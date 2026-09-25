@@ -78,7 +78,7 @@ export function WelcomeTutorial({ onClose, onOpenShortcuts }: Props) {
           </button>
           <button
             onClick={onClose}
-            className="ml-auto h-7 px-3 rounded text-xs font-semibold text-zinc-900"
+            className="ml-auto h-7 px-3 rounded text-xs font-semibold text-accent-foreground"
             style={{ background: '#e6c068' }}
           >
             Começar

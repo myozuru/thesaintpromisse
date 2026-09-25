@@ -98,7 +98,7 @@ export function SceneTabs() {
         type="button"
         onClick={() => createScene()}
         title="Nova cena"
-        className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-[#2a2b30]"
+        className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary"
       >
         <Plus className="h-3.5 w-3.5" />
       </button>

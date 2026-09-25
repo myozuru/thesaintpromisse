@@ -319,7 +319,7 @@ function Item({
     </button>
   );
 }
-function Sep() { return <div className="my-1 h-px bg-[#2a2b30]" />; }
+function Sep() { return <div className="my-1 h-px bg-border" />; }
 
 function MetersInput({
   label, placeholder, initialValue, onSubmit,
@@ -400,7 +400,7 @@ function FichaPicker({
           ))}
           {currentCharacterId && (
             <>
-              <div className="h-px bg-[#2a2b30]" />
+              <div className="h-px bg-border" />
               <button
                 onClick={() => onPick(null)}
                 className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-red-300 hover:bg-secondary"

@@ -40,7 +40,7 @@ export function TemplateSettings() {
                 onClick={() => setToolSettings('template', { kind: k.id })}
                 className="flex flex-col items-center gap-1 py-2 rounded border text-[10px]"
                 style={{
-                  background: active ? 'hsl(var(--border))' : '#1f2024',
+                  background: active ? 'hsl(var(--border))' : 'hsl(var(--secondary))',
                   borderColor: active ? '#7cc4ff' : 'hsl(var(--border))',
                   color: active ? 'hsl(var(--foreground))' : '#a1a1aa',
                 }}

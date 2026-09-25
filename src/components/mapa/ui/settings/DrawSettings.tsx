@@ -82,7 +82,7 @@ function ModeBtn({
       onClick={onClick}
       className={`flex items-center justify-center gap-1.5 px-2 py-1.5 rounded border text-xs transition-colors ${
         active
-          ? 'bg-zinc-100 text-zinc-900 border-zinc-100'
+          ? 'bg-zinc-100 text-accent-foreground border-zinc-100'
           : 'border-border text-foreground/80 hover:bg-secondary'
       }`}
     >

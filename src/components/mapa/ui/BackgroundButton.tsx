@@ -73,7 +73,7 @@ export function BackgroundButton() {
           if (background) setOpen((v) => !v);
           else fileRef.current?.click();
         }}
-        className="h-8 w-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-[#2a2b30]"
+        className="h-8 w-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary"
         style={background ? { color: '#a3e3ff' } : undefined}
       >
         <ImageIcon className="h-4 w-4" />

@@ -208,7 +208,7 @@ export function SelectionToolbar({ visible = true }: { visible?: boolean }) {
                 Desvincular baú
               </button>
             )}
-            <div className="h-px bg-[#2a2b30] my-1" />
+            <div className="h-px bg-border my-1" />
             {Object.values(chestsRecord).length === 0 ? (
               <div className="text-[11px] text-muted-foreground italic px-1">Nenhum baú existente.</div>
             ) : (

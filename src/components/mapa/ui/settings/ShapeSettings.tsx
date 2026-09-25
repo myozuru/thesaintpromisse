@@ -61,7 +61,7 @@ function SegBtn({
       onClick={onClick}
       className={`flex items-center justify-center gap-1 px-2 py-1.5 rounded text-[11px] font-medium transition-colors ${
         active
-          ? 'bg-zinc-100 text-zinc-900'
+          ? 'bg-zinc-100 text-accent-foreground'
           : 'bg-secondary text-foreground/80 hover:bg-secondary border border-border'
       }`}
     >

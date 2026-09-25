@@ -222,7 +222,7 @@ export function InitiativePanel({ onClose }: Props) {
               key={e.id}
               className="flex items-center gap-2 rounded px-2 py-1.5"
               style={{
-                background: isActive ? 'rgba(252,211,77,0.10)' : '#1f2024',
+                background: isActive ? 'rgba(252,211,77,0.10)' : 'hsl(var(--secondary))',
                 border: `1px solid ${isActive ? '#fcd34d' : 'hsl(var(--border))'}`,
               }}
             >
@@ -287,7 +287,7 @@ export function InitiativePanel({ onClose }: Props) {
           <button
             onClick={nextTurn}
             disabled={!ordered.length}
-            className="h-7 px-2 rounded text-zinc-900 font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+            className="h-7 px-2 rounded text-accent-foreground font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
             style={{ background: '#fcd34d' }}
           >
             Próximo
