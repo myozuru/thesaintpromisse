@@ -143,7 +143,10 @@ export function AppSidebar({ activeTab, onTabChange }: Props) {
                             aria-hidden
                           />
                         )}
-                        <Icon className={cn("h-4 w-4 shrink-0", isActive && "text-accent")} />
+                        {(() => {
+                          const TabIcon = Icon as React.ComponentType<{ className?: string }>;
+                          return <TabIcon className={cn("h-4 w-4 shrink-0", isActive && "text-accent")} />;
+                        })()}
                         {!collapsed && (
                           <span style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.05em' }} className="text-sm">
                             {label}
