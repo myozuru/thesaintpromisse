@@ -1,24 +1,32 @@
+import { lazy, Suspense } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
+const TpFichasApp = lazy(() => import("@/components/TpFichasApp"));
+
 export const Route = createFileRoute("/")({
-  component: Index,
+  head: () => ({
+    meta: [
+      { title: "The Promisse — TP Fichas" },
+      {
+        name: "description",
+        content: "Gerencie fichas, combate, itens, mapas e campanhas de The Promisse.",
+      },
+      { property: "og:title", content: "The Promisse — TP Fichas" },
+      {
+        property: "og:description",
+        content: "Painel completo para a campanha de RPG The Promisse.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
+  component: IndexRoute,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+function IndexRoute() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <TpFichasApp />
+    </Suspense>
   );
 }

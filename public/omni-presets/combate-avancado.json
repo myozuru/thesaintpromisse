@@ -1,0 +1,142 @@
+{
+  "formato": "omni-engine.v1",
+  "nome": "Combate Avançado",
+  "autor": "Omni-Engine",
+  "geradoEm": 1700000000001,
+  "entidades": [
+    {
+      "id": "preset-vinganca-postuma",
+      "versao": 1,
+      "nome": "Vingança Póstuma",
+      "categoria": "passiva",
+      "descricao": "Quando o usuário morre, causa 4d10 de dano em quem desferiu o golpe fatal.",
+      "tags": ["preset", "morte", "vingança"],
+      "duracao": { "tipo": "permanente" },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "g-vp-1",
+          "evento": "aoMorrer",
+          "blocos": [
+            {
+              "id": "b-vp-1",
+              "condicoes": [],
+              "modo": "todas",
+              "acoes": [
+                {
+                  "id": "a-vp-1",
+                  "acao": "DANO",
+                  "alvoAplicacao": "ALVO",
+                  "valor": { "tipo": "formula", "expressao": "4d10" }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "criadoEm": 1700000000001,
+      "atualizadoEm": 1700000000001
+    },
+    {
+      "id": "preset-amuleto-vampirico",
+      "versao": 1,
+      "nome": "Amuleto Vampírico",
+      "categoria": "item",
+      "descricao": "Ao causar dano, o portador é curado em 25% do valor causado.",
+      "tags": ["preset", "item", "lifesteal"],
+      "duracao": { "tipo": "permanente" },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "g-av-1",
+          "evento": "aoCausarDano",
+          "blocos": [
+            {
+              "id": "b-av-1",
+              "condicoes": [],
+              "modo": "todas",
+              "acoes": [
+                {
+                  "id": "a-av-1",
+                  "acao": "CURAR",
+                  "alvoAplicacao": "USUARIO",
+                  "valor": { "tipo": "formula", "expressao": "@CENA.dano / 4" }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "criadoEm": 1700000000001,
+      "atualizadoEm": 1700000000001
+    },
+    {
+      "id": "preset-escudo-reativo",
+      "versao": 1,
+      "nome": "Escudo Reativo",
+      "categoria": "passiva",
+      "descricao": "Ao receber uma condição, ganha +5 de Defesa por 2 turnos.",
+      "tags": ["preset", "passiva", "defesa"],
+      "duracao": { "tipo": "permanente" },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "g-er-1",
+          "evento": "aoReceberCondicao",
+          "blocos": [
+            {
+              "id": "b-er-1",
+              "condicoes": [],
+              "modo": "todas",
+              "acoes": [
+                {
+                  "id": "a-er-1",
+                  "acao": "SOMAR",
+                  "alvoAplicacao": "USUARIO",
+                  "caminhoAlvo": "status.defesa",
+                  "valor": { "tipo": "fixo", "valor": 5 }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "criadoEm": 1700000000001,
+      "atualizadoEm": 1700000000001
+    },
+    {
+      "id": "preset-ressonancia-cura",
+      "versao": 1,
+      "nome": "Ressonância da Cura",
+      "categoria": "aura",
+      "descricao": "Quando o usuário recebe cura, aliados em até 4m são curados em 50% do valor.",
+      "tags": ["preset", "aura", "cura"],
+      "duracao": { "tipo": "ateDissipar" },
+      "custos": [],
+      "areaRaio": { "tipo": "fixo", "valor": 4 },
+      "gatilhos": [
+        {
+          "id": "g-rc-1",
+          "evento": "aoReceberCura",
+          "blocos": [
+            {
+              "id": "b-rc-1",
+              "condicoes": [],
+              "modo": "todas",
+              "acoes": [
+                {
+                  "id": "a-rc-1",
+                  "acao": "CURAR",
+                  "alvoAplicacao": "ALVO",
+                  "valor": { "tipo": "formula", "expressao": "@CENA.cura / 2" }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "criadoEm": 1700000000001,
+      "atualizadoEm": 1700000000001
+    }
+  ]
+}

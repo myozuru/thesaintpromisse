@@ -1,0 +1,88 @@
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+
+/**
+ * Pedidos de teste do Mestre → Jogador.
+ *
+ * O Mestre seleciona uma ficha PLAYER e dispara um pedido (atributo,
+ * perícia ou teste de resistência). O jogador dono daquela ficha vê um
+ * overlay full-screen com o botão para rolar o d20 daquele teste.
+ *
+ * Estado é sincronizado entre clientes via `useMultiplayerSync` (slice
+ * `testRequests`). O resultado da rolagem fica anexado ao request para
+ * que todos vejam o mesmo número.
+ */
+
+export type TestKind = 'attribute' | 'skill' | 'save';
+
+export interface TestRequest {
+  id: string;
+  charId: string;
+  charName: string;
+  /** Tipo do teste. */
+  kind: TestKind;
+  /** Nome do atributo/perícia/TR (ex.: "Astúcia"). */
+  testName: string;
+  /** CD opcional definida pelo mestre. */
+  dc?: number;
+  /** Se true, o jogador não vê a CD (mas o mestre vê). */
+  hideDcFromPlayer?: boolean;
+  /** Se true, o jogador não sabe se passou/falhou (mestre ainda vê). */
+  hideOutcomeFromPlayer?: boolean;
+  /** Notas opcionais do mestre. */
+  note?: string;
+  /**
+   * Bônus pré-calculado (usado quando o pedido vem de um feitiço, em que
+   * a pipeline já sabe o bônus correto para aquele TR específico vs. alvo).
+   * Quando definido, o overlay ignora o cálculo padrão.
+   */
+  bonusOverride?: number;
+  bonusBreakdownOverride?: string;
+  /** Tag para correlacionar resultado com a origem (ex.: feitiço.id + targetId). */
+  sourceTag?: string;
+  createdAt: number;
+  /** Resultado, preenchido após o jogador rolar. */
+  result?: {
+    d20: number;
+    bonus: number;
+    total: number;
+    rolledAt: number;
+    /** Modo da rolagem aplicada (vantagem/desvantagem). */
+    advantageMode?: 'normal' | 'advantage' | 'disadvantage';
+    /** Os 1-2 dados rolados (vantagem/desvantagem mostra ambos). */
+    rolls?: number[];
+    /** Se preenchido, o resultado foi FORÇADO por habilidade (sucesso/falha garantida). */
+    forced?: { kind: 'success' | 'failure'; note?: string };
+  };
+}
+
+interface TestRequestState {
+  requests: TestRequest[];
+  enqueue: (r: Omit<TestRequest, 'id' | 'createdAt' | 'result'>) => void;
+  setResult: (id: string, result: NonNullable<TestRequest['result']>) => void;
+  dismiss: (id: string) => void;
+  clearAll: () => void;
+}
+
+export const useTestRequestStore = create<TestRequestState>()(
+  persist(
+    (set) => ({
+      requests: [],
+      enqueue: (r) =>
+        set((s) => ({
+          requests: [
+            ...s.requests,
+            { ...r, id: `tr_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`, createdAt: Date.now() },
+          ],
+        })),
+      setResult: (id, result) =>
+        set((s) => ({
+          requests: s.requests.map((x) => (x.id === id ? { ...x, result } : x)),
+        })),
+      dismiss: (id) =>
+        set((s) => ({ requests: s.requests.filter((x) => x.id !== id) })),
+      clearAll: () => set({ requests: [] }),
+    }),
+    { name: 'rpg-test-requests' }
+  )
+);

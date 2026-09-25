@@ -1,0 +1,176 @@
+{
+  "formato": "omni-engine.v1",
+  "nome": "Pacote Básico",
+  "autor": "Omni-Engine",
+  "geradoEm": 1700000000000,
+  "entidades": [
+    {
+      "id": "preset-pocao-cura",
+      "versao": 1,
+      "nome": "Poção de Cura",
+      "categoria": "item",
+      "descricao": "Restaura 2d4+2 de Vida ao usuário ao ser consumida.",
+      "tags": ["preset", "consumivel", "cura"],
+      "duracao": { "tipo": "instantaneo" },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "g-pocao-1",
+          "evento": "aoEquipar",
+          "blocos": [
+            {
+              "id": "b-pocao-1",
+              "condicoes": [],
+              "modo": "todas",
+              "acoes": [
+                {
+                  "id": "a-pocao-1",
+                  "acao": "CURAR",
+                  "alvoAplicacao": "USUARIO",
+                  "valor": { "tipo": "formula", "expressao": "2d4 + 2" }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000
+    },
+    {
+      "id": "preset-bola-fogo",
+      "versao": 1,
+      "nome": "Bola de Fogo",
+      "categoria": "feitico",
+      "descricao": "Causa 6d6 de dano de fogo no alvo. Custa 8 PE.",
+      "tags": ["preset", "dano", "fogo"],
+      "duracao": { "tipo": "instantaneo" },
+      "custos": [
+        {
+          "caminhoRecurso": "status.energiaAmaldicoada.atual",
+          "valor": { "tipo": "fixo", "valor": 8 }
+        }
+      ],
+      "alcance": { "tipo": "fixo", "valor": 18 },
+      "areaRaio": { "tipo": "fixo", "valor": 6 },
+      "gatilhos": [
+        {
+          "id": "g-bf-1",
+          "evento": "aoConjurarFeitico",
+          "blocos": [
+            {
+              "id": "b-bf-1",
+              "condicoes": [],
+              "modo": "todas",
+              "acoes": [
+                {
+                  "id": "a-bf-1",
+                  "acao": "DANO",
+                  "alvoAplicacao": "ALVO",
+                  "valor": { "tipo": "formula", "expressao": "6d6" }
+                },
+                {
+                  "id": "a-bf-2",
+                  "acao": "APLICAR_CONDICAO",
+                  "alvoAplicacao": "ALVO",
+                  "condicao": "queimando",
+                  "valor": { "tipo": "fixo", "valor": 2 }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000
+    },
+    {
+      "id": "preset-aura-coragem",
+      "versao": 1,
+      "nome": "Aura de Coragem",
+      "categoria": "aura",
+      "descricao": "Aliados em até 6m ganham +2 de Defesa enquanto a aura estiver ativa.",
+      "tags": ["preset", "aura", "buff"],
+      "duracao": { "tipo": "ateDissipar" },
+      "custos": [],
+      "areaRaio": { "tipo": "fixo", "valor": 6 },
+      "gatilhos": [
+        {
+          "id": "g-ac-1",
+          "evento": "aoEntrarEmAura",
+          "blocos": [
+            {
+              "id": "b-ac-1",
+              "condicoes": [],
+              "modo": "todas",
+              "acoes": [
+                {
+                  "id": "a-ac-1",
+                  "acao": "SOMAR",
+                  "alvoAplicacao": "ALVO",
+                  "caminhoAlvo": "status.defesa",
+                  "valor": { "tipo": "fixo", "valor": 2 }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "g-ac-2",
+          "evento": "aoSairDaAura",
+          "blocos": [
+            {
+              "id": "b-ac-2",
+              "condicoes": [],
+              "modo": "todas",
+              "acoes": [
+                {
+                  "id": "a-ac-2",
+                  "acao": "SUBTRAIR",
+                  "alvoAplicacao": "ALVO",
+                  "caminhoAlvo": "status.defesa",
+                  "valor": { "tipo": "fixo", "valor": 2 }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000
+    },
+    {
+      "id": "preset-marca-cacador",
+      "versao": 1,
+      "nome": "Marca do Caçador",
+      "categoria": "passiva",
+      "descricao": "Quando o usuário acerta um ataque, concede 1 reroll ao próximo ataque do mesmo personagem.",
+      "tags": ["preset", "passiva", "reroll"],
+      "duracao": { "tipo": "permanente" },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "g-mc-1",
+          "evento": "aoAcertarAtaque",
+          "blocos": [
+            {
+              "id": "b-mc-1",
+              "condicoes": [],
+              "modo": "todas",
+              "acoes": [
+                {
+                  "id": "a-mc-1",
+                  "acao": "REROLL",
+                  "alvoAplicacao": "USUARIO",
+                  "valor": { "tipo": "fixo", "valor": 1 }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000
+    }
+  ]
+}
