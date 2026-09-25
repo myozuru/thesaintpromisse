@@ -18,6 +18,10 @@ function MultiplayerBridge() {
   return null;
 }
 
+const hasWorkspaceCloud = Boolean(
+  import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+);
+
 function RuntimeSetup() {
   useEffect(() => {
     installSafeLocalStorage();
@@ -52,7 +56,7 @@ export default function TpFichasApp() {
     <AppErrorBoundary>
       <TooltipProvider>
         <RuntimeSetup />
-        <MultiplayerBridge />
+        {hasWorkspaceCloud ? <MultiplayerBridge /> : null}
         <Toaster />
         <Sonner />
         <Index />
