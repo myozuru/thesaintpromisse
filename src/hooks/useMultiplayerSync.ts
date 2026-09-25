@@ -440,6 +440,21 @@ export function useMultiplayerSync() {
 
     // Monkey-patch do socket.emit: cada state:update vai também via broadcast.
     const origEmit = socket.emit.bind(socket);
+    // Persistência: cada parte da mesa é salva (com atraso curto) para quem entrar depois.
+    const persistTimers = new Map<string, ReturnType<typeof setTimeout>>();
+    const persistSlice = (slice: string, data: unknown) => {
+      if (slice === 'mapScene') return; // mapa já é salvo por publishMapSceneToCloud
+      const prev = persistTimers.get(slice);
+      if (prev) clearTimeout(prev);
+      persistTimers.set(slice, setTimeout(() => {
+        persistTimers.delete(slice);
+        let json: Json;
+        try { json = JSON.parse(JSON.stringify(data ?? null)) as Json; } catch { return; }
+        void supabase.from('realtime_world').upsert({ slice, data: json }).then(({ error }) => {
+          if (error) console.warn(`[sync] falha ao salvar ${slice}:`, error.message);
+        });
+      }, 800));
+    };
     (socket as unknown as { emit: typeof socket.emit }).emit = ((event: string, ...args: unknown[]) => {
       if (event === 'state:update' && args[0] && typeof args[0] === 'object') {
         const a = args[0] as { slice?: WorldSlice; data?: unknown };
@@ -447,10 +462,19 @@ export function useMultiplayerSync() {
           try {
             void worldBus.send({ type: 'broadcast', event: 'slice', payload: { clientId, slice: a.slice, data: a.data } });
           } catch (err) { /* ignore */ }
+          persistSlice(a.slice, a.data);
         }
       }
       return origEmit(event as never, ...(args as never[]));
     }) as typeof socket.emit;
+
+    // Carrega o estado salvo da mesa ao abrir o site.
+    void supabase.from('realtime_world').select('slice,data').neq('slice', 'mapScene').then(({ data, error }) => {
+      if (error) { console.warn('[sync] falha ao carregar mesa do Cloud:', error.message); return; }
+      for (const row of data ?? []) {
+        if (row.data !== null) applyRemote(row.slice as WorldSlice, row.data);
+      }
+    });
 
 
 
