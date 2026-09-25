@@ -1,0 +1,3604 @@
+{
+  "formato": "omni-engine.v1",
+  "nome": "Catálogo de Armas",
+  "autor": "Omni-Engine",
+  "geradoEm": 1700000000000,
+  "entidades": [
+    {
+      "id": "preset-arma-adaga",
+      "versao": 1,
+      "nome": "Adaga",
+      "categoria": "arma",
+      "descricao": "**Simples • Corpo-a-corpo • Grupo Faca**\nDano: 1d6 Pf\nMargem de crítico: 18-20\nEspaços: 1 • Custo: 1\nPropriedades: Apunhaladora, Arremessável [6/18], Fineza, Leve, Marcial, Modular Ct",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "simples",
+        "melee",
+        "grupo:faca",
+        "prop:apunhaladora",
+        "prop:arremessavel",
+        "prop:fineza",
+        "prop:leve",
+        "prop:marcial",
+        "prop:modular"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "adaga-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "adaga-fx-1m",
+            "formula": "1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "adaga-fx-1m",
+            "formula": "1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 18,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-bastao",
+      "versao": 1,
+      "nome": "Bastão",
+      "categoria": "arma",
+      "descricao": "**Simples • Corpo-a-corpo • Grupo Bastão**\nDano: 1d6 (1m) / 1d8 (2m) Im\nMargem de crítico: 19-20\nEspaços: 2 • Custo: 1\nPropriedades: Ampla, Dupla, Marcial, Versátil",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "simples",
+        "melee",
+        "grupo:bastão",
+        "prop:ampla",
+        "prop:dupla",
+        "prop:marcial",
+        "prop:versatil"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "bastao-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "bastao-fx-1m",
+            "formula": "1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          },
+          {
+            "id": "bastao-fx-2m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual",
+            "condition": "duas_maos == 1"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "bastao-fx-1m",
+            "formula": "1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          },
+          {
+            "id": "bastao-fx-2m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual",
+            "condition": "duas_maos == 1"
+          }
+        ],
+        "critRange": 19,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-clava",
+      "versao": 1,
+      "nome": "Clava",
+      "categoria": "arma",
+      "descricao": "**Simples • Corpo-a-corpo • Grupo Bastão**\nDano: 1d8 (1m) / 1d10 (2m) Im\nMargem de crítico: 20-20\nEspaços: 1 • Custo: 1\nPropriedades: Versátil",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "simples",
+        "melee",
+        "grupo:bastão",
+        "prop:versatil"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "clava-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "clava-fx-1m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          },
+          {
+            "id": "clava-fx-2m",
+            "formula": "1d10",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual",
+            "condition": "duas_maos == 1"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "clava-fx-1m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          },
+          {
+            "id": "clava-fx-2m",
+            "formula": "1d10",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual",
+            "condition": "duas_maos == 1"
+          }
+        ],
+        "critRange": 20,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-espada-curta",
+      "versao": 1,
+      "nome": "Espada Curta",
+      "categoria": "arma",
+      "descricao": "**Simples • Corpo-a-corpo • Grupo Espada**\nDano: 1d6 Ct\nMargem de crítico: 19-20\nEspaços: 1 • Custo: 1\nPropriedades: Fineza, Leve, Marcial, Modular Pf",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "simples",
+        "melee",
+        "grupo:espada",
+        "prop:fineza",
+        "prop:leve",
+        "prop:marcial",
+        "prop:modular"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "espada-curta-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "espada-curta-fx-1m",
+            "formula": "1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "espada-curta-fx-1m",
+            "formula": "1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 19,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-faixas",
+      "versao": 1,
+      "nome": "Faixas",
+      "categoria": "arma",
+      "descricao": "**Simples • Corpo-a-corpo • Grupo Pugilato**\nSem dano direto (ver especial)\nEspaços: 1 • Custo: 1\nPropriedades: Especial\n\n_Faixas não são consideradas armas; ataques com elas são desarmados, usando o dano desarmado e habilidades correspondentes._",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "simples",
+        "melee",
+        "grupo:pugilato",
+        "prop:especial"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "faixas-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-foice",
+      "versao": 1,
+      "nome": "Foice",
+      "categoria": "arma",
+      "descricao": "**Simples • Corpo-a-corpo • Grupo Haste**\nDano: 1d6 Ct\nMargem de crítico: 19-20\nEspaços: 1 • Custo: 1\nPropriedades: Fineza, Leve, Marcial",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "simples",
+        "melee",
+        "grupo:haste",
+        "prop:fineza",
+        "prop:leve",
+        "prop:marcial"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "foice-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "foice-fx-1m",
+            "formula": "1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "foice-fx-1m",
+            "formula": "1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 19,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-lanca",
+      "versao": 1,
+      "nome": "Lança",
+      "categoria": "arma",
+      "descricao": "**Simples • Corpo-a-corpo • Grupo Haste**\nDano: 1d6 (1m) / 1d8 (2m) Pf\nMargem de crítico: 19-20\nEspaços: 1 • Custo: 1\nPropriedades: Arremessável [6/18], Estendida, Versátil",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "simples",
+        "melee",
+        "grupo:haste",
+        "prop:arremessavel",
+        "prop:estendida",
+        "prop:versatil"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "lanca-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "lanca-fx-1m",
+            "formula": "1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          },
+          {
+            "id": "lanca-fx-2m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual",
+            "condition": "duas_maos == 1"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "lanca-fx-1m",
+            "formula": "1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          },
+          {
+            "id": "lanca-fx-2m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual",
+            "condition": "duas_maos == 1"
+          }
+        ],
+        "critRange": 19,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-leque",
+      "versao": 1,
+      "nome": "Leque",
+      "categoria": "arma",
+      "descricao": "**Simples • Corpo-a-corpo • Grupo Faca**\nDano: 1d6 Im\nMargem de crítico: 18-20\nEspaços: 1 • Custo: 1\nPropriedades: Fineza, Enérgica, Leve, Especial\n\n_Fechado: dano de impacto, grupo Bastão. Aberto: dano cortante, grupo Faca. Alternar é ação livre. +2 em Enganação para Fintar._",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "simples",
+        "melee",
+        "grupo:faca",
+        "prop:fineza",
+        "prop:energica",
+        "prop:leve",
+        "prop:especial"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "leque-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "leque-fx-1m",
+            "formula": "1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "leque-fx-1m",
+            "formula": "1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 18,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-machado",
+      "versao": 1,
+      "nome": "Machado",
+      "categoria": "arma",
+      "descricao": "**Simples • Corpo-a-corpo • Grupo Machado**\nDano: 1d8 (1m) / 1d10 (2m) Ct\nMargem de crítico: 20-20\nEspaços: 1 • Custo: 1\nPropriedades: Versátil",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "simples",
+        "melee",
+        "grupo:machado",
+        "prop:versatil"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "machado-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "machado-fx-1m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          },
+          {
+            "id": "machado-fx-2m",
+            "formula": "1d10",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual",
+            "condition": "duas_maos == 1"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "machado-fx-1m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          },
+          {
+            "id": "machado-fx-2m",
+            "formula": "1d10",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual",
+            "condition": "duas_maos == 1"
+          }
+        ],
+        "critRange": 20,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-mangual",
+      "versao": 1,
+      "nome": "Mangual",
+      "categoria": "arma",
+      "descricao": "**Simples • Corpo-a-corpo • Grupo Chicote**\nDano: 1d8 Im\nMargem de crítico: 20-20\nEspaços: 1 • Custo: 1\nPropriedades: Ampla, Enérgica",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "simples",
+        "melee",
+        "grupo:chicote",
+        "prop:ampla",
+        "prop:energica"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "mangual-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "mangual-fx-1m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "mangual-fx-1m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 20,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-manoplas",
+      "versao": 1,
+      "nome": "Manoplas",
+      "categoria": "arma",
+      "descricao": "**Simples • Corpo-a-corpo • Grupo Pugilato**\nSem dano direto (ver especial)\nEspaços: 1 • Custo: 2\nPropriedades: Aparar, Duas Mãos, Dupla, Especial, Pesada [16]\n\n_Usa dano desarmado. Permite carregar/agarrar mas não manejar outras armas. Dano desarmado +1 nível para cada 2 no Mod. FOR._",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "simples",
+        "melee",
+        "grupo:pugilato",
+        "prop:aparar",
+        "prop:duas_maos",
+        "prop:dupla",
+        "prop:especial",
+        "prop:pesada"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "manoplas-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "comercio": {
+        "basePrice": 200,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-martelo",
+      "versao": 1,
+      "nome": "Martelo",
+      "categoria": "arma",
+      "descricao": "**Simples • Corpo-a-corpo • Grupo Martelo**\nDano: 1d8 (1m) / 1d10 (2m) Im\nMargem de crítico: 20-20\nEspaços: 1 • Custo: 1\nPropriedades: Versátil",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "simples",
+        "melee",
+        "grupo:martelo",
+        "prop:versatil"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "martelo-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "martelo-fx-1m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          },
+          {
+            "id": "martelo-fx-2m",
+            "formula": "1d10",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual",
+            "condition": "duas_maos == 1"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "martelo-fx-1m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          },
+          {
+            "id": "martelo-fx-2m",
+            "formula": "1d10",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual",
+            "condition": "duas_maos == 1"
+          }
+        ],
+        "critRange": 20,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-soco-ingles",
+      "versao": 1,
+      "nome": "Soco Inglês",
+      "categoria": "arma",
+      "descricao": "**Simples • Corpo-a-corpo • Grupo Pugilato**\nSem dano direto (ver especial)\nEspaços: 1 • Custo: 2\nPropriedades: Enérgica, Especial, Fineza, Marcial\n\n_Usa dano desarmado. Aplica efeitos críticos do grupo Faca. CD de TR contra crítico +1 a cada 2 no Mod. FOR ou DES._",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "simples",
+        "melee",
+        "grupo:pugilato",
+        "prop:energica",
+        "prop:especial",
+        "prop:fineza",
+        "prop:marcial"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "soco-ingles-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "comercio": {
+        "basePrice": 200,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-tridente",
+      "versao": 1,
+      "nome": "Tridente",
+      "categoria": "arma",
+      "descricao": "**Simples • Corpo-a-corpo • Grupo Haste**\nDano: 1d6 (1m) / 1d8 (2m) Pf\nMargem de crítico: 19-20\nEspaços: 1 • Custo: 1\nPropriedades: Arremessável [6/18], Estendida, Versátil",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "simples",
+        "melee",
+        "grupo:haste",
+        "prop:arremessavel",
+        "prop:estendida",
+        "prop:versatil"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "tridente-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "tridente-fx-1m",
+            "formula": "1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          },
+          {
+            "id": "tridente-fx-2m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual",
+            "condition": "duas_maos == 1"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "tridente-fx-1m",
+            "formula": "1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          },
+          {
+            "id": "tridente-fx-2m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual",
+            "condition": "duas_maos == 1"
+          }
+        ],
+        "critRange": 19,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-arco-curto",
+      "versao": 1,
+      "nome": "Arco Curto",
+      "categoria": "arma",
+      "descricao": "**Simples • À distância • Grupo Arco**\nDano: 1d6 Pf\nMargem de crítico: 19-20\nAlcance: 24m / 48m\nEspaços: 2 • Custo: 1\nPropriedades: Duas Mãos, Mortal d10",
+      "icone": "🏹",
+      "tags": [
+        "preset",
+        "arma",
+        "simples",
+        "ranged",
+        "grupo:arco",
+        "prop:duas_maos",
+        "prop:mortal"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "arco-curto-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "alcance": {
+        "tipo": "fixo",
+        "valor": 24
+      },
+      "combatData": {
+        "effects": [
+          {
+            "id": "arco-curto-fx-1m",
+            "formula": "1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "arco-curto-fx-1m",
+            "formula": "1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 19,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "ranged",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-besta-leve",
+      "versao": 1,
+      "nome": "Besta Leve",
+      "categoria": "arma",
+      "descricao": "**Simples • À distância • Grupo Arco**\nDano: 1d8 Pf\nMargem de crítico: 19-20\nAlcance: 24m / 48m\nEspaços: 1 • Custo: 1\nPropriedades: Mortal d10, Leve, Recarga [1]",
+      "icone": "🏹",
+      "tags": [
+        "preset",
+        "arma",
+        "simples",
+        "ranged",
+        "grupo:arco",
+        "prop:mortal",
+        "prop:leve",
+        "prop:recarga"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "besta-leve-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "alcance": {
+        "tipo": "fixo",
+        "valor": 24
+      },
+      "combatData": {
+        "effects": [
+          {
+            "id": "besta-leve-fx-1m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "besta-leve-fx-1m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 19,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "ranged",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-pistola",
+      "versao": 1,
+      "nome": "Pistola",
+      "categoria": "arma",
+      "descricao": "**Simples • À distância • Grupo Tiro**\nDano: 1d10 Pf\nMargem de crítico: 20-20\nAlcance: 36m / 72m\nEspaços: 1 • Custo: 2\nPropriedades: Emperrar, Leve, Recarga [12]",
+      "icone": "🏹",
+      "tags": [
+        "preset",
+        "arma",
+        "simples",
+        "ranged",
+        "grupo:tiro",
+        "prop:emperrar",
+        "prop:leve",
+        "prop:recarga"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "pistola-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "alcance": {
+        "tipo": "fixo",
+        "valor": 36
+      },
+      "combatData": {
+        "effects": [
+          {
+            "id": "pistola-fx-1m",
+            "formula": "1d10",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "pistola-fx-1m",
+            "formula": "1d10",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 20,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "ranged",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 200,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-azagaia",
+      "versao": 1,
+      "nome": "Azagaia",
+      "categoria": "arma",
+      "descricao": "**Simples • Arremessável • Grupo Dardo**\nDano: 1d6 Pf\nMargem de crítico: 20-20\nAlcance: 12m / 24m\nEspaços: 1 • Custo: 1\nPropriedades: Leve",
+      "icone": "🎯",
+      "tags": [
+        "preset",
+        "arma",
+        "simples",
+        "thrown",
+        "grupo:dardo",
+        "prop:leve"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "azagaia-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "alcance": {
+        "tipo": "fixo",
+        "valor": 12
+      },
+      "combatData": {
+        "effects": [
+          {
+            "id": "azagaia-fx-1m",
+            "formula": "1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "azagaia-fx-1m",
+            "formula": "1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 20,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "ranged",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-dardo",
+      "versao": 1,
+      "nome": "Dardo",
+      "categoria": "arma",
+      "descricao": "**Simples • Arremessável • Grupo Dardo**\nDano: 1d4 Pf\nMargem de crítico: 18-20\nAlcance: 12m / 24m\nEspaços: 1 • Custo: 1\nPropriedades: Leve, Especial\n\n_Especialmente efetivo para venenos: enquanto coberto, CD do veneno +2 ao acertar._",
+      "icone": "🎯",
+      "tags": [
+        "preset",
+        "arma",
+        "simples",
+        "thrown",
+        "grupo:dardo",
+        "prop:leve",
+        "prop:especial"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "dardo-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "alcance": {
+        "tipo": "fixo",
+        "valor": 12
+      },
+      "combatData": {
+        "effects": [
+          {
+            "id": "dardo-fx-1m",
+            "formula": "1d4",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "dardo-fx-1m",
+            "formula": "1d4",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 18,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "ranged",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-faca-arremesso",
+      "versao": 1,
+      "nome": "Faca de Arremesso",
+      "categoria": "arma",
+      "descricao": "**Simples • Arremessável • Grupo Faca**\nDano: 1d6 Pf\nMargem de crítico: 20-20\nAlcance: 12m / 24m\nEspaços: 1 • Custo: 1\nPropriedades: Leve, Modular Ct",
+      "icone": "🎯",
+      "tags": [
+        "preset",
+        "arma",
+        "simples",
+        "thrown",
+        "grupo:faca",
+        "prop:leve",
+        "prop:modular"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "faca-arremesso-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "alcance": {
+        "tipo": "fixo",
+        "valor": 12
+      },
+      "combatData": {
+        "effects": [
+          {
+            "id": "faca-arremesso-fx-1m",
+            "formula": "1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "faca-arremesso-fx-1m",
+            "formula": "1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 20,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "ranged",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-adagas-duplas",
+      "versao": 1,
+      "nome": "Adagas Duplas",
+      "categoria": "arma",
+      "descricao": "**Complexa • Corpo-a-corpo • Grupo Faca**\nDano: 2d4 Pf\nMargem de crítico: 18-20\nEspaços: 2 • Custo: 2\nPropriedades: Apunhaladora, Duas Mãos, Fineza, Leve, Marcial, Modular Ct, Especial\n\n_Não pode ser desarmado. Conta como uma única arma de duas mãos._",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:faca",
+        "prop:apunhaladora",
+        "prop:duas_maos",
+        "prop:fineza",
+        "prop:leve",
+        "prop:marcial",
+        "prop:modular",
+        "prop:especial"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "adagas-duplas-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "adagas-duplas-fx-1m",
+            "formula": "2d4",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "adagas-duplas-fx-1m",
+            "formula": "2d4",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 18,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 200,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-adaga-aparar",
+      "versao": 1,
+      "nome": "Adaga de Aparar",
+      "categoria": "arma",
+      "descricao": "**Complexa • Corpo-a-corpo • Grupo Faca**\nDano: 1d4 Pf\nMargem de crítico: 18-20\nEspaços: 1 • Custo: 1\nPropriedades: Aparar, Apunhaladora, Fineza, Leve, Marcial, Modular Ct",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:faca",
+        "prop:aparar",
+        "prop:apunhaladora",
+        "prop:fineza",
+        "prop:leve",
+        "prop:marcial",
+        "prop:modular"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "adaga-aparar-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "adaga-aparar-fx-1m",
+            "formula": "1d4",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "adaga-aparar-fx-1m",
+            "formula": "1d4",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 18,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-alabarda",
+      "versao": 1,
+      "nome": "Alabarda",
+      "categoria": "arma",
+      "descricao": "**Complexa • Corpo-a-corpo • Grupo Haste**\nDano: 1d10 Ct\nMargem de crítico: 20-20\nEspaços: 2 • Custo: 2\nPropriedades: Duas Mãos, Estendida, Modular Pf, Pesada [14], Especial\n\n_+2 em testes da manobra Derrubar._",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:haste",
+        "prop:duas_maos",
+        "prop:estendida",
+        "prop:modular",
+        "prop:pesada",
+        "prop:especial"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "alabarda-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "alabarda-fx-1m",
+            "formula": "1d10",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "alabarda-fx-1m",
+            "formula": "1d10",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 20,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 200,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-chicote",
+      "versao": 1,
+      "nome": "Chicote",
+      "categoria": "arma",
+      "descricao": "**Complexa • Corpo-a-corpo • Grupo Chicote**\nDano: 1d4 Ct\nMargem de crítico: 19-20\nEspaços: 1 • Custo: 1\nPropriedades: Estendida, Fineza, Leve, Especial\n\n_Pode usar Agarrar mesmo com a mão ocupada pelo chicote, se o alvo estiver no alcance. +2 em Agarrar com chicote._",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:chicote",
+        "prop:estendida",
+        "prop:fineza",
+        "prop:leve",
+        "prop:especial"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "chicote-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "chicote-fx-1m",
+            "formula": "1d4",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "chicote-fx-1m",
+            "formula": "1d4",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 19,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-chicote-corrente",
+      "versao": 1,
+      "nome": "Chicote de Corrente",
+      "categoria": "arma",
+      "descricao": "**Complexa • Corpo-a-corpo • Grupo Chicote**\nDano: 1d6 (1m) / 1d8 (2m) Im\nMargem de crítico: 19-20\nEspaços: 2 • Custo: 2\nPropriedades: Estendida, Pesada [14], Versátil, Especial\n\n_Tem o traço de chicote. Ação bônus: enrolar a corrente em arma corpo-a-corpo, herdando alcance e crítico do chicote (ocupa 2 mãos)._",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:chicote",
+        "prop:estendida",
+        "prop:pesada",
+        "prop:versatil",
+        "prop:especial"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "chicote-corrente-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "chicote-corrente-fx-1m",
+            "formula": "1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          },
+          {
+            "id": "chicote-corrente-fx-2m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual",
+            "condition": "duas_maos == 1"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "chicote-corrente-fx-1m",
+            "formula": "1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          },
+          {
+            "id": "chicote-corrente-fx-2m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual",
+            "condition": "duas_maos == 1"
+          }
+        ],
+        "critRange": 19,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 200,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-chicote-espinhento",
+      "versao": 1,
+      "nome": "Chicote Espinhento",
+      "categoria": "arma",
+      "descricao": "**Complexa • Corpo-a-corpo • Grupo Chicote**\nDano: 1d6+1d6 Ct\nMargem de crítico: 19-20\nEspaços: 1 • Custo: 3\nPropriedades: Estendida, Fineza, Leve, Especial\n\n_Causa 1d6 cortante + 1d6 perfurante. Subir nível de dano sobe cada dado individualmente. Apenas o menor RD/Resistência conta._",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:chicote",
+        "prop:estendida",
+        "prop:fineza",
+        "prop:leve",
+        "prop:especial"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "chicote-espinhento-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "chicote-espinhento-fx-1m",
+            "formula": "1d6+1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "chicote-espinhento-fx-1m",
+            "formula": "1d6+1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 19,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 300,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-clava-pesada",
+      "versao": 1,
+      "nome": "Clava Pesada",
+      "categoria": "arma",
+      "descricao": "**Complexa • Corpo-a-corpo • Grupo Bastão**\nDano: 2d6 Im\nMargem de crítico: 20-20\nEspaços: 2 • Custo: 2\nPropriedades: Duas Mãos, Pesada [16], Oscilante",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:bastão",
+        "prop:duas_maos",
+        "prop:pesada",
+        "prop:oscilante"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "clava-pesada-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "clava-pesada-fx-1m",
+            "formula": "2d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "clava-pesada-fx-1m",
+            "formula": "2d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 20,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 200,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-corrente-aco",
+      "versao": 1,
+      "nome": "Corrente de Aço",
+      "categoria": "arma",
+      "descricao": "**Complexa • Corpo-a-corpo • Grupo Chicote**\nDano: 2d4 (1m) / 2d6 (2m) Im\nMargem de crítico: 20-20\nEspaços: 2 • Custo: 1\nPropriedades: Estendida, Enérgica, Pesada [14], Versátil",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:chicote",
+        "prop:estendida",
+        "prop:energica",
+        "prop:pesada",
+        "prop:versatil"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "corrente-aco-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "corrente-aco-fx-1m",
+            "formula": "2d4",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          },
+          {
+            "id": "corrente-aco-fx-2m",
+            "formula": "2d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual",
+            "condition": "duas_maos == 1"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "corrente-aco-fx-1m",
+            "formula": "2d4",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          },
+          {
+            "id": "corrente-aco-fx-2m",
+            "formula": "2d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual",
+            "condition": "duas_maos == 1"
+          }
+        ],
+        "critRange": 20,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-espada-gancho",
+      "versao": 1,
+      "nome": "Espada de Gancho",
+      "categoria": "arma",
+      "descricao": "**Complexa • Corpo-a-corpo • Grupo Espada**\nDano: 1d8 Ct\nMargem de crítico: 20-20\nEspaços: 1 • Custo: 2\nPropriedades: Fineza, Leve, Marcial, Especial\n\n_Ao acertar, puxa o alvo 1,5m em sua direção (sem entrar no quadrado). Empunhando duas, ambas ganham Estendida._",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:espada",
+        "prop:fineza",
+        "prop:leve",
+        "prop:marcial",
+        "prop:especial"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "espada-gancho-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "espada-gancho-fx-1m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "espada-gancho-fx-1m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 20,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 200,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-espada-longa",
+      "versao": 1,
+      "nome": "Espada Longa",
+      "categoria": "arma",
+      "descricao": "**Complexa • Corpo-a-corpo • Grupo Espada**\nDano: 1d8 (1m) / 1d10 (2m) Ct\nMargem de crítico: 20-20\nEspaços: 1 • Custo: 1\nPropriedades: Modular Pf, Versátil",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:espada",
+        "prop:modular",
+        "prop:versatil"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "espada-longa-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "espada-longa-fx-1m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          },
+          {
+            "id": "espada-longa-fx-2m",
+            "formula": "1d10",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual",
+            "condition": "duas_maos == 1"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "espada-longa-fx-1m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          },
+          {
+            "id": "espada-longa-fx-2m",
+            "formula": "1d10",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual",
+            "condition": "duas_maos == 1"
+          }
+        ],
+        "critRange": 20,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-katana",
+      "versao": 1,
+      "nome": "Katana",
+      "categoria": "arma",
+      "descricao": "**Complexa • Corpo-a-corpo • Grupo Espada**\nDano: 1d6 (1m) / 1d8 (2m) Ct\nMargem de crítico: 19-20\nEspaços: 1 • Custo: 1\nPropriedades: Versátil, Fatal d10, Fineza",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:espada",
+        "prop:versatil",
+        "prop:fatal",
+        "prop:fineza"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "katana-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "katana-fx-1m",
+            "formula": "1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          },
+          {
+            "id": "katana-fx-2m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual",
+            "condition": "duas_maos == 1"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "katana-fx-1m",
+            "formula": "1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          },
+          {
+            "id": "katana-fx-2m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual",
+            "condition": "duas_maos == 1"
+          }
+        ],
+        "critRange": 19,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-espada-grande",
+      "versao": 1,
+      "nome": "Espada Grande",
+      "categoria": "arma",
+      "descricao": "**Complexa • Corpo-a-corpo • Grupo Espada**\nDano: 1d12 Ct\nMargem de crítico: 20-20\nEspaços: 2 • Custo: 2\nPropriedades: Ampla, Duas Mãos, Modular Pf, Pesada [14]",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:espada",
+        "prop:ampla",
+        "prop:duas_maos",
+        "prop:modular",
+        "prop:pesada"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "espada-grande-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "espada-grande-fx-1m",
+            "formula": "1d12",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "espada-grande-fx-1m",
+            "formula": "1d12",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 20,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 200,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-espada-colossal",
+      "versao": 1,
+      "nome": "Espada Colossal",
+      "categoria": "arma",
+      "descricao": "**Complexa • Corpo-a-corpo • Grupo Espada**\nDano: 2d8 Ct\nMargem de crítico: 20-20\nEspaços: 4 • Custo: 3\nPropriedades: Ampla, Duas Mãos, Modular Im, Pesada [20], Especial\n\n_Como Ampla, mas escolhe uma TERCEIRA criatura adjacente ao alvo do primeiro ataque para também sofrer os efeitos._",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:espada",
+        "prop:ampla",
+        "prop:duas_maos",
+        "prop:modular",
+        "prop:pesada",
+        "prop:especial"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "espada-colossal-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "espada-colossal-fx-1m",
+            "formula": "2d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "espada-colossal-fx-1m",
+            "formula": "2d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 20,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 300,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-foice-grande",
+      "versao": 1,
+      "nome": "Foice Grande",
+      "categoria": "arma",
+      "descricao": "**Complexa • Corpo-a-corpo • Grupo Haste**\nDano: 1d8 (1m) / 1d10 (2m) Ct\nMargem de crítico: 20-20\nEspaços: 2 • Custo: 2\nPropriedades: Ampla, Versátil",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:haste",
+        "prop:ampla",
+        "prop:versatil"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "foice-grande-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "foice-grande-fx-1m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          },
+          {
+            "id": "foice-grande-fx-2m",
+            "formula": "1d10",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual",
+            "condition": "duas_maos == 1"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "foice-grande-fx-1m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          },
+          {
+            "id": "foice-grande-fx-2m",
+            "formula": "1d10",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual",
+            "condition": "duas_maos == 1"
+          }
+        ],
+        "critRange": 20,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 200,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-kusarigama",
+      "versao": 1,
+      "nome": "Kusarigama",
+      "categoria": "arma",
+      "descricao": "**Complexa • Corpo-a-corpo • Grupo Haste**\nDano: 1d6+1d6 Ct\nMargem de crítico: 19-20\nEspaços: 1 • Custo: 2\nPropriedades: Duas Mãos, Dupla, Especial, Estendida, Enérgica\n\n_Foice (Ct) + peso (Im). +2 em testes de manobra. Subir nível sobe cada dado individualmente._",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:haste",
+        "prop:duas_maos",
+        "prop:dupla",
+        "prop:especial",
+        "prop:estendida",
+        "prop:energica"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "kusarigama-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "kusarigama-fx-1m",
+            "formula": "1d6+1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "kusarigama-fx-1m",
+            "formula": "1d6+1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 19,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 200,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-lanca-grande",
+      "versao": 1,
+      "nome": "Lança Grande",
+      "categoria": "arma",
+      "descricao": "**Complexa • Corpo-a-corpo • Grupo Haste**\nDano: 1d12 Pf\nMargem de crítico: 20-20\nEspaços: 2 • Custo: 1\nPropriedades: Duas Mãos, Enérgica, Estendida, Pesada [14]",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:haste",
+        "prop:duas_maos",
+        "prop:energica",
+        "prop:estendida",
+        "prop:pesada"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "lanca-grande-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "lanca-grande-fx-1m",
+            "formula": "1d12",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "lanca-grande-fx-1m",
+            "formula": "1d12",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 20,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-machado-grande",
+      "versao": 1,
+      "nome": "Machado Grande",
+      "categoria": "arma",
+      "descricao": "**Complexa • Corpo-a-corpo • Grupo Machado**\nDano: 1d10 Ct\nMargem de crítico: 20-20\nEspaços: 2 • Custo: 1\nPropriedades: Ampla, Duas Mãos, Pesada [16]",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:machado",
+        "prop:ampla",
+        "prop:duas_maos",
+        "prop:pesada"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "machado-grande-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "machado-grande-fx-1m",
+            "formula": "1d10",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "machado-grande-fx-1m",
+            "formula": "1d10",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 20,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-martelo-grande",
+      "versao": 1,
+      "nome": "Martelo Grande",
+      "categoria": "arma",
+      "descricao": "**Complexa • Corpo-a-corpo • Grupo Martelo**\nDano: 1d12 Im\nMargem de crítico: 20-20\nEspaços: 2 • Custo: 1\nPropriedades: Duas Mãos, Pesada [16]",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:martelo",
+        "prop:duas_maos",
+        "prop:pesada"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "martelo-grande-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "martelo-grande-fx-1m",
+            "formula": "1d12",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "martelo-grande-fx-1m",
+            "formula": "1d12",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 20,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-nunchaku",
+      "versao": 1,
+      "nome": "Nunchaku",
+      "categoria": "arma",
+      "descricao": "**Complexa • Corpo-a-corpo • Grupo Bastão**\nDano: 1d8 Im\nMargem de crítico: 19-20\nEspaços: 1 • Custo: 1\nPropriedades: Dupla, Enérgica, Fineza, Marcial",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:bastão",
+        "prop:dupla",
+        "prop:energica",
+        "prop:fineza",
+        "prop:marcial"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "nunchaku-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "nunchaku-fx-1m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "nunchaku-fx-1m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 19,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-nunchaku-pesado",
+      "versao": 1,
+      "nome": "Nunchaku Pesado",
+      "categoria": "arma",
+      "descricao": "**Complexa • Corpo-a-corpo • Grupo Bastão**\nDano: 2d6 Im\nMargem de crítico: 20-20\nEspaços: 2 • Custo: 2\nPropriedades: Duas Mãos, Dupla, Estendida, Marcial, Pesada [14], Enérgica",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:bastão",
+        "prop:duas_maos",
+        "prop:dupla",
+        "prop:estendida",
+        "prop:marcial",
+        "prop:pesada",
+        "prop:energica"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "nunchaku-pesado-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "nunchaku-pesado-fx-1m",
+            "formula": "2d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "nunchaku-pesado-fx-1m",
+            "formula": "2d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 20,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 200,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-rapieira",
+      "versao": 1,
+      "nome": "Rapieira",
+      "categoria": "arma",
+      "descricao": "**Complexa • Corpo-a-corpo • Grupo Espada**\nDano: 1d8 Pf\nMargem de crítico: 19-20\nEspaços: 1 • Custo: 1\nPropriedades: Fineza, Mortal d10",
+      "icone": "⚔️",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:espada",
+        "prop:fineza",
+        "prop:mortal"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "rapieira-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "rapieira-fx-1m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "rapieira-fx-1m",
+            "formula": "1d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 19,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-arco-longo",
+      "versao": 1,
+      "nome": "Arco Longo",
+      "categoria": "arma",
+      "descricao": "**Complexa • À distância • Grupo Arco**\nDano: 1d10 Pf\nMargem de crítico: 19-20\nAlcance: 30m / 60m\nEspaços: 2 • Custo: 1\nPropriedades: Duas Mãos, Mortal d12",
+      "icone": "🏹",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "ranged",
+        "grupo:arco",
+        "prop:duas_maos",
+        "prop:mortal"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "arco-longo-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "alcance": {
+        "tipo": "fixo",
+        "valor": 30
+      },
+      "combatData": {
+        "effects": [
+          {
+            "id": "arco-longo-fx-1m",
+            "formula": "1d10",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "arco-longo-fx-1m",
+            "formula": "1d10",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 19,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "ranged",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-bazuca",
+      "versao": 1,
+      "nome": "Bazuca",
+      "categoria": "arma",
+      "descricao": "**Complexa • À distância • Grupo Tiro**\nDano: 3d12 Im\nMargem de crítico: 19-20\nAlcance: 9m / 18m\nEspaços: 4 • Custo: 4\nPropriedades: Duas Mãos, Emperrar, Recarga [1], Especial, Pesada [16]\n\n_Compara o ataque contra Defesa de todos os alvos a 7,5m do alvo original. Recarga = ação completa. Munição custa 1 espaço/1 custo._",
+      "icone": "🏹",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "ranged",
+        "grupo:tiro",
+        "prop:duas_maos",
+        "prop:emperrar",
+        "prop:recarga",
+        "prop:especial",
+        "prop:pesada"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "bazuca-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "alcance": {
+        "tipo": "fixo",
+        "valor": 9
+      },
+      "combatData": {
+        "effects": [
+          {
+            "id": "bazuca-fx-1m",
+            "formula": "3d12",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "bazuca-fx-1m",
+            "formula": "3d12",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 19,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "ranged",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 400,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-besta-pesada",
+      "versao": 1,
+      "nome": "Besta Pesada",
+      "categoria": "arma",
+      "descricao": "**Complexa • À distância • Grupo Besta**\nDano: 1d12 Pf\nMargem de crítico: 20-20\nAlcance: 45m / 90m\nEspaços: 2 • Custo: 1\nPropriedades: Pesada [14], Recarga [1], Mortal d12",
+      "icone": "🏹",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "ranged",
+        "grupo:besta",
+        "prop:pesada",
+        "prop:recarga",
+        "prop:mortal"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "besta-pesada-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "alcance": {
+        "tipo": "fixo",
+        "valor": 45
+      },
+      "combatData": {
+        "effects": [
+          {
+            "id": "besta-pesada-fx-1m",
+            "formula": "1d12",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "besta-pesada-fx-1m",
+            "formula": "1d12",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 20,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "ranged",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-escopeta",
+      "versao": 1,
+      "nome": "Escopeta",
+      "categoria": "arma",
+      "descricao": "**Complexa • À distância • Grupo Tiro**\nDano: 2d6 Pf\nMargem de crítico: 20-20\nAlcance: 9m / 18m\nEspaços: 2 • Custo: 2\nPropriedades: Duas Mãos, Emperrar, Especial, Recarga [2]\n\n_Cone 3m: compara ataque contra Defesa de cada criatura na área. Recarga = ação comum._",
+      "icone": "🏹",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "ranged",
+        "grupo:tiro",
+        "prop:duas_maos",
+        "prop:emperrar",
+        "prop:especial",
+        "prop:recarga"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "escopeta-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "alcance": {
+        "tipo": "fixo",
+        "valor": 9
+      },
+      "combatData": {
+        "effects": [
+          {
+            "id": "escopeta-fx-1m",
+            "formula": "2d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "escopeta-fx-1m",
+            "formula": "2d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 20,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "ranged",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 200,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-metralhadora",
+      "versao": 1,
+      "nome": "Metralhadora",
+      "categoria": "arma",
+      "descricao": "**Complexa • À distância • Grupo Tiro**\nDano: 1d12 Pf\nMargem de crítico: 19-20\nAlcance: 30m / 60m\nEspaços: 4 • Custo: 3\nPropriedades: Duas Mãos, Emperrar, Especial, Recarga [30]\n\n_Pode usar ação bônus para ataque adicional consumindo +1 munição. Recarga = ação comum._",
+      "icone": "🏹",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "ranged",
+        "grupo:tiro",
+        "prop:duas_maos",
+        "prop:emperrar",
+        "prop:especial",
+        "prop:recarga"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "metralhadora-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "alcance": {
+        "tipo": "fixo",
+        "valor": 30
+      },
+      "combatData": {
+        "effects": [
+          {
+            "id": "metralhadora-fx-1m",
+            "formula": "1d12",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "metralhadora-fx-1m",
+            "formula": "1d12",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 19,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "ranged",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 300,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-rifle",
+      "versao": 1,
+      "nome": "Rifle",
+      "categoria": "arma",
+      "descricao": "**Complexa • À distância • Grupo Tiro**\nDano: 2d8 Pf\nMargem de crítico: 20-20\nAlcance: 60m / 120m\nEspaços: 2 • Custo: 2\nPropriedades: Duas Mãos, Emperrar, Recarga [20]",
+      "icone": "🏹",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "ranged",
+        "grupo:tiro",
+        "prop:duas_maos",
+        "prop:emperrar",
+        "prop:recarga"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "rifle-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "alcance": {
+        "tipo": "fixo",
+        "valor": 60
+      },
+      "combatData": {
+        "effects": [
+          {
+            "id": "rifle-fx-1m",
+            "formula": "2d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "rifle-fx-1m",
+            "formula": "2d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 20,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "ranged",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 200,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-rifle-precisao",
+      "versao": 1,
+      "nome": "Rifle de Precisão",
+      "categoria": "arma",
+      "descricao": "**Complexa • À distância • Grupo Tiro**\nDano: 2d10 Pf\nMargem de crítico: 19-20\nAlcance: 120m / 240m\nEspaços: 4 • Custo: 3\nPropriedades: Duas Mãos, Emperrar, Recarga [5]",
+      "icone": "🏹",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "ranged",
+        "grupo:tiro",
+        "prop:duas_maos",
+        "prop:emperrar",
+        "prop:recarga"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "rifle-precisao-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "alcance": {
+        "tipo": "fixo",
+        "valor": 120
+      },
+      "combatData": {
+        "effects": [
+          {
+            "id": "rifle-precisao-fx-1m",
+            "formula": "2d10",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "rifle-precisao-fx-1m",
+            "formula": "2d10",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 19,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "ranged",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 300,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-chakram",
+      "versao": 1,
+      "nome": "Chakram",
+      "categoria": "arma",
+      "descricao": "**Complexa • Arremessável • Grupo Faca**\nDano: 2d4 Ct\nMargem de crítico: 20-20\nAlcance: 12m / 24m\nEspaços: 1 • Custo: 1\nPropriedades: Especial, Leve\n\n_Sempre retorna à mão após o ataque de arremesso._",
+      "icone": "🎯",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "thrown",
+        "grupo:faca",
+        "prop:especial",
+        "prop:leve"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "chakram-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "alcance": {
+        "tipo": "fixo",
+        "valor": 12
+      },
+      "combatData": {
+        "effects": [
+          {
+            "id": "chakram-fx-1m",
+            "formula": "2d4",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "chakram-fx-1m",
+            "formula": "2d4",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 20,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "ranged",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-kunai",
+      "versao": 1,
+      "nome": "Kunai",
+      "categoria": "arma",
+      "descricao": "**Complexa • Arremessável • Grupo Dardo**\nDano: 1d6 Pf\nMargem de crítico: 19-20\nAlcance: 9m / 18m\nEspaços: 1 • Custo: 1\nPropriedades: Apunhaladora, Fineza, Leve",
+      "icone": "🎯",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "thrown",
+        "grupo:dardo",
+        "prop:apunhaladora",
+        "prop:fineza",
+        "prop:leve"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "kunai-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "alcance": {
+        "tipo": "fixo",
+        "valor": 9
+      },
+      "combatData": {
+        "effects": [
+          {
+            "id": "kunai-fx-1m",
+            "formula": "1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "kunai-fx-1m",
+            "formula": "1d6",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 19,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "ranged",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-rede",
+      "versao": 1,
+      "nome": "Rede",
+      "categoria": "arma",
+      "descricao": "**Complexa • Arremessável • Grupo Dardo**\nSem dano direto (ver especial)\nAlcance: 9m / 27m\nEspaços: 1 • Custo: 2\nPropriedades: Especial",
+      "icone": "🎯",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "thrown",
+        "grupo:dardo",
+        "prop:especial"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "rede-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "alcance": {
+        "tipo": "fixo",
+        "valor": 9
+      },
+      "comercio": {
+        "basePrice": 200,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    },
+    {
+      "id": "preset-arma-shuriken",
+      "versao": 1,
+      "nome": "Shuriken",
+      "categoria": "arma",
+      "descricao": "**Complexa • Arremessável • Grupo Dardo**\nDano: 1d4 Ct\nMargem de crítico: 18-20\nAlcance: 12m / 24m\nEspaços: 1 • Custo: 1\nPropriedades: Mortal d8, Leve",
+      "icone": "🎯",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "thrown",
+        "grupo:dardo",
+        "prop:mortal",
+        "prop:leve"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "shuriken-g",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000,
+      "alcance": {
+        "tipo": "fixo",
+        "valor": 12
+      },
+      "combatData": {
+        "effects": [
+          {
+            "id": "shuriken-fx-1m",
+            "formula": "1d4",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "shuriken-fx-1m",
+            "formula": "1d4",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 18,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "ranged",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 100,
+        "hiddenTags": [],
+        "isBought": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,206 @@
+{
+  "formato": "omni-engine.v1",
+  "nome": "Seis Olhos",
+  "autor": "Setsugiri / Omni-Engine",
+  "geradoEm": 1700000000000,
+  "entidades": [
+    {
+      "id": "preset-seis-olhos",
+      "versao": 1,
+      "nome": "Seis Olhos",
+      "categoria": "passiva",
+      "descricao": "Traço passivo do clã Gojo. Imune a Cego e Desprevenido. Bônus em Feitiçaria/Percepção e redução de custo de PE escalam com o estado dos olhos (Vendado = metade do nível; Descoberto = nível inteiro). Descoberto também transforma 'Ler Técnica' em ação livre 1×/rodada e gera fadiga: 1 ponto por rodada de combate, a cada 4 vira 1 nível de exaustão. Descanso zera fadiga, mas não a exaustão.",
+      "icone": "👁",
+      "tags": ["preset", "seis-olhos", "gojo", "passiva"],
+      "duracao": { "tipo": "permanente" },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "g-so-equipar",
+          "evento": "aoEquipar",
+          "blocos": [
+            {
+              "id": "b-so-imun",
+              "condicoes": [],
+              "modo": "todas",
+              "acoes": [
+                {
+                  "id": "a-so-imun-cego",
+                  "acao": "CONCEDER_IMUNIDADE",
+                  "alvoAplicacao": "USUARIO",
+                  "caminhoAlvo": "condicao:cego"
+                },
+                {
+                  "id": "a-so-imun-desprev",
+                  "acao": "CONCEDER_IMUNIDADE",
+                  "alvoAplicacao": "USUARIO",
+                  "caminhoAlvo": "condicao:desprevenido"
+                },
+                {
+                  "id": "a-so-acao-ler-bonus",
+                  "acao": "MODIFICAR_CUSTO_ACAO",
+                  "alvoAplicacao": "USUARIO",
+                  "caminhoAlvo": "acao_a",
+                  "condicao": "action_bonus",
+                  "valor": { "tipo": "fixo", "valor": 0 }
+                },
+                {
+                  "id": "a-so-red-pe-vendado",
+                  "acao": "REDUZIR_CUSTO",
+                  "alvoAplicacao": "USUARIO",
+                  "caminhoAlvo": "pe",
+                  "condicao": "1",
+                  "valor": { "tipo": "formula", "expressao": "floor(@USUARIO.ER / 2)" }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "g-so-vendar",
+          "evento": "aoVendar",
+          "blocos": [
+            {
+              "id": "b-so-vendar-bonus",
+              "condicoes": [],
+              "modo": "todas",
+              "acoes": [
+                {
+                  "id": "a-so-v-red-pe",
+                  "acao": "REDUZIR_CUSTO",
+                  "alvoAplicacao": "USUARIO",
+                  "caminhoAlvo": "pe",
+                  "condicao": "1",
+                  "valor": { "tipo": "formula", "expressao": "floor(@USUARIO.ER / 2)" }
+                },
+                {
+                  "id": "a-so-v-acao-bonus",
+                  "acao": "MODIFICAR_CUSTO_ACAO",
+                  "alvoAplicacao": "USUARIO",
+                  "caminhoAlvo": "acao_a",
+                  "condicao": "action_bonus",
+                  "valor": { "tipo": "fixo", "valor": 0 }
+                },
+                {
+                  "id": "a-so-v-zera-fadiga",
+                  "acao": "ZERAR_CONTADOR",
+                  "alvoAplicacao": "USUARIO",
+                  "caminhoAlvo": "fadiga"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "g-so-descobrir",
+          "evento": "aoDescobrir",
+          "blocos": [
+            {
+              "id": "b-so-desc-bonus",
+              "condicoes": [],
+              "modo": "todas",
+              "acoes": [
+                {
+                  "id": "a-so-d-red-pe",
+                  "acao": "REDUZIR_CUSTO",
+                  "alvoAplicacao": "USUARIO",
+                  "caminhoAlvo": "pe",
+                  "condicao": "1",
+                  "valor": { "tipo": "formula", "expressao": "@USUARIO.ER" }
+                },
+                {
+                  "id": "a-so-d-acao-livre",
+                  "acao": "MODIFICAR_CUSTO_ACAO",
+                  "alvoAplicacao": "USUARIO",
+                  "caminhoAlvo": "acao_a",
+                  "condicao": "action_free",
+                  "valor": { "tipo": "fixo", "valor": 1 }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "g-so-rodada",
+          "evento": "aoIniciarRodadaCombate",
+          "blocos": [
+            {
+              "id": "b-so-rodada-fadiga",
+              "condicoes": [
+                {
+                  "id": "c-so-desc",
+                  "esquerdo": { "tipo": "ref", "ref": { "alvo": "USUARIO", "caminho": "DESCOBERTO" } },
+                  "operador": "IGUAL",
+                  "direito": { "tipo": "fixo", "valor": 1 }
+                }
+              ],
+              "modo": "todas",
+              "acoes": [
+                {
+                  "id": "a-so-add-fadiga",
+                  "acao": "INCREMENTAR_CONTADOR",
+                  "alvoAplicacao": "USUARIO",
+                  "caminhoAlvo": "fadiga",
+                  "valor": { "tipo": "fixo", "valor": 1 }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "g-so-fadiga-limiar",
+          "evento": "aoAtualizarContador",
+          "blocos": [
+            {
+              "id": "b-so-limiar",
+              "condicoes": [
+                {
+                  "id": "c-so-fad-4",
+                  "esquerdo": { "tipo": "ref", "ref": { "alvo": "USUARIO", "caminho": "CONTADOR_FADIGA" } },
+                  "operador": "MAIOR_IGUAL",
+                  "direito": { "tipo": "fixo", "valor": 4 }
+                }
+              ],
+              "modo": "todas",
+              "acoes": [
+                {
+                  "id": "a-so-exh",
+                  "acao": "ADICIONAR_EXAUSTAO",
+                  "alvoAplicacao": "USUARIO",
+                  "valor": { "tipo": "fixo", "valor": 1 }
+                },
+                {
+                  "id": "a-so-zera",
+                  "acao": "ZERAR_CONTADOR",
+                  "alvoAplicacao": "USUARIO",
+                  "caminhoAlvo": "fadiga"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "g-so-descansar",
+          "evento": "aoDescansar",
+          "blocos": [
+            {
+              "id": "b-so-rest-zera",
+              "condicoes": [],
+              "modo": "todas",
+              "acoes": [
+                {
+                  "id": "a-so-rest-zera",
+                  "acao": "ZERAR_CONTADOR",
+                  "alvoAplicacao": "USUARIO",
+                  "caminhoAlvo": "fadiga"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "criadoEm": 1700000000000,
+      "atualizadoEm": 1700000000000
+    }
+  ]
+}

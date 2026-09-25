@@ -1,0 +1,35 @@
+{
+  "formato": "omni-presets-index.v1",
+  "presets": [
+    {
+      "id": "basico",
+      "nome": "Pacote Básico",
+      "descricao": "Itens, feitiços e auras genéricos para começar — Poção de Cura, Bola de Fogo, Aura de Coragem e Marca do Caçador.",
+      "arquivo": "/omni-presets/basico.json"
+    },
+    {
+      "id": "combate-avancado",
+      "nome": "Combate Avançado",
+      "descricao": "Passivas e itens que usam os novos gatilhos: morte, cura recebida, condição recebida e lifesteal por dano.",
+      "arquivo": "/omni-presets/combate-avancado.json"
+    },
+    {
+      "id": "utilitarios",
+      "nome": "Utilitários",
+      "descricao": "Itens e feitiços de exploração: Tocha, Corda Élfica e Pergaminho de Retorno.",
+      "arquivo": "/omni-presets/utilitarios.json"
+    },
+    {
+      "id": "armas",
+      "nome": "Catálogo de Armas",
+      "descricao": "52 armas do livro (simples e complexas, corpo-a-corpo, à distância e arremesso) prontas como itens Omni equipáveis no slot 'mãos', com dano, margem de crítico, alcance e propriedades.",
+      "arquivo": "/omni-presets/armas.json"
+    },
+    {
+      "id": "seis-olhos",
+      "nome": "Seis Olhos (Gojo)",
+      "descricao": "Passiva completa do Seis Olhos: imunidade a Cego/Desprevenido, redução de custo de PE escalável (vendado = metade do ER, descoberto = ER inteiro), Ler Técnica ação bônus → livre 1×/rodada quando descoberto, fadiga em combate (4 = 1 exaustão) e zeragem em descansos. Use o slot Venda da ficha para alternar.",
+      "arquivo": "/omni-presets/seis-olhos.json"
+    }
+  ]
+}

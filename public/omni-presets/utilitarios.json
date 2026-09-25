@@ -1,0 +1,73 @@
+{
+  "formato": "omni-engine.v1",
+  "nome": "Utilitários",
+  "autor": "Omni-Engine",
+  "geradoEm": 1700000000002,
+  "entidades": [
+    {
+      "id": "preset-tocha",
+      "versao": 1,
+      "nome": "Tocha",
+      "categoria": "item",
+      "descricao": "Ilumina o ambiente em 6m por 1 hora. Item utilitário.",
+      "tags": ["preset", "utilitario", "luz"],
+      "duracao": { "tipo": "minutos", "valor": { "tipo": "fixo", "valor": 60 } },
+      "custos": [],
+      "areaRaio": { "tipo": "fixo", "valor": 6 },
+      "gatilhos": [],
+      "criadoEm": 1700000000002,
+      "atualizadoEm": 1700000000002
+    },
+    {
+      "id": "preset-corda-elfica",
+      "versao": 1,
+      "nome": "Corda Élfica",
+      "categoria": "item",
+      "descricao": "Corda mágica de 15 metros que se atende ao comando do portador.",
+      "tags": ["preset", "utilitario"],
+      "duracao": { "tipo": "permanente" },
+      "custos": [],
+      "gatilhos": [],
+      "criadoEm": 1700000000002,
+      "atualizadoEm": 1700000000002
+    },
+    {
+      "id": "preset-pergaminho-volta",
+      "versao": 1,
+      "nome": "Pergaminho de Retorno",
+      "categoria": "feitico",
+      "descricao": "Teletransporta o usuário a um ponto previamente marcado. Custa 12 PE.",
+      "tags": ["preset", "utilitario", "viagem"],
+      "duracao": { "tipo": "instantaneo" },
+      "custos": [
+        {
+          "caminhoRecurso": "status.energiaAmaldicoada.atual",
+          "valor": { "tipo": "fixo", "valor": 12 }
+        }
+      ],
+      "gatilhos": [
+        {
+          "id": "g-pr-1",
+          "evento": "aoConjurarFeitico",
+          "blocos": [
+            {
+              "id": "b-pr-1",
+              "condicoes": [],
+              "modo": "todas",
+              "acoes": [
+                {
+                  "id": "a-pr-1",
+                  "acao": "MOVER",
+                  "alvoAplicacao": "USUARIO",
+                  "valor": { "tipo": "fixo", "valor": 0 }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "criadoEm": 1700000000002,
+      "atualizadoEm": 1700000000002
+    }
+  ]
+}
