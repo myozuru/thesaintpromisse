@@ -46,8 +46,7 @@ export function ToolRail({
   };
   return (
     <div
-      className="h-full w-12 flex flex-col items-center py-2 gap-1 shrink-0"
-      style={{ background: '#16171a', borderRight: '1px solid #2a2b30' }}
+      className="h-full w-12 flex flex-col items-center py-2 gap-1 shrink-0 bg-card border-r border-border"
     >
       <RadioIconButton
         title="Selecionar / mover"

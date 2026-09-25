@@ -40,12 +40,7 @@ export function MapTopBar({
   const setDiceOpen = useDiceStore((s) => s.setOpen);
   return (
     <div
-      className="h-10 shrink-0 flex items-center px-2 gap-2"
-      style={{
-        background: '#16171a',
-        borderBottom: '1px solid #2a2b30',
-        color: '#e6e7eb',
-      }}
+      className="h-10 shrink-0 flex items-center px-2 gap-2 bg-card border-b border-border text-foreground"
     >
       <SceneTabs />
 

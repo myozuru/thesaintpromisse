@@ -1,9 +1,9 @@
 /**
- * RadioIconButton — botão de ferramenta no padrão Owlbear Rodeo.
+ * RadioIconButton — botão de ferramenta do mapa.
  *
  * Quadrado, compacto, com 3 estados visuais: idle, hover, active.
  * Disabled mostra cursor not-allowed e cor mais apagada.
- * Tooltip via `title` nativo (suficiente para esta fase).
+ * Usa os tokens de tema do app (violeta/dourado) para combinar com o HUD geral.
  */
 import type { ReactNode } from 'react';
 
@@ -31,15 +31,15 @@ export function RadioIconButton({
     'h-9 w-9 rounded-md flex items-center justify-center transition-colors shrink-0';
   let state: string;
   if (disabled) {
-    state = 'text-zinc-600 cursor-not-allowed';
+    state = 'text-muted-foreground/40 cursor-not-allowed';
   } else if (variant === 'ghost') {
     state = active
-      ? 'text-zinc-100 bg-[#2a2b30]'
-      : 'text-zinc-400 hover:text-zinc-100 hover:bg-[#23252a]';
+      ? 'text-primary-foreground bg-primary shadow-[0_0_10px_hsl(var(--primary)/0.45)]'
+      : 'text-muted-foreground hover:text-foreground hover:bg-secondary';
   } else {
     state = active
-      ? 'bg-zinc-100 text-zinc-900'
-      : 'text-zinc-300 hover:text-zinc-100 hover:bg-[#23252a]';
+      ? 'bg-primary text-primary-foreground shadow-[0_0_12px_hsl(var(--primary)/0.5)]'
+      : 'text-muted-foreground hover:text-foreground hover:bg-secondary';
   }
   return (
     <button
@@ -55,5 +55,5 @@ export function RadioIconButton({
 }
 
 export function RailDivider() {
-  return <div className="h-px w-7 bg-[#2a2b30] my-1 self-center" />;
+  return <div className="h-px w-7 bg-border my-1 self-center" />;
 }
