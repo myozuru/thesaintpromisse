@@ -1,0 +1,17 @@
+{
+  "capabilities": [
+    {"capability":"application_code","source":"ZIP TP-Fichas","outcome":"migrate","status":"in_progress","next_action":"Port full client application into TanStack Start"},
+    {"capability":"database_schema","source":"Historical SQL migrations for realtime_world and realtime_assets","outcome":"migrate_later","status":"pending","next_action":"Enable this workspace's Lovable Cloud and review policies before applying schema"},
+    {"capability":"database_records","source":"Not included in ZIP","outcome":"migrate","status":"pending","next_action":"Request sanitized CSV or JSON exports after preview"},
+    {"capability":"auth_identities","source":"Not included; app currently uses local role/profile access","outcome":"migrate_if_available","status":"pending","next_action":"Request user export only if production Cloud had users"},
+    {"capability":"authorization","source":"Client-side role/profile gates plus historical SQL policies","outcome":"preserve_local","status":"in_progress","next_action":"Preserve current local behavior; Cloud authorization requires policy review"},
+    {"capability":"uploaded_file_bytes","source":"Bundled static images, models, sounds and JSON presets","outcome":"migrate","status":"in_progress","next_action":"Copy bundled application assets"},
+    {"capability":"external_providers","source":"Optional cloud sync and Socket.IO","outcome":"preserve_offline","status":"pending","next_action":"Configure an isolated multiplayer service only when requested"},
+    {"capability":"public_endpoints","source":"Express /health endpoint","outcome":"not_required_for_preview","status":"pending","next_action":"Recreate with multiplayer service if it is enabled"},
+    {"capability":"callbacks_webhooks","source":"None detected","outcome":"absent","status":"verified","next_action":"None"},
+    {"capability":"schedules","source":"Client-side daily recharge","outcome":"migrate","status":"in_progress","next_action":"Preserve client runtime hook"},
+    {"capability":"secrets","source":"No secrets included; variable names only","outcome":"do_not_copy","status":"verified","next_action":"Use only new workspace configuration"},
+    {"capability":"cutover","source":"No published URL supplied","outcome":"not_started","status":"pending","next_action":"Publish only after user requests it"},
+    {"capability":"verification","source":"Desktop and mobile preview","outcome":"verify","status":"pending","next_action":"Build and browser smoke tests"}
+  ]
+}
