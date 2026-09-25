@@ -40,9 +40,9 @@ export function TemplateSettings() {
                 onClick={() => setToolSettings('template', { kind: k.id })}
                 className="flex flex-col items-center gap-1 py-2 rounded border text-[10px]"
                 style={{
-                  background: active ? '#2a2b30' : '#1f2024',
-                  borderColor: active ? '#7cc4ff' : '#2a2b30',
-                  color: active ? '#e6e7eb' : '#a1a1aa',
+                  background: active ? 'hsl(var(--border))' : '#1f2024',
+                  borderColor: active ? '#7cc4ff' : 'hsl(var(--border))',
+                  color: active ? 'hsl(var(--foreground))' : '#a1a1aa',
                 }}
               >
                 {k.icon}
@@ -59,7 +59,7 @@ export function TemplateSettings() {
           type="color"
           value={s.color}
           onChange={(e) => setToolSettings('template', { color: e.target.value })}
-          className="h-7 w-full bg-[#1f2024] border border-[#2a2b30] rounded"
+          className="h-7 w-full bg-secondary border border-border rounded"
         />
       </div>
 
@@ -95,7 +95,7 @@ export function TemplateSettings() {
         type="button"
         onClick={() => clearTemplates()}
         disabled={templatesCount === 0}
-        className="w-full px-2 py-1 rounded border border-[#2a2b30] hover:bg-[#1f2024] flex items-center justify-center gap-1 text-zinc-300 text-xs disabled:opacity-40"
+        className="w-full px-2 py-1 rounded border border-border hover:bg-secondary flex items-center justify-center gap-1 text-foreground/80 text-xs disabled:opacity-40"
       >
         <Trash2 className="h-3 w-3" /> Limpar templates ({templatesCount})
       </button>
@@ -110,8 +110,8 @@ export function TemplateSettings() {
 }
 
 function Header({ label }: { label: string }) {
-  return <div className="text-zinc-300 text-xs font-semibold uppercase tracking-wider">{label}</div>;
+  return <div className="text-foreground/80 text-xs font-semibold uppercase tracking-wider">{label}</div>;
 }
 function Label({ children }: { children: React.ReactNode }) {
-  return <div className="text-zinc-400 text-[11px] mb-1">{children}</div>;
+  return <div className="text-muted-foreground text-[11px] mb-1">{children}</div>;
 }

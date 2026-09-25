@@ -31,17 +31,17 @@ export function DrawSettings() {
       </div>
 
       <div>
-        <div className="text-zinc-400 mb-1">Cor</div>
+        <div className="text-muted-foreground mb-1">Cor</div>
         <input
           type="color"
           value={draw.color}
           onChange={(e) => setToolSettings('draw', { color: e.target.value })}
-          className="h-7 w-full bg-[#1f2024] border border-[#2a2b30] rounded cursor-pointer"
+          className="h-7 w-full bg-secondary border border-border rounded cursor-pointer"
         />
       </div>
 
       <div>
-        <div className="text-zinc-400 mb-1">
+        <div className="text-muted-foreground mb-1">
           Espessura: <span className="tabular-nums">{draw.size}px</span>
         </div>
         <input
@@ -58,7 +58,7 @@ export function DrawSettings() {
       <button
         onClick={clearStrokes}
         disabled={count === 0}
-        className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded border border-[#2a2b30] hover:bg-[#1f2024] text-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed"
+        className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded border border-border hover:bg-secondary text-foreground/80 disabled:opacity-40 disabled:cursor-not-allowed"
       >
         <Trash2 className="h-3 w-3" /> Limpar tudo ({count})
       </button>
@@ -83,7 +83,7 @@ function ModeBtn({
       className={`flex items-center justify-center gap-1.5 px-2 py-1.5 rounded border text-xs transition-colors ${
         active
           ? 'bg-zinc-100 text-zinc-900 border-zinc-100'
-          : 'border-[#2a2b30] text-zinc-300 hover:bg-[#1f2024]'
+          : 'border-border text-foreground/80 hover:bg-secondary'
       }`}
     >
       {icon}

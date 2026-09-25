@@ -101,15 +101,15 @@ export function WallsSettings({ horizontal = false }: { horizontal?: boolean }) 
             </IconBtn>
           ))}
         </div>
-        <div className="text-[11px] text-zinc-400 mt-1.5">
-          <span className="text-zinc-300 font-medium">
+        <div className="text-[11px] text-muted-foreground mt-1.5">
+          <span className="text-foreground/80 font-medium">
             {KINDS.find((k) => k.id === kind)?.label}
           </span>
           {' — '}{activeHint}
         </div>
       </div>
 
-      <p className="text-[11px] text-zinc-400 leading-snug">
+      <p className="text-[11px] text-muted-foreground leading-snug">
         Arraste para criar (linha/retângulo/elipse). Em <b>polígono</b>, clique em
         cada vértice e dê <b>duplo-clique</b> para fechar. <b>Shift+clique</b>{' '}
         remove um segmento.
@@ -119,7 +119,7 @@ export function WallsSettings({ horizontal = false }: { horizontal?: boolean }) 
 
       <button
         onClick={() => clearWalls()}
-        className="w-full px-2 py-1.5 rounded border border-[#2a2b30] hover:bg-[#1f2024] flex items-center justify-center gap-1.5 text-zinc-300 text-xs"
+        className="w-full px-2 py-1.5 rounded border border-border hover:bg-secondary flex items-center justify-center gap-1.5 text-foreground/80 text-xs"
       >
         <Trash2 className="h-3 w-3" /> Limpar todas
       </button>
@@ -128,10 +128,10 @@ export function WallsSettings({ horizontal = false }: { horizontal?: boolean }) 
 }
 
 function Header({ label }: { label: string }) {
-  return <div className="text-zinc-300 text-xs font-semibold uppercase tracking-wider">{label}</div>;
+  return <div className="text-foreground/80 text-xs font-semibold uppercase tracking-wider">{label}</div>;
 }
 function Label({ children }: { children: React.ReactNode }) {
-  return <div className="text-zinc-400 text-[11px] mb-1">{children}</div>;
+  return <div className="text-muted-foreground text-[11px] mb-1">{children}</div>;
 }
 function IconBtn({
   active, onClick, children, title,

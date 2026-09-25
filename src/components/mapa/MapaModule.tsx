@@ -3285,7 +3285,7 @@ export function MapaModule() {
         height: shellHeight,
         minHeight: 480,
         background: '#1f2024',
-        color: '#e6e7eb',
+        color: 'hsl(var(--foreground))',
         borderRadius: immersive ? 0 : 6,
         border: immersive ? 'none' : '1px solid #2a2b30',
       }}
@@ -3450,16 +3450,16 @@ export function MapaModule() {
           <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 10 }}>
             {/* Zoom indicator */}
             <div
-              className="absolute bottom-3 right-3 pointer-events-auto rounded-md px-2.5 py-1 text-xs text-zinc-300 tabular-nums"
-              style={{ background: '#16171a', border: '1px solid #2a2b30' }}
+              className="absolute bottom-3 right-3 pointer-events-auto rounded-md px-2.5 py-1 text-xs text-foreground/80 tabular-nums"
+              style={{ background: 'hsl(var(--card))', border: '1px solid #2a2b30' }}
             >
               {Math.round(cameraScale * 100)}%
             </div>
 
             {/* Drop hint */}
             <div
-              className="absolute bottom-3 left-1/2 -translate-x-1/2 pointer-events-auto flex items-center gap-2 rounded-full px-3 py-1.5 text-xs text-zinc-400"
-              style={{ background: '#16171a', border: '1px solid #2a2b30' }}
+              className="absolute bottom-3 left-1/2 -translate-x-1/2 pointer-events-auto flex items-center gap-2 rounded-full px-3 py-1.5 text-xs text-muted-foreground"
+              style={{ background: 'hsl(var(--card))', border: '1px solid #2a2b30' }}
             >
               <ImageIcon className="h-3.5 w-3.5" />
               Arraste imagens para o mapa
@@ -3470,20 +3470,20 @@ export function MapaModule() {
               <div
                 className="absolute top-2 right-3 w-72 pointer-events-auto rounded-lg p-3 text-xs space-y-3 shadow-xl"
                 style={{
-                  background: '#16171a',
+                  background: 'hsl(var(--card))',
                   border: '1px solid #2a2b30',
-                  color: '#e6e7eb',
+                  color: 'hsl(var(--foreground))',
                 }}
               >
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Configurações</span>
-                  <button onClick={() => setGridOpen(false)} className="text-zinc-500 hover:text-zinc-200">×</button>
+                  <button onClick={() => setGridOpen(false)} className="text-zinc-500 hover:text-foreground">×</button>
                 </div>
                 <Row label="Tipo de grade">
                   <select
                     value={gridConfig.type}
                     onChange={(e) => setGridConfig({ type: e.target.value as GridType })}
-                    className="bg-[#1f2024] border border-[#2a2b30] rounded px-2 py-1 w-full text-zinc-200"
+                    className="bg-secondary border border-border rounded px-2 py-1 w-full text-foreground"
                   >
                     <option value="SQUARE">Quadrada</option>
                     <option value="HEX_VERTICAL">Hex (flat-top)</option>
@@ -3493,7 +3493,7 @@ export function MapaModule() {
                 </Row>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <div className="text-zinc-400 mb-1">Tamanho da grade (m)</div>
+                    <div className="text-muted-foreground mb-1">Tamanho da grade (m)</div>
                     <input
                       type="number"
                       min={0.1}
@@ -3503,11 +3503,11 @@ export function MapaModule() {
                         const v = Number(e.target.value);
                         if (Number.isFinite(v) && v > 0) setGridConfig({ metersPerCell: v });
                       }}
-                      className="w-full bg-[#1f2024] border border-[#2a2b30] rounded px-2 py-1 text-zinc-200"
+                      className="w-full bg-secondary border border-border rounded px-2 py-1 text-foreground"
                     />
                   </div>
                   <div>
-                    <div className="text-zinc-400 mb-1">Célula (px)</div>
+                    <div className="text-muted-foreground mb-1">Célula (px)</div>
                     <input
                       type="number"
                       min={10}
@@ -3517,7 +3517,7 @@ export function MapaModule() {
                         const v = Number(e.target.value);
                         if (Number.isFinite(v) && v > 0) setGridConfig({ dpi: v });
                       }}
-                      className="w-full bg-[#1f2024] border border-[#2a2b30] rounded px-2 py-1 text-zinc-200"
+                      className="w-full bg-secondary border border-border rounded px-2 py-1 text-foreground"
                     />
                   </div>
                 </div>
@@ -3531,7 +3531,7 @@ export function MapaModule() {
                       const v = Number(e.target.value);
                       if (Number.isFinite(v) && v > 0) setGridConfig({ defaultImageHeightM: v });
                     }}
-                    className="w-full bg-[#1f2024] border border-[#2a2b30] rounded px-2 py-1 text-zinc-200"
+                    className="w-full bg-secondary border border-border rounded px-2 py-1 text-foreground"
                   />
                 </Row>
 
@@ -3541,7 +3541,7 @@ export function MapaModule() {
                     onChange={(e) => setGridConfig({ lineWidth: Number(e.target.value) })}
                     className="w-full" />
                 </Row>
-                <label className="flex items-center justify-between text-zinc-300">
+                <label className="flex items-center justify-between text-foreground/80">
                   <span>Snapping (encaixar na grade)</span>
                   <input
                     type="checkbox"
@@ -3555,7 +3555,7 @@ export function MapaModule() {
                     onChange={(e) => setGridConfig({ snappingSensitivity: Number(e.target.value) })}
                     className="w-full" />
                 </Row>
-                <div className="flex items-center gap-3 text-zinc-300">
+                <div className="flex items-center gap-3 text-foreground/80">
                   <label className="flex items-center gap-1">
                     <input type="checkbox" checked={gridConfig.useCorners}
                       onChange={(e) => setGridConfig({ useCorners: e.target.checked })} />
@@ -3576,7 +3576,7 @@ export function MapaModule() {
                   <select
                     value={gridConfig.lineType}
                     onChange={(e) => setGridConfig({ lineType: e.target.value as LineType })}
-                    className="bg-[#1f2024] border border-[#2a2b30] rounded px-2 py-1 w-full text-zinc-200"
+                    className="bg-secondary border border-border rounded px-2 py-1 w-full text-foreground"
                   >
                     <option value="solid">Sólida</option>
                     <option value="dashed">Tracejada</option>
@@ -3585,13 +3585,13 @@ export function MapaModule() {
                 </Row>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <div className="text-zinc-400 mb-1">Cor da grade</div>
+                    <div className="text-muted-foreground mb-1">Cor da grade</div>
                     <input type="color" value={gridConfig.color}
                       onChange={(e) => setGridConfig({ color: e.target.value })}
-                      className="h-7 w-full bg-[#1f2024] border border-[#2a2b30] rounded" />
+                      className="h-7 w-full bg-secondary border border-border rounded" />
                   </div>
                   <div>
-                    <div className="text-zinc-400 mb-1">Opacidade: {Math.round((gridConfig.opacity ?? 0.35) * 100)}%</div>
+                    <div className="text-muted-foreground mb-1">Opacidade: {Math.round((gridConfig.opacity ?? 0.35) * 100)}%</div>
                     <input type="range" min={0.05} max={1} step={0.05}
                       value={gridConfig.opacity ?? 0.35}
                       onChange={(e) => setGridConfig({ opacity: Number(e.target.value) })}
@@ -3603,7 +3603,7 @@ export function MapaModule() {
                   <select
                     value={gridConfig.measurementStyle}
                     onChange={(e) => setGridConfig({ measurementStyle: e.target.value as typeof gridConfig.measurementStyle })}
-                    className="bg-[#1f2024] border border-[#2a2b30] rounded px-2 py-1 w-full text-zinc-200"
+                    className="bg-secondary border border-border rounded px-2 py-1 w-full text-foreground"
                   >
                     <option value="CHEBYSHEV">Chebyshev (5e)</option>
                     <option value="ALTERNATING">Alternada (3.5)</option>
@@ -3693,7 +3693,7 @@ function InitiativeMount() {
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="text-zinc-400 mb-1">{label}</div>
+      <div className="text-muted-foreground mb-1">{label}</div>
       {children}
     </div>
   );
@@ -3704,11 +3704,11 @@ function ViewportControls() {
   const setCamera = useMapStore((s) => s.setCamera);
   const resetCamera = useMapStore((s) => s.resetCamera);
   return (
-    <div className="border-t border-[#2a2b30] pt-2 space-y-2">
-      <div className="text-zinc-400 uppercase tracking-wider text-[10px]">Viewport</div>
+    <div className="border-t border-border pt-2 space-y-2">
+      <div className="text-muted-foreground uppercase tracking-wider text-[10px]">Viewport</div>
       <div className="grid grid-cols-3 gap-2">
         <div>
-          <div className="text-zinc-400 mb-1">Pos X</div>
+          <div className="text-muted-foreground mb-1">Pos X</div>
           <input
             type="number"
             value={Math.round(camera.x)}
@@ -3716,11 +3716,11 @@ function ViewportControls() {
               const v = Number(e.target.value);
               if (Number.isFinite(v)) setCamera({ x: v });
             }}
-            className="w-full bg-[#1f2024] border border-[#2a2b30] rounded px-2 py-1 text-zinc-200"
+            className="w-full bg-secondary border border-border rounded px-2 py-1 text-foreground"
           />
         </div>
         <div>
-          <div className="text-zinc-400 mb-1">Pos Y</div>
+          <div className="text-muted-foreground mb-1">Pos Y</div>
           <input
             type="number"
             value={Math.round(camera.y)}
@@ -3728,11 +3728,11 @@ function ViewportControls() {
               const v = Number(e.target.value);
               if (Number.isFinite(v)) setCamera({ y: v });
             }}
-            className="w-full bg-[#1f2024] border border-[#2a2b30] rounded px-2 py-1 text-zinc-200"
+            className="w-full bg-secondary border border-border rounded px-2 py-1 text-foreground"
           />
         </div>
         <div>
-          <div className="text-zinc-400 mb-1">Zoom %</div>
+          <div className="text-muted-foreground mb-1">Zoom %</div>
           <input
             type="number"
             min={5}
@@ -3742,14 +3742,14 @@ function ViewportControls() {
               const v = Number(e.target.value);
               if (Number.isFinite(v) && v > 0) setCamera({ scale: v / 100 });
             }}
-            className="w-full bg-[#1f2024] border border-[#2a2b30] rounded px-2 py-1 text-zinc-200"
+            className="w-full bg-secondary border border-border rounded px-2 py-1 text-foreground"
           />
         </div>
       </div>
       <button
         type="button"
         onClick={() => resetCamera()}
-        className="w-full h-7 rounded border border-[#2a2b30] hover:bg-[#1f2024] text-zinc-200"
+        className="w-full h-7 rounded border border-border hover:bg-secondary text-foreground"
       >
         Resetar viewport
       </button>

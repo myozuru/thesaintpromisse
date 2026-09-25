@@ -146,7 +146,7 @@ function Pin({
             className="mt-0.5 px-1.5 py-0.5 rounded text-[10px] max-w-[180px] truncate"
             style={{
               background: 'rgba(22,23,26,0.92)',
-              color: '#e6e7eb',
+              color: 'hsl(var(--foreground))',
               border: '1px solid #2a2b30',
             }}
           >
@@ -160,15 +160,15 @@ function Pin({
           className="absolute left-1/2 -translate-x-1/2 mt-1 w-56 rounded-lg p-2 shadow-2xl pointer-events-auto"
           style={{
             top: '4px',
-            background: '#16171a',
+            background: 'hsl(var(--card))',
             border: '1px solid #2a2b30',
-            color: '#e6e7eb',
+            color: 'hsl(var(--foreground))',
           }}
           onMouseDown={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[11px] text-zinc-400">Editar nota</span>
-            <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200">
+            <span className="text-[11px] text-muted-foreground">Editar nota</span>
+            <button onClick={onClose} className="text-zinc-500 hover:text-foreground">
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -181,11 +181,11 @@ function Pin({
             }}
             rows={3}
             placeholder="Texto da nota…"
-            className="w-full text-xs bg-[#1f2024] border border-[#2a2b30] rounded p-1.5 text-zinc-200 resize-none focus:outline-none focus:border-zinc-500"
+            className="w-full text-xs bg-secondary border border-border rounded p-1.5 text-foreground resize-none focus:outline-none focus:border-zinc-500"
           />
           <button
             onClick={onDelete}
-            className="mt-1.5 w-full flex items-center justify-center gap-1.5 px-2 py-1 rounded border border-[#2a2b30] hover:bg-[#1f2024] text-zinc-300 text-xs"
+            className="mt-1.5 w-full flex items-center justify-center gap-1.5 px-2 py-1 rounded border border-border hover:bg-secondary text-foreground/80 text-xs"
           >
             <Trash2 className="h-3 w-3" /> Excluir nota
           </button>

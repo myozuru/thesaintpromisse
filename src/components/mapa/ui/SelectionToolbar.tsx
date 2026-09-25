@@ -130,7 +130,7 @@ export function SelectionToolbar({ visible = true }: { visible?: boolean }) {
           zIndex: 35,
         }}
       >
-        <div className="rounded-full border border-[#2a2b30] bg-[#16171a]/95 backdrop-blur px-2 py-0.5 text-[11px] font-semibold text-zinc-100 shadow-lg tabular-nums">
+        <div className="rounded-full border border-border bg-card/95 backdrop-blur px-2 py-0.5 text-[11px] font-semibold text-foreground shadow-lg tabular-nums">
           {sizeLabel}
         </div>
       </div>
@@ -151,7 +151,7 @@ export function SelectionToolbar({ visible = true }: { visible?: boolean }) {
         onClick={(ev) => ev.stopPropagation()}
         onContextMenu={(ev) => ev.stopPropagation()}
       >
-        <div className="flex items-center gap-0.5 rounded-full border border-[#2a2b30] bg-[#16171a]/95 backdrop-blur px-1.5 py-1 shadow-xl">
+        <div className="flex items-center gap-0.5 rounded-full border border-border bg-card/95 backdrop-blur px-1.5 py-1 shadow-xl">
           {isMaster && (
             <ToolBtn title={e.hidden ? 'Mostrar' : 'Esconder (GM)'} onClick={toggleHidden}>
               {e.hidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -182,7 +182,7 @@ export function SelectionToolbar({ visible = true }: { visible?: boolean }) {
         </div>
 
         {chestMenuOpen && (
-          <div className="flex flex-col gap-1 rounded-md border border-[#2a2b30] bg-[#16171a]/95 backdrop-blur p-2 shadow-xl min-w-[220px] max-h-72 overflow-y-auto">
+          <div className="flex flex-col gap-1 rounded-md border border-border bg-card/95 backdrop-blur p-2 shadow-xl min-w-[220px] max-h-72 overflow-y-auto">
             <button
               type="button"
               onClick={() => {
@@ -210,7 +210,7 @@ export function SelectionToolbar({ visible = true }: { visible?: boolean }) {
             )}
             <div className="h-px bg-[#2a2b30] my-1" />
             {Object.values(chestsRecord).length === 0 ? (
-              <div className="text-[11px] text-zinc-400 italic px-1">Nenhum baú existente.</div>
+              <div className="text-[11px] text-muted-foreground italic px-1">Nenhum baú existente.</div>
             ) : (
               Object.values(chestsRecord)
                 .sort((a, b) => b.updatedAt - a.updatedAt)
@@ -226,10 +226,10 @@ export function SelectionToolbar({ visible = true }: { visible?: boolean }) {
                     className={`h-7 px-2 rounded text-xs text-left truncate ${
                       e.chestId === c.id
                         ? 'bg-sky-500/25 text-sky-100'
-                        : 'text-zinc-200 hover:bg-[#1f2024]'
+                        : 'text-foreground hover:bg-secondary'
                     }`}
                   >
-                    {c.name} <span className="text-zinc-400">({c.entries.length})</span>
+                    {c.name} <span className="text-muted-foreground">({c.entries.length})</span>
                   </button>
                 ))
             )}
@@ -237,7 +237,7 @@ export function SelectionToolbar({ visible = true }: { visible?: boolean }) {
         )}
 
         {renaming && (
-          <div className="flex items-center gap-1 rounded-md border border-[#2a2b30] bg-[#16171a]/95 backdrop-blur px-1.5 py-1 shadow-xl">
+          <div className="flex items-center gap-1 rounded-md border border-border bg-card/95 backdrop-blur px-1.5 py-1 shadow-xl">
             <input
               ref={inputRef}
               value={draft}
@@ -247,7 +247,7 @@ export function SelectionToolbar({ visible = true }: { visible?: boolean }) {
                 else if (ev.key === 'Escape') { ev.preventDefault(); cancelRename(); }
               }}
               placeholder="Nome"
-              className="h-7 w-44 rounded bg-[#0f1012] border border-[#2a2b30] px-2 text-xs text-zinc-100 outline-none focus:border-sky-400/60"
+              className="h-7 w-44 rounded bg-background border border-border px-2 text-xs text-foreground outline-none focus:border-primary/60"
             />
             <button
               type="button"
@@ -278,7 +278,7 @@ function ToolBtn({
           ? 'bg-sky-500/20 text-sky-200'
           : danger
             ? 'text-red-300 hover:bg-red-500/15 hover:text-red-200'
-            : 'text-zinc-300 hover:bg-[#1f2024] hover:text-white'
+            : 'text-foreground/80 hover:bg-secondary hover:text-white'
       }`}
     >
       {children}

@@ -54,7 +54,7 @@ export function OpportunityRailButton() {
 
       {open && (
         <div
-          className="absolute left-full top-0 ml-2 w-72 rounded-md border border-[#2a2b30] bg-[#16171a] p-3 shadow-xl z-50 text-[12px] text-zinc-200"
+          className="absolute left-full top-0 ml-2 w-72 rounded-md border border-border bg-card p-3 shadow-xl z-50 text-[12px] text-foreground"
           onMouseDown={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between mb-2">
@@ -63,16 +63,16 @@ export function OpportunityRailButton() {
             </div>
             <button
               onClick={() => setOpen(false)}
-              className="h-6 w-6 flex items-center justify-center rounded hover:bg-[#1f2025]"
+              className="h-6 w-6 flex items-center justify-center rounded hover:bg-secondary"
             >
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
 
-          <div className="text-[10px] uppercase tracking-wider text-zinc-400 mb-1">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
             Quem recebe o AdO
           </div>
-          <div className="max-h-40 overflow-auto rounded border border-[#2a2b30] bg-[#1a1b1f] mb-2">
+          <div className="max-h-40 overflow-auto rounded border border-border bg-[#1a1b1f] mb-2">
             {characters.length === 0 && (
               <div className="px-2 py-2 text-zinc-500 text-[11px]">
                 Nenhum personagem disponível.
@@ -85,7 +85,7 @@ export function OpportunityRailButton() {
                 <button
                   key={c.id}
                   onClick={() => toggleRecipient(c.id)}
-                  className={`w-full flex items-center gap-2 px-2 py-1 text-left text-[12px] hover:bg-[#23252a] ${
+                  className={`w-full flex items-center gap-2 px-2 py-1 text-left text-[12px] hover:bg-secondary ${
                     checked ? 'bg-amber-500/10' : ''
                   }`}
                 >
@@ -109,13 +109,13 @@ export function OpportunityRailButton() {
             })}
           </div>
 
-          <div className="text-[10px] uppercase tracking-wider text-zinc-400 mb-1">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
             Contra quem (alvo)
           </div>
           <select
             value={target}
             onChange={(e) => setTarget(e.target.value)}
-            className="w-full h-7 px-1 mb-2 rounded bg-[#1f2025] border border-[#2a2b30] text-[12px]"
+            className="w-full h-7 px-1 mb-2 rounded bg-secondary border border-border text-[12px]"
           >
             <option value="">— qualquer um —</option>
             {characters.map((c) => (
@@ -125,7 +125,7 @@ export function OpportunityRailButton() {
             ))}
           </select>
 
-          <div className="text-[10px] uppercase tracking-wider text-zinc-400 mb-1">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
             Tipo
           </div>
           <div className="flex gap-1 mb-3">
@@ -142,7 +142,7 @@ export function OpportunityRailButton() {
                 className={`flex-1 h-7 rounded text-[11px] ${
                   mode === m
                     ? 'bg-amber-500/30 text-amber-100 border border-amber-500/60'
-                    : 'bg-[#1f2025] hover:bg-[#26272c] border border-[#2a2b30]'
+                    : 'bg-secondary hover:bg-accent/20 border border-border'
                 }`}
               >
                 {label}

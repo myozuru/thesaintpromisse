@@ -51,9 +51,9 @@ export function PartyPanel({ collapsed, onToggleCollapsed }: Props) {
         type="button"
         onClick={onToggleCollapsed}
         title={collapsed ? 'Abrir Party' : 'Esconder Party'}
-        className="h-full w-6 flex items-center justify-center text-zinc-400 hover:text-zinc-100 transition-colors shrink-0"
+        className="h-full w-6 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shrink-0"
         style={{
-          background: '#16171a',
+          background: 'hsl(var(--card))',
           borderLeft: '1px solid #2a2b30',
           borderRight: collapsed ? 'none' : '1px solid #2a2b30',
         }}
@@ -66,8 +66,8 @@ export function PartyPanel({ collapsed, onToggleCollapsed }: Props) {
           className="h-full flex flex-col overflow-hidden"
           style={{
             width: panelWidth,
-            background: '#16171a',
-            color: '#e6e7eb',
+            background: 'hsl(var(--card))',
+            color: 'hsl(var(--foreground))',
           }}
         >
           {showSheet ? (
@@ -87,16 +87,16 @@ export function PartyPanel({ collapsed, onToggleCollapsed }: Props) {
               action={
                 <button
                   type="button"
-                  className="text-zinc-500 hover:text-zinc-200"
+                  className="text-zinc-500 hover:text-foreground"
                   title="Convidar (em breve)"
                 >
                   <UserPlus className="h-3.5 w-3.5" />
                 </button>
               }
             >
-              <div className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-[#1f2024]">
+              <div className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-secondary">
                 <span className="inline-block h-7 w-7 rounded-full bg-amber-600 ring-2 ring-[#16171a]" />
-                <span className="text-zinc-200 flex-1 text-sm truncate">Você (GM)</span>
+                <span className="text-foreground flex-1 text-sm truncate">Você (GM)</span>
                 <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
                   GM
                 </span>
@@ -124,8 +124,8 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="border-b border-[#2a2b30] px-3 py-2.5">
-      <div className="flex items-center gap-1.5 mb-2 text-zinc-400 text-[10px] uppercase tracking-wider">
+    <div className="border-b border-border px-3 py-2.5">
+      <div className="flex items-center gap-1.5 mb-2 text-muted-foreground text-[10px] uppercase tracking-wider">
         {icon}
         <span className="flex-1">{title}</span>
         {action}

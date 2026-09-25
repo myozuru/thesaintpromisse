@@ -32,17 +32,17 @@ export function WelcomeTutorial({ onClose, onOpenShortcuts }: Props) {
       <div
         onClick={(e) => e.stopPropagation()}
         className="w-[560px] max-w-[92vw] rounded-lg border shadow-2xl overflow-hidden"
-        style={{ background: '#16171a', borderColor: '#2a2b30', color: '#e6e7eb' }}
+        style={{ background: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }}
       >
         <div
           className="flex items-center h-10 px-3 border-b"
-          style={{ borderColor: '#2a2b30' }}
+          style={{ borderColor: 'hsl(var(--border))' }}
         >
           <Sparkles className="h-4 w-4 text-amber-300 mr-2" />
           <div className="text-sm font-semibold">Bem-vindo ao Mapa</div>
           <button
             onClick={onClose}
-            className="ml-auto h-7 w-7 rounded flex items-center justify-center text-zinc-400 hover:bg-[#1f2024]"
+            className="ml-auto h-7 w-7 rounded flex items-center justify-center text-muted-foreground hover:bg-secondary"
           >
             <X className="h-4 w-4" />
           </button>
@@ -59,7 +59,7 @@ export function WelcomeTutorial({ onClose, onOpenShortcuts }: Props) {
               </div>
               <div>
                 <div className="text-xs font-semibold">{title}</div>
-                <div className="text-xs text-zinc-400 leading-snug">{body}</div>
+                <div className="text-xs text-muted-foreground leading-snug">{body}</div>
               </div>
             </div>
           ))}
@@ -67,12 +67,12 @@ export function WelcomeTutorial({ onClose, onOpenShortcuts }: Props) {
 
         <div
           className="flex items-center gap-2 px-3 h-11 border-t"
-          style={{ borderColor: '#2a2b30', background: '#131417' }}
+          style={{ borderColor: 'hsl(var(--border))', background: '#131417' }}
         >
           <button
             onClick={() => { onClose(); onOpenShortcuts(); }}
-            className="h-7 px-3 rounded text-xs text-zinc-200 hover:bg-[#1f2024] border"
-            style={{ borderColor: '#2a2b30' }}
+            className="h-7 px-3 rounded text-xs text-foreground hover:bg-secondary border"
+            style={{ borderColor: 'hsl(var(--border))' }}
           >
             Ver todos os atalhos
           </button>

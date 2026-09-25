@@ -90,14 +90,14 @@ export function LayerPanel({ onClose }: Props) {
   return (
     <div
       className="absolute top-2 right-3 w-72 max-h-[80%] pointer-events-auto rounded-lg shadow-xl flex flex-col text-xs"
-      style={{ background: '#16171a', border: '1px solid #2a2b30', color: '#e6e7eb', zIndex: 20 }}
+      style={{ background: 'hsl(var(--card))', border: '1px solid #2a2b30', color: 'hsl(var(--foreground))', zIndex: 20 }}
     >
-      <div className="flex items-center justify-between px-3 py-2 border-b border-[#2a2b30]">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border">
         <div className="flex items-center gap-1.5">
           <Layers className="h-3.5 w-3.5" />
           <span className="text-sm font-medium">Camadas</span>
         </div>
-        <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200" title="Fechar">×</button>
+        <button onClick={onClose} className="text-zinc-500 hover:text-foreground" title="Fechar">×</button>
       </div>
 
       <div className="flex-1 overflow-auto p-1">
@@ -107,23 +107,23 @@ export function LayerPanel({ onClose }: Props) {
           return (
             <div key={layer} className="mb-1">
               <div
-                className="flex items-center gap-1 px-1.5 py-1 rounded hover:bg-[#1f2024]"
+                className="flex items-center gap-1 px-1.5 py-1 rounded hover:bg-secondary"
                 onDragOver={(e) => { e.preventDefault(); }}
                 onDrop={(e) => { e.preventDefault(); handleDropOn(null, layer); }}
               >
                 <button
                   onClick={() => setCollapsed((c) => ({ ...c, [layer]: !c[layer] }))}
-                  className="text-zinc-400 hover:text-zinc-200"
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                 </button>
-                <span className="text-[11px] uppercase tracking-wider text-zinc-400 flex-1">
-                  {LAYER_LABEL[layer]} <span className="text-zinc-600">· {items.length}</span>
+                <span className="text-[11px] uppercase tracking-wider text-muted-foreground flex-1">
+                  {LAYER_LABEL[layer]} <span className="text-muted-foreground/40">· {items.length}</span>
                 </span>
                 <button
                   title={layerVisible[layer] ? 'Ocultar camada' : 'Mostrar camada'}
                   onClick={() => setLayerVisible(layer, !layerVisible[layer])}
-                  className="text-zinc-400 hover:text-zinc-200"
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   {layerVisible[layer] ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                 </button>
@@ -133,7 +133,7 @@ export function LayerPanel({ onClose }: Props) {
                 <div className="ml-1 mt-0.5">
                   {items.length === 0 && (
                     <div
-                      className="px-2 py-1.5 text-[10px] text-zinc-600 italic border border-dashed border-[#2a2b30] rounded mx-1"
+                      className="px-2 py-1.5 text-[10px] text-muted-foreground/40 italic border border-dashed border-border rounded mx-1"
                       onDragOver={(e) => { e.preventDefault(); }}
                       onDrop={(e) => { e.preventDefault(); handleDropOn(null, layer); }}
                     >
@@ -162,10 +162,10 @@ export function LayerPanel({ onClose }: Props) {
                           }
                         }}
                         className={`flex items-center gap-1.5 px-1.5 py-1 rounded cursor-pointer ${
-                          selected ? 'bg-[#1d2a3a] outline outline-1 outline-sky-700' : 'hover:bg-[#1f2024]'
+                          selected ? 'bg-[#1d2a3a] outline outline-1 outline-sky-700' : 'hover:bg-secondary'
                         }`}
                       >
-                        <GripVertical className="h-3 w-3 text-zinc-600 shrink-0" />
+                        <GripVertical className="h-3 w-3 text-muted-foreground/40 shrink-0" />
                         <span
                           className="h-3 w-3 rounded-sm shrink-0"
                           style={{
@@ -185,21 +185,21 @@ export function LayerPanel({ onClose }: Props) {
                               if (ev.key === 'Enter') (ev.target as HTMLInputElement).blur();
                               if (ev.key === 'Escape') setEditingId(null);
                             }}
-                            className="flex-1 bg-[#0f1014] border border-[#2a2b30] rounded px-1 text-[11px] text-zinc-200"
+                            className="flex-1 bg-[#0f1014] border border-border rounded px-1 text-[11px] text-foreground"
                           />
                         ) : (
                           <button
-                            className="flex-1 text-left truncate text-zinc-200"
+                            className="flex-1 text-left truncate text-foreground"
                             onDoubleClick={(ev) => { ev.stopPropagation(); setEditingId(e.id); }}
                             title="Duplo-clique para renomear"
                           >
-                            {e.label || <span className="text-zinc-600 italic">sem nome</span>}
+                            {e.label || <span className="text-muted-foreground/40 italic">sem nome</span>}
                           </button>
                         )}
                         <button
                           title="Mostrar nameplate"
                           onClick={(ev) => { ev.stopPropagation(); updateEntity(e.id, { nameplate: !e.nameplate }); }}
-                          className={`text-zinc-500 hover:text-zinc-200 ${e.nameplate ? 'text-sky-300' : ''}`}
+                          className={`text-zinc-500 hover:text-foreground ${e.nameplate ? 'text-sky-300' : ''}`}
                         >
                           <Tag className="h-3.5 w-3.5" />
                         </button>
@@ -221,21 +221,21 @@ export function LayerPanel({ onClose }: Props) {
                               if (!Number.isNaN(n)) updateEntity(e.id, { hp: n, hpMax: n });
                             }
                           }}
-                          className={`text-zinc-500 hover:text-zinc-200 ${typeof e.hp === 'number' ? 'text-rose-300' : ''}`}
+                          className={`text-zinc-500 hover:text-foreground ${typeof e.hp === 'number' ? 'text-rose-300' : ''}`}
                         >
                           <Heart className="h-3.5 w-3.5" />
                         </button>
                         <button
                           title={e.hidden ? 'Mostrar' : 'Ocultar'}
                           onClick={(ev) => { ev.stopPropagation(); updateEntity(e.id, { hidden: !e.hidden }); }}
-                          className="text-zinc-500 hover:text-zinc-200"
+                          className="text-zinc-500 hover:text-foreground"
                         >
                           {e.hidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                         </button>
                         <button
                           title={e.locked ? 'Destravar' : 'Travar'}
                           onClick={(ev) => { ev.stopPropagation(); updateEntity(e.id, { locked: !e.locked }); }}
-                          className="text-zinc-500 hover:text-zinc-200"
+                          className="text-zinc-500 hover:text-foreground"
                         >
                           {e.locked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
                         </button>
@@ -261,7 +261,7 @@ export function LayerPanel({ onClose }: Props) {
         })}
       </div>
 
-      <div className="px-3 py-1.5 border-t border-[#2a2b30] text-[10px] text-zinc-500">
+      <div className="px-3 py-1.5 border-t border-border text-[10px] text-zinc-500">
         Arraste para reordenar/trocar de camada. Shift+clique para multi-seleção.
       </div>
     </div>
