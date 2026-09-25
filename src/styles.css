@@ -60,6 +60,7 @@
 
 @layer base {
   :root {
+    color-scheme: dark;
     --radius: 0.625rem;
 
     /* Sombrio místico — violeta profundo + dourado oculto */
