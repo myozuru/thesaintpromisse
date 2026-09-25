@@ -72,9 +72,9 @@ export function ToolSettingsPanel({ placement = 'rail' }: { placement?: 'rail' |
       style={{
         top,
         left: 52,
-        background: '#16171a',
-        border: '1px solid #2a2b30',
-        color: '#e6e7eb',
+        background: 'hsl(var(--card))',
+        border: '1px solid hsl(var(--border))',
+        color: 'hsl(var(--foreground))',
       }}
     >
       <HelpVisibilityContext.Provider value={true}>

@@ -31,7 +31,7 @@ export function OpportunityPromptOverlay() {
 
   return (
     <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] w-[420px] max-w-[92vw]">
-      <div className="rounded-lg border border-amber-500/60 bg-[#16171a]/97 backdrop-blur shadow-2xl">
+      <div className="rounded-lg border border-amber-500/60 bg-card/95 backdrop-blur shadow-2xl">
         <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-amber-500/30">
           <div className="flex items-center gap-2 text-amber-200 text-[12px] font-semibold uppercase tracking-wider">
             <Swords className="h-4 w-4" />
@@ -39,13 +39,13 @@ export function OpportunityPromptOverlay() {
           </div>
           <button
             onClick={dismiss}
-            className="h-6 w-6 flex items-center justify-center rounded hover:bg-white/10 text-zinc-300"
+            className="h-6 w-6 flex items-center justify-center rounded hover:bg-white/10 text-foreground/80"
             title="Fechar"
           >
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
-        <div className="px-3 py-2 text-[12px] text-zinc-200">
+        <div className="px-3 py-2 text-[12px] text-foreground">
           <span className="text-amber-200 font-semibold">{pending.triggerCharName}</span>{' '}
           saiu da adjacência. Provocou:
         </div>
@@ -53,9 +53,9 @@ export function OpportunityPromptOverlay() {
           {pending.candidates.map((c) => (
             <div
               key={c.charId}
-              className="flex items-center justify-between gap-2 rounded bg-[#1f2025] border border-[#2a2b30] px-2 py-1.5"
+              className="flex items-center justify-between gap-2 rounded bg-secondary border border-border px-2 py-1.5"
             >
-              <span className="text-[12px] text-zinc-100 truncate">{c.charName}</span>
+              <span className="text-[12px] text-foreground truncate">{c.charName}</span>
               {isMaster ? (
                 <div className="flex gap-1">
                   {(c.mode === 'reaction' || c.mode === 'either') && (
@@ -78,7 +78,7 @@ export function OpportunityPromptOverlay() {
                   )}
                 </div>
               ) : (
-                <span className="text-[10px] text-zinc-500 uppercase tracking-wider">aguardando mestre</span>
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">aguardando mestre</span>
               )}
             </div>
           ))}

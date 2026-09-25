@@ -54,7 +54,7 @@ export function SceneTabs() {
             <div
               key={id}
               className="flex items-center gap-1 h-7 px-2 rounded-md text-xs"
-              style={{ background: '#1f2024', border: '1px solid #3a3b40' }}
+              style={{ background: 'hsl(var(--secondary))', border: '1px solid #3a3b40' }}
             >
               <input
                 autoFocus
@@ -64,10 +64,10 @@ export function SceneTabs() {
                   if (e.key === 'Enter') commit();
                   if (e.key === 'Escape') setEditing(null);
                 }}
-                className="bg-transparent outline-none text-zinc-200 w-28"
+                className="bg-transparent outline-none text-foreground w-28"
               />
               <button onClick={commit} className="text-emerald-400 hover:text-emerald-300"><Check className="h-3 w-3" /></button>
-              <button onClick={() => setEditing(null)} className="text-zinc-500 hover:text-zinc-300"><X className="h-3 w-3" /></button>
+              <button onClick={() => setEditing(null)} className="text-muted-foreground hover:text-foreground/80"><X className="h-3 w-3" /></button>
             </div>
           );
         }
@@ -83,10 +83,10 @@ export function SceneTabs() {
             }}
             className="h-7 px-2.5 rounded-md text-xs whitespace-nowrap transition-colors"
             style={{
-              background: isActive ? '#2a2b30' : 'transparent',
+              background: isActive ? 'hsl(var(--border))' : 'transparent',
               border: '1px solid',
               borderColor: isActive ? '#3a3b40' : 'transparent',
-              color: isActive ? '#e6e7eb' : '#9ca3af',
+              color: isActive ? 'hsl(var(--foreground))' : 'hsl(var(--muted-foreground))',
             }}
             title={`${sc.name} (duplo-clique para renomear)`}
           >
@@ -98,7 +98,7 @@ export function SceneTabs() {
         type="button"
         onClick={() => createScene()}
         title="Nova cena"
-        className="h-7 w-7 rounded-md flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-[#2a2b30]"
+        className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary"
       >
         <Plus className="h-3.5 w-3.5" />
       </button>
@@ -110,10 +110,10 @@ export function SceneTabs() {
           style={{
             left: menu.x,
             top: menu.y,
-            background: '#16171a',
-            border: '1px solid #2a2b30',
+            background: 'hsl(var(--card))',
+            border: '1px solid hsl(var(--border))',
             minWidth: 160,
-            color: '#e6e7eb',
+            color: 'hsl(var(--foreground))',
           }}
         >
           <MenuItem icon={<Pencil className="h-3 w-3" />} onClick={() => beginEdit(menu.id)}>Renomear</MenuItem>
@@ -151,7 +151,7 @@ export function SceneTabs() {
           >
             Exportar
           </MenuItem>
-          <div className="my-1 border-t border-[#2a2b30]" />
+          <div className="my-1 border-t border-border" />
           <MenuItem
             icon={<Trash2 className="h-3 w-3 text-red-400" />}
             disabled={sceneOrder.length <= 1}
@@ -185,7 +185,7 @@ function MenuItem({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-[#1f2024] disabled:opacity-40 disabled:cursor-not-allowed"
+      className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed"
       style={{ color: danger ? '#fca5a5' : undefined }}
     >
       {icon}

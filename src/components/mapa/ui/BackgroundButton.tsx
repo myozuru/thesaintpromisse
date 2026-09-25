@@ -73,7 +73,7 @@ export function BackgroundButton() {
           if (background) setOpen((v) => !v);
           else fileRef.current?.click();
         }}
-        className="h-8 w-8 rounded-md flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-[#2a2b30]"
+        className="h-8 w-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary"
         style={background ? { color: '#a3e3ff' } : undefined}
       >
         <ImageIcon className="h-4 w-4" />
@@ -83,15 +83,15 @@ export function BackgroundButton() {
         <div
           ref={popRef}
           className="absolute right-0 top-9 z-50 w-64 rounded-lg p-3 text-xs space-y-3 shadow-xl"
-          style={{ background: '#16171a', border: '1px solid #2a2b30', color: '#e6e7eb' }}
+          style={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))' }}
         >
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">Fundo da cena</span>
-            <button onClick={() => setOpen(false)} className="text-zinc-500 hover:text-zinc-200">×</button>
+            <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground">×</button>
           </div>
 
           <div>
-            <div className="text-zinc-400 mb-1">Largura: {Math.round(background.w)}</div>
+            <div className="text-muted-foreground mb-1">Largura: {Math.round(background.w)}</div>
             <input
               type="range" min={100} max={8000} step={10}
               value={Math.min(background.w, 8000)}
@@ -104,7 +104,7 @@ export function BackgroundButton() {
             />
           </div>
           <div>
-            <div className="text-zinc-400 mb-1">Opacidade: {Math.round(background.opacity * 100)}%</div>
+            <div className="text-muted-foreground mb-1">Opacidade: {Math.round(background.opacity * 100)}%</div>
             <input
               type="range" min={0.1} max={1} step={0.05}
               value={background.opacity}
@@ -114,29 +114,29 @@ export function BackgroundButton() {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <label className="block">
-              <span className="text-zinc-400">X</span>
+              <span className="text-muted-foreground">X</span>
               <input
                 type="number"
                 value={Math.round(background.x)}
                 onChange={(e) => setBackground({ x: Number(e.target.value) })}
-                className="w-full bg-[#1f2024] border border-[#2a2b30] rounded px-2 py-1 text-zinc-200"
+                className="w-full bg-secondary border border-border rounded px-2 py-1 text-foreground"
               />
             </label>
             <label className="block">
-              <span className="text-zinc-400">Y</span>
+              <span className="text-muted-foreground">Y</span>
               <input
                 type="number"
                 value={Math.round(background.y)}
                 onChange={(e) => setBackground({ y: Number(e.target.value) })}
-                className="w-full bg-[#1f2024] border border-[#2a2b30] rounded px-2 py-1 text-zinc-200"
+                className="w-full bg-secondary border border-border rounded px-2 py-1 text-foreground"
               />
             </label>
           </div>
 
-          <div className="flex items-center gap-2 pt-2 border-t border-[#2a2b30]">
+          <div className="flex items-center gap-2 pt-2 border-t border-border">
             <button
               onClick={() => fileRef.current?.click()}
-              className="flex-1 h-7 rounded border border-[#2a2b30] hover:bg-[#1f2024] flex items-center justify-center gap-1 text-zinc-300"
+              className="flex-1 h-7 rounded border border-border hover:bg-secondary flex items-center justify-center gap-1 text-foreground/80"
             >
               <Upload className="h-3 w-3" /> Trocar
             </button>
@@ -148,7 +148,7 @@ export function BackgroundButton() {
                 void assetCache.destroy(aid);
                 setOpen(false);
               }}
-              className="flex-1 h-7 rounded border border-[#2a2b30] hover:bg-[#1f2024] flex items-center justify-center gap-1 text-red-300"
+              className="flex-1 h-7 rounded border border-border hover:bg-secondary flex items-center justify-center gap-1 text-red-300"
             >
               <Trash2 className="h-3 w-3" /> Remover
             </button>

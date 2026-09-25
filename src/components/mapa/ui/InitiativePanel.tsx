@@ -184,23 +184,23 @@ export function InitiativePanel({ onClose }: Props) {
       ref={containerRef}
       className="absolute left-3 bottom-3 w-72 rounded-lg shadow-xl flex flex-col text-xs pointer-events-auto"
       style={{
-        background: '#16171a',
-        border: '1px solid #2a2b30',
-        color: '#e6e7eb',
+        background: 'hsl(var(--card))',
+        border: '1px solid hsl(var(--border))',
+        color: 'hsl(var(--foreground))',
         maxHeight: 'calc(100% - 80px)',
         zIndex: 20,
       }}
     >
       {/* Cabeçalho */}
-      <div className="flex items-center gap-2 px-3 h-9 border-b border-[#2a2b30] shrink-0">
+      <div className="flex items-center gap-2 px-3 h-9 border-b border-border shrink-0">
         <Swords className="h-4 w-4 text-amber-300" />
-        <span className="font-medium text-zinc-200">Iniciativa</span>
-        <span className="ml-2 px-1.5 py-0.5 rounded bg-[#1f2024] text-[10px] tracking-wider uppercase text-zinc-400">
+        <span className="font-medium text-foreground">Iniciativa</span>
+        <span className="ml-2 px-1.5 py-0.5 rounded bg-secondary text-[10px] tracking-wider uppercase text-muted-foreground">
           Round {init.round}
         </span>
         <button
           onClick={onClose}
-          className="ml-auto text-zinc-500 hover:text-zinc-200"
+          className="ml-auto text-muted-foreground hover:text-foreground"
           title="Fechar"
         >
           <X className="h-4 w-4" />
@@ -210,7 +210,7 @@ export function InitiativePanel({ onClose }: Props) {
       {/* Lista */}
       <div className="flex-1 overflow-auto p-2 space-y-1">
         {ordered.length === 0 && (
-          <div className="text-zinc-500 text-center py-6 px-2">
+          <div className="text-muted-foreground text-center py-6 px-2">
             Nenhum combatente. Adicione tokens pelo menu de contexto ou pelo botão abaixo.
           </div>
         )}
@@ -222,8 +222,8 @@ export function InitiativePanel({ onClose }: Props) {
               key={e.id}
               className="flex items-center gap-2 rounded px-2 py-1.5"
               style={{
-                background: isActive ? 'rgba(252,211,77,0.10)' : '#1f2024',
-                border: `1px solid ${isActive ? '#fcd34d' : '#2a2b30'}`,
+                background: isActive ? 'rgba(252,211,77,0.10)' : 'hsl(var(--secondary))',
+                border: `1px solid ${isActive ? '#fcd34d' : 'hsl(var(--border))'}`,
               }}
             >
               <div
@@ -234,14 +234,14 @@ export function InitiativePanel({ onClose }: Props) {
               <input
                 value={e.name}
                 onChange={(ev) => updateInitiative(e.id, { name: ev.target.value })}
-                className="flex-1 min-w-0 bg-transparent outline-none text-zinc-100"
+                className="flex-1 min-w-0 bg-transparent outline-none text-foreground"
               />
               {(e.hpMax ?? 0) > 0 && (
                 <input
                   type="number"
                   value={e.hp ?? 0}
                   onChange={(ev) => updateInitiative(e.id, { hp: Number(ev.target.value) })}
-                  className="w-10 bg-[#16171a] border border-[#2a2b30] rounded px-1 py-0.5 text-zinc-200 text-right"
+                  className="w-10 bg-card border border-border rounded px-1 py-0.5 text-foreground text-right"
                   title="HP atual"
                 />
               )}
@@ -249,13 +249,13 @@ export function InitiativePanel({ onClose }: Props) {
                 type="number"
                 value={e.init}
                 onChange={(ev) => updateInitiative(e.id, { init: Number(ev.target.value) })}
-                className="w-10 bg-[#16171a] border border-[#2a2b30] rounded px-1 py-0.5 text-zinc-200 text-right font-medium"
+                className="w-10 bg-card border border-border rounded px-1 py-0.5 text-foreground text-right font-medium"
                 title="Iniciativa"
               />
               {e.entityId && (
                 <button
                   onClick={() => focusEntity(e.entityId)}
-                  className="text-zinc-500 hover:text-amber-300"
+                  className="text-muted-foreground hover:text-amber-300"
                   title="Centralizar no mapa"
                 >
                   <Target className="h-3.5 w-3.5" />
@@ -263,7 +263,7 @@ export function InitiativePanel({ onClose }: Props) {
               )}
               <button
                 onClick={() => removeInitiative(e.id)}
-                className="text-zinc-500 hover:text-red-300"
+                className="text-muted-foreground hover:text-red-300"
                 title="Remover"
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -274,12 +274,12 @@ export function InitiativePanel({ onClose }: Props) {
       </div>
 
       {/* Controles */}
-      <div className="border-t border-[#2a2b30] p-2 space-y-2 shrink-0">
+      <div className="border-t border-border p-2 space-y-2 shrink-0">
         <div className="flex items-center gap-1">
           <button
             onClick={prevTurn}
             disabled={!ordered.length}
-            className="h-7 px-2 rounded border border-[#2a2b30] hover:bg-[#1f2024] disabled:opacity-40 disabled:cursor-not-allowed text-zinc-300 flex items-center gap-1"
+            className="h-7 px-2 rounded border border-border hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed text-foreground/80 flex items-center gap-1"
           >
             <ChevronLeft className="h-3 w-3" />
             Anterior
@@ -287,7 +287,7 @@ export function InitiativePanel({ onClose }: Props) {
           <button
             onClick={nextTurn}
             disabled={!ordered.length}
-            className="h-7 px-2 rounded text-zinc-900 font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+            className="h-7 px-2 rounded text-accent-foreground font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
             style={{ background: '#fcd34d' }}
           >
             Próximo
@@ -298,7 +298,7 @@ export function InitiativePanel({ onClose }: Props) {
             onClick={() => {
               if (confirm('Reiniciar encontro? (round 1, índice 0)')) resetEncounter();
             }}
-            className="h-7 w-7 flex items-center justify-center rounded border border-[#2a2b30] hover:bg-[#1f2024] text-zinc-400"
+            className="h-7 w-7 flex items-center justify-center rounded border border-border hover:bg-secondary text-muted-foreground"
             title="Reiniciar encontro"
           >
             <RotateCcw className="h-3.5 w-3.5" />
@@ -323,21 +323,21 @@ export function InitiativePanel({ onClose }: Props) {
                 void id;
               }, 0);
             }}
-            className="h-7 px-2 flex items-center gap-1 rounded border border-[#2a2b30] hover:bg-[#1f2024] text-zinc-300"
+            className="h-7 px-2 flex items-center gap-1 rounded border border-border hover:bg-secondary text-foreground/80"
           >
             <Plus className="h-3 w-3" /> Manual
           </button>
 
           <button
             onClick={sortInitiative}
-            className="h-7 px-2 flex items-center gap-1 rounded border border-[#2a2b30] hover:bg-[#1f2024] text-zinc-300"
+            className="h-7 px-2 flex items-center gap-1 rounded border border-border hover:bg-secondary text-foreground/80"
             title="Ordenar por iniciativa"
           >
             <ListOrdered className="h-3 w-3" /> Ordenar
           </button>
           <button
             onClick={rollAll}
-            className="h-7 px-2 flex items-center gap-1 rounded border border-[#2a2b30] hover:bg-[#1f2024] text-zinc-300"
+            className="h-7 px-2 flex items-center gap-1 rounded border border-border hover:bg-secondary text-foreground/80"
             title="Rolar 1d20 para todos (local)"
           >
             <Dices className="h-3 w-3" /> Rolar
@@ -352,7 +352,7 @@ export function InitiativePanel({ onClose }: Props) {
             {pendingBatchId ? `Aguardando ${waitingCount}` : 'Pedir & Iniciar'}
           </button>
           <div className="flex-1" />
-          <span className="text-zinc-500 tabular-nums">
+          <span className="text-muted-foreground tabular-nums">
             <Check className="inline h-3 w-3 mr-0.5" />
             {init.turnIndex + (ordered.length ? 1 : 0)}/{ordered.length}
           </span>

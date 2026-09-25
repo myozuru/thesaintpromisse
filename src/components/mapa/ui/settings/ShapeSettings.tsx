@@ -33,12 +33,12 @@ export function ShapeSettings() {
         <input
           type="color" value={color}
           onChange={(e) => setToolSettings('shape', { color: e.target.value })}
-          className="h-8 w-full bg-[#1f2024] border border-[#2a2b30] rounded cursor-pointer"
+          className="h-8 w-full bg-secondary border border-border rounded cursor-pointer"
         />
       </div>
 
       {showHelp && (
-        <p className="text-zinc-500 text-[11px] leading-relaxed">
+        <p className="text-muted-foreground text-[11px] leading-relaxed">
           Duplo-clique no mapa para criar.
         </p>
       )}
@@ -47,10 +47,10 @@ export function ShapeSettings() {
 }
 
 function Header({ label }: { label: string }) {
-  return <div className="text-zinc-300 text-xs font-semibold uppercase tracking-wider">{label}</div>;
+  return <div className="text-foreground/80 text-xs font-semibold uppercase tracking-wider">{label}</div>;
 }
 function Label({ children }: { children: React.ReactNode }) {
-  return <div className="text-zinc-400 text-[11px] mb-1">{children}</div>;
+  return <div className="text-muted-foreground text-[11px] mb-1">{children}</div>;
 }
 function SegBtn({
   active, onClick, children,
@@ -61,8 +61,8 @@ function SegBtn({
       onClick={onClick}
       className={`flex items-center justify-center gap-1 px-2 py-1.5 rounded text-[11px] font-medium transition-colors ${
         active
-          ? 'bg-zinc-100 text-zinc-900'
-          : 'bg-[#1f2024] text-zinc-300 hover:bg-[#23252a] border border-[#2a2b30]'
+          ? 'bg-zinc-100 text-accent-foreground'
+          : 'bg-secondary text-foreground/80 hover:bg-secondary border border-border'
       }`}
     >
       {children}

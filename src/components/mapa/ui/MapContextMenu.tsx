@@ -125,7 +125,7 @@ export function MapContextMenu({
       <div
         ref={rootRef}
         className="fixed z-[1000] min-w-[160px] rounded-md border p-1 text-xs shadow-2xl"
-        style={{ left: x, top: y, background: '#16171a', borderColor: '#2a2b30', color: '#e6e7eb' }}
+        style={{ left: x, top: y, background: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', color: 'hsl(var(--foreground))' }}
         onContextMenu={(e) => e.preventDefault()}
         onMouseDown={(e) => e.stopPropagation()}
         onMouseUp={(e) => e.stopPropagation()}
@@ -147,9 +147,9 @@ export function MapContextMenu({
       className="fixed z-[1000] min-w-[200px] rounded-md border p-1 text-xs shadow-2xl"
       style={{
         left: x, top: y,
-        background: '#16171a',
-        borderColor: '#2a2b30',
-        color: '#e6e7eb',
+        background: 'hsl(var(--card))',
+        borderColor: 'hsl(var(--border))',
+        color: 'hsl(var(--foreground))',
       }}
       onContextMenu={(e) => e.preventDefault()}
       onMouseDown={(e) => e.stopPropagation()}
@@ -312,14 +312,14 @@ function Item({
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-left hover:bg-[#1f2024] ${danger ? 'text-red-300 hover:text-red-200' : 'text-zinc-200'}`}
+      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-left hover:bg-secondary ${danger ? 'text-red-300 hover:text-red-200' : 'text-foreground'}`}
     >
       {icon}
       <span>{label}</span>
     </button>
   );
 }
-function Sep() { return <div className="my-1 h-px bg-[#2a2b30]" />; }
+function Sep() { return <div className="my-1 h-px bg-border" />; }
 
 function MetersInput({
   label, placeholder, initialValue, onSubmit,
@@ -334,7 +334,7 @@ function MetersInput({
   };
   return (
     <div className="px-2 py-1">
-      <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">{label}</div>
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{label}</div>
       <div className="flex items-center gap-1">
         <input
           type="number"
@@ -345,12 +345,12 @@ function MetersInput({
           value={val}
           onChange={(e) => setVal(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } }}
-          className="h-7 flex-1 rounded border border-[#2a2b30] bg-[#101113] px-2 text-xs text-zinc-200 outline-none focus:border-sky-500"
+          className="h-7 flex-1 rounded border border-border bg-[#101113] px-2 text-xs text-foreground outline-none focus:border-sky-500"
         />
-        <span className="text-[10px] text-zinc-500">m</span>
+        <span className="text-[10px] text-muted-foreground">m</span>
         <button
           onClick={submit}
-          className="h-7 px-2 rounded border border-[#2a2b30] hover:bg-[#1f2024] text-xs text-zinc-200"
+          className="h-7 px-2 rounded border border-border hover:bg-secondary text-xs text-foreground"
         >
           OK
         </button>
@@ -374,25 +374,25 @@ function FichaPicker({
     <div className="px-1">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-left hover:bg-[#1f2024] text-zinc-200"
+        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-left hover:bg-secondary text-foreground"
       >
         <FileText className="h-3.5 w-3.5 text-amber-200" />
         <span className="flex-1">
           {current ? `Ficha: ${current.name}` : 'Vincular ficha…'}
         </span>
-        <span className="text-zinc-500 text-[10px]">{open ? '▾' : '▸'}</span>
+        <span className="text-muted-foreground text-[10px]">{open ? '▾' : '▸'}</span>
       </button>
       {open && (
-        <div className="mt-1 max-h-48 overflow-auto rounded border border-[#2a2b30] bg-[#101113]">
+        <div className="mt-1 max-h-48 overflow-auto rounded border border-border bg-[#101113]">
           {options.length === 0 && (
-            <div className="px-2 py-2 text-[11px] text-zinc-500">Nenhuma ficha disponível</div>
+            <div className="px-2 py-2 text-[11px] text-muted-foreground">Nenhuma ficha disponível</div>
           )}
           {options.map((o) => (
             <button
               key={o.id}
               onClick={() => onPick(o.id)}
-              className={`w-full text-left px-2 py-1.5 text-xs hover:bg-[#1f2024] ${
-                o.id === currentCharacterId ? 'text-emerald-300' : 'text-zinc-200'
+              className={`w-full text-left px-2 py-1.5 text-xs hover:bg-secondary ${
+                o.id === currentCharacterId ? 'text-emerald-300' : 'text-foreground'
               }`}
             >
               {o.name}
@@ -400,10 +400,10 @@ function FichaPicker({
           ))}
           {currentCharacterId && (
             <>
-              <div className="h-px bg-[#2a2b30]" />
+              <div className="h-px bg-border" />
               <button
                 onClick={() => onPick(null)}
-                className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-red-300 hover:bg-[#1f2024]"
+                className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-red-300 hover:bg-secondary"
               >
                 <Link2Off className="h-3.5 w-3.5" />
                 <span>Desvincular</span>
@@ -419,7 +419,7 @@ function FichaPicker({
 function Group({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="px-2 py-1">
-      <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">{label}</div>
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{label}</div>
       <div className="flex gap-1">{children}</div>
     </div>
   );
@@ -429,7 +429,7 @@ function Mini({ icon, title, onClick }: { icon: React.ReactNode; title: string; 
     <button
       title={title}
       onClick={onClick}
-      className="h-7 w-7 flex items-center justify-center rounded border border-[#2a2b30] hover:bg-[#1f2024] text-zinc-300"
+      className="h-7 w-7 flex items-center justify-center rounded border border-border hover:bg-secondary text-foreground/80"
     >
       {icon}
     </button>
