@@ -90,14 +90,14 @@ export function LayerPanel({ onClose }: Props) {
   return (
     <div
       className="absolute top-2 right-3 w-72 max-h-[80%] pointer-events-auto rounded-lg shadow-xl flex flex-col text-xs"
-      style={{ background: 'hsl(var(--card))', border: '1px solid #2a2b30', color: 'hsl(var(--foreground))', zIndex: 20 }}
+      style={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))', zIndex: 20 }}
     >
       <div className="flex items-center justify-between px-3 py-2 border-b border-border">
         <div className="flex items-center gap-1.5">
           <Layers className="h-3.5 w-3.5" />
           <span className="text-sm font-medium">Camadas</span>
         </div>
-        <button onClick={onClose} className="text-zinc-500 hover:text-foreground" title="Fechar">×</button>
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground" title="Fechar">×</button>
       </div>
 
       <div className="flex-1 overflow-auto p-1">
@@ -199,7 +199,7 @@ export function LayerPanel({ onClose }: Props) {
                         <button
                           title="Mostrar nameplate"
                           onClick={(ev) => { ev.stopPropagation(); updateEntity(e.id, { nameplate: !e.nameplate }); }}
-                          className={`text-zinc-500 hover:text-foreground ${e.nameplate ? 'text-sky-300' : ''}`}
+                          className={`text-muted-foreground hover:text-foreground ${e.nameplate ? 'text-sky-300' : ''}`}
                         >
                           <Tag className="h-3.5 w-3.5" />
                         </button>
@@ -221,21 +221,21 @@ export function LayerPanel({ onClose }: Props) {
                               if (!Number.isNaN(n)) updateEntity(e.id, { hp: n, hpMax: n });
                             }
                           }}
-                          className={`text-zinc-500 hover:text-foreground ${typeof e.hp === 'number' ? 'text-rose-300' : ''}`}
+                          className={`text-muted-foreground hover:text-foreground ${typeof e.hp === 'number' ? 'text-rose-300' : ''}`}
                         >
                           <Heart className="h-3.5 w-3.5" />
                         </button>
                         <button
                           title={e.hidden ? 'Mostrar' : 'Ocultar'}
                           onClick={(ev) => { ev.stopPropagation(); updateEntity(e.id, { hidden: !e.hidden }); }}
-                          className="text-zinc-500 hover:text-foreground"
+                          className="text-muted-foreground hover:text-foreground"
                         >
                           {e.hidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                         </button>
                         <button
                           title={e.locked ? 'Destravar' : 'Travar'}
                           onClick={(ev) => { ev.stopPropagation(); updateEntity(e.id, { locked: !e.locked }); }}
-                          className="text-zinc-500 hover:text-foreground"
+                          className="text-muted-foreground hover:text-foreground"
                         >
                           {e.locked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
                         </button>
@@ -247,7 +247,7 @@ export function LayerPanel({ onClose }: Props) {
                             removeEntities([e.id]);
                             if (aid) void assetCache.destroy(aid);
                           }}
-                          className="text-zinc-500 hover:text-red-300"
+                          className="text-muted-foreground hover:text-red-300"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -261,7 +261,7 @@ export function LayerPanel({ onClose }: Props) {
         })}
       </div>
 
-      <div className="px-3 py-1.5 border-t border-border text-[10px] text-zinc-500">
+      <div className="px-3 py-1.5 border-t border-border text-[10px] text-muted-foreground">
         Arraste para reordenar/trocar de camada. Shift+clique para multi-seleção.
       </div>
     </div>

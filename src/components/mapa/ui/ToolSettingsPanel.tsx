@@ -73,7 +73,7 @@ export function ToolSettingsPanel({ placement = 'rail' }: { placement?: 'rail' |
         top,
         left: 52,
         background: 'hsl(var(--card))',
-        border: '1px solid #2a2b30',
+        border: '1px solid hsl(var(--border))',
         color: 'hsl(var(--foreground))',
       }}
     >

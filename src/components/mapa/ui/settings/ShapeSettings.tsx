@@ -38,7 +38,7 @@ export function ShapeSettings() {
       </div>
 
       {showHelp && (
-        <p className="text-zinc-500 text-[11px] leading-relaxed">
+        <p className="text-muted-foreground text-[11px] leading-relaxed">
           Duplo-clique no mapa para criar.
         </p>
       )}

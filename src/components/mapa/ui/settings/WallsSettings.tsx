@@ -115,7 +115,7 @@ export function WallsSettings({ horizontal = false }: { horizontal?: boolean }) 
         remove um segmento.
       </p>
 
-      <div className="text-[11px] text-zinc-500">{count} segmento(s)</div>
+      <div className="text-[11px] text-muted-foreground">{count} segmento(s)</div>
 
       <button
         onClick={() => clearWalls()}

@@ -147,7 +147,7 @@ function Pin({
             style={{
               background: 'rgba(22,23,26,0.92)',
               color: 'hsl(var(--foreground))',
-              border: '1px solid #2a2b30',
+              border: '1px solid hsl(var(--border))',
             }}
           >
             {note.text}
@@ -161,14 +161,14 @@ function Pin({
           style={{
             top: '4px',
             background: 'hsl(var(--card))',
-            border: '1px solid #2a2b30',
+            border: '1px solid hsl(var(--border))',
             color: 'hsl(var(--foreground))',
           }}
           onMouseDown={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-[11px] text-muted-foreground">Editar nota</span>
-            <button onClick={onClose} className="text-zinc-500 hover:text-foreground">
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
               <X className="h-3.5 w-3.5" />
             </button>
           </div>

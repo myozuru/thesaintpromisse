@@ -185,7 +185,7 @@ export function InitiativePanel({ onClose }: Props) {
       className="absolute left-3 bottom-3 w-72 rounded-lg shadow-xl flex flex-col text-xs pointer-events-auto"
       style={{
         background: 'hsl(var(--card))',
-        border: '1px solid #2a2b30',
+        border: '1px solid hsl(var(--border))',
         color: 'hsl(var(--foreground))',
         maxHeight: 'calc(100% - 80px)',
         zIndex: 20,
@@ -200,7 +200,7 @@ export function InitiativePanel({ onClose }: Props) {
         </span>
         <button
           onClick={onClose}
-          className="ml-auto text-zinc-500 hover:text-foreground"
+          className="ml-auto text-muted-foreground hover:text-foreground"
           title="Fechar"
         >
           <X className="h-4 w-4" />
@@ -210,7 +210,7 @@ export function InitiativePanel({ onClose }: Props) {
       {/* Lista */}
       <div className="flex-1 overflow-auto p-2 space-y-1">
         {ordered.length === 0 && (
-          <div className="text-zinc-500 text-center py-6 px-2">
+          <div className="text-muted-foreground text-center py-6 px-2">
             Nenhum combatente. Adicione tokens pelo menu de contexto ou pelo botão abaixo.
           </div>
         )}
@@ -255,7 +255,7 @@ export function InitiativePanel({ onClose }: Props) {
               {e.entityId && (
                 <button
                   onClick={() => focusEntity(e.entityId)}
-                  className="text-zinc-500 hover:text-amber-300"
+                  className="text-muted-foreground hover:text-amber-300"
                   title="Centralizar no mapa"
                 >
                   <Target className="h-3.5 w-3.5" />
@@ -263,7 +263,7 @@ export function InitiativePanel({ onClose }: Props) {
               )}
               <button
                 onClick={() => removeInitiative(e.id)}
-                className="text-zinc-500 hover:text-red-300"
+                className="text-muted-foreground hover:text-red-300"
                 title="Remover"
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -352,7 +352,7 @@ export function InitiativePanel({ onClose }: Props) {
             {pendingBatchId ? `Aguardando ${waitingCount}` : 'Pedir & Iniciar'}
           </button>
           <div className="flex-1" />
-          <span className="text-zinc-500 tabular-nums">
+          <span className="text-muted-foreground tabular-nums">
             <Check className="inline h-3 w-3 mr-0.5" />
             {init.turnIndex + (ordered.length ? 1 : 0)}/{ordered.length}
           </span>

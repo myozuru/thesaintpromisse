@@ -101,7 +101,7 @@ export function TemplateSettings() {
       </button>
 
       {showHelp && (
-        <p className="text-zinc-500 text-[11px] leading-relaxed">
+        <p className="text-muted-foreground text-[11px] leading-relaxed">
           Arraste no mapa para posicionar. Clique-direito em um template para removê-lo.
         </p>
       )}

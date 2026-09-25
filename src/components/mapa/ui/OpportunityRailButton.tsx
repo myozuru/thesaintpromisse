@@ -74,7 +74,7 @@ export function OpportunityRailButton() {
           </div>
           <div className="max-h-40 overflow-auto rounded border border-border bg-[#1a1b1f] mb-2">
             {characters.length === 0 && (
-              <div className="px-2 py-2 text-zinc-500 text-[11px]">
+              <div className="px-2 py-2 text-muted-foreground text-[11px]">
                 Nenhum personagem disponível.
               </div>
             )}

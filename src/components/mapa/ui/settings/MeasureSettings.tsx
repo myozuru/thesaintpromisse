@@ -52,7 +52,7 @@ export function MeasureSettings() {
       </button>
 
       {showHelp && (
-        <p className="text-zinc-500 text-[11px] leading-relaxed">
+        <p className="text-muted-foreground text-[11px] leading-relaxed">
           Atalho: segure <kbd className="px-1 rounded bg-secondary border border-border">R</kbd> para medir sem trocar a ferramenta. Solte com <kbd className="px-1 rounded bg-secondary border border-border">Shift</kbd> para fixar a régua. Clique-direito em uma régua para removê-la.
         </p>
       )}

@@ -83,11 +83,11 @@ export function BackgroundButton() {
         <div
           ref={popRef}
           className="absolute right-0 top-9 z-50 w-64 rounded-lg p-3 text-xs space-y-3 shadow-xl"
-          style={{ background: 'hsl(var(--card))', border: '1px solid #2a2b30', color: 'hsl(var(--foreground))' }}
+          style={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))' }}
         >
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">Fundo da cena</span>
-            <button onClick={() => setOpen(false)} className="text-zinc-500 hover:text-foreground">×</button>
+            <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground">×</button>
           </div>
 
           <div>

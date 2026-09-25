@@ -54,7 +54,7 @@ export function SceneTabs() {
             <div
               key={id}
               className="flex items-center gap-1 h-7 px-2 rounded-md text-xs"
-              style={{ background: '#1f2024', border: '1px solid #3a3b40' }}
+              style={{ background: 'hsl(var(--secondary))', border: '1px solid #3a3b40' }}
             >
               <input
                 autoFocus
@@ -67,7 +67,7 @@ export function SceneTabs() {
                 className="bg-transparent outline-none text-foreground w-28"
               />
               <button onClick={commit} className="text-emerald-400 hover:text-emerald-300"><Check className="h-3 w-3" /></button>
-              <button onClick={() => setEditing(null)} className="text-zinc-500 hover:text-foreground/80"><X className="h-3 w-3" /></button>
+              <button onClick={() => setEditing(null)} className="text-muted-foreground hover:text-foreground/80"><X className="h-3 w-3" /></button>
             </div>
           );
         }
@@ -111,7 +111,7 @@ export function SceneTabs() {
             left: menu.x,
             top: menu.y,
             background: 'hsl(var(--card))',
-            border: '1px solid #2a2b30',
+            border: '1px solid hsl(var(--border))',
             minWidth: 160,
             color: 'hsl(var(--foreground))',
           }}

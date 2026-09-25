@@ -102,7 +102,7 @@ export function DicePanel() {
 
         {/* Modifier + adv/dis */}
         <div className="flex items-center gap-2">
-          <div className="text-zinc-500">Mod.</div>
+          <div className="text-muted-foreground">Mod.</div>
           <button
             className="h-6 w-6 flex items-center justify-center rounded border border-border hover:bg-secondary"
             onClick={() => setModifier(modifier - 1)}
@@ -165,7 +165,7 @@ export function DicePanel() {
         {/* Favorites */}
         {favorites.length > 0 && (
           <div className="flex flex-col gap-1">
-            <div className="text-[10px] uppercase tracking-wider text-zinc-500">Favoritos</div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Favoritos</div>
             <div className="flex flex-wrap gap-1">
               {favorites.map((f) => (
                 <div
@@ -182,7 +182,7 @@ export function DicePanel() {
                   <button
                     onClick={() => removeFavorite(f.id)}
                     title="Remover"
-                    className="h-5 w-5 rounded flex items-center justify-center text-zinc-500 hover:text-red-300 opacity-0 group-hover:opacity-100"
+                    className="h-5 w-5 rounded flex items-center justify-center text-muted-foreground hover:text-red-300 opacity-0 group-hover:opacity-100"
                   >
                     <StarOff className="h-3 w-3" />
                   </button>
@@ -194,11 +194,11 @@ export function DicePanel() {
 
         {/* History */}
         <div className="flex items-center gap-1 mt-1">
-          <div className="text-[10px] uppercase tracking-wider text-zinc-500">Histórico</div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Histórico</div>
           {history.length > 0 && (
             <button
               onClick={clearHistory}
-              className="ml-auto h-5 w-5 rounded flex items-center justify-center text-zinc-500 hover:text-red-300"
+              className="ml-auto h-5 w-5 rounded flex items-center justify-center text-muted-foreground hover:text-red-300"
               title="Limpar histórico"
             >
               <Trash2 className="h-3 w-3" />
@@ -207,7 +207,7 @@ export function DicePanel() {
         </div>
         <div className="flex flex-col gap-1 max-h-[240px] overflow-y-auto">
           {history.length === 0 && (
-            <div className="text-[11px] text-zinc-500 italic">Nenhuma rolagem ainda.</div>
+            <div className="text-[11px] text-muted-foreground italic">Nenhuma rolagem ainda.</div>
           )}
           {history.map((h) => (
             <div
@@ -215,7 +215,7 @@ export function DicePanel() {
               className="flex items-start gap-1 rounded border border-border bg-background p-1.5"
             >
               <div className="flex-1 min-w-0">
-                <div className="text-[10px] text-zinc-500 font-mono truncate">{h.pretty}</div>
+                <div className="text-[10px] text-muted-foreground font-mono truncate">{h.pretty}</div>
                 <div className="text-amber-200 font-semibold tabular-nums">= {h.total}</div>
               </div>
               <button

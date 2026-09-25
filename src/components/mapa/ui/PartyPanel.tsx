@@ -54,8 +54,8 @@ export function PartyPanel({ collapsed, onToggleCollapsed }: Props) {
         className="h-full w-6 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shrink-0"
         style={{
           background: 'hsl(var(--card))',
-          borderLeft: '1px solid #2a2b30',
-          borderRight: collapsed ? 'none' : '1px solid #2a2b30',
+          borderLeft: '1px solid hsl(var(--border))',
+          borderRight: collapsed ? 'none' : '1px solid hsl(var(--border))',
         }}
       >
         {collapsed ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -76,7 +76,7 @@ export function PartyPanel({ collapsed, onToggleCollapsed }: Props) {
             </div>
           ) : isPlayer ? (
             <div className="flex-1 overflow-y-auto overflow-x-hidden p-2">
-              <div className="text-zinc-500 text-xs leading-relaxed p-3 text-center">
+              <div className="text-muted-foreground text-xs leading-relaxed p-3 text-center">
                 Crie sua ficha no módulo Fichas para vê-la aqui.
               </div>
             </div>
@@ -87,7 +87,7 @@ export function PartyPanel({ collapsed, onToggleCollapsed }: Props) {
               action={
                 <button
                   type="button"
-                  className="text-zinc-500 hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground"
                   title="Convidar (em breve)"
                 >
                   <UserPlus className="h-3.5 w-3.5" />
@@ -136,5 +136,5 @@ function Section({
 }
 
 function Placeholder({ children }: { children: React.ReactNode }) {
-  return <div className="text-zinc-500 text-xs leading-relaxed py-1">{children}</div>;
+  return <div className="text-muted-foreground text-xs leading-relaxed py-1">{children}</div>;
 }

@@ -53,7 +53,7 @@ export function WelcomeTutorial({ onClose, onOpenShortcuts }: Props) {
             <div key={title} className="flex items-start gap-3">
               <div
                 className="h-8 w-8 shrink-0 rounded flex items-center justify-center"
-                style={{ background: '#1f2024', border: '1px solid #2a2b30' }}
+                style={{ background: 'hsl(var(--secondary))', border: '1px solid hsl(var(--border))' }}
               >
                 <Icon className="h-4 w-4 text-amber-300/80" />
               </div>

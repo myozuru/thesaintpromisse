@@ -78,7 +78,7 @@ export function OpportunityPromptOverlay() {
                   )}
                 </div>
               ) : (
-                <span className="text-[10px] text-zinc-500 uppercase tracking-wider">aguardando mestre</span>
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">aguardando mestre</span>
               )}
             </div>
           ))}

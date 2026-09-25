@@ -3284,10 +3284,10 @@ export function MapaModule() {
       style={{
         height: shellHeight,
         minHeight: 480,
-        background: '#1f2024',
+        background: 'hsl(var(--secondary))',
         color: 'hsl(var(--foreground))',
         borderRadius: immersive ? 0 : 6,
-        border: immersive ? 'none' : '1px solid #2a2b30',
+        border: immersive ? 'none' : '1px solid hsl(var(--border))',
       }}
     >
       {/* ============ COLUNA ESQUERDA: rail + painel contextual ============ */}
@@ -3322,7 +3322,7 @@ export function MapaModule() {
           ref={containerRef}
           className="flex-1 relative overflow-hidden"
           tabIndex={0}
-          style={{ touchAction: 'none', background: '#1f2024' }}
+          style={{ touchAction: 'none', background: 'hsl(var(--secondary))' }}
         >
           <ToolSettingsPanel placement="top" />
           <canvas ref={bgCanvasRef} className="absolute inset-0" style={{ zIndex: 1 }} />
@@ -3451,7 +3451,7 @@ export function MapaModule() {
             {/* Zoom indicator */}
             <div
               className="absolute bottom-3 right-3 pointer-events-auto rounded-md px-2.5 py-1 text-xs text-foreground/80 tabular-nums"
-              style={{ background: 'hsl(var(--card))', border: '1px solid #2a2b30' }}
+              style={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
             >
               {Math.round(cameraScale * 100)}%
             </div>
@@ -3459,7 +3459,7 @@ export function MapaModule() {
             {/* Drop hint */}
             <div
               className="absolute bottom-3 left-1/2 -translate-x-1/2 pointer-events-auto flex items-center gap-2 rounded-full px-3 py-1.5 text-xs text-muted-foreground"
-              style={{ background: 'hsl(var(--card))', border: '1px solid #2a2b30' }}
+              style={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
             >
               <ImageIcon className="h-3.5 w-3.5" />
               Arraste imagens para o mapa
@@ -3471,13 +3471,13 @@ export function MapaModule() {
                 className="absolute top-2 right-3 w-72 pointer-events-auto rounded-lg p-3 text-xs space-y-3 shadow-xl"
                 style={{
                   background: 'hsl(var(--card))',
-                  border: '1px solid #2a2b30',
+                  border: '1px solid hsl(var(--border))',
                   color: 'hsl(var(--foreground))',
                 }}
               >
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Configurações</span>
-                  <button onClick={() => setGridOpen(false)} className="text-zinc-500 hover:text-foreground">×</button>
+                  <button onClick={() => setGridOpen(false)} className="text-muted-foreground hover:text-foreground">×</button>
                 </div>
                 <Row label="Tipo de grade">
                   <select

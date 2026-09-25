@@ -23,7 +23,7 @@ export function AssetTypeDialog({ name, previewUrl, onChoose, onCancel }: Props)
       <div
         onClick={(e) => e.stopPropagation()}
         className="rounded-lg p-4 w-[420px] shadow-2xl"
-        style={{ background: 'hsl(var(--card))', border: '1px solid #2a2b30', color: 'hsl(var(--foreground))' }}
+        style={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))' }}
       >
         <div className="flex items-center justify-between mb-3">
           <div className="text-foreground text-sm font-semibold truncate pr-3">{name}</div>
@@ -83,7 +83,7 @@ function Choice({
     >
       <div className="text-foreground">{icon}</div>
       <div className="text-foreground text-xs font-medium">{label}</div>
-      <div className="text-zinc-500 text-[10px]">{hint}</div>
+      <div className="text-muted-foreground text-[10px]">{hint}</div>
     </button>
   );
 }
