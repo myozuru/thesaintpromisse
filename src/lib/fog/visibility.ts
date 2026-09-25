@@ -233,6 +233,8 @@ export function buildSegments(walls: Wall[], doors: Door[]): Segment[] {
   // Portas fechadas bloqueiam luz
   for (const d of doors) {
     if (d.open) continue;
+    // Porta órfã (parede já apagada) não pode continuar bloqueando.
+    if (d.wallId != null && !walls.some((w) => w.id === d.wallId)) continue;
     const { a, b } = resolveDoor(d, walls);
     out.push({ a, b });
   }
