@@ -128,8 +128,8 @@ export const useFogStore = create<FogState>()(
       };
 
       return {
-        walls: DEMO.walls,
-        doors: DEMO.doors,
+        walls: [],
+        doors: [],
         lights: DEMO.lights,
         tool: "select",
         draft: [],
@@ -443,6 +443,19 @@ export const useFogStore = create<FogState>()(
     {
       name: "fog-store-v2",
       partialize: (s) => ({ walls: s.walls, doors: s.doors, lights: s.lights, darknessMode: s.darknessMode }),
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<FogState>;
+        const merged = { ...current, ...p } as FogState;
+        // Remove paredes/portas de demonstração antigas que ficavam "invisíveis" para players.
+        const demoKey = (pts: Vec2[]) => pts.map((q) => `${q.x},${q.y}`).join("|");
+        const demoWalls = new Set(DEMO.walls.map((w) => demoKey(w.points)));
+        const demoDoors = new Set(DEMO.doors.map((d) => demoKey([d.a!, d.b!])));
+        const walls = (merged.walls ?? []).filter((w) => !demoWalls.has(demoKey(w.points)));
+        const doors = (merged.doors ?? []).filter((d) =>
+          d.wallId ? walls.some((w) => w.id === d.wallId) : !(d.a && d.b && demoDoors.has(demoKey([d.a, d.b]))),
+        );
+        return { ...merged, walls, doors };
+      },
     },
   ),
 );
