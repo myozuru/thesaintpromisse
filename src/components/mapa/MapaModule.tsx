@@ -3353,7 +3353,7 @@ export function MapaModule() {
           )}
 
 
-          <NotesOverlay containerRef={containerRef} />
+          <NotesOverlay containerRef={containerRef as React.RefObject<HTMLDivElement>} />
           <SelectionToolbar visible={selectionToolbarVisible} />
           <PendingMoveOverlay />
           <OpportunityPromptOverlay />
