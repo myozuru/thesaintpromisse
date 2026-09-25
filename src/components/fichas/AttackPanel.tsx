@@ -402,7 +402,7 @@ export function AttackPanel({ character: c }: Props) {
       // Uma rolagem de dano via física 3D, aplicada a todos.
       const ability = pickAttackAbility(c, mainWeapon);
       const abMod = getAbilityMod(c, ability);
-      const { rolls, total } = await rollDiceCom(c.id, mainWeapon.damage);
+      const { rolls, total } = await rollDiceCom(c.id, mainWeapon.damage ?? "0");
       const damageTotal = Math.max(0, total + abMod);
       const dmgType = mainWeapon.damageType as any;
       const targetsLabel =

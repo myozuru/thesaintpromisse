@@ -113,8 +113,8 @@ describe('Entradas ausentes/parciais', () => {
     delete (cre as any).aptidoes;
     const r = importCreatureToFichas(cre);
     const c = get(r!.id);
-    expect(c.cursedAptitudes.AU).toBe(0);
-    expect(c.cursedAptitudes.CL).toBe(0);
+    expect(c.cursedAptitudes!.AU).toBe(0);
+    expect(c.cursedAptitudes!.CL).toBe(0);
   });
 
   it('attributes parcial preserva valores existentes para os não fornecidos', () => {

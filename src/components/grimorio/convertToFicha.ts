@@ -202,7 +202,7 @@ function buildPatch(creature: Creature, current: Character): Partial<Character> 
       ...sk,
       value: 0,
       trained, mastery,
-      externalBonus: computeSkillExternal(found.mod, linkedAttrName, trained, mastery),
+      externalBonus: computeSkillExternal(found.mod, linkedAttrName, !!trained, !!mastery),
     };
   });
 

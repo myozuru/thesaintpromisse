@@ -131,9 +131,9 @@ describe('importCreatureToFichas — Calamidade ND 15', () => {
   it('mapeia aptidões amaldiçoadas e classe/tamanho', () => {
     const res = importCreatureToFichas(makeCalamidade());
     const c = useCharacterStore.getState().characters.find((x) => x.id === res!.id)!;
-    expect(c.cursedAptitudes.AU).toBe(5);
-    expect(c.cursedAptitudes.ER).toBe(5);
-    expect(c.cursedAptitudes.DOM).toBe(2);
+    expect(c.cursedAptitudes!.AU).toBe(5);
+    expect(c.cursedAptitudes!.ER).toBe(5);
+    expect(c.cursedAptitudes!.DOM).toBe(2);
     expect(c.characterClass).toBe('Maldição');
     expect(c.hasEnergiaReversa).toBeFalsy(); // Bug #12 fix: hasAumentoEnergia ≠ hasEnergiaReversa
     expect(c.sizeCategory).toBe('Grande');

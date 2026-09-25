@@ -733,6 +733,7 @@ function formatChoiceValue(value: import('@/lib/specAbilities').SpecAbilityChoic
     case 'weapons':     return `Armas: ${value.weapons.join(', ') || '—'}`;
     case 'save':        return `TR de ${value.save}`;
   }
+  return "—";
 }
 
 // ----- PoolChip: chip visual de cada um dos 3 pools -----

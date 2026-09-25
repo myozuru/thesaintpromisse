@@ -11,10 +11,10 @@ const mkChar = (over: Partial<Character> = {}): Character => ({
   ...over,
 } as Character);
 
-const sword: Weapon = {
+const sword = {
   name: 'Espada Curta', group: 'Espada', range: 'melee', damageType: 'Ct',
   damage: '1d6', critRange: 19, properties: [],
-} as Weapon;
+} as unknown as Weapon;
 
 describe('Aura Embaçada — desvantagem ao atacante', () => {
   it('rola 2 d20 e fica com o menor quando alvo tem aura_embacada', async () => {

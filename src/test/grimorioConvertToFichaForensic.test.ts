@@ -106,9 +106,9 @@ describe('Forense — normalização de chaves com acento/case/espaço', () => {
   it('aptidões aceitam chaves maiúsculas e não-canônicas', () => {
     const r = importCreatureToFichas(creature({ aptidoes: { EA: 4, CL: 5, BAR: 3, DOM: 2, ER: 1 } }));
     const c = get(r!.id);
-    expect(c.cursedAptitudes.AU).toBe(4);
-    expect(c.cursedAptitudes.CL).toBe(5);
-    expect(c.cursedAptitudes.BAR).toBe(3);
+    expect(c.cursedAptitudes!.AU).toBe(4);
+    expect(c.cursedAptitudes!.CL).toBe(5);
+    expect(c.cursedAptitudes!.BAR).toBe(3);
   });
 });
 

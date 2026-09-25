@@ -116,8 +116,8 @@ describe('Conversor — Clamps e ND > 20', () => {
   it('clampa aptidões a 5', () => {
     const r = importCreatureToFichas(baseCreature({ aptidoes: { ea: 99, cl: 2, bar: 0, dom: 0, er: -2 } }));
     const c = get(r!.id);
-    expect(c.cursedAptitudes.AU).toBe(5);
-    expect(c.cursedAptitudes.ER).toBe(0);
+    expect(c.cursedAptitudes!.AU).toBe(5);
+    expect(c.cursedAptitudes!.ER).toBe(0);
   });
 });
 
