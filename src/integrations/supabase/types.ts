@@ -14,7 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      realtime_assets: {
+        Row: {
+          created_at: string
+          data_base64: string
+          id: string
+          mime: string
+        }
+        Insert: {
+          created_at?: string
+          data_base64: string
+          id: string
+          mime?: string
+        }
+        Update: {
+          created_at?: string
+          data_base64?: string
+          id?: string
+          mime?: string
+        }
+        Relationships: []
+      }
+      realtime_world: {
+        Row: {
+          data: Json
+          slice: string
+          updated_at: string
+        }
+        Insert: {
+          data?: Json
+          slice: string
+          updated_at?: string
+        }
+        Update: {
+          data?: Json
+          slice?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
