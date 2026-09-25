@@ -2334,16 +2334,23 @@ export function MapaModule() {
         return;
       }
 
-      // 3) clicou no vazio: com select tool, inicia marquee; senão deseleciona.
+      // 3) clicou no vazio com select tool: arrasta o mapa; Shift inicia seleção em área.
       if (activeToolRef.current === 'select') {
-        dragRef.current = {
-          kind: 'marquee',
-          startWorld: { x: wx, y: wy },
-          currentWorld: { x: wx, y: wy },
-          additive: shiftDownRef.current,
-          baseSelection: shiftDownRef.current ? [...state.selectedIds] : [],
-        };
-        if (!shiftDownRef.current) state.clearSelection();
+        if (shiftDownRef.current) {
+          dragRef.current = {
+            kind: 'marquee',
+            startWorld: { x: wx, y: wy },
+            currentWorld: { x: wx, y: wy },
+            additive: true,
+            baseSelection: [...state.selectedIds],
+          };
+          return;
+        }
+        state.clearSelection();
+        dragRef.current = { kind: 'pan' };
+        panStateRef.current = { lastX: e.clientX, lastY: e.clientY };
+        state.setCamera({ isPanning: true });
+        el.style.cursor = 'grabbing';
         return;
       }
       if (!shiftDownRef.current) state.clearSelection();
