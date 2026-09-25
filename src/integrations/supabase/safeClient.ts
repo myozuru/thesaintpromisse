@@ -7,30 +7,40 @@ const env = (typeof import.meta !== 'undefined' ? import.meta.env : undefined) a
 const url = env?.VITE_SUPABASE_URL;
 const key = env?.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+export const hasWorkspaceCloud = Boolean(url && key);
+
 function buildStub(): SupabaseClient {
-  const warn = () => console.warn('[supabase] cliente offline — multiplayer cloud desativado.');
-  const queryStub: Record<string, unknown> = {};
-  const proxy = new Proxy(queryStub, {
-    get: () => () => {
-      warn();
-      return Promise.resolve({ data: null, error: { message: 'supabase offline' } });
+  const offlineResult = Promise.resolve({ data: null, error: null });
+  const query = new Proxy({} as Record<string, unknown>, {
+    get: (_target, property) => {
+      if (property === 'then') return offlineResult.then.bind(offlineResult);
+      return () => query;
     },
   });
+
+  const channel = {
+    on: () => channel,
+    subscribe: (callback?: (status: string) => void) => {
+      callback?.('CLOSED');
+      return channel;
+    },
+    send: async () => 'ok',
+    unsubscribe: async () => 'ok',
+  };
+
   return {
-    from: () => proxy,
-    channel: () => ({ on: () => ({ subscribe: () => ({}) }), subscribe: () => ({}) }),
+    from: () => query,
+    channel: () => channel,
     removeChannel: () => Promise.resolve('ok'),
   } as unknown as SupabaseClient;
 }
 
 let client: SupabaseClient;
-try {
-  if (!url || !key) throw new Error('missing supabase env');
+if (hasWorkspaceCloud && url && key) {
   client = createClient(url, key, {
     auth: { storage: typeof localStorage !== 'undefined' ? localStorage : undefined, persistSession: true, autoRefreshToken: true },
   });
-} catch (err) {
-  console.warn('[supabase] falha ao inicializar, usando stub:', err);
+} else {
   client = buildStub();
 }
 

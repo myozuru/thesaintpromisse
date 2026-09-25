@@ -90,7 +90,10 @@ export function LogPanel() {
               className="rounded-lg p-1 text-primary transition-all duration-300 hover:bg-primary/10"
               title={visibilityMeta.title}
             >
-              <VisibilityIcon className="h-3.5 w-3.5" />
+              {(() => {
+                const Icon = VisibilityIcon as React.ComponentType<{ className?: string }>;
+                return <Icon className="h-3.5 w-3.5" />;
+              })()}
             </button>
           )}
           <button
@@ -143,7 +146,10 @@ export function LogPanel() {
                 key={log.id}
                 className="flex items-start gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-secondary/50 transition-all duration-300 animate-fade-in"
               >
-                <Icon className={cn('mt-0.5 h-3.5 w-3.5 shrink-0', LOG_COLORS[log.type])} />
+                {(() => {
+                  const LogIcon = Icon as React.ComponentType<{ className?: string }>;
+                  return <LogIcon className={cn('mt-0.5 h-3.5 w-3.5 shrink-0', LOG_COLORS[log.type])} />;
+                })()}
                 <div className="min-w-0 flex-1">
                   <p className="break-words text-foreground/90 text-sm" style={{ fontFamily: "'Cormorant Garamond', serif" }}>{log.message}</p>
                   <span className="text-xs text-muted-foreground font-mono">

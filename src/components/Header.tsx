@@ -177,7 +177,10 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
                 )}
               >
                 <GripVertical className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" aria-hidden />
-                <Icon className={cn("h-3.5 w-3.5 shrink-0", isActive && "text-accent")} />
+                {(() => {
+                  const TabIcon = Icon as React.ComponentType<{ className?: string }>;
+                  return <TabIcon className={cn("h-3.5 w-3.5 shrink-0", isActive && "text-accent")} />;
+                })()}
                 <span style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.06em' }}>
                   {TAB_LABELS[id]}
                 </span>

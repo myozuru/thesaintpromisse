@@ -10,6 +10,7 @@ import { installSafeLocalStorage } from "@/lib/safeLocalStorage";
 import { installOmniItemBankSync } from "@/lib/omni/syncItemBank";
 import { iniciarWatcherEngine } from "@/lib/omni/watcherEngine";
 import { validateCursedAptitudeCatalog } from "@/lib/auraAptitudes";
+import { hasWorkspaceCloud } from "@/integrations/supabase/safeClient";
 import Index from "@/pages/Index";
 
 function MultiplayerBridge() {
@@ -17,10 +18,6 @@ function MultiplayerBridge() {
   useDailyOmniRecharge();
   return null;
 }
-
-const hasWorkspaceCloud = Boolean(
-  import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-);
 
 function RuntimeSetup() {
   useEffect(() => {
