@@ -60,6 +60,7 @@
 
 @layer base {
   :root {
+    color-scheme: dark;
     --radius: 0.625rem;
 
     /* Sombrio místico — violeta profundo + dourado oculto */
@@ -173,6 +174,12 @@
   .text-xs, .text-sm {
     font-weight: 600;
   }
+}
+
+/* Firefox: barras de rolagem no tema (o Webkit abaixo cobre Chrome/Edge/Safari) */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(268 40% 28%) hsl(265 30% 5%);
 }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
