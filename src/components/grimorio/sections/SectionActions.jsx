@@ -371,9 +371,22 @@ function resetTradesForAttackType(attackType, currentTrades) {
 
 // Calcula alcance e área automáticos com base no BT, tipo de ataque e tipo de alcance
 const fmtM = (n) => `${String(n).replace(".", ",")} Metros`;
-function calcAutoRange(attackType, rangeType, bt) {
+// Regra do livro: trocar alcance por área — cada −1,5m de área concede +12m
+// de alcance (e vice-versa). A área nunca fica abaixo de 1,5m.
+const AREA_TRADE_STEP_M  = 1.5;
+const RANGE_TRADE_STEP_M = 12;
+function maxAreaRangeSteps(bt) {
+  const params = getActionParams(bt);
+  return Math.max(0, Math.floor((params.area - AREA_TRADE_STEP_M) / AREA_TRADE_STEP_M + 1e-9));
+}
+function calcAutoRange(attackType, rangeType, bt, areaRangeSteps = 0) {
   const params = getActionParams(bt);
   const isArea = attackType === "tr_area";
+  const steps  = isArea && rangeType !== "cac"
+    ? Math.max(0, Math.min(maxAreaRangeSteps(bt), Number(areaRangeSteps) || 0))
+    : 0;
+  const area  = params.area  - steps * AREA_TRADE_STEP_M;
+  const range = params.range + steps * RANGE_TRADE_STEP_M;
   if (rangeType === "cac") {
     return {
       range: "Corpo-a-Corpo",
@@ -381,8 +394,8 @@ function calcAutoRange(attackType, rangeType, bt) {
     };
   }
   return {
-    range: fmtM(params.range),
-    area:  isArea ? fmtM(params.area) : "-",
+    range: fmtM(range),
+    area:  isArea ? fmtM(area) : "-",
   };
 }
 
@@ -415,6 +428,9 @@ const deriveFinalDice = (dmg) => {
   if (dmg?.damageIsCalculated) return base;
   return dmg?.isNarrativePhysical ? Math.max(0, base - 2) : base;
 };
+
+const condApplyTr  = (a) => a?.condition?.applyTrType || a?.trType || "";
+const condRemoveTr = (a) => a?.condition?.removeTrType || condApplyTr(a);
 
 const deriveCondPE = (condition) => {
   if (!condition) return 0;
@@ -659,6 +675,9 @@ export function humanizeAction(action) {
   if (cond?.tier && cond.tier !== "nenhuma") {
     const tierLabel = CONDITION_TIER_LABELS[cond.tier] || cond.tier;
     const condName  = cond.name?.trim() ? `[${cond.name}]` : `[condição ${tierLabel}]`;
+    const aTr = condApplyTr(action), rTr = condRemoveTr(action);
+    if (aTr && aTr !== action.trType) parts.push(`Teste para aplicar: ${TR_TYPE_LABELS[aTr]}.`);
+    if (rTr && rTr !== aTr) parts.push(`Teste para retirar: ${TR_TYPE_LABELS[rTr]}.`);
     if (cond.payment === "nd") {
       const ndCost = CONDITION_ND_COST[cond.tier] ?? "?";
       parts.push(`Aplica a condição ${condName} (${tierLabel} — -${ndCost} ND).`);
@@ -771,7 +790,15 @@ export function generateActionDescription(action, creatureName, flavorText = "")
         ? rawName.charAt(0).toUpperCase() + rawName.slice(1)
         : tierLabel;
       const condSuffix = rawName ? ` (${tierLabel})` : "";
-      mechanicalText += ` Além disso, caso falhe, sofre a condição ${condName}${condSuffix}.`;
+      const applyTr  = condApplyTr(action);
+      const removeTr = condRemoveTr(action);
+      const applyTxt = applyTr && applyTr !== action.trType
+        ? ` Além disso, deve realizar um teste de resistência de ${TR_TYPE_LABELS[applyTr]} (CD ${action.cd ?? 0}); caso falhe, sofre a condição ${condName}${condSuffix}.`
+        : ` Além disso, caso falhe, sofre a condição ${condName}${condSuffix}.`;
+      const removeTxt = removeTr && removeTr !== applyTr
+        ? ` Para se livrar da condição, realiza um teste de resistência de ${TR_TYPE_LABELS[removeTr]}.`
+        : "";
+      mechanicalText += applyTxt + removeTxt;
     }
 
     const secondParagraph = [flavor, mechanicalText].filter(Boolean).join(" ");
@@ -948,7 +975,7 @@ function ActionItem({ action, patamar, nd, bt, creatureName, typeOptions, onUpda
       const resetTrades = resetTradesForAttackType(patch.attackType, norm.trades ?? TRADES_ZERO);
       const basePatch   = { ...patch, trades: resetTrades };
       if (patch.attackType === "acerto") basePatch.condition = BLANK_CONDITION;
-      const av = calcAutoRange(patch.attackType, norm.rangeType, bt);
+      const av = calcAutoRange(patch.attackType, norm.rangeType, bt, norm.areaRangeSteps);
       if (norm.rangeLocked !== false) basePatch.range = av.range;
       if (norm.areaLocked  !== false) basePatch.area  = av.area;
       if (!norm.damage?.damageIsLocked) {
@@ -1025,7 +1052,7 @@ function ActionItem({ action, patamar, nd, bt, creatureName, typeOptions, onUpda
   };
 
   const updateRangeType = (newRangeType) => {
-    const av = calcAutoRange(norm.attackType, newRangeType, bt);
+    const av = calcAutoRange(norm.attackType, newRangeType, bt, norm.areaRangeSteps);
     const rangePatch = {
       rangeType: newRangeType,
       ...(norm.rangeLocked !== false ? { range: av.range } : {}),
@@ -1193,7 +1220,7 @@ function ActionForm({ derived, draft, typeOptions, onAdd, onCancel }) {
         const resetTrades = resetTradesForAttackType(patch.attackType, prev.trades ?? TRADES_ZERO);
         next.trades = resetTrades;
         if (patch.attackType === "acerto") next.condition = BLANK_CONDITION;
-        const av = calcAutoRange(patch.attackType, next.rangeType, bt);
+        const av = calcAutoRange(patch.attackType, next.rangeType, bt, next.areaRangeSteps);
         if (next.rangeLocked !== false) next.range = av.range;
         if (next.areaLocked  !== false) next.area  = av.area;
         if (!prev.damage?.damageIsLocked) {
@@ -1279,7 +1306,7 @@ function ActionForm({ derived, draft, typeOptions, onAdd, onCancel }) {
 
   const updateRangeType = (newRangeType) =>
     setForm((prev) => {
-      const av = calcAutoRange(prev.attackType, newRangeType, bt);
+      const av = calcAutoRange(prev.attackType, newRangeType, bt, prev.areaRangeSteps);
       const rangeUpdates = {
         rangeType: newRangeType,
         ...(prev.rangeLocked !== false ? { range: av.range } : {}),
@@ -1489,7 +1516,7 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
 
   const rangeLocked = form.rangeLocked !== false;
   const areaLocked  = form.areaLocked  !== false;
-  const autoVals    = calcAutoRange(form.attackType, rangeType, bt);
+  const autoVals    = calcAutoRange(form.attackType, rangeType, bt, form.areaRangeSteps);
 
   const toggleRangeLock = () => {
     if (!rangeLocked) update({ rangeLocked: true, range: autoVals.range });
@@ -1798,13 +1825,14 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
       {form.attackType === "tr_area" && (
         <div>
           <FieldLabel hint="formato do template no mapa">Forma da Área</FieldLabel>
-          <div className="grid grid-cols-5 gap-1">
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1">
             {[
               { id: "circle", label: "Círculo" },
               { id: "square", label: "Quadrado" },
               { id: "cone",   label: "Cone" },
               { id: "cone_attached", label: "Cone Aderente" },
               { id: "line",   label: "Linha" },
+              { id: "line_attached", label: "Linha Aderente" },
             ].map((opt) => {
               const active = (form.areaShape ?? "circle") === opt.id;
               return (
@@ -1812,7 +1840,7 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
                   key={opt.id}
                   type="button"
                   onClick={() => update({ areaShape: opt.id })}
-                  title={opt.id === "cone_attached" ? "Cone com apex no conjurador, mirando na direção do cursor (grudado no personagem, igual à Linha)" : opt.label}
+                  title={opt.id === "cone_attached" ? "Cone com apex no conjurador, mirando na direção do cursor (grudado no personagem)" : opt.id === "line_attached" ? "Linha que parte do conjurador, mirando na direção do cursor (grudada no personagem)" : opt.label}
                   className={`h-9 rounded border text-[11px] font-medium transition-colors focus:outline-none ${
                     active
                       ? "border-purple-500 bg-purple-600/30 text-purple-100"
@@ -1826,6 +1854,34 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
           </div>
         </div>
       )}
+
+      {/* Reduzir área → aumentar alcance (regra do livro) */}
+      {form.attackType === "tr_area" && rangeType !== "cac" && (() => {
+        const maxSteps = maxAreaRangeSteps(bt);
+        const steps = Math.max(0, Math.min(maxSteps, Number(form.areaRangeSteps) || 0));
+        const setSteps = (v) => {
+          const n = Math.max(0, Math.min(maxSteps, v));
+          const av = calcAutoRange(form.attackType, rangeType, bt, n);
+          update({ areaRangeSteps: n, rangeLocked: true, areaLocked: true, range: av.range, area: av.area });
+        };
+        return (
+          <div className="rounded border border-slate-800 bg-slate-950/40 p-2.5">
+            <FieldLabel hint="−1,5m de área = +12m de alcance">Reduzir Área para Aumentar Alcance</FieldLabel>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setSteps(steps - 1)} disabled={steps <= 0}
+                className="w-8 h-8 rounded border border-slate-700 bg-slate-950 text-slate-200 disabled:opacity-40">−</button>
+              <span className="min-w-[2ch] text-center font-mono text-sm text-white">{steps}</span>
+              <button type="button" onClick={() => setSteps(steps + 1)} disabled={steps >= maxSteps}
+                className="w-8 h-8 rounded border border-slate-700 bg-slate-950 text-slate-200 disabled:opacity-40">+</button>
+              <span className="text-[11px] text-slate-400">
+                {steps > 0
+                  ? `Área −${String(steps * AREA_TRADE_STEP_M).replace(".", ",")}m · Alcance +${steps * RANGE_TRADE_STEP_M}m`
+                  : maxSteps > 0 ? "Sem troca" : "Área já está no mínimo (1,5m)"}
+              </span>
+            </div>
+          </div>
+        );
+      })()}
       </div>
 
       {/* Dano base */}
@@ -2138,6 +2194,27 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
               );
             })()}
 
+            {hasCond && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div>
+                  <FieldLabel hint="teste para sofrer a condição">Teste para Aplicar</FieldLabel>
+                  <Select
+                    value={form.condition?.applyTrType ?? ""}
+                    onChange={(v) => updateCond({ applyTrType: v })}
+                    options={[{ value: "", label: `Mesmo do ataque (${TR_TYPE_LABELS[form.trType] ?? "TR"})` }, ...TR_TYPE_OPTIONS]}
+                  />
+                </div>
+                <div>
+                  <FieldLabel hint="teste para se livrar da condição">Teste para Retirar</FieldLabel>
+                  <Select
+                    value={form.condition?.removeTrType ?? ""}
+                    onChange={(v) => updateCond({ removeTrType: v })}
+                    options={[{ value: "", label: "Mesmo do teste para aplicar" }, ...TR_TYPE_OPTIONS]}
+                  />
+                </div>
+              </div>
+            )}
+
             {hasCond && (() => {
               const mode = form.condition?.durationMode ?? "ate_acabar";
               const turns = form.condition?.durationTurns ?? 1;
@@ -2153,7 +2230,7 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
                     />
                     {(mode === "tr_todo_round" || mode === "ate_passar_tr") && (
                       <div className="mt-1 text-[10px] text-slate-500">
-                        TR usado: <span className="text-slate-300">{form.trType || "—"}</span> vs CD <span className="text-slate-300">{form.cd ?? 0}</span> (ambos vêm da própria ação).
+                        TR usado: <span className="text-slate-300">{TR_TYPE_LABELS[condRemoveTr(form)] || "—"}</span> vs CD <span className="text-slate-300">{form.cd ?? 0}</span> (CD da própria ação).
                       </div>
                     )}
                   </div>
