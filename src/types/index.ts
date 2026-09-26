@@ -720,6 +720,8 @@ export interface Character {
   keyAttribute?: 'Inteligência' | 'Sabedoria' | 'Presença';
   /** Suporte em Combate: usos da cura de toque gastos desde o último descanso. */
   suporteHealUsed?: number;
+  /** Suporte: usos gastos da Medicina Infalível (zera em descanso curto/longo). */
+  medicinaInfalivelUsed?: number;
   /** Suporte: TR treinado escolhido no Nv 1 ('Astúcia' | 'Vontade'). O TR Mestre
    *  (Nv 9) treina o outro e concede maestria neste. */
   suporteBaseTR?: 'Astúcia' | 'Vontade';
