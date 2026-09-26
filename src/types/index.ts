@@ -730,6 +730,10 @@ export interface Character {
   guardaSincronizada?: { members: string[] };
   /** Bônus de Defesa recebido de uma Guarda Sincronizada. */
   guardaSincronizadaBonus?: { value: number; grantedBy: string };
+  /** Suporte Nv 4 — Inspirar Aliados já usado nesta cena. */
+  inspirarUsadoCena?: boolean;
+  /** Inspiração ativa (no Suporte): aliados, usos compartilhados restantes e fim (segundos do relógio). */
+  inspiracao?: { allyIds: string[]; usesLeft: number; expiresAt: number };
   /** Apoio Estratégico ativo: +value na CD do próximo teste forçado, até o início do próximo turno de grantedBy. */
   apoioEstrategico?: { value: number; grantedBy?: string };
   /** Suporte: usos gastos da Medicina Infalível (zera em descanso curto/longo). */
