@@ -16,17 +16,17 @@ import type { Character } from '@/types';
 
 const get = (id: string) => useCharacterStore.getState().characters.find((c) => c.id === id)!;
 const mk = (p: Partial<Character>) => ({
-  category: 'PLAYER', level: 6, hpCurrent: 10, hpMax: 10, peCurrent: 10, peMax: 10,
+  category: 'PLAYER', level: 2, hpCurrent: 10, hpMax: 10, peCurrent: 10, peMax: 10,
   attributes: [], skills: [], savingThrows: [], passives: [], rdByType: {}, ca: 10, baseDC: 15, ...p,
 }) as unknown as Character;
 
 const grid = { dpi: 70, metersPerCell: 1.5 };
 const ent = (characterId: string, x: number, y: number) => ({ characterId, x, y, w: 70, h: 70 });
-const withAb = (id: string) => ({ chosenSpecAbilities: [{ abilityId: id, chosenAtLevel: 6 }] });
+const withAb = (id: string) => ({ chosenSpecAbilities: [{ abilityId: id, chosenAtLevel: 2 }] });
 
-describe('Catálogo do Suporte (Nv 6)', () => {
-  it('tem Apoio Avançado e Conceder Outra Chance no tier 6 e o catálogo continua válido', () => {
-    const ids = getSpecAbilitiesFor('Suporte').filter((a) => a.tier === 6).map((a) => a.id);
+describe('Catálogo do Suporte (Nv 2)', () => {
+  it('tem Apoio Avançado e Conceder Outra Chance no tier 2 e o catálogo continua válido', () => {
+    const ids = getSpecAbilitiesFor('Suporte').filter((a) => a.tier === 2).map((a) => a.id);
     expect(ids).toEqual(expect.arrayContaining([APOIO_AVANCADO_ID, OUTRA_CHANCE_ID]));
     expect(validateSpecAbilityCatalog()).toEqual([]);
   });
@@ -37,11 +37,13 @@ describe('Apoio Avançado — escolha de apoios', () => {
     useCharacterStore.setState({ characters: [mk({ id: 's', name: 'Sup', ...withAb(APOIO_AVANCADO_ID) })] });
   });
 
-  it('conhece 1 apoio no Nv 6 e 2 no Nv 12', () => {
-    expect(getApoiosMax(5)).toBe(0);
-    expect(getApoiosMax(6)).toBe(1);
-    expect(getApoiosMax(11)).toBe(1);
-    expect(getApoiosMax(12)).toBe(2);
+  it('conhece 1 apoio no Nv 2, +1 no Nv 6 e +1 no Nv 12', () => {
+    expect(getApoiosMax(1)).toBe(0);
+    expect(getApoiosMax(2)).toBe(1);
+    expect(getApoiosMax(5)).toBe(1);
+    expect(getApoiosMax(6)).toBe(2);
+    expect(getApoiosMax(11)).toBe(2);
+    expect(getApoiosMax(12)).toBe(3);
   });
 
   it('escolhe até o limite e não repete apoio', () => {
@@ -50,8 +52,8 @@ describe('Apoio Avançado — escolha de apoios', () => {
     expect(getApoiosEscolhidos(get('s'))).toEqual(['defensivo']);
     expect(canChooseApoio(get('s'))).toBe(false);
     expect(chooseApoio(get('s'), 'focado').ok).toBe(false);
-    // Nv 12 libera o segundo
-    useCharacterStore.getState().updateCharacter('s', { level: 12 });
+    // Nv 6 libera o segundo
+    useCharacterStore.getState().updateCharacter('s', { level: 6 });
     expect(chooseApoio(get('s'), 'defensivo').ok).toBe(false); // duplicado
     expect(chooseApoio(get('s'), 'focado').ok).toBe(true);
     expect(getApoiosEscolhidos(get('s'))).toEqual(['defensivo', 'focado']);
