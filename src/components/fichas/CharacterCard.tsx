@@ -31,6 +31,7 @@ import { rollD20Com, rollDiceCom } from '@/lib/dice';
 import { hasSpecAbility } from '@/lib/suporteNivel2';
 import { PRE_ANALISE_ATENCAO, PRE_ANALISE_ID } from '@/lib/suportePreAnaliseRecompensa';
 import { consumeAdvantageFor, consumeFlatBonusFor, applyAdvantageToD20 } from '@/lib/omni/rollAdvantage';
+import { maybeApplyRecompensa } from '@/lib/suportePreAnaliseRecompensa';
 import { cn } from '@/lib/utils';
 import { Eye, EyeOff, Dice1, ChevronDown, ChevronUp, Zap, Plus, X, Heart, Sparkles, Shield, Backpack, Star, Crosshair, RotateCcw, Gem, ScrollText, ShieldAlert, AlertTriangle, HelpCircle, Wand2, Moon, Wallet, Sword, Trash2 } from 'lucide-react';
 import { playDiceSound, playClickSound, playToggleSound, playSuccessSound, playErrorSound, playFichaToggleSound } from '@/lib/sounds';
@@ -880,6 +881,7 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
     const condLabel = condBonus !== 0 ? ` (${condBonus > 0 ? '+' : ''}${condBonus} cond.)` : '';
     const flatLabel = flat.bonus ? ` (${flat.bonus > 0 ? '+' : ''}${flat.bonus} comando/apoio)` : '';
     showRollAnimation(name + condLabel + flatLabel + modeLabel, d20, totalBonus + flat.bonus, d20 + totalBonus + flat.bonus);
+    maybeApplyRecompensa(c.id, flat, { find: (id) => useCharacterStore.getState().characters.find((x) => x.id === id), update: updateCharacter, log: (m) => addLog('combat', m) });
   };
 
   const handleSkillRoll = async (name: string, skillValue: number, linkedAttrId?: string, trained?: boolean, mastery?: boolean, externalBonus?: number) => {
@@ -957,6 +959,7 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
     const masteryLabel = promotedMastery && !mastery ? ' [Maestria/Spec]' : '';
     const flatLabel = flat.bonus ? ` (${flat.bonus > 0 ? '+' : ''}${flat.bonus} comando/apoio)` : '';
     showRollAnimation(name + auraLabel + condLabel + specLabel + sentidosLabel + inspiracaoLabel + flatLabel + masteryLabel + bastiaoLabel + modeLabel, d20, totalBonus + flat.bonus, d20 + totalBonus + flat.bonus);
+    maybeApplyRecompensa(c.id, flat, { find: (id) => useCharacterStore.getState().characters.find((x) => x.id === id), update: updateCharacter, log: (m) => addLog('combat', m) });
   };
 
   const [hitTargets, setHitTargets] = useState<string[]>([]);
