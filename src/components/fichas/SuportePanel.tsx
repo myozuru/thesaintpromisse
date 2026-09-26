@@ -24,6 +24,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
   const applyHealing = useCharacterStore((s) => s.applyHealing);
   const addLog = useLogStore((s) => s.addLog);
   const [targetId, setTargetId] = useState<string>(c.id);
+  const [apoiarTargetId, setApoiarTargetId] = useState<string>('');
   const [busy, setBusy] = useState(false);
 
   if (!isSuporte(c)) return null;
@@ -37,8 +38,8 @@ export function SuportePanel({ character: c }: { character: Character }) {
   const sign = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
 
   const handleApoiar = async () => {
-    const target = characters.find((x) => x.id === targetId);
-    if (!target || busy) return;
+    const target = characters.find((x) => x.id === apoiarTargetId);
+    if (!target || target.id === c.id || busy) return;
     setBusy(true);
     try {
       await applyApoiar(c, target);
