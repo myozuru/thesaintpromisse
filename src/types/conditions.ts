@@ -86,6 +86,8 @@ export interface SpellCondition {
   durationMode?: ConditionDurationMode;
   endCD?: number;
   endTrType?: string;
+  /** TR usado para sofrer a condição (quando diferente do TR do ataque). */
+  applyTrType?: string;
 }
 
 // ===== ÁREA PERSISTENTE (dano/condição contínua em zona) =====
