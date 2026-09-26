@@ -43,12 +43,14 @@ function computeBonus(c: Character, req: TestRequest): { bonus: number; breakdow
     const train = getTrainingBonus(level, sk.trained, sk.mastery);
     const half = getLevelSkillBonus(level);
     const ext = sk.externalBonus ?? 0;
-    const bonus = attrMod + train + half + ext;
+    const insp = c.inspiracaoBonus ?? 0;
+    const bonus = attrMod + train + half + ext + insp;
     const parts = [
       `½nv +${half}`,
       linked ? `${sk.linkedAttribute} ${attrMod >= 0 ? '+' : ''}${attrMod}` : null,
       train ? `treino +${train}` : null,
       ext ? `ext ${ext >= 0 ? '+' : ''}${ext}` : null,
+      insp ? `inspirado +${insp}` : null,
     ].filter(Boolean);
     return { bonus, breakdown: parts.join(' · ') };
   }
