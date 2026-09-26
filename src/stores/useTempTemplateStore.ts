@@ -35,7 +35,7 @@ interface State {
   rename: (id: string, label: string) => void;
 }
 
-export function createTempTemplate(label: string, c: Character, id = crypto.randomUUID()): TempTemplate {
+export function createTempTemplate(label: string, c: Character, id: string = crypto.randomUUID()): TempTemplate {
   const attributes: Record<string, number> = {};
   (c.attributes ?? []).forEach((a) => { attributes[a.name] = a.value ?? 10; });
   const skills: Record<string, number> = {};
