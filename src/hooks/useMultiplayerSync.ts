@@ -322,6 +322,8 @@ function applySmoothedEntityPatches(patches: RemotePatch[]) {
 
 /** Últimos mapas completos que ESTE navegador salvou — o eco vindo do banco é ignorado. */
 const recentPublishedMapJSON: string[] = [];
+/** Última mudança feita NESTE navegador no mapa (ainda pode não ter sido enviada). */
+let localMapChangedAt = -Infinity;
 function rememberPublishedMap(json: string) {
   recentPublishedMapJSON.push(json);
   if (recentPublishedMapJSON.length > 6) recentPublishedMapJSON.shift();
@@ -381,13 +383,14 @@ function applyRemote(slice: WorldSlice, data: unknown) {
       const mergedEntities: Record<string, any> = { ...(nextActive?.entities ?? {}) };
       if (nextActiveId === current.activeSceneId) {
         const recent = getRecentLocalEntityEdits();
+        const localFresh = performance.now() - localMapChangedAt < 1500;
         const localEnts = current.entities as Record<string, any>;
         for (const id of Object.keys(mergedEntities)) {
           const local = localEnts[id];
           if (!local) continue;
           const inc = mergedEntities[id];
           const livePatchAge = performance.now() - (remotePatchAt.get(id) ?? -Infinity);
-          if (recent.has(id) || livePatchAge < 1500) {
+          if (recent.has(id) || livePatchAge < 1500 || localFresh) {
             mergedEntities[id] = { ...inc, x: local.x, y: local.y };
           } else if (smoothTargets.has(id) && typeof inc.x === 'number' && typeof inc.y === 'number') {
             smoothTargets.set(id, { x: inc.x, y: inc.y });
@@ -963,6 +966,7 @@ export function useMultiplayerSync() {
 
     const unsubMapScene = useMapStore.subscribe(() => {
       if (applyingRemote) return;
+      localMapChangedAt = performance.now();
       if (mapSceneTimer) clearTimeout(mapSceneTimer);
       mapSceneTimer = setTimeout(flushMapScene, 120);
     });
