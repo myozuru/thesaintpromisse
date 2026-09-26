@@ -61,7 +61,7 @@ describe('Apoio Avançado — escolha de apoios', () => {
 });
 
 describe('Apoio Avançado — efeitos', () => {
-  const tb = getTrainingBonusByLevel(6);
+  const tb = getTrainingBonusByLevel(2);
   beforeEach(() => {
     useCharacterStore.setState({
       characters: [
@@ -132,7 +132,7 @@ describe('Apoio Avançado — efeitos', () => {
 });
 
 describe('Conceder Outra Chance — usos e descanso', () => {
-  const tb = getTrainingBonusByLevel(6);
+  const tb = getTrainingBonusByLevel(2);
   beforeEach(() => {
     useCharacterStore.setState({ characters: [mk({ id: 's', name: 'Sup', ...withAb(OUTRA_CHANCE_ID) })] });
   });
@@ -153,7 +153,7 @@ describe('Conceder Outra Chance — usos e descanso', () => {
 });
 
 describe('Conceder Outra Chance — elegibilidade (6 m)', () => {
-  const tb = getTrainingBonusByLevel(6);
+  const tb = getTrainingBonusByLevel(2);
   const sup = () => get('s');
   beforeEach(() => {
     useCharacterStore.setState({
