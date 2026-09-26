@@ -30,6 +30,15 @@ import {
 import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import { HeartHandshake, HandHelping, ShieldCheck, Sparkles } from 'lucide-react';
 import { AmizadeSection, AnaliseSection } from './SuporteNivel2Sections';
+import { ApoioAvancadoSection, OutraChanceSection } from './SuporteNivel6Sections';
+import { hasSpecAbility } from '@/lib/suporteNivel2';
+import {
+  APOIO_AVANCADO_ID,
+  APOIOS_AVANCADOS,
+  applyApoioAvancado,
+  getApoiosEscolhidos,
+  type ApoioAvancadoKey,
+} from '@/lib/suporteNivel6';
 
 export function SuportePanel({ character: c }: { character: Character }) {
   const characters = useCharacterStore((s) => s.characters);
@@ -42,6 +51,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
   const [trChoice, setTrChoice] = useState<SuporteBaseTR>('Astúcia');
   const [busy, setBusy] = useState(false);
   const [maximize, setMaximize] = useState(0);
+  const [apoioKey, setApoioKey] = useState<ApoioAvancadoKey | ''>('');
 
   if (!isSuporte(c)) return null;
 
@@ -52,17 +62,55 @@ export function SuportePanel({ character: c }: { character: Character }) {
   const left = getSuporteHealUsesLeft(c);
   const allies = characters.filter((x) => x.category === 'PLAYER' || x.category === 'NPC' || x.id === c.id);
   const sign = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
+  const apoiosConhecidos = hasSpecAbility(c, APOIO_AVANCADO_ID) ? getApoiosEscolhidos(c) : [];
+
+  /** Cura de toque do Suporte em Combate (também usada pelo Apoio Curativo). */
+  const rollSuporteHeal = async (target: Character, origem: string): Promise<number> => {
+    const notation = `${dice.count}d${dice.sides}`;
+    const { rolls } = await rollDiceCom(c.id, notation, {
+      bonus: keyMod,
+      label: `Suporte em Combate — Cura (${origem})`,
+    });
+    const med = applyMedicinaInfalivel(c, rolls, dice.sides, 0);
+    const amount = Math.max(0, med.rolls.reduce((a, b) => a + b, 0) + keyMod + med.flatBonus);
+    const before = target.hpCurrent;
+    applyHealing(target.id, amount, 'other');
+    const after = useCharacterStore.getState().characters.find((x) => x.id === target.id)?.hpCurrent ?? before;
+    updateCharacter(c.id, {
+      suporteHealUsed: (c.suporteHealUsed ?? 0) + 1,
+      ...(med.used > 0 ? { medicinaInfalivelUsed: (c.medicinaInfalivelUsed ?? 0) + med.used } : {}),
+    });
+    const medTxt = med.flatBonus ? ` +${med.flatBonus} Medicina Infalível` : '';
+    addLog(
+      'combat',
+      `💚 ${c.name}: Suporte em Combate (${origem}, toque) cura ${target.name} — ${notation}[${med.rolls.join(', ')}] ${sign(keyMod)} ${keyAttr}${medTxt} = ${amount} (PV ${before} → ${after}). Usos: ${left - 1}/${maxUses}.`,
+    );
+    return amount;
+  };
 
   const handleApoiar = async () => {
     const target = characters.find((x) => x.id === apoiarTargetId);
     if (!target || target.id === c.id || busy) return;
     setBusy(true);
     try {
+      // Apoio Avançado: valida o efeito ANTES de aplicar o Apoiar.
+      let advNote = '';
+      if (apoioKey) {
+        const r = applyApoioAvancado(c, target, apoioKey);
+        if (!r.ok) {
+          addLog('combat', `❌ ${c.name}: ${APOIOS_AVANCADOS[apoioKey].label} falhou — ${r.reason}`);
+          return;
+        }
+        advNote = ` + ${APOIOS_AVANCADOS[apoioKey].label}${r.note ? ` (${r.note})` : ''}`;
+      }
       await applyApoiar(c, target);
       addLog(
         'combat',
-        `🤝 ${c.name} usa Apoiar (Ação Bônus) em ${target.name} — vantagem no próximo teste de perícia da tarefa apoiada, até o início do próximo turno de ${c.name}.`,
+        `🤝 ${c.name} usa Apoiar (Ação Bônus) em ${target.name} — vantagem no próximo teste de perícia da tarefa apoiada, até o início do próximo turno de ${c.name}.${advNote}`,
       );
+      // Apoio Curativo: rola a cura como parte da mesma ação.
+      if (apoioKey === 'curativo') await rollSuporteHeal(target, 'Apoio Curativo');
+      setApoioKey('');
     } finally {
       setBusy(false);
     }
