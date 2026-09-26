@@ -115,6 +115,8 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
   const [motivation, setMotivation] = useState<Motivation>('Medo');
   const [origin, setOrigin] = useState<Origin>('Inato');
   const [keyAttribute, setKeyAttribute] = useState<'Inteligência' | 'Sabedoria'>('Inteligência');
+  /** Suporte: atributo-chave escolhido (Presença ou Sabedoria — regra do livro). */
+  const [supKeyAttribute, setSupKeyAttribute] = useState<'Presença' | 'Sabedoria'>('Presença');
 
   // Step 3: Stats — agora DERIVADAS dos atributos + classe/spec.
   const [level, setLevel] = useState(1);
@@ -163,6 +165,16 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
   const TEC_FIXED_SKILLS = ['Feitiçaria', 'Ocultismo'];
   const tecOficioOptions = useMemo(() => ['Ofício 1', 'Ofício 2', 'Ofício 3'], []);
   const tecChoicesComplete = !isTecnica || (!!tecSaveChoice && tecOficioChoices.length === 2 && tecFundamentos.length === 2);
+
+  // ===== Suporte — escolhas obrigatórias (regra do livro) =====
+  // Automático: Armas Simples + Escudos. Perícias fixas: Medicina + Prestidigitação.
+  // O jogador escolhe: 1 TR entre Astúcia | Vontade e 2 Ofícios (Treinados).
+  // (As "outras três perícias quaisquer" usam o pool normal do passo Perícias.)
+  const [supSaveChoice, setSupSaveChoice] = useState<'Astúcia' | 'Vontade' | ''>('');
+  const [supOficioChoices, setSupOficioChoices] = useState<string[]>([]);
+  const isSuporte = charClass === 'Feiticeiro' && specialization === 'Suporte';
+  const SUP_FIXED_SKILLS = ['Medicina', 'Prestidigitação'];
+  const supChoicesComplete = !isSuporte || (!!supSaveChoice && supOficioChoices.length === 2);
 
   // Step 6: Passives
   const [passives, setPassives] = useState<Passive[]>([]);
