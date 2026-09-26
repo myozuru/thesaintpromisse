@@ -8,8 +8,8 @@ import {
 const ab = (...ids: string[]) => ids.map((abilityId) => ({ abilityId, chosenAtLevel: 4 }));
 const ch = (id: string, extra: Record<string, unknown> = {}) =>
   ({ id, name: id, level: 4, category: 'PLAYER', peCurrent: 20, chosenSpecAbilities: [], ...extra }) as unknown as Character;
-const grid = { cellSize: 50, metersPerCell: 1.5 } as never;
-const ent = (cid: string, x: number) => ({ id: `e-${cid}`, characterId: cid, x, y: 0, width: 50, height: 50 });
+const grid = { dpi: 50, metersPerCell: 1.5 } as never;
+const ent = (cid: string, x: number) => ({ id: `e-${cid}`, characterId: cid, x, y: 0, w: 50, h: 50 });
 
 describe('Negação Crítica', () => {
   const sup = ch('s', { chosenSpecAbilities: ab('sup-negacao-critica') });
