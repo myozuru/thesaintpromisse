@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Circle, Move, RotateCcw, Square, ZoomIn } from 'lucide-react';
 import type { Entity, TokenCrop } from '@/stores/useMapStore';
+import { DEFAULT_TOKEN_BORDER, TOKEN_BORDERS, drawTokenBorder, type TokenBorderStyle } from '@/lib/mapa/tokenBorders';
 import { assetCache } from '../assetCache';
 import { getTokenImageRect, normalizeTokenCrop } from '../EntityEngine';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ const DEFAULT_CROP: TokenCrop = { zoom: 1, offsetX: 0, offsetY: 0 };
 export function TokenCropDialog({ entity, onConfirm, onCancel }: Props) {
   const [crop, setCrop] = useState(() => normalizeTokenCrop(entity.tokenCrop));
   const [circular, setCircular] = useState(entity.shape === 'ELLIPSE');
+  const [border, setBorder] = useState<TokenBorderStyle>(entity.tokenCrop?.border ?? DEFAULT_TOKEN_BORDER);
   const [imageReadyTick, setImageReadyTick] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dragRef = useRef<{ x: number; y: number; crop: TokenCrop } | null>(null);
