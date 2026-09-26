@@ -23,6 +23,7 @@ const SHAPE_LABEL_TO_KIND: Record<string, TemplateKind> = {
   aderente: 'cone_attached',
   'cone livre': 'cone',
   linha: 'line',
+  'linha aderente': 'line',
 };
 
 const localToWorld = (e: Entity, lx: number, ly: number) => {

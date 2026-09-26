@@ -341,7 +341,8 @@ function buildPatch(creature: Creature, current: Character): Partial<Character> 
           durationRounds: typeof c.durationRounds === 'number' ? c.durationRounds : 0,
           durationMode: mode,
           endCD: typeof act.cd === 'number' ? act.cd : undefined,
-          endTrType: typeof act.trType === 'string' ? act.trType : undefined,
+          endTrType: (c.removeTrType || c.applyTrType || act.trType) || undefined,
+          applyTrType: c.applyTrType || undefined,
         };
       });
     // Para TR em Área, anexa "Área: <Forma> (<N>m[ x 1.5m])" na descrição,
@@ -349,13 +350,13 @@ function buildPatch(creature: Creature, current: Character): Partial<Character> 
     let finalDescription = act.description ?? '';
     if (attackTypeKey === 'tr_area') {
       const shapeLabelMap: Record<string, string> = {
-        circle: 'Esfera', square: 'Cubo', cone: 'Cone', cone_attached: 'Cone Aderente', line: 'Linha',
+        circle: 'Esfera', square: 'Cubo', cone: 'Cone', cone_attached: 'Cone Aderente', line: 'Linha', line_attached: 'Linha Aderente',
       };
       const shapeKey = String(act.areaShape ?? 'circle').toLowerCase();
       const shapeLabel = shapeLabelMap[shapeKey] ?? 'Esfera';
       const areaNum = parseFloat(String(act.area ?? '').replace(',', '.').match(/[\d.]+/)?.[0] ?? '0');
       if (areaNum > 0) {
-        const sizeStr = shapeKey === 'line'
+        const sizeStr = (shapeKey === 'line' || shapeKey === 'line_attached')
           ? `${areaNum}m x 1.5m`
           : `${areaNum}m`;
         const areaLine = `Área: ${shapeLabel} (${sizeStr})`;
