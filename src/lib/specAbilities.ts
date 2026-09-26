@@ -1542,6 +1542,14 @@ const SUPORTE: SpecAbility[] = [
     triggerText: 'Painel do Suporte — escolha aliado e condição.',
     logicText: 'Toque = 1,5 m no mapa. Condições especiais não podem ser encerradas; Sangramento (variável) pede o grau.',
   },
+  {
+    id: 'sup-negacao-critica', name: 'Negação Crítica', tier: 4, specialization: 'Suporte',
+    flavor: 'Impedir o pior de acontecer.',
+    mechanic: '1 + metade do bônus de treinamento vezes por cena, 3 PE: negue uma falha crítica de um aliado que você possa ver a até 12 metros.',
+    activation: 'passive',
+    triggerText: 'Aviso automático ao dono do Suporte quando um aliado tira 1 natural.',
+    logicText: 'A falha crítica vira falha comum. Vale para qualquer rolagem de d20.',
+  },
 ];
 
 // ===== Registry global =====================================================
