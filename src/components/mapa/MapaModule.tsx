@@ -33,6 +33,7 @@ import {
   drawEntity,
   drawSelection,
   drawNameplate,
+  getTokenDisplayPatch,
   worldToLocal,
   entitiesInRect,
   type HandleKind,
@@ -3076,7 +3077,7 @@ export function MapaModule() {
     const ents = sel.map((id) => st.entities[id]).filter((x): x is Entity => !!x);
     if (a === 'adjustToken') {
       const target = ents[0];
-      if (target?.assetId && target.shape === 'ELLIPSE') setTokenCropEntityId(target.id);
+      if (target?.assetId && target.tokenCrop) setTokenCropEntityId(target.id);
       return;
     }
     st.pushHistory();
@@ -3460,7 +3461,7 @@ export function MapaModule() {
                 canGroup={sel.length >= 2}
                 canUngroup={sel.some((e) => !!e.groupId)}
                 anyHasAsset={sel.some((e) => !!e.assetId)}
-                canAdjustToken={!!(single?.assetId && single.shape === 'ELLIPSE' && single.tokenCrop)}
+                canAdjustToken={!!(single?.assetId && single.tokenCrop)}
                 isPlayer={isPlayerNow}
                 isGM={!isPlayerNow}
                 myselfActive={myselfActive}
@@ -3721,10 +3722,14 @@ export function MapaModule() {
           <TokenCropDialog
             entity={entity}
             onCancel={() => setTokenCropEntityId(null)}
-            onConfirm={(tokenCrop) => {
+            onConfirm={(tokenCrop, circular) => {
               const st = useMapStore.getState();
+              const cached = entity.assetId ? assetCache.get(entity.assetId) : null;
+              const naturalW = cached?.img?.naturalWidth ?? entity.w;
+              const naturalH = cached?.img?.naturalHeight ?? entity.h;
+              const size = circular ? Math.max(entity.w, entity.h) : entity.h;
               st.pushHistory();
-              st.updateEntity(entity.id, { shape: 'ELLIPSE', w: Math.max(entity.w, entity.h), h: Math.max(entity.w, entity.h), tokenCrop });
+              st.updateEntity(entity.id, { ...getTokenDisplayPatch(circular, size, naturalW, naturalH), tokenCrop });
               setTokenCropEntityId(null);
             }}
           />

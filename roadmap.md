@@ -6,6 +6,7 @@
 - [ ] Verify build and core desktop/mobile flows.
 - [ ] Keep original database records, users, and multiplayer service pending until exports/configuration are supplied.
 - [x] Add adjustable circular framing to PNG characters and verify creation, editing, and persistence.
+- [x] Allow circular character tokens to switch back to free images and add a themed double border.
 
 ## Pendências de regras
 - [ ] Suporte Nv 4 — "No Último Segundo": implementar junto com os testes da Porta da Morte (contador de fracassos). Lembrar o usuário quando a Porta da Morte for feita.
