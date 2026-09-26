@@ -68,7 +68,7 @@ import { DotesPanel } from './DotesPanel';
 import { isCamActive } from '@/lib/camCores';
 import { getPassiveSpellLevel, isPassiveActive, getMaxSpells } from '@/lib/spellRules';
 import { applyOriginEffects } from '@/lib/originEngine';
-import { getTrainingBonusByLevel, getHitDiceMax } from '@/lib/levelEngine';
+import { getTrainingBonusByLevel, getHitDiceMax, MAX_LEVEL } from '@/lib/levelEngine';
 import { aggregateTalentBonuses } from '@/lib/talentEffects';
 import { aggregateAuraEffects, getPendingAbsorbedDice, hasKokusen, getKokusenCritThreshold } from '@/lib/auraEffects';
 import { aggregateConditionMods, getDefenseModFromConditions, getSkillModFromConditions, getAutoCritFromConditions } from '@/lib/conditionEffects';
