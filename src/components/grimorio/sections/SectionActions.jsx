@@ -1905,12 +1905,12 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
 
       {/* Reduzir área → aumentar alcance (regra do livro) */}
       {form.attackType === "tr_area" && rangeType !== "cac" && (() => {
-        const maxSteps = maxAreaRangeSteps(bt);
+        const maxSteps = maxAreaRangeSteps(bt, form.areaShape);
         const steps = Math.max(0, Math.min(maxSteps, Number(form.areaRangeSteps) || 0));
         const setSteps = (v) => {
           const n = Math.max(0, Math.min(maxSteps, v));
-          const av = calcAutoRange(form.attackType, rangeType, bt, n);
-          update({ areaRangeSteps: n, rangeLocked: true, areaLocked: true, range: av.range, area: av.area });
+          const av = calcAutoRange(form.attackType, rangeType, bt, n, form.areaShape, form.lineWidthSteps);
+          update({ areaRangeSteps: n, rangeLocked: true, areaLocked: true, range: av.range, area: av.area, lineWidth: av.lineWidth });
         };
         return (
           <div className="rounded border border-slate-800 bg-slate-950/40 p-2.5">
@@ -1925,6 +1925,35 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
                 {steps > 0
                   ? `Área −${String(steps * AREA_TRADE_STEP_M).replace(".", ",")}m · Alcance +${steps * RANGE_TRADE_STEP_M}m`
                   : maxSteps > 0 ? "Sem troca" : "Área já está no mínimo (1,5m)"}
+              </span>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Linha: aumentar largura reduzindo o comprimento (regra do livro) */}
+      {form.attackType === "tr_area" && rangeType !== "cac" && isLineShape(form.areaShape) && (() => {
+        const maxWSteps = maxLineWidthSteps(bt, form.areaShape, form.areaRangeSteps);
+        const wSteps = Math.max(0, Math.min(maxWSteps, Number(form.lineWidthSteps) || 0));
+        const setWSteps = (v) => {
+          const n = Math.max(0, Math.min(maxWSteps, v));
+          const av = calcAutoRange(form.attackType, rangeType, bt, form.areaRangeSteps, form.areaShape, n);
+          update({ lineWidthSteps: n, rangeLocked: true, areaLocked: true, range: av.range, area: av.area, lineWidth: av.lineWidth });
+        };
+        const curWidth = LINE_BASE_WIDTH_M + wSteps * LINE_WIDTH_STEP_M;
+        return (
+          <div className="rounded border border-slate-800 bg-slate-950/40 p-2.5">
+            <FieldLabel hint="−4,5m de comprimento = +1,5m de largura">Aumentar Largura da Linha</FieldLabel>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setWSteps(wSteps - 1)} disabled={wSteps <= 0}
+                className="w-8 h-8 rounded border border-slate-700 bg-slate-950 text-slate-200 disabled:opacity-40">−</button>
+              <span className="min-w-[2ch] text-center font-mono text-sm text-white">{wSteps}</span>
+              <button type="button" onClick={() => setWSteps(wSteps + 1)} disabled={wSteps >= maxWSteps}
+                className="w-8 h-8 rounded border border-slate-700 bg-slate-950 text-slate-200 disabled:opacity-40">+</button>
+              <span className="text-[11px] text-slate-400">
+                {wSteps > 0
+                  ? `Largura ${String(curWidth).replace(".", ",")}m · Comprimento −${String(wSteps * LINE_LENGTH_COST_M).replace(".", ",")}m`
+                  : maxWSteps > 0 ? `Largura 1,5m (padrão)` : "Comprimento insuficiente para alargar"}
               </span>
             </div>
           </div>
