@@ -115,6 +115,8 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
   const [motivation, setMotivation] = useState<Motivation>('Medo');
   const [origin, setOrigin] = useState<Origin>('Inato');
   const [keyAttribute, setKeyAttribute] = useState<'Inteligência' | 'Sabedoria'>('Inteligência');
+  /** Suporte: atributo-chave escolhido (Presença ou Sabedoria — regra do livro). */
+  const [supKeyAttribute, setSupKeyAttribute] = useState<'Presença' | 'Sabedoria'>('Presença');
 
   // Step 3: Stats — agora DERIVADAS dos atributos + classe/spec.
   const [level, setLevel] = useState(1);
@@ -163,6 +165,16 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
   const TEC_FIXED_SKILLS = ['Feitiçaria', 'Ocultismo'];
   const tecOficioOptions = useMemo(() => ['Ofício 1', 'Ofício 2', 'Ofício 3'], []);
   const tecChoicesComplete = !isTecnica || (!!tecSaveChoice && tecOficioChoices.length === 2 && tecFundamentos.length === 2);
+
+  // ===== Suporte — escolhas obrigatórias (regra do livro) =====
+  // Automático: Armas Simples + Escudos. Perícias fixas: Medicina + Prestidigitação.
+  // O jogador escolhe: 1 TR entre Astúcia | Vontade e 2 Ofícios (Treinados).
+  // (As "outras três perícias quaisquer" usam o pool normal do passo Perícias.)
+  const [supSaveChoice, setSupSaveChoice] = useState<'Astúcia' | 'Vontade' | ''>('');
+  const [supOficioChoices, setSupOficioChoices] = useState<string[]>([]);
+  const isSuporte = charClass === 'Feiticeiro' && specialization === 'Suporte';
+  const SUP_FIXED_SKILLS = ['Medicina', 'Prestidigitação'];
+  const supChoicesComplete = !isSuporte || (!!supSaveChoice && supOficioChoices.length === 2);
 
   // Step 6: Passives
   const [passives, setPassives] = useState<Passive[]>([]);
@@ -215,7 +227,9 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
     if (charClass === 'Feiticeiro') {
       keyAttrName = specialization === 'Especialista em Técnica'
         ? keyAttribute
-        : getKeyAttrForSpec(specialization);
+        : specialization === 'Suporte'
+          ? supKeyAttribute
+          : getKeyAttrForSpec(specialization);
     }
     const keyMod = keyAttrName ? mod(eff(keyAttrName)) : 0;
 
@@ -227,7 +241,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
     const ca = 10 + desMod;
     const baseDC = 10 + keyMod;
     return { hpMax, peMax, ca, baseDC, keyAttrName, keyMod, conMod, desMod };
-  }, [attrValues, charClass, specialization, keyAttribute, effects.attrBonuses]);
+  }, [attrValues, charClass, specialization, keyAttribute, supKeyAttribute, effects.attrBonuses]);
   const { hpMax, peMax, ca, baseDC } = derivedStats;
 
   const maxSpells = charClass === 'Feiticeiro'
@@ -265,7 +279,9 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
 
   // Pool unificado de perícias para Feiticeiros = nível + 1 (mesma regra da ficha).
   // Origens/clãs adicionam pontos extras (effects.trackers.availableTrainings).
-  const wizardSkillPoolBase = charClass === 'Feiticeiro' ? (level + 1) : 0;
+  // Suporte recebe +1 ponto extra: o livro concede 3 perícias quaisquer além das fixas
+  // (pool padrão nível+1 cobre só 2 no Nv 1).
+  const wizardSkillPoolBase = charClass === 'Feiticeiro' ? (level + 1) + (isSuporte ? 1 : 0) : 0;
 
   const liveTrackers = useMemo(() => {
     const totalAttr = (effects.trackers.availableAttrPoints + (effects.automation.extraAttrPoints ?? 0));
@@ -352,6 +368,8 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
     if (step === 1) {
       // Especialista em Técnica: bloqueia avanço sem as 3 escolhas obrigatórias.
       if (!tecChoicesComplete) return false;
+      // Suporte: bloqueia avanço sem TR + 2 Ofícios.
+      if (!supChoicesComplete) return false;
       return true;
     }
     if (step === 2) {
@@ -401,6 +419,11 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
       // 2 Ofícios escolhidos no passo Classe (sempre treinados).
       for (const ofKey of tecOficioChoices) tecTrainedOverride[ofKey] = true;
     }
+    // Suporte: Medicina + Prestidigitação fixas + 2 Ofícios escolhidos.
+    if (isSuporte) {
+      for (const fx of SUP_FIXED_SKILLS) tecTrainedOverride[fx] = true;
+      for (const ofKey of supOficioChoices) tecTrainedOverride[ofKey] = true;
+    }
 
     // Build skills array from fixed definitions
     const skills: Attribute[] = FIXED_SKILLS.map(sd => {
@@ -427,6 +450,15 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
     // Players: passivas criadas pelo player vão para análise do Mestre — NÃO entram
     // na ficha agora. Apenas as passivas concedidas pela origem ficam.
     const passivesForCharacter = isMaster ? [...passives, ...originPassives] : [...originPassives];
+    // Suporte: treinamento em Escudos (regra do livro) registrado como passiva.
+    if (isSuporte) {
+      passivesForCharacter.push({
+        id: crypto.randomUUID(),
+        name: 'Treinamento: Escudos',
+        description: 'Proficiente em Escudos (treinamento da especialização Suporte).',
+        bonusHP: 0, bonusPE: 0, bonusESC: 0, bonusSlots: 0, bonusRD: 0, bonusCA: 0,
+      });
+    }
 
     // HP/PE finais incluem automação de nível (Kamo +1/level, Gojo PE par, etc.)
     const finalHpMax = hpMax + (effects.automation.bonusHP ?? 0);
@@ -507,6 +539,17 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
             mastery: false,
           });
         }
+        // Suporte: adiciona o TR escolhido (Astúcia OU Vontade) como Treinado.
+        if (isSuporte && supSaveChoice) {
+          base.push({
+            id: crypto.randomUUID(),
+            name: supSaveChoice,
+            value: 0,
+            linkedAttribute: undefined,
+            trained: true,
+            mastery: false,
+          });
+        }
         return base;
       })(),
       passives: passivesForCharacter,
@@ -521,7 +564,8 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
       cursedLinkedAttr: '',
       dcLinkedAttr: '',
       // Especialista em Técnica: Armas Simples (melee) + Armas a Distância já treinadas.
-      meleeTrained: isTecnica ? true : false,
+      // Suporte: Armas Simples (melee) treinadas (regra do livro).
+      meleeTrained: (isTecnica || isSuporte) ? true : false,
       rangedTrained: isTecnica ? true : false,
       cursedTrained: false,
       meleeMastery: false,
@@ -552,7 +596,11 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
       accessorySlots: createEmptyAccessorySlots(),
       votos: '',
       hasEnergiaReversa,
-      keyAttribute: specialization === 'Especialista em Técnica' ? keyAttribute : undefined,
+      keyAttribute: specialization === 'Especialista em Técnica'
+        ? keyAttribute
+        : specialization === 'Suporte'
+          ? supKeyAttribute
+          : undefined,
       tecnicaFundamentos: isTecnica ? tecFundamentos : undefined,
       // ===== Origin metadata =====
       originTags: effects.tags,
@@ -841,6 +889,107 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                   <p className="text-[10px] text-muted-foreground italic">
                     Define CDs, ataques amaldiçoados e o bônus único no PE Máximo (6 × Nv + Mod).
                   </p>
+                </div>
+              )}
+
+              {/* ─── Suporte: atributo-chave + treinamentos obrigatórios ─── */}
+              {isSuporte && (
+                <div className="space-y-3 rounded-lg border-2 border-primary/40 bg-primary/5 p-3">
+                  <div className="flex items-center gap-2">
+                    <ScrollText className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-bold text-primary">Treinamentos do Suporte</span>
+                    {supChoicesComplete ? (
+                      <span className="ml-auto text-[10px] text-primary font-bold">✓ Completo</span>
+                    ) : (
+                      <span className="ml-auto text-[10px] text-destructive font-bold">Obrigatório</span>
+                    )}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground space-y-0.5">
+                    <p><strong>Automático:</strong> Armas Simples + Escudos.</p>
+                    <p><strong>Perícias fixas:</strong> Medicina + Prestidigitação.</p>
+                    <p><strong>Livres:</strong> 3 perícias quaisquer (passo Perícias).</p>
+                  </div>
+
+                  {/* Atributo-chave: Presença OU Sabedoria */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-foreground">🔑 Atributo-Chave (CD das habilidades)</label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {(['Presença', 'Sabedoria'] as const).map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setSupKeyAttribute(s)}
+                          className={cn(
+                            'h-8 rounded border text-[11px] font-bold transition-colors',
+                            supKeyAttribute === s
+                              ? 'border-primary bg-primary text-primary-foreground'
+                              : 'border-border bg-secondary/40 text-foreground hover:border-primary/60',
+                          )}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground italic">
+                      Define a CD das habilidades de Suporte e o bônus no PE Máximo (5 × Nv + Mod).
+                    </p>
+                  </div>
+
+                  {/* TR Astúcia OU Vontade */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-foreground">Teste de Resistência (1)</label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {(['Astúcia', 'Vontade'] as const).map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setSupSaveChoice(s)}
+                          className={cn(
+                            'h-8 rounded border text-[11px] font-bold transition-colors',
+                            supSaveChoice === s
+                              ? 'border-primary bg-primary text-primary-foreground'
+                              : 'border-border bg-secondary/40 text-foreground hover:border-primary/60',
+                          )}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Ofícios x2 */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-foreground">
+                      Ofícios (2 de 3) — selecionados: {supOficioChoices.length}/2
+                    </label>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {tecOficioOptions.map((o) => {
+                        const picked = supOficioChoices.includes(o);
+                        const full = supOficioChoices.length >= 2;
+                        return (
+                          <button
+                            key={o}
+                            type="button"
+                            disabled={!picked && full}
+                            onClick={() => {
+                              setSupOficioChoices((prev) =>
+                                picked ? prev.filter((x) => x !== o) : [...prev, o],
+                              );
+                            }}
+                            className={cn(
+                              'h-8 rounded border text-[11px] font-bold transition-colors',
+                              picked
+                                ? 'border-primary bg-primary text-primary-foreground'
+                                : 'border-border bg-secondary/40 text-foreground hover:border-primary/60',
+                              !picked && full && 'opacity-40 cursor-not-allowed',
+                            )}
+                          >
+                            {o}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               )}
 
