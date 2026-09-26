@@ -113,7 +113,7 @@ export function LevelUpDialog({ character: c, onClose }: Props) {
 
   // PE automático por especialização (mult/nível). Campo manual = bônus EXTRA opcional.
   const peMult = getPePerLevelMult(c.specialization);
-  const peKeyAttr = getKeyAttrForSpec(c.specialization);
+  const peKeyAttr = getKeyAttrForSpec(c.specialization, c.keyAttribute);
   const peKeyMod = peKeyAttr ? getAttrMod(getAttrValue(c, peKeyAttr)) : 0;
   const autoPeGain = peMult; // crescimento por nível (keyMod já está embutido no total acumulado)
   const [bonusPE, setBonusPE] = useState(0);

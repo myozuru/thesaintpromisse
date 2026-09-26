@@ -430,6 +430,15 @@ export function canMulticlassFromTecnica(attrs: Attribute[]): boolean {
   return get('Inteligência') >= 16 || get('Sabedoria') >= 16;
 }
 
+/**
+ * Suporte só pode multiclasse (entrada/saída) se possuir
+ * Presença OU Sabedoria >= 16 (regra do livro).
+ */
+export function canMulticlassFromSuporte(attrs: Attribute[]): boolean {
+  const get = (n: string) => attrs.find(a => a.name === n)?.value ?? 10;
+  return get('Presença') >= 16 || get('Sabedoria') >= 16;
+}
+
 // ===== Integração: aplica TODA a progressão automática ======================
 
 export interface TecnicaProgressionResult {
