@@ -302,7 +302,11 @@ export function TestRequestOverlay() {
       }
     }
 
-    let total = d20 + bonus;
+    // Bônus fixos (ex: Apoio Focado do Suporte) somam no total e são consumidos.
+    const flat = consumeFlatBonusFor(char.id, ctx);
+    const totalBonus = bonus + flat.bonus;
+
+    let total = d20 + totalBonus;
     // Quando o resultado é FORÇADO e há CD, ajusta `total` pra garantir
     // o veredito visual (sucesso ≥ CD, falha < CD).
     if (auto.outcome && current.dc != null) {
