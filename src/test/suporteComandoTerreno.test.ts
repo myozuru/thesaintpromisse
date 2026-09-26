@@ -85,9 +85,8 @@ describe('Desvendar Terreno', () => {
   });
   it('fim de cena zera o bônus', () => {
     pedirDesvendar(get('s')); definirCDDesvendar('s', 10); resolverDesvendar(get('s'), 20);
-    const st = useCharacterStore.getState() as unknown as Record<string, () => void>;
-    const reset = st.resetScene ?? st.endScene ?? st.resetSceneState;
-    if (reset) { reset(); expect(getDesvendarFase(get('s'))).toBe('idle'); }
+    useCharacterStore.getState().resetSceneForCharacter('s');
+    expect(getDesvendarFase(get('s'))).toBe('idle');
   });
   it('sem a habilidade não pede', () => {
     expect(pedirDesvendar(get('a')).ok).toBe(false);
