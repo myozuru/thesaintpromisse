@@ -628,6 +628,7 @@ const flushEntityPatches = () => {
 
 const sendEntityPatches = (patches: EntityPatchMessage) => {
   if (!patches.length) return;
+  markLocalEntityEdits(patches.map((p) => p.id));
   for (const { id, patch } of patches) {
     pendingEntityPatches.set(id, { ...(pendingEntityPatches.get(id) ?? {}), ...patch });
   }
