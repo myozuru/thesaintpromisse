@@ -503,6 +503,8 @@ function normalizeAction(action) {
     rangeLocked: action.rangeLocked ?? true,
     areaLocked:  action.areaLocked  ?? true,
     areaShape:   action.areaShape   ?? "circle",
+    lineWidthSteps: action.lineWidthSteps ?? 0,
+    lineWidth:      action.lineWidth      ?? 0,
     damage: {
       type: "cortante",
       isNarrativePhysical: false,
@@ -1008,9 +1010,10 @@ function ActionItem({ action, patamar, nd, bt, creatureName, typeOptions, onUpda
       const resetTrades = resetTradesForAttackType(patch.attackType, norm.trades ?? TRADES_ZERO);
       const basePatch   = { ...patch, trades: resetTrades };
       if (patch.attackType === "acerto") basePatch.condition = BLANK_CONDITION;
-      const av = calcAutoRange(patch.attackType, norm.rangeType, bt, norm.areaRangeSteps);
+      const av = calcAutoRange(patch.attackType, norm.rangeType, bt, norm.areaRangeSteps, norm.areaShape, norm.lineWidthSteps);
       if (norm.rangeLocked !== false) basePatch.range = av.range;
       if (norm.areaLocked  !== false) basePatch.area  = av.area;
+      basePatch.lineWidth = av.lineWidth;
       if (!norm.damage?.damageIsLocked) {
         const r = runFullCalc(patch.attackType, norm.condition, norm.damage?.narrativeType, norm.rangeType, resetTrades, norm.damage?.type);
         if (r) { onUpdate({ ...basePatch, ...r, damage: { ...norm.damage, ...r.damage } }); return; }
@@ -1085,9 +1088,10 @@ function ActionItem({ action, patamar, nd, bt, creatureName, typeOptions, onUpda
   };
 
   const updateRangeType = (newRangeType) => {
-    const av = calcAutoRange(norm.attackType, newRangeType, bt, norm.areaRangeSteps);
+    const av = calcAutoRange(norm.attackType, newRangeType, bt, norm.areaRangeSteps, norm.areaShape, norm.lineWidthSteps);
     const rangePatch = {
       rangeType: newRangeType,
+      lineWidth: av.lineWidth,
       ...(norm.rangeLocked !== false ? { range: av.range } : {}),
       ...(norm.areaLocked  !== false ? { area:  av.area  } : {}),
     };
