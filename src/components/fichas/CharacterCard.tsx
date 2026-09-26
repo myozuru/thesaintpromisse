@@ -1350,7 +1350,7 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
           </div>
           <div className="text-sm text-muted-foreground pr-2">
             {c.characterClass || 'Não-Feiticeiro'}
-            {c.characterClass === 'Feiticeiro' && c.specialization && c.specialization !== 'Lutador' ? ` · ${c.specialization}` : ''}
+            {c.isGrimorioCreature ? ' · Criatura' : (c.characterClass === 'Feiticeiro' && c.specialization && c.specialization !== 'Lutador' ? ` · ${c.specialization}` : '')}
             {c.characterClass === 'Maldição' && c.motivation ? ` · ${c.motivation}` : ''}
             {c.characterClass === 'Feiticeiro' && c.origin && c.origin !== 'Inato' ? ` · ${c.origin}` : ''}
             {' · '}
@@ -1595,10 +1595,10 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
       {c.origin === 'Feto Amaldiçoada Híbrido (FAH)' && <FahPanel character={c} />}
 
       {/* ─── Reações do Especialista em Técnica (Bloco A) ─── */}
-      <SpecReactionsPanel character={c} />
+      {!c.isGrimorioCreature && <SpecReactionsPanel character={c} />}
 
       {/* ─── Ações ativas do Especialista em Técnica (Bloco B) ─── */}
-      <SpecActionsPanel character={c} />
+      {!c.isGrimorioCreature && <SpecActionsPanel character={c} />}
 
       {/* ─── Painel de Ataque (combatEngine) ─── */}
       {/* Visível apenas durante combate ativo. */}
@@ -1922,7 +1922,7 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
       <SmoothCollapse open={expanded}>
         <div className="border-t border-border px-4 py-3 space-y-3 resize-y overflow-auto" style={{ minHeight: expanded ? '200px' : undefined }}>
           <ExhaustionControl character={c} />
-          <PendingLevelChoicesPanel character={c} />
+          {!c.isGrimorioCreature && <PendingLevelChoicesPanel character={c} />}
           <div className="space-y-2">
             {/* Attack types with linked attr, training, mastery */}
             <div className="space-y-1.5">
@@ -2724,7 +2724,7 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
             </Section>
           )}
 
-          {c.characterClass === 'Feiticeiro' && (
+          {c.characterClass === 'Feiticeiro' && !c.isGrimorioCreature && (
             <Section icon={<Sparkles className="h-4 w-4" />} title="Habilidades de Especialização">
               <SpecAbilitiesPanel character={c} editMode={editMode} />
             </Section>
