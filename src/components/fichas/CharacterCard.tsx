@@ -1290,7 +1290,7 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
           </span>
         </div>
         {/* Level up button (one-way). Oculto para INIMIGOs (ND fixo da importação). */}
-        {c.category !== 'INIMIGO' && (
+        {c.category !== 'INIMIGO' && c.level < MAX_LEVEL && (
         <div className="flex flex-col gap-0">
           <button
             onClick={(e) => {
