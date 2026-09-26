@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useCharacterStore } from '@/stores/useCharacterStore';
-import { isProtegidoPreAnalise, preAnaliseShortRestPatch, getRecompensaBonus, recompensaPEPatch, canEscolherAliadoPreAnalise, hasRecompensaNote } from '@/lib/suportePreAnaliseRecompensa';
+import { isProtegidoPreAnalise, preAnaliseShortRestPatch, getRecompensaBonus, recompensaPEPatch, canEscolherAliadoPreAnalise, hasRecompensaNote, maybeApplyRecompensa, RECOMPENSA_SOURCE_TAG } from '@/lib/suportePreAnaliseRecompensa';
 import { darComando } from '@/lib/suporteComandoTerreno';
 import { consumeFlatBonusFor } from '@/lib/omni/rollAdvantage';
 
@@ -50,8 +50,8 @@ describe('Recompensa pelo Sucesso', () => {
 
 describe('maybeApplyRecompensa — rolagens sem CD conhecida', () => {
   it('concede 2 PE quando o bônus reduzido do Comando é consumido numa rolagem sem CD', () => {
-    const ally = mkChar({ peCurrent: 3, peMax: 10 });
-    const updates: [string, Partial<Character>][] = [];
+    const ally = mk({ id: 'a', peCurrent: 3, peMax: 10 }) as any;
+    const updates: [string, any][] = [];
     const logs: string[] = [];
     const ok = maybeApplyRecompensa(ally.id, { bonus: 2, notes: [`+2 Comando Motivador (Suporte) · ${RECOMPENSA_SOURCE_TAG}`] }, {
       find: (id) => (id === ally.id ? ally : undefined),
@@ -64,8 +64,8 @@ describe('maybeApplyRecompensa — rolagens sem CD conhecida', () => {
   });
 
   it('excedente vira PE temporário e não dispara sem a nota de Recompensa', () => {
-    const ally = mkChar({ peCurrent: 9, peMax: 10, tempPE: 0 });
-    const updates: [string, Partial<Character>][] = [];
+    const ally = mk({ id: 'a', peCurrent: 9, peMax: 10, tempPE: 0 }) as any;
+    const updates: [string, any][] = [];
     maybeApplyRecompensa(ally.id, { bonus: 2, notes: [RECOMPENSA_SOURCE_TAG] }, {
       find: () => ally, update: (id, p) => updates.push([id, p]), log: () => {},
     });
