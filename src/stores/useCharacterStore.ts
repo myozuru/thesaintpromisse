@@ -4284,6 +4284,8 @@ export const useCharacterStore = create<CharacterStore>()(
               suporteHealUsed: 0,
               medicinaInfalivelUsed: 0,
               inspiracaoBonus: 0,
+              // Inspirar Aliados: 1 vez por cena.
+              inspirarUsadoCena: false,
               // Transmitir Conhecimento: treinamentos temporários expiram no descanso.
               ...(expireTransmitir(c) ?? {}),
               // Conceder Outra Chance (Suporte Nv 6): descanso curto recupera metade dos usos.
