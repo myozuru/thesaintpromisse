@@ -323,7 +323,7 @@ export function TestRequestOverlay() {
       setRolling(false);
       setResult(current.id, {
         d20,
-        bonus,
+        bonus: totalBonus,
         total,
         rolledAt: Date.now(),
         advantageMode: advNet,
@@ -340,6 +340,7 @@ export function TestRequestOverlay() {
       const advTxt = advNet !== 'normal'
         ? ` [${advNet === 'advantage' ? 'Vantagem' : 'Desvantagem'} 2d20(${rolls.join(',')})→${d20}]`
         : '';
+      const flatTxt = flat.bonus ? ` ${flat.notes.join(' ')}` : '';
       const forcedTxt = auto.outcome
         ? ` [${auto.outcome === 'success' ? '✨ SUCESSO GARANTIDO' : '💀 FALHA GARANTIDA'}${auto.note ? ` · ${auto.note}` : ''}]`
         : '';
@@ -348,8 +349,29 @@ export function TestRequestOverlay() {
         : '';
       addLog(
         'combat',
-        `🎲 ${char.name} — ${kindLabel} (${current.testName}): d20 ${d20}${advTxt} ${bonus >= 0 ? '+' : ''}${bonus} = ${total}${forcedTxt}${dcTxt}`
+        `🎲 ${char.name} — ${kindLabel} (${current.testName}): d20 ${d20}${advTxt} ${totalBonus >= 0 ? '+' : ''}${totalBonus} = ${total}${flatTxt}${forcedTxt}${dcTxt}`
       );
+      // Conceder Outra Chance (Suporte Nv 6): falha com CD conhecida dispara a oferta.
+      if (passedFinal === false && !auto.outcome && current.dc != null && char.category === 'PLAYER') {
+        void (async () => {
+          const [{ findOutraChanceSupporter, sendOutraChanceOffer }, { useMapStore }] = await Promise.all([
+            import('@/lib/suporteNivel6'),
+            import('@/stores/useMapStore'),
+          ]);
+          const { entities, gridConfig } = useMapStore.getState();
+          const all = useCharacterStore.getState().characters;
+          const supporter = findOutraChanceSupporter(char.id, all, entities, gridConfig);
+          if (!supporter) return;
+          await sendOutraChanceOffer({
+            supporterId: supporter.id,
+            rollerId: char.id,
+            requestId: current.id,
+            testName: current.testName,
+            total,
+            dc: current.dc,
+          });
+        })();
+      }
     }, 1400);
   };
 
