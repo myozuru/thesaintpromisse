@@ -277,7 +277,9 @@ function smoothStep(now: number) {
   const k = 1 - Math.exp(-dt / 65);
   const entities = useMapStore.getState().entities as Record<string, { x: number; y: number } | undefined>;
   const out: RemotePatch[] = [];
+  const protectedIds = getProtectedRemoteEntityPatchIds();
   for (const [id, t] of smoothTargets) {
+    if (protectedIds?.has(id)) { smoothTargets.delete(id); continue; }
     const e = entities[id];
     if (!e) { smoothTargets.delete(id); continue; }
     const dx = t.x - e.x, dy = t.y - e.y;
