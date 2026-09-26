@@ -9,7 +9,8 @@
  *  • capturarEnvios(): grava o que esta tela mandaria às outras pela nuvem,
  *    e entregarNaOutraTela() simula a outra tela recebendo.
  *
- * Use em arquivos com `// @vitest-environment jsdom` para poder renderizar e clicar.
+ * Use em arquivos com `// @vitest-environment jsdom` para poder renderizar e clicar,
+ * e copie os vi.mock de nuvem/socket do fluxoNegacaoCritica.test.tsx (sem rede real).
  */
 import { vi } from 'vitest';
 import type { Character } from '@/types';
@@ -21,7 +22,7 @@ import { useRoleStore } from '@/stores/useRoleStore';
 
 // Sem som no ambiente de teste.
 const tudoNoop: unknown = new Proxy(function () {}, {
-  get: (_t, k) => (k === 'then' ? undefined : k === 'state' ? 'running' : typeof k === 'symbol' ? undefined : tudoNoop),
+  get: (_t, k) => (k === 'then' ? undefined : k === 'state' ? 'running' : k === 'currentTime' || k === 'value' ? 0 : typeof k === 'symbol' ? undefined : tudoNoop),
   apply: () => tudoNoop,
   construct: () => tudoNoop as object,
 });
