@@ -1,9 +1,7 @@
 import { useRef, useState } from 'react';
-import { User, Lock, ImagePlus, Eye } from 'lucide-react';
+import { User, Lock, ImagePlus } from 'lucide-react';
 import { JjkSwirl } from '@/components/JjkSwirl';
 import { authDb, nickToEmail, normalizeNick, NICK_RE, applyUser } from '@/lib/auth';
-import { useRoleStore } from '@/stores/useRoleStore';
-import { useProfileStore } from '@/stores/useProfileStore';
 
 type Tab = 'login' | 'signup';
 
@@ -52,11 +50,6 @@ export function AuthScreen() {
     } finally {
       setBusy(false);
     }
-  };
-
-  const enterAsVisitor = () => {
-    useProfileStore.getState().setActiveProfile(null);
-    useRoleStore.getState().setRole('PLAYER');
   };
 
   const input =
@@ -126,12 +119,6 @@ export function AuthScreen() {
           </button>
         </form>
 
-        <button
-          onClick={enterAsVisitor}
-          className="mt-4 w-full flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <Eye className="h-4 w-4" /> Entrar como visitante
-        </button>
       </div>
     </div>
   );
