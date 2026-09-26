@@ -1801,7 +1801,7 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
             Alcance Máx: <span className="text-slate-300">{params.range}m</span>
           </span>
           <span className="text-slate-500">
-            Área Máx: <span className="text-slate-300">{params.area}m</span>
+            Área Máx: <span className="text-slate-300">{baseAreaFor(bt, form.areaShape)}m{isLineShape(form.areaShape) ? " (×1,5 linha)" : ""}</span>
           </span>
           {rangeType === "cac" && (
             <span className="text-emerald-400 font-semibold">
