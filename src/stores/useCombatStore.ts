@@ -397,6 +397,10 @@ export const useCombatStore = create<CombatStore>()(
           import('@/lib/omni/autoOutcome').then(({ expireAutoOutcomesEndOfTurnFor }) => {
             expireAutoOutcomesEndOfTurnFor(currentEntry.charId);
           });
+          // Amizade Inquebrável (Suporte): pergunta se quer Apoiar o Amigo ao lado.
+          import('@/lib/suporteNivel2').then(({ checkAmizadeAtEndOfTurn }) =>
+            checkAmizadeAtEndOfTurn(currentEntry.charId),
+          );
         }
         const nextIndex = currentTurnIndex + 1;
         if (nextIndex >= initiativeOrder.length) {

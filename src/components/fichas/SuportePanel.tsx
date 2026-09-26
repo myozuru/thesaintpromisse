@@ -29,6 +29,7 @@ import {
 } from '@/lib/suporteAbilities';
 import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import { HeartHandshake, HandHelping, ShieldCheck, Sparkles } from 'lucide-react';
+import { AmizadeSection, AnaliseSection } from './SuporteNivel2Sections';
 
 export function SuportePanel({ character: c }: { character: Character }) {
   const characters = useCharacterStore((s) => s.characters);
@@ -281,6 +282,8 @@ export function SuportePanel({ character: c }: { character: Character }) {
           <span className="text-muted-foreground">PE: {c.peCurrent ?? 0}/{c.peMax ?? 0}</span>
         </div>
       )}
+      <AmizadeSection c={c} />
+      <AnaliseSection c={c} />
     </div>
   );
 }

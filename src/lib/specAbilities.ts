@@ -1413,11 +1413,36 @@ const ESPECIALISTA_TECNICA: SpecAbility[] = [
   },
 ];
 
+// ===== SUPORTE ==============================================================
+// Os botões dessas habilidades ficam no painel do Suporte (SuportePanel), por
+// isso o catálogo as marca como 'passive' (sem botão genérico que gaste PE).
+
+const SUPORTE: SpecAbility[] = [
+  {
+    id: 'sup-amizade-inquebravel', name: 'Amizade Inquebrável', tier: 2, specialization: 'Suporte',
+    flavor: 'Um laço que nenhum combate desfaz.',
+    mechanic: 'Escolha um Aliado Jogador como seu "Amigo" (permanente). Ao terminar seu turno ao lado dele (até 1,5 m), você pode, como ação livre, realizar Apoiar nele. Se o Amigo morrer, só pode escolher outro no próximo interlúdio.',
+    activation: 'passive',
+    triggerText: 'Fim do seu turno a até 1,5 m do Amigo (pergunta ao jogador).',
+    logicText: 'Aplica Apoiar (vantagem no próximo teste de perícia do Amigo) sem gastar ação. Troca de Amigo liberada pelo Mestre.',
+  },
+  {
+    id: 'sup-analise-profunda', name: 'Análise Profunda', tier: 2, specialization: 'Suporte',
+    flavor: 'Um olhar atento revela o que o inimigo esconde.',
+    mechanic: 'Ação Comum, 1 PE: role Percepção contra CD 15 + ND da criatura. No sucesso descobre 1 característica (PV, perícias, ataque…), +1 para cada 5 pontos excedentes. Uma vez por criatura, por cena.',
+    activation: 'passive',
+    peCost: 1,
+    triggerText: 'Botão "Analisar" no painel do Suporte.',
+    logicText: 'Descobertas = 1 + ⌊(total − CD) ÷ 5⌋ no sucesso; alvo marcado até o fim da cena.',
+  },
+];
+
 // ===== Registry global =====================================================
 
 const REGISTRY: Partial<Record<Specialization, SpecAbility[]>> = {
   Lutador: LUTADOR,
   'Especialista em Técnica': ESPECIALISTA_TECNICA,
+  Suporte: SUPORTE,
 };
 
 export function getSpecAbilitiesFor(spec: Specialization): SpecAbility[] {
