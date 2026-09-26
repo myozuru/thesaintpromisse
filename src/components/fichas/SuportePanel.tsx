@@ -80,10 +80,25 @@ export function SuportePanel({ character: c }: { character: Character }) {
   return (
     <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
       <div className="text-xs font-bold uppercase tracking-wider text-primary">Suporte em Combate</div>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <select
+          value={apoiarTargetId}
+          onChange={(e) => setApoiarTargetId(e.target.value)}
+          className="rounded border border-border bg-background px-2 py-1 text-xs"
+          title="Criatura que você está ajudando (não pode ser você)"
+        >
+          <option value="">Apoiar quem?</option>
+          {allies
+            .filter((a) => a.id !== c.id)
+            .map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+        </select>
         <button
           onClick={handleApoiar}
-          disabled={busy}
+          disabled={busy || !apoiarTargetId}
           className="inline-flex items-center gap-1 rounded border border-border bg-secondary/40 px-2 py-1 text-xs hover:bg-secondary/70 disabled:cursor-not-allowed disabled:opacity-40"
           title="Ação Bônus: o alvo ganha vantagem no próximo teste de perícia da tarefa apoiada, se rolar antes do início do seu próximo turno."
         >
