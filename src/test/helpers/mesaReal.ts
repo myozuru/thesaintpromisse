@@ -20,17 +20,14 @@ import { useProfileStore } from '@/stores/useProfileStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 
 // Sem som no ambiente de teste.
-if (typeof globalThis.AudioContext === 'undefined') {
-  (globalThis as Record<string, unknown>).AudioContext = class {
-    state = 'running'; currentTime = 0; destination = {};
-    resume() { return Promise.resolve(); }
-    createOscillator() { return { connect() {}, start() {}, stop() {}, frequency: { setValueAtTime() {}, exponentialRampToValueAtTime() {}, linearRampToValueAtTime() {} }, type: '' }; }
-    createGain() { return { connect() {}, gain: { setValueAtTime() {}, exponentialRampToValueAtTime() {}, linearRampToValueAtTime() {}, value: 0 } }; }
-    createBufferSource() { return { connect() {}, start() {}, stop() {}, buffer: null }; }
-    createBuffer() { return { getChannelData: () => new Float32Array(1) }; }
-    decodeAudioData() { return Promise.resolve({}); }
-  };
-}
+const tudoNoop: unknown = new Proxy(function () {}, {
+  get: (_t, k) => (k === 'then' ? undefined : k === 'state' ? 'running' : typeof k === 'symbol' ? undefined : tudoNoop),
+  apply: () => tudoNoop,
+  construct: () => tudoNoop as object,
+});
+(globalThis as Record<string, unknown>).AudioContext = function AudioContextFalso() { return tudoNoop; };
+// Sem conexões de rede ao vivo durante o teste.
+(globalThis as Record<string, unknown>).WebSocket = class { close() {} send() {} addEventListener() {} removeEventListener() {} };
 
 /** Cliente de nuvem falso: responde vazio a tudo, sem rede. */
 const vazio: unknown = new Proxy(function () {}, {
