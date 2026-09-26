@@ -11,6 +11,7 @@
  */
 import type { Attribute, Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
+import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 
 export function isSuporte(c: Pick<Character, 'specialization' | 'isGrimorioCreature'>): boolean {
   return c.specialization === 'Suporte' && !c.isGrimorioCreature;
@@ -153,4 +154,51 @@ export function applyPresencaInspiradora(
     store.updateCharacter(ally.id, { inspiracaoBonus: bonus });
   }
   return { ok: true, bonus, totalCost };
+}
+
+// ===== Medicina Infalível =====
+
+/** Nível do Suporte em que Medicina Infalível é obtida (assumido). */
+export const MEDICINA_INFALIVEL_LEVEL = 10;
+
+export function hasMedicinaInfalivel(c: Pick<Character, 'specialization' | 'isGrimorioCreature' | 'level'>): boolean {
+  return isSuporte(c) && (c.level ?? 0) >= MEDICINA_INFALIVEL_LEVEL;
+}
+
+function trainingBonus(level: number): number {
+  return getTrainingBonusByLevel(level ?? 1);
+}
+
+/** Usos por descanso = metade do nível de Suporte + bônus de treinamento. */
+export function getMedicinaInfalivelMaxUses(c: Pick<Character, 'level'>): number {
+  return Math.floor((c.level ?? 0) / 2) + trainingBonus(c.level);
+}
+
+export function getMedicinaInfalivelUsesLeft(c: Character): number {
+  if (!hasMedicinaInfalivel(c)) return 0;
+  return Math.max(0, getMedicinaInfalivelMaxUses(c) - (c.medicinaInfalivelUsed ?? 0));
+}
+
+/**
+ * Aplica Medicina Infalível numa cura: maximiza até `requested` dados (os
+ * menores primeiro, limitado aos usos restantes) e soma o bônus de
+ * treinamento ao total. Sem a habilidade, devolve tudo inalterado.
+ * Não grava nada: quem chama deve somar `used` em `medicinaInfalivelUsed`.
+ */
+export function applyMedicinaInfalivel(
+  c: Character,
+  rolls: number[],
+  sides: number,
+  requested: number,
+): { rolls: number[]; used: number; flatBonus: number; maximized: number[] } {
+  if (!hasMedicinaInfalivel(c)) return { rolls: [...rolls], used: 0, flatBonus: 0, maximized: [] };
+  const want = Math.max(0, Math.min(Math.floor(requested || 0), getMedicinaInfalivelUsesLeft(c)));
+  const order = rolls.map((v, i) => ({ v, i })).filter((x) => x.v < sides).sort((a, b) => a.v - b.v);
+  const out = [...rolls];
+  const maximized: number[] = [];
+  for (const { i } of order.slice(0, want)) {
+    out[i] = sides;
+    maximized.push(i);
+  }
+  return { rolls: out, used: maximized.length, flatBonus: trainingBonus(c.level), maximized };
 }

@@ -3879,6 +3879,7 @@ export const useCharacterStore = create<CharacterStore>()(
                 ...next,
                 peCurrent: Math.max(0, next.peCurrent - peCost),
                 ...(inCombat ? { actionsCurrent: Math.max(0, (next.actionsCurrent ?? 0) - 1) } : {}),
+                ...(med.used > 0 ? { medicinaInfalivelUsed: (next.medicinaInfalivelUsed ?? 0) + med.used } : {}),
               };
             }
             if (c.id === tgtId) {
