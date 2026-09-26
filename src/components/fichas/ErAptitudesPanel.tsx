@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { playClickSound, playSuccessSound, playErrorSound } from '@/lib/sounds';
 import { GroupHealDialog } from './GroupHealDialog';
 import { RegeneracaoAprimoradaDialog } from './RegeneracaoAprimoradaDialog';
+import { EnergiaReversaDialog } from './EnergiaReversaDialog';
 import type { FluxoConstanteModo } from '@/lib/erActivation';
 
 interface Props {
@@ -94,6 +95,8 @@ export function ErAptitudesPanel({
 
   const [groupHealOpen, setGroupHealOpen] = useState(false);
   const [regenOpen, setRegenOpen] = useState(false);
+  const [erHealOpen, setErHealOpen] = useState(false);
+  const hasEr = (c.chosenClAptitudes ?? []).includes('er-energia-reversa');
 
   const apts = { ...createDefaultCursedAptitudes(), ...(c.cursedAptitudes ?? {}) };
   const erLevel = apts.ER;
@@ -203,12 +206,23 @@ export function ErAptitudesPanel({
             </span>
             <span className="text-xs text-muted-foreground">ER {erLevel}/5</span>
           </div>
+          <div className="flex items-center gap-1.5">
+          {hasEr && (
+            <button
+              onClick={() => { playClickSound(); setErHealOpen(true); }}
+              className="text-xs px-2 py-1 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1"
+              title="Curar com Energia Reversa"
+            >
+              <HeartPulse className="h-3 w-3" /> Curar
+            </button>
+          )}
           <button
             onClick={() => { playClickSound(); setShowCatalog(p => !p); }}
             className="text-xs px-2 py-1 rounded-md border border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary transition-colors"
           >
             {showCatalog ? 'Fechar catálogo' : 'Abrir catálogo'}
           </button>
+          </div>
         </div>
       )}
 
@@ -273,7 +287,7 @@ export function ErAptitudesPanel({
                       <Sparkles className="h-3 w-3" /> Conjurar
                     </button>
                   )}
-                  {(apt.id === 'er-fluxo-constante' || apt.id === 'er-liberacao-energia-reversa' || apt.id === 'er-canalizar-energia-reversa') && (
+                  {(apt.id === 'er-fluxo-constante' || apt.id === 'er-canalizar-energia-reversa') && (
                     <button
                       onClick={() => handleActivateEr(apt.id)}
                       className="text-xs px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1"
@@ -444,6 +458,7 @@ export function ErAptitudesPanel({
 
       <GroupHealDialog caster={c} open={groupHealOpen} onOpenChange={setGroupHealOpen} />
       <RegeneracaoAprimoradaDialog character={c} open={regenOpen} onOpenChange={setRegenOpen} />
+      {erHealOpen && <EnergiaReversaDialog character={c} onClose={() => setErHealOpen(false)} />}
     </div>
   );
 }
