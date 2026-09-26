@@ -65,15 +65,17 @@ export function getConMod(c: Pick<Character, 'attributes'>): number {
   return getAttrMod(getAttrValue(c, 'Constituição'));
 }
 
-/** Atributo-chave para PE por classe. Apenas Especialista em Técnica/Controlador/Suporte ganham bônus. */
-export function getKeyAttrForSpec(spec: Specialization): string | null {
+/** Atributo-chave para PE por classe. Apenas Especialista em Técnica/Controlador/Suporte ganham bônus.
+ *  Suporte escolhe entre Presença ou Sabedoria (regra do livro) — usa `keyAttribute`
+ *  da ficha quando definido; fallback Presença para fichas antigas. */
+export function getKeyAttrForSpec(spec: Specialization, keyAttribute?: string | null): string | null {
   switch (spec) {
     case 'Especialista em Técnica':
       return 'Inteligência';
     case 'Controlador':
       return 'Sabedoria';
     case 'Suporte':
-      return 'Presença';
+      return keyAttribute === 'Sabedoria' ? 'Sabedoria' : 'Presença';
     default:
       return null;
   }
@@ -113,9 +115,10 @@ export function recalcPeMaxBySpec(
   spec: Specialization,
   attrs: Attribute[],
   bonusExternal = 0,
+  keyAttribute?: string | null,
 ): number {
   const mult = getPePerLevelMult(spec);
-  const keyName = getKeyAttrForSpec(spec);
+  const keyName = getKeyAttrForSpec(spec, keyAttribute);
   let keyMod = 0;
   if (keyName) {
     const value = attrs.find(a => a.name === keyName)?.value ?? 10;
