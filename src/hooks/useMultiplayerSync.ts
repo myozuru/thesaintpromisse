@@ -253,6 +253,66 @@ function pickTestRequests(s: ReturnType<typeof useTestRequestStore.getState>) {
   return s.requests;
 }
 
+// ── Suavização de movimento remoto ─────────────────────────────────────────
+// Posições recebidas deslizam até o destino em vez de "teleportar".
+type RemotePatch = { id: string; patch: Record<string, unknown> };
+const smoothTargets = new Map<string, { x: number; y: number }>();
+let smoothRaf: number | null = null;
+let smoothLast = 0;
+
+function applyRemoteEntityUpdate(patches: RemotePatch[]) {
+  if (!patches.length) return;
+  applyingRemote = true;
+  try {
+    useMapStore.getState().updateEntities(patches as never);
+  } finally {
+    setTimeout(() => { applyingRemote = false; }, 0);
+  }
+}
+
+function smoothStep(now: number) {
+  const dt = Math.min(100, now - (smoothLast || now));
+  smoothLast = now;
+  // ~90% do caminho em ~150ms, casando com o ritmo de envio (~8/s).
+  const k = 1 - Math.exp(-dt / 65);
+  const entities = useMapStore.getState().entities as Record<string, { x: number; y: number } | undefined>;
+  const out: RemotePatch[] = [];
+  for (const [id, t] of smoothTargets) {
+    const e = entities[id];
+    if (!e) { smoothTargets.delete(id); continue; }
+    const dx = t.x - e.x, dy = t.y - e.y;
+    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) {
+      out.push({ id, patch: { x: t.x, y: t.y } });
+      smoothTargets.delete(id);
+    } else {
+      out.push({ id, patch: { x: e.x + dx * k, y: e.y + dy * k } });
+    }
+  }
+  applyRemoteEntityUpdate(out);
+  smoothRaf = smoothTargets.size ? requestAnimationFrame(smoothStep) : null;
+  if (!smoothRaf) smoothLast = 0;
+}
+
+function applySmoothedEntityPatches(patches: RemotePatch[]) {
+  const immediate: RemotePatch[] = [];
+  const entities = useMapStore.getState().entities as Record<string, { x: number; y: number } | undefined>;
+  const canAnimate = typeof requestAnimationFrame === 'function' && typeof document !== 'undefined' && !document.hidden;
+  for (const { id, patch } of patches) {
+    const { x, y, ...rest } = patch as { x?: unknown; y?: unknown } & Record<string, unknown>;
+    const e = entities[id];
+    const hasPos = typeof x === 'number' && typeof y === 'number';
+    if (hasPos && e && canAnimate) {
+      smoothTargets.set(id, { x: x as number, y: y as number });
+      if (Object.keys(rest).length) immediate.push({ id, patch: rest });
+    } else {
+      smoothTargets.delete(id);
+      immediate.push({ id, patch });
+    }
+  }
+  applyRemoteEntityUpdate(immediate);
+  if (smoothTargets.size && smoothRaf == null) smoothRaf = requestAnimationFrame(smoothStep);
+}
+
 function applyRemote(slice: WorldSlice, data: unknown) {
   if (data == null) return;
   applyingRemote = true;
@@ -414,24 +474,14 @@ export function useMultiplayerSync() {
       const protectedIds = getProtectedRemoteEntityPatchIds();
       const patches = protectedIds ? p.patches.filter((patch) => !protectedIds.has(patch.id)) : p.patches;
       if (!patches.length) return;
-      applyingRemote = true;
-      try {
-        useMapStore.getState().updateEntities(patches as never);
-      } finally {
-        setTimeout(() => { applyingRemote = false; }, 0);
-      }
+      applySmoothedEntityPatches(patches);
     });
     const onEntityPatch = (payload: { clientId?: string; patches?: Array<{ id: string; patch: Record<string, unknown> }> } | null) => {
       if (!payload || payload.clientId === clientId || !Array.isArray(payload.patches)) return;
       const protectedIds = getProtectedRemoteEntityPatchIds();
       const patches = protectedIds ? payload.patches.filter((patch) => !protectedIds.has(patch.id)) : payload.patches;
       if (!patches.length) return;
-      applyingRemote = true;
-      try {
-        useMapStore.getState().updateEntities(patches as never);
-      } finally {
-        setTimeout(() => { applyingRemote = false; }, 0);
-      }
+      applySmoothedEntityPatches(patches);
     };
     void worldBus.subscribe();
     // expõe para o MapaModule emitir pings/cursor remotos
