@@ -375,27 +375,60 @@ const fmtM = (n) => `${String(n).replace(".", ",")} Metros`;
 // de alcance (e vice-versa). A área nunca fica abaixo de 1,5m.
 const AREA_TRADE_STEP_M  = 1.5;
 const RANGE_TRADE_STEP_M = 12;
-function maxAreaRangeSteps(bt) {
+// Regra do livro (Linha): área em Linha é multiplicada por 1,5 e começa com
+// 1,5m de largura; cada +1,5m de largura custa 4,5m de comprimento.
+const LINE_AREA_MULT      = 1.5;
+const LINE_BASE_WIDTH_M   = 1.5;
+const LINE_WIDTH_STEP_M   = 1.5;
+const LINE_LENGTH_COST_M  = 4.5;
+
+const isLineShape = (shape) => shape === "line" || shape === "line_attached";
+
+function baseAreaFor(bt, areaShape) {
   const params = getActionParams(bt);
-  return Math.max(0, Math.floor((params.area - AREA_TRADE_STEP_M) / AREA_TRADE_STEP_M + 1e-9));
+  return isLineShape(areaShape) ? params.area * LINE_AREA_MULT : params.area;
 }
-function calcAutoRange(attackType, rangeType, bt, areaRangeSteps = 0) {
+
+function maxAreaRangeSteps(bt, areaShape) {
+  const base = baseAreaFor(bt, areaShape);
+  return Math.max(0, Math.floor((base - AREA_TRADE_STEP_M) / AREA_TRADE_STEP_M + 1e-9));
+}
+
+function maxLineWidthSteps(bt, areaShape, areaRangeSteps = 0) {
+  if (!isLineShape(areaShape)) return 0;
+  const steps = Math.max(0, Math.min(maxAreaRangeSteps(bt, areaShape), Number(areaRangeSteps) || 0));
+  const afterRange = baseAreaFor(bt, areaShape) - steps * AREA_TRADE_STEP_M;
+  // o comprimento nunca fica abaixo de 1,5m
+  return Math.max(0, Math.floor((afterRange - AREA_TRADE_STEP_M) / LINE_LENGTH_COST_M + 1e-9));
+}
+
+function calcAutoRange(attackType, rangeType, bt, areaRangeSteps = 0, areaShape = "circle", lineWidthSteps = 0) {
   const params = getActionParams(bt);
   const isArea = attackType === "tr_area";
+  const isLine = isArea && isLineShape(areaShape);
   const steps  = isArea && rangeType !== "cac"
-    ? Math.max(0, Math.min(maxAreaRangeSteps(bt), Number(areaRangeSteps) || 0))
+    ? Math.max(0, Math.min(maxAreaRangeSteps(bt, areaShape), Number(areaRangeSteps) || 0))
     : 0;
-  const area  = params.area  - steps * AREA_TRADE_STEP_M;
+  const base  = baseAreaFor(bt, areaShape);
+  let area    = base - steps * AREA_TRADE_STEP_M;
+  let lineWidth = 0;
+  if (isLine) {
+    const wSteps = Math.max(0, Math.min(maxLineWidthSteps(bt, areaShape, steps), Number(lineWidthSteps) || 0));
+    area      = area - wSteps * LINE_LENGTH_COST_M;
+    lineWidth = LINE_BASE_WIDTH_M + wSteps * LINE_WIDTH_STEP_M;
+  }
   const range = params.range + steps * RANGE_TRADE_STEP_M;
   if (rangeType === "cac") {
     return {
       range: "Corpo-a-Corpo",
-      area:  isArea ? fmtM(params.area) : "-",
+      area:  isArea ? fmtM(base) : "-",
+      lineWidth: isLine ? LINE_BASE_WIDTH_M : 0,
     };
   }
   return {
     range: fmtM(range),
     area:  isArea ? fmtM(area) : "-",
+    lineWidth,
   };
 }
 
