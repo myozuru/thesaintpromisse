@@ -541,6 +541,27 @@ export function useMultiplayerSync() {
       void worldBus.send({ type: 'broadcast', event: 'protetor', payload: { clientId, ...d } });
     };
     window.addEventListener('protetor:send', onProtetorSend);
+    // Negação Crítica (Suporte Nv 4): oferta/aceite/fechamento entre telas.
+    worldBus.on('broadcast', { event: 'negacao' }, ({ payload }) => {
+      void import('@/lib/suporteNegacao').then(
+        ({ useNegacaoPromptStore, shouldSeeNegacaoPrompt, reduceNegacaoMessage, resolveNegacao }) => {
+          const r = reduceNegacaoMessage(payload as never, clientId, (sid) =>
+            shouldSeeNegacaoPrompt(sid, useRoleStore.getState().role),
+          );
+          const st = useNegacaoPromptStore.getState();
+          if (r.type === 'open') st.open(r.offer);
+          else if (r.type === 'accept' || r.type === 'close') {
+            if (st.offer?.requestId === r.requestId) st.close();
+            resolveNegacao(r.requestId, r.type === 'accept');
+          }
+        },
+      );
+    });
+    const onNegacaoSend = (e: Event) => {
+      const d = (e as CustomEvent).detail ?? {};
+      void worldBus.send({ type: 'broadcast', event: 'negacao', payload: { clientId, ...d } });
+    };
+    window.addEventListener('negacao:send', onNegacaoSend);
     // Mobilidade Avançada (Suporte Nv 2): oferta de reação entre telas.
     worldBus.on('broadcast', { event: 'mobilidade' }, ({ payload }) => {
       void import('@/lib/suporteRepertorioMobilidade').then(
@@ -1093,6 +1114,7 @@ export function useMultiplayerSync() {
       void supabase.removeChannel(cloudAssetChannel);
       window.removeEventListener('amizade:send', onAmizadeSend);
       window.removeEventListener('outra-chance:send', onOutraChanceSend);
+      window.removeEventListener('negacao:send', onNegacaoSend);
       window.removeEventListener('protetor:send', onProtetorSend);
       window.removeEventListener('mobilidade:send', onMobilidadeSend);
       void supabase.removeChannel(worldBus);

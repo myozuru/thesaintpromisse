@@ -42,6 +42,13 @@ export async function rollD20(bonus?: number): Promise<number> {
     const [r2] = await useDice3DStore.getState().requestRoll(['D20'], 'd20 reroll');
     if ((r2 ?? 0) > r) r = r2;
   }
+  // Negação Crítica (Suporte Nv 4): 1 natural de um aliado pode virar falha comum.
+  if (r === 1 && charId) {
+    try {
+      const { maybeNegateCritFail } = await import('@/lib/suporteNegacao');
+      await maybeNegateCritFail(charId);
+    } catch { /* sem Suporte elegível */ }
+  }
   return r;
 }
 
