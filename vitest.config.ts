@@ -7,5 +7,9 @@ export default defineConfig({
   resolve: { alias: { "@": path.resolve(__dirname, "src") } },
   test: {
     setupFiles: ["./src/test/setup.node.ts"],
+    // Ruído conhecido do ambiente jsdom (conexão interna do próprio Vitest), não do app.
+    onUnhandledError(error) {
+      if ((error as { code?: string }).code === "ERR_INVALID_ARG_TYPE" && String(error.message).includes('"event" argument')) return false;
+    },
   },
 });
