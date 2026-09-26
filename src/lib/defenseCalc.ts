@@ -281,6 +281,7 @@ export function computeDefenseBreakdown(
   if (specAbilityCA) notes.push(`Movimentos Imprevisíveis +${specAbilityCA}`);
   if (shieldCA && equippedShield) notes.push(`${equippedShield.name} +${shieldCA}`);
   if (conditionsCA) notes.push(`Condições ${conditionsCA >= 0 ? '+' : ''}${conditionsCA}`);
+  if (apoioCA) notes.push(`Apoio Defensivo +${apoioCA}`);
 
   return {
     base,

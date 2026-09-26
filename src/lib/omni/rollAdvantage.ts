@@ -55,6 +55,9 @@ export interface AdvModifier {
   /** charId de quem concedeu (ex: Apoiar do Suporte) — usado para expirar
    *  o efeito no início do próximo turno do concedente. */
   grantedBy?: string;
+  /** Bônus fixo (ex: Apoio Focado do Suporte). Mods com `bonus` NÃO contam
+   *  como vantagem/desvantagem — são somados ao total da rolagem. */
+  bonus?: number;
 }
 
 const PREFIX = '__advmod__:';
