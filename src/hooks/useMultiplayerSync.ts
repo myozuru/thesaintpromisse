@@ -1068,9 +1068,17 @@ export function useMultiplayerSync() {
         // Usa as posições vivas (a cópia da cena pode estar um passo atrasada).
         const liveEnts = useMapStore.getState().entities as Record<string, { x: number; y: number }>;
         const patches: Array<{ id: string; patch: { x: number; y: number } }> = [];
+        // Só reenvia peças mexidas AQUI. Peças que chegaram de outro PC (ou
+        // ainda deslizando) não voltam para a rede — antes cada tela reenviava
+        // as peças das outras, criando eco, disputa de posição e travamento.
+        const recentLocal = getRecentLocalEntityEdits();
+        const nowFlush = performance.now();
         for (const [id, e] of Object.entries(liveEnts)) {
           const p = lastSentLivePos.get(id);
-          if (!p || p.x !== e.x || p.y !== e.y) patches.push({ id, patch: { x: e.x, y: e.y } });
+          if (p && p.x === e.x && p.y === e.y) continue;
+          const remoteOwned = smoothTargets.has(id) || nowFlush - (remotePatchAt.get(id) ?? -Infinity) < 2500;
+          if (remoteOwned && !recentLocal.has(id)) continue;
+          patches.push({ id, patch: { x: e.x, y: e.y } });
         }
         const otherScenesSame = Object.keys(next.scenes).every((id) =>
           id === next.activeSceneId || JSON.stringify(next.scenes[id]) === JSON.stringify(prevObj.scenes[id]));
@@ -1080,7 +1088,7 @@ export function useMultiplayerSync() {
             markLocalEntityEdits(patches.map((p) => p.id));
             void worldBus.send({ type: 'broadcast', event: 'entity-patch', payload: { clientId, patches } });
           }
-          persistMapLater();
+          if (patches.length) persistMapLater();
           return;
         }
       }
