@@ -1111,6 +1111,7 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
     const { d20 } = await applyAdvantageToD20(omniAdv.net, () => rollD20Com(c.id));
     const totalHitBonus = c.customHitBonus + buffHit + flatAtk.bonus;
     const result = d20 + totalHitBonus;
+    maybeApplyRecompensa(c.id, flatAtk, { find: (id) => useCharacterStore.getState().characters.find((x) => x.id === id), update: updateCharacter, log: (m) => addLog('combat', m) });
 
     // Check for extra dice from buffs
     const extraDiceBuffs = activeBuffs.filter(b => b.type === 'extraDice');
