@@ -1195,7 +1195,9 @@ export const useCharacterStore = create<CharacterStore>()(
             merged.peMax = newPeMax;
             merged.peCurrent = Math.min(merged.peCurrent, newPeMax);
           }
-          if (specChanged || levelChanged || classChanged) {
+          if (merged.isGrimorioCreature) {
+            merged = stripCreatureProgression(merged);
+          } else if (specChanged || levelChanged || classChanged) {
             // Se mudou de spec/classe, regenera os trackers desde o Nv 1 (oldLevel=0).
             // Caso contrário, é um level-up incremental e usa o nível anterior.
             const oldLevelForTrackers = (specChanged || classChanged) ? 0 : c.level;
@@ -5017,9 +5019,13 @@ export const useCharacterStore = create<CharacterStore>()(
       // (vigorMalditoUses/Max, anatomyFeatures, canHealWithCursedEnergy, etc.)
       onRehydrateStorage: () => (state) => {
         if (!state) return;
+        const creatureIds = readGrimorioLinkedIds();
         state.characters = state.characters.map((c) => {
-          const migrated = finalizeFAH(c);
-          return migrateSavingThrowNames(migrated);
+          let migrated = migrateSavingThrowNames(finalizeFAH(c));
+          if (migrated.isGrimorioCreature || creatureIds.has(migrated.id)) {
+            migrated = stripCreatureProgression({ ...migrated, isGrimorioCreature: true });
+          }
+          return migrated;
         });
       },
     }
