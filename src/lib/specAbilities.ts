@@ -1452,6 +1452,23 @@ const SUPORTE: SpecAbility[] = [
     triggerText: 'Pergunta automática quando um aliado a até 6 m falha num teste com CD conhecida.',
     logicText: 'Falha detectada na rolagem (total < CD); ao aceitar, o aliado rola de novo e fica com o melhor total.',
   },
+  {
+    id: 'sup-otimizacao-espaco', name: 'Otimização de Espaço', tier: 2, specialization: 'Suporte',
+    flavor: 'Cada bolso no lugar certo — você carrega mais do que parece possível.',
+    mechanic: 'Você recebe espaços de item adicionais no inventário iguais ao seu bônus de treinamento.',
+    activation: 'passive',
+    triggerText: 'Automático — somado aos espaços do inventário na ficha.',
+    logicText: 'slotsMax efetivo += bônus de treinamento.',
+  },
+  {
+    id: 'sup-protetor', name: 'Protetor', tier: 2, specialization: 'Suporte',
+    flavor: 'Seu escudo não protege só a você.',
+    mechanic: 'Quando um aliado a até 1,5 m é atacado, gaste 1 PE (Ação Livre) para reduzir o dano em Xd10 + mod de Presença/Sabedoria, onde X = bônus de treinamento. Requer escudo equipado.',
+    activation: 'passive',
+    peCost: 1,
+    triggerText: 'Pergunta automática quando um aliado adjacente sofre dano de ataque.',
+    logicText: 'Redução retroativa: devolve HP/Escudo ao alvo até o valor rolado (máx. o dano sofrido).',
+  },
 ];
 
 // ===== Registry global =====================================================

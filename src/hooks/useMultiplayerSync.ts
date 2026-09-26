@@ -523,6 +523,24 @@ export function useMultiplayerSync() {
       void worldBus.send({ type: 'broadcast', event: 'outra-chance', payload: { clientId, ...d } });
     };
     window.addEventListener('outra-chance:send', onOutraChanceSend);
+    // Protetor (Suporte Nv 2): oferta/fechamento entre telas.
+    worldBus.on('broadcast', { event: 'protetor' }, ({ payload }) => {
+      void import('@/lib/suporteProtetor').then(
+        ({ useProtetorPromptStore, shouldSeeProtetorPrompt, reduceProtetorMessage }) => {
+          const r = reduceProtetorMessage(payload as never, clientId, (sid) =>
+            shouldSeeProtetorPrompt(sid, useRoleStore.getState().role),
+          );
+          const st = useProtetorPromptStore.getState();
+          if (r.type === 'close') st.close();
+          else if (r.type === 'open') st.open(r.offer);
+        },
+      );
+    });
+    const onProtetorSend = (e: Event) => {
+      const d = (e as CustomEvent).detail ?? {};
+      void worldBus.send({ type: 'broadcast', event: 'protetor', payload: { clientId, ...d } });
+    };
+    window.addEventListener('protetor:send', onProtetorSend);
     worldBus.on('broadcast', { event: 'ping' }, ({ payload }) => {
       const p = payload as { clientId?: string; x?: number; y?: number; color?: string } | null;
       if (!p || p.clientId === clientId || typeof p.x !== 'number' || typeof p.y !== 'number') return;
@@ -1057,6 +1075,7 @@ export function useMultiplayerSync() {
       void supabase.removeChannel(cloudAssetChannel);
       window.removeEventListener('amizade:send', onAmizadeSend);
       window.removeEventListener('outra-chance:send', onOutraChanceSend);
+      window.removeEventListener('protetor:send', onProtetorSend);
       void supabase.removeChannel(worldBus);
       if (chronosTimer) clearTimeout(chronosTimer);
       if (mapSceneTimer) clearTimeout(mapSceneTimer);

@@ -2298,6 +2298,34 @@ export const useCharacterStore = create<CharacterStore>()(
           }
         }
 
+        // ─── Suporte — Protetor (aliado adjacente sofreu dano) ─────────────
+        // Se um Suporte com a habilidade, escudo equipado e PE estiver a até
+        // 1,5 m do alvo, oferece a redução retroativa (Xd10 + mod) ao dono da
+        // ficha dele. A pergunta e a rolagem ficam no ProtetorPromptDialog.
+        const protDealt = postSet
+          ? Math.max(0, preEsc - postSet.escCurrent) + Math.max(0, preHp - postSet.hpCurrent)
+          : 0;
+        if (postSet && protDealt > 0 && damageType !== 'DAL') {
+          const dealt = protDealt;
+          setTimeout(() => {
+            void Promise.all([import('@/lib/suporteProtetor'), import('@/stores/useMapStore')]).then(
+              ([prot, mapMod]) => {
+                const { entities, gridConfig } = mapMod.useMapStore.getState();
+                const all = get().characters;
+                const sup = prot.findProtetor(postSet.id, all, entities, gridConfig);
+                if (!sup) return;
+                void prot.sendProtetorOffer({
+                  supporterId: sup.id,
+                  targetId: postSet.id,
+                  damageDealt: dealt,
+                  hpLost: Math.max(0, preHp - postSet.hpCurrent),
+                  escLost: Math.max(0, preEsc - postSet.escCurrent),
+                });
+              },
+            );
+          }, 0);
+        }
+
 
         // ─── Omni-Engine: emite gatilhos de dano ─────────────────────────────
         import('@/lib/omni/eventBus').then(({ emitirEvento }) => {
