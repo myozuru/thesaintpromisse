@@ -4,7 +4,7 @@ import { isProtegidoPreAnalise, preAnaliseShortRestPatch, getRecompensaBonus, re
 import { darComando } from '@/lib/suporteComandoTerreno';
 import { consumeFlatBonusFor } from '@/lib/omni/rollAdvantage';
 
-const mk = (o: any) => ({ id: o.id, name: o.id, category: 'PLAYER', level: 5, peCurrent: 10, peMax: 10, specAbilities: [], activeConditions: [], ...o });
+const mk = (o: any) => ({ id: o.id, name: o.id, category: 'PLAYER', level: 5, peCurrent: 10, peMax: 10, activeConditions: [], ...o, chosenSpecAbilities: (o.specAbilities ?? []).map((abilityId: string) => ({ abilityId })) });
 
 describe('Pré-Análise', () => {
   it('protege dono e aliado; outros não', () => {
