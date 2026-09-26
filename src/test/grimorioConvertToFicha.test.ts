@@ -115,7 +115,10 @@ describe('importCreatureToFichas — Calamidade ND 15', () => {
     const res = importCreatureToFichas(makeCalamidade());
     const c = useCharacterStore.getState().characters.find((x) => x.id === res!.id)!;
     const garra = c.spells.find((s) => s.name === 'Garra Lacerante')!;
-    expect(garra.damageDice).toBe('6d10+37');
+    // A conversão separa "6d10+37" em damageDice="6d10" + fixedDamage=37
+    // (o bônus fixo é somado na rolagem, sem duplicar nas técnicas).
+    expect(garra.damageDice).toBe('6d10');
+    expect(garra.fixedDamage).toBe(37);
     expect(garra.damageType).toBe('DCO');
     expect(garra.targetMode).toBe('single_atk');
 
