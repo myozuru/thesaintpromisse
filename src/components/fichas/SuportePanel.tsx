@@ -35,6 +35,8 @@ import { ComandoSection, DesvendarSection, PreAnaliseSection } from './SuporteCo
 import { RepertorioSection, MobilidadeSection } from './SuporteRepertorioMobilidadeSections';
 import { TransmitirSection } from './SuporteTransmitirSection';
 import { NegacaoCriticaSection } from './SuporteNegacaoSections';
+import { SintonizacaoVitalSection } from './SuporteSintonizacaoSections';
+import { maybeOfferSintonizacao } from '@/lib/suporteSintonizacao';
 import { GuardaSincronizadaSection, InspirarAliadosSection, IntervencaoSection } from './SuporteNivel4Sections';
 import { hasSpecAbility } from '@/lib/suporteNivel2';
 import {
@@ -90,6 +92,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
       'combat',
       `💚 ${c.name}: Suporte em Combate (${origem}, toque) cura ${target.name} — ${notation}[${med.rolls.join(', ')}] ${sign(keyMod)} ${keyAttr}${medTxt} = ${amount} (PV ${before} → ${after}). Usos: ${left - 1}/${maxUses}.`,
     );
+    void maybeOfferSintonizacao(c.id, target.id, amount);
     return amount;
   };
 
@@ -176,6 +179,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
         'combat',
         `💚 ${c.name}: Suporte em Combate (Ação Bônus, toque) cura ${target.name} — ${notation}[${healRolls.join(', ')}] ${sign(keyMod)} ${keyAttr}${medTxt} = ${amount} (PV ${before} → ${after}). Usos: ${left - 1}/${maxUses}.`,
       );
+      void maybeOfferSintonizacao(c.id, target.id, amount);
     } finally {
       setBusy(false);
     }
