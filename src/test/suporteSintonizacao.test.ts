@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { sintonizacaoHealAmount, canOfferSintonizacao, reduceSintonizacaoMessage, listSintonizacaoTargets } from '@/lib/suporteSintonizacao';
 import { getSpecAbilityById as getSpecAbility } from '@/lib/specAbilities';
 
-const sup = (o: Record<string, unknown> = {}) => ({ id: 's', name: 'S', peCurrent: 5, selectedSpecAbilities: ['sup-sintonizacao-vital'], specAbilities: ['sup-sintonizacao-vital'], ...o }) as never;
+const sup = (o: Record<string, unknown> = {}) => ({ id: 's', name: 'S', peCurrent: 5, chosenSpecAbilities: [{ abilityId: 'sup-sintonizacao-vital' }], ...o }) as never;
 
 describe('Sintonização Vital', () => {
   it('metade arredondada para cima', () => {
