@@ -410,7 +410,7 @@ export function TestRequestOverlay() {
             requestId: current.id,
             testName: current.testName,
             total,
-            dc: current.dc,
+            dc: current.dc as number,
           });
         })();
       }
