@@ -13,6 +13,7 @@ import { useCharacterStore } from '@/stores/useCharacterStore';
 import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import { hasSpecAbility } from '@/lib/suporteNivel2';
 import { grantFlatBonus } from '@/lib/omni/rollAdvantage';
+import { RECOMPENSA_ID, RECOMPENSA_SOURCE_TAG, getRecompensaBonus } from '@/lib/suportePreAnaliseRecompensa';
 
 export const COMANDO_ID = 'sup-comando-motivador';
 export const DESVENDAR_ID = 'sup-desvendar-terreno';
@@ -39,14 +40,16 @@ export function darComando(
   c: Character,
   target: Character | undefined,
   comando: string,
+  recompensa = false,
 ): { ok: boolean; reason?: string; bonus: number } {
   const chk = canComandar(c, target);
   if (!chk.ok || !target) return { ok: false, reason: chk.reason, bonus: 0 };
-  const bonus = getComandoBonus(c);
+  const useRecompensa = recompensa && hasSpecAbility(c, RECOMPENSA_ID);
+  const bonus = useRecompensa ? getRecompensaBonus(c) : getComandoBonus(c);
   useCharacterStore.getState().updateCharacter(c.id, { peCurrent: (c.peCurrent ?? 0) - COMANDO_PE_COST });
   grantFlatBonus(target.id, 'next_any', bonus, {
     expires: 'use',
-    source: `Comando Motivador (${c.name})${comando ? `: ${comando}` : ''}`,
+    source: `Comando Motivador (${c.name})${useRecompensa ? ` · ${RECOMPENSA_SOURCE_TAG}` : ''}${comando ? `: ${comando}` : ''}`,
     grantedBy: c.id,
   });
   return { ok: true, bonus };

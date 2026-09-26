@@ -18,6 +18,7 @@ import { useLogStore } from '@/stores/useLogStore';
 import { rollD20Com } from '@/lib/dice';
 import { getAttrModifier } from '@/components/fichas/CharacterCard';
 import { getTrainingBonus, getLevelSkillBonus } from '@/types';
+import { hasRecompensaNote, recompensaPEPatch } from '@/lib/suportePreAnaliseRecompensa';
 import { consumeAdvantageFor, consumeFlatBonusFor, peekAdvantageFor, type RollContext } from '@/lib/omni/rollAdvantage';
 import { consumeAutoOutcomeFor, peekAutoOutcomeFor, type OutcomeContext } from '@/lib/omni/autoOutcome';
 import { Dice6, X, Check, Loader2, Hourglass } from 'lucide-react';
@@ -393,6 +394,15 @@ export function TestRequestOverlay() {
         'combat',
         `🎲 ${char.name} — ${kindLabel} (${current.testName}): d20 ${d20}${advTxt} ${totalBonus >= 0 ? '+' : ''}${totalBonus} = ${total}${flatTxt}${forcedTxt}${dcTxt}`
       );
+      // Recompensa pelo Sucesso: sucesso com CD conhecida sob Comando reduzido → +2 PE.
+      if (passedFinal === true && current.dc != null && flat.bonus && hasRecompensaNote(flat.notes)) {
+        const fresh = useCharacterStore.getState().characters.find((x) => x.id === char.id);
+        if (fresh) {
+          const patch = recompensaPEPatch(fresh);
+          useCharacterStore.getState().updateCharacter(fresh.id, patch);
+          addLog('combat', `🏆 ${fresh.name} — Recompensa pelo Sucesso: +2 PE${(patch.tempPE ?? 0) > (fresh.tempPE ?? 0) ? ' (excedente como PE temporário)' : ''}.`);
+        }
+      }
       // Conceder Outra Chance (Suporte Nv 6): falha com CD conhecida dispara a oferta.
       if (passedFinal === false && !auto.outcome && current.dc != null && char.category === 'PLAYER') {
         void (async () => {

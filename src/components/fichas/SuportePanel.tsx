@@ -31,7 +31,7 @@ import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import { HeartHandshake, HandHelping, ShieldCheck, Sparkles } from 'lucide-react';
 import { AmizadeSection, AnaliseSection } from './SuporteNivel2Sections';
 import { ApoioAvancadoSection, OutraChanceSection } from './SuporteNivel6Sections';
-import { ComandoSection, DesvendarSection } from './SuporteComandoTerrenoSections';
+import { ComandoSection, DesvendarSection, PreAnaliseSection } from './SuporteComandoTerrenoSections';
 import { RepertorioSection, MobilidadeSection } from './SuporteRepertorioMobilidadeSections';
 import { TransmitirSection } from './SuporteTransmitirSection';
 import { NegacaoCriticaSection } from './SuporteNegacaoSections';
@@ -360,6 +360,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
       <MobilidadeSection c={c} />
       <TransmitirSection c={c} />
       <GuardaSincronizadaSection c={c} />
+      <PreAnaliseSection c={c} />
       <InspirarAliadosSection c={c} />
       <IntervencaoSection c={c} />
       <NegacaoCriticaSection c={c} />
