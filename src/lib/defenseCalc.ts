@@ -247,6 +247,9 @@ export function computeDefenseBreakdown(
   if (attackKind === 'melee') conditionsCA += condMods.defenseMelee ?? 0;
   else if (attackKind === 'ranged') conditionsCA += condMods.defenseRanged ?? 0;
 
+  // Apoio Defensivo (Suporte Nv 6): bônus temporário até o início do turno de quem apoiou.
+  const apoioCA = c.apoioDefensivo?.value ?? 0;
+
   const base = c.ca ?? 10;
   const total =
     base +
@@ -261,7 +264,8 @@ export function computeDefenseBreakdown(
     dualWieldCA +
     specAbilityCA +
     shieldCA +
-    conditionsCA;
+    conditionsCA +
+    apoioCA;
 
   const notes: string[] = [];
   notes.push(`CA base ${base}`);
