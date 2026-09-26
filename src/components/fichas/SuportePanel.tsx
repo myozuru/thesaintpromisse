@@ -55,6 +55,31 @@ export function SuportePanel({ character: c }: { character: Character }) {
     }
   };
 
+  const maxExtra = getPresencaInspiradoraMaxExtra(c);
+  const extra = Math.min(inspiracaoExtra, maxExtra);
+  const inspiracaoCost = 2 + extra;
+  const inspiracaoBonus = 1 + extra;
+  const canInspirar = c.level >= 3 && (c.peCurrent ?? 0) >= inspiracaoCost;
+
+  const handleInspirar = () => {
+    if (!canInspirar || busy) return;
+    setBusy(true);
+    try {
+      const r = applyPresencaInspiradora(c, allies, extra);
+      if (!r.ok) {
+        addLog('combat', `✨ ${c.name}: Presença Inspiradora falhou — ${r.reason}`);
+        return;
+      }
+      addLog(
+        'combat',
+        `✨ ${c.name} usa Presença Inspiradora (−${r.totalCost} PE): aliados em até 9 m recebem +${r.bonus} em TODAS as rolagens de perícia durante a cena.`,
+      );
+      setInspiracaoExtra(0);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleHeal = async () => {
     if (left <= 0 || busy) return;
     const target = characters.find((x) => x.id === targetId);
