@@ -5,6 +5,7 @@
  * Restrição: 1 buff por criatura por Descanso Longo (alvos já buffados ficam
  * desabilitados e marcados na lista).
  */
+import { shownHpMax } from '@/lib/peDisplay';
 import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -140,7 +141,7 @@ export function DiscursoMotivadorDialog({ source, open, onOpenChange }: Props) {
                         )}
                       </div>
                       <div className="text-[10px] text-muted-foreground">
-                        HP {a.hpCurrent}/{a.hpMax} · PV Temp atual: {a.escCurrent ?? 0}
+                        HP {a.hpCurrent}/{shownHpMax(a)} · PV Temp atual: {a.escCurrent ?? 0}
                         {already && <span className="ml-1 text-amber-400">— já buffado neste descanso</span>}
                       </div>
                     </div>

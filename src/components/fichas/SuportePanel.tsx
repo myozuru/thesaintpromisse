@@ -2,7 +2,7 @@
  * Painel das habilidades base do Suporte.
  * Nv 1 · Suporte em Combate: Apoiar (Ação Bônus) + Cura de toque (Ação Bônus).
  */
-import { shownPeMax } from '@/lib/peDisplay';
+import { shownPeMax, shownHpMax } from '@/lib/peDisplay';
 import { useState } from 'react';
 import type { Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
@@ -238,7 +238,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
         >
           {allies.map((a) => (
             <option key={a.id} value={a.id}>
-              {a.name} ({a.hpCurrent}/{a.hpMax})
+              {a.name} ({a.hpCurrent}/{shownHpMax(a)})
             </option>
           ))}
         </select>

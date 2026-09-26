@@ -1,3 +1,4 @@
+import { shownHpMax } from '@/lib/peDisplay';
 import { useState } from 'react';
 import { HeartPulse, X } from 'lucide-react';
 import type { Character } from '@/types';
@@ -75,7 +76,7 @@ export function EnergiaReversaDialog({ character: c, onClose }: Props) {
           >
             {targets.map(t => (
               <option key={t.id} value={t.id}>
-                {t.id === c.id ? `${t.name} (você)` : t.name} — {t.hpCurrent}/{t.hpMax} PV{t.id !== c.id && checkTouchTarget(c.id, t.id, entities, gridConfig) ? ' · fora do toque' : ''}
+                {t.id === c.id ? `${t.name} (você)` : t.name} — {t.hpCurrent}/{shownHpMax(t)} PV{t.id !== c.id && checkTouchTarget(c.id, t.id, entities, gridConfig) ? ' · fora do toque' : ''}
               </option>
             ))}
           </select>

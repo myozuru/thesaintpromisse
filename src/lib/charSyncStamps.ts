@@ -69,5 +69,15 @@ export function mergeIncomingCharacters<T extends WithId>(local: T[], remote: T[
   return out;
 }
 
+/** Para salvar na nuvem: por ficha, fica a cópia com carimbo mais novo.
+ *  Fichas só presentes na nuvem são removidas (a lista local define quem existe). */
+export function pickNewestPerCharacter<T extends WithId>(mine: T[], cloud: T[]): T[] {
+  const cloudById = new Map(cloud.filter((c) => c && typeof c.id === 'string').map((c) => [c.id, c]));
+  return mine.map((m) => {
+    const cl = cloudById.get(m.id);
+    return cl && (cl._syncAt ?? 0) > (m._syncAt ?? 0) ? cl : m;
+  });
+}
+
 /** Só para testes. */
 export function __resetCharSyncStamps() { stamps.clear(); loaded = true; }

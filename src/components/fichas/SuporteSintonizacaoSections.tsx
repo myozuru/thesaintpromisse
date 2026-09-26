@@ -1,5 +1,5 @@
 /** Suporte Nv 4 — Sintonização Vital: info no painel + aviso ao dono do Suporte. */
-import { shownPeMax } from '@/lib/peDisplay';
+import { shownPeMax, shownHpMax } from '@/lib/peDisplay';
 import { useState } from 'react';
 import type { Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
@@ -81,7 +81,7 @@ export function SintonizacaoPromptDialog() {
           <option value="">Curar quem?</option>
           {targets.map((t) => (
             <option key={t.id} value={t.id}>
-              {t.id === sup.id ? `${t.name} (você)` : t.name} — PV {t.hpCurrent}/{t.hpMax}
+              {t.id === sup.id ? `${t.name} (você)` : t.name} — PV {t.hpCurrent}/{shownHpMax(t)}
             </option>
           ))}
         </select>

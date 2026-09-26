@@ -17,7 +17,7 @@
  *   - Delete: remove selecionadas.
  *   - Ctrl/Cmd: bypass de snap.
  */
-import { shownPeMax } from '@/lib/peDisplay';
+import { shownPeMax, shownHpMax } from '@/lib/peDisplay';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   useMapStore,
@@ -707,7 +707,7 @@ const canStartMoveEntityNow = (entity: Entity): boolean => {
 
 const toNameplateStats = (c: Character): NameplateCharacterStats => ({
   hp: c.hpCurrent,
-  hpMax: c.hpMax,
+  hpMax: shownHpMax(c),
   pe: c.peCurrent,
   peMax: shownPeMax(c),
 });

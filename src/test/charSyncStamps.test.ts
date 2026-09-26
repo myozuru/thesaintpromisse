@@ -43,3 +43,14 @@ describe('sincronização de vida/PE das fichas', () => {
     expect([after.hpCurrent, after.hpMax, after.peCurrent, after.peMax]).toEqual([33, 40, 9, 15]);
   });
 });
+
+import { pickNewestPerCharacter } from '@/lib/charSyncStamps';
+describe('salvar fichas na nuvem', () => {
+  it('cópia antiga de uma tela não apaga a edição mais nova já salva', () => {
+    const out = pickNewestPerCharacter(
+      [{ id: 'a', hpCurrent: 30, _syncAt: 100 }, { id: 'b', hpCurrent: 9, _syncAt: 900 }],
+      [{ id: 'a', hpCurrent: 12, _syncAt: 500 }, { id: 'b', hpCurrent: 1, _syncAt: 200 }],
+    );
+    expect(out.map((c) => c.hpCurrent)).toEqual([12, 9]);
+  });
+});
