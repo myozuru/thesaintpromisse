@@ -257,6 +257,8 @@ function pickTestRequests(s: ReturnType<typeof useTestRequestStore.getState>) {
 // Posições recebidas deslizam até o destino em vez de "teleportar".
 type RemotePatch = { id: string; patch: Record<string, unknown> };
 const smoothTargets = new Map<string, { x: number; y: number }>();
+/** Quando cada peça recebeu o último movimento ao vivo (para não ser atropelada por um mapa completo atrasado). */
+const remotePatchAt = new Map<string, number>();
 let smoothRaf: number | null = null;
 let smoothLast = 0;
 
@@ -299,7 +301,9 @@ function applySmoothedEntityPatches(patches: RemotePatch[]) {
   const immediate: RemotePatch[] = [];
   const entities = useMapStore.getState().entities as Record<string, { x: number; y: number } | undefined>;
   const canAnimate = typeof requestAnimationFrame === 'function' && typeof document !== 'undefined' && !document.hidden;
+  const nowPatch = performance.now();
   for (const { id, patch } of patches) {
+    if ('x' in patch || 'y' in patch) remotePatchAt.set(id, nowPatch);
     const { x, y, ...rest } = patch as { x?: unknown; y?: unknown } & Record<string, unknown>;
     const e = entities[id];
     const hasPos = typeof x === 'number' && typeof y === 'number';
@@ -374,7 +378,8 @@ function applyRemote(slice: WorldSlice, data: unknown) {
           const local = localEnts[id];
           if (!local) continue;
           const inc = mergedEntities[id];
-          if (recent.has(id)) {
+          const livePatchAge = performance.now() - (remotePatchAt.get(id) ?? -Infinity);
+          if (recent.has(id) || livePatchAge < 1500) {
             mergedEntities[id] = { ...inc, x: local.x, y: local.y };
           } else if (smoothTargets.has(id) && typeof inc.x === 'number' && typeof inc.y === 'number') {
             smoothTargets.set(id, { x: inc.x, y: inc.y });
