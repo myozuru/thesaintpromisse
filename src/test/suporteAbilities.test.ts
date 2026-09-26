@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { getSuporteHealDice, getSuporteHealMaxUses, getSuporteKeyMod, getSuporteHealUsesLeft, applyApoiar, applyPresencaInspiradora, getPresencaInspiradoraMaxExtra } from '@/lib/suporteAbilities';
+import { getSuporteHealDice, getSuporteHealMaxUses, getSuporteKeyMod, getSuporteHealUsesLeft, applyApoiar, applyPresencaInspiradora, getPresencaInspiradoraMaxExtra, applySuporteBaseTR, applyTRMestre, getSuporteBaseTR, TR_MESTRE_LEVEL } from '@/lib/suporteAbilities';
 import { consumeAdvantageFor, expireGrantedBy, peekAdvantageFor } from '@/lib/omni/rollAdvantage';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import type { Character } from '@/types';
@@ -114,5 +114,68 @@ describe('Presença Inspiradora (Nv 3)', () => {
     expect(r.ok).toBe(false);
     expect(r.totalCost).toBe(3);
     expect(useCharacterStore.getState().characters[0].peCurrent).toBe(2);
+  });
+});
+
+describe('TR do Suporte (Nv 1) e TR Mestre (Nv 9)', () => {
+  const mkSup = (level: number, suporteBaseTR?: 'Astúcia' | 'Vontade', savingThrows?: unknown[]) =>
+    ({
+      id: 'sup-1',
+      name: 'Suporte',
+      level,
+      suporteBaseTR,
+      savingThrows: savingThrows ?? [
+        { id: 'astucia', name: 'Astúcia', value: 10 },
+        { id: 'vontade', name: 'Vontade', value: 10 },
+      ],
+    }) as unknown as Character;
+
+  const st = (name: string) =>
+    useCharacterStore.getState().characters[0].savingThrows.find((s) => s.name === name);
+
+  beforeEach(() => {
+    useCharacterStore.setState({ characters: [] });
+  });
+
+  it('escolha do Nv 1 treina Astúcia ou Vontade', () => {
+    const s = mkSup(1);
+    useCharacterStore.setState({ characters: [s] });
+    applySuporteBaseTR(s, 'Vontade');
+    expect(getSuporteBaseTR(useCharacterStore.getState().characters[0])).toBe('Vontade');
+    expect(st('Vontade')?.trained).toBe(true);
+    expect(st('Astúcia')?.trained).toBeFalsy();
+  });
+
+  it('TR Mestre: maestria no escolhido, treinado no outro', () => {
+    const s = mkSup(TR_MESTRE_LEVEL);
+    useCharacterStore.setState({ characters: [s] });
+    applySuporteBaseTR(s, 'Astúcia');
+    const r = applyTRMestre(useCharacterStore.getState().characters[0]);
+    expect(r.ok).toBe(true);
+    expect(st('Astúcia')?.mastery).toBe(true);
+    expect(st('Astúcia')?.trained).toBe(true);
+    expect(st('Vontade')?.trained).toBe(true);
+    expect(st('Vontade')?.mastery).toBeFalsy();
+  });
+
+  it('TR Mestre falha abaixo do nível ou sem escolha base', () => {
+    const s = mkSup(TR_MESTRE_LEVEL - 1);
+    useCharacterStore.setState({ characters: [s] });
+    applySuporteBaseTR(s, 'Astúcia');
+    expect(applyTRMestre(useCharacterStore.getState().characters[0]).ok).toBe(false);
+    const semBase = mkSup(20);
+    useCharacterStore.setState({ characters: [semBase] });
+    expect(applyTRMestre(semBase).ok).toBe(false);
+  });
+
+  it('trocar a escolha após o TR Mestre move a maestria junto', () => {
+    const s = mkSup(20);
+    useCharacterStore.setState({ characters: [s] });
+    applySuporteBaseTR(s, 'Astúcia');
+    applyTRMestre(useCharacterStore.getState().characters[0]);
+    applySuporteBaseTR(useCharacterStore.getState().characters[0], 'Vontade');
+    expect(st('Vontade')?.mastery).toBe(true);
+    expect(st('Astúcia')?.trained).toBe(true);
+    expect(st('Astúcia')?.mastery).toBeFalsy();
   });
 });

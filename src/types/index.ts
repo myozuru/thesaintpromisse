@@ -720,6 +720,9 @@ export interface Character {
   keyAttribute?: 'Inteligência' | 'Sabedoria' | 'Presença';
   /** Suporte em Combate: usos da cura de toque gastos desde o último descanso. */
   suporteHealUsed?: number;
+  /** Suporte: TR treinado escolhido no Nv 1 ('Astúcia' | 'Vontade'). O TR Mestre
+   *  (Nv 9) treina o outro e concede maestria neste. */
+  suporteBaseTR?: 'Astúcia' | 'Vontade';
   /** Presença Inspiradora (Suporte Nv 3): bônus em TODAS as rolagens de perícia
    *  enquanto durar a cena. Zerado no reset de cena e nos descansos. */
   inspiracaoBonus?: number;

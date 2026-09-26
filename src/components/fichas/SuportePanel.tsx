@@ -11,14 +11,19 @@ import {
   isSuporte,
   applyApoiar,
   applyPresencaInspiradora,
+  applySuporteBaseTR,
+  applyTRMestre,
   getPresencaInspiradoraMaxExtra,
+  getSuporteBaseTR,
   getSuporteHealDice,
   getSuporteHealMaxUses,
   getSuporteHealUsesLeft,
   getSuporteKeyAttr,
   getSuporteKeyMod,
+  TR_MESTRE_LEVEL,
+  type SuporteBaseTR,
 } from '@/lib/suporteAbilities';
-import { HeartHandshake, HandHelping, Sparkles } from 'lucide-react';
+import { HeartHandshake, HandHelping, ShieldCheck, Sparkles } from 'lucide-react';
 
 export function SuportePanel({ character: c }: { character: Character }) {
   const characters = useCharacterStore((s) => s.characters);
@@ -28,6 +33,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
   const [targetId, setTargetId] = useState<string>(c.id);
   const [apoiarTargetId, setApoiarTargetId] = useState<string>('');
   const [inspiracaoExtra, setInspiracaoExtra] = useState(0);
+  const [trChoice, setTrChoice] = useState<SuporteBaseTR>('Astúcia');
   const [busy, setBusy] = useState(false);
 
   if (!isSuporte(c)) return null;
@@ -158,6 +164,61 @@ export function SuportePanel({ character: c }: { character: Character }) {
           Usos: <strong className="text-foreground">{left}/{maxUses}</strong> · {keyAttr}
         </span>
       </div>
+      {(() => {
+        const baseTR = getSuporteBaseTR(c);
+        const baseST = (c.savingThrows ?? []).find((s) => s.name === baseTR);
+        const hasMastery = !!baseST?.mastery;
+        return (
+          <div className="flex flex-wrap items-center gap-2 text-xs border-t border-primary/20 pt-2">
+            <span className="font-bold uppercase tracking-wider text-primary">Testes de Resistência</span>
+            {!baseTR ? (
+              <>
+                <select
+                  value={trChoice}
+                  onChange={(e) => setTrChoice(e.target.value as SuporteBaseTR)}
+                  className="rounded border border-border bg-background px-2 py-1 text-xs"
+                  title="TR treinado da especialização (Nv 1): Astúcia ou Vontade"
+                >
+                  <option value="Astúcia">Astúcia</option>
+                  <option value="Vontade">Vontade</option>
+                </select>
+                <button
+                  onClick={() => {
+                    applySuporteBaseTR(c, trChoice);
+                    addLog('combat', `🛡️ ${c.name}: TR da especialização — ${trChoice} treinado.`);
+                  }}
+                  className="inline-flex items-center gap-1 rounded border border-primary/40 bg-primary/15 px-2 py-1 font-bold text-primary hover:bg-primary/25"
+                >
+                  <ShieldCheck className="h-3.5 w-3.5" /> Treinar TR
+                </button>
+              </>
+            ) : (
+              <span className="text-muted-foreground">
+                Treinado: <strong className="text-foreground">{baseTR}</strong>
+                {hasMastery ? ' (Mestre)' : ''}
+              </span>
+            )}
+            {baseTR && !hasMastery && (
+              <button
+                onClick={() => {
+                  const r = applyTRMestre(c);
+                  addLog(
+                    'combat',
+                    r.ok
+                      ? `🛡️ ${c.name}: TR Mestre — maestria em ${baseTR} e treinado em ${baseTR === 'Astúcia' ? 'Vontade' : 'Astúcia'}.`
+                      : `🛡️ ${c.name}: TR Mestre falhou — ${r.reason}`,
+                  );
+                }}
+                disabled={c.level < TR_MESTRE_LEVEL}
+                className="inline-flex items-center gap-1 rounded border border-primary/40 bg-primary/15 px-2 py-1 font-bold text-primary hover:bg-primary/25 disabled:cursor-not-allowed disabled:opacity-40"
+                title={`Nv ${TR_MESTRE_LEVEL}: maestria no TR da especialização e treinado no outro (Astúcia/Vontade).`}
+              >
+                <ShieldCheck className="h-3.5 w-3.5" /> TR Mestre (Nv {TR_MESTRE_LEVEL})
+              </button>
+            )}
+          </div>
+        );
+      })()}
       {c.level >= 3 && (
         <div className="flex flex-wrap items-center gap-2 text-xs border-t border-primary/20 pt-2">
           <span className="font-bold uppercase tracking-wider text-primary">Presença Inspiradora</span>

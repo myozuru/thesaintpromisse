@@ -9,7 +9,7 @@
  *     atributo-chave, por descanso curto ou longo.
  * ============================================================================
  */
-import type { Character } from '@/types';
+import type { Attribute, Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 
 export function isSuporte(c: Pick<Character, 'specialization' | 'isGrimorioCreature'>): boolean {
@@ -70,6 +70,56 @@ export async function applyApoiar(
     source: `Apoiar (${supporter.name})`,
     grantedBy: supporter.id,
   });
+}
+
+// ===== Testes de Resistência do Suporte =====
+
+/** Nível em que o Suporte ganha o TR Mestre. */
+export const TR_MESTRE_LEVEL = 9;
+
+export type SuporteBaseTR = 'Astúcia' | 'Vontade';
+
+/** TR treinado escolhido no Nv 1 (Características de Especialização). */
+export function getSuporteBaseTR(c: Pick<Character, 'suporteBaseTR'>): SuporteBaseTR | null {
+  return c.suporteBaseTR === 'Astúcia' || c.suporteBaseTR === 'Vontade' ? c.suporteBaseTR : null;
+}
+
+function upsertSavingThrow(list: Attribute[], name: string, patch: Partial<Attribute>): Attribute[] {
+  const idx = list.findIndex((s) => s.name === name);
+  if (idx >= 0) {
+    const next = [...list];
+    next[idx] = { ...next[idx], ...patch };
+    return next;
+  }
+  return [...list, { id: name.toLowerCase(), name, value: 10, ...patch }];
+}
+
+/**
+ * Escolha do TR treinado do Suporte (Nv 1): Astúcia OU Vontade fica treinado.
+ * Idempotente: re-escolher apenas move o treinamento (e a maestria, se o TR
+ * Mestre já foi aplicado) para a nova escolha.
+ */
+export function applySuporteBaseTR(c: Character, choice: SuporteBaseTR): void {
+  const other: SuporteBaseTR = choice === 'Astúcia' ? 'Vontade' : 'Astúcia';
+  const hadMastery = (c.savingThrows ?? []).some((s) => s.name === getSuporteBaseTR(c) && s.mastery);
+  let list = upsertSavingThrow(c.savingThrows ?? [], choice, { trained: true, mastery: hadMastery });
+  list = upsertSavingThrow(list, other, { trained: hadMastery, mastery: false });
+  useCharacterStore.getState().updateCharacter(c.id, { suporteBaseTR: choice, savingThrows: list });
+}
+
+/**
+ * TR Mestre (Nv 9): o TR da especialização (o escolhido no Nv 1) ganha
+ * MAESTRIA e o outro (Astúcia/Vontade) fica TREINADO. Idempotente.
+ */
+export function applyTRMestre(c: Character): { ok: boolean; reason?: string } {
+  const base = getSuporteBaseTR(c);
+  if (!base) return { ok: false, reason: 'Escolha primeiro o TR treinado do Nv 1 (Astúcia ou Vontade).' };
+  if (c.level < TR_MESTRE_LEVEL) return { ok: false, reason: `Requer nível ${TR_MESTRE_LEVEL}.` };
+  const other: SuporteBaseTR = base === 'Astúcia' ? 'Vontade' : 'Astúcia';
+  let list = upsertSavingThrow(c.savingThrows ?? [], base, { trained: true, mastery: true });
+  list = upsertSavingThrow(list, other, { trained: true, mastery: false });
+  useCharacterStore.getState().updateCharacter(c.id, { savingThrows: list });
+  return { ok: true };
 }
 
 /** Presença Inspiradora (Nv 3): PE extra máximo = metade do mod de Presença (fixo). */
