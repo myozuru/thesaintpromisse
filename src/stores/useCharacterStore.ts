@@ -1216,7 +1216,7 @@ export const useCharacterStore = create<CharacterStore>()(
             // PE: agora 100% determinístico pela especialização + nível + atributo-chave.
             // `pePerLevelGains` continua somado como bônus manual extra (legado).
             const peGains = merged.pePerLevelGains ?? 0;
-            const newPeMax = recalcPeMaxBySpec(merged.level, merged.specialization, merged.attributes, peGains);
+            const newPeMax = recalcPeMaxBySpec(merged.level, merged.specialization, merged.attributes, peGains, merged.keyAttribute);
             merged.hpMax = newHpMax;
             merged.hpCurrent = Math.min(merged.hpCurrent, newHpMax);
             merged.peMax = newPeMax;
@@ -1273,7 +1273,7 @@ export const useCharacterStore = create<CharacterStore>()(
           const newHpMax = recalcHpMaxFromHistory(startBase, newHistory, conMod, newLevel, 0);
           const hpDelta = newHpMax - c.hpMax;
           const newPeGains = (c.pePerLevelGains ?? 0) + (payload.pePerLevel ?? 0);
-          const newPeMax = recalcPeMaxBySpec(newLevel, c.specialization, c.attributes, newPeGains);
+          const newPeMax = recalcPeMaxBySpec(newLevel, c.specialization, c.attributes, newPeGains, c.keyAttribute);
           const peDelta = newPeMax - c.peMax;
 
           // ===== ANTI-FARM: tenta restaurar pendências arquivadas deste nível =====
