@@ -261,9 +261,9 @@ export function drawEntity(ctx: CanvasRenderingContext2D, e: Entity, scale: numb
 
   // Imagem (assetId) — se disponível no cache e carregada.
   const cached = e.assetId ? assetCache.get(e.assetId) : null;
-  const hasImg = cached && cached.ready;
+  const image = cached?.ready ? cached.img : null;
 
-  if (hasImg) {
+  if (image) {
     // Clip pelo shape para imagem respeitar elipse.
     ctx.save();
     if (e.shape === 'ELLIPSE') {
@@ -275,15 +275,15 @@ export function drawEntity(ctx: CanvasRenderingContext2D, e: Entity, scale: numb
     try {
       if (e.shape === 'ELLIPSE' && e.tokenCrop) {
         const rect = getTokenImageRect(
-          cached!.img.naturalWidth,
-          cached!.img.naturalHeight,
+          image.naturalWidth,
+          image.naturalHeight,
           e.w,
           e.h,
           e.tokenCrop,
         );
-        ctx.drawImage(cached!.img, rect.x, rect.y, rect.w, rect.h);
+        ctx.drawImage(image, rect.x, rect.y, rect.w, rect.h);
       } else {
-        ctx.drawImage(cached!.img, -hw, -hh, e.w, e.h);
+        ctx.drawImage(image, -hw, -hh, e.w, e.h);
       }
     } catch {
       // ignora frames durante decoding

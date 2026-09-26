@@ -66,6 +66,7 @@ import { PartyPanel } from './ui/PartyPanel';
 import { PlayerActionBar } from './ui/PlayerActionBar';
 import { ToolSettingsPanel } from './ui/ToolSettingsPanel';
 import { AssetTypeDialog, type AssetKind } from './ui/AssetTypeDialog';
+import { TokenCropDialog } from './ui/TokenCropDialog';
 import { NotesOverlay } from './ui/NotesOverlay';
 import { SelectionToolbar } from './ui/SelectionToolbar';
 import { PendingMoveOverlay } from './ui/PendingMoveOverlay';
@@ -750,6 +751,7 @@ export function MapaModule() {
   const entityDragMovedRef = useRef(false);
   const clickCountRef = useRef<{ id: string | null; count: number; t: number }>({ id: null, count: 0, t: 0 });
   const [selectionToolbarVisible, setSelectionToolbarVisible] = useState(false);
+  const [tokenCropEntityId, setTokenCropEntityId] = useState<string | null>(null);
   const selectionToolbarVisibleRef = useRef(false);
 
   const gridConfig = useMapStore((s) => s.gridConfig);
@@ -1773,16 +1775,11 @@ export function MapaModule() {
         const newIds: string[] = [];
         for (const en of clipboardRef.current) {
           const id = st.addEntity({
-            shape: en.shape,
+            ...en,
+            id: undefined,
             x: en.x + off,
             y: en.y + off,
-            w: en.w,
-            h: en.h,
-            rotation: en.rotation,
-            color: en.color,
-            label: en.label,
             locked: false,
-            assetId: en.assetId,
           });
           newIds.push(id);
         }
@@ -1802,16 +1799,11 @@ export function MapaModule() {
           const en = st.entities[id];
           if (!en) continue;
           const nid = st.addEntity({
-            shape: en.shape,
+            ...en,
+            id: undefined,
             x: en.x + off,
             y: en.y + off,
-            w: en.w,
-            h: en.h,
-            rotation: en.rotation,
-            color: en.color,
-            label: en.label,
             locked: false,
-            assetId: en.assetId,
           });
           newIds.push(nid);
         }
@@ -3083,6 +3075,11 @@ export function MapaModule() {
     if (!sel.length) return;
     const ents = sel.map((id) => st.entities[id]).filter((x): x is Entity => !!x);
     st.pushHistory();
+    if (a === 'adjustToken') {
+      const target = ents[0];
+      if (target?.assetId && target.shape === 'ELLIPSE') setTokenCropEntityId(target.id);
+      return;
+    }
     if (typeof a === 'object' && a.kind === 'setLayer') {
       for (const id of sel) st.setEntityLayer(id, a.layer);
       return;
@@ -3203,7 +3200,7 @@ export function MapaModule() {
           const cached = e.assetId ? assetCache.get(e.assetId) : null;
           const natW = cached?.img?.naturalWidth ?? e.w;
           const natH = cached?.img?.naturalHeight ?? e.h;
-          return { id: e.id, patch: { w: natW, h: natH } };
+          return { id: e.id, patch: { w: natW, h: natH, shape: 'RECT' as const, tokenCrop: undefined } };
         });
         st.updateEntities(patches);
         for (const t of targets) st.setEntityLayer(t.id, 'map');
@@ -3216,9 +3213,12 @@ export function MapaModule() {
         const natW = cached?.img?.naturalWidth ?? e.w;
         const natH = cached?.img?.naturalHeight ?? e.h;
         const ratio = natH > 0 ? natW / natH : 1;
-        return { id: e.id, patch: { h: targetH, w: Math.max(20, targetH * ratio) } };
+        return a.assetKind === 'character'
+          ? { id: e.id, patch: { h: targetH, w: targetH, shape: 'ELLIPSE' as const, tokenCrop: { zoom: 1, offsetX: 0, offsetY: 0 } } }
+          : { id: e.id, patch: { h: targetH, w: Math.max(20, targetH * ratio), shape: 'RECT' as const, tokenCrop: undefined } };
       });
       st.updateEntities(patches);
+      if (a.assetKind === 'character' && targets.length === 1) setTokenCropEntityId(targets[0].id);
       return;
     }
     if (a === 'bringFront')   { for (const id of sel) st.bringToFront(id);   return; }
@@ -3246,9 +3246,11 @@ export function MapaModule() {
       const newIds: string[] = [];
       for (const en of ents) {
         const nid = st.addEntity({
-          shape: en.shape, x: en.x + off, y: en.y + off,
-          w: en.w, h: en.h, rotation: en.rotation,
-          color: en.color, label: en.label, locked: false, assetId: en.assetId,
+          ...en,
+          id: undefined,
+          x: en.x + off,
+          y: en.y + off,
+          locked: false,
         });
         newIds.push(nid);
       }
@@ -3389,7 +3391,7 @@ export function MapaModule() {
 
 
           <NotesOverlay containerRef={containerRef as React.RefObject<HTMLDivElement>} />
-          <SelectionToolbar visible={selectionToolbarVisible} />
+          <SelectionToolbar visible={selectionToolbarVisible} onAdjustToken={setTokenCropEntityId} />
           <PendingMoveOverlay />
           <OpportunityPromptOverlay />
           <PendingAoEOverlay />
@@ -3457,6 +3459,7 @@ export function MapaModule() {
                 canGroup={sel.length >= 2}
                 canUngroup={sel.some((e) => !!e.groupId)}
                 anyHasAsset={sel.some((e) => !!e.assetId)}
+                canAdjustToken={!!(single?.assetId && single.shape === 'ELLIPSE' && single.tokenCrop)}
                 isPlayer={isPlayerNow}
                 isGM={!isPlayerNow}
                 myselfActive={myselfActive}
@@ -3682,16 +3685,19 @@ export function MapaModule() {
             const center = snapBypassRef.current
               ? item.world
               : GridEngine.snapToGrid(item.world, cfg);
-            st.addEntity({
-              shape: 'RECT',
+            const id = st.addEntity({
+              shape: kind === 'character' ? 'ELLIPSE' : 'RECT',
               x: center.x, y: center.y,
-              w, h,
+              w: kind === 'character' ? h : w, h,
               rotation: 0,
               color: '#ffffff',
               locked: false,
               assetId: item.assetId,
               label: item.name.slice(0, 24),
+              tokenCrop: kind === 'character' ? { zoom: 1, offsetX: 0, offsetY: 0 } : undefined,
             });
+            st.setSelected([id]);
+            if (kind === 'character') setTokenCropEntityId(id);
           }
           consume();
         };
@@ -3703,6 +3709,22 @@ export function MapaModule() {
             onCancel={() => {
               void assetCache.destroy(item.assetId);
               consume();
+            }}
+          />
+        );
+      })()}
+      {tokenCropEntityId && (() => {
+        const entity = useMapStore.getState().entities[tokenCropEntityId];
+        if (!entity?.assetId) return null;
+        return (
+          <TokenCropDialog
+            entity={entity}
+            onCancel={() => setTokenCropEntityId(null)}
+            onConfirm={(tokenCrop) => {
+              const st = useMapStore.getState();
+              st.pushHistory();
+              st.updateEntity(entity.id, { shape: 'ELLIPSE', w: Math.max(entity.w, entity.h), h: Math.max(entity.w, entity.h), tokenCrop });
+              setTokenCropEntityId(null);
             }}
           />
         );
