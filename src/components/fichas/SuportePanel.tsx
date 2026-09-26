@@ -10,6 +10,10 @@ import { rollDiceCom } from '@/lib/dice';
 import {
   isSuporte,
   applyApoiar,
+  applyMedicinaInfalivel,
+  getMedicinaInfalivelMaxUses,
+  getMedicinaInfalivelUsesLeft,
+  hasMedicinaInfalivel,
   applyPresencaInspiradora,
   applySuporteBaseTR,
   applyTRMestre,
@@ -23,6 +27,7 @@ import {
   TR_MESTRE_LEVEL,
   type SuporteBaseTR,
 } from '@/lib/suporteAbilities';
+import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import { HeartHandshake, HandHelping, ShieldCheck, Sparkles } from 'lucide-react';
 
 export function SuportePanel({ character: c }: { character: Character }) {
@@ -35,6 +40,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
   const [inspiracaoExtra, setInspiracaoExtra] = useState(0);
   const [trChoice, setTrChoice] = useState<SuporteBaseTR>('Astúcia');
   const [busy, setBusy] = useState(false);
+  const [maximize, setMaximize] = useState(0);
 
   if (!isSuporte(c)) return null;
 
@@ -97,14 +103,24 @@ export function SuportePanel({ character: c }: { character: Character }) {
         bonus: keyMod,
         label: 'Suporte em Combate — Cura',
       });
-      const amount = Math.max(0, total + keyMod);
+      const med = applyMedicinaInfalivel(c, rolls, dice.sides, maximize);
+      const healRolls = med.rolls;
+      const amount = Math.max(0, healRolls.reduce((a, b) => a + b, 0) + keyMod + med.flatBonus);
+      void total;
       const before = target.hpCurrent;
       applyHealing(target.id, amount, 'other');
       const after = useCharacterStore.getState().characters.find((x) => x.id === target.id)?.hpCurrent ?? before;
-      updateCharacter(c.id, { suporteHealUsed: (c.suporteHealUsed ?? 0) + 1 });
+      updateCharacter(c.id, {
+        suporteHealUsed: (c.suporteHealUsed ?? 0) + 1,
+        ...(med.used > 0 ? { medicinaInfalivelUsed: (c.medicinaInfalivelUsed ?? 0) + med.used } : {}),
+      });
+      setMaximize(0);
+      const medTxt = med.flatBonus
+        ? ` +${med.flatBonus} Medicina Infalível${med.used ? ` (${med.used} dado(s) maximizado(s))` : ''}`
+        : '';
       addLog(
         'combat',
-        `💚 ${c.name}: Suporte em Combate (Ação Bônus, toque) cura ${target.name} — ${notation}[${rolls.join(', ')}] ${sign(keyMod)} ${keyAttr} = ${amount} (PV ${before} → ${after}). Usos: ${left - 1}/${maxUses}.`,
+        `💚 ${c.name}: Suporte em Combate (Ação Bônus, toque) cura ${target.name} — ${notation}[${healRolls.join(', ')}] ${sign(keyMod)} ${keyAttr}${medTxt} = ${amount} (PV ${before} → ${after}). Usos: ${left - 1}/${maxUses}.`,
       );
     } finally {
       setBusy(false);
@@ -158,12 +174,32 @@ export function SuportePanel({ character: c }: { character: Character }) {
           className="inline-flex items-center gap-1 rounded border border-primary/40 bg-primary/15 px-2 py-1 font-bold text-primary hover:bg-primary/25 disabled:cursor-not-allowed disabled:opacity-40"
           title="Ação Bônus · alcance de toque. Recupera usos em descanso curto ou longo."
         >
-          <HeartHandshake className="h-3.5 w-3.5" /> Curar {dice.count}d{dice.sides} {sign(keyMod)}
+          <HeartHandshake className="h-3.5 w-3.5" /> Curar {dice.count}d{dice.sides} {sign(keyMod)}{hasMedicinaInfalivel(c) ? ` +${getTrainingBonusByLevel(c.level)}` : ''}
         </button>
         <span className="text-muted-foreground">
           Usos: <strong className="text-foreground">{left}/{maxUses}</strong> · {keyAttr}
         </span>
       </div>
+      {hasMedicinaInfalivel(c) && (
+        <div className="flex flex-wrap items-center gap-2 text-xs border-t border-primary/20 pt-2">
+          <span className="font-bold uppercase tracking-wider text-primary">Medicina Infalível</span>
+          <label className="text-muted-foreground" title="Maximiza os menores dados da próxima cura (1 uso por dado). Vale para esta cura e para a Energia Reversa.">
+            Maximizar{' '}
+            <input
+              type="number"
+              min={0}
+              max={getMedicinaInfalivelUsesLeft(c)}
+              value={maximize}
+              onChange={(e) => setMaximize(Math.max(0, Math.min(getMedicinaInfalivelUsesLeft(c), Math.floor(Number(e.target.value) || 0))))}
+              className="w-12 rounded border border-border bg-background px-1 py-0.5 text-xs text-foreground"
+            />{' '}
+            dado(s)
+          </label>
+          <span className="text-muted-foreground">
+            Usos: <strong className="text-foreground">{getMedicinaInfalivelUsesLeft(c)}/{getMedicinaInfalivelMaxUses(c)}</strong> · toda cura +{getTrainingBonusByLevel(c.level)}
+          </span>
+        </div>
+      )}
       {(() => {
         const baseTR = getSuporteBaseTR(c);
         const baseST = (c.savingThrows ?? []).find((s) => s.name === baseTR);

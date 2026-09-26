@@ -6,6 +6,8 @@ import { useLogStore } from '@/stores/useLogStore';
 import { getEnergiaReversaConfig } from '@/lib/auraEffects';
 import { useMapStore } from '@/stores/useMapStore';
 import { checkTouchTarget } from '@/lib/touchRange';
+import { getMedicinaInfalivelUsesLeft, hasMedicinaInfalivel } from '@/lib/suporteAbilities';
+import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import { playErrorSound, playSuccessSound } from '@/lib/sounds';
 
 interface Props {
@@ -22,6 +24,7 @@ export function EnergiaReversaDialog({ character: c, onClose }: Props) {
   const [per, setPer] = useState(1);
   const [targetId, setTargetId] = useState(c.id);
   const [busy, setBusy] = useState(false);
+  const [maximize, setMaximize] = useState(0);
   const entities = useMapStore(s => s.entities);
   const gridConfig = useMapStore(s => s.gridConfig);
   if (!cfg) return null;
@@ -36,12 +39,12 @@ export function EnergiaReversaDialog({ character: c, onClose }: Props) {
 
   const submit = async () => {
     setBusy(true);
-    const r = await cast(c.id, per, targetId);
+    const r = await cast(c.id, per, targetId, maximize);
     setBusy(false);
     const tgt = characters.find(x => x.id === targetId);
     if (r.ok) {
       playSuccessSound();
-      addLog('system', `💚 ${c.name} usou Energia Reversa (${per} PER / -${r.peSpent} PE) em ${targetId === c.id ? 'si mesmo' : tgt?.name}: ${dice}d${cfg.dieSize} [${(r.rolls ?? []).join(', ')}] ${mod >= 0 ? '+' : ''}${mod} → +${r.healed} PV`);
+      addLog('system', `💚 ${c.name} usou Energia Reversa (${per} PER / -${r.peSpent} PE) em ${targetId === c.id ? 'si mesmo' : tgt?.name}: ${dice}d${cfg.dieSize} [${(r.rolls ?? []).join(', ')}] ${mod >= 0 ? '+' : ''}${mod}${hasMedicinaInfalivel(c) ? ` +${getTrainingBonusByLevel(c.level)} Medicina Infalível` : ''} → +${r.healed} PV`);
       onClose();
     } else {
       playErrorSound();
@@ -76,6 +79,20 @@ export function EnergiaReversaDialog({ character: c, onClose }: Props) {
           </select>
           {touchBlock && <span className="mt-1 block text-destructive">{touchBlock}</span>}
         </label>
+
+        {hasMedicinaInfalivel(c) && (
+          <label className="block text-xs text-muted-foreground">
+            Medicina Infalível: maximizar dados ({getMedicinaInfalivelUsesLeft(c)} usos) · cura +{getTrainingBonusByLevel(c.level)}
+            <input
+              type="number"
+              min={0}
+              max={getMedicinaInfalivelUsesLeft(c)}
+              value={maximize}
+              onChange={e => setMaximize(Math.max(0, Math.min(getMedicinaInfalivelUsesLeft(c), Math.floor(Number(e.target.value) || 0))))}
+              className="mt-1 w-full rounded-md border border-border bg-secondary/40 px-2 py-1.5 text-sm text-foreground"
+            />
+          </label>
+        )}
 
         <label className="block text-xs text-muted-foreground">
           PER a gastar (máx. {limit} por vez · 1 PER = 2 PE)
