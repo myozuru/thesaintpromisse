@@ -1,7 +1,7 @@
 /**
  * ============================================================================
- *  SUPORTE — Habilidades de 6º nível
- *  • Apoio Avançado        (sup-apoio-avancado)
+ *  SUPORTE — Habilidades de 2º nível (2º par)
+ *  • Apoio Avançado        (sup-apoio-avancado) — 1 apoio no Nv 2, +1 no Nv 6, +1 no Nv 12
  *  • Conceder Outra Chance (sup-conceder-outra-chance)
  * ============================================================================
  *  Funções puras + ações que gravam no store. A UI fica em
