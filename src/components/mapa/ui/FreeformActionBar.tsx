@@ -7,6 +7,7 @@
  *   3. Dano: rola acerto (d20 + bônus vs Defesa).
  *   4. Rola NdX + mod e aplica no alvo.
  */
+import { shownHpMax } from '@/lib/peDisplay';
 import { useEffect, useMemo, useState } from 'react';
 import { Swords, Heart, X, Dice6, Crosshair, Plus, Minus } from 'lucide-react';
 import { useCharacterStore } from '@/stores/useCharacterStore';
@@ -397,7 +398,7 @@ export function FreeformAttackForm({
             )}
           >
             <Crosshair className="h-3.5 w-3.5" />
-            {picking ? 'Clique no token…' : target ? `${target.name} · ${target.hpCurrent}/${target.hpMax}` : 'Selecionar alvo'}
+            {picking ? 'Clique no token…' : target ? `${target.name} · ${target.hpCurrent}/${shownHpMax(target)}` : 'Selecionar alvo'}
           </button>
 
           {/* Tipo de ataque: Acerto x TR */}

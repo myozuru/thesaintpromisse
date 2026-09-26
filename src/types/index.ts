@@ -318,6 +318,8 @@ export interface Character {
   baseDC: number;
   /** PE máximo final (com todos os bônus), gravado pela ficha para ficar igual em todo lugar. */
   peMaxEffective?: number;
+  /** Vida máxima final (com bônus e exaustão), gravada pela ficha. */
+  hpMaxEffective?: number;
   /** Ficha temporária: CD de Especialização definida à mão. */
   specDC?: number;
   hpCurrent: number;

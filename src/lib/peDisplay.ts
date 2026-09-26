@@ -6,3 +6,9 @@ export function shownPeMax(c: Pick<Character, 'peMax'> & { peMaxEffective?: numb
   if (!c) return 0;
   return typeof c.peMaxEffective === 'number' ? c.peMaxEffective : (c.peMax ?? 0);
 }
+
+/** Vida máxima mostrada em todos os lugares (mesmo número da ficha). */
+export function shownHpMax(c: { hpMax?: number; hpMaxEffective?: number } | null | undefined): number {
+  if (!c) return 0;
+  return typeof c.hpMaxEffective === 'number' ? c.hpMaxEffective : (c.hpMax ?? 0);
+}

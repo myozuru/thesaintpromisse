@@ -828,9 +828,11 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
 
   // Grava o PE máximo final na ficha para que mapa, painéis e diálogos mostrem o mesmo número.
   useEffect(() => {
-    if (c.peMaxEffective !== effectivePeMax) updateCharacter(c.id, { peMaxEffective: effectivePeMax });
+    if (c.peMaxEffective !== effectivePeMax || c.hpMaxEffective !== effectiveHpMax) {
+      updateCharacter(c.id, { peMaxEffective: effectivePeMax, hpMaxEffective: effectiveHpMax });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [c.id, effectivePeMax, c.peMaxEffective]);
+  }, [c.id, effectivePeMax, c.peMaxEffective, effectiveHpMax, c.hpMaxEffective]);
 
   const normalizarNomeRolagem = (nome: string) => nome
     .toLowerCase()

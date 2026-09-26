@@ -1,4 +1,4 @@
-import { mergeIncomingCharacters, stampLocalChanges, withStamps } from '@/lib/charSyncStamps';
+import { mergeIncomingCharacters, pickNewestPerCharacter, stampLocalChanges, withStamps } from '@/lib/charSyncStamps';
 import { useEffect } from 'react';
 import { getSocket, type WorldSlice } from '@/lib/socket';
 import { useCharacterStore } from '@/stores/useCharacterStore';
@@ -652,8 +652,15 @@ export function useMultiplayerSync() {
         persistTimers.delete(slice);
         let json: Json;
         try { json = JSON.parse(JSON.stringify(data ?? null)) as Json; } catch { return; }
-        void supabase.from('realtime_world').upsert({ slice, data: json }).then(({ error }) => {
+        const save = (payload: Json) => supabase.from('realtime_world').upsert({ slice, data: payload }).then(({ error }) => {
           if (error) console.warn(`[sync] falha ao salvar ${slice}:`, error.message);
+        });
+        if (slice !== 'characters' || !Array.isArray(json)) { void save(json); return; }
+        // Fichas: junta com a cópia da nuvem antes de salvar, ficha a ficha pela
+        // edição mais recente — uma tela com cópia antiga nunca apaga dados novos.
+        void supabase.from('realtime_world').select('data').eq('slice', 'characters').maybeSingle().then(({ data: row }) => {
+          const cloud = Array.isArray(row?.data) ? (row!.data as never[]) : [];
+          void save(pickNewestPerCharacter(json as never[], cloud) as unknown as Json);
         });
       }, 400));
     };

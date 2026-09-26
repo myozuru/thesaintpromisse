@@ -1,4 +1,4 @@
-import { shownPeMax } from '@/lib/peDisplay';
+import { shownPeMax, shownHpMax } from '@/lib/peDisplay';
 import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -178,7 +178,7 @@ export function GroupHealDialog({ caster, open, onOpenChange }: Props) {
                       <div className="flex-1 min-w-0">
                         <div className="text-xs font-bold truncate">{a.name}</div>
                         <div className="text-[10px] text-muted-foreground">
-                          HP {a.hpCurrent}/{a.hpMax} {missing > 0 && <span className="text-amber-400">(–{missing})</span>}
+                          HP {a.hpCurrent}/{shownHpMax(a)} {missing > 0 && <span className="text-amber-400">(–{missing})</span>}
                         </div>
                       </div>
                       <Input
