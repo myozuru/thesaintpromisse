@@ -715,7 +715,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
       const d20 = req.result.d20;
       let result: SaveResult = total >= totalDC ? 'success' : 'fail';
       if (d20 === 20) result = 'crit_success';
-      if (d20 === 1 && !consumeCritNegated(target.id)) result = 'crit_fail';
+      if (d20 === 1 && !consumeCritNegated(targetId)) result = 'crit_fail';
       updates.push({ id: targetId, saveRoll: String(total), result });
       // limpa para não reprocessar
       dismissTest(req.id);
