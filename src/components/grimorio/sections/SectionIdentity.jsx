@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Image as ImageIcon, X, Check, Upload, LoaderCircle, RotateCcw } from "lucide-react";
+import { X, Check, Upload, LoaderCircle, RotateCcw } from "lucide-react";
 import { FieldLabel, TextInput, TextArea } from "../builder-controls";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -49,14 +49,14 @@ async function prepareImage(file) {
     const image = new Image();
     image.src = source;
     await image.decode();
-    const scale = Math.min(1, 1600 / Math.max(image.naturalWidth, image.naturalHeight));
+    const scale = Math.min(1, 1200 / Math.max(image.naturalWidth, image.naturalHeight));
     const canvas = document.createElement("canvas");
     canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
     canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
     const context = canvas.getContext("2d");
     if (!context) throw new Error("Não foi possível preparar a imagem.");
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL("image/jpeg", 0.86);
+    return canvas.toDataURL("image/jpeg", 0.82);
   } finally {
     URL.revokeObjectURL(source);
   }
