@@ -699,6 +699,8 @@ interface CharacterStore {
     perSpent: number,
     /** Alvo da cura (padrão: o próprio). Outros exigem Liberação de ER. */
     targetId?: string,
+    /** Medicina Infalível: quantos dados maximizar (gasta usos). */
+    maximizeDice?: number,
   ) => Promise<{ ok: boolean; reason?: string; peSpent?: number; healed?: number; rolls?: number[]; mod?: number; key?: 'Presença' | 'Sabedoria' }>;
   /**
    * Regeneração Aprimorada (ER) — modos: ferimento(8), veneno(4), membro(3).
@@ -3807,7 +3809,7 @@ export const useCharacterStore = create<CharacterStore>()(
         });
         return result;
       },
-      castEnergiaReversaSelf: async (charId, perSpent, targetId) => {
+      castEnergiaReversaSelf: async (charId, perSpent, targetId, maximizeDice = 0) => {
         const c0 = get().characters.find(x => x.id === charId);
         if (!c0) return { ok: false, reason: 'Personagem não encontrado.' };
         const peCost = perSpent * 2;
@@ -3856,7 +3858,10 @@ export const useCharacterStore = create<CharacterStore>()(
         if (c0.level >= 15) bonusDice += 1;
         if (c0.level >= 20) bonusDice += 1;
         const totalDiceCount = baseCount + bonusDice;
-        const { rolls } = await rollDiceCom(charId, `${totalDiceCount}d${die}`);
+        const rolled = await rollDiceCom(charId, `${totalDiceCount}d${die}`);
+        const { applyMedicinaInfalivel } = await import('@/lib/suporteAbilities');
+        const med = applyMedicinaInfalivel(c0, rolled.rolls, die, maximizeDice);
+        const rolls = med.rolls;
         const modMul = hasAmplificada ? 2 : 1;
         const pre = (c0.attributes ?? []).find(a => a.name === 'Presença');
         const sab = (c0.attributes ?? []).find(a => a.name === 'Sabedoria');
@@ -3864,7 +3869,7 @@ export const useCharacterStore = create<CharacterStore>()(
         const sabMod = sab ? Math.floor((sab.value - 10) / 2) : -5;
         const usePre = preMod >= sabMod;
         const mod = (usePre ? preMod : sabMod) * modMul;
-        const total = Math.max(1, rolls.reduce((a, b) => a + b, 0) + mod);
+        const total = Math.max(1, rolls.reduce((a, b) => a + b, 0) + mod + med.flatBonus);
         let result: { ok: boolean; reason?: string; peSpent?: number; healed?: number; rolls?: number[]; mod?: number; key?: 'Presença' | 'Sabedoria' } = { ok: false };
         set((state) => ({
           characters: state.characters.map((c) => {
@@ -3874,6 +3879,7 @@ export const useCharacterStore = create<CharacterStore>()(
                 ...next,
                 peCurrent: Math.max(0, next.peCurrent - peCost),
                 ...(inCombat ? { actionsCurrent: Math.max(0, (next.actionsCurrent ?? 0) - 1) } : {}),
+                ...(med.used > 0 ? { medicinaInfalivelUsed: (next.medicinaInfalivelUsed ?? 0) + med.used } : {}),
               };
             }
             if (c.id === tgtId) {
@@ -4238,6 +4244,7 @@ export const useCharacterStore = create<CharacterStore>()(
               lastSpellUsedId: undefined,
               tecCombateAmaldicoadoActive: false,
               suporteHealUsed: 0,
+              medicinaInfalivelUsed: 0,
               inspiracaoBonus: 0,
             };
           }),
@@ -4372,6 +4379,7 @@ export const useCharacterStore = create<CharacterStore>()(
               lastSpellUsedId: undefined,
               tecCombateAmaldicoadoActive: false,
               suporteHealUsed: 0,
+              medicinaInfalivelUsed: 0,
               inspiracaoBonus: 0,
             };
           }),
@@ -4477,6 +4485,7 @@ export const useCharacterStore = create<CharacterStore>()(
               lastSpellUsedId: undefined,
               tecCombateAmaldicoadoActive: false,
               suporteHealUsed: 0,
+              medicinaInfalivelUsed: 0,
               // Presença Inspiradora: bônus de cena zera com a cena.
               inspiracaoBonus: 0,
             };

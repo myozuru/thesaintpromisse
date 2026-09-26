@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { getSuporteHealDice, getSuporteHealMaxUses, getSuporteKeyMod, getSuporteHealUsesLeft, applyApoiar, applyPresencaInspiradora, getPresencaInspiradoraMaxExtra, applySuporteBaseTR, applyTRMestre, getSuporteBaseTR, TR_MESTRE_LEVEL } from '@/lib/suporteAbilities';
+import { getSuporteHealDice, getSuporteHealMaxUses, getSuporteKeyMod, getSuporteHealUsesLeft, applyApoiar, applyPresencaInspiradora, getPresencaInspiradoraMaxExtra, applySuporteBaseTR, applyTRMestre, getSuporteBaseTR, TR_MESTRE_LEVEL , applyMedicinaInfalivel, getMedicinaInfalivelMaxUses, getMedicinaInfalivelUsesLeft, MEDICINA_INFALIVEL_LEVEL } from '@/lib/suporteAbilities';
+import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import { consumeAdvantageFor, expireGrantedBy, peekAdvantageFor } from '@/lib/omni/rollAdvantage';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import type { Character } from '@/types';
@@ -177,5 +178,31 @@ describe('TR do Suporte (Nv 1) e TR Mestre (Nv 9)', () => {
     expect(st('Vontade')?.mastery).toBe(true);
     expect(st('Astúcia')?.trained).toBe(true);
     expect(st('Astúcia')?.mastery).toBeFalsy();
+  });
+});
+
+describe('Medicina Infalível', () => {
+  const mkM = (level: number, used = 0) =>
+    ({ id: 's', name: 'S', specialization: 'Suporte', level, medicinaInfalivelUsed: used }) as unknown as Character;
+
+  it('sem a habilidade abaixo do nível: nada muda', () => {
+    const r = applyMedicinaInfalivel(mkM(MEDICINA_INFALIVEL_LEVEL - 1), [1, 2], 6, 2);
+    expect(r).toEqual({ rolls: [1, 2], used: 0, flatBonus: 0, maximized: [] });
+  });
+  it('usos = metade do nível + treinamento', () => {
+    const c = mkM(10);
+    expect(getMedicinaInfalivelMaxUses(c)).toBe(5 + getTrainingBonusByLevel(10));
+    expect(getMedicinaInfalivelUsesLeft(mkM(10, 2))).toBe(3 + getTrainingBonusByLevel(10));
+  });
+  it('maximiza os menores dados, soma treinamento e ignora dados já no máximo', () => {
+    const r = applyMedicinaInfalivel(mkM(10), [6, 1, 3], 6, 5);
+    expect(r.rolls).toEqual([6, 6, 6]);
+    expect(r.used).toBe(2);
+    expect(r.flatBonus).toBe(getTrainingBonusByLevel(10));
+  });
+  it('limita aos usos restantes', () => {
+    const max = getMedicinaInfalivelMaxUses(mkM(10));
+    const r = applyMedicinaInfalivel(mkM(10, max - 1), [1, 1, 1], 8, 3);
+    expect(r.used).toBe(1);
   });
 });
