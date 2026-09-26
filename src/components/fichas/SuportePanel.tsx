@@ -34,9 +34,11 @@ import { ApoioAvancadoSection, OutraChanceSection } from './SuporteNivel6Section
 import { ComandoSection, DesvendarSection } from './SuporteComandoTerrenoSections';
 import { RepertorioSection, MobilidadeSection } from './SuporteRepertorioMobilidadeSections';
 import { TransmitirSection } from './SuporteTransmitirSection';
+import { GuardaSincronizadaSection } from './SuporteNivel4Sections';
 import { hasSpecAbility } from '@/lib/suporteNivel2';
 import {
   APOIO_AVANCADO_ID,
+  hasApoioAccess,
   APOIOS_AVANCADOS,
   applyApoioAvancado,
   getApoiosEscolhidos,
@@ -65,7 +67,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
   const left = getSuporteHealUsesLeft(c);
   const allies = characters.filter((x) => x.category === 'PLAYER' || x.category === 'NPC' || x.id === c.id);
   const sign = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
-  const apoiosConhecidos = hasSpecAbility(c, APOIO_AVANCADO_ID) ? getApoiosEscolhidos(c) : [];
+  const apoiosConhecidos = hasApoioAccess(c) ? getApoiosEscolhidos(c) : [];
 
   /** Cura de toque do Suporte em Combate (também usada pelo Apoio Curativo). */
   const rollSuporteHeal = async (target: Character, origem: string): Promise<number> => {
@@ -357,6 +359,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
       <RepertorioSection c={c} />
       <MobilidadeSection c={c} />
       <TransmitirSection c={c} />
+      <GuardaSincronizadaSection c={c} />
     </div>
   );
 }

@@ -20,7 +20,8 @@ import {
   chooseApoio,
   closeOutraChanceEverywhere,
   getApoiosEscolhidos,
-  getApoiosMax,
+  getApoiosMaxFor,
+  hasApoioAccess,
   getOutraChanceMaxUses,
   getOutraChanceUsesLeft,
   useOutraChancePromptStore,
@@ -33,10 +34,10 @@ import { Handshake, RotateCcw } from 'lucide-react';
 export function ApoioAvancadoSection({ character: c }: { character: Character }) {
   const addLog = useLogStore((s) => s.addLog);
   const [pick, setPick] = useState<ApoioAvancadoKey | ''>('');
-  if (!hasSpecAbility(c, APOIO_AVANCADO_ID)) return null;
+  if (!hasApoioAccess(c)) return null;
 
   const chosen = getApoiosEscolhidos(c);
-  const max = getApoiosMax(c.level);
+  const max = getApoiosMaxFor(c);
   const available = (Object.keys(APOIOS_AVANCADOS) as ApoioAvancadoKey[]).filter((k) => !chosen.includes(k));
 
   const handleChoose = () => {

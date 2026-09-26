@@ -14,6 +14,7 @@ import { useProfileStore } from '@/stores/useProfileStore';
 import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import { getSuporteKeyMod, getSuporteHealUsesLeft } from '@/lib/suporteAbilities';
 import { hasSpecAbility } from '@/lib/suporteNivel2';
+import { getApoiosVersateisBonus, APOIOS_VERSATEIS_ID } from '@/lib/suporteNivel4';
 import { findCharEntity, touchDistanceMeters, type TouchEntity, type TouchGrid } from '@/lib/touchRange';
 
 export const APOIO_AVANCADO_ID = 'sup-apoio-avancado';
@@ -54,19 +55,30 @@ export const APOIOS_AVANCADOS: Record<ApoioAvancadoKey, { label: string; desc: s
     return 0;
   }
 
+/** Limite total do personagem: Apoio Avançado (1/2/3) + Apoios Versáteis (+1, +1 no Nv 10). */
+export function getApoiosMaxFor(c: Pick<Character, 'level' | 'chosenSpecAbilities'>): number {
+  const base = hasSpecAbility(c, APOIO_AVANCADO_ID) ? getApoiosMax(c.level) : 0;
+  return base + getApoiosVersateisBonus(c);
+}
+
+/** Tem acesso a apoios avançados (por Apoio Avançado ou Apoios Versáteis). */
+export function hasApoioAccess(c: Pick<Character, 'chosenSpecAbilities'>): boolean {
+  return hasSpecAbility(c, APOIO_AVANCADO_ID) || hasSpecAbility(c, APOIOS_VERSATEIS_ID);
+}
+
 export function getApoiosEscolhidos(c: Pick<Character, 'apoiosAvancados'>): ApoioAvancadoKey[] {
   return (c.apoiosAvancados ?? []).filter((k): k is ApoioAvancadoKey => k in APOIOS_AVANCADOS);
 }
 
 export function canChooseApoio(c: Character): boolean {
-  return hasSpecAbility(c, APOIO_AVANCADO_ID) && getApoiosEscolhidos(c).length < getApoiosMax(c.level);
+  return hasApoioAccess(c) && getApoiosEscolhidos(c).length < getApoiosMaxFor(c);
 }
 
 export function chooseApoio(c: Character, key: ApoioAvancadoKey): { ok: boolean; reason?: string } {
-  if (!hasSpecAbility(c, APOIO_AVANCADO_ID)) return { ok: false, reason: 'Sem Apoio Avançado.' };
+  if (!hasApoioAccess(c)) return { ok: false, reason: 'Sem Apoio Avançado.' };
   const chosen = getApoiosEscolhidos(c);
   if (chosen.includes(key)) return { ok: false, reason: 'Apoio já conhecido.' };
-  if (chosen.length >= getApoiosMax(c.level)) return { ok: false, reason: 'Limite de apoios atingido.' };
+  if (chosen.length >= getApoiosMaxFor(c)) return { ok: false, reason: 'Limite de apoios atingido.' };
   useCharacterStore.getState().updateCharacter(c.id, { apoiosAvancados: [...chosen, key] });
   return { ok: true };
 }

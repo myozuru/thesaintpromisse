@@ -33,7 +33,7 @@ export function isCegoOuSurdo(c: Pick<Character, 'activeConditions'>): boolean {
 }
 
 function isAlly(c: Character): boolean {
-  return !c.isGrimorioCreature;
+  return !c.isGrimorioCreature && (c.category === 'PLAYER' || c.category === 'NPC');
 }
 
 /** Membros válidos a partir de uma lista de candidatos (inclui o Suporte). */
