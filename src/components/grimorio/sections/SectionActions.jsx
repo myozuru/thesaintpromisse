@@ -943,8 +943,7 @@ export default function SectionActions({ draft, derived, actions }) {
           <SmallButton
             onClick={() => setShowForm(true)}
             variant="primary"
-            disabled={!canAddAny}
-            title={canAddAny ? undefined : "Todos os slots de ação por turno estão ocupados"}
+            title="Adicionar mais uma opção de ação à ficha (o limite por turno vale só no combate)"
           >
             <Plus className="w-3 h-3" /> Adicionar Ação
           </SmallButton>
