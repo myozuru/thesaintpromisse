@@ -47,3 +47,35 @@ describe('Recompensa pelo Sucesso', () => {
     expect(hasRecompensaNote(flat.notes)).toBe(true);
   });
 });
+
+describe('maybeApplyRecompensa — rolagens sem CD conhecida', () => {
+  it('concede 2 PE quando o bônus reduzido do Comando é consumido numa rolagem sem CD', () => {
+    const ally = mkChar({ peCurrent: 3, peMax: 10 });
+    const updates: [string, Partial<Character>][] = [];
+    const logs: string[] = [];
+    const ok = maybeApplyRecompensa(ally.id, { bonus: 2, notes: [`+2 Comando Motivador (Suporte) · ${RECOMPENSA_SOURCE_TAG}`] }, {
+      find: (id) => (id === ally.id ? ally : undefined),
+      update: (id, p) => updates.push([id, p]),
+      log: (m) => logs.push(m),
+    });
+    expect(ok).toBe(true);
+    expect(updates[0][1].peCurrent).toBe(5);
+    expect(logs[0]).toContain('Recompensa pelo Sucesso');
+  });
+
+  it('excedente vira PE temporário e não dispara sem a nota de Recompensa', () => {
+    const ally = mkChar({ peCurrent: 9, peMax: 10, tempPE: 0 });
+    const updates: [string, Partial<Character>][] = [];
+    maybeApplyRecompensa(ally.id, { bonus: 2, notes: [RECOMPENSA_SOURCE_TAG] }, {
+      find: () => ally, update: (id, p) => updates.push([id, p]), log: () => {},
+    });
+    expect(updates[0][1].peCurrent).toBe(10);
+    expect(updates[0][1].tempPE).toBe(1);
+    const none: unknown[] = [];
+    const ok = maybeApplyRecompensa(ally.id, { bonus: 3, notes: ['+3 Comando Motivador'] }, {
+      find: () => ally, update: () => none.push(1), log: () => {},
+    });
+    expect(ok).toBe(false);
+    expect(none).toHaveLength(0);
+  });
+});
