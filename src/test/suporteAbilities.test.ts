@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { getSuporteHealDice, getSuporteHealMaxUses, getSuporteKeyMod, getSuporteHealUsesLeft, applyApoiar } from '@/lib/suporteAbilities';
+import { getSuporteHealDice, getSuporteHealMaxUses, getSuporteKeyMod, getSuporteHealUsesLeft, applyApoiar, applyPresencaInspiradora, getPresencaInspiradoraMaxExtra } from '@/lib/suporteAbilities';
 import { consumeAdvantageFor, expireGrantedBy, peekAdvantageFor } from '@/lib/omni/rollAdvantage';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import type { Character } from '@/types';
@@ -68,5 +68,51 @@ describe('Apoiar (Suporte em Combate)', () => {
     await applyApoiar(supporter, target);
     expireGrantedBy('outro-id');
     expect(peekAdvantageFor('alvo-1', { kind: 'skill', name: 'Atletismo' })).toBe('advantage');
+  });
+});
+
+describe('Presença Inspiradora (Nv 3)', () => {
+  const sup = (pre: number, pe: number) =>
+    ({
+      id: 'sup-1',
+      name: 'Suporte',
+      attributes: [{ name: 'Presença', value: pre }],
+      peCurrent: pe,
+    }) as unknown as Character;
+  const ally = (id: string) => ({ id, name: id, inspiracaoBonus: 0 }) as unknown as Character;
+
+  beforeEach(() => {
+    useCharacterStore.setState({ characters: [] });
+  });
+
+  it('PE extra máximo = metade do mod de Presença', () => {
+    expect(getPresencaInspiradoraMaxExtra(sup(16, 20))).toBe(1); // mod +3 → 1
+    expect(getPresencaInspiradoraMaxExtra(sup(18, 20))).toBe(2); // mod +4 → 2
+    expect(getPresencaInspiradoraMaxExtra(sup(10, 20))).toBe(0);
+  });
+
+  it('custa 2 PE + extra e aplica +1 por PE extra nos aliados (não em si)', () => {
+    const s = sup(18, 10);
+    const a1 = ally('a1');
+    const a2 = ally('a2');
+    useCharacterStore.setState({ characters: [s, a1, a2] });
+    const r = applyPresencaInspiradora(s, [s, a1, a2], 2);
+    expect(r.ok).toBe(true);
+    expect(r.totalCost).toBe(4);
+    expect(r.bonus).toBe(3);
+    const chars = useCharacterStore.getState().characters;
+    expect(chars.find((x) => x.id === 'sup-1')?.peCurrent).toBe(6);
+    expect(chars.find((x) => x.id === 'sup-1')?.inspiracaoBonus ?? 0).toBe(0);
+    expect(chars.find((x) => x.id === 'a1')?.inspiracaoBonus).toBe(3);
+    expect(chars.find((x) => x.id === 'a2')?.inspiracaoBonus).toBe(3);
+  });
+
+  it('limita o extra ao máximo e falha sem PE', () => {
+    const s = sup(16, 2); // maxExtra 1, PE 2
+    useCharacterStore.setState({ characters: [s] });
+    const r = applyPresencaInspiradora(s, [], 99); // clamp a 1 → custo 3 > 2 PE
+    expect(r.ok).toBe(false);
+    expect(r.totalCost).toBe(3);
+    expect(useCharacterStore.getState().characters[0].peCurrent).toBe(2);
   });
 });
