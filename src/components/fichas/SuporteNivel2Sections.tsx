@@ -70,7 +70,7 @@ export function AmizadeSection({ c }: { c: Character }) {
             Confirmar
           </button>
         </div>
-      ) : role === 'MASTER' ? (
+      ) : role === 'MASTER' && amigo && (amigo.hpCurrent ?? 0) <= 0 ? (
         <button
           onClick={() => {
             liberarTrocaAmigo(c);
@@ -78,10 +78,10 @@ export function AmizadeSection({ c }: { c: Character }) {
           }}
           className="w-full rounded-md border border-border px-2 py-1 text-xs text-foreground hover:bg-secondary/40"
         >
-          Liberar troca de Amigo (interlúdio)
+          O Amigo caiu — o interlúdio já passou? Liberar novo Amigo
         </button>
       ) : (
-        <div className="text-[11px] text-muted-foreground">O Amigo é permanente. Se ele morrer, o Mestre libera a troca no interlúdio.</div>
+        <div className="text-[11px] text-muted-foreground">O Amigo é permanente. Se ele cair a 0 PV, o Mestre libera um novo Amigo após o interlúdio.</div>
       )}
     </div>
   );
@@ -95,6 +95,7 @@ export function AnaliseSection({ c }: { c: Character }) {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ targetId: string; total: number; cd: number; discoveries: number } | null>(null);
   const [chosen, setChosen] = useState<string[]>([]);
+  const [shared, setShared] = useState<string[]>([]);
   if (!hasSpecAbility(c, ANALISE_ID)) return null;
 
   const target = characters.find((x) => x.id === targetId);
@@ -111,10 +112,11 @@ export function AnaliseSection({ c }: { c: Character }) {
       const r = performAnalise(c, target, total, inCombat);
       if (!r.ok) return;
       setChosen([]);
+      setShared([]);
       setResult({ targetId: target.id, total, cd: r.cd, discoveries: r.discoveries });
       addLog(
         'combat',
-        `🔍 ${c.name} usa Análise Profunda em ${target.name}: Percepção ${d20}${bonus >= 0 ? '+' : ''}${bonus} = ${total}${modeLabel} vs CD ${r.cd} → ${r.discoveries > 0 ? `${r.discoveries} característica(s)` : 'falhou'}.`,
+        `🔍 ${c.name} usa Análise Profunda em ${target.name}: Percepção ${d20}${bonus >= 0 ? '+' : ''}${bonus} = ${total}${modeLabel} vs CD ${r.cd} → ${r.discoveries > 0 ? 'sucesso' : 'falhou'}.`,
       );
     } finally {
       setBusy(false);
@@ -171,10 +173,23 @@ export function AnaliseSection({ c }: { c: Character }) {
                   disabled={locked || on}
                   onChange={() => {
                     setChosen((p) => [...p, t.key]);
-                    addLog('combat', `🔍 ${c.name} descobriu em ${resTarget.name} — ${t.label}: ${t.value}`);
                   }}
                 />
-                <span className="text-foreground">{t.label}{on && <>: <b>{t.value}</b></>}</span>
+                <span className="flex-1 text-foreground">{t.label}{on && <>: <b>{t.value}</b></>}</span>
+                {on && (
+                  <button
+                    type="button"
+                    disabled={shared.includes(t.key)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setShared((p) => [...p, t.key]);
+                      addLog('combat', `🔍 ${c.name} compartilhou sobre ${resTarget.name} — ${t.label}: ${t.value}`);
+                    }}
+                    className="rounded border border-border px-1.5 text-[10px] text-foreground hover:bg-secondary/40 disabled:opacity-50"
+                  >
+                    {shared.includes(t.key) ? 'Compartilhado' : 'Compartilhar'}
+                  </button>
+                )}
               </label>
             );
           })}
