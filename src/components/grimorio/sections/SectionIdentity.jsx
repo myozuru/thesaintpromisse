@@ -156,7 +156,7 @@ function PortraitField({ value, settings, onChange, onSettingsChange }) {
               Trocar imagem
             </span>
           )}
-        </div>
+        </button>
 
         {/* Controles */}
         <div className="flex-1 min-w-0">
