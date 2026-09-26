@@ -1,3 +1,4 @@
+import { shownPeMax } from '@/lib/peDisplay';
 import { useState } from 'react';
 import { X, Coffee, Moon, Dices, Hammer } from 'lucide-react';
 import type { Character } from '@/types';
@@ -151,7 +152,7 @@ export function RestModal({ character: c, onClose, allowedMode }: RestModalProps
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  PV: <span className="font-mono text-foreground">{c.hpCurrent}/{c.hpMax}</span> · PE: <span className="font-mono text-foreground">{c.peCurrent}/{c.peMax}</span>
+                  PV: <span className="font-mono text-foreground">{c.hpCurrent}/{c.hpMax}</span> · PE: <span className="font-mono text-foreground">{c.peCurrent}/{shownPeMax(c)}</span>
                 </p>
               </div>
 
@@ -189,7 +190,7 @@ export function RestModal({ character: c, onClose, allowedMode }: RestModalProps
 
               <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs space-y-0.5">
                 <p>PV: <span className="font-mono text-foreground">{c.hpCurrent}/{c.hpMax}</span></p>
-                <p>PE: <span className="font-mono text-foreground">{c.peCurrent}/{c.peMax}</span></p>
+                <p>PE: <span className="font-mono text-foreground">{c.peCurrent}/{shownPeMax(c)}</span></p>
                 <p>Dados de Vida: <span className="font-mono text-foreground">{hdAvail}/{hdMax}</span></p>
                 {c.exhaustionLevel ? <p>Exaustão atual: <span className="font-mono text-foreground">{c.exhaustionLevel}</span></p> : null}
               </div>

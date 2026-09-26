@@ -7,6 +7,7 @@
  *    (arredondado para cima); se o aliado suceder num teste com CD conhecida,
  *    ganha 2 PE (excedente vira PE temporário).
  */
+import { shownPeMax } from '@/lib/peDisplay';
 import type { Character } from '@/types';
 import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import { hasSpecAbility } from '@/lib/suporteNivel2';
@@ -90,7 +91,7 @@ export function maybeApplyRecompensa(
 /** Ganho de 2 PE: preenche até o máximo; o resto vira PE temporário. */
 export function recompensaPEPatch(c: Character): Partial<Character> {
   const cur = c.peCurrent ?? 0;
-  const max = c.peMax ?? cur;
+  const max = shownPeMax(c) || cur;
   const room = Math.max(0, max - cur);
   const toPe = Math.min(room, RECOMPENSA_PE);
   const toTemp = RECOMPENSA_PE - toPe;

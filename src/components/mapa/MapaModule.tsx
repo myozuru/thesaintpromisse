@@ -17,6 +17,7 @@
  *   - Delete: remove selecionadas.
  *   - Ctrl/Cmd: bypass de snap.
  */
+import { shownPeMax } from '@/lib/peDisplay';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   useMapStore,
@@ -708,7 +709,7 @@ const toNameplateStats = (c: Character): NameplateCharacterStats => ({
   hp: c.hpCurrent,
   hpMax: c.hpMax,
   pe: c.peCurrent,
-  peMax: c.peMax,
+  peMax: shownPeMax(c),
 });
 
 const resolveEntityNameplateStats = (

@@ -2,6 +2,7 @@
  * Painel das habilidades base do Suporte.
  * Nv 1 · Suporte em Combate: Apoiar (Ação Bônus) + Cura de toque (Ação Bônus).
  */
+import { shownPeMax } from '@/lib/peDisplay';
 import { useState } from 'react';
 import type { Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
@@ -351,7 +352,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
           >
             <Sparkles className="h-3.5 w-3.5" /> Inspirar (−{inspiracaoCost} PE, +{inspiracaoBonus})
           </button>
-          <span className="text-muted-foreground">PE: {c.peCurrent ?? 0}/{c.peMax ?? 0}</span>
+          <span className="text-muted-foreground">PE: {c.peCurrent ?? 0}/{shownPeMax(c)}</span>
         </div>
       )}
       <AmizadeSection c={c} />

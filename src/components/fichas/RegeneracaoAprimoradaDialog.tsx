@@ -1,3 +1,4 @@
+import { shownPeMax } from '@/lib/peDisplay';
 import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -92,7 +93,7 @@ export function RegeneracaoAprimoradaDialog({ character: c, open, onOpenChange }
         <div className="space-y-3 text-sm">
           <div className="rounded-md border border-border bg-secondary/20 p-3 text-[11px] text-muted-foreground space-y-1">
             <div>
-              <span className="text-foreground font-bold">{c.name}</span> · PE: <span className="text-foreground">{c.peCurrent}/{c.peMax}</span> · ER: <span className="text-foreground">{er}/5</span>
+              <span className="text-foreground font-bold">{c.name}</span> · PE: <span className="text-foreground">{c.peCurrent}/{shownPeMax(c)}</span> · ER: <span className="text-foreground">{er}/5</span>
             </div>
             <div>
               Cada operação consome a ação correspondente e PE = PER × 2. Após executar, cura HP automaticamente
