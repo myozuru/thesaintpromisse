@@ -66,5 +66,6 @@ export type WorldSlice =
   | 'omniProposals'
   | 'mapScene'
   | 'testRequests'
+  | 'tempTemplates'
   | 'fog';
 

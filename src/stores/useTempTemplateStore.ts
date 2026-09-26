@@ -35,36 +35,63 @@ interface State {
   rename: (id: string, label: string) => void;
 }
 
+export function createTempTemplate(label: string, c: Character, id: string = crypto.randomUUID()): TempTemplate {
+  const attributes: Record<string, number> = {};
+  (c.attributes ?? []).forEach((a) => { attributes[a.name] = a.value ?? 10; });
+  const skills: Record<string, number> = {};
+  (c.skills ?? []).forEach((s) => { skills[s.name] = s.externalBonus ?? 0; });
+  const saves: Record<string, number> = {};
+  (c.savingThrows ?? []).forEach((s) => { saves[s.name] = s.value ?? 0; });
+  return {
+    id,
+    label: label.trim() || c.name,
+    createdAt: new Date().toISOString(),
+    data: {
+      hpMax: c.hpMax,
+      peMax: c.peMax,
+      movement: c.movement,
+      rd: c.rd ?? 0,
+      rdByType: { ...c.rdByType },
+      notes: c.notes ?? '',
+      attributes,
+      skills,
+      saves,
+    },
+  };
+}
+
+export function mergeTempTemplates(local: TempTemplate[], remote: TempTemplate[]): TempTemplate[] {
+  const merged = new Map<string, TempTemplate>();
+  for (const template of remote) merged.set(template.id, template);
+  for (const template of local) if (!merged.has(template.id)) merged.set(template.id, template);
+  return Array.from(merged.values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export function tempTemplateCharacterPatch(c: Character, template: TempTemplate): Partial<Character> {
+  const data = template.data;
+  return {
+    hpMax: data.hpMax,
+    hpCurrent: data.hpMax,
+    peMax: data.peMax,
+    peCurrent: data.peMax,
+    movement: data.movement,
+    rd: data.rd,
+    rdByType: { ...c.rdByType, ...data.rdByType },
+    notes: data.notes ?? c.notes,
+    attributes: c.attributes.map((a) => ({ ...a, value: data.attributes?.[a.name] ?? a.value })),
+    skills: c.skills.map((s) => ({ ...s, externalBonus: data.skills?.[s.name] ?? s.externalBonus })),
+    savingThrows: (c.savingThrows ?? []).map((s) => ({ ...s, value: data.saves?.[s.name] ?? s.value })),
+  };
+}
+
 export const useTempTemplateStore = create<State>()(
   persist(
     (set) => ({
       templates: [],
       addFromCharacter: (label, c) => {
-        const id = crypto.randomUUID();
-        const attributes: Record<string, number> = {};
-        (c.attributes ?? []).forEach((a) => { attributes[a.name] = a.value ?? 10; });
-        const skills: Record<string, number> = {};
-        (c.skills ?? []).forEach((s) => { skills[s.name] = (s as any).externalBonus ?? 0; });
-        const saves: Record<string, number> = {};
-        (c.savingThrows ?? []).forEach((s) => { saves[s.name] = s.value ?? 0; });
-        const tpl: TempTemplate = {
-          id,
-          label: label.trim() || c.name,
-          createdAt: new Date().toISOString(),
-          data: {
-            hpMax: c.hpMax,
-            peMax: c.peMax,
-            movement: c.movement,
-            rd: c.rd ?? 0,
-            rdByType: { ...c.rdByType },
-            notes: c.notes ?? '',
-            attributes,
-            skills,
-            saves,
-          },
-        };
+        const tpl = createTempTemplate(label, c);
         set((s) => ({ templates: [tpl, ...s.templates] }));
-        return id;
+        return tpl.id;
       },
       remove: (id) => set((s) => ({ templates: s.templates.filter((t) => t.id !== id) })),
       rename: (id, label) =>
