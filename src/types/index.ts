@@ -316,6 +316,10 @@ export interface Character {
   level: number;
   ca: number;
   baseDC: number;
+  /** PE máximo final (com todos os bônus), gravado pela ficha para ficar igual em todo lugar. */
+  peMaxEffective?: number;
+  /** Ficha temporária: CD de Especialização definida à mão. */
+  specDC?: number;
   hpCurrent: number;
   hpMax: number;
   peCurrent: number;

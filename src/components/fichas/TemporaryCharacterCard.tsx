@@ -11,6 +11,7 @@
  *  - Modelos de ficha temporária (item 7).
  *  - Travar campos pelo Mestre (item 8).
  */
+import { shownPeMax } from '@/lib/peDisplay';
 import { useMemo, useState } from 'react';
 import { Character, DAMAGE_TYPES, DAMAGE_TYPE_LABELS, DAMAGE_TYPE_ABBR, DamageType, createEmptyRdByType, ActiveCondition } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
@@ -431,7 +432,7 @@ export function TemporaryCharacterCard({ character: c }: Props) {
               <span className="ml-auto font-mono text-sm tabular-nums">
                 <span className="text-sky-300">{c.peCurrent}</span>
                 <span className="text-muted-foreground"> / </span>
-                <span className="text-foreground">{c.peMax}</span>
+                <span className="text-foreground">{shownPeMax(c)}</span>
               </span>
               <LockToggle locked={!!locks.pe} canEdit={isMaster} onToggle={() => toggleLock('pe')} />
             </div>
@@ -465,9 +466,16 @@ export function TemporaryCharacterCard({ character: c }: Props) {
             <div className="rounded-xl border border-border bg-secondary/10 p-3">
               <div className="flex items-center gap-2 mb-2">
                 <Crosshair className="h-4 w-4 text-orange-400" />
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">CD</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">CD Amaldiçoada</span>
               </div>
               <NumStep value={c.baseDC ?? 10} onChange={(v) => setField('baseDC', Math.max(0, v))} min={0} />
+            </div>
+            <div className="rounded-xl border border-border bg-secondary/10 p-3 col-span-2">
+              <div className="flex items-center gap-2 mb-2">
+                <Crosshair className="h-4 w-4 text-primary" />
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">CD de Especialização</span>
+              </div>
+              <NumStep value={c.specDC ?? c.baseDC ?? 10} onChange={(v) => setField('specDC' as never, Math.max(0, v) as never)} min={0} />
             </div>
           </div>
         </section>

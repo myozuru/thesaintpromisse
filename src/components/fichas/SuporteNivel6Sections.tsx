@@ -4,6 +4,7 @@
  *  • OutraChanceSection — contador de usos de Conceder Outra Chance.
  *  • OutraChancePromptDialog — pergunta automática quando um aliado falha.
  */
+import { shownPeMax } from '@/lib/peDisplay';
 import { useState } from 'react';
 import type { Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
@@ -163,7 +164,7 @@ export function OutraChancePromptDialog() {
           {OUTRA_CHANCE_PE_COST} PE para ele rolar de novo, ficando com o melhor resultado?
         </p>
         <p className="text-xs text-muted-foreground">
-          Usos restantes: {getOutraChanceUsesLeft(sup)}/{getOutraChanceMaxUses(sup)} · PE: {sup.peCurrent}/{sup.peMax}
+          Usos restantes: {getOutraChanceUsesLeft(sup)}/{getOutraChanceMaxUses(sup)} · PE: {sup.peCurrent}/{shownPeMax(sup)}
         </p>
         <div className="flex gap-2">
           <button

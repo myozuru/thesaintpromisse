@@ -1,4 +1,5 @@
 /** Suporte Nv 4 — Sintonização Vital: info no painel + aviso ao dono do Suporte. */
+import { shownPeMax } from '@/lib/peDisplay';
 import { useState } from 'react';
 import type { Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
@@ -84,7 +85,7 @@ export function SintonizacaoPromptDialog() {
             </option>
           ))}
         </select>
-        <p className="text-xs text-muted-foreground">PE: {sup.peCurrent}/{sup.peMax}</p>
+        <p className="text-xs text-muted-foreground">PE: {sup.peCurrent}/{shownPeMax(sup)}</p>
         <div className="flex gap-2">
           <button
             onClick={() => closeSintonizacaoEverywhere(offer.requestId)}

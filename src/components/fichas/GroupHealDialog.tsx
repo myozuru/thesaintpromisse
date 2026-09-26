@@ -1,3 +1,4 @@
+import { shownPeMax } from '@/lib/peDisplay';
 import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -118,7 +119,7 @@ export function GroupHealDialog({ caster, open, onOpenChange }: Props) {
               Conjurador: <span className="text-foreground font-bold">{caster.name}</span>
             </div>
             <div className="flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground">
-              <span>PE atual: <span className="text-foreground">{caster.peCurrent}/{caster.peMax}</span></span>
+              <span>PE atual: <span className="text-foreground">{caster.peCurrent}/{shownPeMax(caster)}</span></span>
               <span>Limite PER: <span className="text-foreground">{peLimit}</span></span>
               <span>Dado: <span className="text-foreground">d{cfg.dieSize}</span></span>
               <span>Mod-Chave: <span className="text-foreground">{cfg.keyAttribute} {cfg.keyAttrMod >= 0 ? '+' : ''}{cfg.keyAttrMod}{cfg.modMultiplier === 2 ? ' ×2' : ''}</span></span>

@@ -73,7 +73,7 @@ import { DotesPanel } from './DotesPanel';
 import { isCamActive } from '@/lib/camCores';
 import { getPassiveSpellLevel, isPassiveActive, getMaxSpells } from '@/lib/spellRules';
 import { applyOriginEffects } from '@/lib/originEngine';
-import { getTrainingBonusByLevel, getHitDiceMax, MAX_LEVEL } from '@/lib/levelEngine';
+import { getTrainingBonusByLevel, getHitDiceMax, MAX_LEVEL, getKeyAttrForSpec } from '@/lib/levelEngine';
 import { aggregateTalentBonuses } from '@/lib/talentEffects';
 import { aggregateAuraEffects, getPendingAbsorbedDice, hasKokusen, getKokusenCritThreshold } from '@/lib/auraEffects';
 import { aggregateConditionMods, getDefenseModFromConditions, getSkillModFromConditions, getAutoCritFromConditions } from '@/lib/conditionEffects';
@@ -820,6 +820,17 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
   const classCdBonusCC = c.classCdBonus || 0;
   const exhaustionPenalty = -(c.exhaustionLevel ?? 0);
   const effectiveDC = baseDCCC + dcAttrModCC + halfLevelCC + trainingBonusCC + passiveDC + itemDC + buffDC + cdIncreaseCC + classCdBonusCC + exhaustionPenalty;
+  // ===== CD de Especialização — atributo-chave da especialização (Suporte: Presença/Sabedoria) =====
+  const specKeyNameCC = getKeyAttrForSpec(c.specialization as never, c.keyAttribute) ?? c.keyAttribute ?? null;
+  const specKeyAttrCC = specKeyNameCC ? (c.attributes || []).find(a => a.name === specKeyNameCC) : undefined;
+  const specKeyModCC = specKeyAttrCC ? Math.floor((specKeyAttrCC.value - 10) / 2) : 0;
+  const specDC = baseDCCC + specKeyModCC + halfLevelCC + trainingBonusCC + passiveDC + itemDC + buffDC + cdIncreaseCC + exhaustionPenalty;
+
+  // Grava o PE máximo final na ficha para que mapa, painéis e diálogos mostrem o mesmo número.
+  useEffect(() => {
+    if (c.peMaxEffective !== effectivePeMax) updateCharacter(c.id, { peMaxEffective: effectivePeMax });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [c.id, effectivePeMax, c.peMaxEffective]);
 
   const normalizarNomeRolagem = (nome: string) => nome
     .toLowerCase()
@@ -1410,11 +1421,18 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
             className="flex flex-col items-center justify-center rounded-xl border-2 border-neon-yellow/50 bg-gradient-to-br from-neon-yellow/20 to-neon-yellow/5 px-3 py-1.5 shadow-[0_0_20px_-5px_hsl(var(--neon-yellow)/0.4)]"
             title={`CD base ${baseDCCC}${dcAttrCC ? ` + ${dcAttrCC.name.slice(0,3).toUpperCase()} ${dcAttrModCC >= 0 ? '+' : ''}${dcAttrModCC}` : ' (sem atributo)'} + ½ Nv ${halfLevelCC} + Treinamento ${trainingBonusCC}${passiveDC ? ` + Passivas ${passiveDC}` : ''}${itemDC ? ` + Itens ${itemDC}` : ''}${buffDC ? ` + Buffs ${buffDC}` : ''}${cdIncreaseCC ? ` + Aumento ${cdIncreaseCC}` : ''}${classCdBonusCC ? ` + Classe ${classCdBonusCC}` : ''}`}
           >
-            <span className="text-xs font-bold uppercase tracking-wider text-neon-yellow/80 leading-none">CD</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-neon-yellow/80 leading-none">CD Amald.</span>
             <span className="font-mono text-2xl font-black leading-none text-neon-yellow">
               {effectiveDC}
               {buffDC > 0 && <span className="ml-0.5 text-xs text-pe align-top">+{buffDC}</span>}
             </span>
+          </div>
+          <div
+            className="flex flex-col items-center justify-center rounded-xl border-2 border-primary/50 bg-gradient-to-br from-primary/20 to-primary/5 px-3 py-1.5"
+            title={`CD de Especialização: base ${baseDCCC}${specKeyAttrCC ? ` + ${specKeyAttrCC.name.slice(0,3).toUpperCase()} ${specKeyModCC >= 0 ? '+' : ''}${specKeyModCC}` : ' (sem atributo-chave)'} + ½ Nv ${halfLevelCC} + Treinamento ${trainingBonusCC}${passiveDC ? ` + Passivas ${passiveDC}` : ''}${itemDC ? ` + Itens ${itemDC}` : ''}${buffDC ? ` + Buffs ${buffDC}` : ''}${cdIncreaseCC ? ` + Aumento ${cdIncreaseCC}` : ''}`}
+          >
+            <span className="text-xs font-bold uppercase tracking-wider text-primary/80 leading-none">CD Espec.</span>
+            <span className="font-mono text-2xl font-black leading-none text-primary">{specDC}</span>
           </div>
           <div className="flex flex-col gap-0.5">
             <div className="text-xs text-muted-foreground font-mono" title={`Movimento base ${c.movement ?? 9}m${talentBonuses.movementMeters > 0 ? ` + ${talentBonuses.movementMeters}m (talento)` : ''}${getMobilidadeBonus(c) > 0 ? ` + ${getMobilidadeBonus(c)}m (Mobilidade Avançada)` : ''}${(c.exhaustionLevel ?? 0) > 0 ? ` - ${(1.5 * (c.exhaustionLevel ?? 0)).toFixed(1)}m (Exaustão)` : ''}`}>

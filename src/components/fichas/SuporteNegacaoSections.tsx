@@ -1,4 +1,5 @@
 /** Suporte Nv 4 — Negação Crítica: contador no painel + aviso ao dono do Suporte. */
+import { shownPeMax } from '@/lib/peDisplay';
 import type { Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLogStore } from '@/stores/useLogStore';
@@ -55,7 +56,7 @@ export function NegacaoPromptDialog() {
           <b>{roller.name}</b> tirou <b>1 natural</b>. Gastar {NEGACAO_PE} PE para transformar a falha crítica em falha comum?
         </p>
         <p className="text-xs text-muted-foreground">
-          Usos na cena: {getNegacaoUsesLeft(sup)}/{getNegacaoMaxUses(sup)} · PE: {sup.peCurrent}/{sup.peMax}
+          Usos na cena: {getNegacaoUsesLeft(sup)}/{getNegacaoMaxUses(sup)} · PE: {sup.peCurrent}/{shownPeMax(sup)}
         </p>
         <div className="flex gap-2">
           <button onClick={() => closeNegacaoEverywhere(offer.requestId)}
