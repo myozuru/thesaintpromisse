@@ -1,7 +1,7 @@
 /**
  * ============================================================================
- *  SUPORTE — Habilidades de 6º nível
- *  • Apoio Avançado        (sup-apoio-avancado)
+ *  SUPORTE — Habilidades de 2º nível (2º par)
+ *  • Apoio Avançado        (sup-apoio-avancado) — 1 apoio no Nv 2, +1 no Nv 6, +1 no Nv 12
  *  • Conceder Outra Chance (sup-conceder-outra-chance)
  * ============================================================================
  *  Funções puras + ações que gravam no store. A UI fica em
@@ -46,12 +46,13 @@ export const APOIOS_AVANCADOS: Record<ApoioAvancadoKey, { label: string; desc: s
   },
 };
 
-/** Quantos apoios o Suporte conhece: 1 no Nv 6, +1 no Nv 12. */
-export function getApoiosMax(level: number): number {
-  if ((level ?? 0) >= 12) return 2;
-  if ((level ?? 0) >= 6) return 1;
-  return 0;
-}
+  /** Quantos apoios o Suporte conhece: 1 no Nv 2, +1 no Nv 6, +1 no Nv 12. */
+  export function getApoiosMax(level: number): number {
+    if ((level ?? 0) >= 12) return 3;
+    if ((level ?? 0) >= 6) return 2;
+    if ((level ?? 0) >= 2) return 1;
+    return 0;
+  }
 
 export function getApoiosEscolhidos(c: Pick<Character, 'apoiosAvancados'>): ApoioAvancadoKey[] {
   return (c.apoiosAvancados ?? []).filter((k): k is ApoioAvancadoKey => k in APOIOS_AVANCADOS);

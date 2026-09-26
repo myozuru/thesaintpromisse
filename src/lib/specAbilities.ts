@@ -1436,15 +1436,15 @@ const SUPORTE: SpecAbility[] = [
     logicText: 'Descobertas = 1 + ⌊(total − CD) ÷ 5⌋ no sucesso; alvo marcado até o fim da cena.',
   },
   {
-    id: 'sup-apoio-avancado', name: 'Apoio Avançado', tier: 6, specialization: 'Suporte',
+    id: 'sup-apoio-avancado', name: 'Apoio Avançado', tier: 2, specialization: 'Suporte',
     flavor: 'Seu apoio vai além de palavras — vira ação concreta.',
-    mechanic: 'Ao usar Apoiar, fortaleça com um efeito conhecido: Curativo (gasta 1 uso de Suporte em Combate e cura o aliado), Defensivo (+½ bônus de treinamento na Defesa), Focado (+½ mod de Presença/Sabedoria no teste), Ofensivo (2 PE: 1 ataque como parte da ação) ou Estratégico (+½ bônus de treinamento na CD do próximo teste forçado pelo aliado). Nv 6: conhece 1 apoio; Nv 12: +1.',
+    mechanic: 'Ao usar Apoiar, fortaleça com um efeito conhecido: Curativo (gasta 1 uso de Suporte em Combate e cura o aliado), Defensivo (+½ bônus de treinamento na Defesa), Focado (+½ mod de Presença/Sabedoria no teste), Ofensivo (2 PE: 1 ataque como parte da ação) ou Estratégico (+½ bônus de treinamento na CD do próximo teste forçado pelo aliado). Conhece 1 apoio; Nv 6: +1; Nv 12: +1.',
     activation: 'passive',
     triggerText: 'Seletor de efeito no botão Apoiar (painel do Suporte).',
     logicText: 'Buffs Defensivo/Estratégico expiram no início do próximo turno do Suporte; Focado é consumido na próxima perícia do alvo.',
   },
   {
-    id: 'sup-conceder-outra-chance', name: 'Conceder Outra Chance', tier: 6, specialization: 'Suporte',
+    id: 'sup-conceder-outra-chance', name: 'Conceder Outra Chance', tier: 2, specialization: 'Suporte',
     flavor: 'Um empurrão no momento exato transforma fracasso em acerto.',
     mechanic: 'Ao ver um aliado a até 6 m falhar em um teste, gaste 3 PE para ele rolar novamente, ficando com o melhor resultado. Usos = bônus de treinamento, por descanso longo; descanso curto recupera metade.',
     activation: 'passive',
