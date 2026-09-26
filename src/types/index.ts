@@ -724,6 +724,10 @@ export interface Character {
   apoiosAvancados?: string[];
   /** Suporte Nv 6 — Conceder Outra Chance: usos gastos (máx = bônus de treinamento). */
   outraChanceUsed?: number;
+  /** Suporte Nv 4 — Pré-Análise: aliado que não pode ser surpreendido. */
+  preAnaliseAllyId?: string;
+  /** Pré-Análise: já escolheu aliado desde o último descanso curto. */
+  preAnaliseEscolhaUsada?: boolean;
   /** Apoio Defensivo ativo: +value na Defesa até o início do próximo turno de grantedBy. */
   apoioDefensivo?: { value: number; grantedBy?: string };
   /** Suporte Nv 4 — Guarda Sincronizada ativa (no Suporte): membros atuais, incluindo ele. */
