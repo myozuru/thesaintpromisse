@@ -774,7 +774,7 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
   const effectiveHpMax = Math.max(0, baseHpMax - exhaustionHpReduction);
   const effectivePeMax = c.peMax + passiveBonuses.pe + itemBonuses.pe + talentBonuses.pe;
   const effectiveEscMax = c.escMax + passiveBonuses.esc + itemBonuses.esc;
-  const effectiveSlotsMax = c.slotsMax + passiveBonuses.slots + itemBonuses.slots;
+  const effectiveSlotsMax = c.slotsMax + passiveBonuses.slots + itemBonuses.slots + getOtimizacaoSlotsBonus(c);
   const effectiveAttention = (c.attention ?? 0) + talentBonuses.attention;
   const effectiveInitiative = (c.initiativeBonus ?? 0) + talentBonuses.initiative;
 
