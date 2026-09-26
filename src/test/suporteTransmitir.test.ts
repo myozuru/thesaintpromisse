@@ -20,7 +20,7 @@ const mk = (p: Partial<Character>) => ({
   attributes: [], skills: [], savingThrows: [], passives: [], rdByType: {}, ca: 10, baseDC: 15, ...p,
 }) as unknown as Character;
 const withAb = { chosenSpecAbilities: [{ abilityId: TRANSMITIR_ID, chosenAtLevel: 2 }] };
-const sk = (name: string, trained = false) => ({ name, trained, value: 0, linkedAttribute: 'Sabedoria' });
+const sk = (name: string, trained = false) => ({ id: name, name, trained, value: 0, linkedAttribute: 'Sabedoria' });
 
 describe('Catálogo — Transmitir Conhecimento', () => {
   it('está no tier 2 do Suporte e o catálogo continua válido', () => {
