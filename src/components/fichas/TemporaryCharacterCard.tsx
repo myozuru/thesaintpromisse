@@ -11,6 +11,7 @@
  *  - Modelos de ficha temporária (item 7).
  *  - Travar campos pelo Mestre (item 8).
  */
+import { shownPeMax } from '@/lib/peDisplay';
 import { useMemo, useState } from 'react';
 import { Character, DAMAGE_TYPES, DAMAGE_TYPE_LABELS, DAMAGE_TYPE_ABBR, DamageType, createEmptyRdByType, ActiveCondition } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
@@ -431,7 +432,7 @@ export function TemporaryCharacterCard({ character: c }: Props) {
               <span className="ml-auto font-mono text-sm tabular-nums">
                 <span className="text-sky-300">{c.peCurrent}</span>
                 <span className="text-muted-foreground"> / </span>
-                <span className="text-foreground">{c.peMax}</span>
+                <span className="text-foreground">{shownPeMax(c)}</span>
               </span>
               <LockToggle locked={!!locks.pe} canEdit={isMaster} onToggle={() => toggleLock('pe')} />
             </div>
