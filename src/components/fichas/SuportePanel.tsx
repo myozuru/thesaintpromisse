@@ -158,6 +158,32 @@ export function SuportePanel({ character: c }: { character: Character }) {
           Usos: <strong className="text-foreground">{left}/{maxUses}</strong> · {keyAttr}
         </span>
       </div>
+      {c.level >= 3 && (
+        <div className="flex flex-wrap items-center gap-2 text-xs border-t border-primary/20 pt-2">
+          <span className="font-bold uppercase tracking-wider text-primary">Presença Inspiradora</span>
+          <select
+            value={extra}
+            onChange={(e) => setInspiracaoExtra(Number(e.target.value))}
+            className="rounded border border-border bg-background px-2 py-1 text-xs"
+            title="PE adicional: +1 no bônus por PE (máx. = metade do mod de Presença)"
+          >
+            {Array.from({ length: maxExtra + 1 }, (_, i) => (
+              <option key={i} value={i}>
+                +{i} PE extra → bônus +{1 + i}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={handleInspirar}
+            disabled={!canInspirar || busy}
+            className="inline-flex items-center gap-1 rounded border border-primary/40 bg-primary/15 px-2 py-1 font-bold text-primary hover:bg-primary/25 disabled:cursor-not-allowed disabled:opacity-40"
+            title="Custa 2 PE + PE extra. Aliados em até 9 m ganham o bônus em todas as perícias durante a cena."
+          >
+            <Sparkles className="h-3.5 w-3.5" /> Inspirar (−{inspiracaoCost} PE, +{inspiracaoBonus})
+          </button>
+          <span className="text-muted-foreground">PE: {c.peCurrent ?? 0}/{c.peMax ?? 0}</span>
+        </div>
+      )}
     </div>
   );
 }
