@@ -46,6 +46,7 @@ import { CamCoreTabs } from './CamCoreTabs';
 import { FahPanel } from './FahPanel';
 import { SpecReactionsPanel } from './SpecReactionsPanel';
 import { SpecActionsPanel } from './SpecActionsPanel';
+import { SuportePanel } from './SuportePanel';
 import { AttackPanel } from './AttackPanel';
 import { CamDeathReactionDialog } from './CamDeathReactionDialog';
 import { PendingLevelChoicesPanel, hasPendingChoices } from './PendingLevelChoicesPanel';
@@ -1599,6 +1600,9 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
 
       {/* ─── Ações ativas do Especialista em Técnica (Bloco B) ─── */}
       {!c.isGrimorioCreature && <SpecActionsPanel character={c} />}
+
+      {/* ─── Suporte: habilidades base ─── */}
+      <SuportePanel character={c} />
 
       {/* ─── Painel de Ataque (combatEngine) ─── */}
       {/* Visível apenas durante combate ativo. */}
