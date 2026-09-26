@@ -450,6 +450,15 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
     // Players: passivas criadas pelo player vão para análise do Mestre — NÃO entram
     // na ficha agora. Apenas as passivas concedidas pela origem ficam.
     const passivesForCharacter = isMaster ? [...passives, ...originPassives] : [...originPassives];
+    // Suporte: treinamento em Escudos (regra do livro) registrado como passiva.
+    if (isSuporte) {
+      passivesForCharacter.push({
+        id: crypto.randomUUID(),
+        name: 'Treinamento: Escudos',
+        description: 'Proficiente em Escudos (treinamento da especialização Suporte).',
+        bonusHP: 0, bonusPE: 0, bonusESC: 0, bonusSlots: 0, bonusRD: 0, bonusCA: 0,
+      });
+    }
 
     // HP/PE finais incluem automação de nível (Kamo +1/level, Gojo PE par, etc.)
     const finalHpMax = hpMax + (effects.automation.bonusHP ?? 0);
