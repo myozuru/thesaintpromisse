@@ -1345,7 +1345,7 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
               </span>
             )}
             <span className="flex-shrink-0">
-              <PendingSummaryButton character={c} onExpand={() => setExpanded(true)} />
+              {!c.isGrimorioCreature && <PendingSummaryButton character={c} onExpand={() => setExpanded(true)} />}
             </span>
           </div>
           <div className="text-sm text-muted-foreground pr-2">
