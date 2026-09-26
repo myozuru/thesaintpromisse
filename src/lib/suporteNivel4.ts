@@ -8,6 +8,8 @@
  */
 import type { Character } from '@/types';
 import { hasSpecAbility } from '@/lib/suporteNivel2';
+import { getTrainingBonusByLevel } from '@/lib/levelEngine';
+import { getSuporteKeyMod } from '@/lib/suporteAbilities';
 import { findCharEntity, touchDistanceMeters, type TouchEntity, type TouchGrid } from '@/lib/touchRange';
 
 export const APOIOS_VERSATEIS_ID = 'sup-apoios-versateis';
@@ -113,4 +115,102 @@ export function computeGuardaPatches(
     else patches.push({ id: c.id, patch: { guardaSincronizadaBonus: want } });
   }
   return patches;
+}
+
+// ===================== Inspirar Aliados =====================
+
+export const INSPIRAR_ID = 'sup-inspirar-aliados';
+export const INTERVENCAO_ID = 'sup-intervencao';
+export const INSPIRAR_PE = 1;
+export const INSPIRAR_DURACAO_S = 600; // 10 minutos no relógio do jogo
+
+export function getInspirarMaxAliados(c: Pick<Character, 'level'>): number {
+  return Math.floor(getTrainingBonusByLevel(c.level ?? 1) / 2);
+}
+
+/** Usos totais compartilhados = mod de Presença/Sabedoria (mín. 1). */
+export function getInspirarUsos(c: Pick<Character, 'attributes' | 'keyAttribute'>): number {
+  return Math.max(1, getSuporteKeyMod(c));
+}
+
+export function canInspirar(c: Character, allyIds: string[]): { ok: boolean; reason?: string } {
+  if (!hasSpecAbility(c, INSPIRAR_ID)) return { ok: false, reason: 'Sem Inspirar Aliados.' };
+  if (c.inspirarUsadoCena) return { ok: false, reason: 'Já usado nesta cena.' };
+  if ((c.peCurrent ?? 0) < INSPIRAR_PE) return { ok: false, reason: 'PE insuficiente (1 PE).' };
+  const max = getInspirarMaxAliados(c);
+  if (allyIds.length === 0) return { ok: false, reason: 'Escolha ao menos um aliado.' };
+  if (allyIds.length > max) return { ok: false, reason: `Máximo de ${max} aliado(s).` };
+  if (allyIds.includes(c.id)) return { ok: false, reason: 'Escolha aliados, não você.' };
+  return { ok: true };
+}
+
+/** Patch no Suporte ao inspirar. `now` = segundos na linha do tempo do relógio. */
+export function buildInspirar(c: Character, allyIds: string[], now: number): Partial<Character> {
+  return {
+    peCurrent: (c.peCurrent ?? 0) - INSPIRAR_PE,
+    inspirarUsadoCena: true,
+    inspiracao: { allyIds, usesLeft: getInspirarUsos(c), expiresAt: now + INSPIRAR_DURACAO_S },
+  };
+}
+
+/** Suporte cuja inspiração está ativa para esse aliado. */
+export function findInspiracaoFor(allyId: string, chars: Character[], now: number): Character | null {
+  return chars.find((s) => {
+    const i = s.inspiracao;
+    return !!i && i.usesLeft > 0 && now < i.expiresAt && i.allyIds.includes(allyId);
+  }) ?? null;
+}
+
+export function inspiracaoExpirada(s: Pick<Character, 'inspiracao'>, now: number): boolean {
+  const i = s.inspiracao;
+  return !!i && (i.usesLeft <= 0 || now >= i.expiresAt);
+}
+
+// ===================== Intervenção =====================
+
+export type GrauCondicao = 'fraca' | 'media' | 'forte' | 'extrema' | 'variavel' | 'especial';
+
+export const GRAU_CONDICAO: Record<string, GrauCondicao> = {
+  condenado: 'media', engasgando: 'media', enjoado: 'media', envenenado: 'media', sangramento: 'variavel', sofrendo: 'fraca',
+  atordoado: 'extrema', inconsciente: 'extrema', paralisado: 'extrema', indefeso: 'especial',
+  abalado: 'fraca', amedrontado: 'media', aterrorizado: 'forte', confuso: 'media', enfeiticado: 'media',
+  agarrado: 'media', caido: 'fraca', enredado: 'media', imovel: 'forte', lento: 'media',
+  cego: 'forte', desorientado: 'fraca', desprevenido: 'fraca', invisivel: 'especial', surdo: 'media', surpreso: 'especial',
+  exposto: 'forte', fragilizado: 'forte',
+  // Condições internas do sistema, fora da lista do livro: não removíveis.
+  marcado: 'especial', morto: 'especial', desmaiado: 'especial',
+};
+
+const ORDEM: Record<'fraca' | 'media' | 'forte' | 'extrema', number> = { fraca: 0, media: 1, forte: 2, extrema: 3 };
+export type GrauRemovivel = keyof typeof ORDEM;
+
+/** Grau máximo removível: fraca; média no Nv 6; forte no Nv 12; extrema no Nv 18. */
+export function getGrauMaximo(level: number): GrauRemovivel {
+  if (level >= 18) return 'extrema';
+  if (level >= 12) return 'forte';
+  if (level >= 6) return 'media';
+  return 'fraca';
+}
+
+/** 3 PE + 3 por grau acima de fraca. */
+export function getIntervencaoCusto(grau: GrauRemovivel): number {
+  return 3 + 3 * ORDEM[grau];
+}
+
+/** Para condições de grau variável (Sangramento) o Suporte informa o grau. */
+export function checkIntervencao(
+  sup: Character,
+  conditionId: string,
+  grauVariavel?: GrauRemovivel,
+): { ok: true; grau: GrauRemovivel; custo: number } | { ok: false; reason: string } {
+  if (!hasSpecAbility(sup, INTERVENCAO_ID)) return { ok: false, reason: 'Sem Intervenção.' };
+  const g = GRAU_CONDICAO[conditionId];
+  if (!g) return { ok: false, reason: 'Condição sem grau definido.' };
+  if (g === 'especial') return { ok: false, reason: 'Condições especiais não podem ser encerradas por Intervenção.' };
+  const grau: GrauRemovivel | undefined = g === 'variavel' ? grauVariavel : g;
+  if (!grau) return { ok: false, reason: 'Informe o grau desta condição.' };
+  if (ORDEM[grau] > ORDEM[getGrauMaximo(sup.level ?? 1)]) return { ok: false, reason: `Seu nível ainda não permite encerrar condições ${grau === 'media' ? 'médias' : grau + 's'}.` };
+  const custo = getIntervencaoCusto(grau);
+  if ((sup.peCurrent ?? 0) < custo) return { ok: false, reason: `PE insuficiente (${custo} PE).` };
+  return { ok: true, grau, custo };
 }

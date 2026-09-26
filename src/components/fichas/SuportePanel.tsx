@@ -34,7 +34,7 @@ import { ApoioAvancadoSection, OutraChanceSection } from './SuporteNivel6Section
 import { ComandoSection, DesvendarSection } from './SuporteComandoTerrenoSections';
 import { RepertorioSection, MobilidadeSection } from './SuporteRepertorioMobilidadeSections';
 import { TransmitirSection } from './SuporteTransmitirSection';
-import { GuardaSincronizadaSection } from './SuporteNivel4Sections';
+import { GuardaSincronizadaSection, InspirarAliadosSection, IntervencaoSection } from './SuporteNivel4Sections';
 import { hasSpecAbility } from '@/lib/suporteNivel2';
 import {
   hasApoioAccess,
@@ -359,6 +359,8 @@ export function SuportePanel({ character: c }: { character: Character }) {
       <MobilidadeSection c={c} />
       <TransmitirSection c={c} />
       <GuardaSincronizadaSection c={c} />
+      <InspirarAliadosSection c={c} />
+      <IntervencaoSection c={c} />
     </div>
   );
 }
