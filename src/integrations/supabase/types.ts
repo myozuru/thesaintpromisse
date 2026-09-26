@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          avatar: string | null
+          created_at: string
+          id: string
+          nick: string
+        }
+        Insert: {
+          avatar?: string | null
+          created_at?: string
+          id: string
+          nick: string
+        }
+        Update: {
+          avatar?: string | null
+          created_at?: string
+          id?: string
+          nick?: string
+        }
+        Relationships: []
+      }
       realtime_assets: {
         Row: {
           created_at: string
@@ -53,15 +74,45 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      claim_first_master: { Args: never; Returns: boolean }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      list_masters: { Args: never; Returns: string[] }
+      set_master: {
+        Args: { _make: boolean; _target: string }
+        Returns: undefined
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "master" | "player"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -188,6 +239,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["master", "player"],
+    },
   },
 } as const
