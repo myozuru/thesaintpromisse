@@ -52,10 +52,8 @@ export function CombatBar({ className, variant = 'bar' }: Props) {
     // ou (legado) se ele é PC sem perfil e eu sou o único PC sem perfil.
     const playerChars = allCharacters.filter((c) => c.category === 'PLAYER');
     const legacyPcs = playerChars.filter((c) => !c.profileId);
-    const isMyTurn = !!activeChar && !!activeProfileId && (
-      activeChar.profileId === activeProfileId ||
-      (!activeChar.profileId && legacyPcs.length === 1 && legacyPcs[0].id === activeChar.id)
-    );
+    void legacyPcs;
+    const isMyTurn = !!activeChar && !!activeProfileId && activeChar.profileId === activeProfileId;
     const endTurn = () => {
       const { endOfRound } = combat.nextTurn();
       if (endOfRound) resetActions();
