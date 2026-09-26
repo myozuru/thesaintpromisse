@@ -1017,6 +1017,7 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
 
     if (targets.length === 0) {
       showRollAnimation(label + modeLabel, d20, totalBonus, finalResult);
+      maybeApplyRecompensa(c.id, flatAtk, { find: (id) => useCharacterStore.getState().characters.find((x) => x.id === id), update: updateCharacter, log: (m) => addLog('combat', m) });
       return;
     }
 
