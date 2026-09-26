@@ -168,7 +168,7 @@ export function Global3DDiceOverlay() {
             {lastResults.map((r) => (
               <span
                 key={r.id}
-                className="px-2 py-0.5 rounded-md text-[11px] tabular-nums font-semibold"
+                className="px-2 py-0.5 rounded-md text-[11px] tabular-nums font-semibold flex items-center gap-1"
                 style={{
                   background: 'linear-gradient(135deg, hsl(268 60% 22%) 0%, hsl(285 55% 18%) 100%)',
                   color: 'hsl(42 90% 75%)',
@@ -176,7 +176,9 @@ export function Global3DDiceOverlay() {
                   boxShadow: 'inset 0 0 8px hsl(268 85% 62% / 0.25)',
                   fontFamily: "'Cinzel', serif",
                 }}
+                title={`${r.type} tirou ${r.value}`}
               >
+                <span className="text-[9px] uppercase opacity-70 tracking-wider">{r.type}</span>
                 {r.value}
               </span>
             ))}
