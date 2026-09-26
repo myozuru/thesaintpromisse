@@ -282,6 +282,8 @@ export function SuportePanel({ character: c }: { character: Character }) {
           <span className="text-muted-foreground">PE: {c.peCurrent ?? 0}/{c.peMax ?? 0}</span>
         </div>
       )}
+      <AmizadeSection c={c} />
+      <AnaliseSection c={c} />
     </div>
   );
 }
