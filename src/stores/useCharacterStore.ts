@@ -53,6 +53,7 @@ import { getShieldById, effectiveShieldRD } from '@/lib/shields';
 import { applyLutadorProgression } from '@/lib/lutadorProgression';
 import { applyTecnicaProgression } from '@/lib/tecnicaProgression';
 import { aggregateSpecAbilityEffects } from '@/lib/specAbilityEffects';
+import { expireTransmitir } from '@/lib/suporteTransmitir';
 import { aggregateSpecChoices, DOMINANCIA_DYNAMIC } from '@/lib/specChoiceEffects';
 import { getSpecKeyMod } from '@/lib/specKeyMod';
 import { applyOriginLevelUp, initOriginPools, resetOriginDailyPools } from '@/lib/originLevelEngine';
@@ -4283,6 +4284,8 @@ export const useCharacterStore = create<CharacterStore>()(
               suporteHealUsed: 0,
               medicinaInfalivelUsed: 0,
               inspiracaoBonus: 0,
+              // Transmitir Conhecimento: treinamentos temporários expiram no descanso.
+              ...(expireTransmitir(c) ?? {}),
               // Conceder Outra Chance (Suporte Nv 6): descanso curto recupera metade dos usos.
               outraChanceUsed: Math.max(
                 0,
@@ -4423,6 +4426,8 @@ export const useCharacterStore = create<CharacterStore>()(
               suporteHealUsed: 0,
               medicinaInfalivelUsed: 0,
               inspiracaoBonus: 0,
+              // Transmitir Conhecimento: treinamentos temporários expiram no descanso.
+              ...(expireTransmitir(c) ?? {}),
               // Conceder Outra Chance (Suporte Nv 6): usos voltam no descanso longo.
               outraChanceUsed: 0,
             };
