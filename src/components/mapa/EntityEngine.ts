@@ -10,6 +10,7 @@
  * antes da rotação. rotation é em radianos.
  */
 import type { Entity, TokenCrop, Vector2 } from '@/stores/useMapStore';
+import { drawTokenBorder } from '@/lib/mapa/tokenBorders';
 import { assetCache } from './assetCache';
 
 
@@ -302,27 +303,7 @@ export function drawEntity(ctx: CanvasRenderingContext2D, e: Entity, scale: numb
     }
     ctx.restore();
     if (e.shape === 'ELLIPSE' && e.tokenCrop) {
-      const outerWidth = Math.max(2 / scale, Math.min(e.w, e.h) * 0.055);
-      ctx.save();
-      ctx.beginPath();
-      ctx.ellipse(0, 0, Math.max(1, hw - outerWidth / 2), Math.max(1, hh - outerWidth / 2), 0, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(10, 8, 18, 0.92)';
-      ctx.lineWidth = outerWidth;
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.ellipse(0, 0, Math.max(1, hw - outerWidth * 1.05), Math.max(1, hh - outerWidth * 1.05), 0, 0, Math.PI * 2);
-      ctx.strokeStyle = withAlpha(e.color, 0.95);
-      ctx.lineWidth = Math.max(1.5 / scale, outerWidth * 0.42);
-      ctx.shadowColor = withAlpha(e.color, 0.75);
-      ctx.shadowBlur = Math.max(3 / scale, outerWidth * 0.8);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.ellipse(0, 0, Math.max(1, hw - outerWidth * 1.55), Math.max(1, hh - outerWidth * 1.55), 0, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(255,255,255,0.45)';
-      ctx.lineWidth = Math.max(0.75 / scale, outerWidth * 0.16);
-      ctx.shadowBlur = 0;
-      ctx.stroke();
-      ctx.restore();
+      drawTokenBorder(ctx, hw, hh, e.tokenCrop.border, scale);
     }
   } else {
     ctx.fillStyle = withAlpha(e.color, 0.5);
