@@ -1555,14 +1555,14 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
 
   const rangeLocked = form.rangeLocked !== false;
   const areaLocked  = form.areaLocked  !== false;
-  const autoVals    = calcAutoRange(form.attackType, rangeType, bt, form.areaRangeSteps);
+  const autoVals    = calcAutoRange(form.attackType, rangeType, bt, form.areaRangeSteps, form.areaShape, form.lineWidthSteps);
 
   const toggleRangeLock = () => {
     if (!rangeLocked) update({ rangeLocked: true, range: autoVals.range });
     else update({ rangeLocked: false });
   };
   const toggleAreaLock = () => {
-    if (!areaLocked) update({ areaLocked: true, area: autoVals.area });
+    if (!areaLocked) update({ areaLocked: true, area: autoVals.area, lineWidth: autoVals.lineWidth });
     else update({ areaLocked: false });
   };
 
@@ -1878,7 +1878,16 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
                 <button
                   key={opt.id}
                   type="button"
-                  onClick={() => update({ areaShape: opt.id })}
+                  onClick={() => {
+                    const av = calcAutoRange(form.attackType, rangeType, bt, form.areaRangeSteps, opt.id, 0);
+                    update({
+                      areaShape: opt.id,
+                      lineWidthSteps: 0,
+                      lineWidth: av.lineWidth,
+                      ...(areaLocked ? { area: av.area } : {}),
+                      ...(rangeLocked ? { range: av.range } : {}),
+                    });
+                  }}
                   title={opt.id === "cone_attached" ? "Cone com apex no conjurador, mirando na direção do cursor (grudado no personagem)" : opt.id === "line_attached" ? "Linha que parte do conjurador, mirando na direção do cursor (grudada no personagem)" : opt.label}
                   className={`h-9 rounded border text-[11px] font-medium transition-colors focus:outline-none ${
                     active
