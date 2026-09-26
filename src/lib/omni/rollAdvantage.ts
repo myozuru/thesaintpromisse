@@ -52,6 +52,9 @@ export interface AdvModifier {
   expires: 'turn' | 'use' | 'persistent';
   /** Origem para log. */
   source?: string;
+  /** charId de quem concedeu (ex: Apoiar do Suporte) — usado para expirar
+   *  o efeito no início do próximo turno do concedente. */
+  grantedBy?: string;
 }
 
 const PREFIX = '__advmod__:';
@@ -91,7 +94,7 @@ export function grantAdvantage(
   charId: string,
   kind: AdvKind,
   scope: AdvScope,
-  opts: { target?: string; expires?: 'turn' | 'use' | 'persistent'; source?: string } = {},
+  opts: { target?: string; expires?: 'turn' | 'use' | 'persistent'; source?: string; grantedBy?: string } = {},
 ): string {
   const c = useCharacterStore.getState().characters.find(x => x.id === charId);
   if (!c) return '';
@@ -104,9 +107,25 @@ export function grantAdvantage(
     target: opts.target?.toLowerCase(),
     expires: opts.expires ?? defExp,
     source: opts.source,
+    grantedBy: opts.grantedBy,
   };
   writeMods(charId, mods);
   return id;
+}
+
+/** Remove, em TODOS os personagens, os modificadores concedidos por `grantorId`.
+ *  Usado pelo Apoiar (Suporte): o efeito expira no início do próximo turno
+ *  de quem apoiou. */
+export function expireGrantedBy(grantorId: string): void {
+  const chars = useCharacterStore.getState().characters;
+  for (const c of chars) {
+    const mods = readMods(c);
+    const ids = Object.values(mods).filter(m => m.grantedBy === grantorId).map(m => m.id);
+    if (ids.length === 0) continue;
+    const remaining = { ...mods };
+    for (const id of ids) delete remaining[id];
+    writeMods(c.id, remaining);
+  }
 }
 
 export function clearAllAdvantage(charId: string): void {

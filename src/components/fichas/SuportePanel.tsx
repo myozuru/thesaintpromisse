@@ -9,6 +9,7 @@ import { useLogStore } from '@/stores/useLogStore';
 import { rollDiceCom } from '@/lib/dice';
 import {
   isSuporte,
+  applyApoiar,
   getSuporteHealDice,
   getSuporteHealMaxUses,
   getSuporteHealUsesLeft,
@@ -23,6 +24,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
   const applyHealing = useCharacterStore((s) => s.applyHealing);
   const addLog = useLogStore((s) => s.addLog);
   const [targetId, setTargetId] = useState<string>(c.id);
+  const [apoiarTargetId, setApoiarTargetId] = useState<string>('');
   const [busy, setBusy] = useState(false);
 
   if (!isSuporte(c)) return null;
@@ -35,8 +37,19 @@ export function SuportePanel({ character: c }: { character: Character }) {
   const allies = characters.filter((x) => x.category === 'PLAYER' || x.category === 'NPC' || x.id === c.id);
   const sign = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
 
-  const handleApoiar = () => {
-    addLog('combat', `🤝 ${c.name} usa Apoiar como Ação Bônus (Suporte em Combate).`);
+  const handleApoiar = async () => {
+    const target = characters.find((x) => x.id === apoiarTargetId);
+    if (!target || target.id === c.id || busy) return;
+    setBusy(true);
+    try {
+      await applyApoiar(c, target);
+      addLog(
+        'combat',
+        `🤝 ${c.name} usa Apoiar (Ação Bônus) em ${target.name} — vantagem no próximo teste de perícia da tarefa apoiada, até o início do próximo turno de ${c.name}.`,
+      );
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleHeal = async () => {
@@ -67,11 +80,27 @@ export function SuportePanel({ character: c }: { character: Character }) {
   return (
     <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
       <div className="text-xs font-bold uppercase tracking-wider text-primary">Suporte em Combate</div>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <select
+          value={apoiarTargetId}
+          onChange={(e) => setApoiarTargetId(e.target.value)}
+          className="rounded border border-border bg-background px-2 py-1 text-xs"
+          title="Criatura que você está ajudando (não pode ser você)"
+        >
+          <option value="">Apoiar quem?</option>
+          {allies
+            .filter((a) => a.id !== c.id)
+            .map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+        </select>
         <button
           onClick={handleApoiar}
-          className="inline-flex items-center gap-1 rounded border border-border bg-secondary/40 px-2 py-1 text-xs hover:bg-secondary/70"
-          title="Você pode usar Apoiar como Ação Bônus."
+          disabled={busy || !apoiarTargetId}
+          className="inline-flex items-center gap-1 rounded border border-border bg-secondary/40 px-2 py-1 text-xs hover:bg-secondary/70 disabled:cursor-not-allowed disabled:opacity-40"
+          title="Ação Bônus: o alvo ganha vantagem no próximo teste de perícia da tarefa apoiada, se rolar antes do início do seu próximo turno."
         >
           <HandHelping className="h-3.5 w-3.5" /> Apoiar (Ação Bônus)
         </button>
