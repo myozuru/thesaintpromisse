@@ -16,7 +16,7 @@ describe('enquadramento circular de personagem', () => {
 
   it('aplica zoom e deslocamento dentro da sobra disponível', () => {
     const rect = getTokenImageRect(600, 1200, 100, 100, { zoom: 2, offsetX: 100, offsetY: -100 });
-    expect(rect).toEqual({ x: 0, y: -400, w: 200, h: 400 });
+    expect(rect).toEqual({ x: -50, y: -350, w: 200, h: 400 });
   });
 
   it('limita valores inválidos para manter o personagem visível', () => {

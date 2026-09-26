@@ -16,7 +16,7 @@ const DEFAULT_CROP: TokenCrop = { zoom: 1, offsetX: 0, offsetY: 0 };
 
 export function TokenCropDialog({ entity, onConfirm, onCancel }: Props) {
   const [crop, setCrop] = useState(() => normalizeTokenCrop(entity.tokenCrop));
-  const [, setImageReadyTick] = useState(0);
+  const [imageReadyTick, setImageReadyTick] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dragRef = useRef<{ x: number; y: number; crop: TokenCrop } | null>(null);
   const cached = entity.assetId ? assetCache.get(entity.assetId) : null;
@@ -51,7 +51,7 @@ export function TokenCropDialog({ entity, onConfirm, onCancel }: Props) {
     ctx.beginPath();
     ctx.arc(size / 2, size / 2, size / 2 - 3, 0, Math.PI * 2);
     ctx.stroke();
-  }, [cached, crop]);
+  }, [cached, crop, imageReadyTick]);
 
   const updateFromDrag = (clientX: number, clientY: number) => {
     const start = dragRef.current;

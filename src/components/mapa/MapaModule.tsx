@@ -3074,12 +3074,12 @@ export function MapaModule() {
     const sel = st.selectedIds;
     if (!sel.length) return;
     const ents = sel.map((id) => st.entities[id]).filter((x): x is Entity => !!x);
-    st.pushHistory();
     if (a === 'adjustToken') {
       const target = ents[0];
       if (target?.assetId && target.shape === 'ELLIPSE') setTokenCropEntityId(target.id);
       return;
     }
+    st.pushHistory();
     if (typeof a === 'object' && a.kind === 'setLayer') {
       for (const id of sel) st.setEntityLayer(id, a.layer);
       return;
@@ -3218,6 +3218,7 @@ export function MapaModule() {
           : { id: e.id, patch: { h: targetH, w: Math.max(20, targetH * ratio), shape: 'RECT' as const, tokenCrop: undefined } };
       });
       st.updateEntities(patches);
+      for (const target of targets) st.setEntityLayer(target.id, 'tokens');
       if (a.assetKind === 'character' && targets.length === 1) setTokenCropEntityId(targets[0].id);
       return;
     }
