@@ -1,3 +1,4 @@
+import { InspiradoButton } from './SuporteNivel4Sections';
 import { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import { Character, Attribute, Passive, Spell, DAMAGE_TYPES, DAMAGE_TYPE_LABELS, DAMAGE_TYPE_ABBR, DamageType, SpellBuff, createEmptyRdByType, CHARACTER_CLASSES, CharacterClass, SPECIALIZATIONS, Specialization, MOTIVATIONS, Motivation, ORIGINS, Origin, createEmptyAccessorySlots, AccessorySlots, ItemSlotType, ITEM_SLOT_LABELS, ALL_CONDITIONS, SPELL_LEVELS, SpellLevel, SpellCondition, SPELL_RANGES, SPELL_TARGET_MODES, SpellTargetMode, getTrainingBonus, getMasteryBonus, getLevelSkillBonus, getBaseAttackBonus, getTrainingValue, SaveAttr, SAVE_ATTRS, APTITUDE_KEYS, APTITUDE_LABELS, APTITUDE_MAX, createDefaultCursedAptitudes, type AptitudeKey } from '@/types';
 import { SpellCreationAssistant } from './SpellCreationAssistant';
@@ -1610,6 +1611,9 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
 
       {/* ─── Ações ativas do Especialista em Técnica (Bloco B) ─── */}
       {!c.isGrimorioCreature && <SpecActionsPanel character={c} />}
+
+      {/* ─── Inspirar Aliados: botão do aliado inspirado ─── */}
+      <InspiradoButton c={c} />
 
       {/* ─── Suporte: habilidades base ─── */}
       <SuportePanel character={c} />

@@ -1526,6 +1526,22 @@ const SUPORTE: SpecAbility[] = [
     triggerText: 'Painel do Suporte — botão Sintonizar guarda.',
     logicText: 'Membros (incluindo o Suporte) recebem +1 de Defesa por outro membro. Quem se afastar mais de 7,5 m ou ficar Cego/Surdo sai; se sobrar só o Suporte, a guarda acaba.',
   },
+  {
+    id: 'sup-inspirar-aliados', name: 'Inspirar Aliados', tier: 4, specialization: 'Suporte',
+    flavor: 'A inspiração certa, na hora certa.',
+    mechanic: 'Uma vez por cena, 1 PE + Ação Bônus: inspire aliados até metade do bônus de treinamento. Durante 10 minutos, eles podem somar 2d3 em ataque, teste de habilidade ou TR (uma vez por teste), um total de vezes igual ao seu mod de Presença/Sabedoria.',
+    activation: 'passive',
+    triggerText: 'Painel do Suporte; o aliado usa pelo botão na própria ficha.',
+    logicText: 'Usos compartilhados; expira pelo relógio do jogo após 10 minutos.',
+  },
+  {
+    id: 'sup-intervencao', name: 'Intervenção', tier: 4, specialization: 'Suporte',
+    flavor: 'Agir antes que a aflição piore.',
+    mechanic: 'Ação Comum, 3 PE: encerre uma condição fraca de um aliado ao alcance de toque. Nos níveis 6, 12 e 18 encerra condições médias, fortes e extremas; +3 PE por grau acima de fraca.',
+    activation: 'passive',
+    triggerText: 'Painel do Suporte — escolha aliado e condição.',
+    logicText: 'Toque = 1,5 m no mapa. Condições especiais não podem ser encerradas; Sangramento (variável) pede o grau.',
+  },
 ];
 
 // ===== Registry global =====================================================
