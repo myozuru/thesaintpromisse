@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { GuardaSincronizadaWatcher, InspiracaoWatcher } from "@/components/fichas/SuporteNivel4Sections";
 import { Global3DDiceOverlay } from "@/components/dice-physics/Global3DDiceOverlay";
 import { AmizadePromptDialog } from "@/components/fichas/AmizadePromptDialog";
+import { NegacaoPromptDialog } from "@/components/fichas/SuporteNegacaoSections";
 import { OutraChancePromptDialog } from "@/components/fichas/SuporteNivel6Sections";
 import { ProtetorPromptDialog } from "@/components/fichas/ProtetorPromptDialog";
 import { MobilidadePromptDialog } from "@/components/fichas/SuporteRepertorioMobilidadeSections";
@@ -68,6 +69,7 @@ export default function TpFichasApp() {
         <Global3DDiceOverlay />
         <AmizadePromptDialog />
         <OutraChancePromptDialog />
+        <NegacaoPromptDialog />
         <ProtetorPromptDialog />
         <MobilidadePromptDialog />
         <DesvendarCDDialog />

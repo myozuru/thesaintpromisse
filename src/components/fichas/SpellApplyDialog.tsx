@@ -1,3 +1,4 @@
+import { consumeCritNegated } from '@/lib/suporteNegacao';
 import { useState, useEffect, useRef } from 'react';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLogStore } from '@/stores/useLogStore';
@@ -626,7 +627,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
     const total = d20 + stBonus;
     let result: SaveResult = total >= totalDC ? 'success' : 'fail';
     if (d20 === 20) result = 'crit_success';
-    if (d20 === 1) result = 'crit_fail';
+    if (d20 === 1 && !consumeCritNegated(target.id)) result = 'crit_fail';
     setTargetSaves(prev => prev.map(ts => ts.id === targetId ? { ...ts, saveRoll: String(total), result } : ts));
     addLog('spell', `🎲 TR ${attr} de ${target.name}: d20(${d20}) + ${stBonus} = ${total} vs CD ${totalDC} → ${result === 'crit_success' ? '✨ SUC.CRÍT' : result === 'success' ? '✅ Sucesso' : result === 'crit_fail' ? '💀 FAL.CRÍT' : '❌ Falha'}`);
   };
@@ -714,7 +715,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
       const d20 = req.result.d20;
       let result: SaveResult = total >= totalDC ? 'success' : 'fail';
       if (d20 === 20) result = 'crit_success';
-      if (d20 === 1) result = 'crit_fail';
+      if (d20 === 1 && !consumeCritNegated(targetId)) result = 'crit_fail';
       updates.push({ id: targetId, saveRoll: String(total), result });
       // limpa para não reprocessar
       dismissTest(req.id);

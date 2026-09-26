@@ -1,3 +1,4 @@
+import { consumeCritNegated } from '@/lib/suporteNegacao';
 /**
  * Motor de Combate.
  *
@@ -291,7 +292,7 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
     if (r2 < d20) d20 = r2;
   }
   const natural = d20;
-  const criticalFail = natural === 1;
+  const criticalFail = natural === 1 && !consumeCritNegated(ctx.attacker.id);
   const critical = natural >= critRange;
 
   // Modificadores

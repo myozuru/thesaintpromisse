@@ -732,6 +732,8 @@ export interface Character {
   guardaSincronizadaBonus?: { value: number; grantedBy: string };
   /** Suporte Nv 4 — Inspirar Aliados já usado nesta cena. */
   inspirarUsadoCena?: boolean;
+  /** Suporte Nv 4 — Negação Crítica: usos gastos nesta cena. */
+  negacaoCriticaUsed?: number;
   /** Inspiração ativa (no Suporte): aliados, usos compartilhados restantes e fim (segundos do relógio). */
   inspiracao?: { allyIds: string[]; usesLeft: number; expiresAt: number };
   /** Apoio Estratégico ativo: +value na CD do próximo teste forçado, até o início do próximo turno de grantedBy. */

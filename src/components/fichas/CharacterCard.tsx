@@ -1,3 +1,4 @@
+import { consumeCritNegated } from '@/lib/suporteNegacao';
 import { InspiradoButton } from './SuporteNivel4Sections';
 import { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import { Character, Attribute, Passive, Spell, DAMAGE_TYPES, DAMAGE_TYPE_LABELS, DAMAGE_TYPE_ABBR, DamageType, SpellBuff, createEmptyRdByType, CHARACTER_CLASSES, CharacterClass, SPECIALIZATIONS, Specialization, MOTIVATIONS, Motivation, ORIGINS, Origin, createEmptyAccessorySlots, AccessorySlots, ItemSlotType, ITEM_SLOT_LABELS, ALL_CONDITIONS, SPELL_LEVELS, SpellLevel, SpellCondition, SPELL_RANGES, SPELL_TARGET_MODES, SpellTargetMode, getTrainingBonus, getMasteryBonus, getLevelSkillBonus, getBaseAttackBonus, getTrainingValue, SaveAttr, SAVE_ATTRS, APTITUDE_KEYS, APTITUDE_LABELS, APTITUDE_MAX, createDefaultCursedAptitudes, type AptitudeKey } from '@/types';
@@ -1017,7 +1018,7 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
     // Crit threshold honra buffs critMargin (igual ao handleCustomHitRoll)
     const critMarginBuff = activeBuffs.filter(b => b.type === 'critMargin').reduce((s, b) => s + b.value, 0);
     const critThreshold = Math.max(2, 20 - critMarginBuff);
-    const isCritFail = d20 === 1;
+    const isCritFail = d20 === 1 && !consumeCritNegated(c.id);
     const isCritHit = d20 >= critThreshold && !isCritFail;
 
     // Fase 10 — Motor Kokusen (Raio Negro) - escuta passiva em ataques CaC
@@ -1138,7 +1139,7 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
 
     const critMarginBuff = activeBuffs.filter(b => b.type === 'critMargin').reduce((s, b) => s + b.value, 0);
     const critThreshold = Math.max(2, 20 - critMarginBuff);
-    const isCritFail = d20 === 1;
+    const isCritFail = d20 === 1 && !consumeCritNegated(c.id);
     const isCritHit = d20 >= critThreshold && !isCritFail;
 
     const hitResultsList: { name: string; hit: 'hit' | 'miss' | 'crit' | 'critFail' }[] = [];

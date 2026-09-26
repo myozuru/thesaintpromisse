@@ -4522,6 +4522,9 @@ export const useCharacterStore = create<CharacterStore>()(
               auraAptitudeUsage: auraUsage,
               talentUsage,
               tempPE: 0,
+              // Suporte Nv 4 — usos por cena
+              inspirarUsadoCena: false,
+              negacaoCriticaUsed: 0,
               hpSacrificedTotal: 0,
               sacrificioExhaustionTriggered: false,
               sacrificioCooldownRounds: 0,
