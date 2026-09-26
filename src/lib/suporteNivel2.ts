@@ -83,7 +83,19 @@ export async function checkAmizadeAtEndOfTurn(charId: string): Promise<void> {
   const { useMapStore } = await import('@/stores/useMapStore');
   const { entities, gridConfig } = useMapStore.getState();
   const friend = amizadeEndTurnTarget(c, all, entities, gridConfig);
-  if (friend) useAmizadePromptStore.getState().open({ supporterId: c.id, friendId: friend.id });
+  if (!friend) return;
+  const payload = { supporterId: c.id, friendId: friend.id };
+  const { useRoleStore } = await import('@/stores/useRoleStore');
+  // A pergunta é do jogador, não do Mestre: abre aqui só se esta tela for de jogador
+  // e manda para as telas dos jogadores conectados.
+  if (useRoleStore.getState().role !== 'MASTER') useAmizadePromptStore.getState().open(payload);
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('amizade:send', { detail: { kind: 'open', ...payload } }));
+}
+
+/** Fecha a pergunta aqui e nas outras telas (alguém já respondeu). */
+export function closeAmizadePromptEverywhere(): void {
+  useAmizadePromptStore.getState().close();
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('amizade:send', { detail: { kind: 'close' } }));
 }
 
 // ===================== Análise Profunda =====================
