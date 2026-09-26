@@ -2302,8 +2302,11 @@ export const useCharacterStore = create<CharacterStore>()(
         // Se um Suporte com a habilidade, escudo equipado e PE estiver a até
         // 1,5 m do alvo, oferece a redução retroativa (Xd10 + mod) ao dono da
         // ficha dele. A pergunta e a rolagem ficam no ProtetorPromptDialog.
-        if (postSet && dealtForProtetor(postSet, preEsc, preHp) && damageType !== 'DAL' && !opts?.tags?.includes('__protetor_offer_sent')) {
-          const dealt = Math.max(0, preEsc - postSet.escCurrent) + Math.max(0, preHp - postSet.hpCurrent);
+        const protDealt = postSet
+          ? Math.max(0, preEsc - postSet.escCurrent) + Math.max(0, preHp - postSet.hpCurrent)
+          : 0;
+        if (postSet && protDealt > 0 && damageType !== 'DAL') {
+          const dealt = protDealt;
           setTimeout(() => {
             void Promise.all([import('@/lib/suporteProtetor'), import('@/stores/useMapStore')]).then(
               ([prot, mapMod]) => {
