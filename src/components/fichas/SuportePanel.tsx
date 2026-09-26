@@ -203,6 +203,21 @@ export function SuportePanel({ character: c }: { character: Character }) {
         >
           <HandHelping className="h-3.5 w-3.5" /> Apoiar (Ação Bônus)
         </button>
+        {apoiosConhecidos.length > 0 && (
+          <select
+            value={apoioKey}
+            onChange={(e) => setApoioKey(e.target.value as ApoioAvancadoKey | '')}
+            className="rounded border border-border bg-background px-2 py-1 text-xs"
+            title="Apoio Avançado: efeito extra aplicado junto do Apoiar"
+          >
+            <option value="">Apoio simples</option>
+            {apoiosConhecidos.map((k) => (
+              <option key={k} value={k}>
+                {APOIOS_AVANCADOS[k].label}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <select
