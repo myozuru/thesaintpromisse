@@ -9,6 +9,7 @@ import { checkTouchTarget } from '@/lib/touchRange';
 import { getMedicinaInfalivelUsesLeft, hasMedicinaInfalivel } from '@/lib/suporteAbilities';
 import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import { playErrorSound, playSuccessSound } from '@/lib/sounds';
+import { maybeOfferSintonizacao } from '@/lib/suporteSintonizacao';
 
 interface Props {
   character: Character;
@@ -45,6 +46,7 @@ export function EnergiaReversaDialog({ character: c, onClose }: Props) {
     if (r.ok) {
       playSuccessSound();
       addLog('system', `💚 ${c.name} usou Energia Reversa (${per} PER / -${r.peSpent} PE) em ${targetId === c.id ? 'si mesmo' : tgt?.name}: ${dice}d${cfg.dieSize} [${(r.rolls ?? []).join(', ')}] ${mod >= 0 ? '+' : ''}${mod}${hasMedicinaInfalivel(c) ? ` +${getTrainingBonusByLevel(c.level)} Medicina Infalível` : ''} → +${r.healed} PV`);
+      if (targetId !== c.id && r.healed) void maybeOfferSintonizacao(c.id, targetId, r.healed);
       onClose();
     } else {
       playErrorSound();

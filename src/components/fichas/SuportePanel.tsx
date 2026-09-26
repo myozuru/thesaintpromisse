@@ -368,6 +368,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
       <InspirarAliadosSection c={c} />
       <IntervencaoSection c={c} />
       <NegacaoCriticaSection c={c} />
+      <SintonizacaoVitalSection c={c} />
     </div>
   );
 }
