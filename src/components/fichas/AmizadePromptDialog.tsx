@@ -1,13 +1,13 @@
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { applyApoiar } from '@/lib/suporteAbilities';
-import { useAmizadePromptStore } from '@/lib/suporteNivel2';
+import { useAmizadePromptStore, closeAmizadePromptEverywhere } from '@/lib/suporteNivel2';
 import { Heart } from 'lucide-react';
 
 /** Pergunta, ao fim do turno do Suporte, se quer Apoiar o Amigo (ação livre). */
 export function AmizadePromptDialog() {
   const prompt = useAmizadePromptStore((s) => s.prompt);
-  const close = useAmizadePromptStore((s) => s.close);
+  const close = closeAmizadePromptEverywhere;
   const characters = useCharacterStore((s) => s.characters);
   const addLog = useLogStore((s) => s.addLog);
   if (!prompt) return null;

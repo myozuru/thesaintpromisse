@@ -486,6 +486,22 @@ export function useMultiplayerSync() {
       if (!p || p.clientId === clientId || !p.slice) return;
       applyRemote(p.slice, p.data);
     });
+    worldBus.on('broadcast', { event: 'amizade' }, ({ payload }) => {
+      const p = payload as { clientId?: string; kind?: string; supporterId?: string; friendId?: string } | null;
+      if (!p || p.clientId === clientId) return;
+      void import('@/lib/suporteNivel2').then(({ useAmizadePromptStore }) => {
+        const st = useAmizadePromptStore.getState();
+        if (p.kind === 'close') st.close();
+        else if (p.kind === 'open' && p.supporterId && p.friendId && useRoleStore.getState().role !== 'MASTER') {
+          st.open({ supporterId: p.supporterId, friendId: p.friendId });
+        }
+      });
+    });
+    const onAmizadeSend = (e: Event) => {
+      const d = (e as CustomEvent).detail ?? {};
+      void worldBus.send({ type: 'broadcast', event: 'amizade', payload: { clientId, ...d } });
+    };
+    window.addEventListener('amizade:send', onAmizadeSend);
     worldBus.on('broadcast', { event: 'ping' }, ({ payload }) => {
       const p = payload as { clientId?: string; x?: number; y?: number; color?: string } | null;
       if (!p || p.clientId === clientId || typeof p.x !== 'number' || typeof p.y !== 'number') return;
