@@ -10,21 +10,21 @@ const ent = (id: string, cells: number) => ({ id, characterId: id, x: cells * 70
 
 describe('Apoios Versáteis', () => {
   it('+1 no Nv 4, +2 no Nv 10, soma ao Apoio Avançado', () => {
-    const c = ch('s', { chosenSpecAbilities: ['sup-apoio-avancado', 'sup-apoios-versateis'] } as Partial<Character>);
+    const c = ch('s', { chosenSpecAbilities: [{ abilityId: 'sup-apoio-avancado', chosenAtLevel: 2 }, { abilityId: 'sup-apoios-versateis', chosenAtLevel: 2 }] });
     expect(getApoiosVersateisBonus(c)).toBe(1);
     expect(getApoiosMaxFor(c)).toBe(2);
     expect(getApoiosMaxFor({ ...c, level: 10 })).toBe(4);
     expect(getApoiosMaxFor({ ...c, level: 12 })).toBe(5);
   });
   it('funciona sem Apoio Avançado', () => {
-    const c = ch('s', { chosenSpecAbilities: ['sup-apoios-versateis'] } as Partial<Character>);
+    const c = ch('s', { chosenSpecAbilities: [{ abilityId: 'sup-apoios-versateis', chosenAtLevel: 2 }] });
     expect(getApoiosMaxFor(c)).toBe(1);
     expect(canChooseApoio(c)).toBe(true);
   });
 });
 
 describe('Guarda Sincronizada', () => {
-  const sup = ch('s', { chosenSpecAbilities: ['sup-guarda-sincronizada'] } as Partial<Character>);
+  const sup = ch('s', { chosenSpecAbilities: [{ abilityId: 'sup-guarda-sincronizada', chosenAtLevel: 2 }] });
   it('inclui aliados a até 7,5 m, exclui longe, cegos, surdos e criaturas', () => {
     const chars = [sup, ch('a'), ch('b'), ch('far'), ch('cego', { activeConditions: [{ conditionId: 'cego' }] } as never),
       ch('surdo', { activeConditions: [{ conditionId: 'surdo' }] } as never), ch('m', { category: 'MONSTER' } as never)];
