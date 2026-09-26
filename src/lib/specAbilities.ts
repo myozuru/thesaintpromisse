@@ -1469,6 +1469,23 @@ const SUPORTE: SpecAbility[] = [
     triggerText: 'Pergunta automática quando um aliado adjacente sofre dano de ataque.',
     logicText: 'Redução retroativa: devolve HP/Escudo ao alvo até o valor rolado (máx. o dano sofrido).',
   },
+  {
+    id: 'sup-comando-motivador', name: 'Comando Motivador', tier: 2, specialization: 'Suporte',
+    flavor: 'Sua presença é motivadora, e o mesmo vale para um comando dado por você.',
+    mechanic: 'Como Ação Livre, fale um comando a um aliado e gaste 2 PE: quando ele realizar a ação comandada, recebe bônus igual ao seu bônus de treinamento na rolagem usada.',
+    activation: 'passive',
+    peCost: 2,
+    triggerText: 'Botão Comandar no painel do Suporte.',
+    logicText: 'Bônus fixo na próxima rolagem do aliado; expira no início do próximo turno do Suporte.',
+  },
+  {
+    id: 'sup-desvendar-terreno', name: 'Desvendar Terreno', tier: 2, specialization: 'Suporte',
+    flavor: 'Você destrincha o ambiente e encontra pontos de vantagem.',
+    mechanic: 'Ação de Movimento: teste de Percepção com CD do Narrador. Se suceder, percebe pontos estratégicos e, até o fim da cena, soma o bônus de treinamento em testes de Percepção para procurar/encontrar coisas ou pessoas no terreno analisado.',
+    activation: 'passive',
+    triggerText: 'Pedido no painel do Suporte; o Mestre define a CD.',
+    logicText: 'Sucesso libera o botão separado "Procurar no terreno" (Percepção + bônus) até o fim da cena.',
+  },
 ];
 
 // ===== Registry global =====================================================

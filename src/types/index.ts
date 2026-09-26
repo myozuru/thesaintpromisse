@@ -742,6 +742,12 @@ export interface Character {
   suporteAmigoTrocaLiberada?: boolean;
   /** Análise Profunda: criaturas já analisadas nesta cena. */
   analiseProfundaAlvos?: string[];
+  /** Desvendar Terreno: pedido aguardando a CD do Mestre / pronto para rolar. */
+  desvendarPending?: boolean;
+  /** Desvendar Terreno: CD definida pelo Mestre. */
+  desvendarCD?: number;
+  /** Desvendar Terreno: bônus de cena em "Procurar no terreno" (0 = inativo). */
+  desvendarBonus?: number;
   /** Mudanças de Fundamento aprendidas (Domínio dos Fundamentos). */
   tecnicaFundamentos?: string[];
   /** Foco Amaldiçoado escolhido no Nv 10 ('Destruição' | 'Economia' | 'Refino'). */

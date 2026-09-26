@@ -6,6 +6,7 @@ import { Global3DDiceOverlay } from "@/components/dice-physics/Global3DDiceOverl
 import { AmizadePromptDialog } from "@/components/fichas/AmizadePromptDialog";
 import { OutraChancePromptDialog } from "@/components/fichas/SuporteNivel6Sections";
 import { ProtetorPromptDialog } from "@/components/fichas/ProtetorPromptDialog";
+import { DesvendarCDDialog } from "@/components/fichas/SuporteComandoTerrenoSections";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import { useMultiplayerSync } from "@/hooks/useMultiplayerSync";
 import { useDailyOmniRecharge } from "@/hooks/useDailyOmniRecharge";
@@ -66,6 +67,7 @@ export default function TpFichasApp() {
         <AmizadePromptDialog />
         <OutraChancePromptDialog />
         <ProtetorPromptDialog />
+        <DesvendarCDDialog />
       </TooltipProvider>
     </AppErrorBoundary>
   );

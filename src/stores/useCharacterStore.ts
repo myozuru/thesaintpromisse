@@ -4526,6 +4526,10 @@ export const useCharacterStore = create<CharacterStore>()(
               inspiracaoBonus: 0,
               // Análise Profunda: 1 vez por criatura, por cena.
               analiseProfundaAlvos: [],
+              // Desvendar Terreno: bônus e pedido duram só a cena.
+              desvendarPending: false,
+              desvendarCD: undefined,
+              desvendarBonus: 0,
             };
           }),
         })),
