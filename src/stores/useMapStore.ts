@@ -53,6 +53,14 @@ export type EntityShape = 'RECT' | 'ELLIPSE';
 export type EntityLayer = 'map' | 'tokens' | 'gm';
 export const ENTITY_LAYERS: EntityLayer[] = ['map', 'tokens', 'gm'];
 
+export interface TokenCrop {
+  /** Escala adicional sobre o preenchimento mínimo do círculo. */
+  zoom: number;
+  /** Deslocamento normalizado (-100..100) dentro da sobra horizontal/vertical. */
+  offsetX: number;
+  offsetY: number;
+}
+
 export interface Entity {
   id: string;
   shape: EntityShape;
@@ -87,6 +95,8 @@ export interface Entity {
   groupId?: string;
   /** Espelhamento horizontal da renderização (vira o token para o outro lado). */
   flipX?: boolean;
+  /** Enquadramento da imagem para tokens circulares de personagem. */
+  tokenCrop?: TokenCrop;
   /** ID do perfil de jogador que marcou este token como "Eu" (avatar pessoal). */
   ownerProfileId?: string;
   /** ID do perfil que marcou este token como avatar ativo; não define posse do token. */
