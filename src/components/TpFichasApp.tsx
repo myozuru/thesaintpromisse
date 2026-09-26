@@ -12,6 +12,7 @@ import { iniciarWatcherEngine } from "@/lib/omni/watcherEngine";
 import { validateCursedAptitudeCatalog } from "@/lib/auraAptitudes";
 import { hasWorkspaceCloud } from "@/integrations/supabase/safeClient";
 import Index from "@/pages/Index";
+import { AuthSync } from "@/components/AuthSync";
 
 function MultiplayerBridge() {
   useMultiplayerSync();
@@ -53,6 +54,7 @@ export default function TpFichasApp() {
     <AppErrorBoundary>
       <TooltipProvider>
         <RuntimeSetup />
+        <AuthSync />
         {hasWorkspaceCloud ? <MultiplayerBridge /> : null}
         <Toaster />
         <Sonner />

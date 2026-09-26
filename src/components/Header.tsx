@@ -8,6 +8,8 @@ import { useTabOrderStore } from '@/stores/useTabOrderStore';
 import { cn } from '@/lib/utils';
 import { MiniClock } from '@/components/chronos/MiniClock';
 import { usePendingDebates } from '@/hooks/usePendingDebates';
+import { MasterAccountsDialog } from '@/components/MasterAccountsDialog';
+import { signOutAll } from '@/lib/auth';
 
 export type TabId = 'relogio' | 'fichas' | 'itens' | 'baus' | 'calendario' | 'sistema' | 'guia' | 'feiticos-players' | 'money' | 'cardapios' | 'omni' | 'catalogo' | 'testes' | 'mapa' | 'grimorio';
 
@@ -66,6 +68,7 @@ interface HeaderProps {
 export function Header({ activeTab, onTabChange }: HeaderProps) {
   const role = useRoleStore((s) => s.role);
   const logout = useRoleStore((s) => s.logout);
+  const [accountsOpen, setAccountsOpen] = useState(false);
   const setOrder = useTabOrderStore((s) => s.setOrder);
   const savedOrders = useTabOrderStore((s) => s.orders);
   const pending = usePendingDebates();
@@ -198,9 +201,18 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
           </div>
         </nav>
 
+        {role === 'MASTER' && (
+          <button
+            onClick={() => setAccountsOpen(true)}
+            title="Contas e Mestres"
+            className="shrink-0 flex items-center rounded-md border border-transparent p-1.5 text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-all"
+          >
+            <Users className="h-4 w-4" />
+          </button>
+        )}
         {role && (
           <button
-            onClick={logout}
+            onClick={() => { void signOutAll(); logout(); }}
             title={`Sair (${role === 'MASTER' ? 'Mestre' : 'Player'})`}
             className="shrink-0 flex items-center gap-1.5 rounded-md border border-transparent px-2 sm:px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-destructive/15 hover:text-destructive hover:border-destructive/40 transition-all"
           >
@@ -210,6 +222,7 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
             </span>
           </button>
         )}
+        <MasterAccountsDialog open={accountsOpen} onOpenChange={setAccountsOpen} />
       </div>
     </header>
   );

@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { Header, getTabsForRole } from "@/components/Header";
-import { RoleSelect } from "@/components/RoleSelect";
+import { AuthScreen } from "@/components/AuthScreen";
 import { useRoleStore } from "@/stores/useRoleStore";
 import { LogPanel } from "@/components/LogPanel";
 import { DataHub } from "@/components/fab/DataHub";
@@ -197,7 +197,7 @@ export default function Index() {
   }
 
   if (!role) {
-    return <RoleSelect />;
+    return <AuthScreen />;
   }
 
   return (
