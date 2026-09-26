@@ -18,7 +18,7 @@ import { useLogStore } from '@/stores/useLogStore';
 import { rollD20Com } from '@/lib/dice';
 import { getAttrModifier } from '@/components/fichas/CharacterCard';
 import { getTrainingBonus, getLevelSkillBonus } from '@/types';
-import { consumeAdvantageFor, peekAdvantageFor, type RollContext } from '@/lib/omni/rollAdvantage';
+import { consumeAdvantageFor, consumeFlatBonusFor, peekAdvantageFor, type RollContext } from '@/lib/omni/rollAdvantage';
 import { consumeAutoOutcomeFor, peekAutoOutcomeFor, type OutcomeContext } from '@/lib/omni/autoOutcome';
 import { Dice6, X, Check, Loader2, Hourglass } from 'lucide-react';
 import { Button } from '@/components/ui/button';

@@ -347,6 +347,8 @@ export function SuportePanel({ character: c }: { character: Character }) {
       )}
       <AmizadeSection c={c} />
       <AnaliseSection c={c} />
+      <ApoioAvancadoSection character={c} />
+      <OutraChanceSection character={c} />
     </div>
   );
 }
