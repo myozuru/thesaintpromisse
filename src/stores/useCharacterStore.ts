@@ -4247,6 +4247,11 @@ export const useCharacterStore = create<CharacterStore>()(
               suporteHealUsed: 0,
               medicinaInfalivelUsed: 0,
               inspiracaoBonus: 0,
+              // Conceder Outra Chance (Suporte Nv 6): descanso curto recupera metade dos usos.
+              outraChanceUsed: Math.max(
+                0,
+                (c.outraChanceUsed ?? 0) - Math.floor(getTrainingBonusByLevel(c.level ?? 1) / 2),
+              ),
             };
           }),
         }));
@@ -4382,6 +4387,8 @@ export const useCharacterStore = create<CharacterStore>()(
               suporteHealUsed: 0,
               medicinaInfalivelUsed: 0,
               inspiracaoBonus: 0,
+              // Conceder Outra Chance (Suporte Nv 6): usos voltam no descanso longo.
+              outraChanceUsed: 0,
             };
           }),
         }));
