@@ -63,6 +63,30 @@ export function hasRecompensaNote(notes: string[]): boolean {
   return notes.some((n) => n.includes(RECOMPENSA_SOURCE_TAG));
 }
 
+/**
+ * Concede os 2 PE da Recompensa quando uma rolagem consome o bônus reduzido
+ * do Comando. Usado tanto em testes com CD (sucesso confirmado) quanto em
+ * rolagens sem CD conhecida, onde o Mestre julga o sucesso narrativamente.
+ * Retorna true se concedeu.
+ */
+export function maybeApplyRecompensa(
+  charId: string,
+  flat: { bonus: number; notes: string[] },
+  deps: {
+    find: (id: string) => Character | undefined;
+    update: (id: string, patch: Partial<Character>) => void;
+    log: (msg: string) => void;
+  },
+): boolean {
+  if (!flat.bonus || !hasRecompensaNote(flat.notes)) return false;
+  const fresh = deps.find(charId);
+  if (!fresh) return false;
+  const patch = recompensaPEPatch(fresh);
+  deps.update(fresh.id, patch);
+  deps.log(`🏆 ${fresh.name} — Recompensa pelo Sucesso: +2 PE${(patch.tempPE ?? 0) > (fresh.tempPE ?? 0) ? ' (excedente como PE temporário)' : ''}.`);
+  return true;
+}
+
 /** Ganho de 2 PE: preenche até o máximo; o resto vira PE temporário. */
 export function recompensaPEPatch(c: Character): Partial<Character> {
   const cur = c.peCurrent ?? 0;

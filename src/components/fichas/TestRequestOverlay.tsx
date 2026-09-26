@@ -394,8 +394,10 @@ export function TestRequestOverlay() {
         'combat',
         `🎲 ${char.name} — ${kindLabel} (${current.testName}): d20 ${d20}${advTxt} ${totalBonus >= 0 ? '+' : ''}${totalBonus} = ${total}${flatTxt}${forcedTxt}${dcTxt}`
       );
-      // Recompensa pelo Sucesso: sucesso com CD conhecida sob Comando reduzido → +2 PE.
-      if (passedFinal === true && current.dc != null && flat.bonus && hasRecompensaNote(flat.notes)) {
+      // Recompensa pelo Sucesso: rolagem sob Comando reduzido → +2 PE.
+      // Com CD conhecida exige sucesso; sem CD (CD oculta) o Mestre confirma
+      // o sucesso narrativamente, então o PE é concedido na rolagem.
+      if ((passedFinal === true || current.dc == null) && flat.bonus && hasRecompensaNote(flat.notes)) {
         const fresh = useCharacterStore.getState().characters.find((x) => x.id === char.id);
         if (fresh) {
           const patch = recompensaPEPatch(fresh);
