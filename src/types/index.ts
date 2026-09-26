@@ -715,8 +715,9 @@ export interface Character {
   lastHungerHourKey?: number;
 
   // ===== Especialista em Técnica =====
-  /** Atributo-chave da Técnica: 'Inteligência' ou 'Sabedoria'. Define no wizard. */
-  keyAttribute?: 'Inteligência' | 'Sabedoria';
+  /** Atributo-chave da especialização. Técnica: 'Inteligência' ou 'Sabedoria';
+   * Suporte: 'Presença' ou 'Sabedoria'. Definido no wizard. */
+  keyAttribute?: 'Inteligência' | 'Sabedoria' | 'Presença';
   /** Mudanças de Fundamento aprendidas (Domínio dos Fundamentos). */
   tecnicaFundamentos?: string[];
   /** Foco Amaldiçoado escolhido no Nv 10 ('Destruição' | 'Economia' | 'Refino'). */
