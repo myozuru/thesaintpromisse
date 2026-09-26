@@ -33,6 +33,7 @@ import { AmizadeSection, AnaliseSection } from './SuporteNivel2Sections';
 import { ApoioAvancadoSection, OutraChanceSection } from './SuporteNivel6Sections';
 import { ComandoSection, DesvendarSection } from './SuporteComandoTerrenoSections';
 import { RepertorioSection, MobilidadeSection } from './SuporteRepertorioMobilidadeSections';
+import { TransmitirSection } from './SuporteTransmitirSection';
 import { hasSpecAbility } from '@/lib/suporteNivel2';
 import {
   APOIO_AVANCADO_ID,
@@ -355,6 +356,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
       <DesvendarSection c={c} />
       <RepertorioSection c={c} />
       <MobilidadeSection c={c} />
+      <TransmitirSection c={c} />
     </div>
   );
 }
