@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { getSuporteHealDice, getSuporteHealMaxUses, getSuporteKeyMod, getSuporteHealUsesLeft, applyApoiar, applyPresencaInspiradora, getPresencaInspiradoraMaxExtra } from '@/lib/suporteAbilities';
+import { getSuporteHealDice, getSuporteHealMaxUses, getSuporteKeyMod, getSuporteHealUsesLeft, applyApoiar, applyPresencaInspiradora, getPresencaInspiradoraMaxExtra, applySuporteBaseTR, applyTRMestre, getSuporteBaseTR, TR_MESTRE_LEVEL } from '@/lib/suporteAbilities';
 import { consumeAdvantageFor, expireGrantedBy, peekAdvantageFor } from '@/lib/omni/rollAdvantage';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import type { Character } from '@/types';
