@@ -1,3 +1,4 @@
+import { mergeIncomingCharacters, stampLocalChanges, withStamps } from '@/lib/charSyncStamps';
 import { useEffect } from 'react';
 import { getSocket, type WorldSlice } from '@/lib/socket';
 import { useCharacterStore } from '@/stores/useCharacterStore';
@@ -338,7 +339,8 @@ function applyRemote(slice: WorldSlice, data: unknown) {
   applyingRemote = true;
   try {
     if (slice === 'characters' && Array.isArray(data)) {
-      useCharacterStore.setState({ characters: data as never });
+      const local = useCharacterStore.getState().characters as never[];
+      useCharacterStore.setState({ characters: mergeIncomingCharacters(local, data as never[]) as never });
     } else if (slice === 'combat' && typeof data === 'object') {
       useCombatStore.setState(data as never);
     } else if (slice === 'chronos' && typeof data === 'object') {
@@ -653,7 +655,7 @@ export function useMultiplayerSync() {
         void supabase.from('realtime_world').upsert({ slice, data: json }).then(({ error }) => {
           if (error) console.warn(`[sync] falha ao salvar ${slice}:`, error.message);
         });
-      }, 800));
+      }, 400));
     };
     (socket as unknown as { emit: typeof socket.emit }).emit = ((event: string, ...args: unknown[]) => {
       if (event === 'state:update' && args[0] && typeof args[0] === 'object') {
@@ -782,7 +784,7 @@ export function useMultiplayerSync() {
       // Empurra os merges resultantes para o servidor (mode 'merge' por id,
       // replace para os agregados). O servidor faz broadcast aos demais.
       try {
-        if (mergedChars.length > 0) socket.emit('state:update', { slice: 'characters', data: mergedChars, mode: 'merge' });
+        if (mergedChars.length > 0) socket.emit('state:update', { slice: 'characters', data: withStamps(mergedChars as never[]), mode: 'merge' });
         if (mergedProfiles.length > 0) socket.emit('state:update', { slice: 'profiles', data: mergedProfiles, mode: 'merge' });
         if (mergedItems.length > 0) socket.emit('state:update', { slice: 'items', data: mergedItems, mode: 'merge' });
         if (mergedEvents.length > 0) socket.emit('state:update', { slice: 'calendar', data: mergedEvents, mode: 'merge' });
@@ -863,9 +865,11 @@ export function useMultiplayerSync() {
     const unsubChars = useCharacterStore.subscribe((state) => {
       const next = pickCharacters(state);
       if (next === lastChars) return;
+      const prevChars = lastChars;
       lastChars = next;
       if (applyingRemote) return;
-      socket.emit('state:update', { slice: 'characters', data: next });
+      stampLocalChanges(prevChars as never[], next as never[]);
+      socket.emit('state:update', { slice: 'characters', data: withStamps(next as never[]) });
     });
 
     let lastCombat = JSON.stringify(pickCombat(useCombatStore.getState()));

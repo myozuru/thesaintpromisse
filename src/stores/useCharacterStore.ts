@@ -1215,7 +1215,8 @@ export const useCharacterStore = create<CharacterStore>()(
           const attrsChanged = updates.attributes && updates.attributes !== c.attributes;
           const specChanged = updates.specialization && updates.specialization !== c.specialization;
           const levelChanged = typeof updates.level === 'number' && updates.level !== c.level;
-          if (attrsChanged || specChanged || classChanged) {
+          // Fichas temporárias e criaturas têm vida/PE definidos à mão: não recalcular.
+          if ((attrsChanged || specChanged || classChanged) && !merged.temporary && !merged.isGrimorioCreature) {
             const conMod = getConMod(merged);
             const startBase = merged.hpStartingBase ?? c.hpMax - (getConMod(c) * c.level);
             const history = merged.levelHistory ?? [];
