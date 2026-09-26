@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import {
   OTIMIZACAO_ID, PROTETOR_ID, applyProtetor, findProtetor, getOtimizacaoSlotsBonus,
   getProtetorDice, getProtetorMod, hasShieldEquipped, protetorRefund, reduceProtetorMessage,
-  useProtetorPromptStore,
+  type ProtetorOffer,
 } from '@/lib/suporteProtetor';
 import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import { getSpecAbilitiesFor, validateSpecAbilityCatalog } from '@/lib/specAbilities';
