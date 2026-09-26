@@ -862,16 +862,18 @@ function getMaxByType(total) {
   };
 }
 
+// O limite por tipo vale para o USO em combate (ações por turno), não para
+// quantas ações a ficha pode ter cadastradas — a criatura pode ter várias
+// opções e escolher quais usar a cada turno.
 function buildTypeOptions(usedByType, maxByType, currentType) {
   return ACTION_TYPE_OPTIONS.map((opt) => {
     const max  = maxByType[opt.value] ?? Infinity;
     const used = usedByType[opt.value] ?? 0;
-    const full = used >= max && opt.value !== currentType;
-    const suffix = Number.isFinite(max) ? ` (${used}/${max})` : "";
+    const suffix = Number.isFinite(max) ? ` (${used} cad., máx ${max}/turno)` : "";
     return {
       value: opt.value,
-      label: full ? `${opt.label}${suffix} — limite atingido` : `${opt.label}${suffix}`,
-      disabled: full,
+      label: `${opt.label}${suffix}`,
+      disabled: false,
     };
   });
 }
@@ -890,25 +892,14 @@ export default function SectionActions({ draft, derived, actions }) {
   const bt      = derived.bt ?? 2;
 
   const handleAdd = (newAction) => {
-    const t = newAction.type;
-    const max  = maxByType[t] ?? Infinity;
-    const used = usedByType[t] ?? 0;
-    if (used >= max) {
-      alert(`Limite de "${ACTION_TYPE_LABELS[t]}" por turno atingido (${used}/${max}).`);
-      return;
-    }
     actions.addAction({ ...newAction, id: `act-${Date.now().toString(36)}` });
     setShowForm(false);
   };
 
-  const canAddAny = ACTION_TYPE_OPTIONS.some(
-    (o) => (usedByType[o.value] ?? 0) < (maxByType[o.value] ?? Infinity)
-  );
-
   return (
     <div className="space-y-3">
       <div className="bg-slate-950/60 border border-slate-800 rounded px-3 py-2 flex flex-wrap gap-2 text-xs">
-        <span className="text-slate-500">Por turno:</span>
+        <span className="text-slate-500" title="Cadastradas / limite de uso por turno">Cadastradas / uso por turno:</span>
         <Pill color="rose">{usedByType.comum ?? 0}/{total.comum} Comum</Pill>
         <Pill color="amber">{usedByType.rapida ?? 0}/{total.rapida} Rápida</Pill>
         <Pill color="sky">{usedByType.bonus ?? 0}/{total.bonus} Bônus</Pill>
@@ -952,8 +943,7 @@ export default function SectionActions({ draft, derived, actions }) {
           <SmallButton
             onClick={() => setShowForm(true)}
             variant="primary"
-            disabled={!canAddAny}
-            title={canAddAny ? undefined : "Todos os slots de ação por turno estão ocupados"}
+            title="Adicionar mais uma opção de ação à ficha (o limite por turno vale só no combate)"
           >
             <Plus className="w-3 h-3" /> Adicionar Ação
           </SmallButton>
