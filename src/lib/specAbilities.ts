@@ -1486,6 +1486,22 @@ const SUPORTE: SpecAbility[] = [
     triggerText: 'Pedido no painel do Suporte; o Mestre define a CD.',
     logicText: 'Sucesso libera o botão separado "Procurar no terreno" (Percepção + bônus) até o fim da cena.',
   },
+  {
+    id: 'sup-expandir-repertorio', name: 'Expandir Repertório', tier: 2, specialization: 'Suporte',
+    flavor: 'Estudando para se tornar mais versátil, você domina outros campos de estudo.',
+    mechanic: 'Torna-se treinado em perícias igual a metade do bônus de treinamento (para baixo) e recebe +2 em uma perícia qualquer.',
+    activation: 'passive',
+    triggerText: 'Escolhas no painel do Suporte.',
+    logicText: 'Marca as perícias como treinadas e soma +2 no bônus externo da perícia escolhida; novas escolhas surgem quando o bônus de treinamento sobe.',
+  },
+  {
+    id: 'sup-mobilidade-avancada', name: 'Mobilidade Avançada', tier: 2, specialization: 'Suporte',
+    flavor: 'Você chega rápido onde seu suporte é requisitado.',
+    mechanic: '+3 m de movimento. Quando um aliado cai nas portas da morte, você pode, como reação, mover-se metade do seu movimento na direção dele.',
+    activation: 'passive',
+    triggerText: 'Pergunta automática quando um aliado jogador cai a 0 PV.',
+    logicText: 'Aceitar gasta 1 reação e libera metade do movimento para arrastar a peça fora do turno, até o início do seu próximo turno.',
+  },
 ];
 
 // ===== Registry global =====================================================

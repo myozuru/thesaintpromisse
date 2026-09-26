@@ -447,7 +447,7 @@ export const useCombatStore = create<CombatStore>()(
           import('@/stores/useMapStore').then(({ useMapStore }) => useMapStore.getState().setPendingMove(null));
           const firstEntry = initiativeOrder[0];
           if (firstEntry) {
-            charStore.updateCharacter(firstEntry.charId, { weaponSwapsThisTurn: 0, attacksThisTurn: 0, lastAttackHit: undefined });
+            charStore.updateCharacter(firstEntry.charId, { weaponSwapsThisTurn: 0, attacksThisTurn: 0, lastAttackHit: undefined, mobilidadeReacaoM: 0, mobilidadeReacaoBase: 0 });
             // Fase 2 — Reaplica pool dedicado de Aptidões (Mestre das Aptidões).
             charStore.applyTurnStartSpecHooks(firstEntry.charId);
             import('@/lib/omni/eventBus').then(({ emitirEvento }) => {
@@ -509,7 +509,7 @@ export const useCombatStore = create<CombatStore>()(
         }
         const nextEntry = initiativeOrder[nextIndex];
         if (nextEntry) {
-          useCharacterStore.getState().updateCharacter(nextEntry.charId, { weaponSwapsThisTurn: 0, attacksThisTurn: 0, lastAttackHit: undefined });
+          useCharacterStore.getState().updateCharacter(nextEntry.charId, { weaponSwapsThisTurn: 0, attacksThisTurn: 0, lastAttackHit: undefined, mobilidadeReacaoM: 0, mobilidadeReacaoBase: 0 });
           // Fase 2 — Reaplica pool dedicado de Aptidões (Mestre das Aptidões).
           useCharacterStore.getState().applyTurnStartSpecHooks(nextEntry.charId);
           import('@/lib/omni/eventBus').then(({ emitirEvento }) => {

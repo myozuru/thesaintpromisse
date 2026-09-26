@@ -32,6 +32,7 @@ import { HeartHandshake, HandHelping, ShieldCheck, Sparkles } from 'lucide-react
 import { AmizadeSection, AnaliseSection } from './SuporteNivel2Sections';
 import { ApoioAvancadoSection, OutraChanceSection } from './SuporteNivel6Sections';
 import { ComandoSection, DesvendarSection } from './SuporteComandoTerrenoSections';
+import { RepertorioSection, MobilidadeSection } from './SuporteRepertorioMobilidadeSections';
 import { hasSpecAbility } from '@/lib/suporteNivel2';
 import {
   APOIO_AVANCADO_ID,
@@ -352,6 +353,8 @@ export function SuportePanel({ character: c }: { character: Character }) {
       <OutraChanceSection character={c} />
       <ComandoSection c={c} />
       <DesvendarSection c={c} />
+      <RepertorioSection c={c} />
+      <MobilidadeSection c={c} />
     </div>
   );
 }

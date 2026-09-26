@@ -748,6 +748,14 @@ export interface Character {
   desvendarCD?: number;
   /** Desvendar Terreno: bônus de cena em "Procurar no terreno" (0 = inativo). */
   desvendarBonus?: number;
+  /** Expandir Repertório: perícias treinadas pela habilidade. */
+  repertorioSkills?: string[];
+  /** Expandir Repertório: perícia que recebeu o +2. */
+  repertorioBonusSkill?: string;
+  /** Mobilidade Avançada: metros liberados pela reação (fora do turno). */
+  mobilidadeReacaoM?: number;
+  /** Mobilidade Avançada: movimento já usado quando a reação foi aceita. */
+  mobilidadeReacaoBase?: number;
   /** Mudanças de Fundamento aprendidas (Domínio dos Fundamentos). */
   tecnicaFundamentos?: string[];
   /** Foco Amaldiçoado escolhido no Nv 10 ('Destruição' | 'Economia' | 'Refino'). */
