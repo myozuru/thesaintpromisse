@@ -15,7 +15,7 @@ import { useMemo, useState } from 'react';
 import { Character, DAMAGE_TYPES, DAMAGE_TYPE_LABELS, DAMAGE_TYPE_ABBR, DamageType, createEmptyRdByType, ActiveCondition } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useRoleStore } from '@/stores/useRoleStore';
-import { useTempTemplateStore } from '@/stores/useTempTemplateStore';
+import { tempTemplateCharacterPatch, useTempTemplateStore } from '@/stores/useTempTemplateStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { Plus, Minus, Heart, Sparkles, Shield, Footprints, NotebookPen, Dice6, Clock, Lock, Unlock, History, Bookmark, BookmarkPlus, Trash2, Swords, Plus as PlusIcon, Zap, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -251,23 +251,7 @@ export function TemporaryCharacterCard({ character: c }: Props) {
   const applyTemplate = (tplId: string) => {
     const tpl = tempTemplates.find((t) => t.id === tplId);
     if (!tpl) return;
-    const d = tpl.data;
-    const attrs = c.attributes.map((a) => ({ ...a, value: d.attributes?.[a.name] ?? a.value }));
-    const skills = c.skills.map((s) => ({ ...s, externalBonus: d.skills?.[s.name] ?? (s as any).externalBonus }));
-    const saves = (c.savingThrows ?? []).map((s) => ({ ...s, value: d.saves?.[s.name] ?? s.value }));
-    updateCharacter(c.id, {
-      hpMax: d.hpMax,
-      hpCurrent: d.hpMax,
-      peMax: d.peMax,
-      peCurrent: d.peMax,
-      movement: d.movement,
-      rd: d.rd,
-      rdByType: { ...createEmptyRdByType(), ...d.rdByType },
-      notes: d.notes ?? c.notes,
-      attributes: attrs,
-      skills,
-      savingThrows: saves,
-    });
+    updateCharacter(c.id, tempTemplateCharacterPatch(c, tpl));
     addLog('system', `📑 Modelo "${tpl.label}" aplicado em ${c.name}.`);
   };
 

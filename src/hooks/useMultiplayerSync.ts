@@ -22,6 +22,7 @@ import { assetDB } from '@/components/mapa/assetDB';
 import { assetCache } from '@/components/mapa/assetCache';
 import { supabase } from '@/integrations/supabase/safeClient';
 import { useFogStore } from '@/stores/fogStore';
+import { mergeTempTemplates, useTempTemplateStore, type TempTemplate } from '@/stores/useTempTemplateStore';
 import { getProtectedRemoteEntityPatchIds, getRecentLocalEntityEdits, markLocalEntityEdits, shouldIgnoreRemoteMapScene } from '@/components/mapa/mapSyncGuards';
 
 type Json = string | number | boolean | null | { [k: string]: Json } | Json[];
@@ -253,6 +254,9 @@ function pickOmniProposals(s: ReturnType<typeof useOmniProposalStore.getState>) 
 function pickTestRequests(s: ReturnType<typeof useTestRequestStore.getState>) {
   return s.requests;
 }
+function pickTempTemplates(s: ReturnType<typeof useTempTemplateStore.getState>) {
+  return s.templates;
+}
 
 // ── Suavização de movimento remoto ─────────────────────────────────────────
 // Posições recebidas deslizam até o destino em vez de "teleportar".
@@ -434,6 +438,9 @@ function applyRemote(slice: WorldSlice, data: unknown) {
     }
     else if (slice === 'testRequests' && Array.isArray(data)) {
       useTestRequestStore.setState({ requests: data as never });
+    }
+    else if (slice === 'tempTemplates' && Array.isArray(data)) {
+      useTempTemplateStore.setState({ templates: data as TempTemplate[] });
     }
     else if (slice === 'fog' && data && typeof data === 'object') {
       const d = data as { walls?: unknown; doors?: unknown; lights?: unknown };
@@ -664,8 +671,22 @@ export function useMultiplayerSync() {
     // Carrega o estado salvo da mesa ao abrir o site.
     void supabase.from('realtime_world').select('slice,data').neq('slice', 'mapScene').then(({ data, error }) => {
       if (error) { console.warn('[sync] falha ao carregar mesa do Cloud:', error.message); return; }
+      const localTemplates = pickTempTemplates(useTempTemplateStore.getState());
+      const remoteTemplateRow = (data ?? []).find((row) => row.slice === 'tempTemplates');
+      const remoteTemplates = Array.isArray(remoteTemplateRow?.data) ? remoteTemplateRow.data as unknown as TempTemplate[] : [];
+      const migrationKey = 'rpg-temp-templates-cloud-migrated-v1';
+      const shouldMigrateLocal = localStorage.getItem(migrationKey) !== 'true';
+      const mergedTemplates = shouldMigrateLocal ? mergeTempTemplates(localTemplates, remoteTemplates) : remoteTemplates;
       for (const row of data ?? []) {
+        if (row.slice === 'tempTemplates') continue;
         if (row.data !== null) applyRemote(row.slice as WorldSlice, row.data);
+      }
+      applyRemote('tempTemplates', mergedTemplates);
+      if (shouldMigrateLocal) {
+        localStorage.setItem(migrationKey, 'true');
+        if (mergedTemplates.length > 0 && JSON.stringify(mergedTemplates) !== JSON.stringify(remoteTemplates)) {
+          socket.emit('state:update', { slice: 'tempTemplates', data: mergedTemplates });
+        }
       }
     });
 
@@ -1100,6 +1121,17 @@ export function useMultiplayerSync() {
       socket.emit('state:update', { slice: 'testRequests', data: next });
     });
 
+    // Modelos compartilhados na nuvem; persist local serve como cache/offline.
+    let lastTempTemplates = JSON.stringify(pickTempTemplates(useTempTemplateStore.getState()));
+    const unsubTempTemplates = useTempTemplateStore.subscribe((state) => {
+      const next = pickTempTemplates(state);
+      const s = JSON.stringify(next);
+      if (s === lastTempTemplates) return;
+      lastTempTemplates = s;
+      if (applyingRemote) return;
+      socket.emit('state:update', { slice: 'tempTemplates', data: next });
+    });
+
     // Fog/Walls/Doors/Lights — sincroniza apenas o snapshot persistente.
     const pickFog = () => {
       const s = useFogStore.getState();
@@ -1151,6 +1183,7 @@ export function useMultiplayerSync() {
       unsubMapScene();
       unsubOmniProps();
       unsubTestReqs();
+      unsubTempTemplates();
       unsubFog();
     };
 
