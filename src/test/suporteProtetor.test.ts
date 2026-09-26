@@ -35,7 +35,7 @@ describe('Otimização de Espaço', () => {
     const c = mk({ id: 's', level: 5, ...withAb(OTIMIZACAO_ID) });
     expect(getOtimizacaoSlotsBonus(c)).toBe(getTrainingBonusByLevel(5));
     expect(getOtimizacaoSlotsBonus(mk({ id: 'x', level: 5 }))).toBe(0);
-    expect(getOtimizacaoSlotsBonus(mk({ id: 'y', level: 12, ...withAb(OTIMIZACAO_ID) })).toBeGreaterThan(
+    expect(getOtimizacaoSlotsBonus(mk({ id: 'y', level: 12, ...withAb(OTIMIZACAO_ID) }))).toBeGreaterThan(
       getOtimizacaoSlotsBonus(c),
     );
   });
