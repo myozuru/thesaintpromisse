@@ -12,7 +12,7 @@ import { useOpportunityStore } from '@/stores/useOpportunityStore';
 import { detectOpportunityCandidates } from '../opportunityEngine';
 import { getSocket } from '@/lib/socket';
 import { holdLocalMapSync } from '../mapSyncGuards';
-import { effectiveMovement } from '@/lib/movementBudget';
+import { combatMoveBudget } from '@/lib/movementBudget';
 import { isFreeformFor } from '@/lib/freeformMode';
 
 
@@ -34,9 +34,11 @@ export function PendingMoveOverlay() {
   const ent = entities[pending.entityId];
   if (!ent) return null;
 
-  const isFreeform = isFreeformFor(character, freeformMode);
+  const combatNow = useCombatStore.getState();
+  const isActiveTurn = !combatNow.inCombat || combatNow.initiativeOrder[combatNow.currentTurnIndex]?.charId === pending.charId;
+  const isFreeform = isActiveTurn && isFreeformFor(character, freeformMode);
   const used = movementUsed[pending.charId] ?? 0;
-  const total = isFreeform ? Infinity : effectiveMovement(character);
+  const total = isFreeform ? Infinity : (combatMoveBudget(character, isActiveTurn) ?? 0);
   const remaining = isFreeform ? Infinity : Math.max(0, total - used - pending.distM);
 
   const confirm = () => {

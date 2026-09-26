@@ -93,7 +93,7 @@ import { useDiceStore } from '@/stores/useDiceStore';
 import type { Character } from '@/types';
 import { getSocket } from '@/lib/socket';
 import { holdLocalMapSync, markLocalEntityEdits } from './mapSyncGuards';
-import { effectiveMovement } from '@/lib/movementBudget';
+import { combatMoveBudget, reactionMoveBudget } from '@/lib/movementBudget';
 import { isFreeformFor } from '@/lib/freeformMode';
 import { toast } from '@/hooks/use-toast';
 
@@ -687,15 +687,17 @@ const canStartMoveEntityNow = (entity: Entity): boolean => {
   // Entidades sem ficha vinculada (imagens/objetos enviados pelo player) são
   // movíveis livremente mesmo em combate — não consomem orçamento de movimento.
   if (!entity.characterId) return true;
-  if (combat.initiativeOrder[combat.currentTurnIndex]?.charId !== entity.characterId) return false;
+  const isActiveTurn = combat.initiativeOrder[combat.currentTurnIndex]?.charId === entity.characterId;
+  const character = characters.find((c) => c.id === entity.characterId);
+  // Fora do turno só move quem tem movimento de reação (Mobilidade Avançada).
+  if (!isActiveTurn && reactionMoveBudget(character) == null) return false;
 
   // Se já existe um pendingMove para esse token, permite retomar mesmo
   // sem orçamento restante (o jogador pode arrastar de volta para reduzir).
   if (samePending) return true;
 
-  const character = characters.find((c) => c.id === entity.characterId);
-  if (isFreeformFor(character, combat.freeformMode)) return true;
-  const budgetM = effectiveMovement(character);
+  if (isActiveTurn && isFreeformFor(character, combat.freeformMode)) return true;
+  const budgetM = combatMoveBudget(character, isActiveTurn) ?? 0;
   const usedM = combat.movementUsedByChar[entity.characterId] ?? 0;
   return budgetM - usedM > MOVEMENT_EPS_M;
 };
@@ -1046,7 +1048,8 @@ export function MapaModule() {
         const pm = state.pendingMove;
         const cb2 = useCombatStore.getState();
         const ch2 = useCharacterStore.getState().characters.find((c) => c.id === pm.charId);
-        const budgetM2 = isFreeformFor(ch2, cb2.freeformMode) ? Infinity : (ch2 ? effectiveMovement(ch2) : undefined);
+        const active2 = cb2.initiativeOrder[cb2.currentTurnIndex]?.charId === pm.charId;
+        const budgetM2 = active2 && isFreeformFor(ch2, cb2.freeformMode) ? Infinity : (ch2 ? (combatMoveBudget(ch2, active2) ?? undefined) : undefined);
         const committed = cb2.movementUsedByChar[pm.charId] ?? 0;
         const totalUsed = committed + pm.distM;
         drawTrail(pm.trail, '#fcd34d', totalUsed, budgetM2);
@@ -2325,10 +2328,13 @@ export function MapaModule() {
         const linkedCharId = primaryEnt?.characterId;
         if (cb.inCombat && linkedCharId) {
           const activeChar = cb.initiativeOrder[cb.currentTurnIndex]?.charId;
-          if (activeChar === linkedCharId) {
-            const ch = useCharacterStore.getState().characters.find((c) => c.id === linkedCharId);
-            const budgetM = isFreeformFor(ch, cb.freeformMode) ? Infinity : effectiveMovement(ch);
-            const usedBeforeM = isFreeformFor(ch, cb.freeformMode) ? 0 : (cb.movementUsedByChar[linkedCharId] ?? 0);
+          const chMove = useCharacterStore.getState().characters.find((c) => c.id === linkedCharId);
+          const isActiveMove = activeChar === linkedCharId;
+          if (isActiveMove || reactionMoveBudget(chMove) != null) {
+            const ch = chMove;
+            const free = isActiveMove && isFreeformFor(ch, cb.freeformMode);
+            const budgetM = free ? Infinity : (combatMoveBudget(ch, isActiveMove) ?? 0);
+            const usedBeforeM = free ? 0 : (cb.movementUsedByChar[linkedCharId] ?? 0);
             const cfg = store.getState().gridConfig;
             const metersPerPx = (cfg.metersPerCell || 1.5) / (cfg.dpi || 70);
             // Se já existe um pendingMove para esse mesmo token, continuamos
