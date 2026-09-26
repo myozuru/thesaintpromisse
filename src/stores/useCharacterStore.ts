@@ -4489,6 +4489,8 @@ export const useCharacterStore = create<CharacterStore>()(
               medicinaInfalivelUsed: 0,
               // Presença Inspiradora: bônus de cena zera com a cena.
               inspiracaoBonus: 0,
+              // Análise Profunda: 1 vez por criatura, por cena.
+              analiseProfundaAlvos: [],
             };
           }),
         })),

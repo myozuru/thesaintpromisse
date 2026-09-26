@@ -728,6 +728,12 @@ export interface Character {
   /** Presença Inspiradora (Suporte Nv 3): bônus em TODAS as rolagens de perícia
    *  enquanto durar a cena. Zerado no reset de cena e nos descansos. */
   inspiracaoBonus?: number;
+  /** Amizade Inquebrável: ficha do Amigo (aliado Jogador). */
+  suporteAmigoId?: string;
+  /** Amizade Inquebrável: Mestre liberou escolher outro Amigo (interlúdio). */
+  suporteAmigoTrocaLiberada?: boolean;
+  /** Análise Profunda: criaturas já analisadas nesta cena. */
+  analiseProfundaAlvos?: string[];
   /** Mudanças de Fundamento aprendidas (Domínio dos Fundamentos). */
   tecnicaFundamentos?: string[];
   /** Foco Amaldiçoado escolhido no Nv 10 ('Destruição' | 'Economia' | 'Refino'). */
