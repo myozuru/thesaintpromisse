@@ -8,6 +8,8 @@ import { useTabOrderStore } from '@/stores/useTabOrderStore';
 import { cn } from '@/lib/utils';
 import { MiniClock } from '@/components/chronos/MiniClock';
 import { usePendingDebates } from '@/hooks/usePendingDebates';
+import { MasterAccountsDialog } from '@/components/MasterAccountsDialog';
+import { signOutAll } from '@/lib/auth';
 
 export type TabId = 'relogio' | 'fichas' | 'itens' | 'baus' | 'calendario' | 'sistema' | 'guia' | 'feiticos-players' | 'money' | 'cardapios' | 'omni' | 'catalogo' | 'testes' | 'mapa' | 'grimorio';
 
