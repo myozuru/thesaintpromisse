@@ -541,6 +541,24 @@ export function useMultiplayerSync() {
       void worldBus.send({ type: 'broadcast', event: 'protetor', payload: { clientId, ...d } });
     };
     window.addEventListener('protetor:send', onProtetorSend);
+    // Mobilidade Avançada (Suporte Nv 2): oferta de reação entre telas.
+    worldBus.on('broadcast', { event: 'mobilidade' }, ({ payload }) => {
+      void import('@/lib/suporteRepertorioMobilidade').then(
+        ({ useMobilidadePromptStore, shouldSeeMobilidadePrompt, reduceMobilidadeMessage }) => {
+          const r = reduceMobilidadeMessage(payload as never, clientId, (sid) =>
+            shouldSeeMobilidadePrompt(sid, useRoleStore.getState().role),
+          );
+          const st = useMobilidadePromptStore.getState();
+          if (r.type === 'open') st.open(r.offer);
+          else if (r.type === 'close') st.close(r.supporterId);
+        },
+      );
+    });
+    const onMobilidadeSend = (e: Event) => {
+      const d = (e as CustomEvent).detail ?? {};
+      void worldBus.send({ type: 'broadcast', event: 'mobilidade', payload: { clientId, ...d } });
+    };
+    window.addEventListener('mobilidade:send', onMobilidadeSend);
     worldBus.on('broadcast', { event: 'ping' }, ({ payload }) => {
       const p = payload as { clientId?: string; x?: number; y?: number; color?: string } | null;
       if (!p || p.clientId === clientId || typeof p.x !== 'number' || typeof p.y !== 'number') return;
@@ -1076,6 +1094,7 @@ export function useMultiplayerSync() {
       window.removeEventListener('amizade:send', onAmizadeSend);
       window.removeEventListener('outra-chance:send', onOutraChanceSend);
       window.removeEventListener('protetor:send', onProtetorSend);
+      window.removeEventListener('mobilidade:send', onMobilidadeSend);
       void supabase.removeChannel(worldBus);
       if (chronosTimer) clearTimeout(chronosTimer);
       if (mapSceneTimer) clearTimeout(mapSceneTimer);

@@ -2327,6 +2327,14 @@ export const useCharacterStore = create<CharacterStore>()(
         }
 
 
+        // ─── Suporte — Mobilidade Avançada (aliado caiu a 0 PV) ─────────────
+        if (postSet && postSet.category === 'PLAYER' && preHp > 0 && (postSet.hpCurrent ?? 0) <= 0) {
+          const fallenId = postSet.id;
+          setTimeout(() => {
+            void import('@/lib/suporteRepertorioMobilidade').then((m) => m.sendMobilidadeOffers(fallenId));
+          }, 0);
+        }
+
         // ─── Omni-Engine: emite gatilhos de dano ─────────────────────────────
         import('@/lib/omni/eventBus').then(({ emitirEvento }) => {
           emitirEvento('aoSofrerDano', {

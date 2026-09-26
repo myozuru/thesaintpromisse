@@ -79,6 +79,7 @@ import { RestModal } from './RestModal';
 import { PreparedSpellsDialog } from './PreparedSpellsDialog';
 import { useAttributeLockConfirm } from './AttributeLockConfirm';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getMobilidadeBonus } from '@/lib/movementBudget';
 import { getOtimizacaoSlotsBonus } from '@/lib/suporteProtetor';
 
 interface Props {
@@ -1407,8 +1408,8 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
             </span>
           </div>
           <div className="flex flex-col gap-0.5">
-            <div className="text-xs text-muted-foreground font-mono" title={`Movimento base ${c.movement ?? 9}m${talentBonuses.movementMeters > 0 ? ` + ${talentBonuses.movementMeters}m (talento)` : ''}${(c.exhaustionLevel ?? 0) > 0 ? ` - ${(1.5 * (c.exhaustionLevel ?? 0)).toFixed(1)}m (Exaustão)` : ''}`}>
-              MOV:{Math.max(0, (c.movement ?? 9) + talentBonuses.movementMeters - 1.5 * (c.exhaustionLevel ?? 0)).toFixed(1)}m{talentBonuses.movementMeters > 0 && <span className="ml-0.5 text-primary/80">⚙</span>}
+            <div className="text-xs text-muted-foreground font-mono" title={`Movimento base ${c.movement ?? 9}m${talentBonuses.movementMeters > 0 ? ` + ${talentBonuses.movementMeters}m (talento)` : ''}${getMobilidadeBonus(c) > 0 ? ` + ${getMobilidadeBonus(c)}m (Mobilidade Avançada)` : ''}${(c.exhaustionLevel ?? 0) > 0 ? ` - ${(1.5 * (c.exhaustionLevel ?? 0)).toFixed(1)}m (Exaustão)` : ''}`}>
+              MOV:{Math.max(0, (c.movement ?? 9) + talentBonuses.movementMeters + getMobilidadeBonus(c) - 1.5 * (c.exhaustionLevel ?? 0)).toFixed(1)}m{talentBonuses.movementMeters > 0 && <span className="ml-0.5 text-primary/80">⚙</span>}
             </div>
             <Select
               value={c.dcLinkedAttr || ''}
