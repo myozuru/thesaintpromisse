@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Circle, Move, RotateCcw, Square, ZoomIn } from 'lucide-react';
 import type { Entity, TokenCrop } from '@/stores/useMapStore';
+import { DEFAULT_TOKEN_BORDER, TOKEN_BORDERS, drawTokenBorder, type TokenBorderStyle } from '@/lib/mapa/tokenBorders';
 import { assetCache } from '../assetCache';
 import { getTokenImageRect, normalizeTokenCrop } from '../EntityEngine';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ const DEFAULT_CROP: TokenCrop = { zoom: 1, offsetX: 0, offsetY: 0 };
 export function TokenCropDialog({ entity, onConfirm, onCancel }: Props) {
   const [crop, setCrop] = useState(() => normalizeTokenCrop(entity.tokenCrop));
   const [circular, setCircular] = useState(entity.shape === 'ELLIPSE');
+  const [border, setBorder] = useState<TokenBorderStyle>(entity.tokenCrop?.border ?? DEFAULT_TOKEN_BORDER);
   const [imageReadyTick, setImageReadyTick] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dragRef = useRef<{ x: number; y: number; crop: TokenCrop } | null>(null);
@@ -48,30 +50,16 @@ export function TokenCropDialog({ entity, onConfirm, onCancel }: Props) {
       const rect = getTokenImageRect(image.naturalWidth, image.naturalHeight, size, size, crop);
       ctx.drawImage(image, size / 2 + rect.x, size / 2 + rect.y, rect.w, rect.h);
       ctx.restore();
-      ctx.strokeStyle = 'hsl(260 28% 9%)';
-      ctx.lineWidth = 14;
-      ctx.beginPath();
-      ctx.arc(size / 2, size / 2, size / 2 - 7, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.strokeStyle = 'hsl(265 70% 67%)';
-      ctx.lineWidth = 6;
-      ctx.shadowColor = 'hsl(265 70% 67%)';
-      ctx.shadowBlur = 12;
-      ctx.beginPath();
-      ctx.arc(size / 2, size / 2, size / 2 - 13, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = 'hsla(0 0% 100% / 0.45)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(size / 2, size / 2, size / 2 - 20, 0, Math.PI * 2);
-      ctx.stroke();
+      ctx.save();
+      ctx.translate(size / 2, size / 2);
+      drawTokenBorder(ctx, size / 2, size / 2, border, 1.5);
+      ctx.restore();
     } else {
       const fit = Math.min(size / image.naturalWidth, size / image.naturalHeight);
       const w = image.naturalWidth * fit, h = image.naturalHeight * fit;
       ctx.drawImage(image, (size - w) / 2, (size - h) / 2, w, h);
     }
-  }, [cached, circular, crop, imageReadyTick]);
+  }, [cached, circular, crop, border, imageReadyTick]);
 
   const updateFromDrag = (clientX: number, clientY: number) => {
     const start = dragRef.current;
@@ -137,6 +125,31 @@ export function TokenCropDialog({ entity, onConfirm, onCancel }: Props) {
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Move className="h-3.5 w-3.5" /> Arraste a prévia para reposicionar.
           </div>
+          <div>
+            <span className="mb-2 block text-xs text-muted-foreground">Moldura</span>
+            <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Estilo da moldura">
+              {TOKEN_BORDERS.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={border === option.id}
+                  onClick={() => setBorder(option.id)}
+                  className={`flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs transition-colors ${
+                    border === option.id
+                      ? 'border-primary bg-secondary text-foreground'
+                      : 'border-border bg-muted/40 text-muted-foreground hover:bg-muted'
+                  }`}
+                >
+                  <span
+                    className="h-3.5 w-3.5 shrink-0 rounded-full border border-black/40"
+                    style={{ background: option.main, boxShadow: `0 0 6px ${option.glow}` }}
+                  />
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>}
 
         <div className="mt-6 flex items-center justify-between gap-2">
@@ -145,7 +158,7 @@ export function TokenCropDialog({ entity, onConfirm, onCancel }: Props) {
           </Button>
           <div className="flex gap-2">
             <Button type="button" variant="outline" size="sm" onClick={onCancel}>Cancelar</Button>
-            <Button type="button" size="sm" onClick={() => onConfirm(crop, circular)}>Aplicar</Button>
+            <Button type="button" size="sm" onClick={() => onConfirm({ ...crop, border }, circular)}>Aplicar</Button>
           </div>
         </div>
       </div>

@@ -59,6 +59,8 @@ export interface TokenCrop {
   /** Deslocamento normalizado (-100..100) dentro da sobra horizontal/vertical. */
   offsetX: number;
   offsetY: number;
+  /** Estilo da moldura do token circular (ver src/lib/mapa/tokenBorders.ts). */
+  border?: import('@/lib/mapa/tokenBorders').TokenBorderStyle;
 }
 
 export interface Entity {
