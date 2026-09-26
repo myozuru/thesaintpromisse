@@ -9,6 +9,8 @@ import { useRoleStore } from '@/stores/useRoleStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { CharacterCard } from '@/components/fichas/CharacterCard';
+import { useProfileStore } from '@/stores/useProfileStore';
+import { findMyCharacter } from '@/lib/myCharacter';
 
 interface Props {
   collapsed: boolean;
@@ -22,13 +24,9 @@ export function PartyPanel({ collapsed, onToggleCollapsed }: Props) {
   const role = useRoleStore((s) => s.role);
   const isPlayer = role === 'PLAYER';
 
-  const playerCharacter = useCharacterStore((s) =>
-    isPlayer
-      ? s.characters.find(
-          (c) => c.category === 'PLAYER' && c.createdBy !== 'MASTER' && !c.hiddenFromPlayers,
-        )
-      : undefined,
-  );
+  const activeProfileId = useProfileStore((s) => s.activeProfileId);
+  const characters = useCharacterStore((s) => s.characters);
+  const playerCharacter = isPlayer ? findMyCharacter(characters, activeProfileId) ?? undefined : undefined;
 
   // Mestre: se houver um único token selecionado vinculado a uma ficha, mostra essa ficha.
   const selectedCharacterId = useMapStore((s) => {

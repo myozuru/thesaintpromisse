@@ -16,6 +16,7 @@ import { Swords, Sparkles, Zap, Package, X, Target, AlertTriangle, Check } from 
 import { useRoleStore } from '@/stores/useRoleStore';
 import { useProfileStore } from '@/stores/useProfileStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
+import { findMyCharacter } from '@/lib/myCharacter';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useMapStore } from '@/stores/useMapStore';
@@ -80,11 +81,8 @@ export function PlayerActionBar() {
   // Personagem "meu" (mesma heurística do PartyPanel).
   const myChar = useMemo(() => {
     if (role !== 'PLAYER') return null;
-    const mine = allCharacters.find(
-      (c) => c.category === 'PLAYER' && c.createdBy !== 'MASTER' && !c.hiddenFromPlayers,
-    );
-    return mine ?? null;
-  }, [role, allCharacters]);
+    return findMyCharacter(allCharacters, activeProfileId);
+  }, [role, allCharacters, activeProfileId]);
 
   /**
    * Mostra a hotbar quando:

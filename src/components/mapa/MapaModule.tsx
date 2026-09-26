@@ -649,8 +649,6 @@ const playerOwnsEntity = (entity: Entity, profileId: string | null, characters: 
   if (entity.characterId) {
     const linked = characters.find((c) => c.id === entity.characterId);
     if (linked?.profileId === profileId) return true;
-    const legacyPlayers = characters.filter((c) => isPlayerVisibleCharacter(c) && !c.profileId);
-    if (linked && isPlayerVisibleCharacter(linked) && !linked.profileId && legacyPlayers.length === 1) return true;
   }
   // Compatibilidade: imagens antigas podem ter perdido ownerProfileId quando
   // "Sou eu" limpava a marcação dos outros uploads do player.
@@ -2267,8 +2265,14 @@ export function MapaModule() {
 
       // 2) hit em entidade?
       const hit = pickEntityAt(wx, wy);
-      if (hit) {
-        if (hit.locked) return;
+      // Players: mapas (camada de fundo), peças travadas e peças de outros não
+      // bloqueiam o arraste da visão — clicar nelas arrasta a cena normalmente.
+      const isPlayerRole = useRoleStore.getState().role === 'PLAYER';
+      const panThrough = !!hit && activeToolRef.current === 'select' && !shiftDownRef.current && (
+        hit.locked
+        || (isPlayerRole && ((hit.layer ?? 'tokens') === 'map' || !canPlayerEditEntityNow(hit)))
+      );
+      if (hit && !panThrough) {
         // expansão de grupo: clicar em membro de um grupo seleciona todos do grupo
         // (a menos que Alt esteja pressionado, que isola apenas o token clicado).
         const altIsolate = (e as any).altKey === true;
@@ -2367,7 +2371,8 @@ export function MapaModule() {
           };
           return;
         }
-        state.clearSelection();
+        if (panThrough && hit && !hit.locked && (hit.layer ?? 'tokens') !== 'map') state.setSelected([hit.id]);
+        else state.clearSelection();
         dragRef.current = { kind: 'pan' };
         panStateRef.current = { lastX: e.clientX, lastY: e.clientY };
         state.setCamera({ isPanning: true });

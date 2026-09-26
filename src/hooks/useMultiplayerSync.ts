@@ -281,7 +281,7 @@ function smoothStep(now: number) {
   const dt = Math.min(100, now - (smoothLast || now));
   smoothLast = now;
   // ~90% do caminho em ~150ms, casando com o ritmo de envio (~8/s).
-  const k = 1 - Math.exp(-dt / 65);
+  const k = 1 - Math.exp(-dt / 85);
   const entities = useMapStore.getState().entities as Record<string, { x: number; y: number } | undefined>;
   const out: RemotePatch[] = [];
   const protectedIds = getProtectedRemoteEntityPatchIds();

@@ -1,4 +1,4 @@
-import type { Character } from '@/types/character';
+import type { Character } from '@/types';
 
 /** Ficha de jogador visível (não criada pelo Mestre, não oculta). */
 export const isPlayerVisibleCharacter = (c: Character) =>
