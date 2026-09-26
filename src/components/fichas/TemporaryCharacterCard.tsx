@@ -17,7 +17,7 @@ import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { tempTemplateCharacterPatch, useTempTemplateStore } from '@/stores/useTempTemplateStore';
 import { useLogStore } from '@/stores/useLogStore';
-import { Plus, Minus, Heart, Sparkles, Shield, Footprints, NotebookPen, Dice6, Clock, Lock, Unlock, History, Bookmark, BookmarkPlus, Trash2, Swords, Plus as PlusIcon, Zap, X } from 'lucide-react';
+import { Plus, Minus, Heart, Sparkles, Shield, Footprints, NotebookPen, Dice6, Clock, Lock, Unlock, History, Bookmark, BookmarkPlus, Trash2, Swords, Plus as PlusIcon, Zap, X, Crosshair } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -452,6 +452,23 @@ export function TemporaryCharacterCard({ character: c }: Props) {
               <span className="ml-auto text-[10px] text-muted-foreground">m / turno</span>
             </div>
             <NumStep value={c.movement} onChange={(v) => setField('movement', Math.max(0, v))} min={0} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl border border-border bg-secondary/10 p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Shield className="h-4 w-4 text-sky-300" />
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">CA</span>
+              </div>
+              <NumStep value={c.ca ?? 10} onChange={(v) => setField('ca', Math.max(0, v))} min={0} />
+            </div>
+            <div className="rounded-xl border border-border bg-secondary/10 p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Crosshair className="h-4 w-4 text-orange-400" />
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">CD</span>
+              </div>
+              <NumStep value={c.baseDC ?? 10} onChange={(v) => setField('baseDC', Math.max(0, v))} min={0} />
+            </div>
           </div>
         </section>
 
