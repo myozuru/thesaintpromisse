@@ -115,22 +115,44 @@ describe('Protetor — reembolso e aplicação', () => {
 const supProtetor = () => mk({ id: 's', name: 'Sup', ...withAb(PROTETOR_ID), ...shielded });
 
 describe('Protetor — roteamento multiplayer (mesa simulada)', () => {
-  beforeEach(() => useProtetorPromptStore.getState().close());
+  type Prompt = ProtetorOffer | null;
+  let owners: Record<string, string | null> = {};
+  const mesa = createFakeMesa<{ prompt: Prompt }>(() => ({ prompt: null }), {
+    protetor: (c, msg) => {
+      const r = reduceProtetorMessage(msg as never, c.id, (sid) => {
+        const owner = owners[sid];
+        return owner ? c.viewer.profileId === owner : c.viewer.role !== 'MASTER';
+      });
+      if (r.type === 'open') c.state.prompt = r.offer;
+      if (r.type === 'close') c.state.prompt = null;
+    },
+  });
+  const mestre = mesa.join({ name: 'Mestre', role: 'MASTER', profileId: 'p-mestre' });
+  const ana = mesa.join({ name: 'Ana (Suporte)', role: 'PLAYER', profileId: 'p-ana' });
+  const bruno = mesa.join({ name: 'Bruno', role: 'PLAYER', profileId: 'p-bruno' });
+  const offer = { supporterId: 'sup', targetId: 'a', damageDealt: 7, hpLost: 7, escLost: 0 };
 
-  it('oferta chega só ao dono do Suporte; close fecha todos', () => {
-    const mesa = createFakeMesa(['mestre', 'dona', 'outro']);
-    const offer = { supporterId: 's', targetId: 'a', damageDealt: 7, hpLost: 7, escLost: 0 };
-    mesa.send('mestre', { kind: 'offer', ...offer });
-    const canSee = { mestre: () => false, dona: () => true, outro: () => false };
-    const seen = mesa.deliver((clientId, msg) => reduceProtetorMessage(msg, clientId, (sid) => canSee[clientId as keyof typeof canSee](sid)));
-    expect(seen.dona).toEqual({ type: 'open', offer });
-    expect(seen.mestre).toEqual({ type: 'ignore' });
-    expect(seen.outro).toEqual({ type: 'ignore' });
+  beforeEach(() => {
+    mesa.reset();
+    owners = { sup: 'p-ana', semDono: null };
+  });
 
-    mesa.send('dona', { kind: 'close' });
-    const closed = mesa.deliver((clientId, msg) => reduceProtetorMessage(msg, clientId, () => true));
-    expect(closed.mestre).toEqual({ type: 'close' });
-    expect(closed.outro).toEqual({ type: 'close' });
+  it('oferta chega só à dona do Suporte; close fecha as outras telas', () => {
+    mestre.send('protetor', { kind: 'offer', ...offer });
+    expect(ana.state.prompt).toEqual(offer);
+    expect(bruno.state.prompt).toBeNull();
+    expect(mestre.state.prompt).toBeNull();
+
+    ana.send('protetor', { kind: 'close' });
+    expect(bruno.state.prompt).toBeNull();
+    expect(mestre.state.prompt).toBeNull();
+  });
+
+  it('ficha sem dono: todos os jogadores veem, o Mestre não', () => {
+    mestre.send('protetor', { kind: 'offer', ...offer, supporterId: 'semDono' });
+    expect(ana.state.prompt).not.toBeNull();
+    expect(bruno.state.prompt).not.toBeNull();
+    expect(mestre.state.prompt).toBeNull();
   });
 
   it('ignora mensagens inválidas e as da própria tela', () => {
