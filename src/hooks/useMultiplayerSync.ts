@@ -22,7 +22,7 @@ import { assetDB } from '@/components/mapa/assetDB';
 import { assetCache } from '@/components/mapa/assetCache';
 import { supabase } from '@/integrations/supabase/safeClient';
 import { useFogStore } from '@/stores/fogStore';
-import { getProtectedRemoteEntityPatchIds, getRecentLocalEntityEdits, shouldIgnoreRemoteMapScene } from '@/components/mapa/mapSyncGuards';
+import { getProtectedRemoteEntityPatchIds, getRecentLocalEntityEdits, markLocalEntityEdits, shouldIgnoreRemoteMapScene } from '@/components/mapa/mapSyncGuards';
 
 type Json = string | number | boolean | null | { [k: string]: Json } | Json[];
 
@@ -140,6 +140,7 @@ function base64ToBlob(base64: string, mime?: string): Blob {
 }
 
 async function publishMapSceneToCloud(map: MapSceneSync) {
+  rememberPublishedMap(JSON.stringify(map));
   const { error } = await supabase.from('realtime_world').upsert({
     slice: 'mapScene',
     data: JSON.parse(JSON.stringify(map)) as Json,
@@ -319,6 +320,13 @@ function applySmoothedEntityPatches(patches: RemotePatch[]) {
   if (smoothTargets.size && smoothRaf == null) smoothRaf = requestAnimationFrame(smoothStep);
 }
 
+/** Últimos mapas completos que ESTE navegador salvou — o eco vindo do banco é ignorado. */
+const recentPublishedMapJSON: string[] = [];
+function rememberPublishedMap(json: string) {
+  recentPublishedMapJSON.push(json);
+  if (recentPublishedMapJSON.length > 6) recentPublishedMapJSON.shift();
+}
+
 function applyRemote(slice: WorldSlice, data: unknown) {
   if (data == null) return;
   applyingRemote = true;
@@ -363,7 +371,7 @@ function applyRemote(slice: WorldSlice, data: unknown) {
     else if (slice === 'mapScene' && isMapSceneSync(data)) {
       const incomingJSON = JSON.stringify(data);
       // Eco do nosso próprio publish — ignorar para não atropelar drag local.
-      if (incomingJSON === lastPublishedMapJSON) return;
+      if (incomingJSON === lastPublishedMapJSON || recentPublishedMapJSON.includes(incomingJSON)) return;
       if (shouldIgnoreRemoteMapScene()) return;
       const current = useMapStore.getState();
       const nextActiveId = data.activeSceneId || data.sceneOrder[0] || current.activeSceneId;
@@ -938,6 +946,7 @@ export function useMultiplayerSync() {
         if (otherScenesSame) {
           rememberLivePos();
           if (patches.length) {
+            markLocalEntityEdits(patches.map((p) => p.id));
             void worldBus.send({ type: 'broadcast', event: 'entity-patch', payload: { clientId, patches } });
           }
           persistMapLater();
