@@ -79,6 +79,7 @@ import { RestModal } from './RestModal';
 import { PreparedSpellsDialog } from './PreparedSpellsDialog';
 import { useAttributeLockConfirm } from './AttributeLockConfirm';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getOtimizacaoSlotsBonus } from '@/lib/suporteProtetor';
 
 interface Props {
   character: Character;
