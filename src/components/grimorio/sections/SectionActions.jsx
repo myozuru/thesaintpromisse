@@ -1257,9 +1257,10 @@ function ActionForm({ derived, draft, typeOptions, onAdd, onCancel }) {
         const resetTrades = resetTradesForAttackType(patch.attackType, prev.trades ?? TRADES_ZERO);
         next.trades = resetTrades;
         if (patch.attackType === "acerto") next.condition = BLANK_CONDITION;
-        const av = calcAutoRange(patch.attackType, next.rangeType, bt, next.areaRangeSteps);
+        const av = calcAutoRange(patch.attackType, next.rangeType, bt, next.areaRangeSteps, next.areaShape, next.lineWidthSteps);
         if (next.rangeLocked !== false) next.range = av.range;
         if (next.areaLocked  !== false) next.area  = av.area;
+        next.lineWidth = av.lineWidth;
         if (!prev.damage?.damageIsLocked) {
           const r = runFullCalc(patch.attackType, prev.condition, prev.damage?.narrativeType, prev.rangeType, resetTrades, prev.damage?.type);
           if (r) Object.assign(next, r, { damage: { ...prev.damage, ...r.damage, damageIsLocked: false } });
@@ -1343,9 +1344,10 @@ function ActionForm({ derived, draft, typeOptions, onAdd, onCancel }) {
 
   const updateRangeType = (newRangeType) =>
     setForm((prev) => {
-      const av = calcAutoRange(prev.attackType, newRangeType, bt, prev.areaRangeSteps);
+      const av = calcAutoRange(prev.attackType, newRangeType, bt, prev.areaRangeSteps, prev.areaShape, prev.lineWidthSteps);
       const rangeUpdates = {
         rangeType: newRangeType,
+        lineWidth: av.lineWidth,
         ...(prev.rangeLocked !== false ? { range: av.range } : {}),
         ...(prev.areaLocked  !== false ? { area:  av.area  } : {}),
       };
