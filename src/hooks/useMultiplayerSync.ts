@@ -499,6 +499,30 @@ export function useMultiplayerSync() {
       void worldBus.send({ type: 'broadcast', event: 'amizade', payload: { clientId, ...d } });
     };
     window.addEventListener('amizade:send', onAmizadeSend);
+    // Conceder Outra Chance (Suporte Nv 6): oferta/aceite/fechamento entre telas.
+    worldBus.on('broadcast', { event: 'outra-chance' }, ({ payload }) => {
+      void import('@/lib/suporteNivel6').then(
+        ({ useOutraChancePromptStore, shouldSeeOutraChancePrompt, reduceOutraChanceMessage }) => {
+          const r = reduceOutraChanceMessage(payload as never, clientId, (sid) =>
+            shouldSeeOutraChancePrompt(sid, useRoleStore.getState().role),
+          );
+          const st = useOutraChancePromptStore.getState();
+          if (r.type === 'close') st.close();
+          else if (r.type === 'open') st.open(r.offer);
+          else if (r.type === 'accept') {
+            st.close();
+            window.dispatchEvent(
+              new CustomEvent('outra-chance:apply', { detail: { requestId: r.requestId, rollerId: r.rollerId } }),
+            );
+          }
+        },
+      );
+    });
+    const onOutraChanceSend = (e: Event) => {
+      const d = (e as CustomEvent).detail ?? {};
+      void worldBus.send({ type: 'broadcast', event: 'outra-chance', payload: { clientId, ...d } });
+    };
+    window.addEventListener('outra-chance:send', onOutraChanceSend);
     worldBus.on('broadcast', { event: 'ping' }, ({ payload }) => {
       const p = payload as { clientId?: string; x?: number; y?: number; color?: string } | null;
       if (!p || p.clientId === clientId || typeof p.x !== 'number' || typeof p.y !== 'number') return;
@@ -1032,6 +1056,7 @@ export function useMultiplayerSync() {
       void supabase.removeChannel(cloudMapChannel);
       void supabase.removeChannel(cloudAssetChannel);
       window.removeEventListener('amizade:send', onAmizadeSend);
+      window.removeEventListener('outra-chance:send', onOutraChanceSend);
       void supabase.removeChannel(worldBus);
       if (chronosTimer) clearTimeout(chronosTimer);
       if (mapSceneTimer) clearTimeout(mapSceneTimer);

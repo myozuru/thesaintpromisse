@@ -18,7 +18,7 @@ import { useLogStore } from '@/stores/useLogStore';
 import { rollD20Com } from '@/lib/dice';
 import { getAttrModifier } from '@/components/fichas/CharacterCard';
 import { getTrainingBonus, getLevelSkillBonus } from '@/types';
-import { consumeAdvantageFor, peekAdvantageFor, type RollContext } from '@/lib/omni/rollAdvantage';
+import { consumeAdvantageFor, consumeFlatBonusFor, peekAdvantageFor, type RollContext } from '@/lib/omni/rollAdvantage';
 import { consumeAutoOutcomeFor, peekAutoOutcomeFor, type OutcomeContext } from '@/lib/omni/autoOutcome';
 import { Dice6, X, Check, Loader2, Hourglass } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -239,6 +239,48 @@ export function TestRequestOverlay() {
     }
   }, [current?.id]);
 
+  // Conceder Outra Chance (Suporte Nv 6): ao receber o aceite, o cliente dono
+  // da ficha rola de novo e fica com o MELHOR total.
+  useEffect(() => {
+    const onApply = (e: Event) => {
+      const { requestId, rollerId } = (e as CustomEvent).detail ?? {};
+      if (!requestId || !rollerId) return;
+      const state = useTestRequestStore.getState();
+      const req = state.requests.find((r) => r.id === requestId);
+      if (!req?.result || req.charId !== rollerId) return;
+      const chars = useCharacterStore.getState().characters;
+      const rollerChar = chars.find((x) => x.id === rollerId);
+      if (!rollerChar) return;
+      // Só o cliente dono da ficha rerola (mesma regra de posse do overlay).
+      const masterControlled = rollerChar.createdBy === 'MASTER' || rollerChar.category !== 'PLAYER';
+      const mine = isMaster
+        ? masterControlled
+        : !masterControlled && (!rollerChar.profileId || rollerChar.profileId === activeProfileId);
+      if (!mine) return;
+      void (async () => {
+        const prev = req.result!;
+        const newD20 = await rollD20Com(rollerId);
+        const newTotal = newD20 + prev.bonus;
+        const best = newTotal > prev.total
+          ? { d20: newD20, total: newTotal }
+          : { d20: prev.d20, total: prev.total };
+        state.setResult(requestId, {
+          ...prev,
+          d20: best.d20,
+          total: best.total,
+          rolls: [...(prev.rolls ?? [prev.d20]), newD20],
+        });
+        const dcTxt = req.dc != null ? ` vs CD ${req.dc} → ${best.total >= req.dc ? '✅ SUCESSO' : '❌ FALHA'}` : '';
+        useLogStore.getState().addLog(
+          'combat',
+          `🔁 ${rollerChar.name} — Outra Chance (${req.testName}): nova rolagem d20 ${newD20} (antes ${prev.d20}) → melhor total ${best.total}${dcTxt}`,
+        );
+      })();
+    };
+    window.addEventListener('outra-chance:apply', onApply);
+    return () => window.removeEventListener('outra-chance:apply', onApply);
+  }, [isMaster, activeProfileId]);
+
 
   if (!current) {
     return isMaster ? <MasterWatchPanel /> : null;
@@ -302,7 +344,11 @@ export function TestRequestOverlay() {
       }
     }
 
-    let total = d20 + bonus;
+    // Bônus fixos (ex: Apoio Focado do Suporte) somam no total e são consumidos.
+    const flat = consumeFlatBonusFor(char.id, ctx);
+    const totalBonus = bonus + flat.bonus;
+
+    let total = d20 + totalBonus;
     // Quando o resultado é FORÇADO e há CD, ajusta `total` pra garantir
     // o veredito visual (sucesso ≥ CD, falha < CD).
     if (auto.outcome && current.dc != null) {
@@ -319,7 +365,7 @@ export function TestRequestOverlay() {
       setRolling(false);
       setResult(current.id, {
         d20,
-        bonus,
+        bonus: totalBonus,
         total,
         rolledAt: Date.now(),
         advantageMode: advNet,
@@ -336,6 +382,7 @@ export function TestRequestOverlay() {
       const advTxt = advNet !== 'normal'
         ? ` [${advNet === 'advantage' ? 'Vantagem' : 'Desvantagem'} 2d20(${rolls.join(',')})→${d20}]`
         : '';
+      const flatTxt = flat.bonus ? ` ${flat.notes.join(' ')}` : '';
       const forcedTxt = auto.outcome
         ? ` [${auto.outcome === 'success' ? '✨ SUCESSO GARANTIDO' : '💀 FALHA GARANTIDA'}${auto.note ? ` · ${auto.note}` : ''}]`
         : '';
@@ -344,8 +391,29 @@ export function TestRequestOverlay() {
         : '';
       addLog(
         'combat',
-        `🎲 ${char.name} — ${kindLabel} (${current.testName}): d20 ${d20}${advTxt} ${bonus >= 0 ? '+' : ''}${bonus} = ${total}${forcedTxt}${dcTxt}`
+        `🎲 ${char.name} — ${kindLabel} (${current.testName}): d20 ${d20}${advTxt} ${totalBonus >= 0 ? '+' : ''}${totalBonus} = ${total}${flatTxt}${forcedTxt}${dcTxt}`
       );
+      // Conceder Outra Chance (Suporte Nv 6): falha com CD conhecida dispara a oferta.
+      if (passedFinal === false && !auto.outcome && current.dc != null && char.category === 'PLAYER') {
+        void (async () => {
+          const [{ findOutraChanceSupporter, sendOutraChanceOffer }, { useMapStore }] = await Promise.all([
+            import('@/lib/suporteNivel6'),
+            import('@/stores/useMapStore'),
+          ]);
+          const { entities, gridConfig } = useMapStore.getState();
+          const all = useCharacterStore.getState().characters;
+          const supporter = findOutraChanceSupporter(char.id, all, entities, gridConfig);
+          if (!supporter) return;
+          await sendOutraChanceOffer({
+            supporterId: supporter.id,
+            rollerId: char.id,
+            requestId: current.id,
+            testName: current.testName,
+            total,
+            dc: current.dc as number,
+          });
+        })();
+      }
     }, 1400);
   };
 

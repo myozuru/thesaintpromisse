@@ -720,6 +720,14 @@ export interface Character {
   keyAttribute?: 'Inteligência' | 'Sabedoria' | 'Presença';
   /** Suporte em Combate: usos da cura de toque gastos desde o último descanso. */
   suporteHealUsed?: number;
+  /** Suporte Nv 6 — Apoio Avançado: apoios conhecidos (1 no Nv 6, +1 no Nv 12). */
+  apoiosAvancados?: string[];
+  /** Suporte Nv 6 — Conceder Outra Chance: usos gastos (máx = bônus de treinamento). */
+  outraChanceUsed?: number;
+  /** Apoio Defensivo ativo: +value na Defesa até o início do próximo turno de grantedBy. */
+  apoioDefensivo?: { value: number; grantedBy?: string };
+  /** Apoio Estratégico ativo: +value na CD do próximo teste forçado, até o início do próximo turno de grantedBy. */
+  apoioEstrategico?: { value: number; grantedBy?: string };
   /** Suporte: usos gastos da Medicina Infalível (zera em descanso curto/longo). */
   medicinaInfalivelUsed?: number;
   /** Suporte: TR treinado escolhido no Nv 1 ('Astúcia' | 'Vontade'). O TR Mestre
