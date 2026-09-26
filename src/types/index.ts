@@ -720,6 +720,9 @@ export interface Character {
   keyAttribute?: 'Inteligência' | 'Sabedoria' | 'Presença';
   /** Suporte em Combate: usos da cura de toque gastos desde o último descanso. */
   suporteHealUsed?: number;
+  /** Presença Inspiradora (Suporte Nv 3): bônus em TODAS as rolagens de perícia
+   *  enquanto durar a cena. Zerado no reset de cena e nos descansos. */
+  inspiracaoBonus?: number;
   /** Mudanças de Fundamento aprendidas (Domínio dos Fundamentos). */
   tecnicaFundamentos?: string[];
   /** Foco Amaldiçoado escolhido no Nv 10 ('Destruição' | 'Economia' | 'Refino'). */

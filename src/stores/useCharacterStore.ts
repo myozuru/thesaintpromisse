@@ -4204,6 +4204,7 @@ export const useCharacterStore = create<CharacterStore>()(
               lastSpellUsedId: undefined,
               tecCombateAmaldicoadoActive: false,
               suporteHealUsed: 0,
+              inspiracaoBonus: 0,
             };
           }),
         }));
@@ -4337,6 +4338,7 @@ export const useCharacterStore = create<CharacterStore>()(
               lastSpellUsedId: undefined,
               tecCombateAmaldicoadoActive: false,
               suporteHealUsed: 0,
+              inspiracaoBonus: 0,
             };
           }),
         }));
@@ -4441,6 +4443,8 @@ export const useCharacterStore = create<CharacterStore>()(
               lastSpellUsedId: undefined,
               tecCombateAmaldicoadoActive: false,
               suporteHealUsed: 0,
+              // Presença Inspiradora: bônus de cena zera com a cena.
+              inspiracaoBonus: 0,
             };
           }),
         })),
