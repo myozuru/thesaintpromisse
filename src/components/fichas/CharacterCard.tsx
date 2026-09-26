@@ -918,11 +918,11 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
     const passiveAggEarly = aggregateSpecAbilityEffects(c);
     const isAstucia = (name || '').trim().toLowerCase() === 'astúcia' || (name || '').trim().toLowerCase() === 'astucia';
     const concentrationBonus = isAstucia ? passiveAggEarly.concentrationCheckBonus : 0;
-    // Presença Inspiradora (Suporte Nv 3): bônus de cena em TODAS as perícias.
-    const inspiracao = isSavingThrowCheck(name) ? 0 : (c.inspiracaoBonus ?? 0);
-    const totalBonus = baseBonus + attrMod + itemBonus + trainBonus + levelBonus + extBonus + auraSkillBonus + conditionSkillBonus + saveBonus + sentidosBonus + concentrationBonus + omniSkillBonus + inspiracao;
     // Bastião Interior (Tier 6) — Vantagem em TR vs Amedrontado / Desorientado / Enfeitiçado.
     const isSavingThrow = (c.savingThrows || []).some(st => st.name === name);
+    // Presença Inspiradora (Suporte Nv 3): bônus de cena em TODAS as perícias (não em TRs).
+    const inspiracao = isSavingThrow ? 0 : (c.inspiracaoBonus ?? 0);
+    const totalBonus = baseBonus + attrMod + itemBonus + trainBonus + levelBonus + extBonus + auraSkillBonus + conditionSkillBonus + saveBonus + sentidosBonus + concentrationBonus + omniSkillBonus + inspiracao;
     const activeCondIds = (c.activeConditions || []).map(ac => (ac.conditionId || '').toLowerCase());
     const triggersBastiao =
       isSavingThrow &&
@@ -944,8 +944,9 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
     const condLabel = conditionSkillBonus !== 0 ? ` (${conditionSkillBonus > 0 ? '+' : ''}${conditionSkillBonus} cond.)` : '';
     const specLabel = saveBonus > 0 ? ` (+${saveBonus} foco)` : '';
     const sentidosLabel = sentidosBonus > 0 ? ` (+${sentidosBonus} sentidos)` : '';
+    const inspiracaoLabel = inspiracao > 0 ? ` (+${inspiracao} inspiração)` : '';
     const masteryLabel = promotedMastery && !mastery ? ' [Maestria/Spec]' : '';
-    showRollAnimation(name + auraLabel + condLabel + specLabel + sentidosLabel + masteryLabel + bastiaoLabel + modeLabel, d20, totalBonus, d20 + totalBonus);
+    showRollAnimation(name + auraLabel + condLabel + specLabel + sentidosLabel + inspiracaoLabel + masteryLabel + bastiaoLabel + modeLabel, d20, totalBonus, d20 + totalBonus);
   };
 
   const [hitTargets, setHitTargets] = useState<string[]>([]);
