@@ -1,7 +1,9 @@
 import { useRef, useState } from 'react';
-import { User, Lock, ImagePlus } from 'lucide-react';
+import { User, Lock, ImagePlus, Eye, EyeOff, LoaderCircle } from 'lucide-react';
 import { JjkSwirl } from '@/components/JjkSwirl';
 import { authDb, nickToEmail, normalizeNick, NICK_RE, applyUser } from '@/lib/auth';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 type Tab = 'login' | 'signup';
 
@@ -13,6 +15,7 @@ export function AuthScreen() {
   const [avatar, setAvatar] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const pickAvatar = (file: File) => {
@@ -32,94 +35,140 @@ export function AuthScreen() {
     setBusy(true);
     try {
       if (tab === 'signup') {
-        if (password !== confirm) return setError('As senhas não conferem');
+        if (password !== confirm) {
+          setError('As senhas não conferem');
+          return;
+        }
         const { data: taken } = await authDb.from('profiles').select('id').eq('nick', n).maybeSingle();
-        if (taken) return setError('Este nick já está em uso');
+        if (taken) {
+          setError('Este nick já está em uso');
+          return;
+        }
         const { data, error: err } = await authDb.auth.signUp({
           email: nickToEmail(n),
           password,
           options: { data: { nick: n, avatar } },
         });
-        if (err) return setError(err.message.includes('registered') ? 'Este nick já está em uso' : 'Não foi possível criar a conta');
+        if (err) {
+          setError(err.message.includes('registered') ? 'Este nick já está em uso' : 'Não foi possível criar a conta');
+          return;
+        }
         if (data.user && data.session) await applyUser(data.user);
       } else {
         const { data, error: err } = await authDb.auth.signInWithPassword({ email: nickToEmail(n), password });
-        if (err || !data.user) return setError('Nick ou senha incorretos');
+        if (err || !data.user) {
+          setError('Nick ou senha incorretos');
+          return;
+        }
         await applyUser(data.user);
       }
+    } catch {
+      setError('Não foi possível conectar. Tente novamente.');
     } finally {
       setBusy(false);
     }
   };
 
-  const input =
-    'w-full h-10 rounded-lg border border-input bg-background pl-9 pr-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30';
+  const changeTab = (next: Tab) => {
+    if (busy || next === tab) return;
+    setTab(next);
+    setError('');
+    setConfirm('');
+  };
+
+  const input = 'h-12 rounded-lg border-border/70 bg-background/70 pl-10 pr-11 text-sm shadow-inner';
 
   return (
-    <div className="fixed inset-0 z-[100] bg-background flex items-center justify-center overflow-y-auto animate-fade-in">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-background px-4 py-8 animate-fade-in">
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <JjkSwirl size={800} className="opacity-[0.06]" />
+        <JjkSwirl size={820} className="opacity-[0.08]" />
       </div>
-      <div className="relative z-10 w-full max-w-md px-6 py-10">
-        <h1
-          className="text-4xl text-center text-primary tracking-[0.2em] mb-8"
-          style={{ fontFamily: "'Cinzel Decorative', serif", textShadow: '0 0 20px hsla(270, 100%, 50%, 0.6)' }}
-        >
-          {tab === 'login' ? 'Entrar' : 'Criar Conta'}
-        </h1>
+      <div className="pointer-events-none absolute left-4 top-4 h-12 w-12 border-l border-t border-border/70" aria-hidden />
+      <div className="pointer-events-none absolute bottom-4 right-4 h-12 w-12 border-b border-r border-border/70" aria-hidden />
 
-        <form onSubmit={submit} className="rounded-2xl border-2 border-primary/40 bg-card p-7 space-y-3">
-          <div className="grid grid-cols-2 gap-1 rounded-lg bg-secondary p-1 mb-2">
+      <section className="relative z-10 w-full max-w-[420px] overflow-hidden rounded-2xl border border-border/70 bg-card/80 p-7 shadow-[var(--shadow-occult)] backdrop-blur-2xl sm:p-9 animate-scale-in">
+        <div className="pointer-events-none absolute inset-0 rounded-2xl border border-foreground/5" aria-hidden />
+        <header className="mb-8 text-center">
+          <h1 className="text-3xl font-bold text-foreground glow-text tracking-[0.18em]">THE PROMISSE</h1>
+          <p className="mt-2 text-xs uppercase text-muted-foreground tracking-[0.14em]">Conecte-se ao destino</p>
+        </header>
+
+        <div className="grid grid-cols-2 gap-1 rounded-xl border border-border/50 bg-background/50 p-1" role="tablist" aria-label="Tipo de acesso">
             {(['login', 'signup'] as Tab[]).map((t) => (
-              <button
+              <Button
                 key={t}
                 type="button"
-                onClick={() => { setTab(t); setError(''); }}
-                className={`h-8 rounded-md text-sm transition-colors ${tab === t ? 'bg-primary text-primary-foreground font-bold' : 'text-muted-foreground hover:text-foreground'}`}
-                style={{ fontFamily: "'Cinzel', serif" }}
+                role="tab"
+                aria-selected={tab === t}
+                onClick={() => changeTab(t)}
+                variant="ghost"
+                className={`h-9 rounded-lg text-xs uppercase transition-all duration-300 ${tab === t ? 'bg-secondary text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
               >
                 {t === 'login' ? 'Entrar' : 'Criar conta'}
-              </button>
+              </Button>
             ))}
-          </div>
+        </div>
 
-          {tab === 'signup' && (
-            <div className="flex flex-col items-center">
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                className="w-20 h-20 rounded-full overflow-hidden border-2 border-primary/50 bg-secondary flex items-center justify-center hover:border-primary"
-              >
-                {avatar ? <img src={avatar} alt="" className="w-full h-full object-cover" /> : <ImagePlus className="h-7 w-7 text-primary/70" />}
-              </button>
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) pickAvatar(f); e.target.value = ''; }} />
-              <p className="text-[10px] text-muted-foreground mt-1">Foto (opcional)</p>
+        <form onSubmit={submit} className="mt-7 space-y-5" aria-busy={busy}>
+          <div className={`grid transition-[grid-template-rows,opacity,margin] duration-300 ease-out ${tab === 'signup' ? 'grid-rows-[1fr] opacity-100 mb-1' : 'grid-rows-[0fr] opacity-0 -mb-5'}`}>
+            <div className="overflow-hidden">
+              <div className="flex flex-col items-center pb-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  aria-label="Escolher foto de perfil"
+                  onClick={() => fileRef.current?.click()}
+                  className="h-20 w-20 overflow-hidden rounded-full border-dashed bg-background/60 hover:border-primary"
+                >
+                  {avatar ? <img src={avatar} alt="Foto escolhida" className="h-full w-full object-cover" /> : <ImagePlus className="text-primary/70" />}
+                </Button>
+                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) pickAvatar(f); e.target.value = ''; }} />
+                <p className="mt-2 text-[10px] uppercase text-muted-foreground tracking-[0.12em]">Foto opcional</p>
+              </div>
             </div>
-          )}
+          </div>
 
-          <div className="relative">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input value={nick} onChange={(e) => setNick(e.target.value)} placeholder="Nick" maxLength={20} autoComplete="username" className={input} />
-          </div>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Senha" autoComplete={tab === 'login' ? 'current-password' : 'new-password'} className={input} />
-          </div>
-          {tab === 'signup' && (
+          <label className="block space-y-2">
+            <span className="ml-1 text-[11px] uppercase text-muted-foreground tracking-[0.12em]">Nick</span>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Confirmar senha" autoComplete="new-password" className={input} />
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input value={nick} onChange={(e) => setNick(e.target.value)} placeholder="Ex: noctis" maxLength={20} autoComplete="username" spellCheck={false} disabled={busy} className={input} />
             </div>
-          )}
+          </label>
+          <label className="block space-y-2">
+            <span className="ml-1 text-[11px] uppercase text-muted-foreground tracking-[0.12em]">Senha</span>
+            <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo de 6 caracteres" autoComplete={tab === 'login' ? 'current-password' : 'new-password'} disabled={busy} className={input} />
+              <Button type="button" variant="ghost" size="icon-sm" onClick={() => setShowPassword((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}>
+                {showPassword ? <EyeOff /> : <Eye />}
+              </Button>
+            </div>
+          </label>
 
-          {error && <p className="text-sm text-hp text-center">{error}</p>}
+          <div className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${tab === 'signup' ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+            <div className="overflow-hidden">
+              <label className="block space-y-2">
+                <span className="ml-1 text-[11px] uppercase text-muted-foreground tracking-[0.12em]">Confirmar senha</span>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input type={showPassword ? 'text' : 'password'} value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Repita sua senha" autoComplete="new-password" disabled={busy} className={input} />
+                </div>
+              </label>
+            </div>
+          </div>
 
-          <button type="submit" disabled={busy} className="w-full h-10 rounded-lg bg-primary text-primary-foreground font-bold hover:opacity-90 disabled:opacity-50">
-            {busy ? 'Aguarde…' : tab === 'login' ? 'Entrar' : 'Criar e entrar'}
-          </button>
+          <div className="min-h-5" aria-live="polite">
+            {error && <p className="text-center text-sm text-destructive animate-fade-in">{error}</p>}
+          </div>
+
+          <Button type="submit" variant="mystic" disabled={busy} className="h-12 w-full rounded-lg text-xs uppercase tracking-[0.12em] active:scale-[0.98]">
+            {busy && <LoaderCircle className="animate-spin" />}
+            {busy ? 'Conectando…' : tab === 'login' ? 'Prosseguir jornada' : 'Criar e prosseguir'}
+          </Button>
         </form>
-
-      </div>
+      </section>
     </div>
   );
 }

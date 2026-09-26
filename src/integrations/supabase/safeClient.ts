@@ -1,5 +1,6 @@
 // Sem configuração própria do Cloud, o clone usa apenas o stub offline.
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { supabase as workspaceClient } from './client';
 
 const env = (typeof import.meta !== 'undefined' ? import.meta.env : undefined) as
   | Record<string, string | undefined>
@@ -37,9 +38,7 @@ function buildStub(): SupabaseClient {
 
 let client: SupabaseClient;
 if (hasWorkspaceCloud && url && key) {
-  client = createClient(url, key, {
-    auth: { storage: typeof localStorage !== 'undefined' ? localStorage : undefined, persistSession: true, autoRefreshToken: true },
-  });
+  client = workspaceClient as unknown as SupabaseClient;
 } else {
   client = buildStub();
 }

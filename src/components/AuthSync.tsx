@@ -8,11 +8,11 @@ export function AuthSync() {
     let alive = true;
     authDb.auth.getUser().then(({ data }) => {
       if (!alive) return;
-      if (data.user) void applyUser(data.user);
-      else if (useRoleStore.getState().role === 'MASTER') useRoleStore.getState().logout();
+      if (data.user) void applyUser(data.user).catch(() => useRoleStore.getState().logout());
+      else useRoleStore.getState().logout();
     });
     const { data: sub } = authDb.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) void applyUser(session.user);
+      if (event === 'SIGNED_IN' && session?.user) void applyUser(session.user).catch(() => useRoleStore.getState().logout());
       if (event === 'SIGNED_OUT') useRoleStore.getState().logout();
     });
     return () => {

@@ -112,8 +112,8 @@ export default function Index() {
     if (flashActive) return;
     playOpeningSound();
     setFlashActive(true);
-    setTimeout(() => setFadingOut(true), 800);
-    setTimeout(() => setShowSplash(false), 2000);
+    setTimeout(() => setFadingOut(true), 260);
+    setTimeout(() => setShowSplash(false), 850);
   };
 
   const handleTabChange = (tab: TabId) => {

@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 
 export type UserRole = 'PLAYER' | 'MASTER' | null;
 
@@ -9,13 +8,8 @@ interface RoleState {
   logout: () => void;
 }
 
-export const useRoleStore = create<RoleState>()(
-  persist(
-    (set) => ({
-      role: null,
-      setRole: (role) => set({ role }),
-      logout: () => set({ role: null }),
-    }),
-    { name: 'rpg-role' }
-  )
-);
+export const useRoleStore = create<RoleState>()((set) => ({
+  role: null,
+  setRole: (role) => set({ role }),
+  logout: () => set({ role: null }),
+}));
