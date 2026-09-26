@@ -1502,6 +1502,14 @@ const SUPORTE: SpecAbility[] = [
     triggerText: 'Pergunta automática quando um aliado jogador cai a 0 PV.',
     logicText: 'Aceitar gasta 1 reação e libera metade do movimento para arrastar a peça fora do turno, até o início do seu próximo turno.',
   },
+  {
+    id: 'sup-transmitir-conhecimento', name: 'Transmitir Conhecimento', tier: 2, specialization: 'Suporte',
+    flavor: 'Um bom mentor deixa o grupo inteiro mais capaz.',
+    mechanic: 'Durante um descanso, conceda treinamento temporário em perícias que você é treinado. Limite de aliados: metade do bônus de treinamento (descanso curto) ou o bônus de treinamento (descanso longo). Dura até o próximo descanso do aliado.',
+    activation: 'passive',
+    triggerText: 'Painel do Suporte — escolha o tipo de descanso, o aliado e a perícia.',
+    logicText: 'Marca a perícia do aliado como treinada (registrada em transmitirTempSkills) e remove o treinamento no próximo descanso do aliado.',
+  },
 ];
 
 // ===== Registry global =====================================================

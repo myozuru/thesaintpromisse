@@ -756,6 +756,12 @@ export interface Character {
   mobilidadeReacaoM?: number;
   /** Mobilidade Avançada: movimento já usado quando a reação foi aceita. */
   mobilidadeReacaoBase?: number;
+  /** Transmitir Conhecimento (no ALIADO): perícias temporariamente treinadas,
+   *  removidas no próximo descanso (curto ou longo) do aliado. */
+  transmitirTempSkills?: string[];
+  /** Transmitir Conhecimento (no SUPORTE): sessão do descanso atual —
+   *  modo e aliados já preparados (limite: ⌊BT/2⌋ curto, BT longo). */
+  transmitirSession?: { mode: 'curto' | 'longo'; allyIds: string[] };
   /** Mudanças de Fundamento aprendidas (Domínio dos Fundamentos). */
   tecnicaFundamentos?: string[];
   /** Foco Amaldiçoado escolhido no Nv 10 ('Destruição' | 'Economia' | 'Refino'). */
