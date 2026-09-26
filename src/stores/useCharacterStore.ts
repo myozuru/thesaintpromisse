@@ -4203,6 +4203,7 @@ export const useCharacterStore = create<CharacterStore>()(
               aptitudeOnlyTempPE: 0,
               lastSpellUsedId: undefined,
               tecCombateAmaldicoadoActive: false,
+              suporteHealUsed: 0,
             };
           }),
         }));
@@ -4335,6 +4336,7 @@ export const useCharacterStore = create<CharacterStore>()(
               aptitudeOnlyTempPE: 0,
               lastSpellUsedId: undefined,
               tecCombateAmaldicoadoActive: false,
+              suporteHealUsed: 0,
             };
           }),
         }));
@@ -4438,6 +4440,7 @@ export const useCharacterStore = create<CharacterStore>()(
               aptitudeOnlyTempPE: 0,
               lastSpellUsedId: undefined,
               tecCombateAmaldicoadoActive: false,
+              suporteHealUsed: 0,
             };
           }),
         })),

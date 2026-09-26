@@ -718,6 +718,8 @@ export interface Character {
   /** Atributo-chave da especialização. Técnica: 'Inteligência' ou 'Sabedoria';
    * Suporte: 'Presença' ou 'Sabedoria'. Definido no wizard. */
   keyAttribute?: 'Inteligência' | 'Sabedoria' | 'Presença';
+  /** Suporte em Combate: usos da cura de toque gastos desde o último descanso. */
+  suporteHealUsed?: number;
   /** Mudanças de Fundamento aprendidas (Domínio dos Fundamentos). */
   tecnicaFundamentos?: string[];
   /** Foco Amaldiçoado escolhido no Nv 10 ('Destruição' | 'Economia' | 'Refino'). */
