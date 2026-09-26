@@ -4,6 +4,8 @@ import type { Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { getEnergiaReversaConfig } from '@/lib/auraEffects';
+import { useMapStore } from '@/stores/useMapStore';
+import { checkTouchTarget } from '@/lib/touchRange';
 import { playErrorSound, playSuccessSound } from '@/lib/sounds';
 
 interface Props {
@@ -20,6 +22,8 @@ export function EnergiaReversaDialog({ character: c, onClose }: Props) {
   const [per, setPer] = useState(1);
   const [targetId, setTargetId] = useState(c.id);
   const [busy, setBusy] = useState(false);
+  const entities = useMapStore(s => s.entities);
+  const gridConfig = useMapStore(s => s.gridConfig);
   if (!cfg) return null;
 
   const maxByPe = Math.floor((c.peCurrent ?? 0) / 2);
@@ -27,6 +31,8 @@ export function EnergiaReversaDialog({ character: c, onClose }: Props) {
   const dice = per * 2 + cfg.bonusDiceFromLevel;
   const mod = cfg.keyAttrMod * cfg.modMultiplier;
   const targets = cfg.hasLiberacao ? characters : [c];
+
+  const touchBlock = checkTouchTarget(c.id, targetId, entities, gridConfig);
 
   const submit = async () => {
     setBusy(true);
@@ -55,7 +61,7 @@ export function EnergiaReversaDialog({ character: c, onClose }: Props) {
         </div>
 
         <label className="block text-xs text-muted-foreground">
-          Alvo {cfg.hasLiberacao ? '(alcance de toque)' : '(apenas você — precisa de Liberação de ER para curar outros)'}
+          Alvo {cfg.hasLiberacao ? '(toque: até 1,5 m no mapa)' : '(apenas você — precisa de Liberação de ER para curar outros)'}
           <select
             value={targetId}
             onChange={e => setTargetId(e.target.value)}
@@ -64,10 +70,11 @@ export function EnergiaReversaDialog({ character: c, onClose }: Props) {
           >
             {targets.map(t => (
               <option key={t.id} value={t.id}>
-                {t.id === c.id ? `${t.name} (você)` : t.name} — {t.hpCurrent}/{t.hpMax} PV
+                {t.id === c.id ? `${t.name} (você)` : t.name} — {t.hpCurrent}/{t.hpMax} PV{t.id !== c.id && checkTouchTarget(c.id, t.id, entities, gridConfig) ? ' · fora do toque' : ''}
               </option>
             ))}
           </select>
+          {touchBlock && <span className="mt-1 block text-destructive">{touchBlock}</span>}
         </label>
 
         <label className="block text-xs text-muted-foreground">
@@ -91,10 +98,10 @@ export function EnergiaReversaDialog({ character: c, onClose }: Props) {
 
         <button
           onClick={submit}
-          disabled={busy || per > maxByPe}
+          disabled={busy || per > maxByPe || !!touchBlock}
           className="w-full rounded-md bg-primary py-2 text-sm font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
-          {per > maxByPe ? 'PE insuficiente' : busy ? 'Rolando…' : 'Curar'}
+          {touchBlock ? 'Fora do alcance de toque' : per > maxByPe ? 'PE insuficiente' : busy ? 'Rolando…' : 'Curar'}
         </button>
       </div>
     </div>

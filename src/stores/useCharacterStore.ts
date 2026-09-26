@@ -3822,6 +3822,13 @@ export const useCharacterStore = create<CharacterStore>()(
         if (!get().characters.some(x => x.id === tgtId)) {
           return { ok: false, reason: 'Alvo não encontrado.' };
         }
+        if (tgtId !== charId) {
+          const { useMapStore } = await import('@/stores/useMapStore');
+          const { checkTouchTarget } = await import('@/lib/touchRange');
+          const ms = useMapStore.getState();
+          const why = checkTouchTarget(charId, tgtId, ms.entities, ms.gridConfig);
+          if (why) return { ok: false, reason: why };
+        }
         if (c0.peCurrent < peCost) {
           return { ok: false, reason: `PE insuficiente (${c0.peCurrent}/${peCost}).` };
         }
