@@ -356,8 +356,9 @@ function buildPatch(creature: Creature, current: Character): Partial<Character> 
       const shapeLabel = shapeLabelMap[shapeKey] ?? 'Esfera';
       const areaNum = parseFloat(String(act.area ?? '').replace(',', '.').match(/[\d.]+/)?.[0] ?? '0');
       if (areaNum > 0) {
+        const lineWidth = Number(act.lineWidth) > 0 ? Number(act.lineWidth) : 1.5;
         const sizeStr = (shapeKey === 'line' || shapeKey === 'line_attached')
-          ? `${areaNum}m x 1.5m`
+          ? `${areaNum}m x ${lineWidth}m`
           : `${areaNum}m`;
         const areaLine = `Área: ${shapeLabel} (${sizeStr})`;
         finalDescription = finalDescription

@@ -375,27 +375,60 @@ const fmtM = (n) => `${String(n).replace(".", ",")} Metros`;
 // de alcance (e vice-versa). A área nunca fica abaixo de 1,5m.
 const AREA_TRADE_STEP_M  = 1.5;
 const RANGE_TRADE_STEP_M = 12;
-function maxAreaRangeSteps(bt) {
+// Regra do livro (Linha): área em Linha é multiplicada por 1,5 e começa com
+// 1,5m de largura; cada +1,5m de largura custa 4,5m de comprimento.
+const LINE_AREA_MULT      = 1.5;
+const LINE_BASE_WIDTH_M   = 1.5;
+const LINE_WIDTH_STEP_M   = 1.5;
+const LINE_LENGTH_COST_M  = 4.5;
+
+const isLineShape = (shape) => shape === "line" || shape === "line_attached";
+
+function baseAreaFor(bt, areaShape) {
   const params = getActionParams(bt);
-  return Math.max(0, Math.floor((params.area - AREA_TRADE_STEP_M) / AREA_TRADE_STEP_M + 1e-9));
+  return isLineShape(areaShape) ? params.area * LINE_AREA_MULT : params.area;
 }
-function calcAutoRange(attackType, rangeType, bt, areaRangeSteps = 0) {
+
+function maxAreaRangeSteps(bt, areaShape) {
+  const base = baseAreaFor(bt, areaShape);
+  return Math.max(0, Math.floor((base - AREA_TRADE_STEP_M) / AREA_TRADE_STEP_M + 1e-9));
+}
+
+function maxLineWidthSteps(bt, areaShape, areaRangeSteps = 0) {
+  if (!isLineShape(areaShape)) return 0;
+  const steps = Math.max(0, Math.min(maxAreaRangeSteps(bt, areaShape), Number(areaRangeSteps) || 0));
+  const afterRange = baseAreaFor(bt, areaShape) - steps * AREA_TRADE_STEP_M;
+  // o comprimento nunca fica abaixo de 1,5m
+  return Math.max(0, Math.floor((afterRange - AREA_TRADE_STEP_M) / LINE_LENGTH_COST_M + 1e-9));
+}
+
+function calcAutoRange(attackType, rangeType, bt, areaRangeSteps = 0, areaShape = "circle", lineWidthSteps = 0) {
   const params = getActionParams(bt);
   const isArea = attackType === "tr_area";
+  const isLine = isArea && isLineShape(areaShape);
   const steps  = isArea && rangeType !== "cac"
-    ? Math.max(0, Math.min(maxAreaRangeSteps(bt), Number(areaRangeSteps) || 0))
+    ? Math.max(0, Math.min(maxAreaRangeSteps(bt, areaShape), Number(areaRangeSteps) || 0))
     : 0;
-  const area  = params.area  - steps * AREA_TRADE_STEP_M;
+  const base  = baseAreaFor(bt, areaShape);
+  let area    = base - steps * AREA_TRADE_STEP_M;
+  let lineWidth = 0;
+  if (isLine) {
+    const wSteps = Math.max(0, Math.min(maxLineWidthSteps(bt, areaShape, steps), Number(lineWidthSteps) || 0));
+    area      = area - wSteps * LINE_LENGTH_COST_M;
+    lineWidth = LINE_BASE_WIDTH_M + wSteps * LINE_WIDTH_STEP_M;
+  }
   const range = params.range + steps * RANGE_TRADE_STEP_M;
   if (rangeType === "cac") {
     return {
       range: "Corpo-a-Corpo",
-      area:  isArea ? fmtM(params.area) : "-",
+      area:  isArea ? fmtM(base) : "-",
+      lineWidth: isLine ? LINE_BASE_WIDTH_M : 0,
     };
   }
   return {
     range: fmtM(range),
     area:  isArea ? fmtM(area) : "-",
+    lineWidth,
   };
 }
 
@@ -470,6 +503,8 @@ function normalizeAction(action) {
     rangeLocked: action.rangeLocked ?? true,
     areaLocked:  action.areaLocked  ?? true,
     areaShape:   action.areaShape   ?? "circle",
+    lineWidthSteps: action.lineWidthSteps ?? 0,
+    lineWidth:      action.lineWidth      ?? 0,
     damage: {
       type: "cortante",
       isNarrativePhysical: false,
@@ -975,9 +1010,10 @@ function ActionItem({ action, patamar, nd, bt, creatureName, typeOptions, onUpda
       const resetTrades = resetTradesForAttackType(patch.attackType, norm.trades ?? TRADES_ZERO);
       const basePatch   = { ...patch, trades: resetTrades };
       if (patch.attackType === "acerto") basePatch.condition = BLANK_CONDITION;
-      const av = calcAutoRange(patch.attackType, norm.rangeType, bt, norm.areaRangeSteps);
+      const av = calcAutoRange(patch.attackType, norm.rangeType, bt, norm.areaRangeSteps, norm.areaShape, norm.lineWidthSteps);
       if (norm.rangeLocked !== false) basePatch.range = av.range;
       if (norm.areaLocked  !== false) basePatch.area  = av.area;
+      basePatch.lineWidth = av.lineWidth;
       if (!norm.damage?.damageIsLocked) {
         const r = runFullCalc(patch.attackType, norm.condition, norm.damage?.narrativeType, norm.rangeType, resetTrades, norm.damage?.type);
         if (r) { onUpdate({ ...basePatch, ...r, damage: { ...norm.damage, ...r.damage } }); return; }
@@ -1052,9 +1088,10 @@ function ActionItem({ action, patamar, nd, bt, creatureName, typeOptions, onUpda
   };
 
   const updateRangeType = (newRangeType) => {
-    const av = calcAutoRange(norm.attackType, newRangeType, bt, norm.areaRangeSteps);
+    const av = calcAutoRange(norm.attackType, newRangeType, bt, norm.areaRangeSteps, norm.areaShape, norm.lineWidthSteps);
     const rangePatch = {
       rangeType: newRangeType,
+      lineWidth: av.lineWidth,
       ...(norm.rangeLocked !== false ? { range: av.range } : {}),
       ...(norm.areaLocked  !== false ? { area:  av.area  } : {}),
     };
@@ -1220,9 +1257,10 @@ function ActionForm({ derived, draft, typeOptions, onAdd, onCancel }) {
         const resetTrades = resetTradesForAttackType(patch.attackType, prev.trades ?? TRADES_ZERO);
         next.trades = resetTrades;
         if (patch.attackType === "acerto") next.condition = BLANK_CONDITION;
-        const av = calcAutoRange(patch.attackType, next.rangeType, bt, next.areaRangeSteps);
+        const av = calcAutoRange(patch.attackType, next.rangeType, bt, next.areaRangeSteps, next.areaShape, next.lineWidthSteps);
         if (next.rangeLocked !== false) next.range = av.range;
         if (next.areaLocked  !== false) next.area  = av.area;
+        next.lineWidth = av.lineWidth;
         if (!prev.damage?.damageIsLocked) {
           const r = runFullCalc(patch.attackType, prev.condition, prev.damage?.narrativeType, prev.rangeType, resetTrades, prev.damage?.type);
           if (r) Object.assign(next, r, { damage: { ...prev.damage, ...r.damage, damageIsLocked: false } });
@@ -1306,9 +1344,10 @@ function ActionForm({ derived, draft, typeOptions, onAdd, onCancel }) {
 
   const updateRangeType = (newRangeType) =>
     setForm((prev) => {
-      const av = calcAutoRange(prev.attackType, newRangeType, bt, prev.areaRangeSteps);
+      const av = calcAutoRange(prev.attackType, newRangeType, bt, prev.areaRangeSteps, prev.areaShape, prev.lineWidthSteps);
       const rangeUpdates = {
         rangeType: newRangeType,
+        lineWidth: av.lineWidth,
         ...(prev.rangeLocked !== false ? { range: av.range } : {}),
         ...(prev.areaLocked  !== false ? { area:  av.area  } : {}),
       };
@@ -1516,14 +1555,14 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
 
   const rangeLocked = form.rangeLocked !== false;
   const areaLocked  = form.areaLocked  !== false;
-  const autoVals    = calcAutoRange(form.attackType, rangeType, bt, form.areaRangeSteps);
+  const autoVals    = calcAutoRange(form.attackType, rangeType, bt, form.areaRangeSteps, form.areaShape, form.lineWidthSteps);
 
   const toggleRangeLock = () => {
     if (!rangeLocked) update({ rangeLocked: true, range: autoVals.range });
     else update({ rangeLocked: false });
   };
   const toggleAreaLock = () => {
-    if (!areaLocked) update({ areaLocked: true, area: autoVals.area });
+    if (!areaLocked) update({ areaLocked: true, area: autoVals.area, lineWidth: autoVals.lineWidth });
     else update({ areaLocked: false });
   };
 
@@ -1762,7 +1801,7 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
             Alcance Máx: <span className="text-slate-300">{params.range}m</span>
           </span>
           <span className="text-slate-500">
-            Área Máx: <span className="text-slate-300">{params.area}m</span>
+            Área Máx: <span className="text-slate-300">{baseAreaFor(bt, form.areaShape)}m{isLineShape(form.areaShape) ? " (×1,5 linha)" : ""}</span>
           </span>
           {rangeType === "cac" && (
             <span className="text-emerald-400 font-semibold">
@@ -1839,7 +1878,16 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
                 <button
                   key={opt.id}
                   type="button"
-                  onClick={() => update({ areaShape: opt.id })}
+                  onClick={() => {
+                    const av = calcAutoRange(form.attackType, rangeType, bt, form.areaRangeSteps, opt.id, 0);
+                    update({
+                      areaShape: opt.id,
+                      lineWidthSteps: 0,
+                      lineWidth: av.lineWidth,
+                      ...(areaLocked ? { area: av.area } : {}),
+                      ...(rangeLocked ? { range: av.range } : {}),
+                    });
+                  }}
                   title={opt.id === "cone_attached" ? "Cone com apex no conjurador, mirando na direção do cursor (grudado no personagem)" : opt.id === "line_attached" ? "Linha que parte do conjurador, mirando na direção do cursor (grudada no personagem)" : opt.label}
                   className={`h-9 rounded border text-[11px] font-medium transition-colors focus:outline-none ${
                     active
@@ -1857,12 +1905,12 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
 
       {/* Reduzir área → aumentar alcance (regra do livro) */}
       {form.attackType === "tr_area" && rangeType !== "cac" && (() => {
-        const maxSteps = maxAreaRangeSteps(bt);
+        const maxSteps = maxAreaRangeSteps(bt, form.areaShape);
         const steps = Math.max(0, Math.min(maxSteps, Number(form.areaRangeSteps) || 0));
         const setSteps = (v) => {
           const n = Math.max(0, Math.min(maxSteps, v));
-          const av = calcAutoRange(form.attackType, rangeType, bt, n);
-          update({ areaRangeSteps: n, rangeLocked: true, areaLocked: true, range: av.range, area: av.area });
+          const av = calcAutoRange(form.attackType, rangeType, bt, n, form.areaShape, form.lineWidthSteps);
+          update({ areaRangeSteps: n, rangeLocked: true, areaLocked: true, range: av.range, area: av.area, lineWidth: av.lineWidth });
         };
         return (
           <div className="rounded border border-slate-800 bg-slate-950/40 p-2.5">
@@ -1877,6 +1925,35 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
                 {steps > 0
                   ? `Área −${String(steps * AREA_TRADE_STEP_M).replace(".", ",")}m · Alcance +${steps * RANGE_TRADE_STEP_M}m`
                   : maxSteps > 0 ? "Sem troca" : "Área já está no mínimo (1,5m)"}
+              </span>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Linha: aumentar largura reduzindo o comprimento (regra do livro) */}
+      {form.attackType === "tr_area" && rangeType !== "cac" && isLineShape(form.areaShape) && (() => {
+        const maxWSteps = maxLineWidthSteps(bt, form.areaShape, form.areaRangeSteps);
+        const wSteps = Math.max(0, Math.min(maxWSteps, Number(form.lineWidthSteps) || 0));
+        const setWSteps = (v) => {
+          const n = Math.max(0, Math.min(maxWSteps, v));
+          const av = calcAutoRange(form.attackType, rangeType, bt, form.areaRangeSteps, form.areaShape, n);
+          update({ lineWidthSteps: n, rangeLocked: true, areaLocked: true, range: av.range, area: av.area, lineWidth: av.lineWidth });
+        };
+        const curWidth = LINE_BASE_WIDTH_M + wSteps * LINE_WIDTH_STEP_M;
+        return (
+          <div className="rounded border border-slate-800 bg-slate-950/40 p-2.5">
+            <FieldLabel hint="−4,5m de comprimento = +1,5m de largura">Aumentar Largura da Linha</FieldLabel>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setWSteps(wSteps - 1)} disabled={wSteps <= 0}
+                className="w-8 h-8 rounded border border-slate-700 bg-slate-950 text-slate-200 disabled:opacity-40">−</button>
+              <span className="min-w-[2ch] text-center font-mono text-sm text-white">{wSteps}</span>
+              <button type="button" onClick={() => setWSteps(wSteps + 1)} disabled={wSteps >= maxWSteps}
+                className="w-8 h-8 rounded border border-slate-700 bg-slate-950 text-slate-200 disabled:opacity-40">+</button>
+              <span className="text-[11px] text-slate-400">
+                {wSteps > 0
+                  ? `Largura ${String(curWidth).replace(".", ",")}m · Comprimento −${String(wSteps * LINE_LENGTH_COST_M).replace(".", ",")}m`
+                  : maxWSteps > 0 ? `Largura 1,5m (padrão)` : "Comprimento insuficiente para alargar"}
               </span>
             </div>
           </div>
