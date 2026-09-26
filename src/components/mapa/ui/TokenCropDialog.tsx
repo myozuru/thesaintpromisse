@@ -50,24 +50,10 @@ export function TokenCropDialog({ entity, onConfirm, onCancel }: Props) {
       const rect = getTokenImageRect(image.naturalWidth, image.naturalHeight, size, size, crop);
       ctx.drawImage(image, size / 2 + rect.x, size / 2 + rect.y, rect.w, rect.h);
       ctx.restore();
-      ctx.strokeStyle = 'hsl(260 28% 9%)';
-      ctx.lineWidth = 14;
-      ctx.beginPath();
-      ctx.arc(size / 2, size / 2, size / 2 - 7, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.strokeStyle = 'hsl(265 70% 67%)';
-      ctx.lineWidth = 6;
-      ctx.shadowColor = 'hsl(265 70% 67%)';
-      ctx.shadowBlur = 12;
-      ctx.beginPath();
-      ctx.arc(size / 2, size / 2, size / 2 - 13, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = 'hsla(0 0% 100% / 0.45)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(size / 2, size / 2, size / 2 - 20, 0, Math.PI * 2);
-      ctx.stroke();
+      ctx.save();
+      ctx.translate(size / 2, size / 2);
+      drawTokenBorder(ctx, size / 2, size / 2, border, 1.5);
+      ctx.restore();
     } else {
       const fit = Math.min(size / image.naturalWidth, size / image.naturalHeight);
       const w = image.naturalWidth * fit, h = image.naturalHeight * fit;
