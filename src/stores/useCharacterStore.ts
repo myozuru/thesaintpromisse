@@ -127,6 +127,33 @@ export function migrateFAHFields<T extends Character>(c: T): T {
  * (idempotente). Use em qualquer ponto onde o personagem possa ter virado FAH,
  * ganhado nível, ou alterado anatomias/toggles.
  */
+/** Criaturas do Grimório: remove progressão de classe/especialização e pendências de nível. */
+function stripCreatureProgression<T extends Character>(c: T): T {
+  return {
+    ...c,
+    tecnicaFundamentos: undefined,
+    tecnicaFoco: undefined,
+    keyAttribute: undefined,
+    empolgacaoLevel: undefined,
+    empolgacaoStartLevel: undefined,
+    empolgacaoDiceTable: undefined,
+    lutadorManeuvers: undefined,
+    passives: (c.passives ?? []).filter((p: any) => p?.source !== '__lutador_auto__' && p?.source !== '__tecnica_auto__'),
+    pendingLevelChoices: [],
+    availableAuraChoices: 0,
+  } as T;
+}
+
+function readGrimorioLinkedIds(): Set<string> {
+  const ids = new Set<string>();
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('fm_creatures_v1') : null;
+    const list = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(list)) for (const cr of list) if (cr?.linkedFichaId) ids.add(String(cr.linkedFichaId));
+  } catch { /* ignore */ }
+  return ids;
+}
+
 function finalizeFAH<T extends Character>(c: T): T {
   // Sempre recalcula passivas CURSED (qualquer ficha pode adquirir aptidões amaldiçoadas).
   const withCursed = recalcCursedExclusivePassives(c) as T;
@@ -1195,7 +1222,9 @@ export const useCharacterStore = create<CharacterStore>()(
             merged.peMax = newPeMax;
             merged.peCurrent = Math.min(merged.peCurrent, newPeMax);
           }
-          if (specChanged || levelChanged || classChanged) {
+          if (merged.isGrimorioCreature) {
+            merged = stripCreatureProgression(merged);
+          } else if (specChanged || levelChanged || classChanged) {
             // Se mudou de spec/classe, regenera os trackers desde o Nv 1 (oldLevel=0).
             // Caso contrário, é um level-up incremental e usa o nível anterior.
             const oldLevelForTrackers = (specChanged || classChanged) ? 0 : c.level;
@@ -5017,9 +5046,13 @@ export const useCharacterStore = create<CharacterStore>()(
       // (vigorMalditoUses/Max, anatomyFeatures, canHealWithCursedEnergy, etc.)
       onRehydrateStorage: () => (state) => {
         if (!state) return;
+        const creatureIds = readGrimorioLinkedIds();
         state.characters = state.characters.map((c) => {
-          const migrated = finalizeFAH(c);
-          return migrateSavingThrowNames(migrated);
+          let migrated = migrateSavingThrowNames(finalizeFAH(c));
+          if (migrated.isGrimorioCreature || creatureIds.has(migrated.id)) {
+            migrated = stripCreatureProgression({ ...migrated, isGrimorioCreature: true });
+          }
+          return migrated;
         });
       },
     }

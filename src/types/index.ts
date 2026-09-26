@@ -280,6 +280,8 @@ export interface Character {
   createdBy?: 'PLAYER' | 'MASTER';
   /** Se true, esta ficha (geralmente INIMIGO/NPC) fica oculta para os players. Apenas o Mestre vê. */
   hiddenFromPlayers?: boolean;
+  /** Ficha gerada pelo Grimório: inimigo pronto, sem especialização nem pendências de nível. */
+  isGrimorioCreature?: boolean;
   /** Quando criado por um player, identifica o perfil dono da ficha. */
   profileId?: string;
   /**

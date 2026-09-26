@@ -473,6 +473,7 @@ function buildPatch(creature: Creature, current: Character): Partial<Character> 
 
   const patch: Partial<Character> = {
     __allowEnemyLevelUpdate: true,
+    isGrimorioCreature: true,
     level,
     hiddenFromPlayers: true,
     hpMax, hpCurrent,
