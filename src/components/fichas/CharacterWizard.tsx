@@ -892,6 +892,107 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                 </div>
               )}
 
+              {/* ─── Suporte: atributo-chave + treinamentos obrigatórios ─── */}
+              {isSuporte && (
+                <div className="space-y-3 rounded-lg border-2 border-primary/40 bg-primary/5 p-3">
+                  <div className="flex items-center gap-2">
+                    <ScrollText className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-bold text-primary">Treinamentos do Suporte</span>
+                    {supChoicesComplete ? (
+                      <span className="ml-auto text-[10px] text-primary font-bold">✓ Completo</span>
+                    ) : (
+                      <span className="ml-auto text-[10px] text-destructive font-bold">Obrigatório</span>
+                    )}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground space-y-0.5">
+                    <p><strong>Automático:</strong> Armas Simples + Escudos.</p>
+                    <p><strong>Perícias fixas:</strong> Medicina + Prestidigitação.</p>
+                    <p><strong>Livres:</strong> 3 perícias quaisquer (passo Perícias).</p>
+                  </div>
+
+                  {/* Atributo-chave: Presença OU Sabedoria */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-foreground">🔑 Atributo-Chave (CD das habilidades)</label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {(['Presença', 'Sabedoria'] as const).map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setSupKeyAttribute(s)}
+                          className={cn(
+                            'h-8 rounded border text-[11px] font-bold transition-colors',
+                            supKeyAttribute === s
+                              ? 'border-primary bg-primary text-primary-foreground'
+                              : 'border-border bg-secondary/40 text-foreground hover:border-primary/60',
+                          )}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground italic">
+                      Define a CD das habilidades de Suporte e o bônus no PE Máximo (5 × Nv + Mod).
+                    </p>
+                  </div>
+
+                  {/* TR Astúcia OU Vontade */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-foreground">Teste de Resistência (1)</label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {(['Astúcia', 'Vontade'] as const).map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setSupSaveChoice(s)}
+                          className={cn(
+                            'h-8 rounded border text-[11px] font-bold transition-colors',
+                            supSaveChoice === s
+                              ? 'border-primary bg-primary text-primary-foreground'
+                              : 'border-border bg-secondary/40 text-foreground hover:border-primary/60',
+                          )}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Ofícios x2 */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-foreground">
+                      Ofícios (2 de 3) — selecionados: {supOficioChoices.length}/2
+                    </label>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {tecOficioOptions.map((o) => {
+                        const picked = supOficioChoices.includes(o);
+                        const full = supOficioChoices.length >= 2;
+                        return (
+                          <button
+                            key={o}
+                            type="button"
+                            disabled={!picked && full}
+                            onClick={() => {
+                              setSupOficioChoices((prev) =>
+                                picked ? prev.filter((x) => x !== o) : [...prev, o],
+                              );
+                            }}
+                            className={cn(
+                              'h-8 rounded border text-[11px] font-bold transition-colors',
+                              picked
+                                ? 'border-primary bg-primary text-primary-foreground'
+                                : 'border-border bg-secondary/40 text-foreground hover:border-primary/60',
+                              !picked && full && 'opacity-40 cursor-not-allowed',
+                            )}
+                          >
+                            {o}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* ─── Especialista em Técnica: proficiências obrigatórias ─── */}
               {isTecnica && (
                 <div className="space-y-3 rounded-lg border-2 border-primary/40 bg-primary/5 p-3">
