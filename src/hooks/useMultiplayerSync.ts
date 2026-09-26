@@ -1034,6 +1034,7 @@ export function useMultiplayerSync() {
       (socket as unknown as { emit: typeof socket.emit }).emit = origEmit as typeof socket.emit;
       void supabase.removeChannel(cloudMapChannel);
       void supabase.removeChannel(cloudAssetChannel);
+      window.removeEventListener('amizade:send', onAmizadeSend);
       void supabase.removeChannel(worldBus);
       if (chronosTimer) clearTimeout(chronosTimer);
       if (mapSceneTimer) clearTimeout(mapSceneTimer);
