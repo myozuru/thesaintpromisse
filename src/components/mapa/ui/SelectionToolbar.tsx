@@ -170,7 +170,7 @@ export function SelectionToolbar({ visible = true, onAdjustToken }: { visible?: 
           <ToolBtn title="Renomear (F2)" onClick={startRename} active={renaming}>
             <TypeIcon className="h-3.5 w-3.5" />
           </ToolBtn>
-          {e.assetId && e.tokenCrop && onAdjustToken && (
+          {e.assetId && onAdjustToken && (
             <ToolBtn title="Ajustar imagem" onClick={() => onAdjustToken(e.id)}>
               <Scan className="h-3.5 w-3.5" />
             </ToolBtn>
