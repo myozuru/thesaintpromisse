@@ -92,7 +92,7 @@ import { CombatBar } from '@/components/combat/CombatBar';
 import { useDiceStore } from '@/stores/useDiceStore';
 import type { Character } from '@/types';
 import { getSocket } from '@/lib/socket';
-import { holdLocalMapSync } from './mapSyncGuards';
+import { holdLocalMapSync, markLocalEntityEdits } from './mapSyncGuards';
 import { effectiveMovement } from '@/lib/movementBudget';
 import { isFreeformFor } from '@/lib/freeformMode';
 import { toast } from '@/hooks/use-toast';
@@ -628,6 +628,7 @@ const flushEntityPatches = () => {
 
 const sendEntityPatches = (patches: EntityPatchMessage) => {
   if (!patches.length) return;
+  markLocalEntityEdits(patches.map((p) => p.id));
   for (const { id, patch } of patches) {
     pendingEntityPatches.set(id, { ...(pendingEntityPatches.get(id) ?? {}), ...patch });
   }

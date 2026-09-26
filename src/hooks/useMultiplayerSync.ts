@@ -22,7 +22,7 @@ import { assetDB } from '@/components/mapa/assetDB';
 import { assetCache } from '@/components/mapa/assetCache';
 import { supabase } from '@/integrations/supabase/safeClient';
 import { useFogStore } from '@/stores/fogStore';
-import { getProtectedRemoteEntityPatchIds, shouldIgnoreRemoteMapScene } from '@/components/mapa/mapSyncGuards';
+import { getProtectedRemoteEntityPatchIds, getRecentLocalEntityEdits, markLocalEntityEdits, shouldIgnoreRemoteMapScene } from '@/components/mapa/mapSyncGuards';
 
 type Json = string | number | boolean | null | { [k: string]: Json } | Json[];
 
@@ -140,6 +140,7 @@ function base64ToBlob(base64: string, mime?: string): Blob {
 }
 
 async function publishMapSceneToCloud(map: MapSceneSync) {
+  rememberPublishedMap(JSON.stringify(map));
   const { error } = await supabase.from('realtime_world').upsert({
     slice: 'mapScene',
     data: JSON.parse(JSON.stringify(map)) as Json,
@@ -257,6 +258,8 @@ function pickTestRequests(s: ReturnType<typeof useTestRequestStore.getState>) {
 // Posições recebidas deslizam até o destino em vez de "teleportar".
 type RemotePatch = { id: string; patch: Record<string, unknown> };
 const smoothTargets = new Map<string, { x: number; y: number }>();
+/** Quando cada peça recebeu o último movimento ao vivo (para não ser atropelada por um mapa completo atrasado). */
+const remotePatchAt = new Map<string, number>();
 let smoothRaf: number | null = null;
 let smoothLast = 0;
 
@@ -299,7 +302,9 @@ function applySmoothedEntityPatches(patches: RemotePatch[]) {
   const immediate: RemotePatch[] = [];
   const entities = useMapStore.getState().entities as Record<string, { x: number; y: number } | undefined>;
   const canAnimate = typeof requestAnimationFrame === 'function' && typeof document !== 'undefined' && !document.hidden;
+  const nowPatch = performance.now();
   for (const { id, patch } of patches) {
+    if ('x' in patch || 'y' in patch) remotePatchAt.set(id, nowPatch);
     const { x, y, ...rest } = patch as { x?: unknown; y?: unknown } & Record<string, unknown>;
     const e = entities[id];
     const hasPos = typeof x === 'number' && typeof y === 'number';
@@ -313,6 +318,15 @@ function applySmoothedEntityPatches(patches: RemotePatch[]) {
   }
   applyRemoteEntityUpdate(immediate);
   if (smoothTargets.size && smoothRaf == null) smoothRaf = requestAnimationFrame(smoothStep);
+}
+
+/** Últimos mapas completos que ESTE navegador salvou — o eco vindo do banco é ignorado. */
+const recentPublishedMapJSON: string[] = [];
+/** Última mudança feita NESTE navegador no mapa (ainda pode não ter sido enviada). */
+let localMapChangedAt = -Infinity;
+function rememberPublishedMap(json: string) {
+  recentPublishedMapJSON.push(json);
+  if (recentPublishedMapJSON.length > 6) recentPublishedMapJSON.shift();
 }
 
 function applyRemote(slice: WorldSlice, data: unknown) {
@@ -359,17 +373,37 @@ function applyRemote(slice: WorldSlice, data: unknown) {
     else if (slice === 'mapScene' && isMapSceneSync(data)) {
       const incomingJSON = JSON.stringify(data);
       // Eco do nosso próprio publish — ignorar para não atropelar drag local.
-      if (incomingJSON === lastPublishedMapJSON) return;
+      if (incomingJSON === lastPublishedMapJSON || recentPublishedMapJSON.includes(incomingJSON)) return;
       if (shouldIgnoreRemoteMapScene()) return;
       const current = useMapStore.getState();
       const nextActiveId = data.activeSceneId || data.sceneOrder[0] || current.activeSceneId;
       const nextActive = nextActiveId ? data.scenes[nextActiveId] : undefined;
+      // Junta em vez de substituir: peças mexidas aqui há pouco mantêm a posição
+      // local; peças deslizando recebem o novo destino em vez de pular.
+      const mergedEntities: Record<string, any> = { ...(nextActive?.entities ?? {}) };
+      if (nextActiveId === current.activeSceneId) {
+        const recent = getRecentLocalEntityEdits();
+        const localFresh = performance.now() - localMapChangedAt < 1500;
+        const localEnts = current.entities as Record<string, any>;
+        for (const id of Object.keys(mergedEntities)) {
+          const local = localEnts[id];
+          if (!local) continue;
+          const inc = mergedEntities[id];
+          const livePatchAge = performance.now() - (remotePatchAt.get(id) ?? -Infinity);
+          if (recent.has(id) || livePatchAge < 1500 || localFresh) {
+            mergedEntities[id] = { ...inc, x: local.x, y: local.y };
+          } else if (smoothTargets.has(id) && typeof inc.x === 'number' && typeof inc.y === 'number') {
+            smoothTargets.set(id, { x: inc.x, y: inc.y });
+            mergedEntities[id] = { ...inc, x: local.x, y: local.y };
+          }
+        }
+      }
       useMapStore.setState({
         scenes: data.scenes as never,
         sceneOrder: [...data.sceneOrder],
         activeSceneId: nextActiveId,
         layerVisible: { ...current.layerVisible, ...data.layerVisible },
-        entities: { ...(nextActive?.entities ?? {}) },
+        entities: mergedEntities,
         entityOrder: [...(nextActive?.entityOrder ?? [])],
         drawings: [...(nextActive?.drawings ?? [])],
         notes: [...(nextActive?.notes ?? [])],
@@ -860,8 +894,32 @@ export function useMultiplayerSync() {
 
     // Mapa visual — qualquer cliente publica mudanças permitidas pela UI;
     // players conseguem mover seus próprios tokens e o Mestre recebe em tempo real.
-    let lastMapScene = JSON.stringify(pickMapScene());
+    // Só posições mudaram → envia patches leves e salva na nuvem com calma.
+    // Qualquer outra mudança (cena, fundo, paredes, desenhos...) → mapa completo.
+    const structuralKey = (map: MapSceneSync) => JSON.stringify(map, (key, value) => {
+      if ((key === 'x' || key === 'y') && typeof value === 'number') return undefined;
+      return value;
+    });
+    let lastMapObj = pickMapScene();
+    let lastMapScene = JSON.stringify(lastMapObj);
+    let lastMapStructure = structuralKey(lastMapObj);
     let mapSceneTimer: ReturnType<typeof setTimeout> | null = null;
+    let mapPersistTimer: ReturnType<typeof setTimeout> | null = null;
+    const lastSentLivePos = new Map<string, { x: number; y: number }>();
+    const rememberLivePos = () => {
+      lastSentLivePos.clear();
+      for (const [id, e] of Object.entries(useMapStore.getState().entities as Record<string, { x: number; y: number }>)) {
+        lastSentLivePos.set(id, { x: e.x, y: e.y });
+      }
+    };
+    rememberLivePos();
+    const persistMapLater = () => {
+      if (mapPersistTimer) clearTimeout(mapPersistTimer);
+      mapPersistTimer = setTimeout(() => {
+        mapPersistTimer = null;
+        void publishMapSceneToCloud(pickMapScene());
+      }, 1500);
+    };
     const flushMapScene = () => {
       mapSceneTimer = null;
       if (applyingRemote) return;
@@ -873,8 +931,34 @@ export function useMultiplayerSync() {
       const next = pickMapScene();
       const s = JSON.stringify(next);
       if (s === lastMapScene) return;
+      const structure = structuralKey(next);
+      const prevObj = lastMapObj;
+      lastMapObj = next;
       lastMapScene = s;
       lastPublishedMapJSON = s;
+      if (structure === lastMapStructure && next.activeSceneId && next.activeSceneId === prevObj.activeSceneId) {
+        // Usa as posições vivas (a cópia da cena pode estar um passo atrasada).
+        const liveEnts = useMapStore.getState().entities as Record<string, { x: number; y: number }>;
+        const patches: Array<{ id: string; patch: { x: number; y: number } }> = [];
+        for (const [id, e] of Object.entries(liveEnts)) {
+          const p = lastSentLivePos.get(id);
+          if (!p || p.x !== e.x || p.y !== e.y) patches.push({ id, patch: { x: e.x, y: e.y } });
+        }
+        const otherScenesSame = Object.keys(next.scenes).every((id) =>
+          id === next.activeSceneId || JSON.stringify(next.scenes[id]) === JSON.stringify(prevObj.scenes[id]));
+        if (otherScenesSame) {
+          rememberLivePos();
+          if (patches.length) {
+            markLocalEntityEdits(patches.map((p) => p.id));
+            void worldBus.send({ type: 'broadcast', event: 'entity-patch', payload: { clientId, patches } });
+          }
+          persistMapLater();
+          return;
+        }
+      }
+      lastMapStructure = structure;
+      rememberLivePos();
+      if (mapPersistTimer) { clearTimeout(mapPersistTimer); mapPersistTimer = null; }
       socket.emit('state:update', { slice: 'mapScene', data: next });
       void publishMapSceneToCloud(next);
       void emitMapAssets(socket, collectMapAssetIds(next), sentMapAssetIds);
@@ -882,6 +966,7 @@ export function useMultiplayerSync() {
 
     const unsubMapScene = useMapStore.subscribe(() => {
       if (applyingRemote) return;
+      localMapChangedAt = performance.now();
       if (mapSceneTimer) clearTimeout(mapSceneTimer);
       mapSceneTimer = setTimeout(flushMapScene, 120);
     });
