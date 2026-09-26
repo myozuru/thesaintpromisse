@@ -6,6 +6,7 @@ import { GuardaSincronizadaWatcher, InspiracaoWatcher } from "@/components/ficha
 import { Global3DDiceOverlay } from "@/components/dice-physics/Global3DDiceOverlay";
 import { AmizadePromptDialog } from "@/components/fichas/AmizadePromptDialog";
 import { NegacaoPromptDialog } from "@/components/fichas/SuporteNegacaoSections";
+import { SintonizacaoPromptDialog } from "@/components/fichas/SuporteSintonizacaoSections";
 import { OutraChancePromptDialog } from "@/components/fichas/SuporteNivel6Sections";
 import { ProtetorPromptDialog } from "@/components/fichas/ProtetorPromptDialog";
 import { MobilidadePromptDialog } from "@/components/fichas/SuporteRepertorioMobilidadeSections";
@@ -70,6 +71,7 @@ export default function TpFichasApp() {
         <AmizadePromptDialog />
         <OutraChancePromptDialog />
         <NegacaoPromptDialog />
+        <SintonizacaoPromptDialog />
         <ProtetorPromptDialog />
         <MobilidadePromptDialog />
         <DesvendarCDDialog />

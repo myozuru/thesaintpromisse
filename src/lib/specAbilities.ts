@@ -1569,6 +1569,14 @@ const SUPORTE: SpecAbility[] = [
     triggerText: 'Opção no Comando Motivador.',
     logicText: 'Bônus arredondado para cima. Sucesso detectado em testes com CD conhecida. PE acima do máximo vira PE temporário.',
   },
+  {
+    id: 'sup-sintonizacao-vital', name: 'Sintonização Vital', tier: 4, specialization: 'Suporte',
+    flavor: 'A cura que você canaliza transborda para quem está por perto.',
+    mechanic: 'Quando curar um aliado, você pode gastar 3 PE para que outra criatura a até 3 m (incluindo você) recupere PV igual a metade da cura original.',
+    activation: 'passive',
+    triggerText: 'Aviso automático após curar um aliado.',
+    logicText: 'Metade arredondada para cima. Sem limite de usos. Alvo secundário não pode ser o aliado já curado.',
+  },
 ];
 
 // ===== Registry global =====================================================

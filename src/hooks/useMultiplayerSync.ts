@@ -499,6 +499,19 @@ export function useMultiplayerSync() {
       void worldBus.send({ type: 'broadcast', event: 'amizade', payload: { clientId, ...d } });
     };
     window.addEventListener('amizade:send', onAmizadeSend);
+    worldBus.on('broadcast', { event: 'sintonizacao' }, ({ payload }) => {
+      void import('@/lib/suporteSintonizacao').then(({ useSintonizacaoPromptStore, shouldSeeSintonizacaoPrompt, reduceSintonizacaoMessage }) => {
+        const st = useSintonizacaoPromptStore.getState();
+        const r = reduceSintonizacaoMessage(payload as never, clientId, (sid) => shouldSeeSintonizacaoPrompt(sid, useRoleStore.getState().role));
+        if (r.type === 'close') { if (!st.offer || st.offer.requestId === r.requestId) st.close(); }
+        else if (r.type === 'open') st.open(r.offer);
+      });
+    });
+    const onSintonizacaoSend = (e: Event) => {
+      const d = (e as CustomEvent).detail ?? {};
+      void worldBus.send({ type: 'broadcast', event: 'sintonizacao', payload: { clientId, ...d } });
+    };
+    window.addEventListener('sintonizacao:send', onSintonizacaoSend);
     // Conceder Outra Chance (Suporte Nv 6): oferta/aceite/fechamento entre telas.
     worldBus.on('broadcast', { event: 'outra-chance' }, ({ payload }) => {
       void import('@/lib/suporteNivel6').then(
@@ -1113,6 +1126,7 @@ export function useMultiplayerSync() {
       void supabase.removeChannel(cloudMapChannel);
       void supabase.removeChannel(cloudAssetChannel);
       window.removeEventListener('amizade:send', onAmizadeSend);
+      window.removeEventListener('sintonizacao:send', onSintonizacaoSend);
       window.removeEventListener('outra-chance:send', onOutraChanceSend);
       window.removeEventListener('negacao:send', onNegacaoSend);
       window.removeEventListener('protetor:send', onProtetorSend);
