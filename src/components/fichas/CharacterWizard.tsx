@@ -530,6 +530,17 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
             mastery: false,
           });
         }
+        // Suporte: adiciona o TR escolhido (Astúcia OU Vontade) como Treinado.
+        if (isSuporte && supSaveChoice) {
+          base.push({
+            id: crypto.randomUUID(),
+            name: supSaveChoice,
+            value: 0,
+            linkedAttribute: undefined,
+            trained: true,
+            mastery: false,
+          });
+        }
         return base;
       })(),
       passives: passivesForCharacter,
@@ -544,7 +555,8 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
       cursedLinkedAttr: '',
       dcLinkedAttr: '',
       // Especialista em Técnica: Armas Simples (melee) + Armas a Distância já treinadas.
-      meleeTrained: isTecnica ? true : false,
+      // Suporte: Armas Simples (melee) treinadas (regra do livro).
+      meleeTrained: (isTecnica || isSuporte) ? true : false,
       rangedTrained: isTecnica ? true : false,
       cursedTrained: false,
       meleeMastery: false,
@@ -575,7 +587,11 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
       accessorySlots: createEmptyAccessorySlots(),
       votos: '',
       hasEnergiaReversa,
-      keyAttribute: specialization === 'Especialista em Técnica' ? keyAttribute : undefined,
+      keyAttribute: specialization === 'Especialista em Técnica'
+        ? keyAttribute
+        : specialization === 'Suporte'
+          ? supKeyAttribute
+          : undefined,
       tecnicaFundamentos: isTecnica ? tecFundamentos : undefined,
       // ===== Origin metadata =====
       originTags: effects.tags,
