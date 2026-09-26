@@ -1266,7 +1266,7 @@ export const useCharacterStore = create<CharacterStore>()(
         characters: state.characters.map((c) => {
           if (c.id !== id) return c;
           if (c.category === 'INIMIGO') return c;
-          const newLevel = Math.min(20, c.level + 1);
+          const newLevel = Math.min(MAX_LEVEL, c.level + 1);
           if (newLevel === c.level) return c;
           const conMod = getConMod(c);
           const newHistory: LevelHistoryEntry[] = [
