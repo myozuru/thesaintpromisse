@@ -16,3 +16,4 @@
 
 - Multiplayer syncs via Lovable Cloud: live changes use a realtime broadcast channel, and each slice is persisted in `realtime_world` (images in `realtime_assets`) so late joiners load the table state — no Socket.IO server needed.
 - Accounts use nick+password mapped to a synthetic email (nick@tpfichas.local, auto-confirm); Master is a row in user_roles (first account auto-claims it) so role never comes from local storage.
+- Map sync: piece moves travel as throttled `entity-patch` broadcasts (~8/s) and glide on receivers; the full map is only rebroadcast for structural changes (positions-only changes save to the cloud after 1.5s), and incoming full maps are merged so fresh local or live-patched positions win — this keeps movement smooth under the realtime message limit.
