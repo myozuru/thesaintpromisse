@@ -1,3 +1,4 @@
+import { useProfileStore } from '@/stores/useProfileStore';
 /**
  * SUPORTE — Habilidades de Suporte do 2º nível (escolhidas no catálogo).
  *  • Amizade Inquebrável (sup-amizade-inquebravel)
@@ -88,8 +89,19 @@ export async function checkAmizadeAtEndOfTurn(charId: string): Promise<void> {
   const { useRoleStore } = await import('@/stores/useRoleStore');
   // A pergunta é do jogador, não do Mestre: abre aqui só se esta tela for de jogador
   // e manda para as telas dos jogadores conectados.
-  if (useRoleStore.getState().role !== 'MASTER') useAmizadePromptStore.getState().open(payload);
+  if (shouldSeeAmizadePrompt(c.id, useRoleStore.getState().role)) useAmizadePromptStore.getState().open(payload);
   if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('amizade:send', { detail: { kind: 'open', ...payload } }));
+}
+
+/**
+ * A pergunta vai só para a conta dona da ficha do Suporte. Ficha sem dono:
+ * qualquer jogador (não-Mestre) vê, como antes.
+ */
+export function shouldSeeAmizadePrompt(supporterId: string, role: string | null): boolean {
+  const c = useCharacterStore.getState().characters.find((x) => x.id === supporterId);
+  const owner = c?.profileId;
+  if (owner) return useProfileStore.getState().activeProfileId === owner;
+  return role !== 'MASTER';
 }
 
 /** Fecha a pergunta aqui e nas outras telas (alguém já respondeu). */

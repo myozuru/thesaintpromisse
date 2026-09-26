@@ -489,10 +489,10 @@ export function useMultiplayerSync() {
     worldBus.on('broadcast', { event: 'amizade' }, ({ payload }) => {
       const p = payload as { clientId?: string; kind?: string; supporterId?: string; friendId?: string } | null;
       if (!p || p.clientId === clientId) return;
-      void import('@/lib/suporteNivel2').then(({ useAmizadePromptStore }) => {
+      void import('@/lib/suporteNivel2').then(({ useAmizadePromptStore, shouldSeeAmizadePrompt }) => {
         const st = useAmizadePromptStore.getState();
         if (p.kind === 'close') st.close();
-        else if (p.kind === 'open' && p.supporterId && p.friendId && useRoleStore.getState().role !== 'MASTER') {
+        else if (p.kind === 'open' && p.supporterId && p.friendId && shouldSeeAmizadePrompt(p.supporterId, useRoleStore.getState().role)) {
           st.open({ supporterId: p.supporterId, friendId: p.friendId });
         }
       });
