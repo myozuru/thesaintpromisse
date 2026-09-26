@@ -47,3 +47,26 @@ export function getSuporteHealMaxUses(c: Pick<Character, 'attributes' | 'keyAttr
 export function getSuporteHealUsesLeft(c: Character): number {
   return Math.max(0, getSuporteHealMaxUses(c) - (c.suporteHealUsed ?? 0));
 }
+
+/**
+ * Apoiar (Ação Bônus — Suporte em Combate): o alvo ganha VANTAGEM no próximo
+ * teste de perícia que fizer para a tarefa apoiada, desde que role antes do
+ * início do próximo turno de quem apoiou.
+ *
+ * Implementação: concede um modificador de vantagem `next_skill` (1 uso) no
+ * alvo, marcado com `grantedBy = supporter.id`. O consumo acontece
+ * automaticamente na próxima rolagem de perícia do alvo (consumeAdvantageFor)
+ * e a expiração ocorre no início do turno do apoiador (expireGrantedBy,
+ * chamado em useCombatStore.nextTurn).
+ */
+export async function applyApoiar(
+  supporter: Pick<Character, 'id' | 'name'>,
+  target: Pick<Character, 'id' | 'name'>,
+): Promise<void> {
+  const { grantAdvantage } = await import('@/lib/omni/rollAdvantage');
+  grantAdvantage(target.id, 'advantage', 'next_skill', {
+    expires: 'use',
+    source: `Apoiar (${supporter.name})`,
+    grantedBy: supporter.id,
+  });
+}
