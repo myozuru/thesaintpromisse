@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { sintonizacaoHealAmount, canOfferSintonizacao, reduceSintonizacaoMessage, listSintonizacaoTargets } from '@/lib/suporteSintonizacao';
-import { getSpecAbility } from '@/lib/specAbilities';
+import { getSpecAbilityById as getSpecAbility } from '@/lib/specAbilities';
 
 const sup = (o: Record<string, unknown> = {}) => ({ id: 's', name: 'S', peCurrent: 5, selectedSpecAbilities: ['sup-sintonizacao-vital'], specAbilities: ['sup-sintonizacao-vital'], ...o }) as never;
 
