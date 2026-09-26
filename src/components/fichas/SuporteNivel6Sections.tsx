@@ -11,7 +11,6 @@ import { useLogStore } from '@/stores/useLogStore';
 import { playClickSound, playErrorSound } from '@/lib/sounds';
 import { hasSpecAbility } from '@/lib/suporteNivel2';
 import {
-  APOIO_AVANCADO_ID,
   APOIOS_AVANCADOS,
   OUTRA_CHANCE_ID,
   OUTRA_CHANCE_PE_COST,

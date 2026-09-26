@@ -37,7 +37,6 @@ import { TransmitirSection } from './SuporteTransmitirSection';
 import { GuardaSincronizadaSection } from './SuporteNivel4Sections';
 import { hasSpecAbility } from '@/lib/suporteNivel2';
 import {
-  APOIO_AVANCADO_ID,
   hasApoioAccess,
   APOIOS_AVANCADOS,
   applyApoioAvancado,
