@@ -726,6 +726,10 @@ export interface Character {
   outraChanceUsed?: number;
   /** Apoio Defensivo ativo: +value na Defesa até o início do próximo turno de grantedBy. */
   apoioDefensivo?: { value: number; grantedBy?: string };
+  /** Suporte Nv 4 — Guarda Sincronizada ativa (no Suporte): membros atuais, incluindo ele. */
+  guardaSincronizada?: { members: string[] };
+  /** Bônus de Defesa recebido de uma Guarda Sincronizada. */
+  guardaSincronizadaBonus?: { value: number; grantedBy: string };
   /** Apoio Estratégico ativo: +value na CD do próximo teste forçado, até o início do próximo turno de grantedBy. */
   apoioEstrategico?: { value: number; grantedBy?: string };
   /** Suporte: usos gastos da Medicina Infalível (zera em descanso curto/longo). */

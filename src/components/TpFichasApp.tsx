@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { GuardaSincronizadaWatcher } from "@/components/fichas/SuporteNivel4Sections";
 import { Global3DDiceOverlay } from "@/components/dice-physics/Global3DDiceOverlay";
 import { AmizadePromptDialog } from "@/components/fichas/AmizadePromptDialog";
 import { OutraChancePromptDialog } from "@/components/fichas/SuporteNivel6Sections";
@@ -70,6 +71,7 @@ export default function TpFichasApp() {
         <ProtetorPromptDialog />
         <MobilidadePromptDialog />
         <DesvendarCDDialog />
+        <GuardaSincronizadaWatcher />
       </TooltipProvider>
     </AppErrorBoundary>
   );

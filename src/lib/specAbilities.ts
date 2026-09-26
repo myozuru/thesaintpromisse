@@ -1510,6 +1510,22 @@ const SUPORTE: SpecAbility[] = [
     triggerText: 'Painel do Suporte — escolha o tipo de descanso, o aliado e a perícia.',
     logicText: 'Marca a perícia do aliado como treinada (registrada em transmitirTempSkills) e remove o treinamento no próximo descanso do aliado.',
   },
+  {
+    id: 'sup-apoios-versateis', name: 'Apoios Versáteis', tier: 4, specialization: 'Suporte',
+    flavor: 'Cada aliado precisa de um tipo diferente de ajuda.',
+    mechanic: 'Você aprende um apoio avançado adicional. No 10º nível, recebe outro.',
+    activation: 'passive',
+    triggerText: 'Painel do Suporte — seção Apoio Avançado.',
+    logicText: 'Soma +1 (ou +2 no Nv 10) ao limite de apoios avançados conhecidos.',
+  },
+  {
+    id: 'sup-guarda-sincronizada', name: 'Guarda Sincronizada', tier: 4, specialization: 'Suporte',
+    flavor: 'Um cuida do outro.',
+    mechanic: 'Ação Bônus: sintonize a guarda dos aliados a até 7,5 m que possam te ver ou ouvir. Para cada aliado no alcance, todos os outros recebem +1 na Defesa.',
+    activation: 'passive',
+    triggerText: 'Painel do Suporte — botão Sintonizar guarda.',
+    logicText: 'Membros (incluindo o Suporte) recebem +1 de Defesa por outro membro. Quem se afastar mais de 7,5 m ou ficar Cego/Surdo sai; se sobrar só o Suporte, a guarda acaba.',
+  },
 ];
 
 // ===== Registry global =====================================================

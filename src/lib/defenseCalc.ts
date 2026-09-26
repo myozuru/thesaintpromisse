@@ -249,6 +249,7 @@ export function computeDefenseBreakdown(
 
   // Apoio Defensivo (Suporte Nv 6): bônus temporário até o início do turno de quem apoiou.
   const apoioCA = c.apoioDefensivo?.value ?? 0;
+  const guardaCA = c.guardaSincronizadaBonus?.value ?? 0;
 
   const base = c.ca ?? 10;
   const total =
@@ -265,7 +266,8 @@ export function computeDefenseBreakdown(
     specAbilityCA +
     shieldCA +
     conditionsCA +
-    apoioCA;
+    apoioCA +
+    guardaCA;
 
   const notes: string[] = [];
   notes.push(`CA base ${base}`);
@@ -282,6 +284,7 @@ export function computeDefenseBreakdown(
   if (shieldCA && equippedShield) notes.push(`${equippedShield.name} +${shieldCA}`);
   if (conditionsCA) notes.push(`Condições ${conditionsCA >= 0 ? '+' : ''}${conditionsCA}`);
   if (apoioCA) notes.push(`Apoio Defensivo +${apoioCA}`);
+  if (guardaCA) notes.push(`Guarda Sincronizada +${guardaCA}`);
 
   return {
     base,
