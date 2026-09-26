@@ -2,12 +2,16 @@ import { useEffect, useState } from 'react';
 import { Shield, User } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { authDb, type CloudProfile } from '@/lib/auth';
+import { useCharacterStore } from '@/stores/useCharacterStore';
 
 export function MasterAccountsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const [profiles, setProfiles] = useState<CloudProfile[]>([]);
   const [masters, setMasters] = useState<Set<string>>(new Set());
   const [me, setMe] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const characters = useCharacterStore((s) => s.characters);
+  const updateCharacter = useCharacterStore((s) => s.updateCharacter);
+  const fichas = characters.filter((c) => !c.isGrimorioCreature);
 
   const load = async () => {
     const [{ data: p }, { data: m }, { data: u }] = await Promise.all([
@@ -54,6 +58,24 @@ export function MasterAccountsDialog({ open, onOpenChange }: { open: boolean; on
               </div>
             );
           })}
+          {fichas.length > 0 && (
+            <div className="pt-3 mt-2 border-t border-border space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Dono de cada ficha</p>
+              {fichas.map((c) => (
+                <div key={c.id} className="flex items-center gap-2 rounded-lg border border-border bg-card p-2">
+                  <span className="flex-1 truncate text-sm text-foreground">{c.name || 'Sem nome'}</span>
+                  <select
+                    value={c.profileId ?? ''}
+                    onChange={(ev) => updateCharacter(c.id, { profileId: ev.target.value || undefined })}
+                    className="h-8 max-w-[45%] rounded-md border border-border bg-background px-2 text-xs text-foreground"
+                  >
+                    <option value="">Sem dono</option>
+                    {profiles.map((p) => <option key={p.id} value={p.id}>{p.nick}</option>)}
+                  </select>
+                </div>
+              ))}
+            </div>
+          )}
           {profiles.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma conta ainda.</p>}
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
