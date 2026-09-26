@@ -70,3 +70,37 @@ export async function applyApoiar(
     grantedBy: supporter.id,
   });
 }
+
+/** Presença Inspiradora (Nv 3): PE extra máximo = metade do mod de Presença (fixo). */
+export function getPresencaInspiradoraMaxExtra(c: Character): number {
+  const pre = c.attributes.find((a) => a.name === 'Presença')?.value ?? 10;
+  return Math.max(0, Math.floor(getAttrModifier(pre) / 2));
+}
+
+/**
+ * Presença Inspiradora (Ação — Suporte Nv 3): paga 2 PE (+ até `extra` PE
+ * adicionais) e concede +(1 + extra) em TODAS as rolagens de perícia de
+ * todos os aliados (exceto o próprio Suporte) durante a cena.
+ * O bônus é armazenado em `inspiracaoBonus` de cada aliado e zerado no
+ * reset de cena/descanso do store.
+ */
+export function applyPresencaInspiradora(
+  supporter: Character,
+  allies: Character[],
+  extraPE: number,
+): { ok: boolean; reason?: string; bonus: number; totalCost: number } {
+  const maxExtra = getPresencaInspiradoraMaxExtra(supporter);
+  const extra = Math.max(0, Math.min(extraPE, maxExtra));
+  const totalCost = 2 + extra;
+  if ((supporter.peCurrent ?? 0) < totalCost) {
+    return { ok: false, reason: `PE insuficiente (precisa de ${totalCost}, tem ${supporter.peCurrent ?? 0}).`, bonus: 0, totalCost };
+  }
+  const bonus = 1 + extra;
+  const store = useCharacterStore.getState();
+  store.updateCharacter(supporter.id, { peCurrent: (supporter.peCurrent ?? 0) - totalCost });
+  for (const ally of allies) {
+    if (ally.id === supporter.id) continue;
+    store.updateCharacter(ally.id, { inspiracaoBonus: bonus });
+  }
+  return { ok: true, bonus, totalCost };
+}
