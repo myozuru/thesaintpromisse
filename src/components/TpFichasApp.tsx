@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Global3DDiceOverlay } from "@/components/dice-physics/Global3DDiceOverlay";
 import { AmizadePromptDialog } from "@/components/fichas/AmizadePromptDialog";
+import { OutraChancePromptDialog } from "@/components/fichas/SuporteNivel6Sections";
 import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import { useMultiplayerSync } from "@/hooks/useMultiplayerSync";
 import { useDailyOmniRecharge } from "@/hooks/useDailyOmniRecharge";
@@ -62,6 +63,7 @@ export default function TpFichasApp() {
         <Index />
         <Global3DDiceOverlay />
         <AmizadePromptDialog />
+        <OutraChancePromptDialog />
       </TooltipProvider>
     </AppErrorBoundary>
   );
