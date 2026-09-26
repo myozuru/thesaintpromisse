@@ -368,6 +368,8 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
     if (step === 1) {
       // Especialista em Técnica: bloqueia avanço sem as 3 escolhas obrigatórias.
       if (!tecChoicesComplete) return false;
+      // Suporte: bloqueia avanço sem TR + 2 Ofícios.
+      if (!supChoicesComplete) return false;
       return true;
     }
     if (step === 2) {
@@ -416,6 +418,11 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
       for (const fx of TEC_FIXED_SKILLS) tecTrainedOverride[fx] = true;
       // 2 Ofícios escolhidos no passo Classe (sempre treinados).
       for (const ofKey of tecOficioChoices) tecTrainedOverride[ofKey] = true;
+    }
+    // Suporte: Medicina + Prestidigitação fixas + 2 Ofícios escolhidos.
+    if (isSuporte) {
+      for (const fx of SUP_FIXED_SKILLS) tecTrainedOverride[fx] = true;
+      for (const ofKey of supOficioChoices) tecTrainedOverride[ofKey] = true;
     }
 
     // Build skills array from fixed definitions
