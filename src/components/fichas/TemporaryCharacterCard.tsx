@@ -466,9 +466,16 @@ export function TemporaryCharacterCard({ character: c }: Props) {
             <div className="rounded-xl border border-border bg-secondary/10 p-3">
               <div className="flex items-center gap-2 mb-2">
                 <Crosshair className="h-4 w-4 text-orange-400" />
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">CD</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">CD Amaldiçoada</span>
               </div>
               <NumStep value={c.baseDC ?? 10} onChange={(v) => setField('baseDC', Math.max(0, v))} min={0} />
+            </div>
+            <div className="rounded-xl border border-border bg-secondary/10 p-3 col-span-2">
+              <div className="flex items-center gap-2 mb-2">
+                <Crosshair className="h-4 w-4 text-primary" />
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">CD de Especialização</span>
+              </div>
+              <NumStep value={c.specDC ?? c.baseDC ?? 10} onChange={(v) => setField('specDC' as never, Math.max(0, v) as never)} min={0} />
             </div>
           </div>
         </section>
