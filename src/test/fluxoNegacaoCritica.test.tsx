@@ -3,7 +3,10 @@
  * Fluxo completo da Negação Crítica com a mesa real:
  * aliado tira 1 natural → aviso aparece na tela do dono do Suporte → clique → efeito.
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+// Nunca fala com a nuvem de verdade durante o teste.
+vi.mock('@/integrations/supabase/client', async () => ({ supabase: (await import('./helpers/mesaReal')).nuvemFalsa }));
+vi.mock('@/integrations/supabase/safeClient', async () => ({ hasWorkspaceCloud: false, supabase: (await import('./helpers/mesaReal')).nuvemFalsa }));
 import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import { rollD20Com } from '@/lib/dice';
 import {

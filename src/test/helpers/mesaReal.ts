@@ -19,6 +19,26 @@ import { useDice3DStore } from '@/stores/useDice3DStore';
 import { useProfileStore } from '@/stores/useProfileStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 
+// Sem som no ambiente de teste.
+if (typeof globalThis.AudioContext === 'undefined') {
+  (globalThis as Record<string, unknown>).AudioContext = class {
+    state = 'running'; currentTime = 0; destination = {};
+    resume() { return Promise.resolve(); }
+    createOscillator() { return { connect() {}, start() {}, stop() {}, frequency: { setValueAtTime() {}, exponentialRampToValueAtTime() {}, linearRampToValueAtTime() {} }, type: '' }; }
+    createGain() { return { connect() {}, gain: { setValueAtTime() {}, exponentialRampToValueAtTime() {}, linearRampToValueAtTime() {}, value: 0 } }; }
+    createBufferSource() { return { connect() {}, start() {}, stop() {}, buffer: null }; }
+    createBuffer() { return { getChannelData: () => new Float32Array(1) }; }
+    decodeAudioData() { return Promise.resolve({}); }
+  };
+}
+
+/** Cliente de nuvem falso: responde vazio a tudo, sem rede. */
+const vazio: unknown = new Proxy(function () {}, {
+  get: (_t, k) => (k === 'then' ? undefined : k === 'data' ? null : k === 'error' ? null : vazio),
+  apply: () => vazio,
+});
+export const nuvemFalsa = vazio;
+
 export const CASA = 70; // px por casa; 1 casa = 1,5 m
 
 export function ficha(id: string, extra: Partial<Character> & Record<string, unknown> = {}): Character {
