@@ -10,13 +10,15 @@ import { rollDiceCom } from '@/lib/dice';
 import {
   isSuporte,
   applyApoiar,
+  applyPresencaInspiradora,
+  getPresencaInspiradoraMaxExtra,
   getSuporteHealDice,
   getSuporteHealMaxUses,
   getSuporteHealUsesLeft,
   getSuporteKeyAttr,
   getSuporteKeyMod,
 } from '@/lib/suporteAbilities';
-import { HeartHandshake, HandHelping } from 'lucide-react';
+import { HeartHandshake, HandHelping, Sparkles } from 'lucide-react';
 
 export function SuportePanel({ character: c }: { character: Character }) {
   const characters = useCharacterStore((s) => s.characters);
@@ -25,6 +27,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
   const addLog = useLogStore((s) => s.addLog);
   const [targetId, setTargetId] = useState<string>(c.id);
   const [apoiarTargetId, setApoiarTargetId] = useState<string>('');
+  const [inspiracaoExtra, setInspiracaoExtra] = useState(0);
   const [busy, setBusy] = useState(false);
 
   if (!isSuporte(c)) return null;
