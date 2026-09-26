@@ -918,7 +918,9 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
     const passiveAggEarly = aggregateSpecAbilityEffects(c);
     const isAstucia = (name || '').trim().toLowerCase() === 'astúcia' || (name || '').trim().toLowerCase() === 'astucia';
     const concentrationBonus = isAstucia ? passiveAggEarly.concentrationCheckBonus : 0;
-    const totalBonus = baseBonus + attrMod + itemBonus + trainBonus + levelBonus + extBonus + auraSkillBonus + conditionSkillBonus + saveBonus + sentidosBonus + concentrationBonus + omniSkillBonus;
+    // Presença Inspiradora (Suporte Nv 3): bônus de cena em TODAS as perícias.
+    const inspiracao = isSavingThrowCheck(name) ? 0 : (c.inspiracaoBonus ?? 0);
+    const totalBonus = baseBonus + attrMod + itemBonus + trainBonus + levelBonus + extBonus + auraSkillBonus + conditionSkillBonus + saveBonus + sentidosBonus + concentrationBonus + omniSkillBonus + inspiracao;
     // Bastião Interior (Tier 6) — Vantagem em TR vs Amedrontado / Desorientado / Enfeitiçado.
     const isSavingThrow = (c.savingThrows || []).some(st => st.name === name);
     const activeCondIds = (c.activeConditions || []).map(ac => (ac.conditionId || '').toLowerCase());
