@@ -19,6 +19,7 @@ import {
   buildLevelUpTrackers,
   buildAfinidadeTecnicaTrackers,
   AFINIDADE_TECNICA_MILESTONES,
+  MAX_LEVEL,
   getTrainingBonusByLevel,
   getHitDiceMax,
   getClassHitDie,
