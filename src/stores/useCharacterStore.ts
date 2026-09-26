@@ -697,6 +697,8 @@ interface CharacterStore {
   castEnergiaReversaSelf: (
     charId: string,
     perSpent: number,
+    /** Alvo da cura (padrão: o próprio). Outros exigem Liberação de ER. */
+    targetId?: string,
   ) => Promise<{ ok: boolean; reason?: string; peSpent?: number; healed?: number; rolls?: number[]; mod?: number; key?: 'Presença' | 'Sabedoria' }>;
   /**
    * Regeneração Aprimorada (ER) — modos: ferimento(8), veneno(4), membro(3).
@@ -3805,24 +3807,40 @@ export const useCharacterStore = create<CharacterStore>()(
         });
         return result;
       },
-      castEnergiaReversaSelf: async (charId, perSpent) => {
+      castEnergiaReversaSelf: async (charId, perSpent, targetId) => {
         const c0 = get().characters.find(x => x.id === charId);
         if (!c0) return { ok: false, reason: 'Personagem não encontrado.' };
         const peCost = perSpent * 2;
-        if (!(c0.chosenClAptitudes ?? []).includes('er-energia-reversa')) {
+        const owned0 = new Set(c0.chosenClAptitudes ?? []);
+        if (!owned0.has('er-energia-reversa')) {
           return { ok: false, reason: 'Energia Reversa não adquirida.' };
+        }
+        const tgtId = targetId ?? charId;
+        if (tgtId !== charId && !owned0.has('er-liberacao-energia-reversa')) {
+          return { ok: false, reason: 'Curar outras criaturas exige Liberação de Energia Reversa.' };
+        }
+        if (!get().characters.some(x => x.id === tgtId)) {
+          return { ok: false, reason: 'Alvo não encontrado.' };
         }
         if (c0.peCurrent < peCost) {
           return { ok: false, reason: `PE insuficiente (${c0.peCurrent}/${peCost}).` };
         }
         const er0 = c0.cursedAptitudes?.ER ?? 0;
-        const owned0 = new Set(c0.chosenClAptitudes ?? []);
         const hasAmplificada = owned0.has('er-cura-amplificada');
         const hasGrupo = owned0.has('er-cura-em-grupo');
         let peLimit = hasAmplificada ? 1 + er0 : 1 + Math.floor(er0 / 2);
         if (hasGrupo) peLimit += 2;
         if (perSpent < 1 || perSpent > peLimit) {
           return { ok: false, reason: `PER fora do limite (1..${peLimit}).` };
+        }
+        // Dentro de combate, curar é uma Ação Comum.
+        let inCombat = false;
+        try {
+          const { useCombatStore } = await import('@/stores/useCombatStore');
+          inCombat = !!useCombatStore.getState().inCombat;
+        } catch { /* sem combate */ }
+        if (inCombat && (c0.actionsCurrent ?? 0) <= 0) {
+          return { ok: false, reason: 'Sem Ação Comum disponível neste turno.' };
         }
         const die = hasAmplificada ? 8 : 6;
         const baseCount = perSpent * 2;
@@ -3832,22 +3850,31 @@ export const useCharacterStore = create<CharacterStore>()(
         if (c0.level >= 20) bonusDice += 1;
         const totalDiceCount = baseCount + bonusDice;
         const { rolls } = await rollDiceCom(charId, `${totalDiceCount}d${die}`);
+        const modMul = hasAmplificada ? 2 : 1;
+        const pre = (c0.attributes ?? []).find(a => a.name === 'Presença');
+        const sab = (c0.attributes ?? []).find(a => a.name === 'Sabedoria');
+        const preMod = pre ? Math.floor((pre.value - 10) / 2) : -5;
+        const sabMod = sab ? Math.floor((sab.value - 10) / 2) : -5;
+        const usePre = preMod >= sabMod;
+        const mod = (usePre ? preMod : sabMod) * modMul;
+        const total = Math.max(1, rolls.reduce((a, b) => a + b, 0) + mod);
         let result: { ok: boolean; reason?: string; peSpent?: number; healed?: number; rolls?: number[]; mod?: number; key?: 'Presença' | 'Sabedoria' } = { ok: false };
         set((state) => ({
           characters: state.characters.map((c) => {
-            if (c.id !== charId) return c;
-            const modMul = hasAmplificada ? 2 : 1;
-            const pre = (c.attributes ?? []).find(a => a.name === 'Presença');
-            const sab = (c.attributes ?? []).find(a => a.name === 'Sabedoria');
-            const preMod = pre ? Math.floor((pre.value - 10) / 2) : -5;
-            const sabMod = sab ? Math.floor((sab.value - 10) / 2) : -5;
-            const usePre = preMod >= sabMod;
-            const mod = (usePre ? preMod : sabMod) * modMul;
-            const total = Math.max(1, rolls.reduce((a, b) => a + b, 0) + mod);
-            const newHp = Math.min(c.hpMax, c.hpCurrent + total);
-            const healed = newHp - c.hpCurrent;
-            result = { ok: true, peSpent: peCost, healed, rolls, mod, key: usePre ? 'Presença' : 'Sabedoria' };
-            return { ...c, peCurrent: c.peCurrent - peCost, hpCurrent: newHp };
+            let next = c;
+            if (c.id === charId) {
+              next = {
+                ...next,
+                peCurrent: Math.max(0, next.peCurrent - peCost),
+                ...(inCombat ? { actionsCurrent: Math.max(0, (next.actionsCurrent ?? 0) - 1) } : {}),
+              };
+            }
+            if (c.id === tgtId) {
+              const newHp = Math.min(next.hpMax, next.hpCurrent + total);
+              result = { ok: true, peSpent: peCost, healed: newHp - next.hpCurrent, rolls, mod, key: usePre ? 'Presença' : 'Sabedoria' };
+              next = { ...next, hpCurrent: newHp };
+            }
+            return next;
           }),
         }));
         return result;
