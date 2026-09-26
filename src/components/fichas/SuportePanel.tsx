@@ -11,14 +11,19 @@ import {
   isSuporte,
   applyApoiar,
   applyPresencaInspiradora,
+  applySuporteBaseTR,
+  applyTRMestre,
   getPresencaInspiradoraMaxExtra,
+  getSuporteBaseTR,
   getSuporteHealDice,
   getSuporteHealMaxUses,
   getSuporteHealUsesLeft,
   getSuporteKeyAttr,
   getSuporteKeyMod,
+  TR_MESTRE_LEVEL,
+  type SuporteBaseTR,
 } from '@/lib/suporteAbilities';
-import { HeartHandshake, HandHelping, Sparkles } from 'lucide-react';
+import { HeartHandshake, HandHelping, ShieldCheck, Sparkles } from 'lucide-react';
 
 export function SuportePanel({ character: c }: { character: Character }) {
   const characters = useCharacterStore((s) => s.characters);
