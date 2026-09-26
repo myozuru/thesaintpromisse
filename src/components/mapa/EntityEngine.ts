@@ -36,6 +36,7 @@ export function normalizeTokenCrop(crop?: Partial<TokenCrop>): TokenCrop {
     zoom: clamp(Number.isFinite(crop?.zoom) ? Number(crop?.zoom) : 1, 1, 4),
     offsetX: clamp(Number.isFinite(crop?.offsetX) ? Number(crop?.offsetX) : 0, -100, 100),
     offsetY: clamp(Number.isFinite(crop?.offsetY) ? Number(crop?.offsetY) : 0, -100, 100),
+    border: crop?.border,
   };
 }
 
