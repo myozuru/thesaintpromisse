@@ -16,9 +16,20 @@ const DEFAULT_CROP: TokenCrop = { zoom: 1, offsetX: 0, offsetY: 0 };
 
 export function TokenCropDialog({ entity, onConfirm, onCancel }: Props) {
   const [crop, setCrop] = useState(() => normalizeTokenCrop(entity.tokenCrop));
+  const [, setImageReadyTick] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dragRef = useRef<{ x: number; y: number; crop: TokenCrop } | null>(null);
   const cached = entity.assetId ? assetCache.get(entity.assetId) : null;
+
+  useEffect(() => {
+    if (!cached || cached.ready) return;
+    const timer = window.setInterval(() => {
+      if (!cached.ready) return;
+      window.clearInterval(timer);
+      setImageReadyTick((value) => value + 1);
+    }, 40);
+    return () => window.clearInterval(timer);
+  }, [cached]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
