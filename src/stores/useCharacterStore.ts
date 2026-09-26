@@ -54,6 +54,7 @@ import { applyLutadorProgression } from '@/lib/lutadorProgression';
 import { applyTecnicaProgression } from '@/lib/tecnicaProgression';
 import { aggregateSpecAbilityEffects } from '@/lib/specAbilityEffects';
 import { expireTransmitir } from '@/lib/suporteTransmitir';
+import { isProtegidoPreAnalise, isSurpresoCondition, preAnaliseShortRestPatch } from '@/lib/suportePreAnaliseRecompensa';
 import { aggregateSpecChoices, DOMINANCIA_DYNAMIC } from '@/lib/specChoiceEffects';
 import { getSpecKeyMod } from '@/lib/specKeyMod';
 import { applyOriginLevelUp, initOriginPools, resetOriginDailyPools } from '@/lib/originLevelEngine';
@@ -4055,6 +4056,10 @@ export const useCharacterStore = create<CharacterStore>()(
         const target = get().characters.find((c) => c.id === charId);
         // Talento "Atenção Infalível" / outros: bloqueia condições listadas em immunities.
         if (target) {
+          if (isSurpresoCondition(condition) && isProtegidoPreAnalise(target, get().characters)) {
+            useLogStore.getState().addLog('system', `🛡 ${target.name} não pode ser surpreendido (Pré-Análise).`);
+            return;
+          }
           const immunities = aggregateTalentBonuses(target).immunities;
           const condNorm = (condition.name ?? '').trim().toLowerCase();
           if (immunities.some((i) => i.trim().toLowerCase() === condNorm)) {
@@ -4243,7 +4248,9 @@ export const useCharacterStore = create<CharacterStore>()(
         let peRecovered = 0;
         let economiaRoll: number | undefined = preEconomia;
         set((state) => ({
-          characters: state.characters.map((c) => {
+          characters: state.characters.map((c0) => {
+            const paPatch = preAnaliseShortRestPatch(c0, charId);
+            const c = paPatch ? { ...c0, ...paPatch } : c0;
             if (c.id !== charId) return c;
             // Recupera 50% do PE máximo
             const halfPe = Math.floor(c.peMax / 2);

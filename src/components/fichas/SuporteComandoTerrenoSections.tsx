@@ -16,22 +16,70 @@ import {
   definirCDDesvendar, getComandoBonus, getDesvendarFase, pedirDesvendar, pendingDesvendar,
   resolverDesvendar,
 } from '@/lib/suporteComandoTerreno';
-import { Map as MapIcon, Megaphone } from 'lucide-react';
+import { Map as MapIcon, Megaphone, Eye } from 'lucide-react';
+import {
+  PRE_ANALISE_ATENCAO, PRE_ANALISE_ID, RECOMPENSA_ID, canEscolherAliadoPreAnalise, escolherAliadoPatch, getRecompensaBonus,
+} from '@/lib/suportePreAnaliseRecompensa';
+
+export function PreAnaliseSection({ c }: { c: Character }) {
+  const characters = useCharacterStore((s) => s.characters);
+  const updateCharacter = useCharacterStore((s) => s.updateCharacter);
+  const addLog = useLogStore((s) => s.addLog);
+  const [targetId, setTargetId] = useState('');
+  if (!hasSpecAbility(c, PRE_ANALISE_ID)) return null;
+  const target = characters.find((x) => x.id === targetId);
+  const ally = characters.find((x) => x.id === c.preAnaliseAllyId);
+  const chk = canEscolherAliadoPreAnalise(c, target);
+  const go = () => {
+    if (!chk.ok || !target) return;
+    updateCharacter(c.id, escolherAliadoPatch(target.id));
+    addLog('combat', `👁 ${c.name} (Pré-Análise) protege ${target.name}: não pode ser surpreendido.`);
+    setTargetId('');
+  };
+  return (
+    <div className="rounded-md border border-border bg-secondary/20 p-2 space-y-2">
+      <div className="flex items-center gap-2 text-xs font-bold text-foreground">
+        <Eye className="h-3.5 w-3.5 text-primary" /> Pré-Análise
+        <span className="font-normal text-muted-foreground">Imune a Surpreso · Atenção +{PRE_ANALISE_ATENCAO}</span>
+      </div>
+      <div className="text-[11px] text-muted-foreground">
+        Aliado protegido: <strong className="text-foreground">{ally ? ally.name : 'nenhum'}</strong>
+        {c.preAnaliseEscolhaUsada && ' · escolha usada (volta no descanso curto)'}
+      </div>
+      <div className="flex gap-2">
+        <select value={targetId} onChange={(e) => setTargetId(e.target.value)} disabled={!!c.preAnaliseEscolhaUsada}
+          className="flex-1 rounded-md border border-border bg-secondary/40 px-2 py-1 text-xs text-foreground">
+          <option value="">Aliado…</option>
+          {characters.filter((x) => x.id !== c.id && x.category === 'PLAYER').map((o) => (
+            <option key={o.id} value={o.id}>{o.name}</option>
+          ))}
+        </select>
+        <button disabled={!chk.ok} onClick={go}
+          className="rounded-md bg-primary px-2 py-1 text-xs font-bold text-primary-foreground disabled:opacity-50">
+          Proteger
+        </button>
+      </div>
+      <div className="text-[10px] text-muted-foreground">O aliado perde a proteção quando fizer um descanso curto.</div>
+    </div>
+  );
+}
 
 export function ComandoSection({ c }: { c: Character }) {
   const characters = useCharacterStore((s) => s.characters);
   const addLog = useLogStore((s) => s.addLog);
   const [targetId, setTargetId] = useState('');
   const [comando, setComando] = useState('');
+  const [recompensa, setRecompensa] = useState(false);
   if (!hasSpecAbility(c, COMANDO_ID)) return null;
+  const temRecompensa = hasSpecAbility(c, RECOMPENSA_ID);
   const target = characters.find((x) => x.id === targetId);
   const chk = canComandar(c, target);
-  const bonus = getComandoBonus(c);
+  const bonus = temRecompensa && recompensa ? getRecompensaBonus(c) : getComandoBonus(c);
 
   const go = () => {
-    const r = darComando(c, target, comando.trim());
+    const r = darComando(c, target, comando.trim(), temRecompensa && recompensa);
     if (!r.ok || !target) return;
-    addLog('combat', `📣 ${c.name} comanda ${target.name}${comando.trim() ? `: "${comando.trim()}"` : ''} (−2 PE) — +${r.bonus} na próxima rolagem.`);
+    addLog('combat', `📣 ${c.name} comanda ${target.name}${comando.trim() ? `: "${comando.trim()}"` : ''} (−2 PE) — +${r.bonus} na próxima rolagem${temRecompensa && recompensa ? ' · 🏆 Recompensa: +2 PE se suceder' : ''}.`);
     setComando('');
   };
 
@@ -56,6 +104,12 @@ export function ComandoSection({ c }: { c: Character }) {
       </div>
       <input value={comando} onChange={(e) => setComando(e.target.value)} placeholder="Comando (opcional), ex: Ataque o líder!"
         className="w-full rounded-md border border-border bg-secondary/40 px-2 py-1 text-xs text-foreground" />
+      {temRecompensa && (
+        <label className="flex items-center gap-2 text-[11px] text-foreground">
+          <input type="checkbox" checked={recompensa} onChange={(e) => setRecompensa(e.target.checked)} />
+          🏆 Recompensa pelo Sucesso — bônus pela metade (+{getRecompensaBonus(c)}); se suceder, o aliado ganha 2 PE
+        </label>
+      )}
       {target && !chk.ok && <div className="text-[11px] text-destructive">{chk.reason}</div>}
       <div className="text-[10px] text-muted-foreground">Vale na próxima rolagem do aliado, até o início do seu próximo turno.</div>
     </div>

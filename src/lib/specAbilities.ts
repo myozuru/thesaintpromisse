@@ -1550,6 +1550,25 @@ const SUPORTE: SpecAbility[] = [
     triggerText: 'Aviso automático ao dono do Suporte quando um aliado tira 1 natural.',
     logicText: 'A falha crítica vira falha comum. Vale para qualquer rolagem de d20.',
   },
+  {
+    id: 'sup-pre-analise', name: 'Pré-Análise', tier: 4, specialization: 'Suporte',
+    flavor: 'Você analisa o território sem nem perceber.',
+    mechanic: 'Você não pode ser surpreendido e sua Atenção recebe +5. Escolha um aliado para também não ser surpreendido.',
+    activation: 'passive',
+    prerequisitesText: 'Treinado em Percepção.',
+    triggerText: 'Painel do Suporte — escolha o aliado (1 por descanso curto).',
+    logicText: 'Condição Surpreso é bloqueada. O aliado perde a proteção quando faz um descanso curto. +5 Atenção é narrativo e aparece em destaque na ficha.',
+  },
+  {
+    id: 'sup-recompensa-sucesso', name: 'Recompensa pelo Sucesso', tier: 4, specialization: 'Suporte',
+    flavor: 'Um sucesso mais difícil é extremamente gratificante.',
+    mechanic: 'Ao usar Comando Motivador, você pode reduzir o bônus pela metade; se o aliado ainda assim suceder, ele ganha 2 PE.',
+    activation: 'passive',
+    prerequisites: ['sup-comando-motivador'],
+    prerequisitesText: 'Comando Motivador.',
+    triggerText: 'Opção no Comando Motivador.',
+    logicText: 'Bônus arredondado para cima. Sucesso detectado em testes com CD conhecida. PE acima do máximo vira PE temporário.',
+  },
 ];
 
 // ===== Registry global =====================================================

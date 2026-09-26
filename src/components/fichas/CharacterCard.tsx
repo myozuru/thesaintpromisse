@@ -28,6 +28,8 @@ import { executarCombatEffect } from '@/lib/omni/executarSubEfeito';
 import { useSpellProposalStore } from '@/stores/useSpellProposalStore';
 import { usePassiveProposalStore } from '@/stores/usePassiveProposalStore';
 import { rollD20Com, rollDiceCom } from '@/lib/dice';
+import { hasSpecAbility } from '@/lib/suporteNivel2';
+import { PRE_ANALISE_ATENCAO, PRE_ANALISE_ID } from '@/lib/suportePreAnaliseRecompensa';
 import { consumeAdvantageFor, consumeFlatBonusFor, applyAdvantageToD20 } from '@/lib/omni/rollAdvantage';
 import { cn } from '@/lib/utils';
 import { Eye, EyeOff, Dice1, ChevronDown, ChevronUp, Zap, Plus, X, Heart, Sparkles, Shield, Backpack, Star, Crosshair, RotateCcw, Gem, ScrollText, ShieldAlert, AlertTriangle, HelpCircle, Wand2, Moon, Wallet, Sword, Trash2 } from 'lucide-react';
@@ -1485,6 +1487,11 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
               <span className="inline-flex items-center gap-1">
                 👁 Atenção: <strong className="text-foreground">+{effectiveAttention}</strong>
                 <TalentBonusBadge bonuses={talentBonuses} prefix="Atenção" />
+              </span>
+            )}
+            {hasSpecAbility(c, PRE_ANALISE_ID) && (
+              <span className="inline-flex items-center gap-1 rounded bg-primary/15 px-1.5 text-primary" title="Pré-Análise (narrativo)">
+                👁 Pré-Análise: Atenção +{PRE_ANALISE_ATENCAO} · imune a Surpreso
               </span>
             )}
             {talentBonuses.fortitude !== 0 && (
