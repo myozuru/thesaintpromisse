@@ -465,6 +465,9 @@ export const useCombatStore = create<CombatStore>()(
             import('@/lib/omni/rollAdvantage').then(({ expireGrantedBy }) => {
               expireGrantedBy(firstEntry.charId);
             });
+            import('@/lib/suporteNivel6').then(({ expireApoiosGrantedBy }) => {
+              expireApoiosGrantedBy(firstEntry.charId);
+            });
             // TRs de fim de condição para o primeiro da nova rodada.
             enqueueConditionEndTRPrompts(firstEntry.charId);
             // Áreas Persistentes: decrementa a duração no início da rodada e aplica tick.
@@ -494,6 +497,9 @@ export const useCombatStore = create<CombatStore>()(
           // Apoiar (Suporte): expira efeitos concedidos por quem está iniciando o turno.
           import('@/lib/omni/rollAdvantage').then(({ expireGrantedBy }) => {
             expireGrantedBy(nextActive.charId);
+          });
+          import('@/lib/suporteNivel6').then(({ expireApoiosGrantedBy }) => {
+            expireApoiosGrantedBy(nextActive.charId);
           });
           set((s) => {
             const m = { ...s.movementUsedByChar };
