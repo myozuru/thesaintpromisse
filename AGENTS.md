@@ -21,3 +21,4 @@
 - Habilidades de Suporte por nível ficam em módulos próprios (suporteNivel2.ts, suporteNivel6.ts) com UI em SuporteNivel*Sections.tsx; bônus fixos em rolagens usam grantFlatBonus/consumeFlatBonusFor de rollAdvantage.ts (mods com `bonus` não contam como vantagem).
 - Full prompt flows (dice → warning → click → effect, and two accounts) are tested with the real-store harness src/test/helpers/mesaReal.ts in jsdom tests that mock cloud/socket (see fluxoNegacaoCritica.test.tsx) — verifies real UI clicks in ~1s without browsers or accounts.
 - Token framing stays in `Entity.tokenCrop` across circular/free formats for scene and multiplayer persistence.
+- Character sync merges per sheet by `_syncAt` last-edit stamps (src/lib/charSyncStamps.ts) — stale cloud/other-screen copies must never overwrite newer HP/PE edits.
