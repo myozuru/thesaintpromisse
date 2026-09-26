@@ -227,7 +227,9 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
     if (charClass === 'Feiticeiro') {
       keyAttrName = specialization === 'Especialista em Técnica'
         ? keyAttribute
-        : getKeyAttrForSpec(specialization);
+        : specialization === 'Suporte'
+          ? supKeyAttribute
+          : getKeyAttrForSpec(specialization);
     }
     const keyMod = keyAttrName ? mod(eff(keyAttrName)) : 0;
 
@@ -239,7 +241,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
     const ca = 10 + desMod;
     const baseDC = 10 + keyMod;
     return { hpMax, peMax, ca, baseDC, keyAttrName, keyMod, conMod, desMod };
-  }, [attrValues, charClass, specialization, keyAttribute, effects.attrBonuses]);
+  }, [attrValues, charClass, specialization, keyAttribute, supKeyAttribute, effects.attrBonuses]);
   const { hpMax, peMax, ca, baseDC } = derivedStats;
 
   const maxSpells = charClass === 'Feiticeiro'
@@ -277,7 +279,9 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
 
   // Pool unificado de perícias para Feiticeiros = nível + 1 (mesma regra da ficha).
   // Origens/clãs adicionam pontos extras (effects.trackers.availableTrainings).
-  const wizardSkillPoolBase = charClass === 'Feiticeiro' ? (level + 1) : 0;
+  // Suporte recebe +1 ponto extra: o livro concede 3 perícias quaisquer além das fixas
+  // (pool padrão nível+1 cobre só 2 no Nv 1).
+  const wizardSkillPoolBase = charClass === 'Feiticeiro' ? (level + 1) + (isSuporte ? 1 : 0) : 0;
 
   const liveTrackers = useMemo(() => {
     const totalAttr = (effects.trackers.availableAttrPoints + (effects.automation.extraAttrPoints ?? 0));
