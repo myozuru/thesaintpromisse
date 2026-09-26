@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   LogOut, Clock, Users, Swords, CalendarDays, Settings, BookOpen, Wand2, Coins, Store, GripVertical, Sparkles, Library, Map as MapIcon, Archive, Skull,
 } from 'lucide-react';
@@ -72,6 +72,8 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
   const setOrder = useTabOrderStore((s) => s.setOrder);
   const savedOrders = useTabOrderStore((s) => s.orders);
   const pending = usePendingDebates();
+  const navRef = useRef<HTMLDivElement>(null);
+  const activeItemRef = useRef<HTMLButtonElement>(null);
 
   const defaults: TabId[] = role ? getTabsForRole(role) : [];
   const roleKey = role ?? null;
@@ -86,6 +88,17 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
 
   const [dragId, setDragId] = useState<TabId | null>(null);
   const [overId, setOverId] = useState<TabId | null>(null);
+
+  useEffect(() => {
+    activeItemRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }, [activeTab]);
+
+  const scrollMenu = (event: React.WheelEvent<HTMLDivElement>) => {
+    const menu = navRef.current;
+    if (!menu || menu.scrollWidth <= menu.clientWidth || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+    event.preventDefault();
+    menu.scrollBy({ left: event.deltaY, behavior: 'smooth' });
+  };
 
   const handleDrop = (targetId: TabId) => {
     if (!dragId || !roleKey || dragId === targetId) {
@@ -105,7 +118,7 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/60 bg-card/95 shadow-[0_4px_24px_-12px_hsl(265_80%_4%/0.8)]">
+    <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/60 bg-card/90 backdrop-blur-xl shadow-[0_4px_24px_-12px_hsl(265_80%_4%/0.8)]">
       {/* Linha ornamental dourada superior */}
       <div className="absolute inset-x-0 bottom-0 ornament-divider" aria-hidden />
       <div className="flex h-14 items-center gap-3 px-3 sm:px-4">
@@ -143,14 +156,21 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
 
         <MiniClock />
 
-        <nav className="flex-1 min-w-0">
-          <div className="flex items-center gap-1 overflow-x-auto scrollbar-thin">
+        <nav className="relative flex-1 min-w-0 overflow-hidden">
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-4 bg-gradient-to-r from-card/90 to-transparent" aria-hidden />
+          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-4 bg-gradient-to-l from-card/90 to-transparent" aria-hidden />
+          <div
+            ref={navRef}
+            onWheel={scrollMenu}
+            className="flex items-center gap-1.5 overflow-x-auto scroll-smooth px-1 py-1 scrollbar-thin"
+          >
             {tabs.map((id) => {
             const Icon = TAB_ICONS[id];
             const isActive = activeTab === id;
             return (
               <button
                 key={id}
+                 ref={isActive ? activeItemRef : undefined}
                 type="button"
                 draggable={!!roleKey}
                 onDragStart={(e) => {
@@ -171,18 +191,18 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
                 onClick={() => onTabChange(id)}
                 title={TAB_LABELS[id]}
                 className={cn(
-                  'group relative flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs whitespace-nowrap cursor-grab active:cursor-grabbing select-none transition-all',
+                   'group relative flex h-9 items-center gap-1.5 rounded-md px-3 text-xs whitespace-nowrap cursor-grab active:cursor-grabbing select-none border transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-200 ease-out active:scale-[0.97]',
                   isActive
-                    ? 'bg-primary/15 text-primary font-semibold border border-primary/50 shadow-[0_0_14px_-4px_hsl(var(--primary)/0.7)]'
-                    : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground border border-transparent hover:border-border/50',
-                  dragId === id && 'opacity-40',
-                  overId === id && dragId && dragId !== id && 'ring-2 ring-accent/60',
+                     ? 'bg-primary/15 text-primary font-semibold border-primary/50 shadow-[0_0_16px_-5px_hsl(var(--primary)/0.8)] -translate-y-px'
+                     : 'text-muted-foreground border-transparent hover:bg-secondary/70 hover:text-foreground hover:border-border/70 hover:-translate-y-px',
+                   dragId === id && 'opacity-40 scale-95',
+                   overId === id && dragId && dragId !== id && 'translate-x-1 ring-2 ring-accent/60',
                 )}
               >
-                <GripVertical className="h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" aria-hidden />
+                 <GripVertical className="h-3 w-3 -ml-1 opacity-0 -translate-x-1 group-hover:opacity-50 group-hover:translate-x-0 transition-all duration-200" aria-hidden />
                 {(() => {
                   const TabIcon = Icon as React.ComponentType<{ className?: string }>;
-                  return <TabIcon className={cn("h-3.5 w-3.5 shrink-0", isActive && "text-accent")} />;
+                   return <TabIcon className={cn("h-3.5 w-3.5 shrink-0 transition-transform duration-200 group-hover:scale-110", isActive && "text-accent scale-110")} />;
                 })()}
                 <span style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.06em' }}>
                   {TAB_LABELS[id]}
@@ -195,6 +215,13 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
                     !{pending.total > 1 ? pending.total : ''}
                   </span>
                 )}
+                 <span
+                   className={cn(
+                     'pointer-events-none absolute inset-x-2 -bottom-px h-px origin-center bg-accent transition-transform duration-300',
+                     isActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-50',
+                   )}
+                   aria-hidden
+                 />
               </button>
             );
             })}
@@ -205,7 +232,7 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
           <button
             onClick={() => setAccountsOpen(true)}
             title="Contas e Mestres"
-            className="shrink-0 flex items-center rounded-md border border-transparent p-1.5 text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-all"
+            className="shrink-0 flex h-9 w-9 items-center justify-center rounded-md border border-transparent text-muted-foreground hover:bg-secondary/70 hover:text-foreground hover:border-border/70 hover:-translate-y-px active:scale-95 transition-all duration-200"
           >
             <Users className="h-4 w-4" />
           </button>
@@ -214,7 +241,7 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
           <button
             onClick={() => { void signOutAll(); logout(); }}
             title={`Sair (${role === 'MASTER' ? 'Mestre' : 'Player'})`}
-            className="shrink-0 flex items-center gap-1.5 rounded-md border border-transparent px-2 sm:px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-destructive/15 hover:text-destructive hover:border-destructive/40 transition-all"
+            className="shrink-0 flex h-9 items-center gap-1.5 rounded-md border border-transparent px-2 sm:px-3 text-xs font-medium text-muted-foreground hover:bg-destructive/15 hover:text-destructive hover:border-destructive/40 hover:-translate-y-px active:scale-95 transition-all duration-200"
           >
             <LogOut className="h-3.5 w-3.5" />
             <span className="hidden sm:inline" style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.05em' }}>
