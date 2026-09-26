@@ -1056,6 +1056,7 @@ export function useMultiplayerSync() {
       void supabase.removeChannel(cloudMapChannel);
       void supabase.removeChannel(cloudAssetChannel);
       window.removeEventListener('amizade:send', onAmizadeSend);
+      window.removeEventListener('outra-chance:send', onOutraChanceSend);
       void supabase.removeChannel(worldBus);
       if (chronosTimer) clearTimeout(chronosTimer);
       if (mapSceneTimer) clearTimeout(mapSceneTimer);
