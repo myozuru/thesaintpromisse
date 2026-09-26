@@ -9,7 +9,7 @@
  *     atributo-chave, por descanso curto ou longo.
  * ============================================================================
  */
-import type { Character } from '@/types';
+import type { Attribute, Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 
 export function isSuporte(c: Pick<Character, 'specialization' | 'isGrimorioCreature'>): boolean {
