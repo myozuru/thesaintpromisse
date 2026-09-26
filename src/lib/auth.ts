@@ -16,8 +16,11 @@ export interface CloudProfile {
   avatar: string | null;
 }
 
+let applyingUser: Promise<void> | null = null;
+let applyingUserId: string | null = null;
+
 /** Sincroniza sessão da conta → papel (Mestre/Player) e perfil local. */
-export async function applyUser(user: User) {
+async function applyUserState(user: User) {
   const { data: prof } = await authDb
     .from('profiles')
     .select('id, nick, avatar')
@@ -39,12 +42,14 @@ export async function applyUser(user: User) {
   const { data: isMaster } = await authDb.rpc('has_role', { _user_id: user.id, _role: 'master' });
 
   // Mantém um perfil local com o mesmo id da conta, para o resto do app.
+  if (!profile) throw new Error('Não foi possível carregar o perfil');
+
   const store = useProfileStore.getState();
   const existing = store.profiles.find((p) => p.id === user.id);
   if (existing) {
     useProfileStore.setState({
       profiles: store.profiles.map((p) =>
-        p.id === user.id ? { ...p, name: profile!.nick, avatar: profile!.avatar } : p,
+        p.id === user.id ? { ...p, name: profile.nick, avatar: profile.avatar } : p,
       ),
     });
   } else {
@@ -57,6 +62,17 @@ export async function applyUser(user: User) {
   }
   store.setActiveProfile(user.id);
   useRoleStore.getState().setRole(isMaster ? 'MASTER' : 'PLAYER');
+}
+
+/** Evita que o evento de sessão e o formulário criem/carreguem o mesmo perfil em paralelo. */
+export function applyUser(user: User): Promise<void> {
+  if (applyingUser && applyingUserId === user.id) return applyingUser;
+  applyingUserId = user.id;
+  applyingUser = applyUserState(user).finally(() => {
+    applyingUser = null;
+    applyingUserId = null;
+  });
+  return applyingUser;
 }
 
 export async function signOutAll() {
