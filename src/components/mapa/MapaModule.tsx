@@ -602,8 +602,19 @@ const MOVEMENT_EPS_M = 0.05;
 
 type EntityPatchMessage = Array<{ id: string; patch: Partial<Entity> }>;
 
-const sendEntityPatches = (patches: EntityPatchMessage) => {
-  if (!patches.length) return;
+// Limita envios ao vivo (~8/s): a conexão aceita ~10 mensagens/s por pessoa e o
+// excesso é descartado. Acumula a última versão de cada peça e sempre envia a final.
+const ENTITY_PATCH_INTERVAL_MS = 125;
+const pendingEntityPatches = new Map<string, Partial<Entity>>();
+let entityPatchTimer: ReturnType<typeof setTimeout> | null = null;
+let lastEntityPatchSent = 0;
+
+const flushEntityPatches = () => {
+  entityPatchTimer = null;
+  if (!pendingEntityPatches.size) return;
+  const patches = [...pendingEntityPatches.entries()].map(([id, patch]) => ({ id, patch }));
+  pendingEntityPatches.clear();
+  lastEntityPatchSent = performance.now();
   try {
     const w = window as unknown as {
       __worldBus?: { send: (a: unknown) => void };
@@ -613,6 +624,16 @@ const sendEntityPatches = (patches: EntityPatchMessage) => {
     w.__worldBus?.send({ type: 'broadcast', event: 'entity-patch', payload });
     getSocket()?.emit('entity:patch', payload);
   } catch { /* ignore */ }
+};
+
+const sendEntityPatches = (patches: EntityPatchMessage) => {
+  if (!patches.length) return;
+  for (const { id, patch } of patches) {
+    pendingEntityPatches.set(id, { ...(pendingEntityPatches.get(id) ?? {}), ...patch });
+  }
+  if (entityPatchTimer) return;
+  const wait = Math.max(0, ENTITY_PATCH_INTERVAL_MS - (performance.now() - lastEntityPatchSent));
+  entityPatchTimer = setTimeout(flushEntityPatches, wait);
 };
 
 const playerOwnsEntity = (entity: Entity, profileId: string | null, characters: Character[]): boolean => {
@@ -2378,7 +2399,7 @@ export function MapaModule() {
           // broadcast incremental (throttle ~40ms)
           const nowT = performance.now();
           const lastSent = (rp as unknown as { _lastSent?: number })._lastSent || 0;
-          if (nowT - lastSent > 40) {
+          if (nowT - lastSent > 150) {
             (rp as unknown as { _lastSent?: number })._lastSent = nowT;
             const w = window as unknown as { __worldBus?: { send: (a: unknown) => void }; __worldBusClientId?: string };
             if (w.__worldBus) {
