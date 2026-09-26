@@ -46,12 +46,13 @@ export const APOIOS_AVANCADOS: Record<ApoioAvancadoKey, { label: string; desc: s
   },
 };
 
-/** Quantos apoios o Suporte conhece: 1 no Nv 6, +1 no Nv 12. */
-export function getApoiosMax(level: number): number {
-  if ((level ?? 0) >= 12) return 2;
-  if ((level ?? 0) >= 6) return 1;
-  return 0;
-}
+  /** Quantos apoios o Suporte conhece: 1 no Nv 2, +1 no Nv 6, +1 no Nv 12. */
+  export function getApoiosMax(level: number): number {
+    if ((level ?? 0) >= 12) return 3;
+    if ((level ?? 0) >= 6) return 2;
+    if ((level ?? 0) >= 2) return 1;
+    return 0;
+  }
 
 export function getApoiosEscolhidos(c: Pick<Character, 'apoiosAvancados'>): ApoioAvancadoKey[] {
   return (c.apoiosAvancados ?? []).filter((k): k is ApoioAvancadoKey => k in APOIOS_AVANCADOS);
