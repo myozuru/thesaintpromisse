@@ -11,14 +11,14 @@ import { useMapStore, type EntityLayer } from '@/stores/useMapStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { entityAABB } from '../EntityEngine';
 import {
-  Eye, EyeOff, Lock, Unlock, Layers, Type as TypeIcon, Trash2, Copy, Package,
+  Eye, EyeOff, Lock, Unlock, Layers, Type as TypeIcon, Trash2, Copy, Package, Scan,
 } from 'lucide-react';
 import { assetCache } from '../assetCache';
 import { useChestStore } from '@/stores/useChestStore';
 
 const LAYER_ORDER: EntityLayer[] = ['map', 'tokens', 'gm'];
 
-export function SelectionToolbar({ visible = true }: { visible?: boolean }) {
+export function SelectionToolbar({ visible = true, onAdjustToken }: { visible?: boolean; onAdjustToken?: (entityId: string) => void }) {
   const selectedIds = useMapStore((s) => s.selectedIds);
   const entities = useMapStore((s) => s.entities);
   const camera = useMapStore((s) => s.camera);
@@ -103,9 +103,10 @@ export function SelectionToolbar({ visible = true }: { visible?: boolean }) {
     const off = gridConfig.dpi / 2;
     pushHistory();
     const nid = addEntity({
-      shape: e.shape, x: e.x + off, y: e.y + off,
-      w: e.w, h: e.h, rotation: e.rotation,
-      color: e.color, label: e.label, locked: false, assetId: e.assetId,
+      ...e,
+      id: undefined,
+      x: e.x + off, y: e.y + off,
+      locked: false,
     });
     setSelected([nid]);
   };
@@ -169,6 +170,11 @@ export function SelectionToolbar({ visible = true }: { visible?: boolean }) {
           <ToolBtn title="Renomear (F2)" onClick={startRename} active={renaming}>
             <TypeIcon className="h-3.5 w-3.5" />
           </ToolBtn>
+          {e.assetId && e.shape === 'ELLIPSE' && e.tokenCrop && onAdjustToken && (
+            <ToolBtn title="Ajustar imagem" onClick={() => onAdjustToken(e.id)}>
+              <Scan className="h-3.5 w-3.5" />
+            </ToolBtn>
+          )}
           <ToolBtn
             title={e.chestId ? 'Baú vinculado (clique p/ trocar)' : 'Vincular Baú'}
             onClick={() => setChestMenuOpen((v) => !v)}

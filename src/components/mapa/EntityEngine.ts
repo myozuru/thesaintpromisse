@@ -9,7 +9,7 @@
  * Convenção: (x,y) é o CENTRO da entidade. w/h são as dimensões "locais"
  * antes da rotação. rotation é em radianos.
  */
-import type { Entity, Vector2 } from '@/stores/useMapStore';
+import type { Entity, TokenCrop, Vector2 } from '@/stores/useMapStore';
 import { assetCache } from './assetCache';
 
 
@@ -25,6 +25,40 @@ export interface Handle {
   /** centro do handle em coords de mundo (após rotação aplicada) */
   x: number;
   y: number;
+}
+
+const DEFAULT_TOKEN_CROP: TokenCrop = { zoom: 1, offsetX: 0, offsetY: 0 };
+
+export function normalizeTokenCrop(crop?: Partial<TokenCrop>): TokenCrop {
+  const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+  return {
+    zoom: clamp(Number.isFinite(crop?.zoom) ? Number(crop?.zoom) : 1, 1, 4),
+    offsetX: clamp(Number.isFinite(crop?.offsetX) ? Number(crop?.offsetX) : 0, -100, 100),
+    offsetY: clamp(Number.isFinite(crop?.offsetY) ? Number(crop?.offsetY) : 0, -100, 100),
+  };
+}
+
+export function getTokenImageRect(
+  naturalW: number,
+  naturalH: number,
+  frameW: number,
+  frameH: number,
+  crop?: Partial<TokenCrop>,
+): { x: number; y: number; w: number; h: number } {
+  const safeW = Math.max(1, naturalW);
+  const safeH = Math.max(1, naturalH);
+  const resolved = normalizeTokenCrop(crop ?? DEFAULT_TOKEN_CROP);
+  const cover = Math.max(frameW / safeW, frameH / safeH) * resolved.zoom;
+  const w = safeW * cover;
+  const h = safeH * cover;
+  const overflowX = Math.max(0, w - frameW) / 2;
+  const overflowY = Math.max(0, h - frameH) / 2;
+  return {
+    x: -w / 2 + overflowX * (resolved.offsetX / 100),
+    y: -h / 2 + overflowY * (resolved.offsetY / 100),
+    w,
+    h,
+  };
 }
 
 /** Converte ponto-mundo p para coordenadas locais (não rotacionadas) da entidade. */
@@ -227,9 +261,9 @@ export function drawEntity(ctx: CanvasRenderingContext2D, e: Entity, scale: numb
 
   // Imagem (assetId) — se disponível no cache e carregada.
   const cached = e.assetId ? assetCache.get(e.assetId) : null;
-  const hasImg = cached && cached.ready;
+  const image = cached?.ready ? cached.img : null;
 
-  if (hasImg) {
+  if (image) {
     // Clip pelo shape para imagem respeitar elipse.
     ctx.save();
     if (e.shape === 'ELLIPSE') {
@@ -239,7 +273,18 @@ export function drawEntity(ctx: CanvasRenderingContext2D, e: Entity, scale: numb
     }
     if (e.flipX) ctx.scale(-1, 1);
     try {
-      ctx.drawImage(cached!.img, -hw, -hh, e.w, e.h);
+      if (e.shape === 'ELLIPSE' && e.tokenCrop) {
+        const rect = getTokenImageRect(
+          image.naturalWidth,
+          image.naturalHeight,
+          e.w,
+          e.h,
+          e.tokenCrop,
+        );
+        ctx.drawImage(image, rect.x, rect.y, rect.w, rect.h);
+      } else {
+        ctx.drawImage(image, -hw, -hh, e.w, e.h);
+      }
     } catch {
       // ignora frames durante decoding
     }

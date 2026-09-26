@@ -13,7 +13,7 @@ import {
   AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal,
   AlignStartVertical, AlignCenterVertical, AlignEndVertical,
   AlignHorizontalDistributeCenter, AlignVerticalDistributeCenter,
-  Map as MapIcon, User, Package, Eye, EyeOff, UserCheck, FileText, Link2Off,
+  Map as MapIcon, User, Package, Eye, EyeOff, UserCheck, FileText, Link2Off, Scan,
 } from 'lucide-react';
 import type { EntityLayer } from '@/stores/useMapStore';
 
@@ -32,6 +32,7 @@ export type CtxMenuAction =
   | 'group' | 'ungroup'
   | 'setMyself' | 'clearMyself'
   | 'carry' | 'drop'
+  | 'adjustToken'
   | { kind: 'setLayer'; layer: EntityLayer }
   | { kind: 'setLight'; preset: LightPreset }
   | { kind: 'setLightMeters'; meters: number }
@@ -60,6 +61,8 @@ interface Props {
   canUngroup?: boolean;
   /** Algum item selecionado é imagem (tem assetId) — habilita "Tipo". */
   anyHasAsset?: boolean;
+  /** Seleção única é um personagem circular ajustável. */
+  canAdjustToken?: boolean;
   /** Mostra opções restritas ao player (Sou eu, vincular ficha). */
   isPlayer?: boolean;
   /** Habilita controles GM-only (Luz e Visão dos tokens). */
@@ -83,7 +86,7 @@ interface Props {
 }
 
 export function MapContextMenu({
-  x, y, selectionCount, anyLocked, anyUnlocked, anyInInit, anyOutInit, canGroup, canUngroup, anyHasAsset,
+  x, y, selectionCount, anyLocked, anyUnlocked, anyInInit, anyOutInit, canGroup, canUngroup, anyHasAsset, canAdjustToken,
   isPlayer, isGM, myselfActive, currentCharacterId, availableCharacters,
   currentLightMeters, currentSeerMeters, currentSeerDarkMeters, carryMode,
   onAction, onClose,
@@ -189,6 +192,13 @@ export function MapContextMenu({
       {anyHasAsset && selectionCount === 1 && (
         <>
           <Sep />
+          {canAdjustToken && (
+            <Item
+              icon={<Scan className="h-3.5 w-3.5 text-violet-300" />}
+              label="Ajustar imagem"
+              onClick={() => { onAction('adjustToken'); onClose(); }}
+            />
+          )}
           {isPlayer && (
             <Item
               icon={<UserCheck className={`h-3.5 w-3.5 ${myselfActive ? 'text-emerald-300' : 'text-sky-300'}`} />}
