@@ -2322,7 +2322,7 @@ export const useCharacterStore = create<CharacterStore>()(
                   escLost: Math.max(0, preEsc - postSet.escCurrent),
                 });
               },
-            );
+            ).catch(() => {});
           }, 0);
         }
 
@@ -2331,7 +2331,7 @@ export const useCharacterStore = create<CharacterStore>()(
         if (postSet && postSet.category === 'PLAYER' && preHp > 0 && (postSet.hpCurrent ?? 0) <= 0) {
           const fallenId = postSet.id;
           setTimeout(() => {
-            void import('@/lib/suporteRepertorioMobilidade').then((m) => m.sendMobilidadeOffers(fallenId));
+            void import('@/lib/suporteRepertorioMobilidade').then((m) => m.sendMobilidadeOffers(fallenId)).catch(() => {});
           }, 0);
         }
 
