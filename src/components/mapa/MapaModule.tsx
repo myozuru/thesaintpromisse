@@ -3077,7 +3077,7 @@ export function MapaModule() {
     const ents = sel.map((id) => st.entities[id]).filter((x): x is Entity => !!x);
     if (a === 'adjustToken') {
       const target = ents[0];
-      if (target?.assetId && target.tokenCrop) setTokenCropEntityId(target.id);
+      if (target?.assetId) setTokenCropEntityId(target.id);
       return;
     }
     st.pushHistory();
@@ -3461,7 +3461,7 @@ export function MapaModule() {
                 canGroup={sel.length >= 2}
                 canUngroup={sel.some((e) => !!e.groupId)}
                 anyHasAsset={sel.some((e) => !!e.assetId)}
-                canAdjustToken={!!(single?.assetId && single.tokenCrop)}
+                canAdjustToken={!!single?.assetId}
                 isPlayer={isPlayerNow}
                 isGM={!isPlayerNow}
                 myselfActive={myselfActive}

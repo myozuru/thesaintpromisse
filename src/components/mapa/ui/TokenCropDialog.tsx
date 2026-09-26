@@ -46,7 +46,7 @@ export function TokenCropDialog({ entity, onConfirm, onCancel }: Props) {
       ctx.arc(size / 2, size / 2, size / 2 - 9, 0, Math.PI * 2);
       ctx.clip();
       const rect = getTokenImageRect(image.naturalWidth, image.naturalHeight, size, size, crop);
-      ctx.drawImage(image, rect.x, rect.y, rect.w, rect.h);
+      ctx.drawImage(image, size / 2 + rect.x, size / 2 + rect.y, rect.w, rect.h);
       ctx.restore();
       ctx.strokeStyle = 'hsl(260 28% 9%)';
       ctx.lineWidth = 14;
@@ -67,7 +67,9 @@ export function TokenCropDialog({ entity, onConfirm, onCancel }: Props) {
       ctx.arc(size / 2, size / 2, size / 2 - 20, 0, Math.PI * 2);
       ctx.stroke();
     } else {
-      ctx.drawImage(image, 0, 0, size, size);
+      const fit = Math.min(size / image.naturalWidth, size / image.naturalHeight);
+      const w = image.naturalWidth * fit, h = image.naturalHeight * fit;
+      ctx.drawImage(image, (size - w) / 2, (size - h) / 2, w, h);
     }
   }, [cached, circular, crop, imageReadyTick]);
 
