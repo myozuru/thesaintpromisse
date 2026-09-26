@@ -16,6 +16,7 @@ const CreatureSchema = {
   createdAt: "2026-04-17T10:00:00Z",
   updatedAt: "2026-04-17T10:00:00Z",
   portraitUrl: null, // opcional, imagem da criatura
+  portraitSettings: { zoom: 100, positionX: 50, positionY: 50, height: 160 },
 
   // ---------- DEFINIÇÃO BASE (ESTÁTICO) ----------
   core: {

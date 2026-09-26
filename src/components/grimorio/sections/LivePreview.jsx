@@ -252,6 +252,13 @@ function PortraitHeader({ draft }) {
   if (!safeUrl || status === "error") return null;
 
   const glowColor = PATAMAR_GLOW_HEX[draft.core.patamar] || PATAMAR_GLOW_HEX.comum;
+  const portraitSettings = {
+    zoom: 100,
+    positionX: 50,
+    positionY: 50,
+    height: 160,
+    ...(draft.portraitSettings ?? {}),
+  };
 
   return (
     <div className="relative">
@@ -263,12 +270,19 @@ function PortraitHeader({ draft }) {
         }}
       />
 
-      <div className="relative h-40 overflow-hidden">
+      <div
+        className="relative overflow-hidden"
+        style={{ height: `${Math.max(120, Math.min(360, portraitSettings.height))}px` }}
+      >
         {/* Imagem */}
         <img
           src={safeUrl}
           alt={draft.name || "Retrato"}
           className="w-full h-full object-cover"
+          style={{
+            objectPosition: `${portraitSettings.positionX}% ${portraitSettings.positionY}%`,
+            transform: `scale(${portraitSettings.zoom / 100})`,
+          }}
           onLoad={() => setStatus("ok")}
           onError={() => setStatus("error")}
           referrerPolicy="no-referrer"

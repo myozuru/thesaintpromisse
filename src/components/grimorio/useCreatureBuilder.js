@@ -21,6 +21,7 @@ const genId = (prefix) =>
 export const blankDraft = () => ({
   name: "",
   portraitUrl: "",
+  portraitSettings: { zoom: 100, positionX: 50, positionY: 50, height: 160 },
   core: {
     grau: "3",
     nd: 5,
@@ -111,6 +112,10 @@ const normalizeHydratePayload = (payload = {}) => {
       saves: { ...(payload.overrides?.saves ?? {}) },
     },
     portraitUrl:        payload.portraitUrl || "",
+    portraitSettings: {
+      ...blank.portraitSettings,
+      ...(payload.portraitSettings ?? {}),
+    },
     attackAttr:         payload.attackAttr || 'forca',
     cdAttr:             payload.cdAttr || 'inteligencia',
     skills:             normalizeSkills(payload.skills),
@@ -131,6 +136,10 @@ const actionHandlers = {
 
   SET_NAME:     (s, payload) => ({ ...s, name: payload }),
   SET_PORTRAIT: (s, payload) => ({ ...s, portraitUrl: payload }),
+  SET_PORTRAIT_SETTINGS: (s, payload) => ({
+    ...s,
+    portraitSettings: { ...s.portraitSettings, ...payload },
+  }),
   SET_NOTES:    (s, payload) => ({ ...s, narratorNotes: payload }),
 
   PATCH_CORE:   (s, payload) => ({ ...s, core: { ...s.core, ...payload } }),
@@ -336,6 +345,8 @@ export default function useCreatureBuilder(initialDraft = null) {
     hydrate:       useCallback((data) => dispatch({ type: "HYDRATE", payload: data }), []),
     setName:       useCallback((name) => dispatch({ type: "SET_NAME", payload: name }), []),
     setPortrait:   useCallback((url) => dispatch({ type: "SET_PORTRAIT", payload: url }), []),
+    setPortraitSettings: useCallback((patch) =>
+      dispatch({ type: "SET_PORTRAIT_SETTINGS", payload: patch }), []),
     setNotes:      useCallback((n) => dispatch({ type: "SET_NOTES", payload: n }), []),
     patchCore:     useCallback((patch) => dispatch({ type: "PATCH_CORE", payload: patch }), []),
     patchOrigin:   useCallback((patch) => dispatch({ type: "PATCH_ORIGIN", payload: patch }), []),
