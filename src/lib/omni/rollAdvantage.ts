@@ -195,7 +195,7 @@ export function consumeAdvantageFor(charId: string, ctx: RollContext): ResolveRe
   const c = useCharacterStore.getState().characters.find(x => x.id === charId);
   if (!c) return { net: 'normal', consumedIds: [], notes: [] };
   const mods = readMods(c);
-  const matches: AdvModifier[] = Object.values(mods).filter(m => matchesScope(m, ctx));
+  const matches: AdvModifier[] = Object.values(mods).filter(m => matchesScope(m, ctx) && m.bonus == null);
   if (matches.length === 0) return { net: 'normal', consumedIds: [], notes: [] };
   const advCount = matches.filter(m => m.kind === 'advantage').length;
   const disCount = matches.filter(m => m.kind === 'disadvantage').length;
@@ -221,13 +221,59 @@ export function peekAdvantageFor(charId: string, ctx: RollContext): ResolveResul
   const c = useCharacterStore.getState().characters.find(x => x.id === charId);
   if (!c) return 'normal';
   const mods = readMods(c);
-  const matches = Object.values(mods).filter(m => matchesScope(m, ctx));
+  const matches = Object.values(mods).filter(m => matchesScope(m, ctx) && m.bonus == null);
   if (matches.length === 0) return 'normal';
   const adv = matches.some(m => m.kind === 'advantage');
   const dis = matches.some(m => m.kind === 'disadvantage');
   if (adv && !dis) return 'advantage';
   if (dis && !adv) return 'disadvantage';
   return 'normal';
+}
+
+// ─── Bônus fixo em rolagens (ex: Apoio Focado do Suporte) ───────────────
+
+/** Concede um bônus fixo (não é vantagem) no escopo indicado. */
+export function grantFlatBonus(
+  charId: string,
+  scope: AdvScope,
+  bonus: number,
+  opts: { target?: string; expires?: 'turn' | 'use' | 'persistent'; source?: string; grantedBy?: string } = {},
+): string {
+  const c = useCharacterStore.getState().characters.find(x => x.id === charId);
+  if (!c) return '';
+  const mods = { ...readMods(c) };
+  const id = `flat-${scope}-${opts.target ?? 'any'}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  mods[id] = {
+    id,
+    kind: 'advantage', // placeholder — mods com `bonus` não entram na contagem de vantagem
+    scope,
+    target: opts.target?.toLowerCase(),
+    expires: opts.expires ?? 'use',
+    source: opts.source,
+    grantedBy: opts.grantedBy,
+    bonus,
+  };
+  writeMods(charId, mods);
+  return id;
+}
+
+/** Soma e consome os bônus fixos aplicáveis ao contexto. */
+export function consumeFlatBonusFor(charId: string, ctx: RollContext): { bonus: number; notes: string[] } {
+  const c = useCharacterStore.getState().characters.find(x => x.id === charId);
+  if (!c) return { bonus: 0, notes: [] };
+  const mods = readMods(c);
+  const matches = Object.values(mods).filter(m => m.bonus != null && matchesScope(m, ctx));
+  if (matches.length === 0) return { bonus: 0, notes: [] };
+  const consumedIds = matches.filter(m => m.expires === 'use').map(m => m.id);
+  if (consumedIds.length > 0) {
+    const remaining = { ...mods };
+    for (const id of consumedIds) delete remaining[id];
+    writeMods(charId, remaining);
+  }
+  return {
+    bonus: matches.reduce((s, m) => s + (m.bonus ?? 0), 0),
+    notes: matches.map(m => `➕ ${m.bonus! >= 0 ? '+' : ''}${m.bonus} (${m.scope}${m.source ? ` · ${m.source}` : ''})`),
+  };
 }
 
 /** Helper para handlers de rolagem: aplica vantagem/desvantagem rolando 2d20. */
