@@ -9,6 +9,7 @@ import { useLogStore } from '@/stores/useLogStore';
 import { rollDiceCom } from '@/lib/dice';
 import {
   isSuporte,
+  applyApoiar,
   getSuporteHealDice,
   getSuporteHealMaxUses,
   getSuporteHealUsesLeft,
@@ -35,8 +36,19 @@ export function SuportePanel({ character: c }: { character: Character }) {
   const allies = characters.filter((x) => x.category === 'PLAYER' || x.category === 'NPC' || x.id === c.id);
   const sign = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
 
-  const handleApoiar = () => {
-    addLog('combat', `🤝 ${c.name} usa Apoiar como Ação Bônus (Suporte em Combate).`);
+  const handleApoiar = async () => {
+    const target = characters.find((x) => x.id === targetId);
+    if (!target || busy) return;
+    setBusy(true);
+    try {
+      await applyApoiar(c, target);
+      addLog(
+        'combat',
+        `🤝 ${c.name} usa Apoiar (Ação Bônus) em ${target.name} — vantagem no próximo teste de perícia da tarefa apoiada, até o início do próximo turno de ${c.name}.`,
+      );
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleHeal = async () => {
@@ -70,8 +82,9 @@ export function SuportePanel({ character: c }: { character: Character }) {
       <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={handleApoiar}
-          className="inline-flex items-center gap-1 rounded border border-border bg-secondary/40 px-2 py-1 text-xs hover:bg-secondary/70"
-          title="Você pode usar Apoiar como Ação Bônus."
+          disabled={busy}
+          className="inline-flex items-center gap-1 rounded border border-border bg-secondary/40 px-2 py-1 text-xs hover:bg-secondary/70 disabled:cursor-not-allowed disabled:opacity-40"
+          title="Ação Bônus: o alvo ganha vantagem no próximo teste de perícia da tarefa apoiada, se rolar antes do início do seu próximo turno."
         >
           <HandHelping className="h-3.5 w-3.5" /> Apoiar (Ação Bônus)
         </button>
