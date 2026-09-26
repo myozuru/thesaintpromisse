@@ -10,6 +10,7 @@
  * ============================================================================
  */
 import type { Character } from '@/types';
+import { useCharacterStore } from '@/stores/useCharacterStore';
 
 export function isSuporte(c: Pick<Character, 'specialization' | 'isGrimorioCreature'>): boolean {
   return c.specialization === 'Suporte' && !c.isGrimorioCreature;
@@ -73,8 +74,7 @@ export async function applyApoiar(
 
 /** Presença Inspiradora (Nv 3): PE extra máximo = metade do mod de Presença (fixo). */
 export function getPresencaInspiradoraMaxExtra(c: Character): number {
-  const pre = c.attributes.find((a) => a.name === 'Presença')?.value ?? 10;
-  return Math.max(0, Math.floor(getAttrModifier(pre) / 2));
+  return Math.max(0, Math.floor(mod(c, 'Presença') / 2));
 }
 
 /**
