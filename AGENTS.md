@@ -15,3 +15,4 @@
 - Cloud clients must use only this workspace's environment configuration; without it, use the offline stub so the copy cannot reach another project's data.
 
 - Multiplayer syncs via Lovable Cloud: live changes use a realtime broadcast channel, and each slice is persisted in `realtime_world` (images in `realtime_assets`) so late joiners load the table state — no Socket.IO server needed.
+- Accounts use nick+password mapped to a synthetic email (nick@tpfichas.local, auto-confirm); Master is a row in user_roles (first account auto-claims it) so role never comes from local storage.
