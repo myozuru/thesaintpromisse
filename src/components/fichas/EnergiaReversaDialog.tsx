@@ -26,7 +26,7 @@ export function EnergiaReversaDialog({ character: c, onClose }: Props) {
   const limit = Math.max(1, cfg.peLimit);
   const dice = per * 2 + cfg.bonusDiceFromLevel;
   const mod = cfg.keyAttrMod * cfg.modMultiplier;
-  const targets = cfg.hasLiberacao ? characters.filter(x => !x.isDead || x.id === c.id) : [c];
+  const targets = cfg.hasLiberacao ? characters : [c];
 
   const submit = async () => {
     setBusy(true);
