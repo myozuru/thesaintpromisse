@@ -26,7 +26,7 @@ import { executarCombatEffect } from '@/lib/omni/executarSubEfeito';
 import { useSpellProposalStore } from '@/stores/useSpellProposalStore';
 import { usePassiveProposalStore } from '@/stores/usePassiveProposalStore';
 import { rollD20Com, rollDiceCom } from '@/lib/dice';
-import { consumeAdvantageFor, applyAdvantageToD20 } from '@/lib/omni/rollAdvantage';
+import { consumeAdvantageFor, consumeFlatBonusFor, applyAdvantageToD20 } from '@/lib/omni/rollAdvantage';
 import { cn } from '@/lib/utils';
 import { Eye, EyeOff, Dice1, ChevronDown, ChevronUp, Zap, Plus, X, Heart, Sparkles, Shield, Backpack, Star, Crosshair, RotateCcw, Gem, ScrollText, ShieldAlert, AlertTriangle, HelpCircle, Wand2, Moon, Wallet, Sword, Trash2 } from 'lucide-react';
 import { playDiceSound, playClickSound, playToggleSound, playSuccessSound, playErrorSound, playFichaToggleSound } from '@/lib/sounds';
@@ -870,9 +870,11 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
     const totalBonus = mod + itemBonus + condBonus;
     // Vantagem/Desvantagem via Omni (atributo específico ou genérico).
     const omniAdv = consumeAdvantageFor(c.id, { kind: 'attribute', name });
+    const flat = consumeFlatBonusFor(c.id, { kind: 'attribute', name });
     const { d20, modeLabel } = await applyAdvantageToD20(omniAdv.net, () => rollD20Com(c.id));
     const condLabel = condBonus !== 0 ? ` (${condBonus > 0 ? '+' : ''}${condBonus} cond.)` : '';
-    showRollAnimation(name + condLabel + modeLabel, d20, totalBonus, d20 + totalBonus);
+    const flatLabel = flat.bonus ? ` (${flat.bonus > 0 ? '+' : ''}${flat.bonus} comando/apoio)` : '';
+    showRollAnimation(name + condLabel + flatLabel + modeLabel, d20, totalBonus + flat.bonus, d20 + totalBonus + flat.bonus);
   };
 
   const handleSkillRoll = async (name: string, skillValue: number, linkedAttrId?: string, trained?: boolean, mastery?: boolean, externalBonus?: number) => {
@@ -932,6 +934,7 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
     const omniAdv = consumeAdvantageFor(c.id, isSavingThrow
       ? { kind: 'save', name }
       : { kind: 'skill', name });
+    const flat = consumeFlatBonusFor(c.id, isSavingThrow ? { kind: 'save', name } : { kind: 'skill', name });
     // Bastião sempre confere vantagem; combina com Omni (vantagem ganha
     // se já não há desvantagem; desvantagem Omni cancela).
     let netRoll: 'normal' | 'advantage' | 'disadvantage' = omniAdv.net;
@@ -947,7 +950,8 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
     const sentidosLabel = sentidosBonus > 0 ? ` (+${sentidosBonus} sentidos)` : '';
     const inspiracaoLabel = inspiracao > 0 ? ` (+${inspiracao} inspiração)` : '';
     const masteryLabel = promotedMastery && !mastery ? ' [Maestria/Spec]' : '';
-    showRollAnimation(name + auraLabel + condLabel + specLabel + sentidosLabel + inspiracaoLabel + masteryLabel + bastiaoLabel + modeLabel, d20, totalBonus, d20 + totalBonus);
+    const flatLabel = flat.bonus ? ` (${flat.bonus > 0 ? '+' : ''}${flat.bonus} comando/apoio)` : '';
+    showRollAnimation(name + auraLabel + condLabel + specLabel + sentidosLabel + inspiracaoLabel + flatLabel + masteryLabel + bastiaoLabel + modeLabel, d20, totalBonus + flat.bonus, d20 + totalBonus + flat.bonus);
   };
 
   const [hitTargets, setHitTargets] = useState<string[]>([]);
@@ -996,9 +1000,9 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
 
   const handleAttackTypeRoll = async (type: 'melee' | 'ranged' | 'cursed') => {
     const label = type === 'melee' ? '⚔️ Acerto C.a.C' : type === 'ranged' ? '🏹 Acerto Distância' : '👁‍🗨 Acerto Amaldiçoado';
-    const totalBonus = getAttackTotalBonus(type);
-    // Vantagem/Desvantagem via Omni (escopo de ataque).
     const omniAdv = consumeAdvantageFor(c.id, { kind: 'attack', subtype: type });
+    const flatAtk = consumeFlatBonusFor(c.id, { kind: 'attack', subtype: type });
+    const totalBonus = getAttackTotalBonus(type) + flatAtk.bonus;
     const { d20, modeLabel } = await applyAdvantageToD20(omniAdv.net, () => rollD20Com(c.id));
     const finalResult = d20 + totalBonus;
     const targets = attackTargets[type];
@@ -1094,8 +1098,9 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
     // Sem subtipo conhecido — usa 'melee' como default (UI permite só 1 botão custom);
     // escopos genéricos como next_attack/attack_all funcionam normalmente.
     const omniAdv = consumeAdvantageFor(c.id, { kind: 'attack', subtype: 'melee' });
+    const flatAtk = consumeFlatBonusFor(c.id, { kind: 'attack', subtype: 'melee' });
     const { d20 } = await applyAdvantageToD20(omniAdv.net, () => rollD20Com(c.id));
-    const totalHitBonus = c.customHitBonus + buffHit;
+    const totalHitBonus = c.customHitBonus + buffHit + flatAtk.bonus;
     const result = d20 + totalHitBonus;
 
     // Check for extra dice from buffs

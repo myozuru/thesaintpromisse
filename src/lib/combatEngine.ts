@@ -28,7 +28,7 @@ import {
 } from '@/lib/weapons';
 import { aggregateTalentBonuses } from '@/lib/talentEffects';
 import { getTalentById } from '@/lib/talents';
-import { consumeAdvantageFor } from '@/lib/omni/rollAdvantage';
+import { consumeAdvantageFor, consumeFlatBonusFor } from '@/lib/omni/rollAdvantage';
 
 // ===== Tipos públicos =======================================================
 
@@ -265,6 +265,9 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
   if (omniAdv.net === 'advantage') ctxBonus.advantage = true;
   if (omniAdv.net === 'disadvantage') ctxBonus.disadvantage = true;
   for (const n of omniAdv.notes) ctxBonus.notes.push(`Omni: ${n}`);
+  // Bônus fixos de rolagem (Comando Motivador, etc.) somam no acerto.
+  const flatAtk = consumeFlatBonusFor(ctx.attacker.id, { kind: 'attack', subtype: attackSubtype, weaponGroup: w.group, weaponName: w.name });
+  if (flatAtk.bonus) { ctxBonus.hit = (ctxBonus.hit ?? 0) + flatAtk.bonus; for (const n of flatAtk.notes) ctxBonus.notes.push(n); }
 
   // Margem crítica (menor = mais fácil)
   const baseCrit = w.critRange ?? 20;
