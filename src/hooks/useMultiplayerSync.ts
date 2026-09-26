@@ -22,7 +22,7 @@ import { assetDB } from '@/components/mapa/assetDB';
 import { assetCache } from '@/components/mapa/assetCache';
 import { supabase } from '@/integrations/supabase/safeClient';
 import { useFogStore } from '@/stores/fogStore';
-import { getProtectedRemoteEntityPatchIds, shouldIgnoreRemoteMapScene } from '@/components/mapa/mapSyncGuards';
+import { getProtectedRemoteEntityPatchIds, getRecentLocalEntityEdits, shouldIgnoreRemoteMapScene } from '@/components/mapa/mapSyncGuards';
 
 type Json = string | number | boolean | null | { [k: string]: Json } | Json[];
 
@@ -364,12 +364,30 @@ function applyRemote(slice: WorldSlice, data: unknown) {
       const current = useMapStore.getState();
       const nextActiveId = data.activeSceneId || data.sceneOrder[0] || current.activeSceneId;
       const nextActive = nextActiveId ? data.scenes[nextActiveId] : undefined;
+      // Junta em vez de substituir: peças mexidas aqui há pouco mantêm a posição
+      // local; peças deslizando recebem o novo destino em vez de pular.
+      const mergedEntities: Record<string, any> = { ...(nextActive?.entities ?? {}) };
+      if (nextActiveId === current.activeSceneId) {
+        const recent = getRecentLocalEntityEdits();
+        const localEnts = current.entities as Record<string, any>;
+        for (const id of Object.keys(mergedEntities)) {
+          const local = localEnts[id];
+          if (!local) continue;
+          const inc = mergedEntities[id];
+          if (recent.has(id)) {
+            mergedEntities[id] = { ...inc, x: local.x, y: local.y };
+          } else if (smoothTargets.has(id) && typeof inc.x === 'number' && typeof inc.y === 'number') {
+            smoothTargets.set(id, { x: inc.x, y: inc.y });
+            mergedEntities[id] = { ...inc, x: local.x, y: local.y };
+          }
+        }
+      }
       useMapStore.setState({
         scenes: data.scenes as never,
         sceneOrder: [...data.sceneOrder],
         activeSceneId: nextActiveId,
         layerVisible: { ...current.layerVisible, ...data.layerVisible },
-        entities: { ...(nextActive?.entities ?? {}) },
+        entities: mergedEntities,
         entityOrder: [...(nextActive?.entityOrder ?? [])],
         drawings: [...(nextActive?.drawings ?? [])],
         notes: [...(nextActive?.notes ?? [])],
@@ -860,8 +878,24 @@ export function useMultiplayerSync() {
 
     // Mapa visual — qualquer cliente publica mudanças permitidas pela UI;
     // players conseguem mover seus próprios tokens e o Mestre recebe em tempo real.
-    let lastMapScene = JSON.stringify(pickMapScene());
+    // Só posições mudaram → envia patches leves e salva na nuvem com calma.
+    // Qualquer outra mudança (cena, fundo, paredes, desenhos...) → mapa completo.
+    const structuralKey = (map: MapSceneSync) => JSON.stringify(map, (key, value) => {
+      if ((key === 'x' || key === 'y') && typeof value === 'number') return undefined;
+      return value;
+    });
+    let lastMapObj = pickMapScene();
+    let lastMapScene = JSON.stringify(lastMapObj);
+    let lastMapStructure = structuralKey(lastMapObj);
     let mapSceneTimer: ReturnType<typeof setTimeout> | null = null;
+    let mapPersistTimer: ReturnType<typeof setTimeout> | null = null;
+    const persistMapLater = () => {
+      if (mapPersistTimer) clearTimeout(mapPersistTimer);
+      mapPersistTimer = setTimeout(() => {
+        mapPersistTimer = null;
+        void publishMapSceneToCloud(pickMapScene());
+      }, 1500);
+    };
     const flushMapScene = () => {
       mapSceneTimer = null;
       if (applyingRemote) return;
@@ -873,8 +907,31 @@ export function useMultiplayerSync() {
       const next = pickMapScene();
       const s = JSON.stringify(next);
       if (s === lastMapScene) return;
+      const structure = structuralKey(next);
+      const prevObj = lastMapObj;
+      lastMapObj = next;
       lastMapScene = s;
       lastPublishedMapJSON = s;
+      if (structure === lastMapStructure && next.activeSceneId && next.activeSceneId === prevObj.activeSceneId) {
+        const prevEnts = prevObj.scenes[next.activeSceneId]?.entities ?? {};
+        const nextEnts = next.scenes[next.activeSceneId]?.entities ?? {};
+        const patches: Array<{ id: string; patch: { x: number; y: number } }> = [];
+        for (const [id, e] of Object.entries(nextEnts)) {
+          const p = (prevEnts as Record<string, { x: number; y: number }>)[id];
+          if (!p || p.x !== e.x || p.y !== e.y) patches.push({ id, patch: { x: e.x, y: e.y } });
+        }
+        const otherScenesSame = Object.keys(next.scenes).every((id) =>
+          id === next.activeSceneId || JSON.stringify(next.scenes[id]) === JSON.stringify(prevObj.scenes[id]));
+        if (otherScenesSame) {
+          if (patches.length) {
+            void worldBus.send({ type: 'broadcast', event: 'entity-patch', payload: { clientId, patches } });
+          }
+          persistMapLater();
+          return;
+        }
+      }
+      lastMapStructure = structure;
+      if (mapPersistTimer) { clearTimeout(mapPersistTimer); mapPersistTimer = null; }
       socket.emit('state:update', { slice: 'mapScene', data: next });
       void publishMapSceneToCloud(next);
       void emitMapAssets(socket, collectMapAssetIds(next), sentMapAssetIds);
