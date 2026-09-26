@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getTokenImageRect, normalizeTokenCrop } from '@/components/mapa/EntityEngine';
+import { getTokenDisplayPatch, getTokenImageRect, normalizeTokenCrop } from '@/components/mapa/EntityEngine';
 
 describe('enquadramento circular de personagem', () => {
   it('preenche um círculo sem distorcer uma imagem retrato', () => {
@@ -22,5 +22,10 @@ describe('enquadramento circular de personagem', () => {
   it('limita valores inválidos para manter o personagem visível', () => {
     expect(normalizeTokenCrop({ zoom: 20, offsetX: -500, offsetY: 500 })).toEqual({ zoom: 4, offsetX: -100, offsetY: 100 });
     expect(normalizeTokenCrop()).toEqual({ zoom: 1, offsetX: 0, offsetY: 0 });
+  });
+
+  it('alterna entre círculo quadrado e imagem livre na proporção original', () => {
+    expect(getTokenDisplayPatch(true, 70, 600, 1200)).toEqual({ shape: 'ELLIPSE', w: 70, h: 70 });
+    expect(getTokenDisplayPatch(false, 70, 600, 1200)).toEqual({ shape: 'RECT', w: 35, h: 70 });
   });
 });

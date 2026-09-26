@@ -61,6 +61,18 @@ export function getTokenImageRect(
   };
 }
 
+export function getTokenDisplayPatch(
+  circular: boolean,
+  size: number,
+  naturalW: number,
+  naturalH: number,
+): Pick<Entity, 'shape' | 'w' | 'h'> {
+  const safeSize = Math.max(20, size);
+  if (circular) return { shape: 'ELLIPSE', w: safeSize, h: safeSize };
+  const ratio = naturalH > 0 ? Math.max(0.05, naturalW / naturalH) : 1;
+  return { shape: 'RECT', w: Math.max(20, safeSize * ratio), h: safeSize };
+}
+
 /** Converte ponto-mundo p para coordenadas locais (não rotacionadas) da entidade. */
 export function worldToLocal(p: Vector2, e: Entity): Vector2 {
   const dx = p.x - e.x;
@@ -289,7 +301,29 @@ export function drawEntity(ctx: CanvasRenderingContext2D, e: Entity, scale: numb
       // ignora frames durante decoding
     }
     ctx.restore();
-    // (sem borda nem label sobre a imagem — fica limpo)
+    if (e.shape === 'ELLIPSE' && e.tokenCrop) {
+      const outerWidth = Math.max(2 / scale, Math.min(e.w, e.h) * 0.055);
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(0, 0, Math.max(1, hw - outerWidth / 2), Math.max(1, hh - outerWidth / 2), 0, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(10, 8, 18, 0.92)';
+      ctx.lineWidth = outerWidth;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(0, 0, Math.max(1, hw - outerWidth * 1.05), Math.max(1, hh - outerWidth * 1.05), 0, 0, Math.PI * 2);
+      ctx.strokeStyle = withAlpha(e.color, 0.95);
+      ctx.lineWidth = Math.max(1.5 / scale, outerWidth * 0.42);
+      ctx.shadowColor = withAlpha(e.color, 0.75);
+      ctx.shadowBlur = Math.max(3 / scale, outerWidth * 0.8);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(0, 0, Math.max(1, hw - outerWidth * 1.55), Math.max(1, hh - outerWidth * 1.55), 0, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+      ctx.lineWidth = Math.max(0.75 / scale, outerWidth * 0.16);
+      ctx.shadowBlur = 0;
+      ctx.stroke();
+      ctx.restore();
+    }
   } else {
     ctx.fillStyle = withAlpha(e.color, 0.5);
     ctx.strokeStyle = withAlpha(e.color, 1);
