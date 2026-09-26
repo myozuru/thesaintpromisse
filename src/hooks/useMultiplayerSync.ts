@@ -487,14 +487,11 @@ export function useMultiplayerSync() {
       applyRemote(p.slice, p.data);
     });
     worldBus.on('broadcast', { event: 'amizade' }, ({ payload }) => {
-      const p = payload as { clientId?: string; kind?: string; supporterId?: string; friendId?: string } | null;
-      if (!p || p.clientId === clientId) return;
-      void import('@/lib/suporteNivel2').then(({ useAmizadePromptStore, shouldSeeAmizadePrompt }) => {
+      void import('@/lib/suporteNivel2').then(({ useAmizadePromptStore, shouldSeeAmizadePrompt, reduceAmizadeMessage }) => {
         const st = useAmizadePromptStore.getState();
-        if (p.kind === 'close') st.close();
-        else if (p.kind === 'open' && p.supporterId && p.friendId && shouldSeeAmizadePrompt(p.supporterId, useRoleStore.getState().role)) {
-          st.open({ supporterId: p.supporterId, friendId: p.friendId });
-        }
+        const r = reduceAmizadeMessage(payload as never, clientId, (sid) => shouldSeeAmizadePrompt(sid, useRoleStore.getState().role));
+        if (r.type === 'close') st.close();
+        else if (r.type === 'open') st.open({ supporterId: r.supporterId, friendId: r.friendId });
       });
     });
     const onAmizadeSend = (e: Event) => {

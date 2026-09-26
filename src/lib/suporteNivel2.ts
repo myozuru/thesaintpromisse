@@ -99,9 +99,32 @@ export async function checkAmizadeAtEndOfTurn(charId: string): Promise<void> {
  */
 export function shouldSeeAmizadePrompt(supporterId: string, role: string | null): boolean {
   const c = useCharacterStore.getState().characters.find((x) => x.id === supporterId);
-  const owner = c?.profileId;
-  if (owner) return useProfileStore.getState().activeProfileId === owner;
-  return role !== 'MASTER';
+  return viewerSeesAmizade(c?.profileId, { role, profileId: useProfileStore.getState().activeProfileId });
+}
+
+/** Regra pura: quem vê a pergunta (testável sem telas nem rede). */
+export function viewerSeesAmizade(
+  ownerProfileId: string | null | undefined,
+  viewer: { role: string | null; profileId: string | null | undefined },
+): boolean {
+  if (ownerProfileId) return viewer.profileId === ownerProfileId;
+  return viewer.role !== 'MASTER';
+}
+
+export type AmizadeMsg = { clientId?: string; kind?: string; supporterId?: string; friendId?: string } | null;
+
+/** Regra pura: o que uma tela faz ao receber uma mensagem de Amizade. */
+export function reduceAmizadeMessage(
+  msg: AmizadeMsg,
+  selfClientId: string,
+  canSee: (supporterId: string) => boolean,
+): { type: 'open'; supporterId: string; friendId: string } | { type: 'close' } | { type: 'ignore' } {
+  if (!msg || msg.clientId === selfClientId) return { type: 'ignore' };
+  if (msg.kind === 'close') return { type: 'close' };
+  if (msg.kind === 'open' && msg.supporterId && msg.friendId && canSee(msg.supporterId)) {
+    return { type: 'open', supporterId: msg.supporterId, friendId: msg.friendId };
+  }
+  return { type: 'ignore' };
 }
 
 /** Fecha a pergunta aqui e nas outras telas (alguém já respondeu). */
