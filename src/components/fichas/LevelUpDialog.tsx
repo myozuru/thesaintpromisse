@@ -18,6 +18,7 @@ import {
   getKeyAttrForSpec,
   getAttrMod,
   getAttrValue,
+  MAX_LEVEL,
 } from '@/lib/levelEngine';
 import { cn } from '@/lib/utils';
 import { Sparkles, Heart, Zap, Star, Shield, ScrollText, Check, X, ChevronUp, Layers, Dices, Calculator } from 'lucide-react';
@@ -40,7 +41,7 @@ export function LevelUpDialog({ character: c, onClose }: Props) {
   const addLog = useLogStore((s) => s.addLog);
 
   const oldLevel = c.level;
-  const newLevel = Math.min(20, oldLevel + 1);
+  const newLevel = Math.min(MAX_LEVEL, oldLevel + 1);
 
   // ===== Diffs do nível =====
   const masteryOld = getMasteryBonus(oldLevel);

@@ -13,6 +13,9 @@
  */
 import type { Character, Specialization, CharacterClass, Attribute, Origin } from '@/types';
 
+/** Nível máximo da campanha: as fichas sobem apenas até o Nv 15. */
+export const MAX_LEVEL = 15;
+
 /** Múltiplos de 4 dentro do range 1..20 (4, 8, 12, 16, 20). */
 export function isMilestoneLevel(level: number): boolean {
   const lv = level | 0;
