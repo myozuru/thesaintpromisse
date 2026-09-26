@@ -894,6 +894,14 @@ export function useMultiplayerSync() {
     let lastMapStructure = structuralKey(lastMapObj);
     let mapSceneTimer: ReturnType<typeof setTimeout> | null = null;
     let mapPersistTimer: ReturnType<typeof setTimeout> | null = null;
+    const lastSentLivePos = new Map<string, { x: number; y: number }>();
+    const rememberLivePos = () => {
+      lastSentLivePos.clear();
+      for (const [id, e] of Object.entries(useMapStore.getState().entities as Record<string, { x: number; y: number }>)) {
+        lastSentLivePos.set(id, { x: e.x, y: e.y });
+      }
+    };
+    rememberLivePos();
     const persistMapLater = () => {
       if (mapPersistTimer) clearTimeout(mapPersistTimer);
       mapPersistTimer = setTimeout(() => {
@@ -918,16 +926,17 @@ export function useMultiplayerSync() {
       lastMapScene = s;
       lastPublishedMapJSON = s;
       if (structure === lastMapStructure && next.activeSceneId && next.activeSceneId === prevObj.activeSceneId) {
-        const prevEnts = prevObj.scenes[next.activeSceneId]?.entities ?? {};
-        const nextEnts = next.scenes[next.activeSceneId]?.entities ?? {};
+        // Usa as posições vivas (a cópia da cena pode estar um passo atrasada).
+        const liveEnts = useMapStore.getState().entities as Record<string, { x: number; y: number }>;
         const patches: Array<{ id: string; patch: { x: number; y: number } }> = [];
-        for (const [id, e] of Object.entries(nextEnts)) {
-          const p = (prevEnts as Record<string, { x: number; y: number }>)[id];
+        for (const [id, e] of Object.entries(liveEnts)) {
+          const p = lastSentLivePos.get(id);
           if (!p || p.x !== e.x || p.y !== e.y) patches.push({ id, patch: { x: e.x, y: e.y } });
         }
         const otherScenesSame = Object.keys(next.scenes).every((id) =>
           id === next.activeSceneId || JSON.stringify(next.scenes[id]) === JSON.stringify(prevObj.scenes[id]));
         if (otherScenesSame) {
+          rememberLivePos();
           if (patches.length) {
             void worldBus.send({ type: 'broadcast', event: 'entity-patch', payload: { clientId, patches } });
           }
@@ -936,6 +945,7 @@ export function useMultiplayerSync() {
         }
       }
       lastMapStructure = structure;
+      rememberLivePos();
       if (mapPersistTimer) { clearTimeout(mapPersistTimer); mapPersistTimer = null; }
       socket.emit('state:update', { slice: 'mapScene', data: next });
       void publishMapSceneToCloud(next);
