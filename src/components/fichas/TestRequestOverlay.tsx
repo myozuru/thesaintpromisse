@@ -239,6 +239,48 @@ export function TestRequestOverlay() {
     }
   }, [current?.id]);
 
+  // Conceder Outra Chance (Suporte Nv 6): ao receber o aceite, o cliente dono
+  // da ficha rola de novo e fica com o MELHOR total.
+  useEffect(() => {
+    const onApply = (e: Event) => {
+      const { requestId, rollerId } = (e as CustomEvent).detail ?? {};
+      if (!requestId || !rollerId) return;
+      const state = useTestRequestStore.getState();
+      const req = state.requests.find((r) => r.id === requestId);
+      if (!req?.result || req.charId !== rollerId) return;
+      const chars = useCharacterStore.getState().characters;
+      const rollerChar = chars.find((x) => x.id === rollerId);
+      if (!rollerChar) return;
+      // Só o cliente dono da ficha rerola (mesma regra de posse do overlay).
+      const masterControlled = rollerChar.createdBy === 'MASTER' || rollerChar.category !== 'PLAYER';
+      const mine = isMaster
+        ? masterControlled
+        : !masterControlled && (!rollerChar.profileId || rollerChar.profileId === activeProfileId);
+      if (!mine) return;
+      void (async () => {
+        const prev = req.result!;
+        const newD20 = await rollD20Com(rollerId);
+        const newTotal = newD20 + prev.bonus;
+        const best = newTotal > prev.total
+          ? { d20: newD20, total: newTotal }
+          : { d20: prev.d20, total: prev.total };
+        state.setResult(requestId, {
+          ...prev,
+          d20: best.d20,
+          total: best.total,
+          rolls: [...(prev.rolls ?? [prev.d20]), newD20],
+        });
+        const dcTxt = req.dc != null ? ` vs CD ${req.dc} → ${best.total >= req.dc ? '✅ SUCESSO' : '❌ FALHA'}` : '';
+        useLogStore.getState().addLog(
+          'combat',
+          `🔁 ${rollerChar.name} — Outra Chance (${req.testName}): nova rolagem d20 ${newD20} (antes ${prev.d20}) → melhor total ${best.total}${dcTxt}`,
+        );
+      })();
+    };
+    window.addEventListener('outra-chance:apply', onApply);
+    return () => window.removeEventListener('outra-chance:apply', onApply);
+  }, [isMaster, activeProfileId]);
+
 
   if (!current) {
     return isMaster ? <MasterWatchPanel /> : null;
