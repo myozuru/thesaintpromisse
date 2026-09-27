@@ -289,6 +289,8 @@ export function TestRequestOverlay() {
     : current.kind === 'skill' ? 'Teste de Perícia'
     : 'Teste de Resistência';
 
+  const dramaLevel = Math.max(0, Math.min(3, Math.round(current.drama ?? 0)));
+
   const handleRoll = async () => {
     if (!char || rolling) return;
     setRolling(true);
@@ -572,7 +574,10 @@ export function TestRequestOverlay() {
   // JOGADOR — Obsidian fundido: pedido + bandeja 3D numa superfície só.
   // ──────────────────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-background/90 p-3 backdrop-blur-md animate-in fade-in duration-200 sm:p-6">
+    <div className={cn(
+      'fixed inset-0 z-[200] flex items-center justify-center bg-relic-deep/90 p-3 backdrop-blur-md animate-in fade-in duration-200 sm:p-6',
+      `test-drama-${dramaLevel}`,
+    )}>
       <div className={cn(
         'relative max-h-[calc(100dvh-1.5rem)] w-full overflow-y-auto rounded-sm border border-relic/25 bg-card/95 before:pointer-events-none before:absolute before:inset-x-20 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-relic before:to-transparent transition-[max-width,box-shadow] duration-500',
         rolling
