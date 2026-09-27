@@ -29,16 +29,42 @@ export function Global3DDiceOverlay() {
 
 
   useEffect(() => {
-    if (!current || !apiRef.current) return;
-    setLastResults([]);
-    setLastTotal(null);
-    apiRef.current.clear();
-    const t = setTimeout(() => {
-      apiRef.current?.rollMany(current.types);
-      setPhase('armed');
-    }, 80);
-    return () => clearTimeout(t);
-  }, [current]);
+    if (!current) return;
+    // A bandeja 3D carrega sob demanda: na primeira rolagem (comum no jogador,
+    // que ainda não abriu a bandeja) ela ainda não existe quando o pedido chega.
+    // Esperamos ela ficar pronta em vez de desistir — antes o pedido ficava
+    // travado para sempre em "Aguardando rolagem…".
+    let cancelled = false;
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const startedAt = Date.now();
+    const arm = () => {
+      if (cancelled) return;
+      const api = apiRef.current;
+      if (!api) {
+        if (Date.now() - startedAt > 15000) {
+          // Não carregou (ex.: navegador sem 3D): resolve com rolagem comum.
+          const faces: Record<string, number> = { D4: 4, D6: 6, D8: 8, D10: 10, D12: 12, D20: 20, D100: 100 };
+          resolveCurrent(current.types.map((ty) => {
+            const f = faces[ty] ?? 20;
+            return f === 100 ? Math.floor(Math.random() * 10) * 10 : Math.floor(Math.random() * f) + 1;
+          }));
+          return;
+        }
+        t = setTimeout(arm, 100);
+        return;
+      }
+      setLastResults([]);
+      setLastTotal(null);
+      api.clear();
+      t = setTimeout(() => {
+        if (cancelled) return;
+        apiRef.current?.rollMany(current.types);
+        setPhase('armed');
+      }, 80);
+    };
+    arm();
+    return () => { cancelled = true; if (t) clearTimeout(t); };
+  }, [current, resolveCurrent]);
 
   if (!enabled || !visible) return null;
 
