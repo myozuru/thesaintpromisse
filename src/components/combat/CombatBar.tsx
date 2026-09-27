@@ -13,6 +13,7 @@ import { useCombatStore } from '@/stores/useCombatStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { rollD20Com } from '@/lib/dice';
+import { useTestRequestStore } from '@/stores/useTestRequestStore';
 import { playDiceSound } from '@/lib/sounds';
 import { getAttrModifier } from '@/components/fichas/CharacterCard';
 import { Button } from '@/components/ui/button';
@@ -108,13 +109,53 @@ export function CombatBar({ className, variant = 'bar' }: Props) {
     const participants = allCharacters.filter((c) => combat.participantIds.includes(c.id));
     if (participants.length === 0) return;
     playDiceSound();
-    const entries = [] as { charId: string; charName: string; roll: number; bonus: number; total: number }[];
-    for (const c of participants) {
-      const d20 = await rollD20Com(c.id);
+    const batchId = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    const askPlayer = (c: typeof participants[number], bonus: number) =>
+      new Promise<number>((resolve) => {
+        const tag = `combat-init::${batchId}::${c.id}`;
+        const store = useTestRequestStore.getState();
+        store.enqueue({
+          charId: c.id,
+          charName: c.name,
+          targetProfileId: c.profileId,
+          kind: 'skill',
+          testName: 'Iniciativa',
+          bonusOverride: bonus,
+          bonusBreakdownOverride: `Iniciativa ${bonus >= 0 ? '+' : ''}${bonus}`,
+          sourceTag: tag,
+          note: 'O Mestre iniciou um combate. Role sua iniciativa.',
+        });
+        const check = () => {
+          const req = useTestRequestStore.getState().requests.find((r) => r.sourceTag === tag);
+          if (req?.result) {
+            unsub();
+            useTestRequestStore.getState().dismiss(req.id);
+            resolve(req.result.d20);
+          }
+        };
+        const unsub = useTestRequestStore.subscribe(check);
+      });
+    const rolled = await Promise.all(participants.map(async (c) => {
       const dexAttr = c.attributes.find((a) => a.name.toLowerCase() === 'destreza');
       const dexMod = dexAttr ? getAttrModifier(dexAttr.value) : 0;
       const bonus = c.initiativeBonus + dexMod;
-      entries.push({ charId: c.id, charName: c.name, roll: d20, bonus, total: d20 + bonus });
+      const isOwnedPlayer = c.category === 'PLAYER' && !!c.profileId;
+      return { c, bonus, isOwnedPlayer };
+    }));
+    const pending = rolled.filter((r) => r.isOwnedPlayer);
+    if (pending.length) addLog('system', `📣 Iniciativa solicitada para ${pending.length} jogador(es). Aguardando rolagens…`);
+    const playerRolls = Promise.all(pending.map((r) => askPlayer(r.c, r.bonus).then((d20) => [r.c.id, d20] as const)));
+    const entries = [] as { charId: string; charName: string; roll: number; bonus: number; total: number }[];
+    for (const r of rolled) {
+      if (r.isOwnedPlayer) continue;
+      const d20 = await rollD20Com(r.c.id);
+      entries.push({ charId: r.c.id, charName: r.c.name, roll: d20, bonus: r.bonus, total: d20 + r.bonus });
+    }
+    const pr = new Map(await playerRolls);
+    for (const r of rolled) {
+      if (!r.isOwnedPlayer) continue;
+      const d20 = pr.get(r.c.id) ?? 1;
+      entries.push({ charId: r.c.id, charName: r.c.name, roll: d20, bonus: r.bonus, total: d20 + r.bonus });
     }
     combat.startCombat(entries);
     resetActions();
