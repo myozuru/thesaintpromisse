@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
-import { Environment, PerspectiveCamera, OrbitControls } from "@react-three/drei";
+import { Environment, Lightformer, PerspectiveCamera, OrbitControls } from "@react-three/drei";
 import { Physics } from "@react-three/rapier";
 import RAPIER from "@dimforge/rapier3d-compat";
 
@@ -142,10 +142,15 @@ export function DiceTray({
 
   return (
     <div className={className} style={{ width: "100%", height: "100%", ...style }}>
-      <Canvas frameloop="always" dpr={[1, 1.5]} gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}>
+      <Canvas frameloop="always" dpr={[1, 1.25]} gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}>
         <color attach="background" args={["#0d0617"]} />
         <fog attach="fog" args={["#0d0617", 4, 12]} />
-        <Environment preset={envPreset} />
+        {/* Iluminação local (sem baixar HDR da internet, que travava/lagava). */}
+        <Environment resolution={64}>
+          <Lightformer intensity={2} position={[0, 5, 0]} scale={[10, 10, 1]} />
+          <Lightformer intensity={1} color="#b48cff" position={[-5, 1, -1]} rotation-y={Math.PI / 2} scale={[20, 1, 1]} />
+          <Lightformer intensity={0.8} color="#e8c46b" position={[5, 1, 1]} rotation-y={-Math.PI / 2} scale={[20, 1, 1]} />
+        </Environment>
         {/* Ambiência mística: violeta + dourado oculto */}
         <ambientLight intensity={0.25} color="#3a1d6e" />
         <directionalLight position={[2, 5, 2]} intensity={0.7} color="#c9a14a" />
@@ -177,7 +182,7 @@ export function DiceTray({
         />
 
         <RapierGate>
-          <Physics colliders={false} interpolate timeStep="vary" updateLoop="follow" gravity={[0, -9.81, 0]}>
+          <Physics colliders={false} interpolate timeStep={1 / 60} updateLoop="follow" gravity={[0, -14, 0]}>
             <TrayColliders />
             {dice.map(({ die, thrown }) => (
               <PhysicsDice
