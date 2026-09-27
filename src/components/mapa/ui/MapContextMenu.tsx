@@ -91,7 +91,7 @@ interface Props {
 export function MapContextMenu({
   x, y, selectionCount, anyLocked, anyUnlocked, anyInInit, anyOutInit, canGroup, canUngroup, anyHasAsset, canAdjustToken,
   isPlayer, isGM, myselfActive, currentCharacterId, availableCharacters,
-  currentLightMeters, currentSeerMeters, currentSeerDarkMeters, carryMode,
+  currentLightMeters, currentSeerMeters, currentSeerDarkMeters, carryMode, nameHidden,
   onAction, onClose,
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -222,6 +222,14 @@ export function MapContextMenu({
       {selectionCount === 1 && (
         <Item icon={<Pencil className="h-3.5 w-3.5" />} label="Renomear  (F2)"
           onClick={() => { onAction('rename'); onClose(); }} />
+      )}
+      {isGM && selectionCount === 1 && (
+        <Item
+          icon={nameHidden
+            ? <Eye className="h-3.5 w-3.5 text-emerald-300" />
+            : <EyeOff className="h-3.5 w-3.5 text-amber-300" />}
+          label={nameHidden ? 'Mostrar nome' : 'Ocultar nome'}
+          onClick={() => { onAction('toggleHideName'); onClose(); }} />
       )}
       <Item icon={<Copy className="h-3.5 w-3.5" />} label="Duplicar  (Ctrl+D)"
         onClick={() => { onAction('duplicate'); onClose(); }} />
