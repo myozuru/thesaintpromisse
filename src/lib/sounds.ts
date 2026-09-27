@@ -248,7 +248,34 @@ let recentHits: number[] = [];
 let lastHitIdx = -1;
 
 /** Toca uma batida real de dado. intensity 0..1 (velocidade do impacto); surface: mesa ou outro dado. */
-export function playDiceHit(intensity: number, surface: 'tray' | 'dice' = 'tray') {
+const dramaReverbs: Record<number, ConvolverNode> = {};
+/** Cadeia de "copo": abafa, ressoa e reverbera conforme o drama (1..3). Reutilizada entre batidas. */
+function getDramaChain(ctx: AudioContext, drama: number): AudioNode {
+  const key = drama;
+  if (dramaReverbs[key]) return dramaReverbs[key];
+  const input = ctx.createGain() as unknown as ConvolverNode;
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = [8000, 4200, 2600, 1700][drama];
+  lp.Q.value = 1.5 + drama;
+  const cup = ctx.createBiquadFilter();
+  cup.type = 'peaking';
+  cup.frequency.value = [900, 1100, 850, 650][drama];
+  cup.Q.value = 5;
+  cup.gain.value = drama * 4;
+  const dry = ctx.createGain();
+  dry.gain.value = 1 - drama * 0.15;
+  const rev = createCaveReverb(ctx, 0.6 + drama * 0.6, 2.5);
+  const wet = ctx.createGain();
+  wet.gain.value = drama * 0.28;
+  (input as unknown as GainNode).connect(cup).connect(lp);
+  lp.connect(dry).connect(ctx.destination);
+  lp.connect(rev).connect(wet).connect(ctx.destination);
+  dramaReverbs[key] = input;
+  return input;
+}
+
+export function playDiceHit(intensity: number, surface: 'tray' | 'dice' = 'tray', drama = 0) {
   if (!diceHitsRequested) { diceHitsRequested = true; DICE_HITS.forEach(preloadSound); }
   if (intensity < 0.04) return;
   const nowMs = performance.now();
@@ -264,10 +291,11 @@ export function playDiceHit(intensity: number, surface: 'tray' | 'dice' = 'tray'
   lastHitIdx = idx;
   const src = ctx.createBufferSource();
   src.buffer = bufferCache[loaded[idx]];
-  src.playbackRate.value = (surface === 'dice' ? 1.12 : 0.95) + (Math.random() - 0.5) * 0.12;
+  const d = Math.max(0, Math.min(3, Math.round(drama)));
+  src.playbackRate.value = ((surface === 'dice' ? 1.12 : 0.95) + (Math.random() - 0.5) * 0.12) * (1 - d * 0.11);
   const gain = ctx.createGain();
-  gain.gain.value = Math.min(0.9, 0.08 + Math.pow(intensity, 0.8) * 0.8);
-  src.connect(gain).connect(ctx.destination);
+  gain.gain.value = Math.min(1, (0.08 + Math.pow(intensity, 0.8) * 0.8) * (1 + d * 0.15));
+  src.connect(gain).connect(d > 0 ? getDramaChain(ctx, d) : ctx.destination);
   src.start(0);
 }
 

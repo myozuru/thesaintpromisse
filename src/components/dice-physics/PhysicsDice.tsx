@@ -38,6 +38,12 @@ export type PhysicsDiceProps = {
 
 export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, onRollFinished, children }: PhysicsDiceProps) {
   const bounciness = useDice3DStore((s) => s.bounciness);
+  const drama = useDice3DStore((s) => s.current?.drama ?? 0);
+  const timeScale = [1, 0.75, 0.55, 0.4][drama] ?? 1;
+  const timeScaleRef = useRef(timeScale);
+  timeScaleRef.current = timeScale;
+  const dramaRef = useRef(drama);
+  dramaRef.current = drama;
   const groupRef = useRef<THREE.Group>(null);
   const rigidBodyRef = useRef<RapierRigidBody>(null);
 
@@ -102,8 +108,9 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
     }
 
     const decision = decideDiceSettlement({
-      elapsedSeconds: now - thrownAt,
-      quietSeconds: lowSpeedSinceRef.current == null ? 0 : now - lowSpeedSinceRef.current,
+      // Tempo de simulação: em câmera lenta o relógio da física anda mais devagar.
+      elapsedSeconds: (now - thrownAt) * timeScaleRef.current,
+      quietSeconds: lowSpeedSinceRef.current == null ? 0 : (now - lowSpeedSinceRef.current) * timeScaleRef.current,
       linearSpeed,
       angularSpeed,
       inTray: validPosition,
@@ -170,7 +177,7 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
     const rb = rigidBodyRef.current;
     if (!rb || !thrownRef.current || lockedRef.current) return;
     const now = performance.now();
-    if (now - lastHitRef.current < 45) return;
+    if (now - lastHitRef.current < 45 / timeScaleRef.current) return;
     const other = e?.other?.rigidBody;
     let rel = magnitude(rb.linvel());
     if (other && other !== rb) {
@@ -183,7 +190,7 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
     if (intensity < 0.04) return;
     lastHitRef.current = now;
     const isDice = !!other && other.bodyType?.() === 1 /* dynamic */;
-    playDiceHit(intensity, isDice ? 'dice' : 'tray');
+    playDiceHit(intensity, isDice ? 'dice' : 'tray', dramaRef.current);
   }, []);
 
   return (
