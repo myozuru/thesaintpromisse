@@ -81,7 +81,7 @@ export function DataHub({ open, onClose }: { open: boolean; onClose: () => void 
 
       const gt = finalResults.reduce((s, r) => s + r.total, 0);
       const details = finalResults.map((r) => `${r.label}[${r.rolls.join(',')}]=${r.total}`).join(' | ');
-      addLog('roll', `🎲 Hub: ${details} → Total: ${gt}`.replace('Hub:', 'Central:').replace('Total:', 'Total:'));
+      addLog('roll', `🎲 Central: ${details} → Total: ${gt}`);
     } finally {
       setRolling(false);
     }
