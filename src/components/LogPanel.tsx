@@ -155,8 +155,8 @@ export function LogPanel() {
                   {sourceName && (
                     <p className="mb-0.5 truncate text-xs font-semibold text-primary">{sourceName}</p>
                   )}
-                  <p className="break-words text-sm leading-5 text-foreground">{log.message}</p>
-                  <span className="mt-0.5 block text-[11px] leading-4 text-muted-foreground">
+                  <p className="break-words font-mono text-[13px] font-medium leading-5 text-foreground tabular-nums">{log.message}</p>
+                  <span className="mt-0.5 block font-mono text-[11px] leading-4 text-muted-foreground tabular-nums">
                     {showGameTime ? (log.gameTime || '—') : new Date(log.timestamp).toLocaleTimeString('pt-BR')}
                   </span>
                 </div>

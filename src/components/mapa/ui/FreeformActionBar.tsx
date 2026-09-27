@@ -296,8 +296,7 @@ export function FreeformAttackForm({
       const next = Math.max(0, t.hpCurrent - reduzido);
       const real = t.hpCurrent - next;
       updateCharacter(t.id, { hpCurrent: next });
-      const rdTxt = rdGeral + rdTipo > 0 ? ` (${amount} − ${rdGeral + rdTipo} RD = ${reduzido})` : '';
-      addLog('combat', `💥 ${t.name} sofreu ${real} de dano${rdTxt} de ${character.name}.`);
+      addLog('combat', `💥 ${t.name} — Dano total: ${amount} | RD: ${rdGeral + rdTipo} | Dano final: ${real} · de ${character.name}`);
     } else {
       applyDamage(t.id, amount, (dmgType || 'DCO') as DamageType, { attackerId: character.id });
     }

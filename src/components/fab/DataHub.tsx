@@ -98,8 +98,6 @@ export function DataHub({ open, onClose }: { open: boolean; onClose: () => void 
       if (!target) return;
       if (mode === 'damage') {
         applyDamage(id, effectiveTotal, dmgType);
-        const typeStr = dmgType ? ` (${DAMAGE_TYPE_LABELS[dmgType]})` : '';
-        addLog('combat', `⚔️ Hub → ${target.name}: ${effectiveTotal} dano${typeStr}`);
       } else if (mode === 'heal') {
         applyHealing(id, effectiveTotal);
         addLog('combat', `💚 Hub → ${target.name}: ${effectiveTotal} cura`);

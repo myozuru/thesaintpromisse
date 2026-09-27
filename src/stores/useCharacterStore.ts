@@ -63,6 +63,7 @@ import { findWeaponByName, requiresTwoHands, isLight } from '@/lib/weapons';
 import { clampExh, getExhaustionHpReduction, syncExhaustionConditions, EXHAUSTION_MAX } from '@/lib/exhaustionEffects';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { selectOmniPassiveBonuses } from '@/lib/omni/omniBridge';
+import { formatDamageBreakdown } from '@/lib/damageLog';
 
 /** Próximo passo de dado (d4→d6→d8→d10→d12, cap d12). */
 function stepDie(d: number): number {
@@ -2075,6 +2076,10 @@ export const useCharacterStore = create<CharacterStore>()(
       })),
       // applyLevelDown removido: progressão de nível é irreversível para evitar farm de bônus.
       applyDamage: (id, rawDamage, damageType, opts) => {
+        const totalDamage = Math.max(0, rawDamage);
+        let rdApplied = 0;
+        let finalDamage = 0;
+        let damageResolved = false;
         // Fase 9 — captura "antes/depois" para detectar gatilho de Absorção Elemental.
         const NON_ELEMENTAL = new Set<DamageType>(['DCO', 'DP', 'DI', 'DPS', 'DAL']);
         const beforeChar = get().characters.find((cc) => cc.id === id);
@@ -2207,11 +2212,16 @@ export const useCharacterStore = create<CharacterStore>()(
           characters: state.characters.map((c) => {
             if (c.id !== id) return c;
             const immunes = c.immunities || [];
-            if (damageType && immunes.includes(damageType) && !opts?.ignoresResistance) return c;
+            if (damageType && immunes.includes(damageType) && !opts?.ignoresResistance) {
+              damageResolved = true;
+              return c;
+            }
             // CAM: dano DAL (na alma) é absorvido pela Integridade da Alma e reduz
             // o hpMax dos 3 núcleos simultaneamente. Não usa RD comum.
             if (damageType === 'DAL' && isCamActive(c)) {
               const soulPatch = applySoulDamagePure(c, rawDamage);
+              finalDamage = rawDamage;
+              damageResolved = true;
               return { ...c, ...soulPatch };
             }
             const activeBuffs = c.activeBuffs || [];
@@ -2237,10 +2247,13 @@ export const useCharacterStore = create<CharacterStore>()(
             const effectiveRd = opts?.ignoresRD ? 0 : Math.max(0, baseRd + buffRD + negacaoRD + revestimentoRD + shieldRD);
 
             let damageFinal = Math.max(0, rawDamage - effectiveRd);
+            rdApplied = Math.min(rawDamage, effectiveRd);
             const vulns = c.vulnerabilities || [];
             if (damageType && vulns.includes(damageType) && !opts?.ignoresResistance) {
               damageFinal = Math.floor(damageFinal * 1.5);
             }
+            finalDamage = damageFinal;
+            damageResolved = true;
             let newEsc = c.escCurrent;
             let newHp = c.hpCurrent;
             if (damageFinal <= newEsc) { newEsc -= damageFinal; }
@@ -2255,6 +2268,17 @@ export const useCharacterStore = create<CharacterStore>()(
             return { ...c, escCurrent: newEsc, hpCurrent: newHp };
           }),
         }));
+
+        if (beforeChar && damageResolved) {
+          try {
+            useLogStore.getState().addLog('combat', formatDamageBreakdown(beforeChar.name, {
+              total: totalDamage,
+              rd: rdApplied,
+              final: finalDamage,
+              damageType,
+            }));
+          } catch { /* noop */ }
+        }
 
         // ─── CL — Cobrir-se reativo (após dano comprometer Esc/HP) ──────────
         // Se o personagem tem a aptidão `cl-cobrir-se`, PE disponível e algum
