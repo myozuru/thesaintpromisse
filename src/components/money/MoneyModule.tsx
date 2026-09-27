@@ -298,7 +298,9 @@ function PlayerMoneyView() {
   }, [activeChar, ensurePersonal]);
 
   useEffect(() => {
-    if (!activeCharId && playerChars[0]) setActiveCharId(playerChars[0].id);
+    if (!playerChars.some((character) => character.id === activeCharId) && playerChars[0]) {
+      setActiveCharId(playerChars[0].id);
+    }
   }, [activeCharId, playerChars]);
 
   if (playerChars.length === 0) {

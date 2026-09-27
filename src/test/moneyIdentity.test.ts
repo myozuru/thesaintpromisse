@@ -28,6 +28,10 @@ describe('identidade das carteiras', () => {
     const wallet = useMoneyStore.getState().wallets[0];
     expect(wallet?.members).toEqual(['char-b']);
     expect(wallet?.name).toBe('Carteira de Bento');
+    if (!wallet) return;
+    useMoneyStore.getState().masterGrant(wallet.id, 'yen', 100, 'Missão');
+    expect(useMoneyStore.getState().spend(wallet.id, 'yen', 35, 'Compra', 'char-b')).toBe(true);
+    expect(useMoneyStore.getState().wallets[0]?.balances.yen).toBe(65);
   });
 
   it('corrige nome antigo sem perder saldo', () => {
