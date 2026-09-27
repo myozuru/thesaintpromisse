@@ -14,6 +14,7 @@
 - [x] Redesign Master and player test requests with the approved Obsidian Arcana direction.
 - [x] Make Legendary rolls physically faster and bouncier without reducing slow motion, with player-screen colors per drama level.
 - [x] Increase the dice's physical rotation, with progressively stronger spins through Legendary drama.
+- [x] Launch dice diagonally across the tray with transverse rotation so they roll farther without stalling.
 
 ## Pendências de regras
 - [ ] Suporte Nv 4 — "No Último Segundo": implementar junto com os testes da Porta da Morte (contador de fracassos). Lembrar o usuário quando a Porta da Morte for feita.
