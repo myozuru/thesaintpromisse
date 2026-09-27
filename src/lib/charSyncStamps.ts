@@ -69,14 +69,31 @@ export function mergeIncomingCharacters<T extends WithId>(local: T[], remote: T[
   return out;
 }
 
+/** Ids excluídos de propósito nesta tela (a única forma de uma ficha sair da nuvem). */
+const DELETED_KEY = 'rpg-char-deleted-ids';
+function loadDeleted(): Set<string> {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(DELETED_KEY) : null;
+    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch { return new Set(); }
+}
+export function markCharacterDeleted(id: string) {
+  const s = loadDeleted(); s.add(id);
+  try { localStorage.setItem(DELETED_KEY, JSON.stringify([...s].slice(-500))); } catch { /* ignore */ }
+}
+
 /** Para salvar na nuvem: por ficha, fica a cópia com carimbo mais novo.
- *  Fichas só presentes na nuvem são removidas (a lista local define quem existe). */
-export function pickNewestPerCharacter<T extends WithId>(mine: T[], cloud: T[]): T[] {
+ *  Fichas só presentes na nuvem são MANTIDAS, a menos que esta tela as tenha
+ *  excluído de propósito — uma tela vazia/antiga nunca apaga a mesa inteira. */
+export function pickNewestPerCharacter<T extends WithId>(mine: T[], cloud: T[], deleted: Set<string> = loadDeleted()): T[] {
   const cloudById = new Map(cloud.filter((c) => c && typeof c.id === 'string').map((c) => [c.id, c]));
-  return mine.map((m) => {
+  const mineIds = new Set(mine.map((m) => m.id));
+  const out = mine.map((m) => {
     const cl = cloudById.get(m.id);
     return cl && (cl._syncAt ?? 0) > (m._syncAt ?? 0) ? cl : m;
   });
+  for (const c of cloudById.values()) if (!mineIds.has(c.id) && !deleted.has(c.id)) out.push(c);
+  return out;
 }
 
 /** Só para testes. */
