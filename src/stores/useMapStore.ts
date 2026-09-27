@@ -85,6 +85,8 @@ export interface Entity {
   hpMax?: number;
   /** Força exibir a nameplate (label) abaixo da entidade independente de seleção. */
   nameplate?: boolean;
+  /** Quando true, o nome do token fica oculto para todos (alternado pelo mestre). */
+  hideName?: boolean;
   /** Fonte de luz emitida (Fase 12). Raio em CÉLULAS. */
   light?: { radius: number; color: string; intensity: number };
   /** Visão por token (Fase 12). Atualmente apenas marca o token como "vê no escuro". */

@@ -352,7 +352,7 @@ export function drawNameplate(
   ctx: CanvasRenderingContext2D,
   e: Entity,
   scale: number,
-  opts: { force?: boolean; live?: NameplateLiveStats; hideStats?: boolean } = {},
+  opts: { force?: boolean; live?: NameplateLiveStats; hideStats?: boolean; label?: string } = {},
 ) {
   // Stats efetivos: prioriza a ficha vinculada (live) sobre os campos do próprio token.
   const hp = opts.live?.hp ?? e.hp;
@@ -360,7 +360,8 @@ export function drawNameplate(
   const pe = opts.live?.pe;
   const peMax = opts.live?.peMax;
 
-  const showLabel = !!(e.label && (e.nameplate || opts.force));
+  const label = opts.label ?? e.label;
+  const showLabel = !!(label && !e.hideName && (e.nameplate || opts.force));
   const showHp = !opts.hideStats && typeof hp === 'number' && typeof hpMax === 'number' && (hpMax ?? 0) > 0;
   const showPe = !opts.hideStats && typeof pe === 'number' && typeof peMax === 'number' && (peMax ?? 0) > 0;
   if (!showLabel && !showHp && !showPe) return;
@@ -452,14 +453,14 @@ export function drawNameplate(
   let baseY = b.y2 + 6 / scale;
 
 
-  if (showLabel && e.label) {
+  if (showLabel && label) {
     const fontPx = 12 / scale;
     ctx.font = `${fontPx}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     const padX = 6 / scale;
     const padY = 2 / scale;
-    const metrics = ctx.measureText(e.label);
+    const metrics = ctx.measureText(label);
     const tw = metrics.width;
     const th = fontPx;
     const y = baseY + (showHp ? 4 / scale : 0);
@@ -480,7 +481,7 @@ export function drawNameplate(
     ctx.fill();
     ctx.stroke();
     ctx.fillStyle = 'rgba(240,240,245,1)';
-    ctx.fillText(e.label, cx, y + padY);
+    ctx.fillText(label, cx, y + padY);
   }
   ctx.restore();
 }

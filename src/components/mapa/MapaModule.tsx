@@ -1187,7 +1187,8 @@ export function MapaModule() {
       for (const id of effectiveOrder) {
         const e = entities[id];
         if (!e) continue;
-        const forced = selectedIds.includes(id);
+        // Nomes sempre visíveis para todos (a menos que o mestre oculte via hideName).
+        const forced = true;
         const live = resolveEntityNameplateStats(e, charsById.characters, charsById.byId);
         const ownsEntity = playerOwnsEntity(e, activePid, charsById.characters);
         const hideStats = !viewerIsMaster && !ownsEntity;
@@ -1215,13 +1216,14 @@ export function MapaModule() {
           tkCtx.restore();
         }
 
+        const nameLabel = e.label || linkedChar?.name || undefined;
         if (e.hidden) {
           tkCtx.save();
           tkCtx.globalAlpha = 0.4;
-          drawNameplate(tkCtx, e, camera.scale, { force: forced, live, hideStats });
+          drawNameplate(tkCtx, e, camera.scale, { force: forced, live, hideStats, label: nameLabel });
           tkCtx.restore();
         } else {
-          drawNameplate(tkCtx, e, camera.scale, { force: forced, live, hideStats });
+          drawNameplate(tkCtx, e, camera.scale, { force: forced, live, hideStats, label: nameLabel });
         }
       }
 
@@ -3086,6 +3088,14 @@ export function MapaModule() {
       if (target?.assetId) setTokenCropEntityId(target.id);
       return;
     }
+    if (a === 'toggleHideName') {
+      const target = ents[0];
+      if (target) {
+        st.pushHistory();
+        st.updateEntity(target.id, { hideName: !target.hideName });
+      }
+      return;
+    }
     st.pushHistory();
     if (typeof a === 'object' && a.kind === 'setLayer') {
       for (const id of sel) st.setEntityLayer(id, a.layer);
@@ -3477,6 +3487,7 @@ export function MapaModule() {
                 currentSeerMeters={currentSeerMeters}
                 currentSeerDarkMeters={currentSeerDarkMeters}
                 carryMode={ctxMenu.carry?.mode ?? null}
+                nameHidden={!!single?.hideName}
                 onAction={handleCtxAction}
                 onClose={() => setCtxMenu(null)}
               />
