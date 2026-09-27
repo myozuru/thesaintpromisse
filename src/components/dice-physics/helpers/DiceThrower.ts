@@ -11,6 +11,9 @@ const MIN_LAUNCH_VELOCITY = 1;
 const MAX_LAUNCH_VELOCITY = 2;
 const MIN_ANGULAR_VELOCITY = 2;
 const MAX_ANGULAR_VELOCITY = 6;
+const INWARD_WEIGHT = 0.58;
+const SIDEWAYS_WEIGHT = 0.82;
+const LIFT_WEIGHT = 0.22;
 
 /**
  * Escolhe um ponto sobre uma das quatro paredes (ligeiramente para dentro),
@@ -29,19 +32,39 @@ export function randomRotation(): DiceQuaternion {
 }
 
 /**
- * Velocidade aponta da parede de origem em direção ao centro/lado oposto,
- * com um leve desvio lateral para variar a trajetória — sensação de "tacar"
- * os dados dentro da caixa.
+ * Lança na diagonal: conserva uma parcela para dentro e outra maior de lado.
+ * Assim o dado atravessa e percorre a bandeja em vez de cair quase no mesmo ponto.
  */
 export function randomLinearVelocity(position: DiceVector3, speedMultiplier = 1): DiceVector3 {
   const { x, z } = position;
   const length = Math.sqrt(x * x + z * z);
   if (isNaN(length) || length === 0) return { x: 0, y: 0, z: 0 };
   const speed = random(MIN_LAUNCH_VELOCITY, MAX_LAUNCH_VELOCITY) * speedMultiplier;
-  return { x: (x / length) * speed * -1, y: 0, z: (z / length) * speed * -1 };
+  const inwardX = -x / length;
+  const inwardZ = -z / length;
+  const side = Math.random() < 0.5 ? -1 : 1;
+  const sidewaysX = -inwardZ * side;
+  const sidewaysZ = inwardX * side;
+  const directionX = inwardX * INWARD_WEIGHT + sidewaysX * SIDEWAYS_WEIGHT;
+  const directionZ = inwardZ * INWARD_WEIGHT + sidewaysZ * SIDEWAYS_WEIGHT;
+  const directionLength = Math.sqrt(directionX * directionX + directionZ * directionZ);
+  return {
+    x: (directionX / directionLength) * speed,
+    y: speed * LIFT_WEIGHT,
+    z: (directionZ / directionLength) * speed,
+  };
 }
 
-export function randomAngularVelocity(): DiceVector3 {
+export function randomAngularVelocity(linearVelocity?: DiceVector3): DiceVector3 {
+  if (linearVelocity) {
+    const roll = random(MIN_ANGULAR_VELOCITY, MAX_ANGULAR_VELOCITY);
+    const wobble = random(-1.2, 1.2);
+    return {
+      x: linearVelocity.z * roll,
+      y: wobble,
+      z: -linearVelocity.x * roll,
+    };
+  }
   return {
     x: random(MIN_ANGULAR_VELOCITY, MAX_ANGULAR_VELOCITY),
     y: random(MIN_ANGULAR_VELOCITY, MAX_ANGULAR_VELOCITY),
@@ -51,11 +74,12 @@ export function randomAngularVelocity(): DiceVector3 {
 
 export function getRandomDiceThrow(speedMultiplier = 1): DiceThrow {
   const position = randomPosition();
+  const linearVelocity = randomLinearVelocity(position, speedMultiplier);
   return {
     position,
     rotation: randomRotation(),
-    linearVelocity: randomLinearVelocity(position, speedMultiplier),
-    angularVelocity: randomAngularVelocity(),
+    linearVelocity,
+    angularVelocity: randomAngularVelocity(linearVelocity),
   };
 }
 
@@ -75,11 +99,12 @@ export class DiceThrower {
       if (this.isPositionValid(position)) break;
       position = randomPosition();
     }
+    const linearVelocity = randomLinearVelocity(position);
     const t: DiceThrow = {
       position,
       rotation: randomRotation(),
-      linearVelocity: randomLinearVelocity(position),
-      angularVelocity: randomAngularVelocity(),
+      linearVelocity,
+      angularVelocity: randomAngularVelocity(linearVelocity),
     };
     this.history.push(t);
     return t;
