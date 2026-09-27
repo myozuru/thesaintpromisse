@@ -4580,7 +4580,7 @@ export const useCharacterStore = create<CharacterStore>()(
             // Relógio voltou ou deu um salto enorme (troca de dispositivo, sincronização
             // com o relógio do Mestre, reset do calendário): apenas realinha o marcador,
             // sem cobrar fome — senão todos recebiam Exaustão até morrer.
-            if (deltaHours < 0 || deltaHours > HUNGER_MAX * 3) {
+            if (deltaHours < 0 || deltaHours >= HUNGER_MAX) {
               return { ...c, lastHungerHourKey: currentHourKey };
             }
             let hunger = c.hunger ?? HUNGER_MAX;
