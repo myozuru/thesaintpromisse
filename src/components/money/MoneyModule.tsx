@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useEffect, useMemo, useState } from 'react';
 import { Coins, Plus, Send, Users, X, Check, Trash2, LogOut, Settings2, Wallet as WalletIcon, UserPlus } from 'lucide-react';
 import { useMoneyStore, type Wallet } from '@/stores/useMoneyStore';
 import { useProfileStore } from "@/stores/useProfileStore";
@@ -27,10 +27,16 @@ function fmtDate(ts: number) {
 /* -------------------------------------------------------------------------- */
 
 /**
- * No nosso modelo, "player" = Character criado pelo jogador.
- * Usamos um seletor para que o player escolha "como qual ficha" está jogando.
- */
 function usePlayerCharacters() {
+  const characters = useCharacterStore((s) => s.characters);
+  const activeProfileId = useProfileStore((s) => s.activeProfileId);
+  return useMemo(() => {
+    return characters.filter((c) => 
+      c.createdBy === "PLAYER" && 
+      (!c.profileId || c.profileId === activeProfileId)
+    );
+  }, [characters, activeProfileId]);
+}
   const characters = useCharacterStore((s) => s.characters);
   const activeProfileId = useProfileStore((s) => s.activeProfileId);
   return useMemo(
