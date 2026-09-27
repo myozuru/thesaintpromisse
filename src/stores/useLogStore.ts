@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { LogEntry, LogType } from '@/types';
 import { useChronosStore } from './useChronosStore';
 import { useRoleStore } from './useRoleStore';
+import { useProfileStore } from './useProfileStore';
 
 export type PlayerLogVisibility = 'full' | 'hide-master' | 'hide-roll-results';
 
@@ -30,9 +31,12 @@ export const useLogStore = create<LogStore>()(
       addLog: (type, message) => {
         const cs = useChronosStore.getState();
         const sourceRole = useRoleStore.getState().role;
+        const { activeProfileId, profiles } = useProfileStore.getState();
+        const sourceName = profiles.find((profile) => profile.id === activeProfileId)?.name
+          ?? (sourceRole === 'MASTER' ? 'Mestre' : 'Jogador');
         const gameTime = `${fmt(cs.hours)}:${fmt(cs.minutes)}:${fmt(cs.seconds)} — Dia ${cs.day}, Mês ${cs.month}, Ano ${cs.year}`;
         set((state) => ({
-          logs: [{ id: crypto.randomUUID(), timestamp: Date.now(), gameTime, type, message, sourceRole }, ...state.logs].slice(0, 200),
+          logs: [{ id: crypto.randomUUID(), timestamp: Date.now(), gameTime, type, message, sourceRole, sourceName }, ...state.logs].slice(0, 200),
         }));
       },
       clearLogs: () => set({ logs: [] }),

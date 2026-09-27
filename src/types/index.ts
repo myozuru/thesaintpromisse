@@ -1161,4 +1161,5 @@ export interface LogEntry {
   type: LogType;
   message: string;
   sourceRole?: 'MASTER' | 'PLAYER' | null;
+  sourceName?: string;
 }
