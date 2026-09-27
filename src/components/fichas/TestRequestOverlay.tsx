@@ -319,7 +319,10 @@ export function TestRequestOverlay() {
       const adv = consumeAdvantageFor(char.id, ctx);
       advNet = adv.net;
       if (adv.net === 'normal') {
-        d20 = await rollD20Com(char.id, undefined, { label: `${current.testName} — ${char.name}`, layout: 'test-request', drama: current.drama ?? 0 });
+        try {
+          d20 = await rollD20Com(char.id, undefined, { label: `${current.testName} — ${char.name}`, layout: 'test-request', drama: current.drama ?? 0 });
+        } catch (e) { console.log('[DEBUG] rollD20Com throw', String(e)); d20 = Math.ceil(Math.random() * 20); }
+        console.log('[DEBUG] rollD20Com resolveu', d20);
         rolls = [d20];
       } else {
         const a = await rollD20Com(char.id, undefined, { label: `${current.testName} — vantagem`, layout: 'test-request', drama: current.drama ?? 0 });
