@@ -3088,6 +3088,14 @@ export function MapaModule() {
       if (target?.assetId) setTokenCropEntityId(target.id);
       return;
     }
+    if (a === 'toggleHideName') {
+      const target = ents[0];
+      if (target) {
+        st.pushHistory();
+        st.updateEntity(target.id, { hideName: !target.hideName });
+      }
+      return;
+    }
     st.pushHistory();
     if (typeof a === 'object' && a.kind === 'setLayer') {
       for (const id of sel) st.setEntityLayer(id, a.layer);
@@ -3479,6 +3487,7 @@ export function MapaModule() {
                 currentSeerMeters={currentSeerMeters}
                 currentSeerDarkMeters={currentSeerDarkMeters}
                 carryMode={ctxMenu.carry?.mode ?? null}
+                nameHidden={!!single?.hideName}
                 onAction={handleCtxAction}
                 onClose={() => setCtxMenu(null)}
               />
