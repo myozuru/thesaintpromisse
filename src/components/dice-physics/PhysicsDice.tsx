@@ -7,12 +7,9 @@ import { useFrame } from "@react-three/fiber";
 import type { Die, DiceThrow, DiceTransform } from "./types";
 import { getValueFromDiceGroup } from "./helpers/getValueFromDiceGroup";
 import { DiceCollider } from "./colliders/DiceColliders";
+import { DICE_SETTLEMENT, decideDiceSettlement } from "./diceSettlement";
 import { useDice3DStore } from "@/stores/useDice3DStore";
 
-/** Velocidade combinada (linear + angular) abaixo da qual o dado é considerado parado. */
-const MIN_ROLL_FINISHED_SPEED = 0.12;
-/** Tempo (s) em que a velocidade precisa permanecer abaixo do limiar para resolver. */
-const LOW_SPEED_SETTLE_S = 0.35;
 /** Y máximo (mundo) para o dado ser considerado "na bandeja". */
 const MAX_SETTLE_Y = 1.5;
 /** Multiplicadores do lançamento — dados mais rápidos quicam mais. */
@@ -53,6 +50,8 @@ export function PhysicsDice({ die, dieThrow, armed, onThrowRequest, onRollFinish
   const lockedRef = useRef(false);
   /** Instante (s) em que a velocidade caiu abaixo do limiar continuamente. null = ainda rápido. */
   const lowSpeedSinceRef = useRef<number | null>(null);
+  const thrownAtRef = useRef<number | null>(null);
+  const dampingAppliedRef = useRef(false);
 
   const lockDice = useCallback(() => {
     const rb = rigidBodyRef.current;
@@ -68,36 +67,52 @@ export function PhysicsDice({ die, dieThrow, armed, onThrowRequest, onRollFinish
     const rb = rigidBodyRef.current;
     const group = groupRef.current;
     if (!rb || !group || lockedRef.current) return;
+    rb.setLinvel({ x: 0, y: 0, z: 0 }, false);
+    rb.setAngvel({ x: 0, y: 0, z: 0 }, false);
+    rb.sleep();
+    group.updateWorldMatrix(true, true);
     const value = getValueFromDiceGroup(group);
     const p = rb.translation();
     const r = rb.rotation();
+    lockDice();
     onRollFinished?.(die.id, value, {
       position: { x: p.x, y: p.y, z: p.z },
       rotation: { x: r.x, y: r.y, z: r.z, w: r.w },
     });
-    lockDice();
   }, [die.id, lockDice, onRollFinished]);
 
   const checkRollFinished = useCallback(() => {
     const rb = rigidBodyRef.current;
     if (!rb || lockedRef.current) return;
     if (!thrownRef.current) return;
-    const speed = magnitude(rb.linvel()) + magnitude(rb.angvel());
+    const linearSpeed = magnitude(rb.linvel());
+    const angularSpeed = magnitude(rb.angvel());
     const pos = rb.translation();
     const validPosition = pos.y < MAX_SETTLE_Y;
     const now = performance.now() / 1000;
+    const thrownAt = thrownAtRef.current ?? now;
 
-    // Detecção limpa de parada: a velocidade combinada precisa permanecer
-    // abaixo do limiar por LOW_SPEED_SETTLE_S segundos com o dado na bandeja.
-    if (speed > MIN_ROLL_FINISHED_SPEED || !validPosition) {
+    if (linearSpeed > DICE_SETTLEMENT.linearSpeed || angularSpeed > DICE_SETTLEMENT.angularSpeed || !validPosition) {
       lowSpeedSinceRef.current = null;
-      return;
-    }
-    if (lowSpeedSinceRef.current == null) {
+    } else if (lowSpeedSinceRef.current == null) {
       lowSpeedSinceRef.current = now;
+    }
+
+    const decision = decideDiceSettlement({
+      elapsedSeconds: now - thrownAt,
+      quietSeconds: lowSpeedSinceRef.current == null ? 0 : now - lowSpeedSinceRef.current,
+      linearSpeed,
+      angularSpeed,
+      inTray: validPosition,
+      sleeping: rb.isSleeping(),
+    });
+    if (decision === 'damp' && !dampingAppliedRef.current) {
+      rb.setLinearDamping(2.5);
+      rb.setAngularDamping(3.5);
+      dampingAppliedRef.current = true;
       return;
     }
-    if (now - lowSpeedSinceRef.current >= LOW_SPEED_SETTLE_S) {
+    if (decision === 'settle') {
       resolveNow();
     }
   }, [resolveNow]);
@@ -123,7 +138,9 @@ export function PhysicsDice({ die, dieThrow, armed, onThrowRequest, onRollFinish
       true,
     );
     thrownRef.current = true;
+    thrownAtRef.current = performance.now() / 1000;
     lowSpeedSinceRef.current = null;
+    dampingAppliedRef.current = false;
   }, [armed, dieThrow]);
 
   // Resetar cursor quando desmontar.
