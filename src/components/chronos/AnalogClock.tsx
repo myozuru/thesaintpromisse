@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useChronosStore } from '@/stores/useChronosStore';
-import { chronosDisplayRef } from '@/stores/useChronosDisplayStore';
+import { stepChronosDisplay } from '@/stores/useChronosDisplayStore';
 
 const ROMAN = ['XII', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
 
@@ -29,69 +28,8 @@ export function AnalogClock({ size: canvasSize = 280 }: { size?: number }) {
     faceCtx.scale(dpr, dpr);
     drawClockFace(faceCtx, canvasSize);
 
-    const initialState = useChronosStore.getState();
-    let displaySec = initialState.hours * 3600 + initialState.minutes * 60 + initialState.seconds;
-    let smoothMult = initialState.isRunning ? initialState.multiplier : 0;
-    let lastFrameTime = performance.now();
-
-    const unsub = useChronosStore.subscribe((s, prev) => {
-      // Só re-sincroniza em casos genuinamente manuais que NÃO podem ser
-      // alcançados pelo avanço natural do display:
-      //  1) mudança de data (dia/mês/ano)
-      //  2) edição manual que move o relógio para TRÁS (tick negativo / setTime)
-      // Qualquer mudança vinda do ticker OU de sync remoto é ignorada — o
-      // display é a fonte visual da verdade entre snaps. Sync remoto envia
-      // o store de outro cliente (que está atrasado em relação ao nosso
-      // display suavizado) e causaria saltos para trás dos ponteiros.
-      if (s.lastMutationSource !== 'manual') return;
-
-      const dateChanged =
-        s.day !== prev.day || s.month !== prev.month || s.year !== prev.year;
-      const storeSec = s.hours * 3600 + s.minutes * 60 + s.seconds;
-      const prevStoreSec = prev.hours * 3600 + prev.minutes * 60 + prev.seconds;
-      const visualSec = ((displaySec % 86400) + 86400) % 86400;
-
-      if (dateChanged) {
-        displaySec = storeSec;
-        return;
-      }
-
-      // Edição manual real: store mudou de valor por setTime/tick manual.
-      // Só puxamos o display se o store foi explicitamente movido para trás
-      // (usuário recuou o tempo) ou para muito à frente (>30s, salto manual).
-      const storeJumped = storeSec !== prevStoreSec;
-      if (!storeJumped) return;
-
-      let diff = storeSec - visualSec;
-      if (diff > 43200) diff -= 86400;
-      if (diff < -43200) diff += 86400;
-
-      // Só snap em retrocessos manuais ou saltos grandes para frente.
-      if (diff < -1 || diff > 30) {
-        displaySec = storeSec;
-      }
-    });
-
     const draw = () => {
-      const now = performance.now();
-      const frameDt = Math.min((now - lastFrameTime) / 1000, 0.1);
-      lastFrameTime = now;
-
-      const state = useChronosStore.getState();
-      const targetMult = state.isRunning ? state.multiplier : 0;
-      // Tau dinâmico (em segundos) baseado nos ms configurados pelo usuário.
-      // Usa start quando acelerando, stop quando desacelerando.
-      const isStarting = targetMult > smoothMult;
-      const easeMs = isStarting ? state.easeStartMs : state.easeStopMs;
-      const tau = Math.max(0.001, easeMs / 1000);
-      const alpha = easeMs <= 0 ? 1 : 1 - Math.exp(-frameDt / tau);
-      smoothMult += (targetMult - smoothMult) * alpha;
-      if (Math.abs(targetMult - smoothMult) < 0.001) smoothMult = targetMult;
-
-      displaySec += smoothMult * frameDt;
-
-      const total = ((displaySec % 86400) + 86400) % 86400;
-      chronosDisplayRef.current = total;
+      const total = stepChronosDisplay(performance.now());
       const hoursContinuous = total / 3600;       // 0..24, contínuo
       const minutesContinuous = (total % 3600) / 60; // 0..60, contínuo (já inclui segundos)
       const seconds = total % 60;
@@ -132,7 +70,6 @@ export function AnalogClock({ size: canvasSize = 280 }: { size?: number }) {
     rafRef.current = requestAnimationFrame(draw);
     return () => {
       cancelAnimationFrame(rafRef.current);
-      unsub();
     };
   }, [canvasSize]);
 
