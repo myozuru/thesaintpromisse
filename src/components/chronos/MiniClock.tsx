@@ -52,7 +52,7 @@ export function MiniClock() {
         <div className="w-6 h-6">
           <AnalogClock size={24} />
         </div>
-        <SmoothTimeDisplay className="text-xs text-foreground tracking-[0.1em] glow-text" style={{ fontFamily: "'Cinzel Decorative', serif", fontSize: '11px' }} />
+        <SmoothTimeDisplay className="text-xs text-foreground tracking-[0.1em] glow-text text-center tabular-nums whitespace-nowrap" style={{ fontFamily: "'Cinzel Decorative', serif", fontSize: '11px', width: '7.2em', display: 'inline-block' }} />
         {!isPlayer && (
           <button
             onClick={() => { playClockClickSound(); store.setIsRunning(!store.isRunning); }}
