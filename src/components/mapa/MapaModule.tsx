@@ -745,6 +745,7 @@ export function MapaModule() {
 
   const shiftDownRef = useRef(false);
   const panStateRef = useRef<{ lastX: number; lastY: number }>({ lastX: 0, lastY: 0 });
+  const panClickRef = useRef<{ x: number; y: number; mapId: string | null } | null>(null);
   const dragRef = useRef<DragMode>({ kind: 'none' });
   const mouseScreenRef = useRef<{ x: number; y: number } | null>(null);
   const mouseWorldRef = useRef<{ x: number; y: number } | null>(null);
@@ -2273,7 +2274,11 @@ export function MapaModule() {
       const isPlayerRole = useRoleStore.getState().role === 'PLAYER';
       const panThrough = !!hit && activeToolRef.current === 'select' && !shiftDownRef.current && (
         hit.locked
-        || (isPlayerRole && ((hit.layer ?? 'tokens') === 'map' || !canPlayerEditEntityNow(hit)))
+        // Imagens de fundo (camada Mapa) não "grudam" no clique: arrastar move a
+        // visão. O Mestre só move a imagem se ela já estiver selecionada
+        // (clique simples sem arrastar seleciona).
+        || ((hit.layer ?? 'tokens') === 'map' && (isPlayerRole || !state.selectedIds.includes(hit.id)))
+        || (isPlayerRole && !canPlayerEditEntityNow(hit))
       );
       if (hit && !panThrough) {
         // expansão de grupo: clicar em membro de um grupo seleciona todos do grupo
@@ -2380,6 +2385,10 @@ export function MapaModule() {
         panStateRef.current = { lastX: e.clientX, lastY: e.clientY };
         state.setCamera({ isPanning: true });
         el.style.cursor = 'grabbing';
+        panClickRef.current = {
+          x: e.clientX, y: e.clientY,
+          mapId: panThrough && hit && !hit.locked && !isPlayerRole && (hit.layer ?? 'tokens') === 'map' ? hit.id : null,
+        };
         return;
       }
       if (!shiftDownRef.current) state.clearSelection();
@@ -2682,6 +2691,11 @@ export function MapaModule() {
       if (drag.kind === 'pan') {
         state.setCamera({ isPanning: false });
         el.style.cursor = '';
+        const pc = panClickRef.current;
+        panClickRef.current = null;
+        if (pc?.mapId && Math.hypot(e.clientX - pc.x, e.clientY - pc.y) < 4) {
+          state.setSelected([pc.mapId]);
+        }
       } else if (drag.kind === 'draw') {
         if (drag.points.length > 0) {
           state.addStroke({
