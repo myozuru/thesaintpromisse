@@ -57,6 +57,7 @@ function NumStep({ value, onChange, min, max, className, step = 1, disabled }: {
   className?: string;
   disabled?: boolean;
 }) {
+  const [draft, setDraft] = useState<string | null>(null);
   const clamp = (n: number) => {
     let r = n;
     if (typeof min === 'number') r = Math.max(min, r);
@@ -76,8 +77,16 @@ function NumStep({ value, onChange, min, max, className, step = 1, disabled }: {
       <Input
         type="number"
         disabled={disabled}
-        value={Number.isFinite(value) ? value : 0}
-        onChange={(e) => onChange(clamp(parseInt(e.target.value, 10) || 0))}
+        value={draft ?? (Number.isFinite(value) ? value : 0)}
+        onFocus={() => setDraft(String(Number.isFinite(value) ? value : 0))}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => {
+          const n = parseInt(draft ?? '', 10);
+          setDraft(null);
+          // Campo vazio/inválido não grava nada (antes virava 0 e zerava a vida).
+          if (Number.isFinite(n) && clamp(n) !== value) onChange(clamp(n));
+        }}
+        onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
         className="h-7 w-16 text-center font-mono tabular-nums"
       />
       <button
@@ -421,7 +430,7 @@ export function TemporaryCharacterCard({ character: c }: Props) {
             </div>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-[10px] uppercase text-muted-foreground w-10">Máx</span>
-              <NumStep disabled={!canEditHp} value={c.hpMax} onChange={(v) => setField('hpMax', Math.max(0, v))} min={0} />
+              <NumStep disabled={!canEditHp} value={c.hpMax} onChange={(v) => setField('hpMax', Math.max(1, v))} min={1} />
             </div>
           </div>
 
