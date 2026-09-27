@@ -19,6 +19,9 @@ export type DiceSettlementDecision = 'continue' | 'damp' | 'settle';
 
 /** Pure decision used by the 3D body and deterministic tests. */
 export function decideDiceSettlement(input: DiceSettlementInput): DiceSettlementDecision {
+  // O corpo para no limite e o resultado continua vindo da orientação física.
+  // Isso também precisa valer quando um quique o deixa acima da bandeja.
+  if (input.elapsedSeconds >= DICE_SETTLEMENT.forceAfterSeconds) return 'settle';
   if (!input.inTray) return 'continue';
   if (input.sleeping) return 'settle';
 
@@ -27,7 +30,7 @@ export function decideDiceSettlement(input: DiceSettlementInput): DiceSettlement
     input.angularSpeed <= DICE_SETTLEMENT.angularSpeed &&
     input.quietSeconds >= DICE_SETTLEMENT.quietSeconds;
 
-  if (naturallyQuiet || input.elapsedSeconds >= DICE_SETTLEMENT.forceAfterSeconds) return 'settle';
+  if (naturallyQuiet) return 'settle';
   if (input.elapsedSeconds >= DICE_SETTLEMENT.dampingAfterSeconds) return 'damp';
   return 'continue';
 }

@@ -15,6 +15,7 @@ export function Global3DDiceOverlay() {
   const setVisible = useDice3DStore((s) => s.setVisible);
   const current = useDice3DStore((s) => s.current);
   const resolveCurrent = useDice3DStore((s) => s.resolveCurrent);
+  const clearRolls = useDice3DStore((s) => s.clear);
   const bounciness = useDice3DStore((s) => s.bounciness);
   const setBounciness = useDice3DStore((s) => s.setBounciness);
   const isMaster = useRoleStore((s) => s.role === 'MASTER');
@@ -29,6 +30,14 @@ export function Global3DDiceOverlay() {
   /** true quando a bandeja 3D não carregou — o jogador rola manualmente por botão. */
   const [trayFailed, setTrayFailed] = useState(false);
   const activeRollIdRef = useRef<string | null>(null);
+
+  const closeTray = () => {
+    activeRollIdRef.current = null;
+    apiRef.current?.clear();
+    setPhase('idle');
+    setTrayFailed(false);
+    clearRolls();
+  };
 
   useEffect(() => {
     if (!current) return;
@@ -96,14 +105,10 @@ export function Global3DDiceOverlay() {
           {current?.label ?? 'Auspício dos Dados'}
         </div>
         <button
-          onClick={() => {
-            if (useDice3DStore.getState().current) return;
-            useDice3DStore.getState().clear();
-            setVisible(false);
-          }}
-          disabled={!!current}
-          title={current ? 'Aguarde o resultado…' : 'Fechar'}
-          className="ml-auto h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-accent hover:bg-primary/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+          onClick={closeTray}
+          title={current ? 'Cancelar rolagem e fechar' : 'Fechar'}
+          aria-label={current ? 'Cancelar rolagem e fechar' : 'Fechar bandeja'}
+          className="ml-auto h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-accent hover:bg-primary/10 transition-colors"
         >
           <X className="h-3.5 w-3.5" />
         </button>
@@ -204,7 +209,10 @@ export function Global3DDiceOverlay() {
 
         {phase === 'armed' && (
           <button
-            onClick={() => apiRef.current?.throwAll()}
+            onClick={() => {
+              if (phase !== 'armed') return;
+              apiRef.current?.throwAll();
+            }}
             className="absolute top-2 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 rounded-md border border-accent/40 bg-primary/30 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-accent hover:bg-primary/50 transition-all animate-pulse"
             style={{
               fontFamily: "'Cinzel', serif",

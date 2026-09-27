@@ -9,7 +9,7 @@
  *   • Defesa do alvo: dropdown de personagens (NPC/INIMIGO) — calcula via
  *     `computeTotalDefense`. Permite override manual.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Character } from '@/types';
 import {
   findWeaponByName, hasProperty, requiresTwoHands, type Weapon,
@@ -241,6 +241,8 @@ export function AttackPanel({ character: c }: Props) {
   // Quantas vezes o d20 de ataque foi rolado nesta tentativa (máx 2).
   // Reseta a cada nova ação de ataque (handleRoll chamado sem ser reroll).
   const [attackRollCount, setAttackRollCount] = useState<number>(0);
+  const rollInFlightRef = useRef(false);
+  const luckRollInFlightRef = useRef(false);
 
   // duas-mãos sempre verdadeiro se a arma exigir
   useEffect(() => {
@@ -282,8 +284,10 @@ export function AttackPanel({ character: c }: Props) {
       addLog('combat', `⚠️ ${c.name} não tem arma equipada na mão principal.`);
       return;
     }
-    if (phase === 'rolling-hit' || phase === 'rolling-dmg') return;
+    if (rollInFlightRef.current || phase === 'rolling-hit' || phase === 'rolling-dmg') return;
     if (isReroll && attackRollCount >= 2) return;
+    rollInFlightRef.current = true;
+    setPhase('rolling-hit');
     const ability = pickAttackAbility(c, mainWeapon);
     const ctx = buildAttackContext({
       attacker: c,
@@ -305,7 +309,16 @@ export function AttackPanel({ character: c }: Props) {
         ...(c.rangedTrained ? (['ranged', 'thrown'] as const) : []),
       ],
     });
-    let result = await rollAttack(ctx);
+    let result: AttackResult;
+    try {
+      result = await rollAttack(ctx);
+    } catch (error) {
+      console.error('[AttackPanel] falha ao concluir rolagem:', error);
+      setPhase('idle');
+      return;
+    } finally {
+      rollInFlightRef.current = false;
+    }
     // Auto-crit contra alvos Inconsciente / Indefeso / Paralisado (CaC).
     const auto = target ? getAutoCritFromConditions(target, attackKind) : null;
     if (auto && !result.criticalFail) {
@@ -340,7 +353,6 @@ export function AttackPanel({ character: c }: Props) {
     setPendingResult(null);
     setFirstD20Revealed(null);
     setPendingRerollMeta({ isReroll });
-    setPhase('rolling-hit');
     // Resultado já vem do sistema 3D (await). Revela direto, sem ticking falso
     // que poderia "voltar atrás" do valor real.
     const isDualD20 = result.attackRolls.length > 1;
@@ -534,19 +546,27 @@ export function AttackPanel({ character: c }: Props) {
   // com o MAIOR valor. Indisponível em falha crítica. Pode repetir enquanto
   // houver pontos. Aplica o novo natural e re-resolve hit/critico/dano se mudar.
   const handleLuckRerollAttack = async () => {
+    if (luckRollInFlightRef.current) return;
     if (!lastResult || !mainWeapon) return;
     if (lastResult.criticalFail) return;
     if ((c.luckCurrent ?? 0) <= 0) return;
     if (phase !== 'await-dmg' && phase !== 'done') return;
 
+    luckRollInFlightRef.current = true;
     const res = spendLuck(c.id);
     if (!res.ok) {
+      luckRollInFlightRef.current = false;
       addLog('combat', `⚠️ ${res.reason ?? 'Não foi possível gastar Sorte.'}`);
       return;
     }
 
     // Re-roll do d20 puro (não rerola contexto inteiro — preserva mods já calculados).
-    const newNat = await rollD20Com(c.id);
+    let newNat: number;
+    try {
+      newNat = await rollD20Com(c.id);
+    } finally {
+      luckRollInFlightRef.current = false;
+    }
     const oldNat = lastResult.natural;
     const keptNat = Math.max(oldNat, newNat);
     const kept = keptNat === oldNat ? 'antigo' : 'novo';
@@ -621,12 +641,15 @@ export function AttackPanel({ character: c }: Props) {
   // 🍀 Re-roll do DANO usando 1 ponto de Sorte: re-rola os dados de dano
   // (mesma notação) e mantém o MAIOR total. Disponível após acertar.
   const handleLuckRerollDamage = async () => {
+    if (luckRollInFlightRef.current) return;
     if (!lastResult || !mainWeapon || !lastResult.hit) return;
     if ((c.luckCurrent ?? 0) <= 0) return;
     if (phase !== 'done') return;
 
+    luckRollInFlightRef.current = true;
     const res = spendLuck(c.id);
     if (!res.ok) {
+      luckRollInFlightRef.current = false;
       addLog('combat', `⚠️ ${res.reason ?? 'Não foi possível gastar Sorte.'}`);
       return;
     }
@@ -646,7 +669,12 @@ export function AttackPanel({ character: c }: Props) {
         ...(c.rangedTrained ? (['ranged', 'thrown'] as const) : []),
       ],
     });
-    const r2 = await rollAttack(ctx);
+    let r2: AttackResult;
+    try {
+      r2 = await rollAttack(ctx);
+    } finally {
+      luckRollInFlightRef.current = false;
+    }
     const oldDmg = lastResult.damageTotal;
     const keep = r2.damageTotal > oldDmg;
     addLog(
