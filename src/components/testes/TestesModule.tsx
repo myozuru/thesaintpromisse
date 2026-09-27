@@ -81,7 +81,7 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
       return;
     }
     const dcNum = dc.trim() ? Number(dc) : undefined;
-    if (dc.trim() && (Number.isNaN(dcNum) || dcNum! < 1)) {
+    if (dc.trim() && (dcNum == null || Number.isNaN(dcNum) || dcNum < 1)) {
       toast({ title: 'CD inválida', variant: 'destructive' });
       return;
     }

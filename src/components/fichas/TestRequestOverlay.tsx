@@ -435,7 +435,6 @@ export function TestRequestOverlay() {
             <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
             {showDc && (
               <div className="rounded-md border border-accent/30 bg-accent/10 px-3 py-1 text-sm font-bold text-accent">CD {current.dc}</div>
-              </div>
             )}
             {!showDc && current.dc != null && !isMaster && (
               <div className="rounded-md border border-border bg-muted/40 px-3 py-1 text-xs italic text-muted-foreground">
