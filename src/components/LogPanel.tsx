@@ -141,22 +141,23 @@ export function LogPanel() {
           )}
           {visibleLogs.map((log) => {
             const Icon = LOG_ICONS[log.type];
+            const sourceName = log.sourceName ?? (log.sourceRole === 'MASTER' ? 'Mestre' : null);
             return (
               <div
                 key={log.id}
-                className="flex items-start gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-secondary/50 transition-all duration-300 animate-fade-in"
+                className="flex items-start gap-2 rounded-lg px-2 py-2 text-sm hover:bg-secondary/50 transition-all duration-300 animate-fade-in"
               >
                 {(() => {
                   const LogIcon = Icon as React.ComponentType<{ className?: string }>;
                   return <LogIcon className={cn('mt-0.5 h-3.5 w-3.5 shrink-0', LOG_COLORS[log.type])} />;
                 })()}
                 <div className="min-w-0 flex-1">
-                  <p className="break-words text-foreground/90 text-sm" style={{ fontFamily: "'Cormorant Garamond', serif" }}>{log.message}</p>
-                  <span className="text-xs text-muted-foreground font-mono">
-                    {showGameTime
-                      ? (log.gameTime || '—')
-                      : new Date(log.timestamp).toLocaleTimeString('pt-BR')
-                    }
+                  {sourceName && (
+                    <p className="mb-0.5 truncate text-xs font-semibold text-primary">{sourceName}</p>
+                  )}
+                  <p className="break-words text-sm leading-5 text-foreground">{log.message}</p>
+                  <span className="mt-0.5 block text-[11px] leading-4 text-muted-foreground">
+                    {showGameTime ? (log.gameTime || '—') : new Date(log.timestamp).toLocaleTimeString('pt-BR')}
                   </span>
                 </div>
               </div>
