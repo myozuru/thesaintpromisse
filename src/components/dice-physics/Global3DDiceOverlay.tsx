@@ -8,6 +8,7 @@ import { useDice3DStore } from '@/stores/useDice3DStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { Slider } from '@/components/ui/slider';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 
 export function Global3DDiceOverlay() {
   const enabled = useDice3DStore((s) => s.enabled);
@@ -29,6 +30,7 @@ export function Global3DDiceOverlay() {
   const [phase, setPhase] = useState<'idle' | 'armed' | 'rolling'>('idle');
   /** true quando a bandeja 3D não carregou — o jogador rola manualmente por botão. */
   const [trayFailed, setTrayFailed] = useState(false);
+  const [lastLayout, setLastLayout] = useState<'default' | 'test-request'>('default');
   const activeRollIdRef = useRef<string | null>(null);
 
   const closeTray = () => {
@@ -41,6 +43,7 @@ export function Global3DDiceOverlay() {
 
   useEffect(() => {
     if (!current) return;
+    setLastLayout(current.layout ?? 'default');
     // A bandeja 3D carrega sob demanda: na primeira rolagem (comum no jogador,
     // que ainda não abriu a bandeja) ela ainda não existe quando o pedido chega.
     // Esperamos ela ficar pronta em vez de desistir — antes o pedido ficava
@@ -79,7 +82,7 @@ export function Global3DDiceOverlay() {
 
   return (
     <div
-      className="fixed bottom-4 right-4 z-[9999] w-[360px] rounded-xl overflow-hidden pointer-events-auto border border-primary/30"
+      className={cn('fixed z-[9999] overflow-hidden pointer-events-auto border border-primary/30', lastLayout === 'test-request' ? 'left-1/2 top-1/2 w-[min(640px,calc(100vw-3rem))] -translate-x-1/2 -translate-y-1/2 rounded-lg' : 'bottom-4 right-4 w-[360px] rounded-xl')}
       style={{
         background:
           'linear-gradient(135deg, hsl(265 30% 7% / 0.96) 0%, hsl(270 35% 5% / 0.96) 100%)',
@@ -135,7 +138,7 @@ export function Global3DDiceOverlay() {
         </div>
       )}
 
-      <div className="relative" style={{ height: 280 }}>
+      <div className={cn('relative', lastLayout === 'test-request' ? 'h-[min(390px,52dvh)]' : 'h-[280px]')}>
         {/* Véu místico atrás do canvas */}
         <div
           className="absolute inset-0 pointer-events-none"
@@ -175,6 +178,11 @@ export function Global3DDiceOverlay() {
               setPhase('idle');
               // Resolve a Promise associada (caminho oficial) — se for só visual, resolveCurrent simplesmente avança.
               resolveCurrent(results.map((r) => r.value));
+               const next = useDice3DStore.getState().current;
+               if (pending.layout === 'test-request' && !next) {
+                 setVisible(false);
+                 apiRef.current?.clear();
+               }
               // A bandeja permanece aberta — o usuário fecha manualmente no X.
             }}
           />

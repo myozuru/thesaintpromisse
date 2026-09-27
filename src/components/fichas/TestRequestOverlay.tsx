@@ -9,7 +9,7 @@
  *   - "Aguardando rolagem…" enquanto o jogador não rolou
  *   - resultado + sucesso/falha (respeitando flags hideDc/hideOutcome)
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTestRequestStore, type TestRequest } from '@/stores/useTestRequestStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useRoleStore } from '@/stores/useRoleStore';
@@ -219,22 +219,9 @@ export function TestRequestOverlay() {
 
   // Animação dramática: cicla números antes de revelar.
   const [rolling, setRolling] = useState(false);
-  const [tick, setTick] = useState(1);
-  const tickTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (tickTimer.current) clearInterval(tickTimer.current);
-    };
-  }, []);
-
   // Reseta animação quando muda o pedido atual.
   useEffect(() => {
     setRolling(false);
-    if (tickTimer.current) {
-      clearInterval(tickTimer.current);
-      tickTimer.current = null;
-    }
   }, [current?.id]);
 
   // Conceder Outra Chance (Suporte Nv 6): ao receber o aceite, o cliente dono
@@ -301,12 +288,6 @@ export function TestRequestOverlay() {
     setRolling(true);
     playDiceSound();
 
-    // Inicia animação cíclica
-    if (tickTimer.current) clearInterval(tickTimer.current);
-    tickTimer.current = setInterval(() => {
-      setTick(Math.floor(Math.random() * 20) + 1);
-    }, 60);
-
     // 1) Sucesso/falha garantida (Omni) tem prioridade — pula a rolagem.
     const ctx = buildRollContext(current);
     const outCtx: OutcomeContext =
@@ -329,11 +310,11 @@ export function TestRequestOverlay() {
       const adv = consumeAdvantageFor(char.id, ctx);
       advNet = adv.net;
       if (adv.net === 'normal') {
-        d20 = await rollD20Com(char.id);
+        d20 = await rollD20Com(char.id, undefined, { label: `${current.testName} — ${char.name}`, layout: 'test-request' });
         rolls = [d20];
       } else {
-        const a = await rollD20Com(char.id);
-        const b = await rollD20Com(char.id);
+        const a = await rollD20Com(char.id, undefined, { label: `${current.testName} — vantagem`, layout: 'test-request' });
+        const b = await rollD20Com(char.id, undefined, { label: `${current.testName} — vantagem`, layout: 'test-request' });
         rolls = [a, b];
         d20 = adv.net === 'advantage' ? Math.max(a, b) : Math.min(a, b);
       }
@@ -353,10 +334,6 @@ export function TestRequestOverlay() {
 
     // Revela após ~1.4s de suspense
     setTimeout(() => {
-      if (tickTimer.current) {
-        clearInterval(tickTimer.current);
-        tickTimer.current = null;
-      }
       setRolling(false);
       setResult(current.id, {
         d20,
@@ -438,7 +415,7 @@ export function TestRequestOverlay() {
     <>
       {isMaster && <MasterWatchPanel />}
       <div className="fixed inset-0 z-[200] flex items-center justify-center bg-background/85 backdrop-blur-sm p-6 animate-in fade-in duration-200">
-        <div className="relative w-full max-w-lg rounded-2xl border-2 border-primary/60 bg-card p-8 shadow-[0_0_60px_-10px_hsl(var(--primary)/0.6)]">
+        <div className="relative w-full max-w-3xl rounded-lg border-2 border-primary/60 bg-card p-5 sm:p-6 shadow-[0_0_60px_-10px_hsl(var(--primary)/0.6)]">
           {(isMaster || current.result) && (
             <button
               onClick={() => (isMaster ? dismiss(current.id) : ackResult(current.id))}
@@ -449,11 +426,11 @@ export function TestRequestOverlay() {
             </button>
           )}
 
-          <div className="text-center space-y-1 mb-6">
+          <div className="text-center space-y-1 mb-4">
             <div className="text-xs uppercase tracking-widest text-primary/80" style={{ fontFamily: "'Cinzel', serif" }}>
               {kindLabel}
             </div>
-            <h2 className="text-3xl font-bold text-foreground" style={{ fontFamily: "'Cinzel', serif" }}>
+            <h2 className="text-2xl font-bold text-foreground" style={{ fontFamily: "'Cinzel', serif" }}>
               {current.testName}
             </h2>
             <div className="text-sm text-muted-foreground">
@@ -503,22 +480,10 @@ export function TestRequestOverlay() {
             </div>
           )}
 
-          {/* Estado: rolando (animação dramática) */}
+          {/* A bandeja 3D global ocupa este espaço enquanto a física resolve o teste. */}
           {rolling && (
-            <div className="mb-4 flex flex-col items-center justify-center py-6 animate-in fade-in duration-200">
-              <Dice6 className="w-16 h-16 text-primary animate-spin mb-3" style={{ animationDuration: '0.5s' }} />
-              <div
-                className="text-7xl font-black text-primary tabular-nums tracking-wider"
-                style={{
-                  fontFamily: "'Cinzel', serif",
-                  textShadow: '0 0 30px hsl(var(--primary) / 0.8)',
-                }}
-              >
-                {tick}
-              </div>
-              <div className="text-xs uppercase tracking-widest text-muted-foreground mt-2">
-                Rolando…
-              </div>
+            <div className="h-[min(390px,52dvh)] rounded-md border border-primary/25 bg-background/30 animate-in fade-in duration-200" aria-label="Bandeja de dados 3D">
+              <div className="flex h-full items-end justify-center pb-3 text-[10px] uppercase text-muted-foreground">Aguardando o resultado dos dados</div>
             </div>
           )}
 

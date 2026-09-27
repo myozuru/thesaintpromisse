@@ -55,12 +55,15 @@ export function notationToDiceTypes(notation: string): DiceType[] {
   return out;
 }
 
+export type DiceOverlayLayout = 'default' | 'test-request';
+
 interface RollRequest {
   id: string;
   types: DiceType[];
   label?: string;
   /** Bônus fixo somado ao total, exibido na bandeja 3D. */
   bonus?: number;
+  layout?: DiceOverlayLayout;
   at: number;
   resolve?: (values: number[]) => void;
 }
@@ -84,8 +87,8 @@ interface Dice3DState {
    * devolvido pela Promise. Se 3D estiver desabilitado, gera valores via
    * RNG instantaneamente e resolve já.
    */
-  requestRoll: (types: DiceType[], label?: string, bonus?: number) => Promise<number[]>;
-  requestNotation: (notation: string, label?: string, bonus?: number) => Promise<number[]>;
+  requestRoll: (types: DiceType[], label?: string, bonus?: number, layout?: DiceOverlayLayout) => Promise<number[]>;
+  requestNotation: (notation: string, label?: string, bonus?: number, layout?: DiceOverlayLayout) => Promise<number[]>;
   /** chamado pelo overlay quando termina de rolar o atual; resolve a Promise associada. */
   resolveCurrent: (values: number[]) => void;
   /** apenas avança para o próximo da fila (rolagens visuais sem promise). */
@@ -140,20 +143,20 @@ export const useDice3DStore = create<Dice3DState>((set, get) => ({
     if (types.length === 0) return;
     get().enqueueTypes(types, label ?? notation);
   },
-  requestRoll: (types, label, bonus) => {
+  requestRoll: (types, label, bonus, layout = 'default') => {
     if (types.length === 0) return Promise.resolve([]);
     if (!get().enabled) return Promise.resolve(rngForTypes(types));
     return new Promise<number[]>((resolve) => {
-      const req: RollRequest = { id: uid(), types, label, bonus, at: Date.now(), resolve };
+      const req: RollRequest = { id: uid(), types, label, bonus, layout, at: Date.now(), resolve };
       set((s) => {
         if (!s.current) return { current: req, visible: true };
         return { queue: [...s.queue, req], visible: true };
       });
     });
   },
-  requestNotation: (notation, label, bonus) => {
+  requestNotation: (notation, label, bonus, layout) => {
     const types = notationToDiceTypes(notation);
-    return get().requestRoll(types, label ?? notation, bonus);
+    return get().requestRoll(types, label ?? notation, bonus, layout);
   },
   resolveCurrent: (values) => {
     const cur = get().current;

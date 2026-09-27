@@ -1,5 +1,5 @@
 import { consumirRerollDe, getCharContextoRolagem, setCharContextoRolagem } from '@/lib/omni/reroll';
-import { useDice3DStore } from '@/stores/useDice3DStore';
+import { useDice3DStore, type DiceOverlayLayout } from '@/stores/useDice3DStore';
 
 /**
  * Sistema oficial de rolagem: TODA rolagem agora vem da física 3D.
@@ -34,9 +34,9 @@ export async function rollDice(
   return { rolls, total: rolls.reduce((a, b) => a + b, 0) };
 }
 
-export async function rollD20(bonus?: number): Promise<number> {
+export async function rollD20(bonus?: number, options?: { label?: string; layout?: DiceOverlayLayout }): Promise<number> {
   const charId = getCharContextoRolagem();
-  const [r1] = await useDice3DStore.getState().requestRoll(['D20'], 'd20', bonus);
+  const [r1] = await useDice3DStore.getState().requestRoll(['D20'], options?.label ?? 'd20', bonus, options?.layout);
   let r = r1 ?? 0;
   if (charId && consumirRerollDe(charId)) {
     const [r2] = await useDice3DStore.getState().requestRoll(['D20'], 'd20 reroll');
@@ -66,11 +66,11 @@ export async function rollDiceCom(
   }
 }
 
-export async function rollD20Com(charId: string | undefined, bonus?: number): Promise<number> {
+export async function rollD20Com(charId: string | undefined, bonus?: number, options?: { label?: string; layout?: DiceOverlayLayout }): Promise<number> {
   const prev = getCharContextoRolagem();
   setCharContextoRolagem(charId);
   try {
-    return await rollD20(bonus);
+    return await rollD20(bonus, options);
   } finally {
     setCharContextoRolagem(prev);
   }
