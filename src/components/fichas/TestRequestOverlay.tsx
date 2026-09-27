@@ -25,6 +25,7 @@ import { Dice6, X, Check, Loader2, Hourglass } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { playDiceSound, playSuccessSound, playErrorSound } from '@/lib/sounds';
 import type { Character } from '@/types';
+import { canViewerRollTestRequest, isPlayerOwnedTestRequest } from '@/lib/testRequestAudience';
 
 function computeBonus(c: Character, req: TestRequest): { bonus: number; breakdown: string } {
   const level = c.level || 1;
@@ -89,13 +90,11 @@ function MasterWatchPanel() {
   const dismiss = useTestRequestStore((s) => s.dismiss);
   const characters = useCharacterStore((s) => s.characters);
 
-  // Master observa pedidos cujo alvo é uma ficha de PLAYER (quem rola é o jogador).
+  // Master acompanha pedidos cujo alvo é uma ficha vinculada a um jogador.
   const watching = useMemo(
     () => requests.filter((r) => {
       const c = characters.find((x) => x.id === r.charId);
-      // se a ficha não foi encontrada (não sincronizou), ainda assim mostra ao mestre
-      if (!c) return true;
-      return c.createdBy !== 'MASTER' && c.category === 'PLAYER';
+      return isPlayerOwnedTestRequest(r, c);
     }),
     [requests, characters]
   );
@@ -203,23 +202,17 @@ export function TestRequestOverlay() {
 
   const isMaster = role === 'MASTER';
 
-  // Filtra pedidos por dono real da ficha alvo:
-  //  - MASTER → fichas master-controlled (createdBy MASTER ou categoria !== PLAYER)
-  //  - PLAYER → fichas criadas por player E pertencentes ao perfil ativo
+  // Somente o perfil vinculado à ficha recebe o botão de rolagem.
+  // Fichas sem perfil e NPCs permanecem sob controle do Mestre.
   const pending = useMemo(
     () => requests.filter((r) => {
       // Pedido que o jogador já viu e fechou some da tela DELE, mas continua
       // visível para o mestre até ele dispensar.
       if (!isMaster && r.playerAckedAt) return false;
       const c = characters.find((x) => x.id === r.charId);
-      if (!c) return false;
-      const masterControlled = c.createdBy === 'MASTER' || c.category !== 'PLAYER';
-      if (isMaster) return masterControlled;
-      if (masterControlled) return false;
-      // player: precisa ser dono do perfil (ou ficha sem profileId vinculado)
-      return !c.profileId || c.profileId === activeProfileId;
+      return canViewerRollTestRequest(r, c, role, activeProfileId);
     }),
-    [requests, characters, isMaster, activeProfileId]
+    [requests, characters, isMaster, role, activeProfileId]
   );
   // Prioriza pedidos sem resultado; senão mostra o último resolvido (até ser dispensado).
   const current = pending.find((r) => !r.result) ?? pending[pending.length - 1];
@@ -257,10 +250,7 @@ export function TestRequestOverlay() {
       const rollerChar = chars.find((x) => x.id === rollerId);
       if (!rollerChar) return;
       // Só o cliente dono da ficha rerola (mesma regra de posse do overlay).
-      const masterControlled = rollerChar.createdBy === 'MASTER' || rollerChar.category !== 'PLAYER';
-      const mine = isMaster
-        ? masterControlled
-        : !masterControlled && (!rollerChar.profileId || rollerChar.profileId === activeProfileId);
+      const mine = canViewerRollTestRequest(req, rollerChar, role, activeProfileId);
       if (!mine) return;
       void (async () => {
         const prev = req.result!;
@@ -284,7 +274,7 @@ export function TestRequestOverlay() {
     };
     window.addEventListener('outra-chance:apply', onApply);
     return () => window.removeEventListener('outra-chance:apply', onApply);
-  }, [isMaster, activeProfileId]);
+  }, [role, activeProfileId]);
 
 
   if (!current) {

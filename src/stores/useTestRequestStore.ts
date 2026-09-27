@@ -19,6 +19,8 @@ export interface TestRequest {
   id: string;
   charId: string;
   charName: string;
+  /** Perfil que deve rolar; congela o destinatário no momento do pedido. */
+  targetProfileId?: string;
   /** Tipo do teste. */
   kind: TestKind;
   /** Nome do atributo/perícia/TR (ex.: "Astúcia"). */

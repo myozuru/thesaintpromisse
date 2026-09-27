@@ -15,7 +15,7 @@
 - Cloud clients must use only this workspace's environment configuration; without it, use the offline stub so the copy cannot reach another project's data.
 
 - Multiplayer syncs through `realtime_world`; `realtime_assets` stores images, and `tempTemplates` shares temporary-sheet templates while local persistence remains an offline cache.
-- Accounts use nick+password mapped to a synthetic email (nick@tpfichas.local, auto-confirm); Master is a row in user_roles (first account auto-claims it) so role never comes from local storage.
+- Accounts use nick+password with synthetic email; Master lives in user_roles, never local storage. Roll requests target the linked profile; only that player rolls while Master watches.
 - Map sync: piece moves travel as throttled `entity-patch` broadcasts (~8/s) and glide on receivers; the full map is only rebroadcast for structural changes (positions-only changes save to the cloud after 1.5s), and incoming full maps are merged so fresh local or live-patched positions win — this keeps movement smooth under the realtime message limit.
 - Multiplayer flows are tested with the in-memory fake table (src/test/helpers/fakeMesa.ts) plus pure receive rules (e.g. reduceAmizadeMessage) — simulates several screens in under 1s instead of opening two browser sessions.
 - Habilidades de Suporte por nível ficam em módulos próprios (suporteNivel2.ts, suporteNivel6.ts) com UI em SuporteNivel*Sections.tsx; bônus fixos em rolagens usam grantFlatBonus/consumeFlatBonusFor de rollAdvantage.ts (mods com `bonus` não contam como vantagem).
