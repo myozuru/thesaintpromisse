@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useChronosStore } from '@/stores/useChronosStore';
-import { chronosDisplayRef } from '@/stores/useChronosDisplayStore';
+import { stepChronosDisplay } from '@/stores/useChronosDisplayStore';
 
 const ROMAN = ['XII', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
 
@@ -71,7 +70,6 @@ export function AnalogClock({ size: canvasSize = 280 }: { size?: number }) {
     rafRef.current = requestAnimationFrame(draw);
     return () => {
       cancelAnimationFrame(rafRef.current);
-      unsub();
     };
   }, [canvasSize]);
 
