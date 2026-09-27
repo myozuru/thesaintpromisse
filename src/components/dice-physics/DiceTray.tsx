@@ -40,7 +40,7 @@ import d20Url from "./meshes/d20.glb?url";
 import d100Url from "./meshes/d100.glb?url";
 
 /** Força máxima do lançamento carregado (segurar o botão). */
-export const MAX_THROW_POWER = 2.5;
+export const MAX_THROW_POWER = 4;
 
 /** Carrega todos os modelos antes de liberar a bandeja; só então avisa que está pronta. */
 function DiceModelsReady({ onReady }: { onReady: () => void }) {

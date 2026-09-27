@@ -321,7 +321,8 @@ export function TestRequestOverlay() {
 
     // Bônus fixos (ex: Apoio Focado do Suporte) somam no total e são consumidos.
     const flat = consumeFlatBonusFor(char.id, ctx);
-    const totalBonus = bonus + flat.bonus;
+    const masterBonus = current.masterBonus ?? 0;
+    const totalBonus = bonus + flat.bonus + masterBonus;
 
     let total = d20 + totalBonus;
     // Quando o resultado é FORÇADO e há CD, ajusta `total` pra garantir
@@ -337,6 +338,7 @@ export function TestRequestOverlay() {
       setResult(current.id, {
         d20,
         bonus: totalBonus,
+        masterBonus: masterBonus || undefined,
         total,
         rolledAt: Date.now(),
         advantageMode: advNet,
@@ -496,6 +498,9 @@ export function TestRequestOverlay() {
                 <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Bônus</span>
                 <strong className="font-display text-2xl text-accent">{bonus >= 0 ? '+' : ''}{bonus}</strong>
                 <span className="max-w-48 text-[10px] leading-tight text-muted-foreground">{breakdown}</span>
+                {current.masterBonus ? (isMaster
+                  ? <span className="text-[10px] font-bold text-accent">+ Mestre {current.masterBonus >= 0 ? '+' : ''}{current.masterBonus} (oculto)</span>
+                  : <span className="text-[10px] font-bold text-accent">+ ? do Mestre</span>) : null}
               </div>
               </div>
             </div>
@@ -522,6 +527,11 @@ export function TestRequestOverlay() {
                   </span>
                 )}
                 {' '}+ {current.result.bonus}
+                {current.result.masterBonus ? (
+                  <div className="mt-1 font-bold text-accent animate-in fade-in duration-700">
+                    Bônus do Mestre revelado: {current.result.masterBonus >= 0 ? '+' : ''}{current.result.masterBonus}
+                  </div>
+                ) : null}
               </div>
               {showOutcome && current.dc != null && (
                   <div className={`mt-3 font-display text-lg font-black uppercase ${

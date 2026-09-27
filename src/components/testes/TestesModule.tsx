@@ -47,6 +47,7 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
   const [hideDc, setHideDc] = useState<boolean>(false);
   const [hideOutcome, setHideOutcome] = useState<boolean>(false);
   const [note, setNote] = useState<string>('');
+  const [masterBonus, setMasterBonus] = useState<string>('');
   const [drama, setDrama] = useState<0 | 1 | 2 | 3>(0);
 
   const selectedChars = players.filter((c) => charIds.includes(c.id));
@@ -86,6 +87,11 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
       toast({ title: 'CD inválida', variant: 'destructive' });
       return;
     }
+    const mb = masterBonus.trim() ? Number(masterBonus) : 0;
+    if (Number.isNaN(mb)) {
+      toast({ title: 'Bônus inválido', variant: 'destructive' });
+      return;
+    }
     selectedChars.forEach((c) => {
       enqueue({
         charId: c.id,
@@ -97,6 +103,7 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
         hideOutcomeFromPlayer: dcNum != null ? hideOutcome : undefined,
         note: note.trim() || undefined,
         drama: drama || undefined,
+        masterBonus: mb || undefined,
       });
     });
     toast({
@@ -211,6 +218,12 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
               </div>
             )}
           </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent/80">Bônus secreto do Mestre</label>
+          <Input type="number" inputMode="numeric" placeholder="ex.: 2 ou -3" value={masterBonus} onChange={(e) => setMasterBonus(e.target.value)} />
+          <p className="text-[10px] text-muted-foreground">O jogador só descobre o valor quando o resultado aparecer.</p>
         </div>
 
         <div className="space-y-2">
