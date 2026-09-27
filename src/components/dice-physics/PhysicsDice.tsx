@@ -16,7 +16,8 @@ import { getDiceDramaConfig } from "./dramaConfig";
 const MAX_SETTLE_Y = 1.5;
 /** Multiplicadores do lançamento — dados mais rápidos quicam mais. */
 const THROW_SPEED = 1.7;
-const SPIN_SPEED = 1.4;
+/** Rotação-base do lançamento: mais voltas visíveis sem alterar a velocidade do tempo. */
+const SPIN_SPEED = 1.8;
 
 function magnitude({ x, y, z }: { x: number; y: number; z: number }) {
   return Math.sqrt(x * x + y * y + z * z);
