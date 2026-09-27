@@ -60,12 +60,14 @@ export function getTabsForRole(role: UserRole): TabId[] {
 interface HeaderProps {
   activeTab: TabId;
   onTabChange: (tab: TabId) => void;
+  testsOpen?: boolean;
+  onToggleTests?: () => void;
 }
 
 /**
  * Topbar global com navegação horizontal de módulos (drag-and-drop preservado).
  */
-export function Header({ activeTab, onTabChange }: HeaderProps) {
+export function Header({ activeTab, onTabChange, testsOpen = false, onToggleTests }: HeaderProps) {
   const role = useRoleStore((s) => s.role);
   const logout = useRoleStore((s) => s.logout);
   const [accountsOpen, setAccountsOpen] = useState(false);
@@ -126,13 +128,13 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
           <button
             type="button"
             onClick={() => {
-              if (role === 'MASTER') onTabChange('testes');
+              if (role === 'MASTER') onToggleTests?.();
             }}
             title={role === 'MASTER' ? 'Enviar testes para players' : 'RPG'}
             className={cn(
               'relative flex h-8 w-8 items-center justify-center rounded-md gradient-mystic shadow-[0_0_14px_-2px_hsl(var(--primary)/0.7)] transition-all',
               role === 'MASTER' && 'hover:scale-110 hover:shadow-[0_0_20px_-2px_hsl(var(--primary)/0.9)] cursor-pointer',
-              role === 'MASTER' && activeTab === 'testes' && 'ring-2 ring-accent/80',
+              role === 'MASTER' && testsOpen && 'ring-2 ring-accent/80',
             )}
           >
             <span

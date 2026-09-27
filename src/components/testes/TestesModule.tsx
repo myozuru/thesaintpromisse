@@ -24,7 +24,9 @@ import { DEFAULT_SAVING_THROWS } from '@/types';
 
 type Kind = 'attribute' | 'skill' | 'save';
 
-export function TestesModule() {
+interface TestesModuleProps { compact?: boolean; }
+
+export function TestesModule({ compact = false }: TestesModuleProps) {
   const role = useRoleStore((s) => s.role);
   const characters = useCharacterStore((s) => s.characters);
   const requests = useTestRequestStore((s) => s.requests);
@@ -113,12 +115,12 @@ export function TestesModule() {
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6">
-      <ModuleHeader title="Pedidos de Teste" subtitle="Solicite rolagens aos jogadores" icon={Dice6} />
+    <div className={compact ? 'p-3 space-y-3' : 'p-4 md:p-6 max-w-4xl mx-auto space-y-6'}>
+      {!compact && <ModuleHeader title="Pedidos de Teste" subtitle="Solicite rolagens aos jogadores" icon={Dice6} />}
 
-      <div className="rounded-lg border border-border/60 bg-card/60 p-5 space-y-4">
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="space-y-1.5 md:col-span-2">
+      <div className={compact ? 'rounded-md border border-border/60 bg-background/30 p-3 space-y-3' : 'rounded-lg border border-border/60 bg-card/60 p-5 space-y-4'}>
+        <div className={compact ? 'grid grid-cols-2 gap-3' : 'grid md:grid-cols-2 gap-4'}>
+          <div className={compact ? 'space-y-1.5 col-span-2' : 'space-y-1.5 md:col-span-2'}>
             <div className="flex items-center justify-between">
               <label className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Users className="w-3.5 h-3.5" /> Fichas alvo {selectedChars.length > 0 && `(${selectedChars.length})`}
@@ -133,7 +135,7 @@ export function TestesModule() {
                 </button>
               )}
             </div>
-            <div className="rounded-md border border-border/40 bg-background/40 p-2 max-h-40 overflow-y-auto">
+            <div className={compact ? 'rounded-md border border-border/40 bg-background/40 p-1.5 max-h-28 overflow-y-auto' : 'rounded-md border border-border/40 bg-background/40 p-2 max-h-40 overflow-y-auto'}>
               {players.length === 0 ? (
                 <div className="text-xs text-muted-foreground text-center py-2">Nenhuma ficha PLAYER</div>
               ) : (
@@ -154,7 +156,7 @@ export function TestesModule() {
             </div>
           </div>
 
-          <div className="space-y-1.5">
+          <div className={compact ? 'space-y-1.5 min-w-0' : 'space-y-1.5'}>
             <label className="text-xs uppercase tracking-wider text-muted-foreground">Tipo</label>
             <Select
               value={kind}
@@ -178,7 +180,7 @@ export function TestesModule() {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5">
+          <div className={compact ? 'space-y-1.5 min-w-0' : 'space-y-1.5'}>
             <label className="text-xs uppercase tracking-wider text-muted-foreground">Teste</label>
             <Select value={testName} onValueChange={setTestName}>
               <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
@@ -193,7 +195,7 @@ export function TestesModule() {
             </Select>
           </div>
 
-          <div className="space-y-1.5">
+          <div className={compact ? 'space-y-1.5 col-span-2' : 'space-y-1.5'}>
             <label className="text-xs uppercase tracking-wider text-muted-foreground">CD (opcional)</label>
             <Input
               type="number"
@@ -226,12 +228,12 @@ export function TestesModule() {
           />
         </div>
 
-        <Button onClick={handleSend} className="w-full gap-2" size="lg">
+        <Button onClick={handleSend} className="w-full gap-2" size={compact ? 'default' : 'lg'}>
           <Send className="w-4 h-4" /> Enviar pedido
         </Button>
       </div>
 
-      <div className="space-y-2">
+      <div className={compact ? 'space-y-2 border-t border-border/50 pt-3' : 'space-y-2'}>
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
             Pedidos ({requests.length})

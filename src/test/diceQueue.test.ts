@@ -24,6 +24,13 @@ describe('fila oficial dos dados 3D', () => {
     expect(useDice3DStore.getState().current).toBeNull();
   });
 
+  it('preserva o posicionamento central solicitado por um pedido de teste', () => {
+    useDice3DStore.setState({ enabled: true, current: null, queue: [] });
+    void useDice3DStore.getState().requestRoll(['D20'], 'Vontade — Player', 0, 'test-request');
+
+    expect(useDice3DStore.getState().current?.layout).toBe('test-request');
+  });
+
   it('cancelar libera o pedido atual e toda a fila sem inventar resultados', async () => {
     useDice3DStore.setState({ enabled: true, current: null, queue: [] });
     const first = useDice3DStore.getState().requestRoll(['D20'], 'ataque');

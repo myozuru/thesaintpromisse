@@ -7,6 +7,7 @@ import { DataHub } from "@/components/fab/DataHub";
 import { GlobalClockTicker } from "@/components/chronos/GlobalClockTicker";
 import { JjkSwirl } from "@/components/JjkSwirl";
 import { TestRequestOverlay } from "@/components/fichas/TestRequestOverlay";
+import { TestRequestPanel } from "@/components/testes/TestRequestPanel";
 import { Dice6, ZoomIn, ZoomOut } from "lucide-react";
 import { playOpeningSound, playTabSound } from "@/lib/sounds";
 import { useLogStore } from "@/stores/useLogStore";
@@ -32,14 +33,12 @@ const MoneyModule = lazy(() => import("@/components/money/MoneyModule").then(m =
 const CardapiosModule = lazy(() => import("@/components/cardapios/CardapiosModule").then(m => ({ default: m.CardapiosModule })));
 const OmniModule = lazy(() => import("@/components/omni/OmniModule").then(m => ({ default: m.OmniModule })));
 const CatalogoModule = lazy(() => import("@/components/catalogo/CatalogoModule").then(m => ({ default: m.CatalogoModule })));
-const TestesModule = lazy(() => import("@/components/testes/TestesModule").then(m => ({ default: m.TestesModule })));
 const MapaModule = lazy(() => import("@/components/mapa/MapaModule").then(m => ({ default: m.MapaModule })));
 const GrimorioModule = lazy(() => import("@/components/grimorio/GrimorioModule").then(m => ({ default: m.GrimorioModule })));
 
-const MODULES: Record<TabId, React.ComponentType> = {
+const MODULES: Partial<Record<TabId, React.ComponentType>> = {
   relogio: ChronosModule,
   fichas: FichasModule,
-  testes: TestesModule,
   "feiticos-players": SpellProposalsModule,
   itens: ItensModule,
   baus: BausModule,
@@ -54,12 +53,13 @@ const MODULES: Record<TabId, React.ComponentType> = {
   guia: GuiaModule,
 };
 
-const TABS: TabId[] = ["relogio", "fichas", "testes", "feiticos-players", "itens", "baus", "money", "cardapios", "calendario", "omni", "catalogo", "mapa", "grimorio", "sistema", "guia"];
+const TABS: TabId[] = ["relogio", "fichas", "feiticos-players", "itens", "baus", "money", "cardapios", "calendario", "omni", "catalogo", "mapa", "grimorio", "sistema", "guia"];
 
 export default function Index() {
   const role = useRoleStore((s) => s.role);
   const [activeTab, setActiveTab] = useState<TabId>("fichas");
   const [hubOpen, setHubOpen] = useState(false);
+  const [testsOpen, setTestsOpen] = useState(false);
   const [displayedTab, setDisplayedTab] = useState<TabId>("fichas");
   const [transitioning, setTransitioning] = useState(false);
   // Track every tab the user has ever opened — we keep them mounted (just
@@ -81,11 +81,9 @@ export default function Index() {
   }, [isMobile]);
 
   // If player role and current tab is restricted, redirect to fichas.
-  // 'testes' não aparece como aba mas é acessível ao mestre pelo botão R.
   useEffect(() => {
     if (!role) return;
     const allowed = new Set<TabId>(getTabsForRole(role));
-    if (role === 'MASTER') allowed.add('testes');
     if (!allowed.has(activeTab)) {
       setActiveTab('fichas');
       setDisplayedTab('fichas');
@@ -210,7 +208,7 @@ export default function Index() {
 
         <GlobalClockTicker />
 
-        {!mapaImmersive && <Header activeTab={activeTab} onTabChange={handleTabChange} />}
+        {!mapaImmersive && <Header activeTab={activeTab} onTabChange={handleTabChange} testsOpen={testsOpen} onToggleTests={() => setTestsOpen((open) => !open)} />}
 
         <main
           className="relative z-10 transition-[padding] duration-300"
@@ -236,6 +234,7 @@ export default function Index() {
               {(Array.from(mountedTabs) as TabId[]).map((id) => {
                 const Module = MODULES[id];
                 const isActive = id === displayedTab;
+                if (!Module) return null;
                 return (
                   <div key={id} hidden={!isActive} aria-hidden={!isActive}>
                     <Module />
@@ -280,6 +279,7 @@ export default function Index() {
       )}
 
         <DataHub open={hubOpen} onClose={() => setHubOpen(false)} />
+        {role === 'MASTER' && <TestRequestPanel open={testsOpen} onClose={() => setTestsOpen(false)} />}
         <TestRequestOverlay />
 
     </div>
