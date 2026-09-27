@@ -29,7 +29,8 @@ describe("configuração dramática dos dados", () => {
     expect(legendary.verticalImpulse).toBeGreaterThan(epic.verticalImpulse * 2);
     expect(legendary.trayRoof).toBeGreaterThan(epic.trayRoof * 1.5);
     expect(legendary.velocityMultiplier).toBeGreaterThanOrEqual(1.5);
-    expect(legendary.spinMultiplier).toBeGreaterThanOrEqual(1.6);
+    expect(legendary.spinMultiplier).toBeGreaterThanOrEqual(2.4);
+    expect(legendary.spinMultiplier).toBeGreaterThan(epic.spinMultiplier * 1.5);
   });
 
   it("limita níveis inválidos sem quebrar a rolagem", () => {
