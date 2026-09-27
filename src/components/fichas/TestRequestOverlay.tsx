@@ -293,7 +293,9 @@ export function TestRequestOverlay() {
     console.log('[DEBUG handleRoll] chamado', { hasChar: !!char, rolling });
     if (!char || rolling) return;
     setRolling(true);
-    playDiceSound();
+    console.log('[DEBUG handleRoll] antes do playDiceSound');
+    try { playDiceSound(); } catch (e) { console.log('[DEBUG] playDiceSound throw', String(e)); }
+    console.log('[DEBUG handleRoll] antes do rollD20Com');
 
     // 1) Sucesso/falha garantida (Omni) tem prioridade — pula a rolagem.
     const ctx = buildRollContext(current);
