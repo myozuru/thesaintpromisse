@@ -46,14 +46,25 @@ describe('encerramento físico dos dados 3D', () => {
     })).toBe('settle');
   });
 
-  it('não encerra um dado fora da bandeja', () => {
+  it('não encerra cedo um dado fora da bandeja', () => {
     expect(decideDiceSettlement({
-      elapsedSeconds: 20,
-      quietSeconds: 20,
+      elapsedSeconds: 2,
+      quietSeconds: 2,
       linearSpeed: 0,
       angularSpeed: 0,
       inTray: false,
       sleeping: true,
     })).toBe('continue');
+  });
+
+  it('encerra pela orientação física no limite mesmo acima da bandeja', () => {
+    expect(decideDiceSettlement({
+      elapsedSeconds: DICE_SETTLEMENT.forceAfterSeconds,
+      quietSeconds: 0,
+      linearSpeed: 3,
+      angularSpeed: 5,
+      inTray: false,
+      sleeping: false,
+    })).toBe('settle');
   });
 });
