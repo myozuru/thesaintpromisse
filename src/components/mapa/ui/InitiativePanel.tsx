@@ -98,14 +98,14 @@ export function InitiativePanel({ onClose }: Props) {
       const ch = charId ? allChars.find((c) => c.id === charId) : null;
       const astucia = ch?.attributes.find((a) => a.name === 'Astúcia');
       const bonus = astucia ? getAttrModifier(astucia.value) : 0;
-      // Fichas PLAYER criadas pelo próprio jogador → o jogador rola.
-      // Fichas PLAYER criadas pelo Mestre (createdBy === 'MASTER') ou NPC/Inimigo
-      // → o Mestre rola localmente.
-      const isPlayerCh = !!ch && ch.category === 'PLAYER' && ch.createdBy !== 'MASTER';
+      // Toda ficha PLAYER vinculada é rolada pelo perfil dono, mesmo quando
+      // a ficha foi originalmente criada pelo Mestre. Sem vínculo, o Mestre rola.
+      const isPlayerCh = !!ch && ch.category === 'PLAYER' && !!ch.profileId;
       if (isPlayerCh) {
         enqueueReq({
           charId: ch.id,
           charName: ch.name,
+          targetProfileId: ch.profileId,
           kind: 'skill',
           testName: 'Iniciativa',
           bonusOverride: bonus,
