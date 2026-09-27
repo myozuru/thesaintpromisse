@@ -1,3 +1,4 @@
+import { markCharacterDeleted } from "@/lib/charSyncStamps";
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { dispararGatilhoEfeitosItens } from '@/lib/omni/triggerEfeitos';
@@ -1170,7 +1171,7 @@ export const useCharacterStore = create<CharacterStore>()(
         set((state) => ({ characters: [...state.characters, base] }));
         return id;
       },
-      removeCharacter: (id) => set((state) => ({ characters: state.characters.filter((c) => c.id !== id) })),
+      removeCharacter: (id) => { markCharacterDeleted(id); set((state) => ({ characters: state.characters.filter((c) => c.id !== id) })); },
       updateCharacter: (id, updates) => set((state) => ({
         characters: state.characters.map((c) => {
           if (c.id !== id) return c;
