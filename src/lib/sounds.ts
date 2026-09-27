@@ -241,58 +241,37 @@ export function playTimeAdvanceSound() {
   }
 }
 
-// ── Impacto 3D dos dados: síntese curta, disparada por colisões reais da física ──
-let noiseBuf: AudioBuffer | null = null;
+// ── Impacto 3D dos dados: gravações reais (Kenney, CC0) disparadas por colisões da física ──
+const DICE_HITS = [0, 1, 2, 3, 4, 5].map((n) => `dice/hit-${n}.mp3`);
+let diceHitsRequested = false;
 let recentHits: number[] = [];
-function getNoise(ctx: AudioContext) {
-  if (noiseBuf) return noiseBuf;
-  const len = Math.floor(ctx.sampleRate * 0.08);
-  noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
-  const d = noiseBuf.getChannelData(0);
-  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-  return noiseBuf;
-}
+let lastHitIdx = -1;
 
-/** Toca um "clac" de dado. intensity 0..1 (velocidade do impacto); surface: mesa ou outro dado. */
+/** Toca uma batida real de dado. intensity 0..1 (velocidade do impacto); surface: mesa ou outro dado. */
 export function playDiceHit(intensity: number, surface: 'tray' | 'dice' = 'tray') {
+  if (!diceHitsRequested) { diceHitsRequested = true; DICE_HITS.forEach(preloadSound); }
   if (intensity < 0.04) return;
   const nowMs = performance.now();
   recentHits = recentHits.filter((t) => nowMs - t < 80);
-  if (recentHits.length >= 6) return; // evita estourar com muitos dados
+  if (recentHits.length >= 5) return;
+  const loaded = DICE_HITS.filter((f) => bufferCache[f]);
+  if (loaded.length === 0) return;
   recentHits.push(nowMs);
   ensureResumed();
   const ctx = getCtx();
-  const t = ctx.currentTime;
-  const vol = Math.min(0.35, 0.05 + intensity * 0.3);
-  const out = ctx.createGain();
-  out.gain.value = vol;
-  out.connect(ctx.destination);
-
-  // Transiente (ruído filtrado)
+  let idx = Math.floor(Math.random() * loaded.length);
+  if (loaded.length > 1 && idx === lastHitIdx) idx = (idx + 1) % loaded.length;
+  lastHitIdx = idx;
   const src = ctx.createBufferSource();
-  src.buffer = getNoise(ctx);
-  const bp = ctx.createBiquadFilter();
-  bp.type = 'bandpass';
-  bp.frequency.value = (surface === 'dice' ? 3800 : 2200) + Math.random() * 900;
-  bp.Q.value = surface === 'dice' ? 6 : 2.5;
-  const ng = ctx.createGain();
-  const dec = surface === 'dice' ? 0.035 : 0.05 + intensity * 0.03;
-  ng.gain.setValueAtTime(1, t);
-  ng.gain.exponentialRampToValueAtTime(0.001, t + dec);
-  src.connect(bp).connect(ng).connect(out);
-  src.start(t);
-  src.stop(t + dec + 0.01);
+  src.buffer = bufferCache[loaded[idx]];
+  src.playbackRate.value = (surface === 'dice' ? 1.12 : 0.95) + (Math.random() - 0.5) * 0.12;
+  const gain = ctx.createGain();
+  gain.gain.value = Math.min(0.9, 0.08 + Math.pow(intensity, 0.8) * 0.8);
+  src.connect(gain).connect(ctx.destination);
+  src.start(0);
+}
 
-  // Corpo tonal curto (resina)
-  const osc = ctx.createOscillator();
-  osc.type = 'sine';
-  const f = (surface === 'dice' ? 2600 : 900) + Math.random() * 300;
-  osc.frequency.setValueAtTime(f, t);
-  osc.frequency.exponentialRampToValueAtTime(f * 0.7, t + 0.04);
-  const og = ctx.createGain();
-  og.gain.setValueAtTime(0.35, t);
-  og.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
-  osc.connect(og).connect(out);
-  osc.start(t);
-  osc.stop(t + 0.05);
+if (typeof window !== 'undefined') {
+  const warm = () => { if (!diceHitsRequested) { diceHitsRequested = true; DICE_HITS.forEach(preloadSound); } window.removeEventListener('pointerdown', warm); };
+  window.addEventListener('pointerdown', warm);
 }
