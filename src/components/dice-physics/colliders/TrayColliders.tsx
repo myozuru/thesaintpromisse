@@ -5,9 +5,10 @@ import { useDice3DStore } from "@/stores/useDice3DStore";
 const WALL_THICKNESS = 50;
 const WALL_SIZE = 100;
 const FLOOR_Y = -WALL_THICKNESS + 0.005;
-const ROOF_Y = WALL_THICKNESS + 1.5;
-const WALL_X = WALL_THICKNESS + 0.46;
-const WALL_Z = WALL_THICKNESS + 0.96;
+const ROOF_Y = WALL_THICKNESS + 2.2;
+// Área ampliada para caber mais dados rolando ao mesmo tempo.
+const WALL_X = WALL_THICKNESS + 1.05;
+const WALL_Z = WALL_THICKNESS + 1.6;
 
 export function TrayColliders() {
   const bounciness = useDice3DStore((s) => s.bounciness);

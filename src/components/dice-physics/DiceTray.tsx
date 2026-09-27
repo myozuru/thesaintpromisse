@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
-import { Environment, Lightformer, PerspectiveCamera, OrbitControls } from "@react-three/drei";
+import { Environment, Lightformer, PerspectiveCamera, OrbitControls, useGLTF } from "@react-three/drei";
 import { Physics } from "@react-three/rapier";
 import RAPIER from "@dimforge/rapier3d-compat";
 
@@ -29,6 +29,23 @@ import { DiceThrower } from "./helpers/DiceThrower";
 import { TrayColliders } from "./colliders/TrayColliders";
 import { PhysicsDice } from "./PhysicsDice";
 import { DiceMesh } from "./meshes/DiceMesh";
+import d4Url from "./meshes/d4.glb?url";
+import d6Url from "./meshes/d6.glb?url";
+import d8Url from "./meshes/d8.glb?url";
+import d10Url from "./meshes/d10.glb?url";
+import d12Url from "./meshes/d12.glb?url";
+import d20Url from "./meshes/d20.glb?url";
+import d100Url from "./meshes/d100.glb?url";
+
+/** Força máxima do lançamento carregado (segurar o botão). */
+export const MAX_THROW_POWER = 2.5;
+
+/** Carrega todos os modelos antes de liberar a bandeja; só então avisa que está pronta. */
+function DiceModelsReady({ onReady }: { onReady: () => void }) {
+  useGLTF([d4Url, d6Url, d8Url, d10Url, d12Url, d20Url, d100Url]);
+  useEffect(() => { onReady(); }, [onReady]);
+  return null;
+}
 import { claimDiceLaunch, type DiceLaunchGuard } from "./diceLaunchGuard";
 
 export type DiceRollResult = { id: string; type: DiceType; value: number };
@@ -39,7 +56,7 @@ export type DiceTrayApi = {
   /** Spawn an array of dice in one batch (em repouso). */
   rollMany: (types: DiceType[]) => void;
   /** Lança todos os dados ainda parados. */
-  throwAll: () => void;
+  throwAll: (power?: number) => void;
   /** Clear the tray. */
   clear: () => void;
 };
@@ -75,6 +92,9 @@ export function DiceTray({
   const [dice, setDice] = useState<RollingDie[]>([]);
   /** Enquanto true, os dados estão parados aguardando clique. */
   const [armed, setArmed] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [power, setPower] = useState(1);
+  const markReady = useCallback(() => setReady(true), []);
   const launchGuardRef = useRef<DiceLaunchGuard>({ armed: false });
   const throwerRef = useRef(new DiceThrower());
   const resultsRef = useRef<Map<string, DiceRollResult>>(new Map());
@@ -94,10 +114,12 @@ export function DiceTray({
     setArmed(true);
   }, []);
 
-  const throwAll = useCallback(() => {
+  const throwAll = useCallback((p?: number) => {
     // O ref é consumido imediatamente. Assim, vários pointerdown/click antes
     // do próximo render não conseguem iniciar a mesma rodada mais de uma vez.
     if (!claimDiceLaunch(launchGuardRef.current)) return;
+    const n = typeof p === 'number' && isFinite(p) ? p : 1;
+    setPower(Math.max(1, Math.min(MAX_THROW_POWER, n)));
     setArmed(false);
     onThrown?.();
   }, [onThrown]);
@@ -112,15 +134,16 @@ export function DiceTray({
   }, []);
 
   useEffect(() => {
-    if (!apiRef) return;
+    // Só expõe a API depois que física e modelos terminaram de carregar.
+    if (!apiRef || !ready) return;
     apiRef.current = {
       rollOne: (type) => spawn([type]),
       rollMany: (types) => spawn(types),
-      throwAll,
+      throwAll: (p?: number) => throwAll(p),
       clear,
     };
     return () => { apiRef.current = null; };
-  }, [apiRef, spawn, throwAll, clear]);
+  }, [apiRef, ready, spawn, throwAll, clear]);
 
   const handleFinished = useCallback((id: string, value: number, _t: DiceTransform) => {
     if (resultsRef.current.has(id)) return;
@@ -147,7 +170,7 @@ export function DiceTray({
     <div className={className} style={{ width: "100%", height: "100%", ...style }}>
       <Canvas frameloop="always" dpr={[1, 1.25]} gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}>
         <color attach="background" args={["#0d0617"]} />
-        <fog attach="fog" args={["#0d0617", 4, 12]} />
+        <fog attach="fog" args={["#0d0617", 6, 16]} />
         {/* Iluminação local (sem baixar HDR da internet, que travava/lagava). */}
         <Environment resolution={64}>
           <Lightformer intensity={2} position={[0, 5, 0]} scale={[10, 10, 1]} />
@@ -160,14 +183,14 @@ export function DiceTray({
         <pointLight position={[-2, 3, -1]} intensity={2.2} color="#9b5cff" distance={8} decay={2} />
         <pointLight position={[2, 1.5, 2]} intensity={1.4} color="#e8c46b" distance={6} decay={2} />
         <spotLight position={[0, 6, 0]} angle={0.6} penumbra={0.8} intensity={1.2} color="#a875ff" />
-        <PerspectiveCamera makeDefault fov={32} position={[0, 3.2, 0.5]} />
+        <PerspectiveCamera makeDefault fov={34} position={[0, 5.4, 0.8]} />
         <OrbitControls
           target={[0, 0, 0]}
           enablePan
           enableZoom
           enableRotate
           minDistance={1.4}
-          maxDistance={6}
+          maxDistance={9}
           maxPolarAngle={Math.PI / 2.05}
           zoomSpeed={1.2}
           rotateSpeed={0.9}
@@ -187,13 +210,15 @@ export function DiceTray({
         <RapierGate>
           <Physics colliders={false} interpolate timeStep={1 / 60} updateLoop="follow" gravity={[0, -14, 0]}>
             <TrayColliders />
+            <Suspense fallback={null}><DiceModelsReady onReady={markReady} /></Suspense>
             {dice.map(({ die, thrown }) => (
               <PhysicsDice
                 key={die.id}
                 die={die}
                 dieThrow={thrown}
                 armed={armed}
-                onThrowRequest={throwAll}
+                power={power}
+                onThrowRequest={() => throwAll(1)}
                 onRollFinished={handleFinished}
               >
                 <DiceMesh diceType={die.type} />
