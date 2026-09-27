@@ -481,7 +481,7 @@ export function drawNameplate(
     ctx.fill();
     ctx.stroke();
     ctx.fillStyle = 'rgba(240,240,245,1)';
-    ctx.fillText(e.label, cx, y + padY);
+    ctx.fillText(label, cx, y + padY);
   }
   ctx.restore();
 }

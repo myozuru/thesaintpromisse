@@ -1216,13 +1216,14 @@ export function MapaModule() {
           tkCtx.restore();
         }
 
+        const nameLabel = e.label || linkedChar?.name || undefined;
         if (e.hidden) {
           tkCtx.save();
           tkCtx.globalAlpha = 0.4;
-          drawNameplate(tkCtx, e, camera.scale, { force: forced, live, hideStats });
+          drawNameplate(tkCtx, e, camera.scale, { force: forced, live, hideStats, label: nameLabel });
           tkCtx.restore();
         } else {
-          drawNameplate(tkCtx, e, camera.scale, { force: forced, live, hideStats });
+          drawNameplate(tkCtx, e, camera.scale, { force: forced, live, hideStats, label: nameLabel });
         }
       }
 
