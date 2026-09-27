@@ -18,9 +18,10 @@ import { Badge } from '@/components/ui/badge';
 import { ModuleHeader } from '@/components/ui/module-header';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dice6, Send, Trash2, CheckCircle2, XCircle, Clock, Users } from 'lucide-react';
+import { Dice6, Send, Trash2, CheckCircle2, XCircle, Clock, Users, EyeOff, ScrollText } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { DEFAULT_SAVING_THROWS } from '@/types';
+import { cn } from '@/lib/utils';
 
 type Kind = 'attribute' | 'skill' | 'save';
 
@@ -80,7 +81,7 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
       return;
     }
     const dcNum = dc.trim() ? Number(dc) : undefined;
-    if (dc.trim() && (Number.isNaN(dcNum) || dcNum! < 1)) {
+    if (dc.trim() && (dcNum == null || Number.isNaN(dcNum) || dcNum < 1)) {
       toast({ title: 'CD inválida', variant: 'destructive' });
       return;
     }
@@ -115,27 +116,29 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
   }
 
   return (
-    <div className={compact ? 'p-3 space-y-3' : 'p-4 md:p-6 max-w-4xl mx-auto space-y-6'}>
+    <div className={compact ? 'space-y-4 p-4' : 'mx-auto max-w-4xl space-y-6 p-4 md:p-6'}>
       {!compact && <ModuleHeader title="Pedidos de Teste" subtitle="Solicite rolagens aos jogadores" icon={Dice6} />}
 
-      <div className={compact ? 'rounded-md border border-border/60 bg-background/30 p-3 space-y-3' : 'rounded-lg border border-border/60 bg-card/60 p-5 space-y-4'}>
+      <div className={compact ? 'space-y-5' : 'space-y-5 rounded-lg border border-border/60 bg-card/60 p-5'}>
         <div className={compact ? 'grid grid-cols-2 gap-3' : 'grid md:grid-cols-2 gap-4'}>
           <div className={compact ? 'space-y-1.5 col-span-2' : 'space-y-1.5 md:col-span-2'}>
             <div className="flex items-center justify-between">
-              <label className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <Users className="w-3.5 h-3.5" /> Fichas alvo {selectedChars.length > 0 && `(${selectedChars.length})`}
+              <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-accent/80">
+                <Users className="h-3.5 w-3.5" /> 01 · Alvos {selectedChars.length > 0 && `(${selectedChars.length})`}
               </label>
               {players.length > 0 && (
-                <button
+                <Button
                   type="button"
-                  className="text-xs text-primary hover:underline"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs text-primary"
                   onClick={toggleAll}
                 >
                   {charIds.length === players.length ? 'Limpar' : 'Selecionar todos'}
-                </button>
+                </Button>
               )}
             </div>
-            <div className={compact ? 'rounded-md border border-border/40 bg-background/40 p-1.5 max-h-28 overflow-y-auto' : 'rounded-md border border-border/40 bg-background/40 p-2 max-h-40 overflow-y-auto'}>
+            <div className={compact ? 'max-h-32 overflow-y-auto rounded-md border border-border/70 bg-background/55 p-1.5' : 'max-h-40 overflow-y-auto rounded-md border border-border/60 bg-background/40 p-2'}>
               {players.length === 0 ? (
                 <div className="text-xs text-muted-foreground text-center py-2">Nenhuma ficha PLAYER</div>
               ) : (
@@ -147,7 +150,7 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
                           checked={charIds.includes(c.id)}
                           onCheckedChange={() => toggleChar(c.id)}
                         />
-                        <span>{c.name}</span>
+                        <span className={charIds.includes(c.id) ? 'font-semibold text-foreground' : 'text-muted-foreground'}>{c.name}</span>
                       </label>
                     </li>
                   ))}
@@ -156,32 +159,20 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
             </div>
           </div>
 
-          <div className={compact ? 'space-y-1.5 min-w-0' : 'space-y-1.5'}>
-            <label className="text-xs uppercase tracking-wider text-muted-foreground">Tipo</label>
-            <Select
-              value={kind}
-              onValueChange={(v) => {
-                const k = v as Kind;
-                setKind(k);
-                setTimeout(() => {
-                  if (!refChar) return;
-                  const next = k === 'attribute' ? refChar.attributes.map(a => a.name)
-                    : k === 'skill' ? refChar.skills.map(s => s.name)
-                    : (refChar.savingThrows ?? []).map(s => s.name);
+          <div className="col-span-2 space-y-2">
+            <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent/80">02 · Tipo de teste</label>
+            <div className="grid grid-cols-3 gap-1 rounded-md border border-border/70 bg-background/55 p-1">
+              {([['attribute', 'Atributo'], ['skill', 'Perícia'], ['save', 'TR']] as const).map(([value, label]) => (
+                <Button key={value} type="button" variant="ghost" size="sm" className={cn('h-8 text-[10px] uppercase', kind === value ? 'border border-accent/25 bg-accent/10 text-accent' : 'text-muted-foreground')} onClick={() => {
+                  setKind(value);
+                  const next = !refChar ? (value === 'save' ? DEFAULT_SAVING_THROWS : []) : value === 'attribute' ? refChar.attributes.map(a => a.name) : value === 'skill' ? refChar.skills.map(s => s.name) : (refChar.savingThrows ?? []).map(s => s.name);
                   ensureValidName(next);
-                }, 0);
-              }}
-            >
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="save">Teste de Resistência</SelectItem>
-                <SelectItem value="attribute">Atributo</SelectItem>
-                <SelectItem value="skill">Perícia</SelectItem>
-              </SelectContent>
-            </Select>
+                }}>{label}</Button>
+              ))}
+            </div>
           </div>
-          <div className={compact ? 'space-y-1.5 min-w-0' : 'space-y-1.5'}>
-            <label className="text-xs uppercase tracking-wider text-muted-foreground">Teste</label>
+          <div className="col-span-2 space-y-1.5">
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Teste solicitado</label>
             <Select value={testName} onValueChange={setTestName}>
               <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
               <SelectContent className="max-h-72">
@@ -195,8 +186,9 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
             </Select>
           </div>
 
-          <div className={compact ? 'space-y-1.5 col-span-2' : 'space-y-1.5'}>
-            <label className="text-xs uppercase tracking-wider text-muted-foreground">CD (opcional)</label>
+          <div className="col-span-2 space-y-2 rounded-md border border-border/70 bg-background/35 p-3">
+            <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-accent/80"><EyeOff className="h-3.5 w-3.5" /> 03 · Desafio e sigilo</label>
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">CD opcional</label>
             <Input
               type="number"
               inputMode="numeric"
@@ -205,14 +197,14 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
               onChange={(e) => setDc(e.target.value)}
             />
             {dc.trim() && (
-              <div className="space-y-1.5 pt-1">
-                <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <label className={cn('flex cursor-pointer items-center gap-2 rounded-md border p-2 text-xs', hideDc ? 'border-accent/35 bg-accent/10 text-foreground' : 'border-border/60 text-muted-foreground')}>
                   <Checkbox checked={hideDc} onCheckedChange={(v) => setHideDc(!!v)} />
-                  Esconder CD do jogador
+                  Esconder CD
                 </label>
-                <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                <label className={cn('flex cursor-pointer items-center gap-2 rounded-md border p-2 text-xs', hideOutcome ? 'border-accent/35 bg-accent/10 text-foreground' : 'border-border/60 text-muted-foreground')}>
                   <Checkbox checked={hideOutcome} onCheckedChange={(v) => setHideOutcome(!!v)} />
-                  Esconder resultado (sucesso/falha) do jogador
+                  Ocultar desfecho
                 </label>
               </div>
             )}
@@ -220,7 +212,7 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs uppercase tracking-wider text-muted-foreground">Nota (opcional)</label>
+          <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-accent/80"><ScrollText className="h-3.5 w-3.5" /> 04 · Nota opcional</label>
           <Input
             placeholder="ex.: você sente algo estranho no ar…"
             value={note}
@@ -228,15 +220,15 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
           />
         </div>
 
-        <Button onClick={handleSend} className="w-full gap-2" size={compact ? 'default' : 'lg'}>
-          <Send className="w-4 h-4" /> Enviar pedido
+        <Button onClick={handleSend} className="h-12 w-full gap-2 bg-accent font-display text-sm font-black uppercase text-accent-foreground shadow-[0_10px_30px_-10px_hsl(var(--accent)/0.65)] hover:bg-accent/90" size={compact ? 'default' : 'lg'}>
+          <Send className="w-4 h-4" /> Lançar desafio
         </Button>
       </div>
 
-      <div className={compact ? 'space-y-2 border-t border-border/50 pt-3' : 'space-y-2'}>
+      <div className={compact ? 'space-y-2 border-t border-border/70 pt-4' : 'space-y-2'}>
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            Pedidos ({requests.length})
+          <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent/80">
+            Pedidos em cena · {requests.length}
           </h3>
           {requests.length > 0 && (
             <Button variant="ghost" size="sm" onClick={clearAll} className="text-muted-foreground">
@@ -257,7 +249,7 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
             return (
               <li
                 key={r.id}
-                className="flex items-center gap-3 rounded-md border border-border/50 bg-card/40 p-3"
+                className={cn('flex items-center gap-3 rounded-md border bg-background/40 p-3', r.result ? (passed === true ? 'border-neon-green/35' : passed === false ? 'border-neon-red/35' : 'border-primary/35') : 'border-border/70')}
               >
                 <div className="shrink-0">
                   {r.result ? (
