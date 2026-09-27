@@ -217,7 +217,7 @@ export function TestRequestOverlay() {
   // Prioriza pedidos sem resultado; senão mostra o último resolvido (até ser dispensado).
   const current = pending.find((r) => !r.result) ?? pending[pending.length - 1];
 
-  // Animação dramática: cicla números antes de revelar.
+  // Mantém o pedido aberto enquanto a bandeja 3D resolve a rolagem.
   const [rolling, setRolling] = useState(false);
   // Reseta animação quando muda o pedido atual.
   useEffect(() => {

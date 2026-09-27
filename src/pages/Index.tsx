@@ -36,7 +36,7 @@ const CatalogoModule = lazy(() => import("@/components/catalogo/CatalogoModule")
 const MapaModule = lazy(() => import("@/components/mapa/MapaModule").then(m => ({ default: m.MapaModule })));
 const GrimorioModule = lazy(() => import("@/components/grimorio/GrimorioModule").then(m => ({ default: m.GrimorioModule })));
 
-const MODULES: Record<TabId, React.ComponentType> = {
+const MODULES: Partial<Record<TabId, React.ComponentType>> = {
   relogio: ChronosModule,
   fichas: FichasModule,
   "feiticos-players": SpellProposalsModule,
@@ -234,6 +234,7 @@ export default function Index() {
               {(Array.from(mountedTabs) as TabId[]).map((id) => {
                 const Module = MODULES[id];
                 const isActive = id === displayedTab;
+                if (!Module) return null;
                 return (
                   <div key={id} hidden={!isActive} aria-hidden={!isActive}>
                     <Module />

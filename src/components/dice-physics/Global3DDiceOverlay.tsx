@@ -178,12 +178,12 @@ export function Global3DDiceOverlay() {
               setPhase('idle');
               // Resolve a Promise associada (caminho oficial) — se for só visual, resolveCurrent simplesmente avança.
               resolveCurrent(results.map((r) => r.value));
-               const next = useDice3DStore.getState().current;
-               if (pending.layout === 'test-request' && !next) {
-                 setVisible(false);
-                 apiRef.current?.clear();
-               }
-              // A bandeja permanece aberta — o usuário fecha manualmente no X.
+              const next = useDice3DStore.getState().current;
+              if (pending.layout === 'test-request' && !next) {
+                setVisible(false);
+                apiRef.current?.clear();
+              }
+              // Fora de pedidos, a bandeja permanece aberta até o usuário fechar.
             }}
           />
         </Suspense>
