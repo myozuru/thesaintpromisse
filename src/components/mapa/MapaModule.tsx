@@ -705,12 +705,18 @@ const canStartMoveEntityNow = (entity: Entity): boolean => {
 
 
 
-const toNameplateStats = (c: Character): NameplateCharacterStats => ({
-  hp: c.hpCurrent,
-  hpMax: shownHpMax(c),
-  pe: c.peCurrent,
-  peMax: shownPeMax(c),
-});
+export const toNameplateStats = (c: Character): NameplateCharacterStats => {
+  // Se o máximo estiver zerado/indefinido (fichas antigas ou temporárias),
+  // usa o valor atual como teto para a barra nunca sumir.
+  const hpMax = shownHpMax(c);
+  const peMax = shownPeMax(c);
+  return {
+    hp: c.hpCurrent,
+    hpMax: hpMax > 0 ? hpMax : Math.max(0, c.hpCurrent ?? 0),
+    pe: c.peCurrent,
+    peMax: peMax > 0 ? peMax : Math.max(0, c.peCurrent ?? 0),
+  };
+};
 
 const resolveEntityNameplateStats = (
   entity: Entity,
