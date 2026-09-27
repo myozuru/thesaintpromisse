@@ -3,26 +3,24 @@ import { createFileRoute } from "@tanstack/react-router";
 
 // After a hot update or new deploy, the old chunk URL can 404 ("Failed to fetch
 // dynamically imported module"). Retry once, then reload the page once.
+// A failed dynamic import is cached per URL, so retrying the same URL is
+// useless — reload the page (at most once every 15s to avoid loops).
 const TpFichasApp = lazy(async () => {
   try {
     return await import("@/components/TpFichasApp");
   } catch (err) {
-    try {
-      return await import("@/components/TpFichasApp");
-    } catch {
-      const key = "tp-chunk-reload";
-      if (typeof window !== "undefined" && !sessionStorage.getItem(key)) {
-        sessionStorage.setItem(key, "1");
+    const key = "tp-chunk-reload-at";
+    if (typeof window !== "undefined") {
+      const last = Number(sessionStorage.getItem(key) || 0);
+      if (Date.now() - last > 15000) {
+        sessionStorage.setItem(key, String(Date.now()));
         window.location.reload();
         return new Promise<never>(() => {});
       }
-      throw err;
     }
+    throw err;
   }
 });
-if (typeof window !== "undefined") {
-  setTimeout(() => sessionStorage.removeItem("tp-chunk-reload"), 10000);
-}
 
 export const Route = createFileRoute("/")({
   head: () => ({
