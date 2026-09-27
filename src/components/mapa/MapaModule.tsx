@@ -2693,7 +2693,7 @@ export function MapaModule() {
         el.style.cursor = '';
         const pc = panClickRef.current;
         panClickRef.current = null;
-        if (pc?.mapId && Math.hypot(e.clientX - pc.x, e.clientY - pc.y) < 4) {
+        if (pc?.mapId && e && Math.hypot(e.clientX - pc.x, e.clientY - pc.y) < 4) {
           state.setSelected([pc.mapId]);
         }
       } else if (drag.kind === 'draw') {
