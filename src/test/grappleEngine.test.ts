@@ -145,7 +145,7 @@ describe('Grapple Engine — Fase C', () => {
       useLogStore.setState({ logs: [] });
     });
 
-    it('grappleAttempt: emite log [grapple/attempt] e [grapple/bind] ao acertar', async () => {
+    it('grappleAttempt: emite log [Agarrão/tentativa] e [Agarrão/vínculo] ao acertar', async () => {
       const { att, tgt } = makePair();
       const seq = [20, 1];
       let i = 0;
@@ -155,12 +155,12 @@ describe('Grapple Engine — Fase C', () => {
       });
       await useCharacterStore.getState().grappleAttempt(att.id, tgt.id);
       const msgs = useLogStore.getState().logs.map(l => l.message);
-      expect(msgs.some(m => m.includes('[grapple/attempt]'))).toBe(true);
-      expect(msgs.some(m => m.includes('[grapple/bind]'))).toBe(true);
+      expect(msgs.some(m => m.includes('[Agarrão/tentativa]'))).toBe(true);
+      expect(msgs.some(m => m.includes('[Agarrão/vínculo]'))).toBe(true);
       expect(msgs.some(m => m.includes('Atacante') && m.includes('Alvo'))).toBe(true);
     });
 
-    it('grappleAttempt: emite só [grapple/attempt] ao falhar', async () => {
+    it('grappleAttempt: emite só [Agarrão/tentativa] ao falhar', async () => {
       const { att, tgt } = makePair();
       const seq = [1, 20];
       let i = 0;
@@ -170,11 +170,11 @@ describe('Grapple Engine — Fase C', () => {
       });
       await useCharacterStore.getState().grappleAttempt(att.id, tgt.id);
       const msgs = useLogStore.getState().logs.map(l => l.message);
-      expect(msgs.some(m => m.includes('[grapple/attempt]') && m.includes('falhou'))).toBe(true);
-      expect(msgs.some(m => m.includes('[grapple/bind]'))).toBe(false);
+      expect(msgs.some(m => m.includes('[Agarrão/tentativa]') && m.includes('falhou'))).toBe(true);
+      expect(msgs.some(m => m.includes('[Agarrão/vínculo]'))).toBe(false);
     });
 
-    it('escapeGrapple: emite [grapple/escape] e [grapple/unbind] ao escapar', async () => {
+    it('escapeGrapple: emite [Agarrão/fuga] e [Agarrão/soltura] ao escapar', async () => {
       const { att, tgt } = makePair();
       useCharacterStore.setState({
         characters: useCharacterStore.getState().characters.map(c => {
@@ -191,11 +191,11 @@ describe('Grapple Engine — Fase C', () => {
       });
       await useCharacterStore.getState().escapeGrapple(tgt.id, att.id, 'Atletismo');
       const msgs = useLogStore.getState().logs.map(l => l.message);
-      expect(msgs.some(m => m.includes('[grapple/escape]'))).toBe(true);
-      expect(msgs.some(m => m.includes('[grapple/unbind]'))).toBe(true);
+      expect(msgs.some(m => m.includes('[Agarrão/fuga]'))).toBe(true);
+      expect(msgs.some(m => m.includes('[Agarrão/soltura]'))).toBe(true);
     });
 
-    it('releaseGrapple: emite [grapple/release] ao soltar voluntariamente', () => {
+    it('releaseGrapple: emite [Agarrão/soltar] ao soltar voluntariamente', () => {
       const { att, tgt } = makePair();
       useCharacterStore.setState({
         characters: useCharacterStore.getState().characters.map(c => {
@@ -206,10 +206,10 @@ describe('Grapple Engine — Fase C', () => {
       });
       useCharacterStore.getState().releaseGrapple(att.id, tgt.id);
       const msgs = useLogStore.getState().logs.map(l => l.message);
-      expect(msgs.some(m => m.includes('[grapple/release]'))).toBe(true);
+      expect(msgs.some(m => m.includes('[Agarrão/soltar]'))).toBe(true);
     });
 
-    it('releaseAllGrapplesOf: emite [grapple/release-all] com listagem dos vínculos', () => {
+    it('releaseAllGrapplesOf: emite [Agarrão/soltar-todos] com listagem dos vínculos', () => {
       const s = useCharacterStore.getState();
       s.addCharacter('A', 'PLAYER', 'PLAYER');
       s.addCharacter('B', 'PLAYER', 'PLAYER');
@@ -225,7 +225,7 @@ describe('Grapple Engine — Fase C', () => {
       });
       useCharacterStore.getState().releaseAllGrapplesOf(A.id);
       const msgs = useLogStore.getState().logs.map(l => l.message);
-      const releaseAllMsg = msgs.find(m => m.includes('[grapple/release-all]'));
+      const releaseAllMsg = msgs.find(m => m.includes('[Agarrão/soltar-todos]'));
       expect(releaseAllMsg).toBeDefined();
       expect(releaseAllMsg).toContain('B');
       expect(releaseAllMsg).toContain('C');
@@ -235,7 +235,7 @@ describe('Grapple Engine — Fase C', () => {
       const { att } = makePair();
       useCharacterStore.getState().releaseAllGrapplesOf(att.id);
       const msgs = useLogStore.getState().logs.map(l => l.message);
-      expect(msgs.some(m => m.includes('[grapple/release-all]'))).toBe(false);
+      expect(msgs.some(m => m.includes('[Agarrão/soltar-todos]'))).toBe(false);
     });
   });
 
@@ -267,7 +267,7 @@ describe('Grapple Engine — Fase C', () => {
       expect(dyingMsg).toBeDefined();
       expect(dyingMsg).toContain('Carrasco');
       // 2) Log de release-all deve estar presente (chamado APÓS aoMorrer).
-      const releaseMsg = msgs.find(m => m.includes('[grapple/release-all]') && m.includes('Vitima'));
+      const releaseMsg = msgs.find(m => m.includes('[Agarrão/soltar-todos]') && m.includes('Vitima'));
       expect(releaseMsg).toBeDefined();
       // 3) Estado final: vínculos liberados.
       const after = useCharacterStore.getState().characters;
@@ -288,7 +288,7 @@ describe('Grapple Engine — Fase C', () => {
       await new Promise(r => setTimeout(r, 20));
       const msgs = useLogStore.getState().logs.map(l => l.message);
       expect(msgs.some(m => m.includes('🤼💀'))).toBe(false);
-      expect(msgs.some(m => m.includes('[grapple/release-all]'))).toBe(false);
+      expect(msgs.some(m => m.includes('[Agarrão/soltar-todos]'))).toBe(false);
     });
   });
 });
