@@ -91,6 +91,8 @@ interface Props {
   character: Character;
   /** Esconde o Painel de Ataque (usado no mapa: ele vive na hotbar do turno). */
   hideAttackPanel?: boolean;
+  /** Reorganiza o cabeçalho para a coluna lateral estreita do mapa. */
+  compactHeader?: boolean;
 }
 
 interface RollResult {
@@ -366,7 +368,7 @@ function DamageHealPanel({ sourceId, sourceName }: { sourceId: string; sourceNam
   );
 }
 
-export function CharacterCard({ character: c, hideAttackPanel }: Props) {
+export function CharacterCard({ character: c, hideAttackPanel, compactHeader = false }: Props) {
   const isPlayer = useRoleStore((s) => s.role) === 'PLAYER';
   // Omni-Engine: rolagens deste personagem passam pelo contexto de reroll.
   const rollD20 = () => rollD20Com(c.id);
@@ -776,7 +778,12 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
   const negacaoRDBuff = (c.activeBuffs || []).filter(b => b.type === 'negacaoRd').reduce((s, b) => s + b.value, 0);
   const totalRD = Math.max(0, c.rd + passiveBonuses.rd + itemBonuses.rd + totalBuffRD + negacaoRDBuff);
   const talentBonuses = aggregateTalentBonuses(c);
-  const baseHpMax = c.hpMax + passiveBonuses.hp + itemBonuses.hp + talentBonuses.hp;
+  const hpBonuses = passiveBonuses.hp + itemBonuses.hp + talentBonuses.hp;
+  // Fichas antigas/temporárias podem chegar com hpMax=0 enquanto ainda têm PV.
+  // Nesse caso preserva o melhor teto conhecido, em vez de publicar 0 no HUD.
+  const baseHpMax = c.hpMax > 0
+    ? c.hpMax + hpBonuses
+    : Math.max(0, c.hpMaxEffective ?? 0, c.hpCurrent ?? 0);
   const exhaustionHpReduction = getExhaustionHpReduction(c.exhaustionLevel ?? 0, baseHpMax);
   const effectiveHpMax = Math.max(0, baseHpMax - exhaustionHpReduction);
   const effectivePeMax = c.peMax + passiveBonuses.pe + itemBonuses.pe + talentBonuses.pe;
@@ -1311,7 +1318,10 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
         className="cursor-pointer hover:bg-secondary/10 transition-colors"
       >
       {/* ─── Header ─── */}
-      <div className="flex w-full items-center gap-3 px-4 py-3 text-left">
+      <div className={cn(
+        "flex w-full items-center gap-3 px-4 py-3 text-left",
+        compactHeader && "flex-wrap content-start",
+      )}>
         <div className="flex items-center gap-2 text-foreground font-bold text-sm rounded-lg p-1">
           <span className="font-mono text-muted-foreground">A</span>
           <span className="text-sm text-muted-foreground">
@@ -1359,7 +1369,7 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
             {c.hiddenFromPlayers ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
         )}
-        <div className="flex-1 min-w-0 text-left p-1">
+        <div className={cn("flex-1 min-w-0 text-left p-1", compactHeader && "order-first basis-full")}>
           <div className="flex flex-wrap items-center gap-2 min-w-0">
             <span className="truncate min-w-0 flex-1 basis-32 font-semibold text-foreground">{c.name}</span>
             {(c.omniFlags?.bloqueio_total ?? 0) >= 1 && (
@@ -1394,7 +1404,7 @@ export function CharacterCard({ character: c, hideAttackPanel }: Props) {
             <span className="text-muted-foreground">Dados de Vida: {c.hitDiceCurrent ?? c.hitDiceMax ?? getHitDiceMax(c.level)}/{getHitDiceMax(c.level)}</span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className={cn("flex items-center gap-2", compactHeader && "order-2 min-w-0 flex-1 flex-wrap")}>
           <div
             className="flex flex-col items-center justify-center rounded-xl border-2 border-primary/50 bg-gradient-to-br from-primary/20 to-primary/5 px-3 py-1.5 shadow-[0_0_20px_-5px_hsl(var(--primary)/0.4)]"
             title={`CA base ${c.ca} + DES ${desModCC >= 0 ? '+' : ''}${desModCC} + ½ Nv ${halfLevelCC}${passiveBonuses.ca ? ` + Passivas ${passiveBonuses.ca}` : ''}${itemBonuses.ca ? ` + Itens ${itemBonuses.ca}` : ''}${buffCA ? ` + Buffs ${buffCA}` : ''}${conditionMods.defense ? ` ${conditionMods.defense >= 0 ? '+' : ''}${conditionMods.defense} Condições` : ''}${hasDirectionalDef ? `\n— Direcionais (aplicados pelo motor):\n  vs CaC: ${caVsMelee + buffCA} (${conditionMods.defenseMelee >= 0 ? '+' : ''}${conditionMods.defenseMelee})\n  vs Distância: ${caVsRanged + buffCA} (${conditionMods.defenseRanged >= 0 ? '+' : ''}${conditionMods.defenseRanged})` : ''}`}
