@@ -290,6 +290,7 @@ export function TestRequestOverlay() {
     : 'Teste de Resistência';
 
   const handleRoll = async () => {
+    console.log('[DEBUG handleRoll] chamado', { hasChar: !!char, rolling });
     if (!char || rolling) return;
     setRolling(true);
     playDiceSound();
