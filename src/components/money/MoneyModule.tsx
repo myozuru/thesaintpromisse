@@ -1,7 +1,6 @@
-import { useEffect, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Coins, Plus, Send, Users, X, Check, Trash2, LogOut, Settings2, Wallet as WalletIcon, UserPlus } from 'lucide-react';
 import { useMoneyStore, type Wallet } from '@/stores/useMoneyStore';
-import { useProfileStore } from "@/stores/useProfileStore";
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { useProfileStore } from '@/stores/useProfileStore';
@@ -26,17 +25,7 @@ function fmtDate(ts: number) {
 /*  Player Identity                                                           */
 /* -------------------------------------------------------------------------- */
 
-/**
 function usePlayerCharacters() {
-  const characters = useCharacterStore((s) => s.characters);
-  const activeProfileId = useProfileStore((s) => s.activeProfileId);
-  return useMemo(() => {
-    return characters.filter((c) => 
-      c.createdBy === "PLAYER" && 
-      (!c.profileId || c.profileId === activeProfileId)
-    );
-  }, [characters, activeProfileId]);
-}
   const characters = useCharacterStore((s) => s.characters);
   const activeProfileId = useProfileStore((s) => s.activeProfileId);
   return useMemo(
