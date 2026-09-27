@@ -80,6 +80,16 @@ export type DiceTrayProps = {
 
 type RollingDie = { die: Die; thrown: ReturnType<DiceThrower["getDiceThrow"]> };
 
+/** Velocidade da simulação por nível de drama (0 normal → 3 lendário). */
+export const DRAMA_TIME_SCALE = [1, 0.75, 0.55, 0.4];
+
+/** Avança a física em câmera lenta quando o drama pede tensão. */
+function SlowMoStepper({ scale }: { scale: number }) {
+  const { step } = useRapier();
+  useFrame((_, delta) => step(Math.min(delta, 1 / 30) * scale));
+  return null;
+}
+
 export function DiceTray({
   onRoll,
   onRollComplete,
@@ -89,6 +99,7 @@ export function DiceTray({
   style,
   envPreset = "city",
 }: DiceTrayProps) {
+  const slowMo = DRAMA_TIME_SCALE[useDice3DStore((st) => st.current?.drama ?? 0)] ?? 1;
   const [dice, setDice] = useState<RollingDie[]>([]);
   /** Enquanto true, os dados estão parados aguardando clique. */
   const [armed, setArmed] = useState(false);
@@ -208,7 +219,8 @@ export function DiceTray({
         />
 
         <RapierGate>
-          <Physics colliders={false} interpolate timeStep={1 / 60} updateLoop="follow" gravity={[0, -14, 0]}>
+          <Physics colliders={false} interpolate timeStep={slowMo < 1 ? 'vary' : 1 / 60} paused={slowMo < 1} updateLoop="follow" gravity={[0, -14, 0]}>
+            {slowMo < 1 && <SlowMoStepper scale={slowMo} />}
             <TrayColliders />
             <Suspense fallback={null}><DiceModelsReady onReady={markReady} /></Suspense>
             {dice.map(({ die, thrown }) => (
