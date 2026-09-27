@@ -9,11 +9,21 @@ describe("configuração dramática dos dados", () => {
       expect(current.timeScale).toBeLessThan(previous.timeScale);
       expect(current.verticalImpulse).toBeGreaterThan(previous.verticalImpulse);
       expect(current.restitution).toBeGreaterThan(previous.restitution);
+      expect(current.gravityScale).toBeLessThan(previous.gravityScale);
+      expect(current.trayRoof).toBeGreaterThan(previous.trayRoof);
       expect(current.impactGain).toBeGreaterThan(previous.impactGain);
       expect(current.impactPitch).toBeLessThan(previous.impactPitch);
       expect(current.lowpassHz).toBeLessThan(previous.lowpassHz);
       expect(current.reverbWet).toBeGreaterThanOrEqual(previous.reverbWet);
     }
+  });
+
+  it("torna o lendário muito mais alto e lento que o épico", () => {
+    const epic = DICE_DRAMA_CONFIG[2];
+    const legendary = DICE_DRAMA_CONFIG[3];
+    expect(legendary.timeScale).toBeLessThanOrEqual(epic.timeScale * 0.4);
+    expect(legendary.verticalImpulse).toBeGreaterThan(epic.verticalImpulse * 2);
+    expect(legendary.trayRoof).toBeGreaterThan(epic.trayRoof * 1.5);
   });
 
   it("limita níveis inválidos sem quebrar a rolagem", () => {
