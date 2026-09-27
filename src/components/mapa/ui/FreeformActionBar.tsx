@@ -8,7 +8,7 @@
  *   4. Rola NdX + mod e aplica no alvo.
  */
 import { shownHpMax } from '@/lib/peDisplay';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Swords, Heart, X, Dice6, Crosshair, Plus, Minus } from 'lucide-react';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useMapStore } from '@/stores/useMapStore';
@@ -128,6 +128,7 @@ export function FreeformAttackForm({
   const [cd, setCd] = useState(initialPrefs.cd);
   const [trType, setTrType] = useState(initialPrefs.trType);
   const [rolling, setRolling] = useState(false);
+  const rollingRef = useRef(false);
   const [attack, setAttack] = useState<{ nat: number; total: number; hit: boolean } | null>(null);
   const [dmgResult, setDmgResult] = useState<{ rolls: number[]; total: number } | null>(null);
   const [applied, setApplied] = useState(false);
@@ -257,7 +258,8 @@ export function FreeformAttackForm({
   };
 
   const rollAttack = async () => {
-    if (!target || rolling) return;
+    if (!target || rollingRef.current) return;
+    rollingRef.current = true;
     setRolling(true);
     try {
       const nat = await rollD20Com(character.id, attackBonus || undefined);
@@ -272,6 +274,7 @@ export function FreeformAttackForm({
         `🎯 ${character.name} → ${target.name}: d20 ${nat}${attackBonus ? ` ${attackBonus > 0 ? '+' : ''}${attackBonus}` : ''} = ${total} → ${hit ? 'ACERTO' : 'ERRO'}.`,
       );
     } finally {
+      rollingRef.current = false;
       setRolling(false);
     }
   };
@@ -301,7 +304,8 @@ export function FreeformAttackForm({
   };
 
   const rollDamage = async () => {
-    if (rolling || !target) return;
+    if (rollingRef.current || !target) return;
+    rollingRef.current = true;
     setRolling(true);
     try {
       // Rola TODOS os grupos de dados juntos, numa única jogada na bandeja 3D.
@@ -329,6 +333,7 @@ export function FreeformAttackForm({
       );
 
     } finally {
+      rollingRef.current = false;
       setRolling(false);
     }
   };
