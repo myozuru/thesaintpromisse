@@ -197,6 +197,7 @@ export function TestRequestOverlay() {
   const requests = useTestRequestStore((s) => s.requests);
   const setResult = useTestRequestStore((s) => s.setResult);
   const dismiss = useTestRequestStore((s) => s.dismiss);
+  const ackResult = useTestRequestStore((s) => s.ackResult);
   const characters = useCharacterStore((s) => s.characters);
   const addLog = useLogStore((s) => s.addLog);
 
@@ -207,6 +208,9 @@ export function TestRequestOverlay() {
   //  - PLAYER → fichas criadas por player E pertencentes ao perfil ativo
   const pending = useMemo(
     () => requests.filter((r) => {
+      // Pedido que o jogador já viu e fechou some da tela DELE, mas continua
+      // visível para o mestre até ele dispensar.
+      if (!isMaster && r.playerAckedAt) return false;
       const c = characters.find((x) => x.id === r.charId);
       if (!c) return false;
       const masterControlled = c.createdBy === 'MASTER' || c.category !== 'PLAYER';
@@ -447,7 +451,7 @@ export function TestRequestOverlay() {
         <div className="relative w-full max-w-lg rounded-2xl border-2 border-primary/60 bg-card p-8 shadow-[0_0_60px_-10px_hsl(var(--primary)/0.6)]">
           {(isMaster || current.result) && (
             <button
-              onClick={() => dismiss(current.id)}
+              onClick={() => (isMaster ? dismiss(current.id) : ackResult(current.id))}
               className="absolute top-3 right-3 text-muted-foreground hover:text-foreground"
               aria-label="Dispensar"
             >
@@ -583,7 +587,7 @@ export function TestRequestOverlay() {
                 variant="outline"
                 size="sm"
                 className="mt-3"
-                onClick={() => dismiss(current.id)}
+                onClick={() => (isMaster ? dismiss(current.id) : ackResult(current.id))}
               >
                 <Check className="w-4 h-4 mr-1" /> Fechar
               </Button>

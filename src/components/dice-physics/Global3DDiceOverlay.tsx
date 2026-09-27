@@ -26,6 +26,8 @@ export function Global3DDiceOverlay() {
   const [lastBonus, setLastBonus] = useState(0);
   /** 'idle' = sem dados, 'armed' = parados aguardando clique, 'rolling' = lançados. */
   const [phase, setPhase] = useState<'idle' | 'armed' | 'rolling'>('idle');
+  /** true quando a bandeja 3D não carregou — o jogador rola manualmente por botão. */
+  const [trayFailed, setTrayFailed] = useState(false);
 
 
   useEffect(() => {
@@ -37,17 +39,15 @@ export function Global3DDiceOverlay() {
     let cancelled = false;
     let t: ReturnType<typeof setTimeout> | undefined;
     const startedAt = Date.now();
+    setTrayFailed(false);
     const arm = () => {
       if (cancelled) return;
       const api = apiRef.current;
       if (!api) {
         if (Date.now() - startedAt > 15000) {
-          // Não carregou (ex.: navegador sem 3D): resolve com rolagem comum.
-          const faces: Record<string, number> = { D4: 4, D6: 6, D8: 8, D10: 10, D12: 12, D20: 20, D100: 100 };
-          resolveCurrent(current.types.map((ty) => {
-            const f = faces[ty] ?? 20;
-            return f === 100 ? Math.floor(Math.random() * 10) * 10 : Math.floor(Math.random() * f) + 1;
-          }));
+          // Não carregou (ex.: navegador sem 3D): NÃO rola sozinho — mostra
+          // um botão para o jogador rolar manualmente quando quiser.
+          setTrayFailed(true);
           return;
         }
         t = setTimeout(arm, 100);
@@ -166,6 +166,33 @@ export function Global3DDiceOverlay() {
             }}
           />
         </Suspense>
+
+        {trayFailed && current && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 p-4">
+            <p className="text-xs text-muted-foreground italic text-center">
+              Os dados 3D não carregaram neste aparelho.
+            </p>
+            <button
+              onClick={() => {
+                const faces: Record<string, number> = { D4: 4, D6: 6, D8: 8, D10: 10, D12: 12, D20: 20, D100: 100 };
+                const values = current.types.map((ty) => {
+                  const f = faces[ty] ?? 20;
+                  return f === 100 ? Math.floor(Math.random() * 10) * 10 : Math.floor(Math.random() * f) + 1;
+                });
+                const bonus = current.bonus ?? 0;
+                setLastResults(values.map((v, i) => ({ id: `fb_${i}`, type: current.types[i], value: v })));
+                setLastBonus(bonus);
+                setLastTotal(values.reduce((a, b) => a + b, 0) + bonus);
+                setTrayFailed(false);
+                resolveCurrent(values);
+              }}
+              className="flex items-center gap-2 rounded-md border border-accent/50 bg-primary/30 px-4 py-2 text-sm font-bold uppercase tracking-[0.15em] text-accent hover:bg-primary/50 transition-all"
+              style={{ fontFamily: "'Cinzel', serif", boxShadow: '0 0 16px hsl(42 78% 58% / 0.35)' }}
+            >
+              <Hand className="h-4 w-4" /> Rolar dados
+            </button>
+          </div>
+        )}
 
         {phase === 'armed' && (
           <button
