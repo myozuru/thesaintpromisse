@@ -100,14 +100,14 @@ export function DataHub({ open, onClose }: { open: boolean; onClose: () => void 
         applyDamage(id, effectiveTotal, dmgType);
       } else if (mode === 'heal') {
         applyHealing(id, effectiveTotal);
-        addLog('combat', `💚 Hub → ${target.name}: ${effectiveTotal} cura`);
+        addLog('combat', `💚 Central → ${target.name}: ${effectiveTotal} cura`);
       } else if (mode === 'shield') {
         applyShield(id, effectiveTotal);
-        addLog('combat', `🛡 Hub → ${target.name}: ${effectiveTotal} escudo`);
+        addLog('combat', `🛡 Central → ${target.name}: ${effectiveTotal} escudo`);
       } else if (mode === 'shieldRemove') {
         const newEsc = Math.max(0, target.escCurrent - effectiveTotal);
         updateCharacter(id, { escCurrent: newEsc });
-        addLog('combat', `💔 Hub → ${target.name}: -${effectiveTotal} escudo`);
+        addLog('combat', `💔 Central → ${target.name}: -${effectiveTotal} escudo`);
       }
     });
     setSelectedTargets([]);
