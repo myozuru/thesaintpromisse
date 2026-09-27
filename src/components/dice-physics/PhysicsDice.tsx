@@ -9,6 +9,7 @@ import { getValueFromDiceGroup } from "./helpers/getValueFromDiceGroup";
 import { DiceCollider } from "./colliders/DiceColliders";
 import { DICE_SETTLEMENT, decideDiceSettlement } from "./diceSettlement";
 import { useDice3DStore } from "@/stores/useDice3DStore";
+import { playDiceHit } from "@/lib/sounds";
 
 /** Y máximo (mundo) para o dado ser considerado "na bandeja". */
 const MAX_SETTLE_Y = 1.5;
@@ -164,6 +165,27 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
     document.body.style.cursor = '';
   }, []);
 
+  const lastHitRef = useRef(0);
+  const handleCollision = useCallback((e: any) => {
+    const rb = rigidBodyRef.current;
+    if (!rb || !thrownRef.current || lockedRef.current) return;
+    const now = performance.now();
+    if (now - lastHitRef.current < 45) return;
+    const other = e?.other?.rigidBody;
+    let rel = magnitude(rb.linvel());
+    if (other && other !== rb) {
+      const ov = other.linvel();
+      const v = rb.linvel();
+      rel = magnitude({ x: v.x - ov.x, y: v.y - ov.y, z: v.z - ov.z });
+    }
+    rel += magnitude(rb.angvel()) * 0.05;
+    const intensity = Math.min(1, rel / 14);
+    if (intensity < 0.04) return;
+    lastHitRef.current = now;
+    const isDice = !!other && other.bodyType?.() === 1 /* dynamic */;
+    playDiceHit(intensity, isDice ? 'dice' : 'tray');
+  }, []);
+
   return (
     <RigidBody
       ref={rigidBodyRef}
@@ -179,6 +201,7 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
       rotation={rotation}
       linearVelocity={[0, 0, 0]}
       angularVelocity={[0, 0, 0]}
+      onCollisionEnter={handleCollision}
     >
       <group
         ref={groupRef}

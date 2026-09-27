@@ -240,3 +240,59 @@ export function playTimeAdvanceSound() {
     osc.stop(t + 0.15);
   }
 }
+
+// ── Impacto 3D dos dados: síntese curta, disparada por colisões reais da física ──
+let noiseBuf: AudioBuffer | null = null;
+let recentHits: number[] = [];
+function getNoise(ctx: AudioContext) {
+  if (noiseBuf) return noiseBuf;
+  const len = Math.floor(ctx.sampleRate * 0.08);
+  noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
+  const d = noiseBuf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  return noiseBuf;
+}
+
+/** Toca um "clac" de dado. intensity 0..1 (velocidade do impacto); surface: mesa ou outro dado. */
+export function playDiceHit(intensity: number, surface: 'tray' | 'dice' = 'tray') {
+  if (intensity < 0.04) return;
+  const nowMs = performance.now();
+  recentHits = recentHits.filter((t) => nowMs - t < 80);
+  if (recentHits.length >= 6) return; // evita estourar com muitos dados
+  recentHits.push(nowMs);
+  ensureResumed();
+  const ctx = getCtx();
+  const t = ctx.currentTime;
+  const vol = Math.min(0.35, 0.05 + intensity * 0.3);
+  const out = ctx.createGain();
+  out.gain.value = vol;
+  out.connect(ctx.destination);
+
+  // Transiente (ruído filtrado)
+  const src = ctx.createBufferSource();
+  src.buffer = getNoise(ctx);
+  const bp = ctx.createBiquadFilter();
+  bp.type = 'bandpass';
+  bp.frequency.value = (surface === 'dice' ? 3800 : 2200) + Math.random() * 900;
+  bp.Q.value = surface === 'dice' ? 6 : 2.5;
+  const ng = ctx.createGain();
+  const dec = surface === 'dice' ? 0.035 : 0.05 + intensity * 0.03;
+  ng.gain.setValueAtTime(1, t);
+  ng.gain.exponentialRampToValueAtTime(0.001, t + dec);
+  src.connect(bp).connect(ng).connect(out);
+  src.start(t);
+  src.stop(t + dec + 0.01);
+
+  // Corpo tonal curto (resina)
+  const osc = ctx.createOscillator();
+  osc.type = 'sine';
+  const f = (surface === 'dice' ? 2600 : 900) + Math.random() * 300;
+  osc.frequency.setValueAtTime(f, t);
+  osc.frequency.exponentialRampToValueAtTime(f * 0.7, t + 0.04);
+  const og = ctx.createGain();
+  og.gain.setValueAtTime(0.35, t);
+  og.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
+  osc.connect(og).connect(out);
+  osc.start(t);
+  osc.stop(t + 0.05);
+}
