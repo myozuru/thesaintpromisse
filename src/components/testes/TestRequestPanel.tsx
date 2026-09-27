@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import { GripHorizontal, PanelLeft, Square, X } from 'lucide-react';
+import { Dices, GripHorizontal, PanelLeft, Square, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TestesModule } from './TestesModule';
 import { cn } from '@/lib/utils';
@@ -50,12 +50,14 @@ export function TestRequestPanel({ open, onClose }: TestRequestPanelProps) {
   };
 
   return (
-    <section aria-label="Pedidos de teste" className={cn('fixed z-[170] flex max-h-[calc(100dvh-4.25rem)] flex-col overflow-hidden border border-primary/40 bg-card/95 shadow-2xl backdrop-blur-xl', docked ? 'left-3 top-[4.25rem] w-[min(360px,calc(100vw-1.5rem))] rounded-md' : 'w-[min(420px,calc(100vw-1.5rem))] rounded-lg')} style={docked ? undefined : { left: position.x, top: position.y }}>
-      <div className={cn('flex h-11 shrink-0 items-center gap-2 border-b border-border/70 px-2', docked ? 'cursor-default' : 'cursor-grab select-none active:cursor-grabbing')} onPointerDown={startDrag}>
-        <GripHorizontal className={cn('h-4 w-4 text-muted-foreground', docked && 'opacity-35')} />
+    <section aria-label="Pedidos de teste" className={cn('fixed z-[170] flex max-h-[calc(100dvh-4.25rem)] flex-col overflow-hidden border border-border/90 bg-card/95 shadow-[0_24px_70px_-20px_hsl(var(--background))] backdrop-blur-xl before:pointer-events-none before:absolute before:inset-x-12 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-accent/80 before:to-transparent', docked ? 'left-3 top-[4.25rem] w-[min(380px,calc(100vw-1.5rem))] rounded-md' : 'w-[min(440px,calc(100vw-1.5rem))] rounded-lg')} style={docked ? undefined : { left: position.x, top: position.y }}>
+      <div className={cn('relative flex min-h-14 shrink-0 items-center gap-2 border-b border-border/70 bg-secondary/35 px-3', docked ? 'cursor-default' : 'cursor-grab select-none active:cursor-grabbing')} onPointerDown={startDrag}>
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-accent/25 bg-accent/10 text-accent">
+          {docked ? <Dices className="h-4 w-4" /> : <GripHorizontal className="h-4 w-4" />}
+        </div>
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-sm font-semibold text-foreground" style={{ fontFamily: "'Cinzel', serif" }}>Pedidos de teste</h2>
-          <p className="truncate text-[10px] text-muted-foreground">Solicite rolagens sem sair do mapa</p>
+          <h2 className="truncate font-display text-sm font-bold uppercase text-accent">Invocar destino</h2>
+          <p className="truncate text-[10px] text-muted-foreground">Forje um desafio para seus jogadores</p>
         </div>
         <Button type="button" variant="ghost" size="icon-sm" title={docked ? 'Usar como janela flutuante' : 'Fixar abaixo do relógio'} aria-label={docked ? 'Usar como janela flutuante' : 'Fixar abaixo do relógio'} onPointerDown={(event) => event.stopPropagation()} onClick={() => setMode(docked ? 'floating' : 'docked')}>
           {docked ? <Square className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
