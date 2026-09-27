@@ -1,3 +1,4 @@
+import { markCharacterDeleted } from "@/lib/charSyncStamps";
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { dispararGatilhoEfeitosItens } from '@/lib/omni/triggerEfeitos';
