@@ -705,7 +705,7 @@ const canStartMoveEntityNow = (entity: Entity): boolean => {
 
 
 
-const toNameplateStats = (c: Character): NameplateCharacterStats => {
+export const toNameplateStats = (c: Character): NameplateCharacterStats => {
   // Se o máximo estiver zerado/indefinido (fichas antigas ou temporárias),
   // usa o valor atual como teto para a barra nunca sumir.
   const hpMax = shownHpMax(c);
