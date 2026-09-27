@@ -85,7 +85,10 @@ export function FichasModule() {
     // Só o Mestre aplica a fome (a fonte de verdade do relógio); cada tela de
     // jogador aplicando com seu próprio relógio duplicava/saltava a cobrança.
     if (isPlayer) return;
-    tickHunger(hourKey);
+    // Só cobra quando a hora passou com o relógio rodando (ticker). Pausado,
+    // avanços manuais, sync remoto ou reabrir a página apenas realinham.
+    const cs = useChronosStore.getState();
+    tickHunger(hourKey, cs.isRunning && cs.lastMutationSource === 'ticker');
   }, [chronosHours, chronosDay, chronosMonth, chronosYear, tickHunger, isPlayer]);
 
 
