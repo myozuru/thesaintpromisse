@@ -451,7 +451,7 @@ export function TestRequestOverlay() {
         <div className="relative w-full max-w-lg rounded-2xl border-2 border-primary/60 bg-card p-8 shadow-[0_0_60px_-10px_hsl(var(--primary)/0.6)]">
           {(isMaster || current.result) && (
             <button
-              onClick={() => dismiss(current.id)}
+              onClick={() => (isMaster ? dismiss(current.id) : ackResult(current.id))}
               className="absolute top-3 right-3 text-muted-foreground hover:text-foreground"
               aria-label="Dispensar"
             >
