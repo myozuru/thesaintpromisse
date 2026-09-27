@@ -30,6 +30,7 @@ import { DiceThrower } from "./helpers/DiceThrower";
 import { TrayColliders } from "./colliders/TrayColliders";
 import { PhysicsDice } from "./PhysicsDice";
 import { DiceMesh } from "./meshes/DiceMesh";
+import { DICE_DRAMA_CONFIG } from "./dramaConfig";
 import d4Url from "./meshes/d4.glb?url";
 import d6Url from "./meshes/d6.glb?url";
 import d8Url from "./meshes/d8.glb?url";
@@ -82,7 +83,7 @@ export type DiceTrayProps = {
 type RollingDie = { die: Die; thrown: ReturnType<DiceThrower["getDiceThrow"]> };
 
 /** Velocidade da simulação por nível de drama (0 normal → 3 lendário). */
-export const DRAMA_TIME_SCALE = [1, 0.75, 0.55, 0.4];
+export const DRAMA_TIME_SCALE = DICE_DRAMA_CONFIG.map((config) => config.timeScale);
 
 /** Avança a física em câmera lenta quando o drama pede tensão. */
 function SlowMoStepper({ scale }: { scale: number }) {

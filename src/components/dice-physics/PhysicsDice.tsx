@@ -10,6 +10,7 @@ import { DiceCollider } from "./colliders/DiceColliders";
 import { DICE_SETTLEMENT, decideDiceSettlement } from "./diceSettlement";
 import { useDice3DStore } from "@/stores/useDice3DStore";
 import { playDiceHit } from "@/lib/sounds";
+import { getDiceDramaConfig } from "./dramaConfig";
 
 /** Y máximo (mundo) para o dado ser considerado "na bandeja". */
 const MAX_SETTLE_Y = 1.5;
@@ -39,7 +40,8 @@ export type PhysicsDiceProps = {
 export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, onRollFinished, children }: PhysicsDiceProps) {
   const bounciness = useDice3DStore((s) => s.bounciness);
   const drama = useDice3DStore((s) => s.current?.drama ?? 0);
-  const timeScale = [1, 0.75, 0.55, 0.4][drama] ?? 1;
+  const dramaConfig = getDiceDramaConfig(drama);
+  const timeScale = dramaConfig.timeScale;
   const timeScaleRef = useRef(timeScale);
   timeScaleRef.current = timeScale;
   const dramaRef = useRef(drama);
@@ -140,7 +142,11 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
     if (!rb) return;
     rb.wakeUp?.();
     rb.setLinvel(
-      { x: dieThrow.linearVelocity.x * THROW_SPEED * power, y: dieThrow.linearVelocity.y * THROW_SPEED, z: dieThrow.linearVelocity.z * THROW_SPEED * power },
+      {
+        x: dieThrow.linearVelocity.x * THROW_SPEED * power,
+        y: dieThrow.linearVelocity.y * THROW_SPEED * dramaConfig.verticalImpulse,
+        z: dieThrow.linearVelocity.z * THROW_SPEED * power,
+      },
       true,
     );
     rb.setAngvel(
@@ -151,7 +157,7 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
     thrownAtRef.current = performance.now() / 1000;
     lowSpeedSinceRef.current = null;
     dampingAppliedRef.current = false;
-  }, [armed, dieThrow, power]);
+  }, [armed, dieThrow, dramaConfig.verticalImpulse, power]);
 
   // Resetar cursor quando desmontar.
   useEffect(() => () => { document.body.style.cursor = ''; }, []);
@@ -200,7 +206,7 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
       gravityScale={2.4}
       density={1.3}
       friction={1.1}
-      restitution={Math.min(0.9, 0.55 * bounciness)}
+      restitution={Math.min(0.97, 0.55 * bounciness * dramaConfig.restitution)}
       ccd
       linearDamping={0.3}
       angularDamping={0.4}
