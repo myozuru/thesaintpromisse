@@ -101,7 +101,9 @@ export function DiceTray({
   style,
   envPreset = "city",
 }: DiceTrayProps) {
-  const slowMo = DRAMA_TIME_SCALE[useDice3DStore((st) => st.current?.drama ?? 0)] ?? 1;
+  const drama = useDice3DStore((st) => st.current?.drama ?? 0);
+  const slowMo = DRAMA_TIME_SCALE[drama] ?? 1;
+  const palette = DICE_DRAMA_CONFIG[drama]?.palette ?? DICE_DRAMA_CONFIG[0].palette;
   const [dice, setDice] = useState<RollingDie[]>([]);
   /** Enquanto true, os dados estão parados aguardando clique. */
   const [armed, setArmed] = useState(false);
