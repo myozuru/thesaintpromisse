@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Coins, Plus, Send, Users, X, Check, Trash2, LogOut, Settings2, Wallet as WalletIcon, UserPlus } from 'lucide-react';
 import { useMoneyStore, type Wallet } from '@/stores/useMoneyStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useRoleStore } from '@/stores/useRoleStore';
+import { useProfileStore } from '@/stores/useProfileStore';
+import { moneyCharactersForViewer } from '@/lib/moneyIdentity';
 import { cn } from '@/lib/utils';
 import { playClickSound } from '@/lib/sounds';
 import { ModuleHeader } from '@/components/ui/module-header';
@@ -23,13 +25,13 @@ function fmtDate(ts: number) {
 /*  Player Identity                                                           */
 /* -------------------------------------------------------------------------- */
 
-/**
- * No nosso modelo, "player" = Character criado pelo jogador.
- * Usamos um seletor para que o player escolha "como qual ficha" está jogando.
- */
 function usePlayerCharacters() {
   const characters = useCharacterStore((s) => s.characters);
-  return useMemo(() => characters.filter((c) => c.createdBy === 'PLAYER'), [characters]);
+  const activeProfileId = useProfileStore((s) => s.activeProfileId);
+  return useMemo(
+    () => moneyCharactersForViewer(characters, 'PLAYER', activeProfileId),
+    [characters, activeProfileId],
+  );
 }
 
 /* -------------------------------------------------------------------------- */
@@ -45,9 +47,14 @@ export function MoneyModule() {
 /* ============================== MASTER VIEW =============================== */
 
 function MasterMoneyView() {
-  const { currencies, wallets, transactions, masterGrant } = useMoneyStore();
+  const { currencies, wallets, masterGrant, ensurePersonalWallet } = useMoneyStore();
   const characters = useCharacterStore((s) => s.characters);
-  const playerChars = useMemo(() => characters.filter((c) => c.createdBy === 'PLAYER'), [characters]);
+  const profiles = useProfileStore((s) => s.profiles);
+  const playerChars = useMemo(
+    () => moneyCharactersForViewer(characters, 'MASTER', null),
+    [characters],
+  );
+  const [personalCharacterId, setPersonalCharacterId] = useState('');
   const [grantWalletId, setGrantWalletId] = useState<string>('');
   const [grantCurrencyId, setGrantCurrencyId] = useState<string>(currencies[0]?.id ?? '');
   const [grantAmount, setGrantAmount] = useState<number>(0);
@@ -55,6 +62,15 @@ function MasterMoneyView() {
   const [showCurrencyPanel, setShowCurrencyPanel] = useState(false);
 
   const memberName = (id: string) => characters.find((c) => c.id === id)?.name ?? '???';
+  const profileName = (profileId?: string) => profiles.find((p) => p.id === profileId)?.name ?? 'Sem player vinculado';
+
+  const handleCreatePersonal = () => {
+    const character = playerChars.find((candidate) => candidate.id === personalCharacterId);
+    if (!character) return;
+    ensurePersonalWallet(character.id, character.name);
+    setPersonalCharacterId('');
+    playClickSound();
+  };
 
   const handleGrant = () => {
     if (!grantWalletId || !grantCurrencyId || grantAmount <= 0) return;
@@ -82,6 +98,41 @@ function MasterMoneyView() {
       />
 
       {showCurrencyPanel && <CurrencyManager />}
+
+      <section className="rounded-lg border border-border bg-card p-4 space-y-3">
+        <h2 className="font-semibold flex items-center gap-2">
+          <WalletIcon className="h-4 w-4" /> Criar carteira pessoal
+        </h2>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <select
+            value={personalCharacterId}
+            onChange={(event) => setPersonalCharacterId(event.target.value)}
+            className="min-w-0 flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+          >
+            <option value="">Selecione a ficha e o player…</option>
+            {playerChars.map((character) => {
+              const alreadyHasWallet = wallets.some(
+                (wallet) => wallet.isPersonal && wallet.members.length === 1 && wallet.members[0] === character.id,
+              );
+              return (
+                <option key={character.id} value={character.id} disabled={alreadyHasWallet}>
+                  {character.name} — {profileName(character.profileId)}{alreadyHasWallet ? ' (já possui)' : ''}
+                </option>
+              );
+            })}
+          </select>
+          <button
+            onClick={handleCreatePersonal}
+            disabled={!personalCharacterId}
+            className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-40"
+          >
+            <Plus className="mr-1.5 inline h-4 w-4" /> Criar e atribuir
+          </button>
+        </div>
+        {playerChars.length === 0 && (
+          <p className="text-xs text-muted-foreground">Vincule uma ficha de jogador a uma conta para criar sua carteira.</p>
+        )}
+      </section>
 
       {/* Conceder dinheiro */}
       <section className="rounded-lg border border-border bg-card p-4 space-y-3">
@@ -237,16 +288,22 @@ function PlayerMoneyView() {
 
   const activeChar = playerChars.find((c) => c.id === activeCharId) ?? playerChars[0];
 
-  // Garante carteira pessoal
-  useMemo(() => {
+  // Garante uma carteira somente para a ficha ligada ao perfil conectado.
+  useEffect(() => {
     if (activeChar) ensurePersonal(activeChar.id, activeChar.name);
-  }, [activeChar?.id]); // eslint-disable-line
+  }, [activeChar, ensurePersonal]);
+
+  useEffect(() => {
+    if (!playerChars.some((character) => character.id === activeCharId) && playerChars[0]) {
+      setActiveCharId(playerChars[0].id);
+    }
+  }, [activeCharId, playerChars]);
 
   if (playerChars.length === 0) {
     return (
       <div className="rounded-lg border border-border bg-card p-6 text-center text-muted-foreground">
         <Coins className="mx-auto mb-3 h-8 w-8 opacity-50" />
-        Crie uma ficha primeiro para ter acesso ao Money.
+        Sua conta ainda não está vinculada a uma ficha. Peça ao Mestre para fazer o vínculo em Contas.
       </div>
     );
   }
