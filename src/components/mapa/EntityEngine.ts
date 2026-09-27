@@ -352,7 +352,7 @@ export function drawNameplate(
   ctx: CanvasRenderingContext2D,
   e: Entity,
   scale: number,
-  opts: { force?: boolean; live?: NameplateLiveStats; hideStats?: boolean } = {},
+  opts: { force?: boolean; live?: NameplateLiveStats; hideStats?: boolean; label?: string } = {},
 ) {
   // Stats efetivos: prioriza a ficha vinculada (live) sobre os campos do próprio token.
   const hp = opts.live?.hp ?? e.hp;
@@ -360,7 +360,8 @@ export function drawNameplate(
   const pe = opts.live?.pe;
   const peMax = opts.live?.peMax;
 
-  const showLabel = !!(e.label && (e.nameplate || opts.force));
+  const label = opts.label ?? e.label;
+  const showLabel = !!(label && !e.hideName && (e.nameplate || opts.force));
   const showHp = !opts.hideStats && typeof hp === 'number' && typeof hpMax === 'number' && (hpMax ?? 0) > 0;
   const showPe = !opts.hideStats && typeof pe === 'number' && typeof peMax === 'number' && (peMax ?? 0) > 0;
   if (!showLabel && !showHp && !showPe) return;
