@@ -4993,12 +4993,12 @@ export const useCharacterStore = create<CharacterStore>()(
           const verdict = success ? '✅ AGARRADO' : '❌ falhou';
           useLogStore.getState().addLog(
             'combat',
-            `🤼 [grapple/attempt] ${att.name} → ${tgt.name}${peTxt}: Atletismo ${rollAttFinal}+${bonusAtt}=${totalAtt}${advTxt}${auTxt} vs ${defRoll.name} ${rollDef}+${defRoll.bonus}=${totalDef} — ${verdict}.`,
+            `🤼 [Agarrão/tentativa] ${att.name} → ${tgt.name}${peTxt}: Atletismo ${rollAttFinal}+${bonusAtt}=${totalAtt}${advTxt}${auTxt} vs ${defRoll.name} ${rollDef}+${defRoll.bonus}=${totalDef} — ${verdict}.`,
           );
           if (success) {
             useLogStore.getState().addLog(
               'combat',
-              `🔗 [grapple/bind] ${att.name} ↔ ${tgt.name}: vínculo criado (alvo agora tem desvantagem em ataques e movimento bloqueado).`,
+              `🔗 [Agarrão/vínculo] ${att.name} ↔ ${tgt.name}: vínculo criado (alvo agora tem desvantagem em ataques e movimento bloqueado).`,
             );
           }
         } catch { /* noop */ }
@@ -5091,12 +5091,12 @@ export const useCharacterStore = create<CharacterStore>()(
           const verdict = success ? '✅ ESCAPOU' : '❌ permanece agarrado';
           useLogStore.getState().addLog(
             'combat',
-            `🏃 [grapple/escape] ${tgt.name} vs ${grp.name}${peTxt}: ${skill} ${rollDefFinal}+${bonusDef}=${totalDef}${disTxt} vs Atletismo ${rollAtt}+${bonusAtt}=${totalAtt}${auTxt} — ${verdict} (empate favorece agarrador).`,
+            `🏃 [Agarrão/fuga] ${tgt.name} vs ${grp.name}${peTxt}: ${skill} ${rollDefFinal}+${bonusDef}=${totalDef}${disTxt} vs Atletismo ${rollAtt}+${bonusAtt}=${totalAtt}${auTxt} — ${verdict} (empate favorece agarrador).`,
           );
           if (success) {
             useLogStore.getState().addLog(
               'combat',
-              `🔓 [grapple/unbind] ${tgt.name} ↮ ${grp.name}: vínculo desfeito.`,
+              `🔓 [Agarrão/soltura] ${tgt.name} ↮ ${grp.name}: vínculo desfeito.`,
             );
           }
         } catch { /* noop */ }
@@ -5136,7 +5136,7 @@ export const useCharacterStore = create<CharacterStore>()(
           try {
             useLogStore.getState().addLog(
               'combat',
-              `🤝 [grapple/release] ${att.name} soltou ${tgt.name} voluntariamente — vínculo desfeito.`,
+              `🤝 [Agarrão/soltar] ${att.name} soltou ${tgt.name} voluntariamente — vínculo desfeito.`,
             );
           } catch { /* noop */ }
         }
@@ -5176,7 +5176,7 @@ export const useCharacterStore = create<CharacterStore>()(
             if (grappledBy.length > 0) parts.push(`escapou de ${grappledBy.map(nameOf).join(', ')} (que ${grappledBy.length === 1 ? 'o agarrava' : 'o agarravam'})`);
             useLogStore.getState().addLog(
               'combat',
-              `🔓 [grapple/release-all] ${c.name}: ${parts.join('; ')}.`,
+              `🔓 [Agarrão/soltar-todos] ${c.name}: ${parts.join('; ')}.`,
             );
           } catch { /* noop */ }
         }

@@ -81,7 +81,7 @@ export function DataHub({ open, onClose }: { open: boolean; onClose: () => void 
 
       const gt = finalResults.reduce((s, r) => s + r.total, 0);
       const details = finalResults.map((r) => `${r.label}[${r.rolls.join(',')}]=${r.total}`).join(' | ');
-      addLog('roll', `🎲 Hub: ${details} → Total: ${gt}`);
+      addLog('roll', `🎲 Central: ${details} → Total: ${gt}`);
     } finally {
       setRolling(false);
     }
@@ -100,14 +100,14 @@ export function DataHub({ open, onClose }: { open: boolean; onClose: () => void 
         applyDamage(id, effectiveTotal, dmgType);
       } else if (mode === 'heal') {
         applyHealing(id, effectiveTotal);
-        addLog('combat', `💚 Hub → ${target.name}: ${effectiveTotal} cura`);
+        addLog('combat', `💚 Central → ${target.name}: ${effectiveTotal} cura`);
       } else if (mode === 'shield') {
         applyShield(id, effectiveTotal);
-        addLog('combat', `🛡 Hub → ${target.name}: ${effectiveTotal} escudo`);
+        addLog('combat', `🛡 Central → ${target.name}: ${effectiveTotal} escudo`);
       } else if (mode === 'shieldRemove') {
         const newEsc = Math.max(0, target.escCurrent - effectiveTotal);
         updateCharacter(id, { escCurrent: newEsc });
-        addLog('combat', `💔 Hub → ${target.name}: -${effectiveTotal} escudo`);
+        addLog('combat', `💔 Central → ${target.name}: -${effectiveTotal} escudo`);
       }
     });
     setSelectedTargets([]);
