@@ -1,8 +1,9 @@
 // @ts-nocheck
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { Environment, Lightformer, PerspectiveCamera, OrbitControls, useGLTF } from "@react-three/drei";
-import { Physics } from "@react-three/rapier";
+import { Physics, useRapier } from "@react-three/rapier";
+import { useDice3DStore } from "@/stores/useDice3DStore";
 import RAPIER from "@dimforge/rapier3d-compat";
 
 // Pre-initialize the Rapier WASM module so <Physics> doesn't throw on first mount.
