@@ -15,6 +15,9 @@ const MIN_ROLL_FINISHED_SPEED = 0.12;
 const LOW_SPEED_SETTLE_S = 0.35;
 /** Y máximo (mundo) para o dado ser considerado "na bandeja". */
 const MAX_SETTLE_Y = 1.5;
+/** Multiplicadores do lançamento — dados mais rápidos quicam mais. */
+const THROW_SPEED = 1.7;
+const SPIN_SPEED = 1.4;
 
 function magnitude({ x, y, z }: { x: number; y: number; z: number }) {
   return Math.sqrt(x * x + y * y + z * z);
@@ -112,11 +115,11 @@ export function PhysicsDice({ die, dieThrow, armed, onThrowRequest, onRollFinish
     if (!rb) return;
     rb.wakeUp?.();
     rb.setLinvel(
-      { x: dieThrow.linearVelocity.x, y: dieThrow.linearVelocity.y, z: dieThrow.linearVelocity.z },
+      { x: dieThrow.linearVelocity.x * THROW_SPEED, y: dieThrow.linearVelocity.y * THROW_SPEED, z: dieThrow.linearVelocity.z * THROW_SPEED },
       true,
     );
     rb.setAngvel(
-      { x: dieThrow.angularVelocity.x, y: dieThrow.angularVelocity.y, z: dieThrow.angularVelocity.z },
+      { x: dieThrow.angularVelocity.x * SPIN_SPEED, y: dieThrow.angularVelocity.y * SPIN_SPEED, z: dieThrow.angularVelocity.z * SPIN_SPEED },
       true,
     );
     thrownRef.current = true;
@@ -149,9 +152,10 @@ export function PhysicsDice({ die, dieThrow, armed, onThrowRequest, onRollFinish
       gravityScale={2.4}
       density={1.3}
       friction={1.1}
-      restitution={Math.min(0.85, 0.4 * bounciness)}
-      linearDamping={0.55}
-      angularDamping={0.55}
+      restitution={Math.min(0.9, 0.55 * bounciness)}
+      ccd
+      linearDamping={0.3}
+      angularDamping={0.4}
       position={position}
       rotation={rotation}
       linearVelocity={[0, 0, 0]}
