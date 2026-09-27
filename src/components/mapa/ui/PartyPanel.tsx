@@ -70,7 +70,7 @@ export function PartyPanel({ collapsed, onToggleCollapsed }: Props) {
         >
           {showSheet ? (
             <div className="flex-1 overflow-y-auto overflow-x-hidden p-2">
-              <CharacterCard character={sheetToShow!} hideAttackPanel />
+              <CharacterCard character={sheetToShow!} hideAttackPanel compactHeader />
             </div>
           ) : isPlayer ? (
             <div className="flex-1 overflow-y-auto overflow-x-hidden p-2">

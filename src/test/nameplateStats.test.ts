@@ -32,6 +32,18 @@ describe('toNameplateStats (barras do token no mapa)', () => {
     expect(s.peMax).toBe(26);
   });
 
+  it('ignora máximo efetivo zerado quando o máximo-base ainda é válido', () => {
+    const s = toNameplateStats({
+      ...base,
+      hpCurrent: 31,
+      hpMax: 51,
+      hpMaxEffective: 0,
+      peCurrent: 8,
+      peMax: 20,
+    });
+    expect(s.hpMax).toBe(51);
+  });
+
   it('ficha normal mantém os valores originais', () => {
     const s = toNameplateStats({ ...base, hpCurrent: 18, hpMax: 40, peCurrent: 5, peMax: 20 });
     expect(s).toEqual({ hp: 18, hpMax: 40, pe: 5, peMax: 20 });
