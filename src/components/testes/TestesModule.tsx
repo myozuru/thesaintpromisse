@@ -175,7 +175,7 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
             <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Teste solicitado</label>
             <Select value={testName} onValueChange={setTestName}>
               <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
-              <SelectContent className="max-h-72">
+              <SelectContent className="z-[220] max-h-72">
                 {options.length === 0 && (
                   <SelectItem value="__none" disabled>Selecione uma ficha primeiro</SelectItem>
                 )}
