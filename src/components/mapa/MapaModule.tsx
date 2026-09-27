@@ -2928,25 +2928,25 @@ export function MapaModule() {
       }> = [];
       for (const file of Array.from(files)) {
         if (!file.type.startsWith('image/')) continue;
-        const assetId = await assetCache.put(file, file.type);
+        const { shrinkImageFile } = await import('@/lib/mapa/shrinkImage');
+        const blob = await shrinkImageFile(file);
+        const assetId = await assetCache.put(blob, blob.type || file.type);
         const cached = assetCache.get(assetId);
         const dims = await new Promise<{ w: number; h: number }>((resolve) => {
-          if (!cached) return resolve({ w: cfg.dpi, h: cfg.dpi });
+          const fallback = { w: cfg.dpi, h: cfg.dpi };
+          if (!cached) return resolve(fallback);
           if (cached.ready) {
             resolve({ w: cached.img.naturalWidth, h: cached.img.naturalHeight });
           } else {
-            cached.img.addEventListener('load', () =>
-              resolve({ w: cached.img.naturalWidth, h: cached.img.naturalHeight }),
-            );
-            cached.img.addEventListener('error', () => resolve({ w: cfg.dpi, h: cfg.dpi }));
+            const t = setTimeout(() => resolve(fallback), 20000);
+            cached.img.addEventListener('load', () => {
+              clearTimeout(t);
+              resolve({ w: cached.img.naturalWidth, h: cached.img.naturalHeight });
+            });
+            cached.img.addEventListener('error', () => { clearTimeout(t); resolve(fallback); });
           }
         });
-        const previewUrl = await new Promise<string>((resolve) => {
-          const r = new FileReader();
-          r.onload = () => resolve(typeof r.result === 'string' ? r.result : '');
-          r.onerror = () => resolve('');
-          r.readAsDataURL(file);
-        });
+        const previewUrl = URL.createObjectURL(blob);
         queued.push({
           assetId,
           name: file.name.replace(/\.[^.]+$/, '').slice(0, 48),
