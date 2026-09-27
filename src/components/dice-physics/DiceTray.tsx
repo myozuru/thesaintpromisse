@@ -29,6 +29,7 @@ import { DiceThrower } from "./helpers/DiceThrower";
 import { TrayColliders } from "./colliders/TrayColliders";
 import { PhysicsDice } from "./PhysicsDice";
 import { DiceMesh } from "./meshes/DiceMesh";
+import { claimDiceLaunch, type DiceLaunchGuard } from "./diceLaunchGuard";
 
 export type DiceRollResult = { id: string; type: DiceType; value: number };
 
@@ -74,6 +75,7 @@ export function DiceTray({
   const [dice, setDice] = useState<RollingDie[]>([]);
   /** Enquanto true, os dados estão parados aguardando clique. */
   const [armed, setArmed] = useState(false);
+  const launchGuardRef = useRef<DiceLaunchGuard>({ armed: false });
   const throwerRef = useRef(new DiceThrower());
   const resultsRef = useRef<Map<string, DiceRollResult>>(new Map());
   const expectedRef = useRef(0);
@@ -88,16 +90,16 @@ export function DiceTray({
     });
     setDice((prev) => [...prev, ...next]);
     expectedRef.current += next.length;
+    launchGuardRef.current.armed = true;
     setArmed(true);
   }, []);
 
   const throwAll = useCallback(() => {
-    let wasArmed = false;
-    setArmed((cur) => { wasArmed = cur; return false; });
-    if (wasArmed) {
-      // Dispara fora do updater para evitar setState em outro componente durante render.
-      queueMicrotask(() => onThrown?.());
-    }
+    // O ref é consumido imediatamente. Assim, vários pointerdown/click antes
+    // do próximo render não conseguem iniciar a mesma rodada mais de uma vez.
+    if (!claimDiceLaunch(launchGuardRef.current)) return;
+    setArmed(false);
+    onThrown?.();
   }, [onThrown]);
 
   const clear = useCallback(() => {
@@ -105,6 +107,7 @@ export function DiceTray({
     throwerRef.current.clearHistory();
     resultsRef.current.clear();
     expectedRef.current = 0;
+    launchGuardRef.current.armed = false;
     setArmed(false);
   }, []);
 

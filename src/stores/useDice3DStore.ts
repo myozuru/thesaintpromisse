@@ -175,7 +175,9 @@ export const useDice3DStore = create<Dice3DState>((set, get) => ({
     const pending = [current, ...queue].filter(Boolean) as RollRequest[];
     pending.forEach((req) => {
       if (!req.resolve) return;
-      try { req.resolve(rngForTypes(req.types)); } catch {}
+      // Cancelamento explícito nunca inventa um resultado. Uma lista vazia
+      // libera os chamadores aguardando sem aplicar dano ou acerto fictício.
+      try { req.resolve([]); } catch {}
     });
     set({ current: null, queue: [], visible: false });
   },
