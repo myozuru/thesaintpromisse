@@ -33,6 +33,8 @@ export interface TestRequest {
   hideOutcomeFromPlayer?: boolean;
   /** Notas opcionais do mestre. */
   note?: string;
+  /** Nível de drama da rolagem 3D escolhido pelo Mestre (0 = normal … 3 = lendário). */
+  drama?: 0 | 1 | 2 | 3;
   /**
    * Bônus pré-calculado (usado quando o pedido vem de um feitiço, em que
    * a pipeline já sabe o bônus correto para aquele TR específico vs. alvo).

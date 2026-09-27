@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { ModuleHeader } from '@/components/ui/module-header';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dice6, Send, Trash2, CheckCircle2, XCircle, Clock, Users, EyeOff, ScrollText } from 'lucide-react';
+import { Dice6, Send, Trash2, CheckCircle2, XCircle, Clock, Users, EyeOff, ScrollText, Flame } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { DEFAULT_SAVING_THROWS } from '@/types';
 import { cn } from '@/lib/utils';
@@ -47,6 +47,7 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
   const [hideDc, setHideDc] = useState<boolean>(false);
   const [hideOutcome, setHideOutcome] = useState<boolean>(false);
   const [note, setNote] = useState<string>('');
+  const [drama, setDrama] = useState<0 | 1 | 2 | 3>(0);
 
   const selectedChars = players.filter((c) => charIds.includes(c.id));
   const refChar = selectedChars[0];
@@ -95,6 +96,7 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
         hideDcFromPlayer: dcNum != null ? hideDc : undefined,
         hideOutcomeFromPlayer: dcNum != null ? hideOutcome : undefined,
         note: note.trim() || undefined,
+        drama: drama || undefined,
       });
     });
     toast({
@@ -208,6 +210,15 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
                 </label>
               </div>
             )}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-accent/80"><Flame className="h-3.5 w-3.5" /> Drama da rolagem</label>
+          <div className="grid grid-cols-4 gap-1 rounded-md border border-border/70 bg-background/55 p-1">
+            {([[0, 'Normal'], [1, 'Tenso'], [2, 'Épico'], [3, 'Lendário']] as const).map(([value, label]) => (
+              <Button key={value} type="button" variant="ghost" size="sm" className={cn('h-8 text-[10px] uppercase', drama === value ? 'border border-accent/25 bg-accent/10 text-accent' : 'text-muted-foreground')} onClick={() => setDrama(value)}>{label}</Button>
+            ))}
           </div>
         </div>
 

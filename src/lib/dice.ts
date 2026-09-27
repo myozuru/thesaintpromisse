@@ -1,5 +1,5 @@
 import { consumirRerollDe, getCharContextoRolagem, setCharContextoRolagem } from '@/lib/omni/reroll';
-import { useDice3DStore, type DiceOverlayLayout } from '@/stores/useDice3DStore';
+import { useDice3DStore, type DiceOverlayLayout, type DiceDrama } from '@/stores/useDice3DStore';
 
 /**
  * Sistema oficial de rolagem: TODA rolagem agora vem da física 3D.
@@ -34,12 +34,12 @@ export async function rollDice(
   return { rolls, total: rolls.reduce((a, b) => a + b, 0) };
 }
 
-export async function rollD20(bonus?: number, options?: { label?: string; layout?: DiceOverlayLayout }): Promise<number> {
+export async function rollD20(bonus?: number, options?: { label?: string; layout?: DiceOverlayLayout; drama?: DiceDrama }): Promise<number> {
   const charId = getCharContextoRolagem();
-  const [r1] = await useDice3DStore.getState().requestRoll(['D20'], options?.label ?? 'd20', bonus, options?.layout);
+  const [r1] = await useDice3DStore.getState().requestRoll(['D20'], options?.label ?? 'd20', bonus, options?.layout, options?.drama);
   let r = r1 ?? 0;
   if (charId && consumirRerollDe(charId)) {
-    const [r2] = await useDice3DStore.getState().requestRoll(['D20'], 'd20 reroll');
+    const [r2] = await useDice3DStore.getState().requestRoll(['D20'], 'd20 reroll', undefined, options?.layout, options?.drama);
     if ((r2 ?? 0) > r) r = r2;
   }
   // Negação Crítica (Suporte Nv 4): 1 natural de um aliado pode virar falha comum.
@@ -66,7 +66,7 @@ export async function rollDiceCom(
   }
 }
 
-export async function rollD20Com(charId: string | undefined, bonus?: number, options?: { label?: string; layout?: DiceOverlayLayout }): Promise<number> {
+export async function rollD20Com(charId: string | undefined, bonus?: number, options?: { label?: string; layout?: DiceOverlayLayout; drama?: DiceDrama }): Promise<number> {
   const prev = getCharContextoRolagem();
   setCharContextoRolagem(charId);
   try {

@@ -27,13 +27,15 @@ export type PhysicsDiceProps = {
   dieThrow: DiceThrow;
   /** Quando `true`, o dado aparece em repouso esperando um clique para ser lançado. */
   armed: boolean;
+  /** Força do lançamento (1 = normal, limitado pelo pai). */
+  power?: number;
   /** Disparado quando o usuário clica em um dado armado. */
   onThrowRequest?: (id: string) => void;
   onRollFinished?: (id: string, value: number, transform: DiceTransform) => void;
   children?: React.ReactNode;
 };
 
-export function PhysicsDice({ die, dieThrow, armed, onThrowRequest, onRollFinished, children }: PhysicsDiceProps) {
+export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, onRollFinished, children }: PhysicsDiceProps) {
   const bounciness = useDice3DStore((s) => s.bounciness);
   const groupRef = useRef<THREE.Group>(null);
   const rigidBodyRef = useRef<RapierRigidBody>(null);
@@ -130,18 +132,18 @@ export function PhysicsDice({ die, dieThrow, armed, onThrowRequest, onRollFinish
     if (!rb) return;
     rb.wakeUp?.();
     rb.setLinvel(
-      { x: dieThrow.linearVelocity.x * THROW_SPEED, y: dieThrow.linearVelocity.y * THROW_SPEED, z: dieThrow.linearVelocity.z * THROW_SPEED },
+      { x: dieThrow.linearVelocity.x * THROW_SPEED * power, y: dieThrow.linearVelocity.y * THROW_SPEED, z: dieThrow.linearVelocity.z * THROW_SPEED * power },
       true,
     );
     rb.setAngvel(
-      { x: dieThrow.angularVelocity.x * SPIN_SPEED, y: dieThrow.angularVelocity.y * SPIN_SPEED, z: dieThrow.angularVelocity.z * SPIN_SPEED },
+      { x: dieThrow.angularVelocity.x * SPIN_SPEED * power, y: dieThrow.angularVelocity.y * SPIN_SPEED * power, z: dieThrow.angularVelocity.z * SPIN_SPEED * power },
       true,
     );
     thrownRef.current = true;
     thrownAtRef.current = performance.now() / 1000;
     lowSpeedSinceRef.current = null;
     dampingAppliedRef.current = false;
-  }, [armed, dieThrow]);
+  }, [armed, dieThrow, power]);
 
   // Resetar cursor quando desmontar.
   useEffect(() => () => { document.body.style.cursor = ''; }, []);
