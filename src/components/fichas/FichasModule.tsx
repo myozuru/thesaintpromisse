@@ -82,8 +82,11 @@ export function FichasModule() {
     const monthsHours = DAYS_IN_MONTH.slice(0, Math.max(0, chronosMonth - 1)).reduce((a, b) => a + b, 0) * 24;
     const daysHours = Math.max(0, chronosDay - 1) * 24;
     const hourKey = yearsHours + monthsHours + daysHours + chronosHours;
+    // Só o Mestre aplica a fome (a fonte de verdade do relógio); cada tela de
+    // jogador aplicando com seu próprio relógio duplicava/saltava a cobrança.
+    if (isPlayer) return;
     tickHunger(hourKey);
-  }, [chronosHours, chronosDay, chronosMonth, chronosYear, tickHunger]);
+  }, [chronosHours, chronosDay, chronosMonth, chronosYear, tickHunger, isPlayer]);
 
 
   // Limite de 1 ficha PRINCIPAL por perfil de player. Fichas temporárias são ilimitadas.
