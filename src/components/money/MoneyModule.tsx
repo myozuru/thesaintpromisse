@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Coins, Plus, Send, Users, X, Check, Trash2, LogOut, Settings2, Wallet as WalletIcon, UserPlus } from 'lucide-react';
 import { useMoneyStore, type Wallet } from '@/stores/useMoneyStore';
+import { useProfileStore } from "@/stores/useProfileStore";
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { useProfileStore } from '@/stores/useProfileStore';
