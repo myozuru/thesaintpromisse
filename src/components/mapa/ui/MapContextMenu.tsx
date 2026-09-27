@@ -33,6 +33,7 @@ export type CtxMenuAction =
   | 'setMyself' | 'clearMyself'
   | 'carry' | 'drop'
   | 'adjustToken'
+  | 'toggleHideName'
   | { kind: 'setLayer'; layer: EntityLayer }
   | { kind: 'setLight'; preset: LightPreset }
   | { kind: 'setLightMeters'; meters: number }
@@ -81,6 +82,8 @@ interface Props {
   currentSeerDarkMeters?: number | null;
   /** Modo restrito: oferece apenas a ação de "carregar/soltar" sobre um corpo caído. */
   carryMode?: 'carry' | 'drop' | null;
+  /** Seleção única está com o nome oculto (controle do mestre). */
+  nameHidden?: boolean;
   onAction: (a: CtxMenuAction) => void;
   onClose: () => void;
 }
