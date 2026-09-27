@@ -4,6 +4,11 @@
  * "Rolar d20" que executa a rolagem com bônus apropriado, registra log
  * e fecha o overlay.
  *
+ * Visual do jogador: "Obsidian fundido" — o pedido e a bandeja 3D são uma
+ * superfície só. Pré-rolagem mostra o fosso ritual com o botão ancorado;
+ * ao rolar, a janela se expande e a bandeja 3D (DiceTrayPanel) ocupa o
+ * espaço grande inteiro, sem ficar limitada ao tamanho do pedido.
+ *
  * Para o MESTRE (que não possui a ficha alvo neste cliente) aparece um
  * painel compacto no canto inferior direito com status:
  *   - "Aguardando rolagem…" enquanto o jogador não rolou
@@ -24,6 +29,8 @@ import { consumeAutoOutcomeFor, peekAutoOutcomeFor, type OutcomeContext } from '
 import { Dice6, X, Check, Loader2, Hourglass, ShieldQuestion, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { playDiceSound, playSuccessSound, playErrorSound } from '@/lib/sounds';
+import { DiceTrayPanel } from '@/components/dice-physics/DiceTrayPanel';
+import { cn } from '@/lib/utils';
 import type { Character } from '@/types';
 import { canViewerRollTestRequest, isPlayerOwnedTestRequest } from '@/lib/testRequestAudience';
 
@@ -412,62 +419,214 @@ export function TestRequestOverlay() {
       })()
     : null;
 
-  return (
-    <>
-      {isMaster && <MasterWatchPanel />}
-      <div className="fixed inset-0 z-[200] flex items-center justify-center bg-background/90 p-3 backdrop-blur-md animate-in fade-in duration-200 sm:p-6">
-        <div className="relative max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl overflow-y-auto rounded-lg border border-border/90 bg-card/95 shadow-[0_35px_90px_-30px_hsl(var(--background))] before:pointer-events-none before:absolute before:inset-x-20 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-accent before:to-transparent">
-          {(isMaster || current.result) && (
-            <Button
-              onClick={() => (isMaster ? dismiss(current.id) : ackResult(current.id))}
-              variant="ghost"
-              size="icon-sm"
-              className="absolute right-3 top-3 z-10"
-              aria-label="Dispensar"
-            >
-              <X className="w-5 h-5" />
-            </Button>
-          )}
+  // ──────────────────────────────────────────────────────────────────
+  // MESTRE — painel clássico (acompanha/rola pedidos de NPCs).
+  // ──────────────────────────────────────────────────────────────────
+  if (isMaster) {
+    return (
+      <>
+        <MasterWatchPanel />
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-background/90 p-3 backdrop-blur-md animate-in fade-in duration-200 sm:p-6">
+          <div className="relative max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl overflow-y-auto rounded-lg border border-border/90 bg-card/95 shadow-[0_35px_90px_-30px_hsl(var(--background))] before:pointer-events-none before:absolute before:inset-x-20 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-accent before:to-transparent">
+            {(current.result) && (
+              <Button
+                onClick={() => dismiss(current.id)}
+                variant="ghost"
+                size="icon-sm"
+                className="absolute right-3 top-3 z-10"
+                aria-label="Dispensar"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            )}
 
-          <div className="border-b border-border/70 bg-secondary/30 px-5 pb-5 pt-6 text-center sm:px-8">
-            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-md border border-accent/30 bg-accent/10 text-accent"><ShieldQuestion className="h-5 w-5" /></div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-accent/75">{kindLabel}</div>
-            <h2 className="mt-1 font-display text-2xl font-black uppercase text-foreground sm:text-3xl">{current.testName}</h2>
-            <div className="mt-1 text-sm text-muted-foreground">Desafio para <span className="font-semibold text-foreground">{current.charName}</span></div>
-            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-            {showDc && (
-              <div className="rounded-md border border-accent/30 bg-accent/10 px-3 py-1 text-sm font-bold text-accent">CD {current.dc}</div>
-            )}
-            {!showDc && current.dc != null && !isMaster && (
-              <div className="rounded-md border border-border bg-muted/40 px-3 py-1 text-xs italic text-muted-foreground">
-                CD oculta
+            <div className="border-b border-border/70 bg-secondary/30 px-5 pb-5 pt-6 text-center sm:px-8">
+              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-md border border-accent/30 bg-accent/10 text-accent"><ShieldQuestion className="h-5 w-5" /></div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-accent/75">{kindLabel}</div>
+              <h2 className="mt-1 font-display text-2xl font-black uppercase text-foreground sm:text-3xl">{current.testName}</h2>
+              <div className="mt-1 text-sm text-muted-foreground">Desafio para <span className="font-semibold text-foreground">{current.charName}</span></div>
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+              {showDc && (
+                <div className="rounded-md border border-accent/30 bg-accent/10 px-3 py-1 text-sm font-bold text-accent">CD {current.dc}</div>
+              )}
+              {!showDc && current.dc != null && (
+                <div className="rounded-md border border-border bg-muted/40 px-3 py-1 text-xs italic text-muted-foreground">
+                  CD oculta
+                </div>
+              )}
+              {advPreview === 'advantage' && (
+                <div className="rounded-md border border-neon-green/30 bg-neon-green/10 px-3 py-1 text-xs font-bold text-neon-green">
+                  Vantagem
+                </div>
+              )}
+              {advPreview === 'disadvantage' && (
+                <div className="rounded-md border border-neon-red/30 bg-neon-red/10 px-3 py-1 text-xs font-bold text-neon-red">
+                  Desvantagem
+                </div>
+              )}
+              {autoPreview === 'success' && (
+                <div className="rounded-md border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-bold text-accent">
+                  Sucesso garantido
+                </div>
+              )}
+              {autoPreview === 'failure' && (
+                <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-1 text-xs font-bold text-destructive">
+                  Falha garantida
+                </div>
+              )}
+              </div>
+            </div>
+
+            <div className="p-4 sm:p-6">
+              {current.note && <div className="mb-4 flex gap-3 rounded-md border border-accent/20 bg-accent/5 p-3 text-sm italic text-muted-foreground"><Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-accent" /><span>“{current.note}”</span></div>}
+
+            {!char && (
+              <div className="mb-4 text-center text-sm text-destructive">
+                Ficha não encontrada neste cliente.
               </div>
             )}
-            {advPreview === 'advantage' && (
-              <div className="rounded-md border border-neon-green/30 bg-neon-green/10 px-3 py-1 text-xs font-bold text-neon-green">
-                Vantagem
+
+            {/* A bandeja 3D embutida ocupa este espaço enquanto a física resolve o teste. */}
+            {rolling && (
+              <div className="h-[min(480px,56dvh)] overflow-hidden rounded-md border border-accent/25 bg-background/45 animate-in fade-in duration-200" aria-label="Bandeja de dados 3D">
+                <DiceTrayPanel />
               </div>
             )}
-            {advPreview === 'disadvantage' && (
-              <div className="rounded-md border border-neon-red/30 bg-neon-red/10 px-3 py-1 text-xs font-bold text-neon-red">
-                Desvantagem
+
+            {!current.result && !rolling && (
+              <div className="space-y-3">
+                <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-stretch">
+                <Button
+                  size="lg"
+                  onClick={handleRoll}
+                  disabled={!char}
+                  className="h-20 w-full gap-3 bg-accent font-display text-xl font-black uppercase text-accent-foreground shadow-[0_14px_35px_-12px_hsl(var(--accent)/0.7)] hover:bg-accent/90 sm:text-2xl"
+                >
+                  <Dice6 className="w-8 h-8" />
+                  Rolar d20
+                </Button>
+                <div className="flex min-w-32 flex-col items-center justify-center rounded-md border border-border/80 bg-background/45 px-4 py-2 text-center">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Bônus</span>
+                  <strong className="font-display text-2xl text-accent">{bonus >= 0 ? '+' : ''}{bonus}</strong>
+                  <span className="max-w-48 text-[10px] leading-tight text-muted-foreground">{breakdown}</span>
+                  {current.masterBonus ? (
+                    <span className="text-[10px] font-bold text-accent">+ Mestre {current.masterBonus >= 0 ? '+' : ''}{current.masterBonus} (oculto)</span>
+                  ) : null}
+                </div>
+                </div>
               </div>
             )}
-            {autoPreview === 'success' && (
-              <div className="rounded-md border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-bold text-accent">
-                Sucesso garantido
-              </div>
-            )}
-            {autoPreview === 'failure' && (
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-1 text-xs font-bold text-destructive">
-                Falha garantida
+
+            {/* Resultado */}
+            {current.result && !rolling && (
+              <div className={`rounded-md border p-5 text-center animate-in zoom-in-50 fade-in duration-300 ${
+                showOutcome && current.dc != null
+                  ? (current.result.total >= current.dc
+                      ? 'border-neon-green/60 bg-neon-green/10 shadow-[0_0_30px_-5px_hsl(var(--neon-green)/0.5)]'
+                      : 'border-neon-red/60 bg-neon-red/10 shadow-[0_0_30px_-5px_hsl(var(--neon-red)/0.5)]')
+                  : 'border-primary/40 bg-primary/10'
+              }`}>
+                <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Resultado final</div>
+                <div className="mt-1 font-display text-6xl font-black text-foreground">
+                  {current.result.total}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  d20 {current.result.d20}
+                  {current.result.advantageMode && current.result.advantageMode !== 'normal' && current.result.rolls && (
+                    <span className="ml-1">
+                      [{current.result.advantageMode === 'advantage' ? 'V' : 'D'} 2d20({current.result.rolls.join(',')})]
+                    </span>
+                  )}
+                  {' '}+ {current.result.bonus}
+                  {current.result.masterBonus ? (
+                    <div className="mt-1 font-bold text-accent animate-in fade-in duration-700">
+                      Bônus do Mestre revelado: {current.result.masterBonus >= 0 ? '+' : ''}{current.result.masterBonus}
+                    </div>
+                  ) : null}
+                </div>
+                {showOutcome && current.dc != null && (
+                    <div className={`mt-3 font-display text-lg font-black uppercase ${
+                    current.result.total >= current.dc ? 'text-neon-green' : 'text-neon-red'
+                  }`}>
+                    {current.result.total >= current.dc ? '✅ SUCESSO' : '❌ FALHA'}
+                  </div>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => dismiss(current.id)}
+                >
+                  <Check className="w-4 h-4 mr-1" /> Fechar
+                </Button>
               </div>
             )}
             </div>
           </div>
+        </div>
+      </>
+    );
+  }
 
-          <div className="p-4 sm:p-6">
-            {current.note && <div className="mb-4 flex gap-3 rounded-md border border-accent/20 bg-accent/5 p-3 text-sm italic text-muted-foreground"><Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-accent" /><span>“{current.note}”</span></div>}
+  // ──────────────────────────────────────────────────────────────────
+  // JOGADOR — Obsidian fundido: pedido + bandeja 3D numa superfície só.
+  // ──────────────────────────────────────────────────────────────────
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-background/90 p-3 backdrop-blur-md animate-in fade-in duration-200 sm:p-6">
+      <div className={cn(
+        'relative max-h-[calc(100dvh-1.5rem)] w-full overflow-y-auto rounded-sm border border-relic/25 bg-card/95 before:pointer-events-none before:absolute before:inset-x-20 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-relic before:to-transparent transition-[max-width,box-shadow] duration-500',
+        rolling
+          ? 'max-w-5xl shadow-[0_0_80px_-15px_hsl(var(--relic)/0.5)]'
+          : current.result
+            ? 'max-w-lg shadow-[0_35px_90px_-30px_hsl(var(--background))]'
+            : 'max-w-md shadow-[0_35px_90px_-30px_hsl(var(--background))]',
+      )}>
+        {current.result && (
+          <Button
+            onClick={() => ackResult(current.id)}
+            variant="ghost"
+            size="icon-sm"
+            className="absolute right-3 top-3 z-20"
+            aria-label="Dispensar"
+          >
+            <X className="w-5 h-5" />
+          </Button>
+        )}
+
+        {/* Cabeçalho ritualístico */}
+        <div className="border-b border-relic/25 bg-gradient-to-b from-relic/15 via-transparent to-transparent px-5 pb-5 pt-7 text-center sm:px-6">
+          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full border border-relic/40 bg-relic/10 text-relic shadow-[0_0_20px_-4px_hsl(var(--relic)/0.7)]"><ShieldQuestion className="h-5 w-5" /></div>
+          <div className="text-[9px] font-black uppercase tracking-[0.45em] text-relic">{kindLabel}</div>
+          <h2 className="mt-1.5 font-display text-3xl font-black uppercase tracking-tight text-foreground" style={{ textShadow: '0 0 22px hsl(var(--relic)/0.5)' }}>{current.testName}</h2>
+          <div className="mt-1.5 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Desafio de <span className="font-bold text-relic">{current.charName}</span></div>
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+            {showDc && (
+              <div className="rounded-sm border border-relic/40 bg-relic/10 px-3 py-0.5 text-xs font-black text-relic">CD {current.dc}</div>
+            )}
+            {!showDc && current.dc != null && (
+              <div className="rounded-sm border border-border bg-muted/40 px-3 py-0.5 text-[10px] italic text-muted-foreground">CD oculta</div>
+            )}
+            {advPreview === 'advantage' && (
+              <div className="rounded-sm border border-neon-green/30 bg-neon-green/10 px-2.5 py-0.5 text-[11px] font-bold text-neon-green">Vantagem</div>
+            )}
+            {advPreview === 'disadvantage' && (
+              <div className="rounded-sm border border-neon-red/30 bg-neon-red/10 px-2.5 py-0.5 text-[11px] font-bold text-neon-red">Desvantagem</div>
+            )}
+            {autoPreview === 'success' && (
+              <div className="rounded-sm border border-accent/30 bg-accent/10 px-2.5 py-0.5 text-[11px] font-bold text-accent">Sucesso garantido</div>
+            )}
+            {autoPreview === 'failure' && (
+              <div className="rounded-sm border border-destructive/30 bg-destructive/10 px-2.5 py-0.5 text-[11px] font-bold text-destructive">Falha garantida</div>
+            )}
+          </div>
+        </div>
+
+        <div className="p-4 sm:p-5">
+          {current.note && (
+            <div className="mb-4 flex gap-2.5 border-l-2 border-relic/50 bg-relic/5 p-3 text-sm italic text-muted-foreground">
+              <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-relic" /><span>“{current.note}”</span>
+            </div>
+          )}
 
           {!char && (
             <div className="mb-4 text-center text-sm text-destructive">
@@ -475,89 +634,96 @@ export function TestRequestOverlay() {
             </div>
           )}
 
-          {/* A bandeja 3D global ocupa este espaço enquanto a física resolve o teste. */}
-          {rolling && (
-            <div className="h-[min(390px,48dvh)] rounded-md border border-accent/20 bg-background/45 animate-in fade-in duration-200" aria-label="Bandeja de dados 3D">
-              <div className="flex h-full items-end justify-center pb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-accent/60">O destino está em movimento</div>
-            </div>
-          )}
-
-          {!current.result && !rolling && (
-            <div className="space-y-3">
-              <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-stretch">
-              <Button
-                size="lg"
-                onClick={handleRoll}
-                disabled={!char}
-                className="h-20 w-full gap-3 bg-accent font-display text-xl font-black uppercase text-accent-foreground shadow-[0_14px_35px_-12px_hsl(var(--accent)/0.7)] hover:bg-accent/90 sm:text-2xl"
-              >
-                <Dice6 className="w-8 h-8" />
-                Rolar d20
-              </Button>
-              <div className="flex min-w-32 flex-col items-center justify-center rounded-md border border-border/80 bg-background/45 px-4 py-2 text-center">
-                <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Bônus</span>
-                <strong className="font-display text-2xl text-accent">{bonus >= 0 ? '+' : ''}{bonus}</strong>
-                <span className="max-w-48 text-[10px] leading-tight text-muted-foreground">{breakdown}</span>
-                {current.masterBonus ? (isMaster
-                  ? <span className="text-[10px] font-bold text-accent">+ Mestre {current.masterBonus >= 0 ? '+' : ''}{current.masterBonus} (oculto)</span>
-                  : <span className="text-[10px] font-bold text-accent">+ ? do Mestre</span>) : null}
-              </div>
-              </div>
-            </div>
-          )}
-
-          {/* Resultado */}
-          {current.result && !rolling && (
-            <div className={`rounded-md border p-5 text-center animate-in zoom-in-50 fade-in duration-300 ${
-              showOutcome && current.dc != null
-                ? (current.result.total >= current.dc
-                    ? 'border-neon-green/60 bg-neon-green/10 shadow-[0_0_30px_-5px_hsl(var(--neon-green)/0.5)]'
-                    : 'border-neon-red/60 bg-neon-red/10 shadow-[0_0_30px_-5px_hsl(var(--neon-red)/0.5)]')
-                : 'border-primary/40 bg-primary/10'
-            }`}>
-              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Resultado final</div>
-              <div className="mt-1 font-display text-6xl font-black text-foreground">
-                {current.result.total}
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">
-                d20 {current.result.d20}
-                {current.result.advantageMode && current.result.advantageMode !== 'normal' && current.result.rolls && (
-                  <span className="ml-1">
-                    [{current.result.advantageMode === 'advantage' ? 'V' : 'D'} 2d20({current.result.rolls.join(',')})]
-                  </span>
-                )}
-                {' '}+ {current.result.bonus}
-                {current.result.masterBonus ? (
-                  <div className="mt-1 font-bold text-accent animate-in fade-in duration-700">
-                    Bônus do Mestre revelado: {current.result.masterBonus >= 0 ? '+' : ''}{current.result.masterBonus}
+          {/* Fosso mesclado: pré-rolagem → rolagem (espaço grande) → resultado */}
+          {char && (
+            <div className={cn(
+              'relative overflow-hidden rounded-sm border bg-background transition-all duration-500',
+              rolling
+                ? 'h-[min(600px,64dvh)] border-relic/30 shadow-[inset_0_0_60px_hsl(var(--background)),0_0_45px_-12px_hsl(var(--relic)/0.5)]'
+                : current.result
+                  ? 'min-h-[280px] border-border'
+                  : 'h-64 border-border shadow-[inset_0_4px_24px_hsl(var(--background)/0.8)] sm:h-72',
+            )}>
+              {rolling ? (
+                <div className="absolute inset-0 animate-in fade-in duration-300" aria-label="Bandeja de dados 3D">
+                  <DiceTrayPanel />
+                </div>
+              ) : current.result ? (
+                <div className="absolute inset-0 flex items-center justify-center p-4">
+                  <div className={cn('w-full rounded-md border p-5 text-center animate-in zoom-in-50 fade-in duration-300',
+                    showOutcome && current.dc != null
+                      ? (current.result.total >= current.dc
+                          ? 'border-neon-green/60 bg-neon-green/10 shadow-[0_0_30px_-5px_hsl(var(--neon-green)/0.5)]'
+                          : 'border-neon-red/60 bg-neon-red/10 shadow-[0_0_30px_-5px_hsl(var(--neon-red)/0.5)]')
+                      : 'border-primary/40 bg-primary/10',
+                  )}>
+                    <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Resultado final</div>
+                    <div className="mt-1 font-display text-6xl font-black text-foreground">{current.result.total}</div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      d20 {current.result.d20}
+                      {current.result.advantageMode && current.result.advantageMode !== 'normal' && current.result.rolls && (
+                        <span className="ml-1">[{current.result.advantageMode === 'advantage' ? 'V' : 'D'} 2d20({current.result.rolls.join(',')})]</span>
+                      )}
+                      {' '}+ {current.result.bonus}
+                      {current.result.masterBonus ? (
+                        <div className="mt-1 font-bold text-relic animate-in fade-in duration-700">
+                          Bônus do Mestre revelado: {current.result.masterBonus >= 0 ? '+' : ''}{current.result.masterBonus}
+                        </div>
+                      ) : null}
+                    </div>
+                    {showOutcome && current.dc != null && (
+                      <div className={cn('mt-3 font-display text-lg font-black uppercase', current.result.total >= current.dc ? 'text-neon-green' : 'text-neon-red')}>
+                        {current.result.total >= current.dc ? '✅ SUCESSO' : '❌ FALHA'}
+                      </div>
+                    )}
+                    {!showOutcome && current.dc != null && (
+                      <div className="mt-2 text-xs italic text-muted-foreground">Resultado enviado ao mestre.</div>
+                    )}
+                    <Button variant="outline" size="sm" className="mt-3" onClick={() => ackResult(current.id)}>
+                      <Check className="w-4 h-4 mr-1" /> Fechar
+                    </Button>
                   </div>
-                ) : null}
-              </div>
-              {showOutcome && current.dc != null && (
-                  <div className={`mt-3 font-display text-lg font-black uppercase ${
-                  current.result.total >= current.dc ? 'text-neon-green' : 'text-neon-red'
-                }`}>
-                  {current.result.total >= current.dc ? '✅ SUCESSO' : '❌ FALHA'}
                 </div>
+              ) : (
+                <>
+                  {/* Círculo de invocação */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="relative flex h-28 w-28 items-center justify-center rounded-full border border-relic/25 bg-relic/5">
+                      <div className="absolute -inset-2 animate-pulse rounded-full border border-relic/10" />
+                      <span className="text-center text-[9px] font-black uppercase leading-relaxed tracking-[0.35em] text-relic/70">Solte o<br />Destino</span>
+                    </div>
+                  </div>
+                  {/* Controles ancorados no fundo do fosso */}
+                  <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 bg-gradient-to-t from-background via-background/85 to-transparent p-4 pt-10">
+                    <Button
+                      size="lg"
+                      onClick={handleRoll}
+                      disabled={!char}
+                      className="h-16 flex-1 gap-3 border border-relic/40 bg-gradient-to-b from-relic/30 to-relic-deep/60 font-display text-lg font-black uppercase tracking-[0.18em] text-foreground shadow-[0_12px_30px_-10px_hsl(var(--relic)/0.7)] hover:from-relic/45 hover:to-relic-deep/70"
+                    >
+                      <Dice6 className="h-6 w-6 text-relic" />Rolar D20
+                    </Button>
+                    <div className="w-24 shrink-0 rounded-sm border border-relic/30 bg-relic-deep/40 px-2 py-2 text-center">
+                      <div className="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground">Bônus</div>
+                      <strong className="font-display text-2xl text-relic">{bonus >= 0 ? '+' : ''}{bonus}</strong>
+                      <div className="text-[9px] leading-tight text-muted-foreground">{breakdown}</div>
+                      {current.masterBonus ? <div className="text-[9px] font-black text-relic">+ ? do Mestre</div> : null}
+                    </div>
+                  </div>
+                </>
               )}
-              {!showOutcome && current.dc != null && !isMaster && (
-                <div className="mt-2 text-xs italic text-muted-foreground">
-                  Resultado enviado ao mestre.
-                </div>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-3"
-                onClick={() => (isMaster ? dismiss(current.id) : ackResult(current.id))}
-              >
-                <Check className="w-4 h-4 mr-1" /> Fechar
-              </Button>
             </div>
           )}
+
+          {/* Rodapé de status */}
+          <div className="mt-3 flex items-center justify-between px-1">
+            <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-muted-foreground/60">
+              {rolling ? 'O destino está em movimento' : current.result ? 'Destino revelado' : 'Aguardando sua escolha'}
+            </span>
+            <div className="flex gap-1 text-[8px] text-relic/50"><span>◆</span><span>◆</span><span>◆</span></div>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
