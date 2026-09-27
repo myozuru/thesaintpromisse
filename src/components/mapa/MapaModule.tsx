@@ -1187,7 +1187,8 @@ export function MapaModule() {
       for (const id of effectiveOrder) {
         const e = entities[id];
         if (!e) continue;
-        const forced = selectedIds.includes(id);
+        // Nomes sempre visíveis para todos (a menos que o mestre oculte via hideName).
+        const forced = true;
         const live = resolveEntityNameplateStats(e, charsById.characters, charsById.byId);
         const ownsEntity = playerOwnsEntity(e, activePid, charsById.characters);
         const hideStats = !viewerIsMaster && !ownsEntity;

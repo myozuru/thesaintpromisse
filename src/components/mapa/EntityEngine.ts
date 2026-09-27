@@ -453,14 +453,14 @@ export function drawNameplate(
   let baseY = b.y2 + 6 / scale;
 
 
-  if (showLabel && e.label) {
+  if (showLabel && label) {
     const fontPx = 12 / scale;
     ctx.font = `${fontPx}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     const padX = 6 / scale;
     const padY = 2 / scale;
-    const metrics = ctx.measureText(e.label);
+    const metrics = ctx.measureText(label);
     const tw = metrics.width;
     const th = fontPx;
     const y = baseY + (showHp ? 4 / scale : 0);
