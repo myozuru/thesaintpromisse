@@ -41,6 +41,12 @@ export interface TestRequest {
   /** Tag para correlacionar resultado com a origem (ex.: feitiço.id + targetId). */
   sourceTag?: string;
   createdAt: number;
+  /**
+   * Preenchido quando o JOGADOR fecha o resultado na tela dele.
+   * O pedido continua existindo (com o resultado) até o MESTRE dispensar,
+   * para que o mestre sempre consiga ver o que saiu antes de fechar.
+   */
+  playerAckedAt?: number;
   /** Resultado, preenchido após o jogador rolar. */
   result?: {
     d20: number;
@@ -60,6 +66,8 @@ interface TestRequestState {
   requests: TestRequest[];
   enqueue: (r: Omit<TestRequest, 'id' | 'createdAt' | 'result'>) => void;
   setResult: (id: string, result: NonNullable<TestRequest['result']>) => void;
+  /** Jogador confirma que viu o resultado (não remove — o mestre ainda vê). */
+  ackResult: (id: string) => void;
   dismiss: (id: string) => void;
   clearAll: () => void;
 }
@@ -78,6 +86,10 @@ export const useTestRequestStore = create<TestRequestState>()(
       setResult: (id, result) =>
         set((s) => ({
           requests: s.requests.map((x) => (x.id === id ? { ...x, result } : x)),
+        })),
+      ackResult: (id) =>
+        set((s) => ({
+          requests: s.requests.map((x) => (x.id === id ? { ...x, playerAckedAt: Date.now() } : x)),
         })),
       dismiss: (id) =>
         set((s) => ({ requests: s.requests.filter((x) => x.id !== id) })),
