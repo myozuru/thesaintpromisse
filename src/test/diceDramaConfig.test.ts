@@ -7,9 +7,13 @@ describe("configuração dramática dos dados", () => {
       const previous = DICE_DRAMA_CONFIG[level - 1];
       const current = DICE_DRAMA_CONFIG[level];
       expect(current.timeScale).toBeLessThan(previous.timeScale);
+      expect(current.velocityMultiplier).toBeGreaterThan(previous.velocityMultiplier);
+      expect(current.spinMultiplier).toBeGreaterThan(previous.spinMultiplier);
       expect(current.verticalImpulse).toBeGreaterThan(previous.verticalImpulse);
       expect(current.restitution).toBeGreaterThan(previous.restitution);
       expect(current.gravityScale).toBeLessThan(previous.gravityScale);
+      expect(current.linearDamping).toBeLessThan(previous.linearDamping);
+      expect(current.angularDamping).toBeLessThan(previous.angularDamping);
       expect(current.trayRoof).toBeGreaterThan(previous.trayRoof);
       expect(current.impactGain).toBeGreaterThan(previous.impactGain);
       expect(current.impactPitch).toBeLessThan(previous.impactPitch);
@@ -24,6 +28,8 @@ describe("configuração dramática dos dados", () => {
     expect(legendary.timeScale).toBeLessThanOrEqual(epic.timeScale * 0.4);
     expect(legendary.verticalImpulse).toBeGreaterThan(epic.verticalImpulse * 2);
     expect(legendary.trayRoof).toBeGreaterThan(epic.trayRoof * 1.5);
+    expect(legendary.velocityMultiplier).toBeGreaterThanOrEqual(1.5);
+    expect(legendary.spinMultiplier).toBeGreaterThanOrEqual(1.6);
   });
 
   it("limita níveis inválidos sem quebrar a rolagem", () => {

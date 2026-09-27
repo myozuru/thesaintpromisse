@@ -153,6 +153,12 @@
     --input: 268 22% 16%;
     --ring: 268 85% 62%;
   }
+
+  /* Identidade visual do pedido do jogador: normal, tenso, épico e lendário. */
+  .test-drama-0 { --relic: 268 85% 62%; --relic-deep: 265 42% 7%; }
+  .test-drama-1 { --relic: 210 88% 62%; --relic-deep: 218 55% 7%; }
+  .test-drama-2 { --relic: 35 92% 57%; --relic-deep: 22 62% 7%; }
+  .test-drama-3 { --relic: 0 82% 55%; --relic-deep: 350 65% 6%; }
 }
 
 @layer base {

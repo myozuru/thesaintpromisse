@@ -143,21 +143,25 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
     rb.wakeUp?.();
     rb.setLinvel(
       {
-        x: dieThrow.linearVelocity.x * THROW_SPEED * power,
-        y: dieThrow.linearVelocity.y * THROW_SPEED * dramaConfig.verticalImpulse,
-        z: dieThrow.linearVelocity.z * THROW_SPEED * power,
+        x: dieThrow.linearVelocity.x * THROW_SPEED * power * dramaConfig.velocityMultiplier,
+        y: dieThrow.linearVelocity.y * THROW_SPEED * dramaConfig.verticalImpulse * dramaConfig.velocityMultiplier,
+        z: dieThrow.linearVelocity.z * THROW_SPEED * power * dramaConfig.velocityMultiplier,
       },
       true,
     );
     rb.setAngvel(
-      { x: dieThrow.angularVelocity.x * SPIN_SPEED * power, y: dieThrow.angularVelocity.y * SPIN_SPEED * power, z: dieThrow.angularVelocity.z * SPIN_SPEED * power },
+      {
+        x: dieThrow.angularVelocity.x * SPIN_SPEED * power * dramaConfig.spinMultiplier,
+        y: dieThrow.angularVelocity.y * SPIN_SPEED * power * dramaConfig.spinMultiplier,
+        z: dieThrow.angularVelocity.z * SPIN_SPEED * power * dramaConfig.spinMultiplier,
+      },
       true,
     );
     thrownRef.current = true;
     thrownAtRef.current = performance.now() / 1000;
     lowSpeedSinceRef.current = null;
     dampingAppliedRef.current = false;
-  }, [armed, dieThrow, dramaConfig.verticalImpulse, power]);
+  }, [armed, dieThrow, dramaConfig.spinMultiplier, dramaConfig.velocityMultiplier, dramaConfig.verticalImpulse, power]);
 
   // Resetar cursor quando desmontar.
   useEffect(() => () => { document.body.style.cursor = ''; }, []);
@@ -208,8 +212,8 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
       friction={1.1}
       restitution={Math.min(0.99, 0.55 * bounciness * dramaConfig.restitution)}
       ccd
-      linearDamping={0.3}
-      angularDamping={0.4}
+      linearDamping={dramaConfig.linearDamping}
+      angularDamping={dramaConfig.angularDamping}
       position={position}
       rotation={rotation}
       linearVelocity={[0, 0, 0]}
