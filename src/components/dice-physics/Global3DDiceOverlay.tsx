@@ -4,6 +4,7 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { X, Sparkles, Hand, Zap } from 'lucide-react';
 import { DiceTray, type DiceTrayApi, type DiceRollResult } from './index';
+import { MAX_THROW_POWER } from './DiceTray';
 import { useDice3DStore } from '@/stores/useDice3DStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { Slider } from '@/components/ui/slider';
@@ -32,6 +33,40 @@ export function Global3DDiceOverlay() {
   const [trayFailed, setTrayFailed] = useState(false);
   const [lastLayout, setLastLayout] = useState<'default' | 'test-request'>('default');
   const activeRollIdRef = useRef<string | null>(null);
+  /** Nível de drama da rolagem atual (0 = normal). */
+  const [drama, setDrama] = useState<0 | 1 | 2 | 3>(0);
+  /** true enquanto o resultado é segurado em suspense (modo dramático). */
+  const [revealing, setRevealing] = useState(false);
+  const [shake, setShake] = useState(false);
+  /** Carga do lançamento ao segurar o botão (0..1). */
+  const [charge, setCharge] = useState(0);
+  const chargeStartRef = useRef<number | null>(null);
+  const chargeRafRef = useRef<number | null>(null);
+  const CHARGE_MS = 1800;
+
+  const stopCharge = () => {
+    if (chargeRafRef.current) cancelAnimationFrame(chargeRafRef.current);
+    chargeRafRef.current = null;
+    chargeStartRef.current = null;
+    setCharge(0);
+  };
+  const startCharge = () => {
+    if (phase !== 'armed' || chargeStartRef.current != null) return;
+    chargeStartRef.current = performance.now();
+    const tick = () => {
+      if (chargeStartRef.current == null) return;
+      setCharge(Math.min(1, (performance.now() - chargeStartRef.current) / CHARGE_MS));
+      chargeRafRef.current = requestAnimationFrame(tick);
+    };
+    tick();
+  };
+  const releaseCharge = () => {
+    if (chargeStartRef.current == null) return;
+    const c = Math.min(1, (performance.now() - chargeStartRef.current) / CHARGE_MS);
+    stopCharge();
+    apiRef.current?.throwAll(1 + c * (MAX_THROW_POWER - 1));
+  };
+  useEffect(() => () => stopCharge(), []);
 
   const closeTray = () => {
     activeRollIdRef.current = null;
@@ -44,6 +79,8 @@ export function Global3DDiceOverlay() {
   useEffect(() => {
     if (!current) return;
     setLastLayout(current.layout ?? 'default');
+    setDrama(current.drama ?? 0);
+    setRevealing(false);
     // A bandeja 3D carrega sob demanda: na primeira rolagem (comum no jogador,
     // que ainda não abriu a bandeja) ela ainda não existe quando o pedido chega.
     // Esperamos ela ficar pronta em vez de desistir — antes o pedido ficava
@@ -56,7 +93,7 @@ export function Global3DDiceOverlay() {
       if (cancelled) return;
       const api = apiRef.current;
       if (!api) {
-        if (Date.now() - startedAt > 15000) {
+        if (Date.now() - startedAt > 30000) {
           // Não carregou (ex.: navegador sem 3D): NÃO rola sozinho — mostra
           // um botão para o jogador rolar manualmente quando quiser.
           setTrayFailed(true);
@@ -82,7 +119,7 @@ export function Global3DDiceOverlay() {
 
   return (
     <div
-      className={cn('fixed z-[9999] overflow-hidden pointer-events-auto border border-primary/30', lastLayout === 'test-request' ? 'left-1/2 top-1/2 w-[min(640px,calc(100vw-3rem))] -translate-x-1/2 -translate-y-1/2 rounded-lg' : 'bottom-4 right-4 w-[360px] rounded-xl')}
+      className={cn('fixed z-[9999] overflow-hidden pointer-events-auto border border-primary/30', lastLayout === 'test-request' ? 'left-1/2 top-1/2 w-[min(760px,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-lg' : 'bottom-4 right-4 w-[min(440px,calc(100vw-2rem))] rounded-xl', drama >= 1 && current && 'border-accent/60', drama >= 2 && current && 'ring-2 ring-accent/40', drama >= 1 && current && 'animate-pulse [animation-duration:2.4s]', shake && 'animate-[dice-shake_0.6s_ease-in-out]')}
       style={{
         background:
           'linear-gradient(135deg, hsl(265 30% 7% / 0.96) 0%, hsl(270 35% 5% / 0.96) 100%)',
@@ -138,7 +175,7 @@ export function Global3DDiceOverlay() {
         </div>
       )}
 
-      <div className={cn('relative', lastLayout === 'test-request' ? 'h-[min(390px,52dvh)]' : 'h-[280px]')}>
+      <div className={cn('relative', lastLayout === 'test-request' ? 'h-[min(480px,58dvh)]' : 'h-[340px]')}>
         {/* Véu místico atrás do canvas */}
         <div
           className="absolute inset-0 pointer-events-none"
@@ -172,21 +209,53 @@ export function Global3DDiceOverlay() {
               if (!pending || activeRollIdRef.current !== pending.id) return;
               const bonus = pending.bonus ?? 0;
               activeRollIdRef.current = null;
-              setLastResults(results);
-              setLastBonus(bonus);
-              setLastTotal(total + bonus);
               setPhase('idle');
-              // Resolve a Promise associada (caminho oficial) — se for só visual, resolveCurrent simplesmente avança.
-              resolveCurrent(results.map((r) => r.value));
-              const next = useDice3DStore.getState().current;
-              if (pending.layout === 'test-request' && !next) {
-                setVisible(false);
-                apiRef.current?.clear();
-              }
+              const lvl = pending.drama ?? 0;
+              // Suspense antes de revelar e tempo para apreciar o resultado.
+              const revealDelay = [0, 700, 1400, 2200][lvl];
+              const holdAfter = [0, 900, 1400, 2000][lvl];
+              const finish = () => {
+                setRevealing(false);
+                setLastResults(results);
+                setLastBonus(bonus);
+                setLastTotal(total + bonus);
+                if (lvl >= 3) { setShake(true); setTimeout(() => setShake(false), 600); }
+                const close = () => {
+                  // Resolve a Promise associada (caminho oficial) — se for só visual, resolveCurrent simplesmente avança.
+                  resolveCurrent(results.map((r) => r.value));
+                  const next = useDice3DStore.getState().current;
+                  if (pending.layout === 'test-request' && !next) {
+                    setVisible(false);
+                    apiRef.current?.clear();
+                  }
+                };
+                if (holdAfter) setTimeout(close, holdAfter); else close();
+              };
+              if (revealDelay) { setRevealing(true); setTimeout(finish, revealDelay); } else finish();
               // Fora de pedidos, a bandeja permanece aberta até o usuário fechar.
             }}
           />
         </Suspense>
+
+        {current && phase === 'idle' && !trayFailed && !revealing && lastTotal === null && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center text-xs italic text-muted-foreground pointer-events-none">
+            Carregando os dados…
+          </div>
+        )}
+
+        {drama >= 1 && current && (
+          <div
+            className="absolute inset-0 pointer-events-none z-[3]"
+            style={{ boxShadow: `inset 0 0 ${40 + drama * 30}px ${10 + drama * 10}px hsl(265 80% 3% / ${0.5 + drama * 0.12})` }}
+          />
+        )}
+
+        {revealing && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 pointer-events-none">
+            <div className="font-display text-4xl font-black tracking-[0.4em] text-accent animate-pulse" style={{ textShadow: '0 0 18px hsl(42 78% 58% / 0.8)' }}>…</div>
+            <div className="text-[10px] uppercase tracking-[0.3em] text-accent/70">{drama >= 3 ? 'O destino hesita' : drama === 2 ? 'Os astros decidem' : 'Revelando'}</div>
+          </div>
+        )}
 
         {trayFailed && current && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 p-4">
@@ -217,18 +286,21 @@ export function Global3DDiceOverlay() {
 
         {phase === 'armed' && (
           <button
-            onClick={() => {
-              if (phase !== 'armed') return;
-              apiRef.current?.throwAll();
-            }}
+            onPointerDown={(e) => { e.currentTarget.setPointerCapture?.(e.pointerId); startCharge(); }}
+            onPointerUp={releaseCharge}
+            onPointerCancel={stopCharge}
+            onKeyDown={(e) => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); startCharge(); } }}
+            onKeyUp={(e) => { if (e.key === ' ' || e.key === 'Enter') releaseCharge(); }}
             className="absolute top-2 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 rounded-md border border-accent/40 bg-primary/30 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-accent hover:bg-primary/50 transition-all animate-pulse"
             style={{
               fontFamily: "'Cinzel', serif",
               boxShadow: '0 0 16px hsl(42 78% 58% / 0.35)',
             }}
-            title="Clique aqui ou diretamente em um dado para lançar"
+            title="Clique para lançar; segure para lançar com mais força"
           >
-            <Hand className="h-3.5 w-3.5" /> Clique nos dados para lançar
+            <span className="absolute inset-y-0 left-0 rounded-md bg-accent/30" style={{ width: `${charge * 100}%` }} />
+            <Hand className="relative h-3.5 w-3.5" />
+            <span className="relative">{charge > 0 ? `Força ${Math.round(100 + charge * (MAX_THROW_POWER - 1) * 100)}%` : 'Clique ou segure para lançar'}</span>
           </button>
         )}
 
