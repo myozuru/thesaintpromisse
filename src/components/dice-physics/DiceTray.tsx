@@ -101,7 +101,9 @@ export function DiceTray({
   style,
   envPreset = "city",
 }: DiceTrayProps) {
-  const slowMo = DRAMA_TIME_SCALE[useDice3DStore((st) => st.current?.drama ?? 0)] ?? 1;
+  const drama = useDice3DStore((st) => st.current?.drama ?? 0);
+  const slowMo = DRAMA_TIME_SCALE[drama] ?? 1;
+  const palette = DICE_DRAMA_CONFIG[drama]?.palette ?? DICE_DRAMA_CONFIG[0].palette;
   const [dice, setDice] = useState<RollingDie[]>([]);
   /** Enquanto true, os dados estão parados aguardando clique. */
   const [armed, setArmed] = useState(false);
@@ -182,20 +184,20 @@ export function DiceTray({
   return (
     <div className={className} style={{ width: "100%", height: "100%", ...style }}>
       <Canvas frameloop="always" dpr={[1, 1.25]} gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}>
-        <color attach="background" args={["#0d0617"]} />
-        <fog attach="fog" args={["#0d0617", 6, 16]} />
+        <color attach="background" args={[palette.bg]} />
+        <fog attach="fog" args={[palette.bg, 6, 16]} />
         {/* Iluminação local (sem baixar HDR da internet, que travava/lagava). */}
         <Environment resolution={64}>
           <Lightformer intensity={2} position={[0, 5, 0]} scale={[10, 10, 1]} />
-          <Lightformer intensity={1} color="#b48cff" position={[-5, 1, -1]} rotation-y={Math.PI / 2} scale={[20, 1, 1]} />
-          <Lightformer intensity={0.8} color="#e8c46b" position={[5, 1, 1]} rotation-y={-Math.PI / 2} scale={[20, 1, 1]} />
+          <Lightformer intensity={1} color={palette.accentA} position={[-5, 1, -1]} rotation-y={Math.PI / 2} scale={[20, 1, 1]} />
+          <Lightformer intensity={0.8} color={palette.accentB} position={[5, 1, 1]} rotation-y={-Math.PI / 2} scale={[20, 1, 1]} />
         </Environment>
-        {/* Ambiência mística: violeta + dourado oculto */}
-        <ambientLight intensity={0.25} color="#3a1d6e" />
-        <directionalLight position={[2, 5, 2]} intensity={0.7} color="#c9a14a" />
-        <pointLight position={[-2, 3, -1]} intensity={2.2} color="#9b5cff" distance={8} decay={2} />
-        <pointLight position={[2, 1.5, 2]} intensity={1.4} color="#e8c46b" distance={6} decay={2} />
-        <spotLight position={[0, 6, 0]} angle={0.6} penumbra={0.8} intensity={1.2} color="#a875ff" />
+        {/* Ambiência mística: a paleta muda conforme o nível de drama da rolagem. */}
+        <ambientLight intensity={0.25} color={palette.ambient} />
+        <directionalLight position={[2, 5, 2]} intensity={0.7} color={palette.accentB} />
+        <pointLight position={[-2, 3, -1]} intensity={2.2} color={palette.accentA} distance={8} decay={2} />
+        <pointLight position={[2, 1.5, 2]} intensity={1.4} color={palette.accentB} distance={6} decay={2} />
+        <spotLight position={[0, 6, 0]} angle={0.6} penumbra={0.8} intensity={1.2} color={palette.accentA} />
         <PerspectiveCamera makeDefault fov={34} position={[0, 5.4, 0.8]} />
         <OrbitControls
           target={[0, 0, 0]}
