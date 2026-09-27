@@ -890,7 +890,7 @@ interface CharacterStore {
    * `currentHourKey` deve ser monotonicamente crescente (year*8760 + ... + hours).
    * Idempotente — só processa o delta entre `lastHungerHourKey` e o atual.
    */
-  tickHunger: (currentHourKey: number) => void;
+  tickHunger: (currentHourKey: number, charge?: boolean) => void;
   /** Define manualmente a fome de um personagem (UI / Mestre). Clamp 0..HUNGER_MAX. */
   setHunger: (charId: string, value: number) => void;
   /**
@@ -4583,7 +4583,7 @@ export const useCharacterStore = create<CharacterStore>()(
             };
           }),
         })),
-      tickHunger: (currentHourKey) => {
+      tickHunger: (currentHourKey, charge = true) => {
         // Snapshot que precisa atualizar via setExhaustion (que sincroniza condições/morte)
         const updates: Array<{ id: string; exhaustion: number }> = [];
         set((state) => ({
@@ -4604,7 +4604,7 @@ export const useCharacterStore = create<CharacterStore>()(
             // Relógio voltou ou deu um salto enorme (troca de dispositivo, sincronização
             // com o relógio do Mestre, reset do calendário): apenas realinha o marcador,
             // sem cobrar fome — senão todos recebiam Exaustão até morrer.
-            if (deltaHours < 0 || deltaHours >= HUNGER_MAX) {
+            if (!charge || deltaHours < 0 || deltaHours >= HUNGER_MAX) {
               return { ...c, lastHungerHourKey: currentHourKey };
             }
             let hunger = c.hunger ?? HUNGER_MAX;
