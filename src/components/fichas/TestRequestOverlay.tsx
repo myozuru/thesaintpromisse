@@ -332,7 +332,7 @@ export function TestRequestOverlay() {
       if (auto.outcome === 'failure' && total >= current.dc) total = current.dc - 1;
     }
 
-    // Revela após ~1.4s de suspense
+    // A própria física já cria o suspense; revela logo após o dado parar.
     setTimeout(() => {
       setRolling(false);
       setResult(current.id, {
@@ -397,7 +397,7 @@ export function TestRequestOverlay() {
           });
         })();
       }
-    }, 1400);
+    }, auto.outcome ? 500 : 200);
   };
 
   const advPreview = char ? peekAdvantageFor(char.id, buildRollContext(current)) : 'normal';
