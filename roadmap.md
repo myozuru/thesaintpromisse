@@ -9,6 +9,8 @@
 - [x] Allow circular character tokens to switch back to free images and add a themed double border.
 - [x] Share temporary-sheet templates through the cloud while preserving legacy browser-saved models.
 - [x] Bind personal money wallets to each player's linked sheet and let the Master create assigned wallets.
+- [ ] Turn Master test requests into a draggable/docked overlay without leaving the map.
+- [ ] Center the real 3D dice tray inside the player's received test flow.
 
 ## Pendências de regras
 - [ ] Suporte Nv 4 — "No Último Segundo": implementar junto com os testes da Porta da Morte (contador de fracassos). Lembrar o usuário quando a Porta da Morte for feita.

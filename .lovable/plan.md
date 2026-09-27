@@ -1,16 +1,17 @@
-# Corrigir travamento dos dados 3D por cliques rápidos
+# Janela flutuante de testes e bandeja central
 
 ## Objetivo
-Impedir que cliques repetidos iniciem lançamentos concorrentes e garantir que a bandeja nunca fique presa sem poder rolar ou fechar.
+Permitir que o Mestre solicite testes sem sair do mapa e tornar a rolagem recebida pelo jogador mais clara e centralizada.
 
 ## Alterações
-- Tornar o comando de lançar atômico: o primeiro clique muda imediatamente o estado; os seguintes são ignorados.
-- Identificar cada rodada dentro da bandeja para que resultados atrasados não afetem a rodada seguinte.
-- Liberar o fechamento como recuperação segura: ao fechar uma rolagem pendente, cancelar apenas aquela rodada e permitir novas rolagens.
-- Limpar estados locais da bandeja ao trocar, concluir ou cancelar um pedido.
-- Preservar o resultado vindo da orientação física final do dado.
+- Fazer o botão **R** abrir e fechar uma janela de pedidos independente da aba atual.
+- Criar dois modos para essa janela: flutuante e arrastável, ou lateral no canto superior esquerdo, sempre abaixo do relógio e sobre o restante da tela.
+- Adaptar o formulário e o histórico para uma largura menor, preservando seleção múltipla, CD, opções ocultas, nota, envio e acompanhamento.
+- No pedido recebido pelo jogador, reservar o centro da tela para a bandeja 3D real e posicionar as informações e ações ao redor dela.
+- Centralizar a bandeja global enquanto ela estiver atendendo ao pedido, sem alterar a física, fila ou cálculo do resultado.
 
 ## Verificação
-- Testar vários cliques síncronos no botão e nos dados, comprovando um único lançamento.
-- Testar fechar durante preparação e durante rolagem, depois abrir e rolar novamente.
-- Rodar os testes de encerramento físico e verificar a compilação da prévia.
+- Confirmar que o mapa continua visível e utilizável atrás da janela do Mestre nos dois modos.
+- Confirmar arraste, encaixe lateral, troca de modo, fechamento e reabertura pelo botão **R**.
+- Confirmar que o jogador inicia a rolagem no pedido e interage com os dados no centro da tela.
+- Rodar os testes relacionados a pedidos/dados e verificar a prévia em largura desktop e móvel.
