@@ -152,7 +152,17 @@ export const useMoneyStore = create<MoneyState>()(
         const existing = get().wallets.find(
           (w) => w.isPersonal && w.members.length === 1 && w.members[0] === characterId,
         );
-        if (existing) return existing.id;
+        if (existing) {
+          const canonicalName = `Carteira de ${characterName}`;
+          if (existing.name !== canonicalName) {
+            set((s) => ({
+              wallets: s.wallets.map((wallet) =>
+                wallet.id === existing.id ? { ...wallet, name: canonicalName } : wallet,
+              ),
+            }));
+          }
+          return existing.id;
+        }
         const id = uid();
         const wallet: Wallet = {
           id,
