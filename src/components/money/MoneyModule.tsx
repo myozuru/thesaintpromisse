@@ -80,6 +80,20 @@ function MasterMoneyView() {
     setGrantReason('');
   };
 
+  const handleRemove = () => {
+    if (!grantWalletId || !grantCurrencyId || grantAmount <= 0) return;
+    const w = wallets.find((x) => x.id === grantWalletId);
+    const available = w?.balances[grantCurrencyId] ?? 0;
+    const amount = Math.min(grantAmount, available);
+    if (amount <= 0) return;
+    useMoneyStore
+      .getState()
+      .spend(grantWalletId, grantCurrencyId, amount, grantReason || 'Retirado pelo Mestre', 'MASTER');
+    playClickSound();
+    setGrantAmount(0);
+    setGrantReason('');
+  };
+
   return (
     <div className="space-y-6">
       <ModuleHeader
@@ -176,6 +190,13 @@ function MasterMoneyView() {
             className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-40"
           >
             Conceder
+          </button>
+          <button
+            onClick={handleRemove}
+            disabled={!grantWalletId || grantAmount <= 0}
+            className="rounded-md bg-destructive px-3 py-1.5 text-sm font-medium text-destructive-foreground hover:opacity-90 disabled:opacity-40"
+          >
+            Retirar
           </button>
         </div>
         <input
