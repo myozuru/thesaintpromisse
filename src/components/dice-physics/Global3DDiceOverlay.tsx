@@ -26,6 +26,8 @@ export function Global3DDiceOverlay() {
   const [lastBonus, setLastBonus] = useState(0);
   /** 'idle' = sem dados, 'armed' = parados aguardando clique, 'rolling' = lançados. */
   const [phase, setPhase] = useState<'idle' | 'armed' | 'rolling'>('idle');
+  /** true quando a bandeja 3D não carregou — o jogador rola manualmente por botão. */
+  const [trayFailed, setTrayFailed] = useState(false);
 
 
   useEffect(() => {
@@ -37,17 +39,15 @@ export function Global3DDiceOverlay() {
     let cancelled = false;
     let t: ReturnType<typeof setTimeout> | undefined;
     const startedAt = Date.now();
+    setTrayFailed(false);
     const arm = () => {
       if (cancelled) return;
       const api = apiRef.current;
       if (!api) {
         if (Date.now() - startedAt > 15000) {
-          // Não carregou (ex.: navegador sem 3D): resolve com rolagem comum.
-          const faces: Record<string, number> = { D4: 4, D6: 6, D8: 8, D10: 10, D12: 12, D20: 20, D100: 100 };
-          resolveCurrent(current.types.map((ty) => {
-            const f = faces[ty] ?? 20;
-            return f === 100 ? Math.floor(Math.random() * 10) * 10 : Math.floor(Math.random() * f) + 1;
-          }));
+          // Não carregou (ex.: navegador sem 3D): NÃO rola sozinho — mostra
+          // um botão para o jogador rolar manualmente quando quiser.
+          setTrayFailed(true);
           return;
         }
         t = setTimeout(arm, 100);
