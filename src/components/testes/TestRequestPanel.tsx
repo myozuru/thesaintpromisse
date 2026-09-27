@@ -39,6 +39,10 @@ export function TestRequestPanel({ open, onClose }: TestRequestPanelProps) {
     };
   }, []);
 
+  useEffect(() => {
+    if (open && mode === 'floating') setPosition((current) => clampPosition(current));
+  }, [open, mode]);
+
   if (!open) return null;
   const docked = mode === 'docked';
   const startDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
