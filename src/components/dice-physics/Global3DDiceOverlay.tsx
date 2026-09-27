@@ -28,6 +28,34 @@ export function Global3DDiceOverlay() {
   const [phase, setPhase] = useState<'idle' | 'armed' | 'rolling'>('idle');
   /** true quando a bandeja 3D não carregou — o jogador rola manualmente por botão. */
   const [trayFailed, setTrayFailed] = useState(false);
+  const activeRollIdRef = useRef<string | null>(null);
+
+  // Em alguns aparelhos a física continua quicando e nunca emite o término.
+  // Só depois do lançamento manual, conclui a mesma jogada em até 8 segundos
+  // para que a tela do teste não permaneça em "Rolando…" para sempre.
+  useEffect(() => {
+    if (phase !== 'rolling' || !current) return;
+    const rollId = current.id;
+    activeRollIdRef.current = rollId;
+    const watchdog = setTimeout(() => {
+      const pending = useDice3DStore.getState().current;
+      if (!pending || pending.id !== rollId || activeRollIdRef.current !== rollId) return;
+      const faces: Record<string, number> = { D4: 4, D6: 6, D8: 8, D10: 10, D12: 12, D20: 20, D100: 100 };
+      const values = pending.types.map((type) => {
+        const sides = faces[type] ?? 20;
+        return sides === 100 ? Math.floor(Math.random() * 10) * 10 : Math.floor(Math.random() * sides) + 1;
+      });
+      const bonus = pending.bonus ?? 0;
+      activeRollIdRef.current = null;
+      apiRef.current?.clear();
+      setLastResults(values.map((value, index) => ({ id: `recovery_${index}`, type: pending.types[index], value })));
+      setLastBonus(bonus);
+      setLastTotal(values.reduce((sum, value) => sum + value, 0) + bonus);
+      setPhase('idle');
+      resolveCurrent(values);
+    }, 8000);
+    return () => clearTimeout(watchdog);
+  }, [phase, current, resolveCurrent]);
 
 
   useEffect(() => {
@@ -153,9 +181,17 @@ export function Global3DDiceOverlay() {
         >
           <DiceTray
             apiRef={apiRef}
-            onThrown={() => setPhase('rolling')}
+            onThrown={() => {
+              activeRollIdRef.current = useDice3DStore.getState().current?.id ?? null;
+              setPhase('rolling');
+            }}
             onRollComplete={(results, total) => {
-              const bonus = useDice3DStore.getState().current?.bonus ?? 0;
+              const pending = useDice3DStore.getState().current;
+              // Um callback atrasado da física anterior não pode resolver a
+              // próxima rolagem que já estiver na fila.
+              if (!pending || activeRollIdRef.current !== pending.id) return;
+              const bonus = pending.bonus ?? 0;
+              activeRollIdRef.current = null;
               setLastResults(results);
               setLastBonus(bonus);
               setLastTotal(total + bonus);
