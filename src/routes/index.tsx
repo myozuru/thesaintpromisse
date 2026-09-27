@@ -1,7 +1,28 @@
 import { lazy, Suspense } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 
-const TpFichasApp = lazy(() => import("@/components/TpFichasApp"));
+// After a hot update or new deploy, the old chunk URL can 404 ("Failed to fetch
+// dynamically imported module"). Retry once, then reload the page once.
+const TpFichasApp = lazy(async () => {
+  try {
+    return await import("@/components/TpFichasApp");
+  } catch (err) {
+    try {
+      return await import("@/components/TpFichasApp");
+    } catch {
+      const key = "tp-chunk-reload";
+      if (typeof window !== "undefined" && !sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, "1");
+        window.location.reload();
+        return new Promise<never>(() => {});
+      }
+      throw err;
+    }
+  }
+});
+if (typeof window !== "undefined") {
+  setTimeout(() => sessionStorage.removeItem("tp-chunk-reload"), 10000);
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
