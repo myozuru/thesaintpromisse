@@ -56,6 +56,8 @@ export function notationToDiceTypes(notation: string): DiceType[] {
 }
 
 export type DiceOverlayLayout = 'default' | 'test-request';
+/** Nível de drama da rolagem: 0 = normal, 1 = tenso, 2 = épico, 3 = lendário. */
+export type DiceDrama = 0 | 1 | 2 | 3;
 
 interface RollRequest {
   id: string;
@@ -64,6 +66,7 @@ interface RollRequest {
   /** Bônus fixo somado ao total, exibido na bandeja 3D. */
   bonus?: number;
   layout?: DiceOverlayLayout;
+  drama?: DiceDrama;
   at: number;
   resolve?: (values: number[]) => void;
 }
@@ -87,7 +90,7 @@ interface Dice3DState {
    * devolvido pela Promise. Se 3D estiver desabilitado, gera valores via
    * RNG instantaneamente e resolve já.
    */
-  requestRoll: (types: DiceType[], label?: string, bonus?: number, layout?: DiceOverlayLayout) => Promise<number[]>;
+  requestRoll: (types: DiceType[], label?: string, bonus?: number, layout?: DiceOverlayLayout, drama?: DiceDrama) => Promise<number[]>;
   requestNotation: (notation: string, label?: string, bonus?: number, layout?: DiceOverlayLayout) => Promise<number[]>;
   /** chamado pelo overlay quando termina de rolar o atual; resolve a Promise associada. */
   resolveCurrent: (values: number[]) => void;
@@ -143,11 +146,11 @@ export const useDice3DStore = create<Dice3DState>((set, get) => ({
     if (types.length === 0) return;
     get().enqueueTypes(types, label ?? notation);
   },
-  requestRoll: (types, label, bonus, layout = 'default') => {
+  requestRoll: (types, label, bonus, layout = 'default', drama = 0) => {
     if (types.length === 0) return Promise.resolve([]);
     if (!get().enabled) return Promise.resolve(rngForTypes(types));
     return new Promise<number[]>((resolve) => {
-      const req: RollRequest = { id: uid(), types, label, bonus, layout, at: Date.now(), resolve };
+      const req: RollRequest = { id: uid(), types, label, bonus, layout, drama, at: Date.now(), resolve };
       set((s) => {
         if (!s.current) return { current: req, visible: true };
         return { queue: [...s.queue, req], visible: true };
