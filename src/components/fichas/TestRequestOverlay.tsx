@@ -21,7 +21,7 @@ import { getTrainingBonus, getLevelSkillBonus } from '@/types';
 import { hasRecompensaNote, recompensaPEPatch } from '@/lib/suportePreAnaliseRecompensa';
 import { consumeAdvantageFor, consumeFlatBonusFor, peekAdvantageFor, type RollContext } from '@/lib/omni/rollAdvantage';
 import { consumeAutoOutcomeFor, peekAutoOutcomeFor, type OutcomeContext } from '@/lib/omni/autoOutcome';
-import { Dice6, X, Check, Loader2, Hourglass } from 'lucide-react';
+import { Dice6, X, Check, Loader2, Hourglass, ShieldQuestion, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { playDiceSound, playSuccessSound, playErrorSound } from '@/lib/sounds';
 import type { Character } from '@/types';
@@ -102,7 +102,7 @@ function MasterWatchPanel() {
   if (watching.length === 0) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-[180] w-80 space-y-2 pointer-events-none">
+    <div className="pointer-events-none fixed bottom-4 right-4 z-[180] w-[min(22rem,calc(100vw-2rem))] space-y-2">
       {watching.slice(-3).map((r) => {
         const passed = r.result
           ? (r.result.forced
@@ -113,14 +113,14 @@ function MasterWatchPanel() {
         return (
           <div
             key={r.id}
-            className={`pointer-events-auto rounded-lg border-2 bg-card/95 backdrop-blur-sm p-3 shadow-lg animate-in slide-in-right fade-in duration-300 ${
+            className={`pointer-events-auto relative overflow-hidden rounded-md border bg-card/95 p-4 shadow-[0_18px_45px_-20px_hsl(var(--background))] backdrop-blur-xl animate-in slide-in-from-right fade-in duration-300 before:absolute before:inset-y-3 before:left-0 before:w-0.5 ${
               r.result
                 ? passed === true
-                  ? 'border-neon-green/60'
+                  ? 'border-neon-green/45 before:bg-neon-green'
                   : passed === false
-                    ? 'border-neon-red/60'
-                    : 'border-primary/60'
-                : 'border-primary/40'
+                    ? 'border-neon-red/45 before:bg-neon-red'
+                    : 'border-primary/45 before:bg-primary'
+                : 'border-accent/30 before:bg-accent'
             }`}
           >
             <div className="flex items-start gap-2">
@@ -136,15 +136,13 @@ function MasterWatchPanel() {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-xs text-muted-foreground truncate">
-                  {r.charName}
-                </div>
-                <div className="text-sm font-semibold truncate">
-                  {r.testName}{r.dc != null && <span className="text-muted-foreground font-normal"> · CD {r.dc}</span>}
+                <div className="truncate text-[10px] font-bold uppercase tracking-[0.16em] text-accent/75">{r.charName}</div>
+                <div className="truncate font-display text-sm font-bold">
+                  {r.testName}{r.dc != null && <span className="font-body text-muted-foreground"> · CD {r.dc}</span>}
                 </div>
                 {!r.result && (
-                  <div className="text-xs text-primary/80 italic mt-1 flex items-center gap-1">
-                    <Loader2 className="w-3 h-3 animate-spin" /> Aguardando rolagem…
+                  <div className="mt-2 flex items-center gap-2 rounded-sm bg-secondary/55 px-2 py-1.5 text-xs text-muted-foreground">
+                    <Loader2 className="w-3 h-3 animate-spin text-accent" /> Aguardando o jogador
                   </div>
                 )}
                 {r.result && (
@@ -175,13 +173,14 @@ function MasterWatchPanel() {
                   </div>
                 )}
               </div>
-              <button
+              <Button
                 onClick={() => dismiss(r.id)}
-                className="text-muted-foreground hover:text-foreground"
+                variant="ghost"
+                size="icon-sm"
                 aria-label="Dispensar"
               >
                 <X className="w-4 h-4" />
-              </button>
+              </Button>
             </div>
           </div>
         );
@@ -414,65 +413,60 @@ export function TestRequestOverlay() {
   return (
     <>
       {isMaster && <MasterWatchPanel />}
-      <div className="fixed inset-0 z-[200] flex items-center justify-center bg-background/85 backdrop-blur-sm p-6 animate-in fade-in duration-200">
-        <div className="relative w-full max-w-3xl rounded-lg border-2 border-primary/60 bg-card p-5 sm:p-6 shadow-[0_0_60px_-10px_hsl(var(--primary)/0.6)]">
+      <div className="fixed inset-0 z-[200] flex items-center justify-center bg-background/90 p-3 backdrop-blur-md animate-in fade-in duration-200 sm:p-6">
+        <div className="relative max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl overflow-y-auto rounded-lg border border-border/90 bg-card/95 shadow-[0_35px_90px_-30px_hsl(var(--background))] before:pointer-events-none before:absolute before:inset-x-20 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-accent before:to-transparent">
           {(isMaster || current.result) && (
-            <button
+            <Button
               onClick={() => (isMaster ? dismiss(current.id) : ackResult(current.id))}
-              className="absolute top-3 right-3 text-muted-foreground hover:text-foreground"
+              variant="ghost"
+              size="icon-sm"
+              className="absolute right-3 top-3 z-10"
               aria-label="Dispensar"
             >
               <X className="w-5 h-5" />
-            </button>
+            </Button>
           )}
 
-          <div className="text-center space-y-1 mb-4">
-            <div className="text-xs uppercase tracking-widest text-primary/80" style={{ fontFamily: "'Cinzel', serif" }}>
-              {kindLabel}
-            </div>
-            <h2 className="text-2xl font-bold text-foreground" style={{ fontFamily: "'Cinzel', serif" }}>
-              {current.testName}
-            </h2>
-            <div className="text-sm text-muted-foreground">
-              Solicitado para <span className="text-foreground font-semibold">{current.charName}</span>
-            </div>
+          <div className="border-b border-border/70 bg-secondary/30 px-5 pb-5 pt-6 text-center sm:px-8">
+            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-md border border-accent/30 bg-accent/10 text-accent"><ShieldQuestion className="h-5 w-5" /></div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-accent/75">{kindLabel}</div>
+            <h2 className="mt-1 font-display text-2xl font-black uppercase text-foreground sm:text-3xl">{current.testName}</h2>
+            <div className="mt-1 text-sm text-muted-foreground">Desafio para <span className="font-semibold text-foreground">{current.charName}</span></div>
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
             {showDc && (
-              <div className="inline-block mt-2 px-3 py-1 rounded-full bg-primary/15 text-primary text-sm font-semibold">
-                CD {current.dc}
+              <div className="rounded-md border border-accent/30 bg-accent/10 px-3 py-1 text-sm font-bold text-accent">CD {current.dc}</div>
               </div>
             )}
             {!showDc && current.dc != null && !isMaster && (
-              <div className="inline-block mt-2 px-3 py-1 rounded-full bg-muted/40 text-muted-foreground text-xs italic">
+              <div className="rounded-md border border-border bg-muted/40 px-3 py-1 text-xs italic text-muted-foreground">
                 CD oculta
               </div>
             )}
             {advPreview === 'advantage' && (
-              <div className="inline-block ml-2 mt-2 px-3 py-1 rounded-full bg-neon-green/15 text-neon-green text-xs font-bold">
-                🟢 Vantagem
+              <div className="rounded-md border border-neon-green/30 bg-neon-green/10 px-3 py-1 text-xs font-bold text-neon-green">
+                Vantagem
               </div>
             )}
             {advPreview === 'disadvantage' && (
-              <div className="inline-block ml-2 mt-2 px-3 py-1 rounded-full bg-neon-red/15 text-neon-red text-xs font-bold">
-                🔴 Desvantagem
+              <div className="rounded-md border border-neon-red/30 bg-neon-red/10 px-3 py-1 text-xs font-bold text-neon-red">
+                Desvantagem
               </div>
             )}
             {autoPreview === 'success' && (
-              <div className="inline-block ml-2 mt-2 px-3 py-1 rounded-full bg-accent/20 text-accent text-xs font-bold">
-                ✨ Sucesso garantido
+              <div className="rounded-md border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-bold text-accent">
+                Sucesso garantido
               </div>
             )}
             {autoPreview === 'failure' && (
-              <div className="inline-block ml-2 mt-2 px-3 py-1 rounded-full bg-destructive/20 text-destructive text-xs font-bold">
-                💀 Falha garantida
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-1 text-xs font-bold text-destructive">
+                Falha garantida
               </div>
             )}
+            </div>
           </div>
 
-          {current.note && (
-            <div className="mb-4 rounded-md border border-border/60 bg-muted/30 p-3 text-sm text-muted-foreground italic">
-              “{current.note}”
-            </div>
-          )}
+          <div className="p-4 sm:p-6">
+            {current.note && <div className="mb-4 flex gap-3 rounded-md border border-accent/20 bg-accent/5 p-3 text-sm italic text-muted-foreground"><Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-accent" /><span>“{current.note}”</span></div>}
 
           {!char && (
             <div className="mb-4 text-center text-sm text-destructive">
@@ -482,39 +476,43 @@ export function TestRequestOverlay() {
 
           {/* A bandeja 3D global ocupa este espaço enquanto a física resolve o teste. */}
           {rolling && (
-            <div className="h-[min(390px,52dvh)] rounded-md border border-primary/25 bg-background/30 animate-in fade-in duration-200" aria-label="Bandeja de dados 3D">
-              <div className="flex h-full items-end justify-center pb-3 text-[10px] uppercase text-muted-foreground">Aguardando o resultado dos dados</div>
+            <div className="h-[min(390px,48dvh)] rounded-md border border-accent/20 bg-background/45 animate-in fade-in duration-200" aria-label="Bandeja de dados 3D">
+              <div className="flex h-full items-end justify-center pb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-accent/60">O destino está em movimento</div>
             </div>
           )}
 
           {!current.result && !rolling && (
             <div className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-stretch">
               <Button
                 size="lg"
                 onClick={handleRoll}
                 disabled={!char}
-                className="w-full h-20 text-2xl font-bold gap-3 bg-gradient-to-r from-primary to-primary/70 hover:from-primary/90 hover:to-primary/60 text-primary-foreground shadow-[0_0_30px_-5px_hsl(var(--primary)/0.6)]"
-                style={{ fontFamily: "'Cinzel', serif" }}
+                className="h-20 w-full gap-3 bg-accent font-display text-xl font-black uppercase text-accent-foreground shadow-[0_14px_35px_-12px_hsl(var(--accent)/0.7)] hover:bg-accent/90 sm:text-2xl"
               >
                 <Dice6 className="w-8 h-8" />
-                Rolar d20 {bonus >= 0 ? '+' : ''}{bonus}
+                Rolar d20
               </Button>
-              <div className="text-center text-xs text-muted-foreground">
-                Bônus: {breakdown}
+              <div className="flex min-w-32 flex-col items-center justify-center rounded-md border border-border/80 bg-background/45 px-4 py-2 text-center">
+                <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Bônus</span>
+                <strong className="font-display text-2xl text-accent">{bonus >= 0 ? '+' : ''}{bonus}</strong>
+                <span className="max-w-48 text-[10px] leading-tight text-muted-foreground">{breakdown}</span>
+              </div>
               </div>
             </div>
           )}
 
           {/* Resultado */}
           {current.result && !rolling && (
-            <div className={`mt-4 rounded-md border p-4 text-center animate-in zoom-in-50 fade-in duration-300 ${
+            <div className={`rounded-md border p-5 text-center animate-in zoom-in-50 fade-in duration-300 ${
               showOutcome && current.dc != null
                 ? (current.result.total >= current.dc
                     ? 'border-neon-green/60 bg-neon-green/10 shadow-[0_0_30px_-5px_hsl(var(--neon-green)/0.5)]'
                     : 'border-neon-red/60 bg-neon-red/10 shadow-[0_0_30px_-5px_hsl(var(--neon-red)/0.5)]')
                 : 'border-primary/40 bg-primary/10'
             }`}>
-              <div className="text-5xl font-black text-foreground" style={{ fontFamily: "'Cinzel', serif" }}>
+              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Resultado final</div>
+              <div className="mt-1 font-display text-6xl font-black text-foreground">
                 {current.result.total}
               </div>
               <div className="text-xs text-muted-foreground mt-1">
@@ -527,7 +525,7 @@ export function TestRequestOverlay() {
                 {' '}+ {current.result.bonus}
               </div>
               {showOutcome && current.dc != null && (
-                <div className={`mt-2 text-lg font-bold ${
+                  <div className={`mt-3 font-display text-lg font-black uppercase ${
                   current.result.total >= current.dc ? 'text-neon-green' : 'text-neon-red'
                 }`}>
                   {current.result.total >= current.dc ? '✅ SUCESSO' : '❌ FALHA'}
@@ -548,6 +546,7 @@ export function TestRequestOverlay() {
               </Button>
             </div>
           )}
+          </div>
         </div>
       </div>
     </>
