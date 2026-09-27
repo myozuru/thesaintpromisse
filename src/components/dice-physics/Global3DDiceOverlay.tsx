@@ -119,7 +119,7 @@ export function Global3DDiceOverlay() {
 
   return (
     <div
-      className={cn('fixed z-[9999] overflow-hidden pointer-events-auto border border-primary/30', lastLayout === 'test-request' ? 'left-1/2 top-1/2 w-[min(760px,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-lg' : 'bottom-4 right-4 w-[min(440px,calc(100vw-2rem))] rounded-xl', drama >= 1 && current && 'border-accent/60', drama >= 2 && current && 'ring-2 ring-accent/40', drama >= 1 && current && 'animate-pulse [animation-duration:2.4s]', shake && 'animate-[dice-shake_0.6s_ease-in-out]')}
+      className={cn('fixed z-[9999] overflow-hidden pointer-events-auto border border-primary/30', lastLayout === 'test-request' ? 'left-1/2 top-1/2 w-[min(760px,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-lg' : 'bottom-4 right-4 w-[min(440px,calc(100vw-2rem))] rounded-xl', drama >= 1 && current && 'border-accent/60', drama >= 2 && current && 'ring-2 ring-accent/40')}
       style={{
         background:
           'linear-gradient(135deg, hsl(265 30% 7% / 0.96) 0%, hsl(270 35% 5% / 0.96) 100%)',
@@ -175,7 +175,7 @@ export function Global3DDiceOverlay() {
         </div>
       )}
 
-      <div className={cn('relative', lastLayout === 'test-request' ? 'h-[min(480px,58dvh)]' : 'h-[340px]')}>
+      <div className={cn('relative', shake && 'animate-[dice-shake_0.6s_ease-in-out]', lastLayout === 'test-request' ? 'h-[min(480px,58dvh)]' : 'h-[340px]')}>
         {/* Véu místico atrás do canvas */}
         <div
           className="absolute inset-0 pointer-events-none"
@@ -291,7 +291,7 @@ export function Global3DDiceOverlay() {
             onPointerCancel={stopCharge}
             onKeyDown={(e) => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); startCharge(); } }}
             onKeyUp={(e) => { if (e.key === ' ' || e.key === 'Enter') releaseCharge(); }}
-            className="absolute top-2 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 rounded-md border border-accent/40 bg-primary/30 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-accent hover:bg-primary/50 transition-all animate-pulse"
+            className="absolute top-2 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 rounded-md border border-accent/40 bg-primary/30 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-accent hover:bg-primary/50 transition-all animate-pulse overflow-hidden select-none touch-none"
             style={{
               fontFamily: "'Cinzel', serif",
               boxShadow: '0 0 16px hsl(42 78% 58% / 0.35)',

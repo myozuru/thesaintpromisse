@@ -426,3 +426,11 @@ input[type="radio"]:checked::after {
   border-radius: 50%;
   background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
 }
+
+@keyframes dice-shake {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-6px, 3px); }
+  40% { transform: translate(5px, -4px); }
+  60% { transform: translate(-4px, 2px); }
+  80% { transform: translate(3px, -1px); }
+}
