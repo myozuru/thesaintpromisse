@@ -40,6 +40,8 @@ export interface TestRequest {
    * a pipeline já sabe o bônus correto para aquele TR específico vs. alvo).
    * Quando definido, o overlay ignora o cálculo padrão.
    */
+  /** Bônus extra do Mestre; o jogador só descobre quando o resultado aparece. */
+  masterBonus?: number;
   bonusOverride?: number;
   bonusBreakdownOverride?: string;
   /** Tag para correlacionar resultado com a origem (ex.: feitiço.id + targetId). */
@@ -55,6 +57,8 @@ export interface TestRequest {
   result?: {
     d20: number;
     bonus: number;
+    /** Parte do bônus que veio do Mestre (revelada no fim). */
+    masterBonus?: number;
     total: number;
     rolledAt: number;
     /** Modo da rolagem aplicada (vantagem/desvantagem). */
