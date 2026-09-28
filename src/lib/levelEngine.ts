@@ -321,7 +321,10 @@ export function buildLevelUpTrackers(
 
     // Aptidões Amaldiçoadas — sistema numérico (AU/CL/BAR/DOM/ER).
     // Distribuição: 1 ponto em níveis pares; 2 pontos nos picos (10 e 20).
-    if (!isRestringido(spec)) {
+    // EXCEÇÃO Suporte: a aptidão dele é a escolha do catálogo (1 por nível,
+    // abaixo) — ele NÃO recebe também os pontos numéricos, senão ficaria
+    // com 2 ganhos de aptidão por nível.
+    if (!isRestringido(spec) && spec !== 'Suporte') {
       const evenLevels = [2, 4, 6, 8, 12, 14, 16, 18];
       const peakLevels = [10, 20];
       let pts = 0;
