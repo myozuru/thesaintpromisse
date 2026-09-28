@@ -22,9 +22,11 @@ interface Props {
   /** Referência opcional para o pai controlar fechar/limpar. */
   handleRef?: RefObject<DiceTrayPanelHandle | null>;
   className?: string;
+  /** O contêiner pai apresenta o resumo cinematográfico sem duplicá-lo sobre o dado. */
+  hideCinematicResultSummary?: boolean;
 }
 
-export function DiceTrayPanel({ handleRef, className }: Props) {
+export function DiceTrayPanel({ handleRef, className, hideCinematicResultSummary = false }: Props) {
   const current = useDice3DStore((s) => s.current);
   const resolveCurrent = useDice3DStore((s) => s.resolveCurrent);
   const setVisible = useDice3DStore((s) => s.setVisible);
@@ -176,7 +178,9 @@ export function DiceTrayPanel({ handleRef, className }: Props) {
                 const next = useDice3DStore.getState().current;
                 if (pending.layout === 'test-request' && !next) {
                   setVisible(false);
-                  apiRef.current?.clear();
+                  // No foco cinematográfico, o mesmo dado precisa permanecer
+                  // montado para o zoom final. A próxima rodada já chama clear().
+                  if (!pending.cinematicFocus || results.length !== 1) apiRef.current?.clear();
                 }
               };
               if (holdAfter) setTimeout(close, holdAfter); else close();
@@ -254,7 +258,7 @@ export function DiceTrayPanel({ handleRef, className }: Props) {
         </button>
       )}
 
-      {lastTotal !== null && (
+      {lastTotal !== null && !(hideCinematicResultSummary && cinematicFocus && lastResults.length === 1) && (
         <div
           className={cn("absolute bottom-2 left-2 right-2 flex flex-wrap items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-accent/30", cinematicFocus && lastResults.length === 1 && "justify-center")}
           style={{

@@ -105,11 +105,18 @@ function CinematicCamera({ positionRef, settledRef }: {
     const point = positionRef.current;
     if (!point) return;
     const settled = settledRef.current;
-    desired.current.set(point.x, point.y + (settled ? 1.2 : 2.7), point.z + (settled ? 0.42 : 1.3));
+    // Durante o voo a câmera já fica próxima; ao assentar, fecha bastante
+    // sobre a face do dado sem trocar a cena nem perder sua posição física.
+    desired.current.set(point.x, point.y + (settled ? 0.7 : 1.75), point.z + (settled ? 0.24 : 0.82));
     const dt = Math.min(delta, 0.05);
-    camera.position.lerp(desired.current, 1 - Math.exp(-(settled ? 2.2 : 4.5) * dt));
-    lookAt.current.lerp(new THREE.Vector3(point.x, point.y, point.z), 1 - Math.exp(-6 * dt));
+    camera.position.lerp(desired.current, 1 - Math.exp(-(settled ? 3.4 : 5.5) * dt));
+    lookAt.current.lerp(new THREE.Vector3(point.x, point.y + (settled ? 0.08 : 0), point.z), 1 - Math.exp(-8 * dt));
     camera.lookAt(lookAt.current);
+    if (camera instanceof THREE.PerspectiveCamera) {
+      const targetFov = settled ? 24 : 31;
+      camera.fov = THREE.MathUtils.damp(camera.fov, targetFov, settled ? 4.5 : 6, dt);
+      camera.updateProjectionMatrix();
+    }
   });
   return null;
 }

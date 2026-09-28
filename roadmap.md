@@ -17,7 +17,7 @@
 - [x] Launch dice diagonally across the tray with transverse rotation so they roll farther without stalling.
 - [x] Expand the 3D arena, throw from varying edges, and add optional single-die cinematic focus for player tests.
 
-- [ ] Corrigir zoom, sincronização e composição compacta do resultado no foco cinematográfico.
+- [x] Corrigir zoom, sincronização e composição compacta do resultado no foco cinematográfico.
 
 ## Pendências de regras
 - [ ] Suporte Nv 4 — "No Último Segundo": implementar junto com os testes da Porta da Morte (contador de fracassos). Lembrar o usuário quando a Porta da Morte for feita.
