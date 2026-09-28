@@ -51,6 +51,15 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
   dramaRef.current = drama;
   const groupRef = useRef<THREE.Group>(null);
   const rigidBodyRef = useRef<RapierRigidBody>(null);
+  const setRigidBodyRef = useCallback((rb: RapierRigidBody | null) => {
+    rigidBodyRef.current = rb;
+    if (!rb || thrownRef.current) return;
+    rb.setEnabledTranslations(false, false, false, false);
+    rb.setEnabledRotations(false, false, false, false);
+    rb.setLinvel({ x: 0, y: 0, z: 0 }, false);
+    rb.setAngvel({ x: 0, y: 0, z: 0 }, false);
+    rb.sleep();
+  }, []);
 
   const [position] = useState<Vec3>(() => [dieThrow.position.x, dieThrow.position.y, dieThrow.position.z]);
   const [rotation] = useState<Vec3>(() => {
@@ -261,10 +270,8 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
 
   return (
     <RigidBody
-      ref={rigidBodyRef}
+      ref={setRigidBodyRef}
       type="dynamic"
-      enabledTranslations={[!armed, !armed, !armed]}
-      enabledRotations={[!armed, !armed, !armed]}
       gravityScale={dramaConfig.gravityScale}
       density={1.3}
       friction={1.1}
