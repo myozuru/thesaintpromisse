@@ -7,8 +7,8 @@ import * as THREE from "three";
 const WALL_THICKNESS = 50;
 const WALL_SIZE = 100;
 const FLOOR_Y = -WALL_THICKNESS + 0.005;
-// Arena compacta para destacar os dados sem cortar suas bordas.
-const WALL_X = WALL_THICKNESS + 0.622;
+// Arena mais larga na horizontal para dar mais espaço lateral aos quiques.
+const WALL_X = WALL_THICKNESS + 0.933;
 const WALL_Z = WALL_THICKNESS + 0.933;
 
 function CollisionField({ roofY, accentA, accentB }: { roofY: number; accentA: string; accentB: string }) {
