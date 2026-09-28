@@ -36,3 +36,7 @@
 
 ## Pendências de regras
 - [ ] Suporte Nv 4 — "No Último Segundo": implementar junto com os testes da Porta da Morte (contador de fracassos). Lembrar o usuário quando a Porta da Morte for feita.
+
+## Pendências de mapa (aguardando definição com o usuário)
+- [ ] Movimento por clique: cada jogador vê sua própria visão do mapa e clica na casa de destino para mover sua peça (estilo tabuleiro/puzzle, só referência). Aguarda decisões de regras.
+- [ ] Mapa-múndi interativo por mundo, separado do mapa tático: regiões/locais, bosses com ficha de informações ao clicar. Aguarda decisões de conteúdo.
