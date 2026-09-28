@@ -22,6 +22,7 @@
 - [x] Suavizar impactos para não inverter ou cancelar bruscamente a rotação dos dados.
 - [x] Adaptar a câmera ao formato da bandeja para o dado nunca nascer fora da visão.
 - [x] Aproximar bastante a visão dos dados e compactar a arena sem cortar lançamentos nas bordas.
+- [x] Ampliar os dados em mais 50% na visão e reduzir proporcionalmente a arena 3D.
 
 ## Pendências de regras
 - [ ] Suporte Nv 4 — "No Último Segundo": implementar junto com os testes da Porta da Morte (contador de fracassos). Lembrar o usuário quando a Porta da Morte for feita.
