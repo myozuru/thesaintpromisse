@@ -142,6 +142,15 @@ function createNumberTexture(value: string) {
   ctx.strokeText(value, 256, 268);
   ctx.fillStyle = "#fff6bd";
   ctx.fillText(value, 256, 268);
+  if (value === "6" || value === "9") {
+    ctx.shadowBlur = 14;
+    ctx.strokeStyle = "#fff6bd";
+    ctx.lineWidth = 18;
+    ctx.beginPath();
+    ctx.moveTo(185, 420);
+    ctx.lineTo(327, 420);
+    ctx.stroke();
+  }
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = 8;

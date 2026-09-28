@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import { randomAngularVelocity, randomLinearVelocity, randomPosition } from "@/components/dice-physics/helpers/DiceThrower";
 import { preserveDiceSpin } from "@/components/dice-physics/angularMomentum";
 import { getTrayCameraPlacement } from "@/components/dice-physics/cameraFraming";
+import { getReadableFaceRotation } from "@/components/dice-physics/helpers/getValueFromDiceGroup";
+import * as THREE from "three";
 
 describe("lançamento lateral dos dados", () => {
   it("atravessa da borda esquerda em direção à borda direita", () => {
@@ -72,5 +74,20 @@ describe("enquadramento da bandeja", () => {
 
     expect(placement.position.every(Number.isFinite)).toBe(true);
     expect(placement.position[1]).toBeGreaterThan(0);
+  });
+});
+
+describe("leitura cinematográfica da face", () => {
+  it("mantém a face vencedora para cima e orienta o número para o topo da tela", () => {
+    const current = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.35, -0.8, 0.25));
+    const localFace = new THREE.Vector3(0.3, 0.85, -0.42).normalize();
+    const localTextUp = new THREE.Vector3(0.7, -0.08, 0.7).normalize();
+    const target = getReadableFaceRotation(current, localFace.clone().applyQuaternion(current), localTextUp.clone().applyQuaternion(current));
+    const finalFace = localFace.clone().applyQuaternion(target);
+    const finalTextUp = localTextUp.clone().applyQuaternion(target);
+    finalTextUp.y = 0;
+    finalTextUp.normalize();
+    expect(finalFace.angleTo(new THREE.Vector3(0, 1, 0))).toBeLessThan(0.0001);
+    expect(finalTextUp.angleTo(new THREE.Vector3(0, 0, -1))).toBeLessThan(0.0001);
   });
 });

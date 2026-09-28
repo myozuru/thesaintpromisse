@@ -5,7 +5,7 @@ import { RigidBody, type RapierRigidBody } from "@react-three/rapier";
 import { useFrame } from "@react-three/fiber";
 
 import type { Die, DiceThrow, DiceTransform, DiceVector3 } from "./types";
-import { getValueFromDiceGroup } from "./helpers/getValueFromDiceGroup";
+import { getReadableFaceRotation, getTopFaceInfo } from "./helpers/getValueFromDiceGroup";
 import { DiceCollider } from "./colliders/DiceColliders";
 import { DICE_SETTLEMENT, decideDiceSettlement } from "./diceSettlement";
 import { useDice3DStore } from "@/stores/useDice3DStore";
@@ -68,6 +68,7 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
   const dampingAppliedRef = useRef(false);
   const previousAngvelRef = useRef<DiceVector3>({ x: 0, y: 0, z: 0 });
   const collisionSpinRef = useRef<DiceVector3 | null>(null);
+  const readableRotationRef = useRef<THREE.Quaternion | null>(null);
 
   const lockDice = useCallback(() => {
     const rb = rigidBodyRef.current;
@@ -87,9 +88,15 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
     rb.setAngvel({ x: 0, y: 0, z: 0 }, false);
     rb.sleep();
     group.updateWorldMatrix(true, true);
-    const value = getValueFromDiceGroup(group);
+    const face = getTopFaceInfo(group);
+    const value = face.value;
     const p = rb.translation();
     const r = rb.rotation();
+    if (face.worldDir && face.worldTextUp) {
+      readableRotationRef.current = getReadableFaceRotation(
+        new THREE.Quaternion(r.x, r.y, r.z, r.w), face.worldDir, face.worldTextUp,
+      );
+    }
     lockDice();
     onRollFinished?.(die.id, value, {
       position: { x: p.x, y: p.y, z: p.z },
@@ -134,7 +141,7 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
     }
   }, [resolveNow]);
 
-  useFrame(() => {
+  useFrame((_, rawDelta) => {
     const rb = rigidBodyRef.current;
     const currentPosition = rb?.translation();
     if (currentPosition) onPositionChange?.(die.id, currentPosition);
@@ -148,6 +155,17 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
         previousAngvelRef.current = stabilized;
       } else {
         previousAngvelRef.current = { x: currentSpin.x, y: currentSpin.y, z: currentSpin.z };
+      }
+    }
+    const readableRotation = readableRotationRef.current;
+    if (rb && lockedRef.current && readableRotation) {
+      const current = rb.rotation();
+      const animated = new THREE.Quaternion(current.x, current.y, current.z, current.w);
+      animated.slerp(readableRotation, 1 - Math.exp(-4.5 * Math.min(rawDelta, 0.05)));
+      rb.setRotation(animated, false);
+      if (animated.angleTo(readableRotation) < 0.002) {
+        rb.setRotation(readableRotation, false);
+        readableRotationRef.current = null;
       }
     }
     checkRollFinished();
