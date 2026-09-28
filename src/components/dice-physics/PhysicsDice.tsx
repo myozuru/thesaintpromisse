@@ -9,7 +9,7 @@ import { getReadableFaceRotation, getTopFaceInfo } from "./helpers/getValueFromD
 import { DiceCollider } from "./colliders/DiceColliders";
 import { DICE_SETTLEMENT, decideDiceSettlement } from "./diceSettlement";
 import { useDice3DStore } from "@/stores/useDice3DStore";
-import { playDiceHit } from "@/lib/sounds";
+import { playDiceHit, prewarmDiceAudio } from "@/lib/sounds";
 import { getDiceDramaConfig } from "./dramaConfig";
 import { preserveDiceSpin } from "./angularMomentum";
 
@@ -207,6 +207,12 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
     lowSpeedSinceRef.current = null;
     dampingAppliedRef.current = false;
   }, [armed, dieThrow, dramaConfig.spinMultiplier, dramaConfig.velocityMultiplier, dramaConfig.verticalImpulse, power]);
+
+  // Prepara o áudio enquanto o dado ainda aguarda o lançamento.
+  useEffect(() => {
+    const idle = (window as any).requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 50));
+    idle(() => prewarmDiceAudio(dramaRef.current));
+  }, []);
 
   // Resetar cursor quando desmontar.
   useEffect(() => () => { document.body.style.cursor = ''; }, []);
