@@ -38,7 +38,7 @@
 - [ ] Suporte Nv 4 — "No Último Segundo": implementar junto com os testes da Porta da Morte (contador de fracassos). Lembrar o usuário quando a Porta da Morte for feita.
 
 ## Pendências de mapa (regras definidas, aguardando início)
-- [ ] Bug: cena é global — trocar de cena num jogador muda para todos. Cada jogador deve ter sua própria cena; o Mestre decide onde cada um está.
+- [x] Cena própria por tela: trocar de cena não arrasta mais as outras telas. (Pendente: Mestre enviar jogadores para uma cena.)
 - [ ] Movimento por cômodos: jogador vê só o cômodo onde está; setas nas portas levam ao próximo cômodo (só na visão dele). Em combate, só na vez dele e limitado por metros percorridos; fora de combate, livre. Portas trancadas exigem chave (puzzles depois).
 - [ ] Aba "Mapa do Mundo": vários mundos com troca; marcadores; ícone redondo de boss com as bordas temáticas; cartão do boss (ND, Patamar, Fraquezas, Resistências, RDs e campos livres) com visibilidade por campo definida pelo Mestre; estado do boss; Mestre oculta/revela qualquer coisa aos jogadores.
 - [ ] Ideia guardada (não fazer ainda): ligar boss do mapa-múndi à batalha.

@@ -268,11 +268,37 @@ const remotePatchAt = new Map<string, number>();
 let smoothRaf: number | null = null;
 let smoothLast = 0;
 
+/** Mantém a cena aberta nesta tela; só adota a do remetente se a local não existir. */
+export function pickLocalActiveScene(localId: string, data: { activeSceneId: string; sceneOrder: string[]; scenes: Record<string, unknown> }): string {
+  if (localId && data.scenes[localId]) return localId;
+  return data.activeSceneId || data.sceneOrder[0] || localId;
+}
+
 function applyRemoteEntityUpdate(patches: RemotePatch[]) {
   if (!patches.length) return;
   applyingRemote = true;
   try {
-    useMapStore.getState().updateEntities(patches as never);
+    const st = useMapStore.getState();
+    const live = st.entities as Record<string, unknown>;
+    const here = patches.filter((p) => live[p.id]);
+    const elsewhere = patches.filter((p) => !live[p.id]);
+    if (here.length) st.updateEntities(here as never);
+    // Peças de cenas que esta tela não está vendo: atualiza a cópia guardada da
+    // cena, para não reenviar posições antigas quando esta tela publicar o mapa.
+    if (elsewhere.length) {
+      const scenes = { ...st.scenes } as Record<string, SceneDoc>;
+      let changed = false;
+      for (const { id, patch } of elsewhere) {
+        for (const sid of Object.keys(scenes)) {
+          if (sid === st.activeSceneId) continue;
+          const ent = scenes[sid].entities?.[id];
+          if (!ent) continue;
+          scenes[sid] = { ...scenes[sid], entities: { ...scenes[sid].entities, [id]: { ...ent, ...patch } } };
+          changed = true;
+        }
+      }
+      if (changed) useMapStore.setState({ scenes } as never);
+    }
   } finally {
     setTimeout(() => { applyingRemote = false; }, 0);
   }
@@ -382,7 +408,8 @@ function applyRemote(slice: WorldSlice, data: unknown) {
       if (incomingJSON === lastPublishedMapJSON || recentPublishedMapJSON.includes(incomingJSON)) return;
       if (shouldIgnoreRemoteMapScene()) return;
       const current = useMapStore.getState();
-      const nextActiveId = data.activeSceneId || data.sceneOrder[0] || current.activeSceneId;
+      // Cena própria por tela: a troca de cena de outra pessoa não arrasta esta tela.
+      const nextActiveId = pickLocalActiveScene(current.activeSceneId, data);
       const nextActive = nextActiveId ? data.scenes[nextActiveId] : undefined;
       // Junta em vez de substituir: peças mexidas aqui há pouco mantêm a posição
       // local; peças deslizando recebem o novo destino em vez de pular.
