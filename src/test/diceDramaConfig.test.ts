@@ -10,6 +10,7 @@ describe("configuração dramática dos dados", () => {
       expect(current.velocityMultiplier).toBeGreaterThan(previous.velocityMultiplier);
       expect(current.spinMultiplier).toBeGreaterThan(previous.spinMultiplier);
       expect(current.verticalImpulse).toBeGreaterThan(previous.verticalImpulse);
+      expect(current.bounceHeightMultiplier).toBeGreaterThan(previous.bounceHeightMultiplier);
       expect(current.restitution).toBeGreaterThan(previous.restitution);
       expect(current.gravityScale).toBeLessThan(previous.gravityScale);
       expect(current.linearDamping).toBeLessThan(previous.linearDamping);
@@ -27,6 +28,7 @@ describe("configuração dramática dos dados", () => {
     const legendary = DICE_DRAMA_CONFIG[3];
     expect(legendary.timeScale).toBeLessThanOrEqual(epic.timeScale * 0.4);
     expect(legendary.verticalImpulse).toBeGreaterThan(epic.verticalImpulse * 2);
+    expect(legendary.bounceHeightMultiplier).toBeGreaterThan(epic.bounceHeightMultiplier * 1.25);
     expect(legendary.trayRoof).toBeGreaterThan(epic.trayRoof * 1.5);
     expect(legendary.velocityMultiplier).toBeGreaterThanOrEqual(1.5);
     expect(legendary.spinMultiplier).toBeGreaterThanOrEqual(2.4);

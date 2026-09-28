@@ -84,6 +84,8 @@ describe("enquadramento da bandeja", () => {
 
     expect(rolling.offset[1]).toBeGreaterThan(settledWide.offset[1]);
     expect(settledWide.fov).toBe(23);
+    expect(rolling.lookHeight).toBe(0);
+    expect(settledWide.lookHeight).toBe(0);
     expect(settledSquare.offset[1]).toBeCloseTo(settledWide.offset[1], 5);
     expect(settledSquare.offset.every(Number.isFinite)).toBe(true);
   });

@@ -102,8 +102,9 @@ function CinematicCamera({ positionRef, settledRef }: {
 }) {
   const { size } = useThree();
   const lookAt = useRef(new THREE.Vector3());
-  const desired = useRef(new THREE.Vector3());
-  const nextLookAt = useRef(new THREE.Vector3());
+  const trackedPoint = useRef(new THREE.Vector3());
+  const smoothedOffset = useRef(new THREE.Vector3());
+  const nextOffset = useRef(new THREE.Vector3());
   const smoothedAspect = useRef(1);
   const initialized = useRef(false);
   const settleBlend = useRef(0);
@@ -117,16 +118,18 @@ function CinematicCamera({ positionRef, settledRef }: {
     const nextAspect = size.width / Math.max(1, size.height);
     smoothedAspect.current = THREE.MathUtils.damp(smoothedAspect.current, nextAspect, 7, dt);
     const placement = getCinematicCameraPlacement(blend, smoothedAspect.current);
-    desired.current.set(point.x + placement.offset[0], point.y + placement.offset[1], point.z + placement.offset[2]);
-    nextLookAt.current.set(point.x, point.y + placement.lookHeight, point.z);
+    nextOffset.current.set(...placement.offset);
     if (!initialized.current) {
-      camera.position.copy(desired.current);
-      lookAt.current.copy(nextLookAt.current);
+      trackedPoint.current.set(point.x, point.y, point.z);
+      smoothedOffset.current.copy(nextOffset.current);
       initialized.current = true;
     } else {
-      camera.position.lerp(desired.current, 1 - Math.exp(-7 * dt));
-      lookAt.current.lerp(nextLookAt.current, 1 - Math.exp(-10 * dt));
+      const follow = 1 - Math.exp(-8 * dt);
+      trackedPoint.current.lerp(new THREE.Vector3(point.x, point.y, point.z), follow);
+      smoothedOffset.current.lerp(nextOffset.current, follow);
     }
+    camera.position.copy(trackedPoint.current).add(smoothedOffset.current);
+    lookAt.current.copy(trackedPoint.current);
     camera.lookAt(lookAt.current);
     if (camera instanceof THREE.PerspectiveCamera) {
       camera.fov = THREE.MathUtils.damp(camera.fov, placement.fov, 5, dt);
