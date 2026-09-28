@@ -187,8 +187,22 @@ export function SuportePanel({ character: c }: { character: Character }) {
   };
 
   return (
-    <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
-      <div className="text-xs font-bold uppercase tracking-wider text-primary">Suporte em Combate</div>
+    <div className="overflow-hidden rounded-xl border border-primary/30 bg-gradient-to-b from-primary/10 to-transparent">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-primary/20 bg-primary/10 px-3 py-2">
+        <div className="flex items-center gap-2">
+          <HeartHandshake className="h-4 w-4 text-primary" />
+          <span className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Suporte</span>
+          <span className="rounded-full border border-primary/30 px-2 py-0.5 text-[10px] text-muted-foreground">Nv {c.level} · {keyAttr}</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px] font-mono">
+          <span className="rounded border border-primary/30 bg-background/50 px-2 py-0.5">CURAS <strong className="text-foreground">{left}/{maxUses}</strong></span>
+          <span className="rounded border border-primary/30 bg-background/50 px-2 py-0.5">PE <strong className="text-foreground">{c.peCurrent ?? 0}/{shownPeMax(c)}</strong></span>
+        </div>
+      </div>
+      <div className="space-y-2 p-3">
+      <div className="grid gap-2 md:grid-cols-2">
+      <div className="space-y-1.5 rounded-lg border border-border/60 bg-background/40 p-2">
+        <div className="text-[10px] font-bold uppercase tracking-wider text-primary">Apoiar · Ação Bônus</div>
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <select
           value={apoiarTargetId}
@@ -229,6 +243,9 @@ export function SuportePanel({ character: c }: { character: Character }) {
           </select>
         )}
       </div>
+      </div>
+      <div className="space-y-1.5 rounded-lg border border-border/60 bg-background/40 p-2">
+        <div className="text-[10px] font-bold uppercase tracking-wider text-primary">Cura de toque · Ação Bônus</div>
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <select
           value={targetId}
@@ -254,8 +271,11 @@ export function SuportePanel({ character: c }: { character: Character }) {
           Usos: <strong className="text-foreground">{left}/{maxUses}</strong> · {keyAttr}
         </span>
       </div>
+      </div>
+      </div>
+      <div className="grid gap-2 md:grid-cols-2">
       {hasMedicinaInfalivel(c) && (
-        <div className="flex flex-wrap items-center gap-2 text-xs border-t border-primary/20 pt-2">
+        <div className="flex flex-wrap items-center gap-2 text-xs rounded-lg border border-border/60 bg-background/40 p-2">
           <span className="font-bold uppercase tracking-wider text-primary">Medicina Infalível</span>
           <label className="text-muted-foreground" title="Maximiza os menores dados da próxima cura (1 uso por dado). Vale para esta cura e para a Energia Reversa.">
             Maximizar{' '}
@@ -279,7 +299,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
         const baseST = (c.savingThrows ?? []).find((s) => s.name === baseTR);
         const hasMastery = !!baseST?.mastery;
         return (
-          <div className="flex flex-wrap items-center gap-2 text-xs border-t border-primary/20 pt-2">
+          <div className="flex flex-wrap items-center gap-2 text-xs rounded-lg border border-border/60 bg-background/40 p-2">
             <span className="font-bold uppercase tracking-wider text-primary">Testes de Resistência</span>
             {!baseTR ? (
               <>
@@ -330,7 +350,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
         );
       })()}
       {c.level >= 3 && (
-        <div className="flex flex-wrap items-center gap-2 text-xs border-t border-primary/20 pt-2">
+        <div className="flex flex-wrap items-center gap-2 text-xs rounded-lg border border-border/60 bg-background/40 p-2">
           <span className="font-bold uppercase tracking-wider text-primary">Presença Inspiradora</span>
           <select
             value={extra}
@@ -355,6 +375,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
           <span className="text-muted-foreground">PE: {c.peCurrent ?? 0}/{shownPeMax(c)}</span>
         </div>
       )}
+      </div>
       <AmizadeSection c={c} />
       <AnaliseSection c={c} />
       <ApoioAvancadoSection character={c} />
@@ -370,6 +391,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
       <IntervencaoSection c={c} />
       <NegacaoCriticaSection c={c} />
       <SintonizacaoVitalSection c={c} />
+      </div>
     </div>
   );
 }
