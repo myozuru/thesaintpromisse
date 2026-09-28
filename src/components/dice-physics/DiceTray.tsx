@@ -32,7 +32,6 @@ import { PhysicsDice } from "./PhysicsDice";
 import { DiceMesh } from "./meshes/DiceMesh";
 import { DICE_DRAMA_CONFIG } from "./dramaConfig";
 import { getTrayCameraPlacement, TRAY_CAMERA_FOV } from "./cameraFraming";
-import { getCinematicCameraPose } from "./cinematicCamera";
 import * as THREE from "three";
 import d4Url from "./meshes/d4.glb?url";
 import d6Url from "./meshes/d6.glb?url";
@@ -108,22 +107,22 @@ function CinematicCamera({ positionRef, settledRef }: {
     const point = positionRef.current;
     if (!point) return;
     const settled = settledRef.current;
-    const pose = getCinematicCameraPose(point, settled);
-    // Posição e alvo partem do mesmo centro físico do dado; a transição não
-    // desloca o objeto nem troca a cena por um cartão numérico.
-    desired.current.set(pose.position.x, pose.position.y, pose.position.z);
+    // Durante o voo a câmera já fica próxima; ao assentar, fecha bastante
+    // sobre a face do dado sem trocar a cena nem perder sua posição física.
+    desired.current.set(point.x, point.y + (settled ? 0.72 : 2.25), point.z + (settled ? 0.2 : 0.38));
     const dt = Math.min(delta, 0.05);
     if (!initialized.current) {
       camera.position.copy(desired.current);
-      lookAt.current.set(pose.target.x, pose.target.y, pose.target.z);
+      lookAt.current.set(point.x, point.y, point.z);
       initialized.current = true;
     } else {
-      camera.position.lerp(desired.current, 1 - Math.exp(-(settled ? 7.5 : 12) * dt));
-      lookAt.current.lerp(new THREE.Vector3(pose.target.x, pose.target.y, pose.target.z), 1 - Math.exp(-(settled ? 12 : 16) * dt));
+      camera.position.lerp(desired.current, 1 - Math.exp(-(settled ? 4.2 : 10) * dt));
+      lookAt.current.lerp(new THREE.Vector3(point.x, point.y + (settled ? 0.08 : 0), point.z), 1 - Math.exp(-(settled ? 10 : 14) * dt));
     }
     camera.lookAt(lookAt.current);
     if (camera instanceof THREE.PerspectiveCamera) {
-      camera.fov = THREE.MathUtils.damp(camera.fov, pose.fov, settled ? 8 : 7, dt);
+      const targetFov = settled ? 23 : 36;
+      camera.fov = THREE.MathUtils.damp(camera.fov, targetFov, settled ? 4.5 : 6, dt);
       camera.updateProjectionMatrix();
     }
   });
@@ -220,7 +219,7 @@ export function DiceTray({
     return () => { apiRef.current = null; };
   }, [apiRef, ready, spawn, throwAll, clear]);
 
-  const handleFinished = useCallback((id: string, value: number, transform: DiceTransform) => {
+  const handleFinished = useCallback((id: string, value: number, _t: DiceTransform) => {
     if (resultsRef.current.has(id)) return;
     const rolling = dice.find((d) => d.die.id === id);
     if (!rolling) return;
@@ -232,10 +231,7 @@ export function DiceTray({
       if (rolling.die.type === "D10") normalized = 10;
     }
     const result: DiceRollResult = { id, type: rolling.die.type, value: normalized };
-    if (useCinematicCamera) {
-      focusPositionRef.current = transform.position;
-      focusSettledRef.current = true;
-    }
+    if (useCinematicCamera) focusSettledRef.current = true;
     resultsRef.current.set(id, result);
     onRoll?.(result);
     if (resultsRef.current.size === expectedRef.current) {

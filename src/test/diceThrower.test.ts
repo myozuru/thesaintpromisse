@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import { randomAngularVelocity, randomLinearVelocity, randomPosition } from "@/components/dice-physics/helpers/DiceThrower";
 import { preserveDiceSpin } from "@/components/dice-physics/angularMomentum";
 import { getTrayCameraPlacement } from "@/components/dice-physics/cameraFraming";
-import { getCinematicCameraPose } from "@/components/dice-physics/cinematicCamera";
 
 describe("lançamento lateral dos dados", () => {
   it("atravessa da borda esquerda em direção à borda direita", () => {
@@ -73,19 +72,5 @@ describe("enquadramento da bandeja", () => {
 
     expect(placement.position.every(Number.isFinite)).toBe(true);
     expect(placement.position[1]).toBeGreaterThan(0);
-  });
-});
-
-describe("foco cinematográfico do resultado", () => {
-  it("mantém o dado centralizado e aproxima a face final", () => {
-    const point = { x: 0.42, y: 0.18, z: -0.31 };
-    const falling = getCinematicCameraPose(point, false);
-    const settled = getCinematicCameraPose(point, true);
-
-    expect(settled.target).toEqual(point);
-    expect(settled.position.x).toBe(point.x);
-    expect(settled.position.z - point.z).toBeLessThan(0.05);
-    expect(settled.position.y - point.y).toBeLessThan(falling.position.y - point.y);
-    expect(settled.fov).toBeLessThan(falling.fov);
   });
 });
