@@ -29,10 +29,6 @@
 - [x] Suavizar a aproximação final e alinhar a face sorteada para leitura inequívoca, incluindo 6 e 9.
 - [x] Estabilizar o dado durante a redução final e tornar os limites físicos da bandeja visíveis.
 - [x] Revelar a arena futurista apenas ao redor dos dados conforme eles se aproximam do piso e das paredes.
-- [x] Pré-carregar números e áudio dos dados para remover travadas durante o lançamento e os primeiros impactos.
-- [x] Separar a preparação física do impulso em quadros distintos para evitar engasgo visível ao soltar os dados.
-- [x] Manter dados como corpos móveis pré-criados e ativá-los no lançamento, evitando reconstrução física durante a animação.
-- [x] Reduzir o custo luminoso da arena reativa para preservar quadros durante os quiques.
 
 ## Pendências de regras
 - [ ] Suporte Nv 4 — "No Último Segundo": implementar junto com os testes da Porta da Morte (contador de fracassos). Lembrar o usuário quando a Porta da Morte for feita.

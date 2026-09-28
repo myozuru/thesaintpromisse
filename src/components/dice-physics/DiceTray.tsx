@@ -29,8 +29,7 @@ import { generateDiceId } from "./helpers/random";
 import { DiceThrower } from "./helpers/DiceThrower";
 import { TrayColliders } from "./colliders/TrayColliders";
 import { PhysicsDice } from "./PhysicsDice";
-import { DiceMesh, prepareDiceFaceTextures } from "./meshes/DiceMesh";
-import { prepareDiceAudio } from "@/lib/sounds";
+import { DiceMesh } from "./meshes/DiceMesh";
 import { DICE_DRAMA_CONFIG } from "./dramaConfig";
 import { getCinematicCameraPlacement, getTrayCameraPlacement, TRAY_CAMERA_FOV } from "./cameraFraming";
 import * as THREE from "three";
@@ -46,15 +45,9 @@ import d100Url from "./meshes/d100.glb?url";
 export const MAX_THROW_POWER = 4;
 
 /** Carrega todos os modelos antes de liberar a bandeja; só então avisa que está pronta. */
-function DiceModelsReady({ onReady, drama }: { onReady: () => void; drama: number }) {
+function DiceModelsReady({ onReady }: { onReady: () => void }) {
   useGLTF([d4Url, d6Url, d8Url, d10Url, d12Url, d20Url, d100Url]);
-  useEffect(() => {
-    let alive = true;
-    Promise.all([prepareDiceFaceTextures(), prepareDiceAudio(drama)]).then(() => {
-      if (alive) onReady();
-    });
-    return () => { alive = false; };
-  }, [drama, onReady]);
+  useEffect(() => { onReady(); }, [onReady]);
   return null;
 }
 import { claimDiceLaunch, type DiceLaunchGuard } from "./diceLaunchGuard";
@@ -179,17 +172,12 @@ export function DiceTray({
   const launchGuardRef = useRef<DiceLaunchGuard>({ armed: false });
   const throwerRef = useRef(new DiceThrower());
   const resultsRef = useRef<Map<string, DiceRollResult>>(new Map());
-  const launchFramesRef = useRef<number[]>([]);
   const expectedRef = useRef(0);
   const focusPositionRef = useRef<DiceTransform["position"] | null>(null);
   const focusSettledRef = useRef(false);
   /** Posições vivas para o campo visual da arena; atualizadas sem renderizar React. */
   const dicePositionsRef = useRef<Map<string, DiceTransform["position"]>>(new Map());
   const useCinematicCamera = cinematicFocus && dice.length === 1;
-
-  useEffect(() => {
-    setReady(false);
-  }, [drama]);
 
   const spawn = useCallback((types: DiceType[]) => {
     if (!types.length) return;
@@ -213,27 +201,11 @@ export function DiceTray({
     if (!claimDiceLaunch(launchGuardRef.current)) return;
     const n = typeof p === 'number' && isFinite(p) ? p : 1;
     setPower(Math.max(1, Math.min(MAX_THROW_POWER, n)));
-    // Deixa a interface encerrar o gesto e preparar o corpo dinâmico antes
-    // de aplicar força. O dado permanece parado nesses poucos quadros, sem
-    // transformar o custo inicial em uma engasgada visível no movimento.
-    const prepareLaunch = (framesLeft: number) => {
-      const frame = requestAnimationFrame(() => {
-        launchFramesRef.current = launchFramesRef.current.filter((id) => id !== frame);
-        if (framesLeft > 1) {
-          prepareLaunch(framesLeft - 1);
-          return;
-        }
-        setArmed(false);
-        onThrown?.();
-      });
-      launchFramesRef.current.push(frame);
-    };
-    prepareLaunch(3);
+    setArmed(false);
+    onThrown?.();
   }, [onThrown]);
 
   const clear = useCallback(() => {
-    launchFramesRef.current.forEach(cancelAnimationFrame);
-    launchFramesRef.current = [];
     setDice([]);
     dicePositionsRef.current.clear();
     focusPositionRef.current = null;
@@ -243,11 +215,6 @@ export function DiceTray({
     expectedRef.current = 0;
     launchGuardRef.current.armed = false;
     setArmed(false);
-  }, []);
-
-  useEffect(() => () => {
-    launchFramesRef.current.forEach(cancelAnimationFrame);
-    launchFramesRef.current = [];
   }, []);
 
   useEffect(() => {
@@ -286,7 +253,7 @@ export function DiceTray({
 
   return (
     <div className={className} style={{ width: "100%", height: "100%", ...style }}>
-      <Canvas frameloop="always" dpr={1} gl={{ antialias: false, alpha: true, powerPreference: "high-performance" }}>
+      <Canvas frameloop="always" dpr={[1, 1.25]} gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}>
         <color attach="background" args={[palette.bg]} />
         <fog attach="fog" args={[palette.bg, 9, 24]} />
         {/* Iluminação local (sem baixar HDR da internet, que travava/lagava). */}
@@ -332,7 +299,7 @@ export function DiceTray({
           <Physics colliders={false} interpolate timeStep={slowMo < 1 ? 'vary' : 1 / 60} paused={slowMo < 1} updateLoop="follow" gravity={[0, -14, 0]}>
             {slowMo < 1 && <SlowMoStepper scale={slowMo} />}
             <TrayColliders dicePositionsRef={dicePositionsRef} />
-            <Suspense fallback={null}><DiceModelsReady onReady={markReady} drama={drama} /></Suspense>
+            <Suspense fallback={null}><DiceModelsReady onReady={markReady} /></Suspense>
             {dice.map(({ die, thrown }) => (
               <PhysicsDice
                 key={die.id}

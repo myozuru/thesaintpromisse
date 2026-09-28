@@ -15,24 +15,15 @@ function ensureResumed() {
 
 const bufferCache: Record<string, AudioBuffer> = {};
 const loadingSet = new Set<string>();
-const loadingPromises = new Map<string, Promise<void>>();
 
 function preloadSound(file: string) {
-  if (bufferCache[file]) return Promise.resolve();
-  const pending = loadingPromises.get(file);
-  if (pending) return pending;
+  if (bufferCache[file] || loadingSet.has(file)) return;
   loadingSet.add(file);
-  const promise = fetch(`/sounds/${file}`)
+  fetch(`/sounds/${file}`)
     .then((r) => r.arrayBuffer())
     .then((buf) => getCtx().decodeAudioData(buf))
     .then((decoded) => { bufferCache[file] = decoded; })
-    .catch(() => {})
-    .finally(() => {
-      loadingSet.delete(file);
-      loadingPromises.delete(file);
-    });
-  loadingPromises.set(file, promise);
-  return promise;
+    .catch(() => { loadingSet.delete(file); });
 }
 
 function preloadAll() {
@@ -286,14 +277,6 @@ function getDramaChain(ctx: AudioContext, drama: number): AudioNode {
   lp.connect(rev).connect(wet).connect(ctx.destination);
   dramaReverbs[key] = input;
   return input;
-}
-
-/** Decodifica impactos e monta o efeito dramático antes da física começar. */
-export async function prepareDiceAudio(drama = 0) {
-  if (typeof window === 'undefined') return;
-  await Promise.all(DICE_HITS.map(preloadSound));
-  const normalized = normalizeDiceDrama(drama);
-  if (normalized > 0) getDramaChain(getCtx(), normalized);
 }
 
 export function playDiceHit(intensity: number, surface: 'tray' | 'dice' = 'tray', drama = 0) {
