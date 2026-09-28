@@ -1,8 +1,8 @@
 export const TRAY_CAMERA_FOV = 42;
 
-const TRAY_HALF_WIDTH = 1.75;
-const TRAY_HALF_DEPTH = 2.55;
-const DICE_VISIBILITY_MARGIN = 0.42;
+const TRAY_HALF_WIDTH = 1.4;
+const TRAY_HALF_DEPTH = 2.1;
+const DICE_VISIBILITY_MARGIN = 0.3;
 const CAMERA_TILT_Z = 0.18;
 const FRAME_MARGIN = 1;
 
