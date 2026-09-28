@@ -175,6 +175,8 @@ export function DiceTray({
   const expectedRef = useRef(0);
   const focusPositionRef = useRef<DiceTransform["position"] | null>(null);
   const focusSettledRef = useRef(false);
+  /** Posições vivas para o campo visual da arena; atualizadas sem renderizar React. */
+  const dicePositionsRef = useRef<Map<string, DiceTransform["position"]>>(new Map());
   const useCinematicCamera = cinematicFocus && dice.length === 1;
 
   const spawn = useCallback((types: DiceType[]) => {
@@ -205,6 +207,7 @@ export function DiceTray({
 
   const clear = useCallback(() => {
     setDice([]);
+    dicePositionsRef.current.clear();
     focusPositionRef.current = null;
     focusSettledRef.current = false;
     throwerRef.current.clearHistory();
@@ -295,7 +298,7 @@ export function DiceTray({
         <RapierGate>
           <Physics colliders={false} interpolate timeStep={slowMo < 1 ? 'vary' : 1 / 60} paused={slowMo < 1} updateLoop="follow" gravity={[0, -14, 0]}>
             {slowMo < 1 && <SlowMoStepper scale={slowMo} />}
-            <TrayColliders />
+            <TrayColliders dicePositionsRef={dicePositionsRef} />
             <Suspense fallback={null}><DiceModelsReady onReady={markReady} /></Suspense>
             {dice.map(({ die, thrown }) => (
               <PhysicsDice
@@ -306,7 +309,10 @@ export function DiceTray({
                 power={power}
                 onThrowRequest={() => throwAll(1)}
                 onRollFinished={handleFinished}
-                onPositionChange={useCinematicCamera ? (_id, position) => { focusPositionRef.current = position; } : undefined}
+                onPositionChange={(id, position) => {
+                  dicePositionsRef.current.set(id, position);
+                  if (useCinematicCamera) focusPositionRef.current = position;
+                }}
               >
                 <DiceMesh diceType={die.type} />
               </PhysicsDice>
