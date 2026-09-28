@@ -96,6 +96,23 @@ function SlowMoStepper({ scale }: { scale: number }) {
   return null;
 }
 
+/**
+ * Mantém o renderer no tamanho visível durante transições CSS contínuas.
+ * O observador padrão pode atualizar apenas no fim de alguns quadros e deixar
+ * um canvas grande sendo recortado pela moldura compacta.
+ */
+function AnimatedViewportSync({ viewportRef }: { viewportRef: React.RefObject<HTMLDivElement | null> }) {
+  const { size, setSize } = useThree();
+  useFrame(() => {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    if (!rect || rect.width < 1 || rect.height < 1) return;
+    if (Math.abs(size.width - rect.width) > 0.25 || Math.abs(size.height - rect.height) > 0.25) {
+      setSize(rect.width, rect.height, rect.top, rect.left);
+    }
+  }, -100);
+  return null;
+}
+
 function CinematicCamera({ positionRef, settledRef, viewportRef }: {
   positionRef: React.MutableRefObject<DiceTransform["position"] | null>;
   settledRef: React.MutableRefObject<boolean>;
@@ -312,6 +329,7 @@ export function DiceTray({
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
         style={{ position: "absolute", left: "50%", top: "50%", width: "100%", height: "100%", transform: "translate(-50%, -50%)" }}
       >
+        <AnimatedViewportSync viewportRef={viewportRef} />
         <color attach="background" args={[palette.bg]} />
         <fog attach="fog" args={[palette.bg, 9, 24]} />
         {/* Iluminação local (sem baixar HDR da internet, que travava/lagava). */}
