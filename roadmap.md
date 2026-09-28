@@ -27,6 +27,7 @@
 - [x] Recuar somente o zoom da bandeja em 10% para comparação visual.
 - [x] Aproximar em 20% o zoom de teste sem alterar a arena física.
 - [x] Suavizar a aproximação final e alinhar a face sorteada para leitura inequívoca, incluindo 6 e 9.
+- [x] Estabilizar o dado durante a redução final e tornar os limites físicos da bandeja visíveis.
 
 ## Pendências de regras
 - [ ] Suporte Nv 4 — "No Último Segundo": implementar junto com os testes da Porta da Morte (contador de fracassos). Lembrar o usuário quando a Porta da Morte for feita.

@@ -86,6 +86,8 @@ export function DiceTrayPanel({ handleRef, className, hideCinematicResultSummary
     },
   }), []);
 
+  const currentRollId = current?.id;
+
   useEffect(() => {
     if (!current) return;
     setDrama(current.drama ?? 0);
@@ -123,7 +125,9 @@ export function DiceTrayPanel({ handleRef, className, hideCinematicResultSummary
     };
     arm();
     return () => { cancelled = true; if (t) clearTimeout(t); };
-  }, [current]);
+    // O resultado atualiza o mesmo pedido; não rearmar evita desmontar o dado
+    // enquanto a janela e a câmera concluem a redução cinematográfica.
+  }, [currentRollId]);
 
   return (
     <div className={cn('relative h-full w-full', shake && 'animate-[dice-shake_0.6s_ease-in-out]', className)}>

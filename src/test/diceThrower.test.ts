@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { randomAngularVelocity, randomLinearVelocity, randomPosition } from "@/components/dice-physics/helpers/DiceThrower";
 import { preserveDiceSpin } from "@/components/dice-physics/angularMomentum";
-import { getTrayCameraPlacement } from "@/components/dice-physics/cameraFraming";
+import { getCinematicCameraPlacement, getTrayCameraPlacement } from "@/components/dice-physics/cameraFraming";
 import { getReadableFaceRotation } from "@/components/dice-physics/helpers/getValueFromDiceGroup";
 import * as THREE from "three";
 
@@ -74,6 +74,17 @@ describe("enquadramento da bandeja", () => {
 
     expect(placement.position.every(Number.isFinite)).toBe(true);
     expect(placement.position[1]).toBeGreaterThan(0);
+  });
+
+  it("compensa o formato durante a redução cinematográfica", () => {
+    const rolling = getCinematicCameraPlacement(0, 16 / 9);
+    const settledWide = getCinematicCameraPlacement(1, 16 / 9);
+    const settledSquare = getCinematicCameraPlacement(1, 1);
+
+    expect(rolling.offset[1]).toBeGreaterThan(settledWide.offset[1]);
+    expect(settledWide.fov).toBe(23);
+    expect(settledSquare.offset[1]).toBeCloseTo(settledWide.offset[1], 5);
+    expect(settledSquare.offset.every(Number.isFinite)).toBe(true);
   });
 });
 
