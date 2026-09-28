@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useEffect, useMemo } from "react";
+import React, { useMemo } from "react";
 import * as THREE from "three";
 import { useGLTF } from "@react-three/drei";
 import type { GLTF } from "three-stdlib";
@@ -124,31 +124,34 @@ const LABEL_TUNING: Record<DiceType, { single: [number, number]; double: [number
 
 const TEXT_NORMAL = new THREE.Vector3(0, 0, 1);
 
+const numberTextureCache = new Map<string, THREE.CanvasTexture>();
+
 function createNumberTexture(value: string) {
   const canvas = document.createElement("canvas");
-  canvas.width = 512;
-  canvas.height = 512;
-  const ctx = canvas.getContext("2d")!;
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return new THREE.CanvasTexture(canvas);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = `900 ${value.length > 1 ? 250 : 330}px Cinzel, Georgia, serif`;
+  ctx.font = `900 ${value.length > 1 ? 125 : 165}px Cinzel, Georgia, serif`;
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
   ctx.shadowColor = "rgba(255, 218, 110, 0.95)";
-  ctx.shadowBlur = 26;
+  ctx.shadowBlur = 13;
   ctx.strokeStyle = "rgba(16, 3, 28, 1)";
-  ctx.lineWidth = value.length > 1 ? 34 : 42;
-  ctx.strokeText(value, 256, 268);
+  ctx.lineWidth = value.length > 1 ? 17 : 21;
+  ctx.strokeText(value, 128, 134);
   ctx.fillStyle = "#fff6bd";
-  ctx.fillText(value, 256, 268);
+  ctx.fillText(value, 128, 134);
   if (value === "6" || value === "9") {
-    ctx.shadowBlur = 14;
+    ctx.shadowBlur = 7;
     ctx.strokeStyle = "#fff6bd";
-    ctx.lineWidth = 18;
+    ctx.lineWidth = 9;
     ctx.beginPath();
-    ctx.moveTo(185, 420);
-    ctx.lineTo(327, 420);
+    ctx.moveTo(92, 210);
+    ctx.lineTo(164, 210);
     ctx.stroke();
   }
   const texture = new THREE.CanvasTexture(canvas);
@@ -156,6 +159,24 @@ function createNumberTexture(value: string) {
   texture.anisotropy = 8;
   texture.needsUpdate = true;
   return texture;
+}
+
+function getNumberTexture(value: string) {
+  const cached = numberTextureCache.get(value);
+  if (cached) return cached;
+  const texture = createNumberTexture(value);
+  numberTextureCache.set(value, texture);
+  return texture;
+}
+
+/** Prepara os rótulos em pequenos lotes antes de liberar a primeira rolagem. */
+export async function prepareDiceFaceTextures() {
+  if (typeof document === "undefined") return;
+  const values = Array.from(new Set(Object.values(LOCATORS).flat().map((locator) => getLabelValue(locator.name))));
+  for (let index = 0; index < values.length; index += 4) {
+    values.slice(index, index + 4).forEach(getNumberTexture);
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  }
 }
 
 function getLabelValue(name: string) {
@@ -176,9 +197,7 @@ function FaceLabel({ diceType, locator }: { diceType: DiceType; locator: Locator
   const tuning = LABEL_TUNING[diceType];
   const { position, quaternion } = getFaceTextTransform(locator.position, tuning.lift);
   const size = value.length > 1 ? tuning.double : tuning.single;
-  const texture = useMemo(() => createNumberTexture(value), [value]);
-
-  useEffect(() => () => texture.dispose(), [texture]);
+  const texture = useMemo(() => getNumberTexture(value), [value]);
 
   return (
     <mesh

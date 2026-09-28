@@ -29,7 +29,8 @@ import { generateDiceId } from "./helpers/random";
 import { DiceThrower } from "./helpers/DiceThrower";
 import { TrayColliders } from "./colliders/TrayColliders";
 import { PhysicsDice } from "./PhysicsDice";
-import { DiceMesh } from "./meshes/DiceMesh";
+import { DiceMesh, prepareDiceFaceTextures } from "./meshes/DiceMesh";
+import { prepareDiceAudio } from "@/lib/sounds";
 import { DICE_DRAMA_CONFIG } from "./dramaConfig";
 import { getCinematicCameraPlacement, getTrayCameraPlacement, TRAY_CAMERA_FOV } from "./cameraFraming";
 import * as THREE from "three";
@@ -45,9 +46,15 @@ import d100Url from "./meshes/d100.glb?url";
 export const MAX_THROW_POWER = 4;
 
 /** Carrega todos os modelos antes de liberar a bandeja; só então avisa que está pronta. */
-function DiceModelsReady({ onReady }: { onReady: () => void }) {
+function DiceModelsReady({ onReady, drama }: { onReady: () => void; drama: number }) {
   useGLTF([d4Url, d6Url, d8Url, d10Url, d12Url, d20Url, d100Url]);
-  useEffect(() => { onReady(); }, [onReady]);
+  useEffect(() => {
+    let alive = true;
+    Promise.all([prepareDiceFaceTextures(), prepareDiceAudio(drama)]).then(() => {
+      if (alive) onReady();
+    });
+    return () => { alive = false; };
+  }, [drama, onReady]);
   return null;
 }
 import { claimDiceLaunch, type DiceLaunchGuard } from "./diceLaunchGuard";
@@ -299,7 +306,7 @@ export function DiceTray({
           <Physics colliders={false} interpolate timeStep={slowMo < 1 ? 'vary' : 1 / 60} paused={slowMo < 1} updateLoop="follow" gravity={[0, -14, 0]}>
             {slowMo < 1 && <SlowMoStepper scale={slowMo} />}
             <TrayColliders dicePositionsRef={dicePositionsRef} />
-            <Suspense fallback={null}><DiceModelsReady onReady={markReady} /></Suspense>
+            <Suspense fallback={null}><DiceModelsReady onReady={markReady} drama={drama} /></Suspense>
             {dice.map(({ die, thrown }) => (
               <PhysicsDice
                 key={die.id}
