@@ -338,6 +338,17 @@ export function buildLevelUpTrackers(
           appliedEffect: { pointsRemaining: pts, aptitudeSpends: {} },
         });
       }
+      // Feiticeiros: a cada nível após o 1º, 1 Aptidão Amaldiçoada do catálogo.
+      // (O Especialista em Técnica recebe a sua extra pelo motor próprio.)
+      if (lv >= 2) {
+        out.push({
+          id: `${lv}-aptchoice-${crypto.randomUUID()}`,
+          level: lv,
+          kind: 'pending_aptitude_choice',
+          label: `${nv}: Escolher 1 Aptidão Amaldiçoada do Catálogo`,
+          resolved: false,
+        });
+      }
     }
 
     // PV — Rolagem vs Fixo
