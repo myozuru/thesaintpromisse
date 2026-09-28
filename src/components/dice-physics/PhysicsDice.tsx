@@ -276,7 +276,8 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
       density={1.3}
       friction={1.1}
       restitution={Math.min(0.99, 0.55 * bounciness * dramaConfig.restitution)}
-      ccd
+      // A arena é compacta e fechada; CCD por dado tornava o primeiro passo
+      // físico muito caro exatamente na soltura, sobretudo em lançamentos múltiplos.
       linearDamping={dramaConfig.linearDamping}
       angularDamping={dramaConfig.angularDamping}
       position={position}
