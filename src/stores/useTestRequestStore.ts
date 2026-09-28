@@ -35,6 +35,8 @@ export interface TestRequest {
   note?: string;
   /** Nível de drama da rolagem 3D escolhido pelo Mestre (0 = normal … 3 = lendário). */
   drama?: 0 | 1 | 2 | 3;
+  /** Mestre pediu acompanhamento e aproximação de câmera para uma rolagem individual. */
+  cinematicFocus?: boolean;
   /**
    * Bônus pré-calculado (usado quando o pedido vem de um feitiço, em que
    * a pipeline já sabe o bônus correto para aquele TR específico vs. alvo).

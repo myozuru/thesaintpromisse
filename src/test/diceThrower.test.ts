@@ -1,14 +1,24 @@
 import { describe, expect, it, vi } from "vitest";
-import { randomAngularVelocity, randomLinearVelocity } from "@/components/dice-physics/helpers/DiceThrower";
+import { randomAngularVelocity, randomLinearVelocity, randomPosition } from "@/components/dice-physics/helpers/DiceThrower";
 
 describe("lançamento lateral dos dados", () => {
-  it("combina avanço para dentro, deslocamento lateral e uma leve elevação", () => {
+  it("atravessa da borda esquerda em direção à borda direita", () => {
     vi.spyOn(Math, "random").mockReturnValue(0.75);
-    const velocity = randomLinearVelocity({ x: 0.75, y: 1, z: 0 }, 1);
+    const start = randomPosition("left");
+    const velocity = randomLinearVelocity(start, 1);
 
-    expect(velocity.x).toBeLessThan(0);
-    expect(Math.abs(velocity.z)).toBeGreaterThan(Math.abs(velocity.x));
+    expect(start.x).toBeLessThan(-2);
+    expect(velocity.x).toBeGreaterThan(0);
     expect(velocity.y).toBeGreaterThan(0);
+    vi.restoreAllMocks();
+  });
+
+  it("atravessa da borda distante em direção à borda próxima", () => {
+    vi.spyOn(Math, "random").mockReturnValue(0.25);
+    const start = randomPosition("far");
+    const velocity = randomLinearVelocity(start, 1);
+    expect(start.z).toBeLessThan(-3.5);
+    expect(velocity.z).toBeGreaterThan(0);
     vi.restoreAllMocks();
   });
 

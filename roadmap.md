@@ -15,6 +15,7 @@
 - [x] Make Legendary rolls physically faster and bouncier without reducing slow motion, with player-screen colors per drama level.
 - [x] Increase the dice's physical rotation, with progressively stronger spins through Legendary drama.
 - [x] Launch dice diagonally across the tray with transverse rotation so they roll farther without stalling.
+- [x] Expand the 3D arena, throw from varying edges, and add optional single-die cinematic focus for player tests.
 
 ## Pendências de regras
 - [ ] Suporte Nv 4 — "No Último Segundo": implementar junto com os testes da Porta da Morte (contador de fracassos). Lembrar o usuário quando a Porta da Morte for feita.

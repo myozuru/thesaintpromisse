@@ -67,6 +67,7 @@ interface RollRequest {
   bonus?: number;
   layout?: DiceOverlayLayout;
   drama?: DiceDrama;
+  cinematicFocus?: boolean;
   at: number;
   resolve?: (values: number[]) => void;
 }
@@ -90,7 +91,7 @@ interface Dice3DState {
    * devolvido pela Promise. Se 3D estiver desabilitado, gera valores via
    * RNG instantaneamente e resolve já.
    */
-  requestRoll: (types: DiceType[], label?: string, bonus?: number, layout?: DiceOverlayLayout, drama?: DiceDrama) => Promise<number[]>;
+  requestRoll: (types: DiceType[], label?: string, bonus?: number, layout?: DiceOverlayLayout, drama?: DiceDrama, cinematicFocus?: boolean) => Promise<number[]>;
   requestNotation: (notation: string, label?: string, bonus?: number, layout?: DiceOverlayLayout) => Promise<number[]>;
   /** chamado pelo overlay quando termina de rolar o atual; resolve a Promise associada. */
   resolveCurrent: (values: number[]) => void;
@@ -146,11 +147,11 @@ export const useDice3DStore = create<Dice3DState>((set, get) => ({
     if (types.length === 0) return;
     get().enqueueTypes(types, label ?? notation);
   },
-  requestRoll: (types, label, bonus, layout = 'default', drama = 0) => {
+  requestRoll: (types, label, bonus, layout = 'default', drama = 0, cinematicFocus = false) => {
     if (types.length === 0) return Promise.resolve([]);
     if (!get().enabled) return Promise.resolve(rngForTypes(types));
     return new Promise<number[]>((resolve) => {
-      const req: RollRequest = { id: uid(), types, label, bonus, layout, drama, at: Date.now(), resolve };
+      const req: RollRequest = { id: uid(), types, label, bonus, layout, drama, cinematicFocus: cinematicFocus && types.length === 1, at: Date.now(), resolve };
       set((s) => {
         if (!s.current) return { current: req, visible: true };
         return { queue: [...s.queue, req], visible: true };
