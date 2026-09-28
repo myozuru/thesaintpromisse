@@ -321,22 +321,27 @@ export function buildLevelUpTrackers(
 
     // Aptidões Amaldiçoadas — sistema numérico (AU/CL/BAR/DOM/ER).
     // Distribuição: 1 ponto em níveis pares; 2 pontos nos picos (10 e 20).
+    // EXCEÇÃO Suporte: a aptidão dele é a escolha do catálogo (1 por nível,
+    // abaixo) — ele NÃO recebe também os pontos numéricos, senão ficaria
+    // com 2 ganhos de aptidão por nível.
     if (!isRestringido(spec)) {
-      const evenLevels = [2, 4, 6, 8, 12, 14, 16, 18];
-      const peakLevels = [10, 20];
-      let pts = 0;
-      if (evenLevels.includes(lv)) pts = 1;
-      if (peakLevels.includes(lv)) pts = 2;
-      if (pts > 0) {
-        out.push({
-          id: `${lv}-aptitude-${crypto.randomUUID()}`,
-          level: lv,
-          kind: 'aptitude_distribute',
-          label: `${nv}: Distribuir ${pts} ponto(s) de Aptidão Amaldiçoada`,
-          resolved: false,
-          value: String(pts),
-          appliedEffect: { pointsRemaining: pts, aptitudeSpends: {} },
-        });
+      if (spec !== 'Suporte') {
+        const evenLevels = [2, 4, 6, 8, 12, 14, 16, 18];
+        const peakLevels = [10, 20];
+        let pts = 0;
+        if (evenLevels.includes(lv)) pts = 1;
+        if (peakLevels.includes(lv)) pts = 2;
+        if (pts > 0) {
+          out.push({
+            id: `${lv}-aptitude-${crypto.randomUUID()}`,
+            level: lv,
+            kind: 'aptitude_distribute',
+            label: `${nv}: Distribuir ${pts} ponto(s) de Aptidão Amaldiçoada`,
+            resolved: false,
+            value: String(pts),
+            appliedEffect: { pointsRemaining: pts, aptitudeSpends: {} },
+          });
+        }
       }
       // Feiticeiros: a cada nível após o 1º, 1 Aptidão Amaldiçoada do catálogo.
       // (O Especialista em Técnica recebe a sua extra pelo motor próprio.)
