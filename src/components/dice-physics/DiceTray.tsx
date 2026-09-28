@@ -179,6 +179,7 @@ export function DiceTray({
   const launchGuardRef = useRef<DiceLaunchGuard>({ armed: false });
   const throwerRef = useRef(new DiceThrower());
   const resultsRef = useRef<Map<string, DiceRollResult>>(new Map());
+  const launchFramesRef = useRef<number[]>([]);
   const expectedRef = useRef(0);
   const focusPositionRef = useRef<DiceTransform["position"] | null>(null);
   const focusSettledRef = useRef(false);
@@ -212,11 +213,27 @@ export function DiceTray({
     if (!claimDiceLaunch(launchGuardRef.current)) return;
     const n = typeof p === 'number' && isFinite(p) ? p : 1;
     setPower(Math.max(1, Math.min(MAX_THROW_POWER, n)));
-    setArmed(false);
-    onThrown?.();
+    // Deixa a interface encerrar o gesto e preparar o corpo dinâmico antes
+    // de aplicar força. O dado permanece parado nesses poucos quadros, sem
+    // transformar o custo inicial em uma engasgada visível no movimento.
+    const prepareLaunch = (framesLeft: number) => {
+      const frame = requestAnimationFrame(() => {
+        launchFramesRef.current = launchFramesRef.current.filter((id) => id !== frame);
+        if (framesLeft > 1) {
+          prepareLaunch(framesLeft - 1);
+          return;
+        }
+        setArmed(false);
+        onThrown?.();
+      });
+      launchFramesRef.current.push(frame);
+    };
+    prepareLaunch(3);
   }, [onThrown]);
 
   const clear = useCallback(() => {
+    launchFramesRef.current.forEach(cancelAnimationFrame);
+    launchFramesRef.current = [];
     setDice([]);
     dicePositionsRef.current.clear();
     focusPositionRef.current = null;
@@ -226,6 +243,11 @@ export function DiceTray({
     expectedRef.current = 0;
     launchGuardRef.current.armed = false;
     setArmed(false);
+  }, []);
+
+  useEffect(() => () => {
+    launchFramesRef.current.forEach(cancelAnimationFrame);
+    launchFramesRef.current = [];
   }, []);
 
   useEffect(() => {
