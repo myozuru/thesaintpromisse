@@ -1,8 +1,8 @@
 export const TRAY_CAMERA_FOV = 42;
 
-const TRAY_HALF_WIDTH = 1.4;
-const TRAY_HALF_DEPTH = 2.1;
-const DICE_VISIBILITY_MARGIN = 0.3;
+const TRAY_HALF_WIDTH = 1.05;
+const TRAY_HALF_DEPTH = 1.45;
+const DICE_VISIBILITY_MARGIN = 0.22;
 const CAMERA_TILT_Z = 0.18;
 const FRAME_MARGIN = 1;
 
@@ -11,7 +11,7 @@ export interface TrayCameraPlacement {
   position: [number, number, number];
 }
 
-/** Recua a câmera conforme o aspecto para manter bordas e dados visíveis. */
+/** Enquadra a região útil da bandeja, priorizando dados legíveis em vez das paredes inteiras. */
 export function getTrayCameraPlacement(aspect: number): TrayCameraPlacement {
   const safeAspect = Number.isFinite(aspect) && aspect > 0 ? aspect : 1;
   const fov = safeAspect < 0.8 ? 50 : TRAY_CAMERA_FOV;
