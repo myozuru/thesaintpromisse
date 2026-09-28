@@ -1,19 +1,19 @@
 import type { DiceThrow, DiceVector3, DiceQuaternion } from "../types";
 import { random } from "./random";
 
-const MIN_X = -2.45;
-const MAX_X = 2.45;
+const MIN_X = -2.05;
+const MAX_X = 2.05;
 const MIN_Y = 1;
 const MAX_Y = 1.2;
-const MIN_Z = -4.15;
-const MAX_Z = 4.15;
-const MIN_LAUNCH_VELOCITY = 1;
-const MAX_LAUNCH_VELOCITY = 2;
-const MIN_ANGULAR_VELOCITY = 2;
-const MAX_ANGULAR_VELOCITY = 6;
-const EDGE_INSET = 0.18;
-const CROSS_VARIATION = 0.42;
-const LIFT_WEIGHT = 0.2;
+const MIN_Z = -3.45;
+const MAX_Z = 3.45;
+const MIN_LAUNCH_VELOCITY = 1.45;
+const MAX_LAUNCH_VELOCITY = 2.35;
+const MIN_ANGULAR_VELOCITY = 3.5;
+const MAX_ANGULAR_VELOCITY = 7;
+const EDGE_INSET = 0.28;
+const CROSS_VARIATION = 0.5;
+const LIFT_WEIGHT = 0.12;
 
 export type DiceLaunchEdge = "left" | "right" | "near" | "far";
 
@@ -39,8 +39,8 @@ export function randomRotation(): DiceQuaternion {
 }
 
 /**
- * Mira a borda oposta, com pequena variação transversal. Cada lançamento pode
- * nascer em qualquer uma das quatro pontas da bandeja.
+ * Mira a borda oposta em trajetória diagonal e baixa. O torque perpendicular
+ * à direção faz o dado rolar de lado, em vez de apenas saltar até o centro.
  */
 export function randomLinearVelocity(position: DiceVector3, speedMultiplier = 1): DiceVector3 {
   const { x, z } = position;
@@ -48,8 +48,12 @@ export function randomLinearVelocity(position: DiceVector3, speedMultiplier = 1)
   if (isNaN(length) || length === 0) return { x: 0, y: 0, z: 0 };
   const speed = random(MIN_LAUNCH_VELOCITY, MAX_LAUNCH_VELOCITY) * speedMultiplier;
   const onVerticalEdge = Math.abs(x / MAX_X) >= Math.abs(z / MAX_Z);
-  const targetX = onVerticalEdge ? -Math.sign(x) * (MAX_X - EDGE_INSET) : random(MIN_X * CROSS_VARIATION, MAX_X * CROSS_VARIATION);
-  const targetZ = onVerticalEdge ? random(MIN_Z * CROSS_VARIATION, MAX_Z * CROSS_VARIATION) : -Math.sign(z) * (MAX_Z - EDGE_INSET);
+  const targetX = onVerticalEdge
+    ? -Math.sign(x) * (MAX_X - EDGE_INSET)
+    : random(MIN_X * CROSS_VARIATION, MAX_X * CROSS_VARIATION);
+  const targetZ = onVerticalEdge
+    ? Math.max(MIN_Z * CROSS_VARIATION, Math.min(MAX_Z * CROSS_VARIATION, -z * 0.55 + random(-0.75, 0.75)))
+    : -Math.sign(z) * (MAX_Z - EDGE_INSET);
   const directionX = targetX - x;
   const directionZ = targetZ - z;
   const directionLength = Math.sqrt(directionX * directionX + directionZ * directionZ);

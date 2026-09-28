@@ -101,19 +101,26 @@ function CinematicCamera({ positionRef, settledRef }: {
 }) {
   const lookAt = useRef(new THREE.Vector3());
   const desired = useRef(new THREE.Vector3());
+  const initialized = useRef(false);
   useFrame(({ camera }, delta) => {
     const point = positionRef.current;
     if (!point) return;
     const settled = settledRef.current;
     // Durante o voo a câmera já fica próxima; ao assentar, fecha bastante
     // sobre a face do dado sem trocar a cena nem perder sua posição física.
-    desired.current.set(point.x, point.y + (settled ? 0.7 : 1.75), point.z + (settled ? 0.24 : 0.82));
+    desired.current.set(point.x, point.y + (settled ? 0.72 : 2.25), point.z + (settled ? 0.2 : 0.38));
     const dt = Math.min(delta, 0.05);
-    camera.position.lerp(desired.current, 1 - Math.exp(-(settled ? 3.4 : 5.5) * dt));
-    lookAt.current.lerp(new THREE.Vector3(point.x, point.y + (settled ? 0.08 : 0), point.z), 1 - Math.exp(-8 * dt));
+    if (!initialized.current) {
+      camera.position.copy(desired.current);
+      lookAt.current.set(point.x, point.y, point.z);
+      initialized.current = true;
+    } else {
+      camera.position.lerp(desired.current, 1 - Math.exp(-(settled ? 4.2 : 10) * dt));
+      lookAt.current.lerp(new THREE.Vector3(point.x, point.y + (settled ? 0.08 : 0), point.z), 1 - Math.exp(-(settled ? 10 : 14) * dt));
+    }
     camera.lookAt(lookAt.current);
     if (camera instanceof THREE.PerspectiveCamera) {
-      const targetFov = settled ? 24 : 31;
+      const targetFov = settled ? 23 : 36;
       camera.fov = THREE.MathUtils.damp(camera.fov, targetFov, settled ? 4.5 : 6, dt);
       camera.updateProjectionMatrix();
     }

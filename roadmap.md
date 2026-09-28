@@ -18,6 +18,7 @@
 - [x] Expand the 3D arena, throw from varying edges, and add optional single-die cinematic focus for player tests.
 
 - [x] Corrigir zoom, sincronização e composição compacta do resultado no foco cinematográfico.
+- [x] Conter a arena, reforçar a rolagem lateral e manter o dado enquadrado desde o lançamento.
 
 ## Pendências de regras
 - [ ] Suporte Nv 4 — "No Último Segundo": implementar junto com os testes da Porta da Morte (contador de fracassos). Lembrar o usuário quando a Porta da Morte for feita.
