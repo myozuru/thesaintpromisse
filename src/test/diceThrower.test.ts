@@ -56,11 +56,12 @@ describe("continuidade da rotação após colisões", () => {
 });
 
 describe("enquadramento da bandeja", () => {
-  it("recua a câmera quando a bandeja fica estreita", () => {
+  it("mantém distância segura e abre o campo de visão em bandejas estreitas", () => {
     const wide = getTrayCameraPlacement(16 / 9);
     const narrow = getTrayCameraPlacement(9 / 16);
 
-    expect(narrow.position[1]).toBeGreaterThan(wide.position[1]);
+    expect(wide.position[1]).toBeGreaterThan(9.5);
+    expect(narrow.position[1]).toBeGreaterThan(9.5);
     expect(narrow.fov).toBeGreaterThan(wide.fov);
   });
 
