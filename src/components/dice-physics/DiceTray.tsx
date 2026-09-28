@@ -300,13 +300,14 @@ export function DiceTray({
             {slowMo < 1 && <SlowMoStepper scale={slowMo} />}
             <TrayColliders dicePositionsRef={dicePositionsRef} />
             <Suspense fallback={null}><DiceModelsReady onReady={markReady} /></Suspense>
-            {dice.map(({ die, thrown }) => (
+            {dice.map(({ die, thrown }, index) => (
               <PhysicsDice
                 key={die.id}
                 die={die}
                 dieThrow={thrown}
                 armed={armed}
                 power={power}
+                launchDelayMs={Math.floor(index / 2) * 18}
                 onThrowRequest={() => throwAll(1)}
                 onRollFinished={handleFinished}
                 onPositionChange={(id, position) => {
