@@ -70,8 +70,12 @@ function createCaveReverb(ctx: AudioContext, duration = 2.5, decay = 3): Convolv
   const impulse = ctx.createBuffer(2, length, sampleRate);
   for (let ch = 0; ch < 2; ch++) {
     const data = impulse.getChannelData(ch);
-    for (let i = 0; i < length; i++) {
-      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+    // Envelope por blocos: evita milhões de Math.pow no primeiro impacto.
+    const block = 256;
+    for (let i = 0; i < length; i += block) {
+      const env = Math.pow(1 - i / length, decay);
+      const end = Math.min(length, i + block);
+      for (let j = i; j < end; j++) data[j] = (Math.random() * 2 - 1) * env;
     }
   }
   const convolver = ctx.createConvolver();
@@ -277,6 +281,13 @@ function getDramaChain(ctx: AudioContext, drama: number): AudioNode {
   lp.connect(rev).connect(wet).connect(ctx.destination);
   dramaReverbs[key] = input;
   return input;
+}
+
+/** Prepara amostras e reverberação antes do lançamento para não travar no primeiro impacto. */
+export function prewarmDiceAudio(drama = 0) {
+  if (!diceHitsRequested) { diceHitsRequested = true; DICE_HITS.forEach(preloadSound); }
+  const d = normalizeDiceDrama(drama);
+  if (d > 0) { try { getDramaChain(getCtx(), d); } catch {} }
 }
 
 export function playDiceHit(intensity: number, surface: 'tray' | 'dice' = 'tray', drama = 0) {
