@@ -106,7 +106,6 @@ function CinematicCamera({ positionRef, settledRef }: {
   const nextPoint = useRef(new THREE.Vector3());
   const smoothedOffset = useRef(new THREE.Vector3());
   const nextOffset = useRef(new THREE.Vector3());
-  const smoothedAspect = useRef(1);
   const initialized = useRef(false);
   const settleBlend = useRef(0);
   useFrame(({ camera }, delta) => {
@@ -117,8 +116,9 @@ function CinematicCamera({ positionRef, settledRef }: {
     settleBlend.current = THREE.MathUtils.damp(settleBlend.current, settled ? 1 : 0, 3.2, dt);
     const blend = settleBlend.current * settleBlend.current * (3 - 2 * settleBlend.current);
     const nextAspect = size.width / Math.max(1, size.height);
-    smoothedAspect.current = THREE.MathUtils.damp(smoothedAspect.current, nextAspect, 7, dt);
-    const placement = getCinematicCameraPlacement(blend, smoothedAspect.current);
+    // Usa imediatamente o formato real da bandeja e suaviza apenas posição e
+    // distância. Evita uma segunda interpolação atrasada durante a redução.
+    const placement = getCinematicCameraPlacement(blend, nextAspect);
     nextPoint.current.set(point.x, point.y, point.z);
     nextOffset.current.set(...placement.offset);
     if (!initialized.current) {
