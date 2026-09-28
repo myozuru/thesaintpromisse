@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { ModuleHeader } from '@/components/ui/module-header';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dice6, Send, Trash2, CheckCircle2, XCircle, Clock, Users, EyeOff, ScrollText, Flame } from 'lucide-react';
+import { Dice6, Send, Trash2, CheckCircle2, XCircle, Clock, Users, EyeOff, ScrollText, Flame, Focus } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { DEFAULT_SAVING_THROWS } from '@/types';
 import { cn } from '@/lib/utils';
@@ -49,6 +49,7 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
   const [note, setNote] = useState<string>('');
   const [masterBonus, setMasterBonus] = useState<string>('');
   const [drama, setDrama] = useState<0 | 1 | 2 | 3>(0);
+  const [cinematicFocus, setCinematicFocus] = useState(false);
 
   const selectedChars = players.filter((c) => charIds.includes(c.id));
   const refChar = selectedChars[0];
@@ -104,6 +105,7 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
         note: note.trim() || undefined,
         drama: drama || undefined,
         masterBonus: mb || undefined,
+        cinematicFocus: cinematicFocus || undefined,
       });
     });
     toast({
@@ -233,6 +235,11 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
               <Button key={value} type="button" variant="ghost" size="sm" className={cn('h-8 text-[10px] uppercase', drama === value ? 'border border-accent/25 bg-accent/10 text-accent' : 'text-muted-foreground')} onClick={() => setDrama(value)}>{label}</Button>
             ))}
           </div>
+          <label className={cn('flex cursor-pointer items-center gap-3 rounded-md border p-3 text-xs transition-colors', cinematicFocus ? 'border-accent/40 bg-accent/10 text-foreground' : 'border-border/70 bg-background/35 text-muted-foreground')}>
+            <Checkbox checked={cinematicFocus} onCheckedChange={(value) => setCinematicFocus(!!value)} />
+            <Focus className="h-4 w-4 shrink-0 text-accent" />
+            <span><strong className="block text-foreground">Foco no dado</strong>Acompanha e aproxima a câmera quando houver apenas um dado.</span>
+          </label>
         </div>
 
         <div className="space-y-1.5">

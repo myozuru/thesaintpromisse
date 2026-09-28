@@ -22,4 +22,4 @@
 - Prompt flows use the real-store jsdom harness in `src/test/helpers/mesaReal.ts`; it mocks cloud/socket and verifies real UI clicks quickly.
 - Token framing stays in `Entity.tokenCrop` across circular/free formats for scene and multiplayer persistence.
 - Character sync merges per sheet by `_syncAt` last-edit stamps (src/lib/charSyncStamps.ts) — stale cloud/other-screen copies must never overwrite newer HP/PE edits.
-- 3D dice launch once, settle by final orientation; shared drama config scales physics and audio.
+- 3D dice cross opposing edges; drama shares physics/audio; cinematic follow is single-die only.

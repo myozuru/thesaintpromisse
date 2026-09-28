@@ -318,7 +318,7 @@ export function TestRequestOverlay() {
       const adv = consumeAdvantageFor(char.id, ctx);
       advNet = adv.net;
       if (adv.net === 'normal') {
-        d20 = await rollD20Com(char.id, undefined, { label: `${current.testName} — ${char.name}`, layout: 'test-request', drama: current.drama ?? 0 });
+        d20 = await rollD20Com(char.id, undefined, { label: `${current.testName} — ${char.name}`, layout: 'test-request', drama: current.drama ?? 0, cinematicFocus: current.cinematicFocus });
         rolls = [d20];
       } else {
         const a = await rollD20Com(char.id, undefined, { label: `${current.testName} — vantagem`, layout: 'test-request', drama: current.drama ?? 0 });
@@ -420,6 +420,9 @@ export function TestRequestOverlay() {
         return peekAutoOutcomeFor(char.id, oc);
       })()
     : null;
+  const singleCinematicResult = !!current.cinematicFocus
+    && !!current.result
+    && (current.result.rolls?.length ?? 1) === 1;
 
   // ──────────────────────────────────────────────────────────────────
   // MESTRE — painel clássico (acompanha/rola pedidos de NPCs).
@@ -643,15 +646,31 @@ export function TestRequestOverlay() {
           {char && (
             <div className={cn(
               'relative overflow-hidden rounded-sm border bg-background transition-all duration-500',
-              rolling
+              rolling || singleCinematicResult
                 ? 'h-[min(600px,64dvh)] border-relic/30 shadow-[inset_0_0_60px_hsl(var(--background)),0_0_45px_-12px_hsl(var(--relic)/0.5)]'
                 : current.result
                   ? 'min-h-[280px] border-border'
                   : 'h-64 border-border shadow-[inset_0_4px_24px_hsl(var(--background)/0.8)] sm:h-72',
             )}>
-              {rolling ? (
+              {rolling || singleCinematicResult ? (
                 <div className="absolute inset-0 animate-in fade-in duration-300" aria-label="Bandeja de dados 3D">
                   <DiceTrayPanel />
+                  {singleCinematicResult && current.result && (
+                    <div className="pointer-events-none absolute inset-x-0 bottom-14 z-20 flex justify-center px-4">
+                      <div className="rounded-sm border border-relic/35 bg-background/85 px-4 py-2 text-center backdrop-blur-md">
+                        <div className="text-[9px] font-black uppercase tracking-[0.25em] text-muted-foreground">Bônus revelados</div>
+                        <div className="font-display text-lg font-black text-relic">
+                          {current.result.bonus >= 0 ? '+' : ''}{current.result.bonus} · Total {current.result.total}
+                        </div>
+                        {current.result.masterBonus ? <div className="text-[10px] text-relic">Mestre {current.result.masterBonus >= 0 ? '+' : ''}{current.result.masterBonus}</div> : null}
+                      </div>
+                    </div>
+                  )}
+                  {singleCinematicResult && (
+                    <Button variant="outline" size="sm" className="absolute bottom-3 left-1/2 z-30 -translate-x-1/2" onClick={() => ackResult(current.id)}>
+                      <Check className="mr-1 h-4 w-4" /> Fechar
+                    </Button>
+                  )}
                 </div>
               ) : current.result ? (
                 <div className="absolute inset-0 flex items-center justify-center p-4">

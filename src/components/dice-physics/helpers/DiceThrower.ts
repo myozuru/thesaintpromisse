@@ -1,26 +1,33 @@
 import type { DiceThrow, DiceVector3, DiceQuaternion } from "../types";
 import { random } from "./random";
 
-const MIN_X = -0.75;
-const MAX_X = 0.75;
+const MIN_X = -2.45;
+const MAX_X = 2.45;
 const MIN_Y = 1;
 const MAX_Y = 1.2;
-const MIN_Z = -1.3;
-const MAX_Z = 1.3;
+const MIN_Z = -4.15;
+const MAX_Z = 4.15;
 const MIN_LAUNCH_VELOCITY = 1;
 const MAX_LAUNCH_VELOCITY = 2;
 const MIN_ANGULAR_VELOCITY = 2;
 const MAX_ANGULAR_VELOCITY = 6;
-const INWARD_WEIGHT = 0.58;
-const SIDEWAYS_WEIGHT = 0.82;
-const LIFT_WEIGHT = 0.22;
+const EDGE_INSET = 0.18;
+const CROSS_VARIATION = 0.42;
+const LIFT_WEIGHT = 0.2;
+
+export type DiceLaunchEdge = "left" | "right" | "near" | "far";
 
 /**
  * Escolhe um ponto sobre uma das quatro paredes (ligeiramente para dentro),
  * de onde o dado será "arremessado" em direção ao lado oposto.
  */
-export function randomPosition(): DiceVector3 {
-  return { x: random(MIN_X, MAX_X), y: random(MIN_Y, MAX_Y), z: random(MIN_Z, MAX_Z) };
+export function randomPosition(edge?: DiceLaunchEdge): DiceVector3 {
+  const selected = edge ?? (["left", "right", "near", "far"] as const)[Math.floor(Math.random() * 4)];
+  const y = random(MIN_Y, MAX_Y);
+  if (selected === "left") return { x: MIN_X + EDGE_INSET, y, z: random(MIN_Z * 0.7, MAX_Z * 0.7) };
+  if (selected === "right") return { x: MAX_X - EDGE_INSET, y, z: random(MIN_Z * 0.7, MAX_Z * 0.7) };
+  if (selected === "near") return { x: random(MIN_X * 0.7, MAX_X * 0.7), y, z: MAX_Z - EDGE_INSET };
+  return { x: random(MIN_X * 0.7, MAX_X * 0.7), y, z: MIN_Z + EDGE_INSET };
 }
 
 export function randomRotation(): DiceQuaternion {
@@ -32,21 +39,19 @@ export function randomRotation(): DiceQuaternion {
 }
 
 /**
- * Lança na diagonal: conserva uma parcela para dentro e outra maior de lado.
- * Assim o dado atravessa e percorre a bandeja em vez de cair quase no mesmo ponto.
+ * Mira a borda oposta, com pequena variação transversal. Cada lançamento pode
+ * nascer em qualquer uma das quatro pontas da bandeja.
  */
 export function randomLinearVelocity(position: DiceVector3, speedMultiplier = 1): DiceVector3 {
   const { x, z } = position;
   const length = Math.sqrt(x * x + z * z);
   if (isNaN(length) || length === 0) return { x: 0, y: 0, z: 0 };
   const speed = random(MIN_LAUNCH_VELOCITY, MAX_LAUNCH_VELOCITY) * speedMultiplier;
-  const inwardX = -x / length;
-  const inwardZ = -z / length;
-  const side = Math.random() < 0.5 ? -1 : 1;
-  const sidewaysX = -inwardZ * side;
-  const sidewaysZ = inwardX * side;
-  const directionX = inwardX * INWARD_WEIGHT + sidewaysX * SIDEWAYS_WEIGHT;
-  const directionZ = inwardZ * INWARD_WEIGHT + sidewaysZ * SIDEWAYS_WEIGHT;
+  const onVerticalEdge = Math.abs(x / MAX_X) >= Math.abs(z / MAX_Z);
+  const targetX = onVerticalEdge ? -Math.sign(x) * (MAX_X - EDGE_INSET) : random(MIN_X * CROSS_VARIATION, MAX_X * CROSS_VARIATION);
+  const targetZ = onVerticalEdge ? random(MIN_Z * CROSS_VARIATION, MAX_Z * CROSS_VARIATION) : -Math.sign(z) * (MAX_Z - EDGE_INSET);
+  const directionX = targetX - x;
+  const directionZ = targetZ - z;
   const directionLength = Math.sqrt(directionX * directionX + directionZ * directionZ);
   return {
     x: (directionX / directionLength) * speed,

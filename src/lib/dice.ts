@@ -34,9 +34,9 @@ export async function rollDice(
   return { rolls, total: rolls.reduce((a, b) => a + b, 0) };
 }
 
-export async function rollD20(bonus?: number, options?: { label?: string; layout?: DiceOverlayLayout; drama?: DiceDrama }): Promise<number> {
+export async function rollD20(bonus?: number, options?: { label?: string; layout?: DiceOverlayLayout; drama?: DiceDrama; cinematicFocus?: boolean }): Promise<number> {
   const charId = getCharContextoRolagem();
-  const [r1] = await useDice3DStore.getState().requestRoll(['D20'], options?.label ?? 'd20', bonus, options?.layout, options?.drama);
+  const [r1] = await useDice3DStore.getState().requestRoll(['D20'], options?.label ?? 'd20', bonus, options?.layout, options?.drama, options?.cinematicFocus);
   let r = r1 ?? 0;
   if (charId && consumirRerollDe(charId)) {
     const [r2] = await useDice3DStore.getState().requestRoll(['D20'], 'd20 reroll', undefined, options?.layout, options?.drama);
@@ -66,7 +66,7 @@ export async function rollDiceCom(
   }
 }
 
-export async function rollD20Com(charId: string | undefined, bonus?: number, options?: { label?: string; layout?: DiceOverlayLayout; drama?: DiceDrama }): Promise<number> {
+export async function rollD20Com(charId: string | undefined, bonus?: number, options?: { label?: string; layout?: DiceOverlayLayout; drama?: DiceDrama; cinematicFocus?: boolean }): Promise<number> {
   const prev = getCharContextoRolagem();
   setCharContextoRolagem(charId);
   try {

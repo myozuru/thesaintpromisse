@@ -41,6 +41,7 @@ export function DiceTrayPanel({ handleRef, className }: Props) {
   const activeRollIdRef = useRef<string | null>(null);
   /** Nível de drama da rolagem atual (0 = normal). */
   const [drama, setDrama] = useState<0 | 1 | 2 | 3>(0);
+  const [cinematicFocus, setCinematicFocus] = useState(false);
   /** true enquanto o resultado é segurado em suspense (modo dramático). */
   const [revealing, setRevealing] = useState(false);
   const [shake, setShake] = useState(false);
@@ -86,6 +87,7 @@ export function DiceTrayPanel({ handleRef, className }: Props) {
   useEffect(() => {
     if (!current) return;
     setDrama(current.drama ?? 0);
+    setCinematicFocus(!!current.cinematicFocus && current.types.length === 1);
     setRevealing(false);
     // A bandeja 3D carrega sob demanda: na primeira rolagem (comum no jogador,
     // que ainda não abriu a bandeja) ela ainda não existe quando o pedido chega.
@@ -145,6 +147,7 @@ export function DiceTrayPanel({ handleRef, className }: Props) {
       >
         <DiceTray
           apiRef={apiRef}
+          cinematicFocus={cinematicFocus}
           onThrown={() => {
             activeRollIdRef.current = useDice3DStore.getState().current?.id ?? null;
             setPhase('rolling');
@@ -253,7 +256,7 @@ export function DiceTrayPanel({ handleRef, className }: Props) {
 
       {lastTotal !== null && (
         <div
-          className="absolute bottom-2 left-2 right-2 flex flex-wrap items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-accent/30"
+          className={cn("absolute bottom-2 left-2 right-2 flex flex-wrap items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-accent/30", cinematicFocus && lastResults.length === 1 && "justify-center")}
           style={{
             background:
               'linear-gradient(135deg, hsl(265 30% 8% / 0.85) 0%, hsl(268 40% 6% / 0.85) 100%)',
@@ -261,7 +264,7 @@ export function DiceTrayPanel({ handleRef, className }: Props) {
             zIndex: 3,
           }}
         >
-          {lastResults.map((r) => (
+          {!cinematicFocus && lastResults.map((r) => (
             <span
               key={r.id}
               className="px-2 py-0.5 rounded-md text-[11px] tabular-nums font-semibold flex items-center gap-1"
@@ -292,7 +295,7 @@ export function DiceTrayPanel({ handleRef, className }: Props) {
               {lastBonus > 0 ? `+${lastBonus}` : lastBonus}
             </span>
           )}
-          <span
+          {!cinematicFocus && <span
             className="ml-auto text-sm font-bold tabular-nums tracking-wider"
             style={{
               color: 'hsl(42 90% 70%)',
@@ -301,7 +304,12 @@ export function DiceTrayPanel({ handleRef, className }: Props) {
             }}
           >
             Σ {lastTotal}
-          </span>
+          </span>}
+          {cinematicFocus && lastResults.length === 1 && (
+            <span className="text-xs font-bold uppercase tracking-[0.18em] text-accent">
+              {lastBonus === 0 ? 'Sem bônus' : `Bônus ${lastBonus > 0 ? '+' : ''}${lastBonus}`} · Total {lastTotal}
+            </span>
+          )}
         </div>
       )}
     </div>
