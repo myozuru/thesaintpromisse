@@ -366,7 +366,7 @@ export function buildLevelUpTrackers(
           id: `${lv}-derivado-${crypto.randomUUID()}`,
           level: lv,
           kind: 'derivado_attr_milestone',
-          label: `${nv} (Marco — Derivado): +1 Ponto de Atributo (quebra o limite)`,
+          label: `${nv} (Marco — Derivado): +1 no atributo escolhido e +1 no limite dele`,
           resolved: false,
         });
       }

@@ -1621,6 +1621,7 @@ export const useCharacterStore = create<CharacterStore>()(
             availableSavingTrainings,
             availableSavingMastery,
             pendingTalents,
+            attributes,
             attrCaps,
             lutadorManeuvers,
             tecnicaFundamentos,
