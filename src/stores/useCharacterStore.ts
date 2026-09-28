@@ -58,6 +58,7 @@ import { expireTransmitir } from '@/lib/suporteTransmitir';
 import { isProtegidoPreAnalise, isSurpresoCondition, preAnaliseShortRestPatch } from '@/lib/suportePreAnaliseRecompensa';
 import { aggregateSpecChoices, DOMINANCIA_DYNAMIC } from '@/lib/specChoiceEffects';
 import { getSpecKeyMod } from '@/lib/specKeyMod';
+import { checkDerivadoEmergency } from '@/lib/derivadoOrigin';
 import { applyOriginLevelUp, initOriginPools, resetOriginDailyPools } from '@/lib/originLevelEngine';
 import { rollDice, rollD20Com, rollDiceCom } from '@/lib/dice';
 import { findWeaponByName, requiresTwoHands, isLight } from '@/lib/weapons';
@@ -770,7 +771,7 @@ interface CharacterStore {
   /** FAH: gasta 1 uso de Alma Maldita; reduz dano à alma para metade (Lv<15) ou anula (Lv≥15). */
   useAlmaMaldita: (charId: string, rawSoulDamage: number) => { ok: boolean; reason?: string; reducedTo?: number; usesLeft?: number };
   /** Derivado: ação "Recuperação de Emergência" — recupera 2× Bônus de Treinamento de PE. 1×/dia. */
-  useDerivadoEmergencyRecovery: (charId: string) => { ok: boolean; reason?: string; recovered?: number };
+  useDerivadoEmergencyRecovery: (charId: string, inCombat: boolean) => { ok: boolean; reason?: string; recovered?: number };
   /** Inumaki: gasta 1 uso de "Olhos de Cobra e Presas". */
   useInumakiOlhosCobra: (charId: string) => { ok: boolean; reason?: string; usesLeft?: number };
   /** Restringido: gasta 1 uso de Resiliência Imediata; devolve dano evitado. */
@@ -1460,6 +1461,7 @@ export const useCharacterStore = create<CharacterStore>()(
           let tecnicaFundamentos = c.tecnicaFundamentos ?? [];
           let tecnicaFoco = c.tecnicaFoco;
           let zeninFocusedSpells = c.zeninFocusedSpells ?? [];
+          let attributes = c.attributes;
           const effect: import('@/lib/levelEngine').PendingChoiceAppliedEffect = appliedEffect ? { ...appliedEffect } : {};
 
           switch (choice.kind) {
@@ -2605,9 +2607,9 @@ export const useCharacterStore = create<CharacterStore>()(
         // O dano residual é aplicado pelo handler do prompt via applyDamage(... 'DAL').
         return { ok: true, reducedTo, usesLeft: cur - 1 };
       },
-      useDerivadoEmergencyRecovery: (charId) => {
+      useDerivadoEmergencyRecovery: (charId, inCombat) => {
         const c = get().characters.find((x) => x.id === charId);
-        const check = checkDerivadoEmergency(c, useCombatStore.getState().inCombat);
+        const check = checkDerivadoEmergency(c, !!inCombat);
         if (!check.ok || !c) return { ok: false, reason: check.reason };
         const tb = getTrainingBonusByLevel(c.level);
         const recovered = tb * 2;
