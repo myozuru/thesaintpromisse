@@ -1,17 +1,17 @@
 import type { DiceThrow, DiceVector3, DiceQuaternion } from "../types";
 import { random } from "./random";
 
-const MIN_X = -1.8;
-const MAX_X = 1.8;
+const MIN_X = -1.45;
+const MAX_X = 1.45;
 const MIN_Y = 1;
 const MAX_Y = 1.2;
-const MIN_Z = -2.95;
-const MAX_Z = 2.95;
+const MIN_Z = -2.25;
+const MAX_Z = 2.25;
 const MIN_LAUNCH_VELOCITY = 1.45;
 const MAX_LAUNCH_VELOCITY = 2.35;
 const MIN_ANGULAR_VELOCITY = 3.5;
 const MAX_ANGULAR_VELOCITY = 7;
-const EDGE_INSET = 0.28;
+const EDGE_INSET = 0.22;
 const CROSS_VARIATION = 0.5;
 const LIFT_WEIGHT = 0.12;
 
