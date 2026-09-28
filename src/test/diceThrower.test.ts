@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { randomAngularVelocity, randomLinearVelocity, randomPosition } from "@/components/dice-physics/helpers/DiceThrower";
 import { preserveDiceSpin } from "@/components/dice-physics/angularMomentum";
+import { getTrayCameraPlacement } from "@/components/dice-physics/cameraFraming";
 
 describe("lançamento lateral dos dados", () => {
   it("atravessa da borda esquerda em direção à borda direita", () => {
@@ -51,5 +52,23 @@ describe("continuidade da rotação após colisões", () => {
   it("não interfere no giro lento durante o assentamento", () => {
     const after = { x: -0.1, y: 0.05, z: 0 };
     expect(preserveDiceSpin({ x: 0.2, y: 0, z: 0 }, after, 0.1)).toEqual(after);
+  });
+});
+
+describe("enquadramento da bandeja", () => {
+  it("mantém distância segura e abre o campo de visão em bandejas estreitas", () => {
+    const wide = getTrayCameraPlacement(16 / 9);
+    const narrow = getTrayCameraPlacement(9 / 16);
+
+    expect(wide.position[1]).toBeGreaterThan(9.5);
+    expect(narrow.position[1]).toBeGreaterThan(9.5);
+    expect(narrow.fov).toBeGreaterThan(wide.fov);
+  });
+
+  it("mantém valores seguros antes das dimensões ficarem disponíveis", () => {
+    const placement = getTrayCameraPlacement(0);
+
+    expect(placement.position.every(Number.isFinite)).toBe(true);
+    expect(placement.position[1]).toBeGreaterThan(0);
   });
 });

@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, Lightformer, PerspectiveCamera, OrbitControls, useGLTF } from "@react-three/drei";
 import { Physics, useRapier } from "@react-three/rapier";
 import { useDice3DStore } from "@/stores/useDice3DStore";
@@ -31,6 +31,7 @@ import { TrayColliders } from "./colliders/TrayColliders";
 import { PhysicsDice } from "./PhysicsDice";
 import { DiceMesh } from "./meshes/DiceMesh";
 import { DICE_DRAMA_CONFIG } from "./dramaConfig";
+import { getTrayCameraPlacement, TRAY_CAMERA_FOV } from "./cameraFraming";
 import * as THREE from "three";
 import d4Url from "./meshes/d4.glb?url";
 import d6Url from "./meshes/d6.glb?url";
@@ -125,6 +126,20 @@ function CinematicCamera({ positionRef, settledRef }: {
       camera.updateProjectionMatrix();
     }
   });
+  return null;
+}
+
+/** Mantém toda a arena visível mesmo quando a bandeja fica alta e estreita. */
+function TrayCameraFraming({ active }: { active: boolean }) {
+  const { camera, size } = useThree();
+  useEffect(() => {
+    if (!active || !(camera instanceof THREE.PerspectiveCamera)) return;
+    const placement = getTrayCameraPlacement(size.width / Math.max(1, size.height));
+    camera.position.set(...placement.position);
+    camera.fov = placement.fov;
+    camera.lookAt(0, 0, 0);
+    camera.updateProjectionMatrix();
+  }, [active, camera, size.height, size.width]);
   return null;
 }
 
@@ -243,7 +258,8 @@ export function DiceTray({
         <pointLight position={[-2, 3, -1]} intensity={2.2} color={palette.accentA} distance={8} decay={2} />
         <pointLight position={[2, 1.5, 2]} intensity={1.4} color={palette.accentB} distance={6} decay={2} />
         <spotLight position={[0, 6, 0]} angle={0.6} penumbra={0.8} intensity={1.2} color={palette.accentA} />
-        <PerspectiveCamera makeDefault fov={38} position={[0, 8.2, 1.5]} />
+        <PerspectiveCamera makeDefault fov={TRAY_CAMERA_FOV} position={[0, 9.8, 1.75]} />
+        <TrayCameraFraming active={!useCinematicCamera} />
         {useCinematicCamera && <CinematicCamera positionRef={focusPositionRef} settledRef={focusSettledRef} />}
         <OrbitControls
           target={[0, 0, 0]}
