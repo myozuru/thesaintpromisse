@@ -140,6 +140,28 @@ function CinematicCamera({ positionRef, settledRef }: {
   return null;
 }
 
+/**
+ * Sonda de teste: registra onde o dado aparece na tela (NDC) em cada quadro
+ * do foco cinematográfico. Só grava quando `window.__diceZoomProbe` existe
+ * (ativado pela página de laboratório / teste de navegador).
+ */
+function ZoomProbe({ positionRef, settledRef }: {
+  positionRef: React.MutableRefObject<DiceTransform["position"] | null>;
+  settledRef: React.MutableRefObject<boolean>;
+}) {
+  const v = useRef(new THREE.Vector3());
+  useFrame(({ camera, clock }) => {
+    const probe = (window as any).__diceZoomProbe as any[] | undefined;
+    const p = positionRef.current;
+    if (!probe || !p) return;
+    camera.updateMatrixWorld();
+    v.current.set(p.x, p.y, p.z).project(camera);
+    probe.push({ t: clock.elapsedTime, x: v.current.x, y: v.current.y, settled: settledRef.current, fov: (camera as any).fov });
+    if (probe.length > 5000) probe.shift();
+  });
+  return null;
+}
+
 /** Mantém toda a arena visível mesmo quando a bandeja fica alta e estreita. */
 function TrayCameraFraming({ active }: { active: boolean }) {
   const { camera, size } = useThree();
@@ -326,6 +348,8 @@ export function DiceTray({
             ))}
           </Physics>
         </RapierGate>
+        {/* Depois dos dados: mede o quadro já atualizado, logo antes de renderizar. */}
+        {useCinematicCamera && <ZoomProbe positionRef={focusPositionRef} settledRef={focusSettledRef} />}
       </Canvas>
     </div>
   );
