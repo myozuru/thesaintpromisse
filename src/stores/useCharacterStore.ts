@@ -1321,6 +1321,12 @@ export const useCharacterStore = create<CharacterStore>()(
               const totalSpent = Object.values(eff.attrSpends).reduce((s, v) => s + (v || 0), 0);
               availableAttrPoints = Math.max(0, availableAttrPoints - totalSpent);
             }
+            if (eff.attrDirect) {
+              attributes = attributes.map(a => {
+                const add = eff.attrDirect![a.name] ?? 0;
+                return add ? { ...a, value: a.value + add } : a;
+              });
+            }
             if (eff.capDelta) {
               attrCaps = attrCaps ? { ...attrCaps } : {};
               for (const [k, v] of Object.entries(eff.capDelta)) {
@@ -1469,12 +1475,14 @@ export const useCharacterStore = create<CharacterStore>()(
               break;
 
             case 'derivado_attr_milestone': {
+              // Desenvolvimento Inesperado: +1 direto no atributo escolhido
+              // e +1 no limite DESSE atributo (nunca vira ponto solto).
               if (value && c.attributes.some(a => a.name === value)) {
-                availableAttrPoints += 1;
                 const DEFAULT_CAP = 20;
                 const currentCap = attrCaps?.[value] ?? DEFAULT_CAP;
                 attrCaps = { ...(attrCaps ?? {}), [value]: currentCap + 1 };
-                effect.attrPointsDelta = (effect.attrPointsDelta ?? 0) + 1;
+                attributes = attributes.map(a => a.name === value ? { ...a, value: a.value + 1 } : a);
+                effect.attrDirect = { ...(effect.attrDirect ?? {}), [value]: 1 };
                 effect.capDelta = { ...(effect.capDelta ?? {}), [value]: 1 };
               }
               break;
@@ -2599,16 +2607,20 @@ export const useCharacterStore = create<CharacterStore>()(
       },
       useDerivadoEmergencyRecovery: (charId) => {
         const c = get().characters.find((x) => x.id === charId);
-        if (!c) return { ok: false, reason: 'Personagem não encontrado.' };
-        if (c.origin !== 'Derivado') return { ok: false, reason: 'Apenas a origem Derivado possui Recuperação de Emergência.' };
-        if (c.derivadoEmergencyUsed) return { ok: false, reason: 'Já utilizada hoje. Reseta no Descanso Longo.' };
+        const check = checkDerivadoEmergency(c, useCombatStore.getState().inCombat);
+        if (!check.ok || !c) return { ok: false, reason: check.reason };
         const tb = getTrainingBonusByLevel(c.level);
         const recovered = tb * 2;
         const peMaxEff = c.peMax;
         set((s) => ({
           characters: s.characters.map((x) =>
             x.id === charId
-              ? { ...x, peCurrent: Math.min(peMaxEff, (x.peCurrent ?? 0) + recovered), derivadoEmergencyUsed: true }
+              ? {
+                  ...x,
+                  peCurrent: Math.min(peMaxEff, (x.peCurrent ?? 0) + recovered),
+                  derivadoEmergencyUsed: true,
+                  bonusActionsCurrent: Math.max(0, (x.bonusActionsCurrent ?? 0) - 1),
+                }
               : x,
           ),
         }));
