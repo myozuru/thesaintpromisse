@@ -31,6 +31,7 @@ import { TrayColliders } from "./colliders/TrayColliders";
 import { PhysicsDice } from "./PhysicsDice";
 import { DiceMesh } from "./meshes/DiceMesh";
 import { DICE_DRAMA_CONFIG } from "./dramaConfig";
+import * as THREE from "three";
 import d4Url from "./meshes/d4.glb?url";
 import d6Url from "./meshes/d6.glb?url";
 import d8Url from "./meshes/d8.glb?url";
@@ -78,6 +79,8 @@ export type DiceTrayProps = {
   style?: React.CSSProperties;
   /** Show an environment map for lighting (defaults to "city" preset). */
   envPreset?: "city" | "studio" | "sunset" | "dawn" | "night" | "warehouse" | "forest" | "apartment" | "park" | "lobby";
+  /** Segue um único dado e aproxima a câmera quando ele assenta. */
+  cinematicFocus?: boolean;
 };
 
 type RollingDie = { die: Die; thrown: ReturnType<DiceThrower["getDiceThrow"]> };
@@ -92,6 +95,25 @@ function SlowMoStepper({ scale }: { scale: number }) {
   return null;
 }
 
+function CinematicCamera({ positionRef, settledRef }: {
+  positionRef: React.MutableRefObject<DiceTransform["position"] | null>;
+  settledRef: React.MutableRefObject<boolean>;
+}) {
+  const lookAt = useRef(new THREE.Vector3());
+  const desired = useRef(new THREE.Vector3());
+  useFrame(({ camera }, delta) => {
+    const point = positionRef.current;
+    if (!point) return;
+    const settled = settledRef.current;
+    desired.current.set(point.x, point.y + (settled ? 1.2 : 2.7), point.z + (settled ? 0.42 : 1.3));
+    const dt = Math.min(delta, 0.05);
+    camera.position.lerp(desired.current, 1 - Math.exp(-(settled ? 2.2 : 4.5) * dt));
+    lookAt.current.lerp(new THREE.Vector3(point.x, point.y, point.z), 1 - Math.exp(-6 * dt));
+    camera.lookAt(lookAt.current);
+  });
+  return null;
+}
+
 export function DiceTray({
   onRoll,
   onRollComplete,
@@ -100,6 +122,7 @@ export function DiceTray({
   className,
   style,
   envPreset = "city",
+  cinematicFocus = false,
 }: DiceTrayProps) {
   const drama = useDice3DStore((st) => st.current?.drama ?? 0);
   const slowMo = DRAMA_TIME_SCALE[drama] ?? 1;
@@ -114,6 +137,9 @@ export function DiceTray({
   const throwerRef = useRef(new DiceThrower());
   const resultsRef = useRef<Map<string, DiceRollResult>>(new Map());
   const expectedRef = useRef(0);
+  const focusPositionRef = useRef<DiceTransform["position"] | null>(null);
+  const focusSettledRef = useRef(false);
+  const useCinematicCamera = cinematicFocus && dice.length === 1;
 
   const spawn = useCallback((types: DiceType[]) => {
     if (!types.length) return;
@@ -124,6 +150,8 @@ export function DiceTray({
       return { die, thrown };
     });
     setDice((prev) => [...prev, ...next]);
+    focusPositionRef.current = next.length === 1 ? next[0].thrown.position : null;
+    focusSettledRef.current = false;
     expectedRef.current += next.length;
     launchGuardRef.current.armed = true;
     setArmed(true);
@@ -141,6 +169,8 @@ export function DiceTray({
 
   const clear = useCallback(() => {
     setDice([]);
+    focusPositionRef.current = null;
+    focusSettledRef.current = false;
     throwerRef.current.clearHistory();
     resultsRef.current.clear();
     expectedRef.current = 0;
@@ -172,6 +202,7 @@ export function DiceTray({
       if (rolling.die.type === "D10") normalized = 10;
     }
     const result: DiceRollResult = { id, type: rolling.die.type, value: normalized };
+    if (useCinematicCamera) focusSettledRef.current = true;
     resultsRef.current.set(id, result);
     onRoll?.(result);
     if (resultsRef.current.size === expectedRef.current) {
@@ -179,13 +210,13 @@ export function DiceTray({
       const total = all.reduce((s, r) => s + r.value, 0);
       onRollComplete?.(all, total);
     }
-  }, [dice, onRoll, onRollComplete]);
+  }, [dice, onRoll, onRollComplete, useCinematicCamera]);
 
   return (
     <div className={className} style={{ width: "100%", height: "100%", ...style }}>
       <Canvas frameloop="always" dpr={[1, 1.25]} gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}>
         <color attach="background" args={[palette.bg]} />
-        <fog attach="fog" args={[palette.bg, 6, 16]} />
+        <fog attach="fog" args={[palette.bg, 9, 24]} />
         {/* Iluminação local (sem baixar HDR da internet, que travava/lagava). */}
         <Environment resolution={64}>
           <Lightformer intensity={2} position={[0, 5, 0]} scale={[10, 10, 1]} />
@@ -198,12 +229,14 @@ export function DiceTray({
         <pointLight position={[-2, 3, -1]} intensity={2.2} color={palette.accentA} distance={8} decay={2} />
         <pointLight position={[2, 1.5, 2]} intensity={1.4} color={palette.accentB} distance={6} decay={2} />
         <spotLight position={[0, 6, 0]} angle={0.6} penumbra={0.8} intensity={1.2} color={palette.accentA} />
-        <PerspectiveCamera makeDefault fov={34} position={[0, 5.4, 0.8]} />
+        <PerspectiveCamera makeDefault fov={38} position={[0, 8.2, 1.5]} />
+        {useCinematicCamera && <CinematicCamera positionRef={focusPositionRef} settledRef={focusSettledRef} />}
         <OrbitControls
           target={[0, 0, 0]}
-          enablePan
-          enableZoom
-          enableRotate
+          enabled={!useCinematicCamera}
+          enablePan={!useCinematicCamera}
+          enableZoom={!useCinematicCamera}
+          enableRotate={!useCinematicCamera}
           minDistance={1.4}
           maxDistance={9}
           maxPolarAngle={Math.PI / 2.05}
@@ -236,6 +269,7 @@ export function DiceTray({
                 power={power}
                 onThrowRequest={() => throwAll(1)}
                 onRollFinished={handleFinished}
+                onPositionChange={useCinematicCamera ? (_id, position) => { focusPositionRef.current = position; } : undefined}
               >
                 <DiceMesh diceType={die.type} />
               </PhysicsDice>
