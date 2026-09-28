@@ -258,7 +258,7 @@ export function DiceTray({
         <pointLight position={[-2, 3, -1]} intensity={2.2} color={palette.accentA} distance={8} decay={2} />
         <pointLight position={[2, 1.5, 2]} intensity={1.4} color={palette.accentB} distance={6} decay={2} />
         <spotLight position={[0, 6, 0]} angle={0.6} penumbra={0.8} intensity={1.2} color={palette.accentA} />
-        <PerspectiveCamera makeDefault fov={TRAY_CAMERA_FOV} position={[0, 11, 2]} />
+        <PerspectiveCamera makeDefault fov={TRAY_CAMERA_FOV} position={[0, 6, 1.1]} />
         <TrayCameraFraming active={!useCinematicCamera} />
         {useCinematicCamera && <CinematicCamera positionRef={focusPositionRef} settledRef={focusSettledRef} />}
         <OrbitControls
