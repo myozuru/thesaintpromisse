@@ -9,7 +9,7 @@ describe("lançamento lateral dos dados", () => {
     const start = randomPosition("left");
     const velocity = randomLinearVelocity(start, 1);
 
-    expect(start.x).toBeLessThan(-0.65);
+    expect(start.x).toBeLessThan(-0.4);
     expect(velocity.x).toBeGreaterThan(0);
     expect(velocity.y).toBeGreaterThan(0);
     expect(Math.abs(velocity.x)).toBeGreaterThan(Math.abs(velocity.y) * 5);
@@ -20,7 +20,7 @@ describe("lançamento lateral dos dados", () => {
     vi.spyOn(Math, "random").mockReturnValue(0.25);
     const start = randomPosition("far");
     const velocity = randomLinearVelocity(start, 1);
-    expect(start.z).toBeLessThan(-1.1);
+    expect(start.z).toBeLessThan(-0.7);
     expect(velocity.z).toBeGreaterThan(0);
     vi.restoreAllMocks();
   });
@@ -60,10 +60,10 @@ describe("enquadramento da bandeja", () => {
     const wide = getTrayCameraPlacement(16 / 9);
     const narrow = getTrayCameraPlacement(9 / 16);
 
-    expect(wide.position[1]).toBeGreaterThan(4);
-    expect(wide.position[1]).toBeLessThan(4.5);
-    expect(narrow.position[1]).toBeGreaterThan(4.2);
-    expect(narrow.position[1]).toBeLessThan(4.8);
+    expect(wide.position[1]).toBeGreaterThan(2.6);
+    expect(wide.position[1]).toBeLessThan(2.9);
+    expect(narrow.position[1]).toBeGreaterThan(2.7);
+    expect(narrow.position[1]).toBeLessThan(3.1);
     expect(narrow.fov).toBeGreaterThan(wide.fov);
   });
 
