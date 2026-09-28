@@ -1,6 +1,6 @@
 // @ts-nocheck
 import * as THREE from "three";
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { RigidBody, type RapierRigidBody } from "@react-three/rapier";
 import { useFrame } from "@react-three/fiber";
 
@@ -69,18 +69,6 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
   const previousAngvelRef = useRef<DiceVector3>({ x: 0, y: 0, z: 0 });
   const collisionSpinRef = useRef<DiceVector3 | null>(null);
   const readableRotationRef = useRef<THREE.Quaternion | null>(null);
-
-  // Mantém corpo e convex hull criados. Trocar fixed -> dynamic na soltura
-  // reconstruía a física de todos os dados no mesmo frame.
-  useLayoutEffect(() => {
-    const rb = rigidBodyRef.current;
-    if (!rb || !armed || thrownRef.current) return;
-    rb.setEnabledTranslations(false, false, false, false);
-    rb.setEnabledRotations(false, false, false, false);
-    rb.setLinvel({ x: 0, y: 0, z: 0 }, false);
-    rb.setAngvel({ x: 0, y: 0, z: 0 }, false);
-    rb.sleep();
-  }, [armed]);
 
   const lockDice = useCallback(() => {
     const rb = rigidBodyRef.current;
@@ -275,6 +263,8 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
     <RigidBody
       ref={rigidBodyRef}
       type="dynamic"
+      enabledTranslations={[!armed, !armed, !armed]}
+      enabledRotations={[!armed, !armed, !armed]}
       gravityScale={dramaConfig.gravityScale}
       density={1.3}
       friction={1.1}
