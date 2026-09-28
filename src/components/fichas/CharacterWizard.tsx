@@ -7,6 +7,7 @@ import { NullSafeInput } from './NullSafeInput';
 import { SpellCreationAssistant } from './SpellCreationAssistant';
 import { TrackersPanel } from './TrackersPanel';
 import { OriginStep } from './OriginStep';
+import { derivadoAuraPrereqIssues } from '@/lib/derivadoOrigin';
 import { TalentCatalogModal, type CatalogPick } from './TalentCatalogModal';
 import { getTalentById } from '@/lib/talents';
 import { applyOriginEffects, attrChoiceFor, isWizardClear, type OriginChoices } from '@/lib/originEngine';
@@ -363,6 +364,15 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
   // FAH: quantidade de anatomias permitidas no momento (1 base + automation).
   const anatomyAllowed = 1 + (effects.automation.extraAnatomyChoices ?? 0);
 
+  // Derivado: a Aptidão de Aura escolhida precisa ter os requisitos atendidos.
+  const derivadoAuraIssues = useMemo(() => {
+    if (origin !== 'Derivado') return [] as string[];
+    const eff: Record<string, number> = {};
+    for (const [k, v] of Object.entries(attrValues)) eff[k] = v + ((effects.attrBonuses as Record<string, number>)[k] ?? 0);
+    const trained = Object.entries(skillTrained).filter(([, t]) => t).map(([n]) => n);
+    return derivadoAuraPrereqIssues(originChoices.auraAptitudeId, eff, level, trained);
+  }, [origin, attrValues, effects.attrBonuses, skillTrained, originChoices.auraAptitudeId, level]);
+
   const canProceed = () => {
     if (step === 0) return name.trim().length > 0;
     if (step === 1) {
@@ -383,6 +393,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
       }
       return true;
     }
+    if (step === 3 && derivadoAuraIssues.length > 0) return false;
     return true;
   };
 
@@ -1240,6 +1251,11 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                 <span className="text-sm font-medium text-muted-foreground">Pontos restantes:</span>
                 <span className={cn('text-2xl font-bold font-mono', remaining >= 0 ? 'text-primary' : 'text-hp')}>{remaining}</span>
               </div>
+              {derivadoAuraIssues.length > 0 && (
+                <div className="rounded-lg border border-hp/40 bg-hp/10 px-3 py-2 text-xs text-hp">
+                  A Aptidão de Aura escolhida exige: <strong>{derivadoAuraIssues.join(', ')}</strong>. Ajuste os atributos ou troque a aptidão na Origem.
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">Base: 10 | Mín: {POINT_BUY_MIN} | Máx: {POINT_BUY_MAX} | Saldo inicial: {POINT_BUY_INITIAL}</p>
               <div className="grid grid-cols-2 gap-3">
                 {FIXED_ATTRIBUTES.map(attr => {
