@@ -11,6 +11,7 @@ import { DICE_SETTLEMENT, decideDiceSettlement } from "./diceSettlement";
 import { useDice3DStore } from "@/stores/useDice3DStore";
 import { playDiceHit } from "@/lib/sounds";
 import { getDiceDramaConfig } from "./dramaConfig";
+import { preserveDiceSpin } from "./angularMomentum";
 
 /** Y máximo (mundo) para o dado ser considerado "na bandeja". */
 const MAX_SETTLE_Y = 1.5;
@@ -65,6 +66,8 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
   const lowSpeedSinceRef = useRef<number | null>(null);
   const thrownAtRef = useRef<number | null>(null);
   const dampingAppliedRef = useRef(false);
+  const previousAngvelRef = useRef<DiceVector3>({ x: 0, y: 0, z: 0 });
+  const collisionSpinRef = useRef<DiceVector3 | null>(null);
 
   const lockDice = useCallback(() => {
     const rb = rigidBodyRef.current;
@@ -132,8 +135,21 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
   }, [resolveNow]);
 
   useFrame(() => {
-    const currentPosition = rigidBodyRef.current?.translation();
+    const rb = rigidBodyRef.current;
+    const currentPosition = rb?.translation();
     if (currentPosition) onPositionChange?.(die.id, currentPosition);
+    if (rb && thrownRef.current && !lockedRef.current) {
+      const currentSpin = rb.angvel();
+      const collisionSpin = collisionSpinRef.current;
+      if (collisionSpin) {
+        const stabilized = preserveDiceSpin(collisionSpin, currentSpin, magnitude(rb.linvel()));
+        rb.setAngvel(stabilized, true);
+        collisionSpinRef.current = null;
+        previousAngvelRef.current = stabilized;
+      } else {
+        previousAngvelRef.current = { x: currentSpin.x, y: currentSpin.y, z: currentSpin.z };
+      }
+    }
     checkRollFinished();
   });
 
@@ -163,6 +179,11 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
       },
       true,
     );
+    previousAngvelRef.current = {
+      x: dieThrow.angularVelocity.x * SPIN_SPEED * power * dramaConfig.spinMultiplier,
+      y: dieThrow.angularVelocity.y * SPIN_SPEED * power * dramaConfig.spinMultiplier,
+      z: dieThrow.angularVelocity.z * SPIN_SPEED * power * dramaConfig.spinMultiplier,
+    };
     thrownRef.current = true;
     thrownAtRef.current = performance.now() / 1000;
     lowSpeedSinceRef.current = null;
@@ -192,6 +213,9 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
   const handleCollision = useCallback((e: any) => {
     const rb = rigidBodyRef.current;
     if (!rb || !thrownRef.current || lockedRef.current) return;
+    if (magnitude(rb.linvel()) >= 0.35 && magnitude(previousAngvelRef.current) >= 2) {
+      collisionSpinRef.current = { ...previousAngvelRef.current };
+    }
     const now = performance.now();
     if (now - lastHitRef.current < 45 / timeScaleRef.current) return;
     const other = e?.other?.rigidBody;
