@@ -186,6 +186,10 @@ export function DiceTray({
   const dicePositionsRef = useRef<Map<string, DiceTransform["position"]>>(new Map());
   const useCinematicCamera = cinematicFocus && dice.length === 1;
 
+  useEffect(() => {
+    setReady(false);
+  }, [drama]);
+
   const spawn = useCallback((types: DiceType[]) => {
     if (!types.length) return;
     const next: RollingDie[] = types.map((type) => {
