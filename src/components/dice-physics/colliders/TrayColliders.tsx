@@ -13,7 +13,7 @@ const FLOOR_Y = -WALL_THICKNESS + 0.005;
 // Os limites visuais e físicos compartilham estas dimensões.
 const WALL_X = WALL_THICKNESS + 0.622;
 const WALL_Z = WALL_THICKNESS + 0.933;
-const MAX_REACTIVE_DICE = 12;
+const MAX_REACTIVE_DICE = 8;
 
 export type DicePositionRegistry = React.MutableRefObject<Map<string, DiceVector3>>;
 
@@ -43,18 +43,16 @@ const fragmentShader = /* glsl */ `
     float pulse = 0.0;
     for (int i = 0; i < MAX_DICE; i++) {
       if (i >= uDiceCount) break;
-      float distanceToDie = distance(vWorldPosition, uDicePositions[i]);
-      float proximity = 1.0 - smoothstep(0.18, 0.86, distanceToDie);
+      vec3 deltaToDie = vWorldPosition - uDicePositions[i];
+      float distanceSq = dot(deltaToDie, deltaToDie);
+      float proximity = 1.0 - smoothstep(0.0324, 0.7396, distanceSq);
       field = max(field, proximity);
-      float ring = 1.0 - smoothstep(0.025, 0.09, abs(distanceToDie - mod(uTime * 0.34, 0.72)));
-      pulse = max(pulse, ring * proximity);
+      pulse = max(pulse, proximity * (0.82 + 0.18 * sin(uTime * 4.0)));
     }
 
-    vec2 cells = abs(fract(vUv * vec2(8.0, 11.0) - 0.5) - 0.5) / fwidth(vUv * vec2(8.0, 11.0));
-    float grid = 1.0 - min(min(cells.x, cells.y), 1.0);
-    float circuit = smoothstep(0.76, 0.98, sin((vUv.x * 17.0 + vUv.y * 13.0) * 3.14159) * 0.5 + 0.5);
-    float scan = 0.72 + 0.28 * sin(uTime * 3.2 + vWorldPosition.y * 9.0 + vWorldPosition.x * 4.0);
-    float visible = clamp(field * (0.34 + grid * 0.72 + circuit * 0.18) * scan + pulse * 0.5, 0.0, 1.0);
+    vec2 gridUv = abs(fract(vUv * vec2(8.0, 11.0)) - 0.5);
+    float grid = 1.0 - smoothstep(0.43, 0.49, max(gridUv.x, gridUv.y));
+    float visible = clamp(field * (0.38 + grid * 0.62) + pulse * 0.28, 0.0, 1.0);
     vec3 color = mix(uAccentA, uAccentB, clamp(grid * 0.65 + pulse * 0.55, 0.0, 1.0));
     gl_FragColor = vec4(color, visible * 0.82);
   }

@@ -254,7 +254,8 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
   return (
     <RigidBody
       ref={rigidBodyRef}
-      type={armed ? 'fixed' : 'dynamic'}
+      type="dynamic"
+      enabled={!armed}
       gravityScale={dramaConfig.gravityScale}
       density={1.3}
       friction={1.1}
