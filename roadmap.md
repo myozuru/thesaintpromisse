@@ -37,6 +37,8 @@
 ## Pendências de regras
 - [ ] Suporte Nv 4 — "No Último Segundo": implementar junto com os testes da Porta da Morte (contador de fracassos). Lembrar o usuário quando a Porta da Morte for feita.
 
-## Pendências de mapa (aguardando definição com o usuário)
-- [ ] Movimento por clique: cada jogador vê sua própria visão do mapa e clica na casa de destino para mover sua peça (estilo tabuleiro/puzzle, só referência). Aguarda decisões de regras.
-- [ ] Mapa-múndi interativo por mundo, separado do mapa tático: regiões/locais, bosses com ficha de informações ao clicar. Aguarda decisões de conteúdo.
+## Pendências de mapa (regras definidas, aguardando início)
+- [ ] Bug: cena é global — trocar de cena num jogador muda para todos. Cada jogador deve ter sua própria cena; o Mestre decide onde cada um está.
+- [ ] Movimento por cômodos: jogador vê só o cômodo onde está; setas nas portas levam ao próximo cômodo (só na visão dele). Em combate, só na vez dele e limitado por metros percorridos; fora de combate, livre. Portas trancadas exigem chave (puzzles depois).
+- [ ] Aba "Mapa do Mundo": vários mundos com troca; marcadores; ícone redondo de boss com as bordas temáticas; cartão do boss (ND, Patamar, Fraquezas, Resistências, RDs e campos livres) com visibilidade por campo definida pelo Mestre; estado do boss; Mestre oculta/revela qualquer coisa aos jogadores.
+- [ ] Ideia guardada (não fazer ainda): ligar boss do mapa-múndi à batalha.
