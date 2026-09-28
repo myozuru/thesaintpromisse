@@ -58,6 +58,7 @@ import { expireTransmitir } from '@/lib/suporteTransmitir';
 import { isProtegidoPreAnalise, isSurpresoCondition, preAnaliseShortRestPatch } from '@/lib/suportePreAnaliseRecompensa';
 import { aggregateSpecChoices, DOMINANCIA_DYNAMIC } from '@/lib/specChoiceEffects';
 import { getSpecKeyMod } from '@/lib/specKeyMod';
+import { checkDerivadoEmergency } from '@/lib/derivadoOrigin';
 import { applyOriginLevelUp, initOriginPools, resetOriginDailyPools } from '@/lib/originLevelEngine';
 import { rollDice, rollD20Com, rollDiceCom } from '@/lib/dice';
 import { findWeaponByName, requiresTwoHands, isLight } from '@/lib/weapons';
@@ -770,7 +771,7 @@ interface CharacterStore {
   /** FAH: gasta 1 uso de Alma Maldita; reduz dano à alma para metade (Lv<15) ou anula (Lv≥15). */
   useAlmaMaldita: (charId: string, rawSoulDamage: number) => { ok: boolean; reason?: string; reducedTo?: number; usesLeft?: number };
   /** Derivado: ação "Recuperação de Emergência" — recupera 2× Bônus de Treinamento de PE. 1×/dia. */
-  useDerivadoEmergencyRecovery: (charId: string) => { ok: boolean; reason?: string; recovered?: number };
+  useDerivadoEmergencyRecovery: (charId: string, inCombat: boolean) => { ok: boolean; reason?: string; recovered?: number };
   /** Inumaki: gasta 1 uso de "Olhos de Cobra e Presas". */
   useInumakiOlhosCobra: (charId: string) => { ok: boolean; reason?: string; usesLeft?: number };
   /** Restringido: gasta 1 uso de Resiliência Imediata; devolve dano evitado. */
@@ -1321,6 +1322,12 @@ export const useCharacterStore = create<CharacterStore>()(
               const totalSpent = Object.values(eff.attrSpends).reduce((s, v) => s + (v || 0), 0);
               availableAttrPoints = Math.max(0, availableAttrPoints - totalSpent);
             }
+            if (eff.attrDirect) {
+              attributes = attributes.map(a => {
+                const add = eff.attrDirect![a.name] ?? 0;
+                return add ? { ...a, value: a.value + add } : a;
+              });
+            }
             if (eff.capDelta) {
               attrCaps = attrCaps ? { ...attrCaps } : {};
               for (const [k, v] of Object.entries(eff.capDelta)) {
@@ -1454,6 +1461,7 @@ export const useCharacterStore = create<CharacterStore>()(
           let tecnicaFundamentos = c.tecnicaFundamentos ?? [];
           let tecnicaFoco = c.tecnicaFoco;
           let zeninFocusedSpells = c.zeninFocusedSpells ?? [];
+          let attributes = c.attributes;
           const effect: import('@/lib/levelEngine').PendingChoiceAppliedEffect = appliedEffect ? { ...appliedEffect } : {};
 
           switch (choice.kind) {
@@ -1469,12 +1477,14 @@ export const useCharacterStore = create<CharacterStore>()(
               break;
 
             case 'derivado_attr_milestone': {
+              // Desenvolvimento Inesperado: +1 direto no atributo escolhido
+              // e +1 no limite DESSE atributo (nunca vira ponto solto).
               if (value && c.attributes.some(a => a.name === value)) {
-                availableAttrPoints += 1;
                 const DEFAULT_CAP = 20;
                 const currentCap = attrCaps?.[value] ?? DEFAULT_CAP;
                 attrCaps = { ...(attrCaps ?? {}), [value]: currentCap + 1 };
-                effect.attrPointsDelta = (effect.attrPointsDelta ?? 0) + 1;
+                attributes = attributes.map(a => a.name === value ? { ...a, value: a.value + 1 } : a);
+                effect.attrDirect = { ...(effect.attrDirect ?? {}), [value]: 1 };
                 effect.capDelta = { ...(effect.capDelta ?? {}), [value]: 1 };
               }
               break;
@@ -1611,6 +1621,7 @@ export const useCharacterStore = create<CharacterStore>()(
             availableSavingTrainings,
             availableSavingMastery,
             pendingTalents,
+            attributes,
             attrCaps,
             lutadorManeuvers,
             tecnicaFundamentos,
@@ -2597,18 +2608,22 @@ export const useCharacterStore = create<CharacterStore>()(
         // O dano residual é aplicado pelo handler do prompt via applyDamage(... 'DAL').
         return { ok: true, reducedTo, usesLeft: cur - 1 };
       },
-      useDerivadoEmergencyRecovery: (charId) => {
+      useDerivadoEmergencyRecovery: (charId, inCombat) => {
         const c = get().characters.find((x) => x.id === charId);
-        if (!c) return { ok: false, reason: 'Personagem não encontrado.' };
-        if (c.origin !== 'Derivado') return { ok: false, reason: 'Apenas a origem Derivado possui Recuperação de Emergência.' };
-        if (c.derivadoEmergencyUsed) return { ok: false, reason: 'Já utilizada hoje. Reseta no Descanso Longo.' };
+        const check = checkDerivadoEmergency(c, !!inCombat);
+        if (!check.ok || !c) return { ok: false, reason: check.reason };
         const tb = getTrainingBonusByLevel(c.level);
         const recovered = tb * 2;
         const peMaxEff = c.peMax;
         set((s) => ({
           characters: s.characters.map((x) =>
             x.id === charId
-              ? { ...x, peCurrent: Math.min(peMaxEff, (x.peCurrent ?? 0) + recovered), derivadoEmergencyUsed: true }
+              ? {
+                  ...x,
+                  peCurrent: Math.min(peMaxEff, (x.peCurrent ?? 0) + recovered),
+                  derivadoEmergencyUsed: true,
+                  bonusActionsCurrent: Math.max(0, (x.bonusActionsCurrent ?? 0) - 1),
+                }
               : x,
           ),
         }));

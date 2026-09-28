@@ -258,6 +258,8 @@ export interface PendingChoiceAppliedEffect {
   attrSpends?: Record<string, number>;
   /** Cap expandido por atributo (Derivado quebra +1). */
   capDelta?: Record<string, number>;
+  /** Pontos aplicados direto no atributo (Derivado: Desenvolvimento Inesperado). */
+  attrDirect?: Record<string, number>;
   /** Id do talento registrado em `Character.pendingTalents` (escolha em aberto). */
   pendingTalentId?: string;
   /** Treinos creditados. */
@@ -364,7 +366,7 @@ export function buildLevelUpTrackers(
           id: `${lv}-derivado-${crypto.randomUUID()}`,
           level: lv,
           kind: 'derivado_attr_milestone',
-          label: `${nv} (Marco — Derivado): +1 Ponto de Atributo (quebra o limite)`,
+          label: `${nv} (Marco — Derivado): +1 no atributo escolhido e +1 no limite dele`,
           resolved: false,
         });
       }

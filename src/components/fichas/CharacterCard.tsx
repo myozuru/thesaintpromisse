@@ -1690,7 +1690,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                 type="button"
                 disabled={used}
                 onClick={() => {
-                  const r = useCharacterStore.getState().useDerivadoEmergencyRecovery(c.id);
+                  const r = useCharacterStore.getState().useDerivadoEmergencyRecovery(c.id, useCombatStore.getState().inCombat);
                   if (!r.ok) { toast.error(r.reason ?? 'Falha.'); playErrorSound(); return; }
                   playSuccessSound();
                   toast.success(`+${r.recovered} PE (Recuperação de Emergência).`);

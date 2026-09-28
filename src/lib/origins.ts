@@ -467,11 +467,11 @@ export const ORIGIN_SPECS: Record<Origin, OriginSpec> = {
     abilities: [
       {
         name: 'Energia Antinatural',
-        description: 'Despertou o poder de forma antinatural. Selecione 1 Aptidão Amaldiçoada de Aura (verifique requisitos). AÇÃO: "Recuperação de Emergência" — recupera PE igual ao DOBRO do Bônus de Treinamento (Maestria). Uso 1× POR DIA.',
+        description: 'Despertou o poder de forma antinatural. Selecione 1 Aptidão Amaldiçoada de Aura (verifique requisitos). AÇÃO BÔNUS (só em combate): "Recuperação de Emergência" — recupera PE igual ao DOBRO do Bônus de Treinamento. Uso 1× POR DIA (volta no Descanso Longo).',
       },
       {
         name: 'Desenvolvimento Inesperado',
-        description: 'Nos níveis 4, 8, 12, 16 e 20: ganha +1 ponto de atributo adicional E o LIMITE MÁXIMO daquele atributo onde o ponto for aplicado sobe em +1 (Derivado pode ultrapassar os limites normais do sistema).',
+        description: 'Nos níveis 4, 8, 12, 16 e 20: escolha um atributo: ele recebe +1 ponto adicional e seu LIMITE MÁXIMO sobe em +1 (Derivado pode ultrapassar os limites normais do sistema).',
       },
     ],
     tags: ['Recuperação de Emergência (1×/dia)', 'Energia Antinatural', 'Desenvolvimento Inesperado'],
