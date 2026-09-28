@@ -32,6 +32,7 @@
 - [x] Pré-carregar números e áudio dos dados para remover travadas durante o lançamento e os primeiros impactos.
 - [x] Separar a preparação física do impulso em quadros distintos para evitar engasgo visível ao soltar os dados.
 - [x] Manter dados como corpos móveis pré-criados e ativá-los no lançamento, evitando reconstrução física durante a animação.
+- [x] Reduzir o custo luminoso da arena reativa para preservar quadros durante os quiques.
 
 ## Pendências de regras
 - [ ] Suporte Nv 4 — "No Último Segundo": implementar junto com os testes da Porta da Morte (contador de fracassos). Lembrar o usuário quando a Porta da Morte for feita.
