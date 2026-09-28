@@ -22,4 +22,4 @@
 - Prompt flows use the real-store jsdom harness in `src/test/helpers/mesaReal.ts`; it mocks cloud/socket and verifies real UI clicks quickly.
 - Token framing stays in `Entity.tokenCrop` across circular/free formats for scene and multiplayer persistence.
 - Character sync merges per sheet by `_syncAt` last-edit stamps (src/lib/charSyncStamps.ts) — stale cloud/other-screen copies must never overwrite newer HP/PE edits.
-- Dice cameras follow one die closely; multi-die views crop unused tray edges.
+- Dice frame close, cross edges, preserve impact spin, share drama, and follow one die.
