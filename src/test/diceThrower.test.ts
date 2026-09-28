@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { randomAngularVelocity, randomLinearVelocity, randomPosition } from "@/components/dice-physics/helpers/DiceThrower";
+import { preserveDiceSpin } from "@/components/dice-physics/angularMomentum";
 
 describe("lançamento lateral dos dados", () => {
   it("atravessa da borda esquerda em direção à borda direita", () => {
@@ -32,5 +33,23 @@ describe("lançamento lateral dos dados", () => {
     expect(Math.abs(angular.y)).toBeLessThan(Math.abs(angular.x));
     expect(Math.hypot(angular.x, angular.z)).toBeGreaterThan(10);
     vi.restoreAllMocks();
+  });
+});
+
+describe("continuidade da rotação após colisões", () => {
+  it("impede que um impacto inverta o giro dominante", () => {
+    const stabilized = preserveDiceSpin({ x: 10, y: 0, z: 0 }, { x: -8, y: 2, z: 1 }, 4);
+    expect(stabilized.x).toBeGreaterThanOrEqual(3.19);
+    expect(Math.hypot(stabilized.x, stabilized.y, stabilized.z)).toBeLessThanOrEqual(10);
+  });
+
+  it("preserva parte do giro quando o impacto tenta zerá-lo", () => {
+    const stabilized = preserveDiceSpin({ x: 0, y: 0, z: -12 }, { x: 0.2, y: 0.1, z: -0.2 }, 3);
+    expect(stabilized.z).toBeLessThanOrEqual(-3.83);
+  });
+
+  it("não interfere no giro lento durante o assentamento", () => {
+    const after = { x: -0.1, y: 0.05, z: 0 };
+    expect(preserveDiceSpin({ x: 0.2, y: 0, z: 0 }, after, 0.1)).toEqual(after);
   });
 });

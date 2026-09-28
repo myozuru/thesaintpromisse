@@ -16,7 +16,7 @@ export function TrayColliders() {
   const roofY = WALL_THICKNESS + getDiceDramaConfig(drama).trayRoof;
   return (
     <group>
-      <RigidBody type="fixed" friction={10} restitution={Math.min(0.95, 0.6 * bounciness)}>
+      <RigidBody type="fixed" friction={1.6} restitution={Math.min(0.95, 0.6 * bounciness)}>
         <CuboidCollider args={[WALL_SIZE, WALL_THICKNESS, WALL_SIZE]} position={[0, FLOOR_Y, 0]} />
       </RigidBody>
 
