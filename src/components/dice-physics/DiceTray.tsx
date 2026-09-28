@@ -307,7 +307,9 @@ export function DiceTray({
                 dieThrow={thrown}
                 armed={armed}
                 power={power}
-                launchDelayMs={Math.floor(index / 2) * 18}
+                // Libera um corpo por frame curto: visualmente é um único
+                // lançamento, mas evita concentrar toda a física no pointerup.
+                launchDelayMs={(index + 1) * 20}
                 onThrowRequest={() => throwAll(1)}
                 onRollFinished={handleFinished}
                 onPositionChange={(id, position) => {
