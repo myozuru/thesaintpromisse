@@ -646,7 +646,7 @@ export function TestRequestOverlay() {
           {char && (
             <div className={cn(
               'relative overflow-hidden rounded-sm border bg-background transition-all duration-500',
-              rolling
+              rolling || singleCinematicResult
                 ? 'h-[min(600px,64dvh)] border-relic/30 shadow-[inset_0_0_60px_hsl(var(--background)),0_0_45px_-12px_hsl(var(--relic)/0.5)]'
                 : current.result
                   ? 'min-h-[280px] border-border'
