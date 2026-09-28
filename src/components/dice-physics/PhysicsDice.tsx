@@ -78,6 +78,7 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, launchDelayMs = 0
   const dampingAppliedRef = useRef(false);
   const previousAngvelRef = useRef<DiceVector3>({ x: 0, y: 0, z: 0 });
   const collisionSpinRef = useRef<DiceVector3 | null>(null);
+  const verticalBounceRef = useRef<number | null>(null);
   const readableRotationRef = useRef<THREE.Quaternion | null>(null);
 
   const lockDice = useCallback(() => {
@@ -156,6 +157,12 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, launchDelayMs = 0
     const currentPosition = rb?.translation();
     if (currentPosition) onPositionChange?.(die.id, currentPosition);
     if (rb && thrownRef.current && !lockedRef.current) {
+      const verticalBounce = verticalBounceRef.current;
+      if (verticalBounce != null) {
+        const velocity = rb.linvel();
+        rb.setLinvel({ x: velocity.x, y: Math.max(velocity.y, verticalBounce), z: velocity.z }, true);
+        verticalBounceRef.current = null;
+      }
       const currentSpin = rb.angvel();
       const collisionSpin = collisionSpinRef.current;
       if (collisionSpin) {
@@ -251,25 +258,32 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, launchDelayMs = 0
   const handleCollision = useCallback((e: any) => {
     const rb = rigidBodyRef.current;
     if (!rb || !thrownRef.current || lockedRef.current) return;
-    if (magnitude(rb.linvel()) >= 0.35 && magnitude(previousAngvelRef.current) >= 2) {
+    const impactVelocity = rb.linvel();
+    const impactPosition = rb.translation();
+    const other = e?.other?.rigidBody;
+    const isDice = !!other && other.bodyType?.() === 1 /* dynamic */;
+    // Reforça só o eixo vertical nos impactos contra o piso. O movimento
+    // horizontal, o giro, o tempo e o áudio permanecem exatamente iguais.
+    if (!isDice && impactPosition.y < 0.85 && impactVelocity.y < -0.45 && dramaConfig.bounceHeightMultiplier > 1) {
+      verticalBounceRef.current = Math.min(12, Math.abs(impactVelocity.y) * dramaConfig.bounceHeightMultiplier);
+    }
+    if (magnitude(impactVelocity) >= 0.35 && magnitude(previousAngvelRef.current) >= 2) {
       collisionSpinRef.current = { ...previousAngvelRef.current };
     }
     const now = performance.now();
     if (now - lastHitRef.current < 45 / timeScaleRef.current) return;
-    const other = e?.other?.rigidBody;
-    let rel = magnitude(rb.linvel());
+    let rel = magnitude(impactVelocity);
     if (other && other !== rb) {
       const ov = other.linvel();
-      const v = rb.linvel();
+      const v = impactVelocity;
       rel = magnitude({ x: v.x - ov.x, y: v.y - ov.y, z: v.z - ov.z });
     }
     rel += magnitude(rb.angvel()) * 0.05;
     const intensity = Math.min(1, rel / 14);
     if (intensity < 0.04) return;
     lastHitRef.current = now;
-    const isDice = !!other && other.bodyType?.() === 1 /* dynamic */;
     playDiceHit(intensity, isDice ? 'dice' : 'tray', dramaRef.current);
-  }, []);
+  }, [dramaConfig.bounceHeightMultiplier]);
 
   return (
     <RigidBody

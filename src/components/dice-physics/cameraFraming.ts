@@ -52,6 +52,6 @@ export function getCinematicCameraPlacement(settleBlend: number, aspect: number)
       THREE.MathUtils.lerp(2.25, 0.72, blend) * narrowCompensation,
       THREE.MathUtils.lerp(0.38, 0.2, blend) * narrowCompensation,
     ],
-    lookHeight: THREE.MathUtils.lerp(0, 0.08, blend),
+    lookHeight: 0,
   };
 }
