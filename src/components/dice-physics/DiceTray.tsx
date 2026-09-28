@@ -102,27 +102,30 @@ function CinematicCamera({ positionRef, settledRef }: {
 }) {
   const lookAt = useRef(new THREE.Vector3());
   const desired = useRef(new THREE.Vector3());
+  const nextLookAt = useRef(new THREE.Vector3());
   const initialized = useRef(false);
+  const settleBlend = useRef(0);
   useFrame(({ camera }, delta) => {
     const point = positionRef.current;
     if (!point) return;
     const settled = settledRef.current;
-    // Durante o voo a câmera já fica próxima; ao assentar, fecha bastante
-    // sobre a face do dado sem trocar a cena nem perder sua posição física.
-    desired.current.set(point.x, point.y + (settled ? 0.72 : 2.25), point.z + (settled ? 0.2 : 0.38));
     const dt = Math.min(delta, 0.05);
+    settleBlend.current = THREE.MathUtils.damp(settleBlend.current, settled ? 1 : 0, 3.2, dt);
+    const blend = settleBlend.current * settleBlend.current * (3 - 2 * settleBlend.current);
+    desired.current.set(point.x, point.y + THREE.MathUtils.lerp(2.25, 0.72, blend), point.z + THREE.MathUtils.lerp(0.38, 0.2, blend));
+    nextLookAt.current.set(point.x, point.y + THREE.MathUtils.lerp(0, 0.08, blend), point.z);
     if (!initialized.current) {
       camera.position.copy(desired.current);
-      lookAt.current.set(point.x, point.y, point.z);
+      lookAt.current.copy(nextLookAt.current);
       initialized.current = true;
     } else {
-      camera.position.lerp(desired.current, 1 - Math.exp(-(settled ? 4.2 : 10) * dt));
-      lookAt.current.lerp(new THREE.Vector3(point.x, point.y + (settled ? 0.08 : 0), point.z), 1 - Math.exp(-(settled ? 10 : 14) * dt));
+      camera.position.lerp(desired.current, 1 - Math.exp(-7 * dt));
+      lookAt.current.lerp(nextLookAt.current, 1 - Math.exp(-10 * dt));
     }
     camera.lookAt(lookAt.current);
     if (camera instanceof THREE.PerspectiveCamera) {
-      const targetFov = settled ? 23 : 36;
-      camera.fov = THREE.MathUtils.damp(camera.fov, targetFov, settled ? 4.5 : 6, dt);
+      const targetFov = THREE.MathUtils.lerp(36, 23, blend);
+      camera.fov = THREE.MathUtils.damp(camera.fov, targetFov, 5, dt);
       camera.updateProjectionMatrix();
     }
   });
