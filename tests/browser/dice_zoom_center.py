@@ -20,10 +20,11 @@ async def main(url: str, drama: int, timeout_s: int) -> int:
         await page.goto(f"{url}/dice-lab?drama={drama}", wait_until="domcontentloaded")
         await page.wait_for_function("window.__diceLab && window.__diceLab.ready()", timeout=timeout_s * 1000)
         await page.evaluate("window.__diceLab.roll()")
-        # Espera assentar e ainda capturar ~2s de zoom final.
+        # Espera assentar, a bandeja realmente encolher e ainda capturar ~2s.
         await page.wait_for_function(
             "(() => { const p = window.__diceZoomProbe; const s = p.filter(f => f.settled);"
-            " return s.length > 0 && s[s.length-1].t - s[0].t > 2; })()",
+            " return s.length > 0 && Math.min(...s.map(f => f.viewportWidth)) <= 241"
+            " && s[s.length-1].t - s[0].t > 2; })()",
             timeout=timeout_s * 1000,
         )
         frames = await page.evaluate("window.__diceZoomProbe")
@@ -34,13 +35,20 @@ async def main(url: str, drama: int, timeout_s: int) -> int:
     worst = max(settled, key=lambda f: (f["x"] ** 2 + f["y"] ** 2) ** 0.5)
     worst_err = (worst["x"] ** 2 + worst["y"] ** 2) ** 0.5
     all_err = max((f["x"] ** 2 + f["y"] ** 2) ** 0.5 for f in frames)
+    worst_pixel = max((f["pixelOffsetX"] ** 2 + f["pixelOffsetY"] ** 2) ** 0.5 for f in settled)
+    widths = [f["viewportWidth"] for f in settled]
+    heights = [f["viewportHeight"] for f in settled]
     print(json.dumps({
         "frames_total": len(frames), "frames_final_zoom": len(settled),
         "fov_start": settled[0]["fov"], "fov_end": settled[-1]["fov"],
         "worst_final_zoom_offset": round(worst_err, 5), "worst_any_offset": round(all_err, 5),
+        "worst_final_pixel_offset": round(worst_pixel, 3),
+        "tray_width_start": round(widths[0], 1), "tray_width_end": round(widths[-1], 1),
+        "tray_height_start": round(heights[0], 1), "tray_height_end": round(heights[-1], 1),
         "page_errors": errors,
     }, indent=2))
-    ok = worst_err <= TOLERANCE and not errors
+    resized = max(widths) - min(widths) >= 400 and max(heights) - min(heights) >= 250
+    ok = worst_err <= TOLERANCE and worst_pixel <= 2 and resized and not errors
     print("PASS" if ok else "FAIL")
     return 0 if ok else 1
 

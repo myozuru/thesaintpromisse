@@ -96,9 +96,10 @@ function SlowMoStepper({ scale }: { scale: number }) {
   return null;
 }
 
-function CinematicCamera({ positionRef, settledRef }: {
+function CinematicCamera({ positionRef, settledRef, viewportRef }: {
   positionRef: React.MutableRefObject<DiceTransform["position"] | null>;
   settledRef: React.MutableRefObject<boolean>;
+  viewportRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const { size } = useThree();
   const lookAt = useRef(new THREE.Vector3());
@@ -114,7 +115,13 @@ function CinematicCamera({ positionRef, settledRef }: {
     const dt = Math.min(delta, 0.05);
     settleBlend.current = THREE.MathUtils.damp(settleBlend.current, settled ? 1 : 0, 3.2, dt);
     const blend = settleBlend.current * settleBlend.current * (3 - 2 * settleBlend.current);
-    const nextAspect = size.width / Math.max(1, size.height);
+    // Durante a redução final, o tamanho informado pelo renderer pode chegar
+    // um quadro depois do CSS. Lemos a moldura real para a câmera já mirar o
+    // centro no mesmo quadro em que a janela muda de tamanho.
+    const rect = viewportRef.current?.getBoundingClientRect();
+    const width = rect?.width ?? size.width;
+    const height = rect?.height ?? size.height;
+    const nextAspect = width / Math.max(1, height);
     // Usa imediatamente o formato real da bandeja e suaviza apenas posição e
     // distância. Evita uma segunda interpolação atrasada durante a redução.
     const placement = getCinematicCameraPlacement(blend, nextAspect);
@@ -133,6 +140,7 @@ function CinematicCamera({ positionRef, settledRef }: {
     lookAt.current.copy(nextPoint.current);
     camera.lookAt(lookAt.current);
     if (camera instanceof THREE.PerspectiveCamera) {
+      camera.aspect = nextAspect;
       camera.fov = THREE.MathUtils.damp(camera.fov, placement.fov, 5, dt);
       camera.updateProjectionMatrix();
     }
@@ -145,18 +153,35 @@ function CinematicCamera({ positionRef, settledRef }: {
  * do foco cinematográfico. Só grava quando `window.__diceZoomProbe` existe
  * (ativado pela página de laboratório / teste de navegador).
  */
-function ZoomProbe({ positionRef, settledRef }: {
+function ZoomProbe({ positionRef, settledRef, viewportRef }: {
   positionRef: React.MutableRefObject<DiceTransform["position"] | null>;
   settledRef: React.MutableRefObject<boolean>;
+  viewportRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const v = useRef(new THREE.Vector3());
-  useFrame(({ camera, clock }) => {
+  useFrame(({ camera, clock, gl }) => {
     const probe = (window as any).__diceZoomProbe as any[] | undefined;
     const p = positionRef.current;
     if (!probe || !p) return;
     camera.updateMatrixWorld();
     v.current.set(p.x, p.y, p.z).project(camera);
-    probe.push({ t: clock.elapsedTime, x: v.current.x, y: v.current.y, settled: settledRef.current, fov: (camera as any).fov });
+    const viewport = viewportRef.current?.getBoundingClientRect();
+    const canvas = gl.domElement.getBoundingClientRect();
+    const dieClientX = canvas.left + ((v.current.x + 1) * canvas.width) / 2;
+    const dieClientY = canvas.top + ((1 - v.current.y) * canvas.height) / 2;
+    const centerX = viewport ? viewport.left + viewport.width / 2 : canvas.left + canvas.width / 2;
+    const centerY = viewport ? viewport.top + viewport.height / 2 : canvas.top + canvas.height / 2;
+    probe.push({
+      t: clock.elapsedTime,
+      x: v.current.x,
+      y: v.current.y,
+      settled: settledRef.current,
+      fov: (camera as any).fov,
+      viewportWidth: viewport?.width ?? canvas.width,
+      viewportHeight: viewport?.height ?? canvas.height,
+      pixelOffsetX: dieClientX - centerX,
+      pixelOffsetY: dieClientY - centerY,
+    });
     if (probe.length > 5000) probe.shift();
   });
   return null;
@@ -201,6 +226,7 @@ export function DiceTray({
   const expectedRef = useRef(0);
   const focusPositionRef = useRef<DiceTransform["position"] | null>(null);
   const focusSettledRef = useRef(false);
+  const viewportRef = useRef<HTMLDivElement>(null);
   /** Posições vivas para o campo visual da arena; atualizadas sem renderizar React. */
   const dicePositionsRef = useRef<Map<string, DiceTransform["position"]>>(new Map());
   const useCinematicCamera = cinematicFocus && dice.length === 1;
@@ -278,8 +304,14 @@ export function DiceTray({
   }, [dice, onRoll, onRollComplete, useCinematicCamera]);
 
   return (
-    <div className={className} style={{ width: "100%", height: "100%", ...style }}>
-      <Canvas frameloop="always" dpr={[1, 1.25]} gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}>
+    <div ref={viewportRef} className={`relative overflow-hidden ${className ?? ""}`} style={{ width: "100%", height: "100%", ...style }}>
+      <Canvas
+        frameloop="always"
+        resize={{ debounce: 0 }}
+        dpr={[1, 1.25]}
+        gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
+        style={{ position: "absolute", left: "50%", top: "50%", width: "100%", height: "100%", transform: "translate(-50%, -50%)" }}
+      >
         <color attach="background" args={[palette.bg]} />
         <fog attach="fog" args={[palette.bg, 9, 24]} />
         {/* Iluminação local (sem baixar HDR da internet, que travava/lagava). */}
@@ -296,7 +328,7 @@ export function DiceTray({
         <spotLight position={[0, 6, 0]} angle={0.6} penumbra={0.8} intensity={1.2} color={palette.accentA} />
         <PerspectiveCamera makeDefault fov={TRAY_CAMERA_FOV} position={[0, 6, 1.1]} />
         <TrayCameraFraming active={!useCinematicCamera} />
-        {useCinematicCamera && <CinematicCamera positionRef={focusPositionRef} settledRef={focusSettledRef} />}
+        {useCinematicCamera && <CinematicCamera positionRef={focusPositionRef} settledRef={focusSettledRef} viewportRef={viewportRef} />}
         <OrbitControls
           target={[0, 0, 0]}
           enabled={!useCinematicCamera}
@@ -349,7 +381,7 @@ export function DiceTray({
           </Physics>
         </RapierGate>
         {/* Depois dos dados: mede o quadro já atualizado, logo antes de renderizar. */}
-        {useCinematicCamera && <ZoomProbe positionRef={focusPositionRef} settledRef={focusSettledRef} />}
+        {useCinematicCamera && <ZoomProbe positionRef={focusPositionRef} settledRef={focusSettledRef} viewportRef={viewportRef} />}
       </Canvas>
     </div>
   );
