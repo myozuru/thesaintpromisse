@@ -195,7 +195,6 @@ function PendingChoiceItem({ choice, character: c, onResolve, onUpdateCharacter 
   const [skillId, setSkillId] = useState('');
   const [attrName, setAttrName] = useState('');
   const [asiOpen, setAsiOpen] = useState(false);
-  const [derivadoOpen, setDerivadoOpen] = useState(false);
   // Lutador: manobras
   const alreadyChosen = c.lutadorManeuvers ?? [];
   const remainingManeuvers = LUTADOR_MANEUVERS.filter(m => !alreadyChosen.includes(m));
@@ -357,7 +356,7 @@ function PendingChoiceItem({ choice, character: c, onResolve, onUpdateCharacter 
           <div className="flex items-start gap-2 rounded-md border border-accent/40 bg-accent/10 p-2 text-xs text-accent-foreground">
             <Sparkles className="h-3 w-3 mt-0.5 flex-shrink-0" />
             <span>
-              <strong>Bônus da Origem Derivado:</strong> +1 ponto livre que <em>quebra o limite máximo</em> do atributo escolhido (ex.: 20 → 21).
+              <strong>Bônus da Origem Derivado:</strong> o atributo escolhido ganha <em>+1 na hora</em> e o limite máximo dele sobe em +1 (ex.: 20 → 21).
             </span>
           </div>
           {!choice.resolved ? (
@@ -379,23 +378,13 @@ function PendingChoiceItem({ choice, character: c, onResolve, onUpdateCharacter 
                 onClick={() => {
                   resolvePendingLevelChoice(c.id, choice.id, attrName);
                   addLog('system', `✓ ${c.name}: ${choice.label} → ${attrName}`);
-                  setDerivadoOpen(true);
                 }}
                 className="rounded-md bg-accent/30 border border-accent px-2 text-xs font-bold text-accent-foreground hover:bg-accent/50 disabled:opacity-40"
               ><Check className="inline h-3 w-3" /></button>
             </div>
           ) : (
             <div className="text-xs text-muted-foreground italic">
-              {(c.availableAttrPoints ?? 0) > 0
-                ? `+1 ponto pendente para `
-                : '✓ Bônus aplicado em '}
-              <strong>{choice.value}</strong>.
-              {(c.availableAttrPoints ?? 0) > 0 && (
-                <button
-                  onClick={() => { playClickSound(); setDerivadoOpen(true); }}
-                  className="ml-2 underline hover:text-foreground"
-                >Distribuir agora</button>
-              )}
+              ✓ +1 aplicado em <strong>{choice.value}</strong> (limite +1).
             </div>
           )}
         </div>
@@ -645,19 +634,6 @@ function PendingChoiceItem({ choice, character: c, onResolve, onUpdateCharacter 
         />
       )}
 
-      {/* Dialog: Derivado — distribuir o +1 (que quebra cap, já expandido em +1 ao resolver) */}
-      {choice.kind === 'derivado_attr_milestone' && choice.value && (
-        <AttributeSpendDialog
-          open={derivadoOpen}
-          onOpenChange={setDerivadoOpen}
-          character={c}
-          perAttrCap={1}
-          requireSpendAll
-          lockedTo={[choice.value]}
-          linkChoiceId={choice.id}
-          hint={`Origem Derivado: aplique o +1 em ${choice.value} (limite expandido em +1).`}
-        />
-      )}
 
       {/* ===== tecnica_fundamentos_initial / tecnica_fundamentos_extra ===== */}
       {(choice.kind === 'tecnica_fundamentos_initial' || choice.kind === 'tecnica_fundamentos_extra') && (() => {
