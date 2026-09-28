@@ -3,6 +3,7 @@ import { randomAngularVelocity, randomLinearVelocity, randomPosition } from "@/c
 import { preserveDiceSpin } from "@/components/dice-physics/angularMomentum";
 import { getCinematicCameraPlacement, getTrayCameraPlacement } from "@/components/dice-physics/cameraFraming";
 import { getReadableFaceRotation } from "@/components/dice-physics/helpers/getValueFromDiceGroup";
+import { combineProximityReveals, getProximityReveal } from "@/components/dice-physics/proximityField";
 import * as THREE from "three";
 
 describe("lançamento lateral dos dados", () => {
@@ -100,5 +101,25 @@ describe("leitura cinematográfica da face", () => {
     finalTextUp.normalize();
     expect(finalFace.angleTo(new THREE.Vector3(0, 1, 0))).toBeLessThan(0.0001);
     expect(finalTextUp.angleTo(new THREE.Vector3(0, 0, -1))).toBeLessThan(0.0001);
+  });
+});
+
+describe("revelação dos limites por proximidade", () => {
+  it("fica invisível longe e totalmente visível junto ao dado", () => {
+    expect(getProximityReveal(1.2)).toBe(0);
+    expect(getProximityReveal(0.1)).toBe(1);
+  });
+
+  it("cresce suavemente conforme o dado se aproxima", () => {
+    const far = getProximityReveal(0.75);
+    const middle = getProximityReveal(0.5);
+    const near = getProximityReveal(0.3);
+    expect(far).toBeLessThan(middle);
+    expect(middle).toBeLessThan(near);
+  });
+
+  it("combina vários dados sem ultrapassar a intensidade máxima", () => {
+    expect(combineProximityReveals([0.25, 0.7, 0.4])).toBe(0.7);
+    expect(combineProximityReveals([0.5, 2])).toBe(1);
   });
 });
