@@ -102,7 +102,6 @@ function CinematicCamera({ positionRef, settledRef }: {
 }) {
   const { size } = useThree();
   const lookAt = useRef(new THREE.Vector3());
-  const trackedPoint = useRef(new THREE.Vector3());
   const nextPoint = useRef(new THREE.Vector3());
   const smoothedOffset = useRef(new THREE.Vector3());
   const nextOffset = useRef(new THREE.Vector3());
@@ -122,16 +121,16 @@ function CinematicCamera({ positionRef, settledRef }: {
     nextPoint.current.set(point.x, point.y, point.z);
     nextOffset.current.set(...placement.offset);
     if (!initialized.current) {
-      trackedPoint.current.copy(nextPoint.current);
       smoothedOffset.current.copy(nextOffset.current);
       initialized.current = true;
     } else {
       const follow = 1 - Math.exp(-8 * dt);
-      trackedPoint.current.lerp(nextPoint.current, follow);
       smoothedOffset.current.lerp(nextOffset.current, follow);
     }
-    camera.position.copy(trackedPoint.current).add(smoothedOffset.current);
-    lookAt.current.copy(trackedPoint.current);
+    // O alvo acompanha o dado sem atraso. Suavizamos só distância e FOV;
+    // suavizar o alvo fazia o zoom fechar primeiro sobre uma posição antiga.
+    camera.position.copy(nextPoint.current).add(smoothedOffset.current);
+    lookAt.current.copy(nextPoint.current);
     camera.lookAt(lookAt.current);
     if (camera instanceof THREE.PerspectiveCamera) {
       camera.fov = THREE.MathUtils.damp(camera.fov, placement.fov, 5, dt);
