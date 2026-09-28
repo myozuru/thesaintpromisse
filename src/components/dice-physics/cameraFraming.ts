@@ -1,9 +1,9 @@
 export const TRAY_CAMERA_FOV = 42;
 
-// Escala 2/3: deixa o dado 50% maior na tela sem perder a margem de segurança.
-const TRAY_HALF_WIDTH = 0.933;
-const TRAY_HALF_DEPTH = 1.4;
-const DICE_VISIBILITY_MARGIN = 0.2;
+// Segunda escala 2/3: amplia novamente o dado em 50% com margem proporcional.
+const TRAY_HALF_WIDTH = 0.622;
+const TRAY_HALF_DEPTH = 0.933;
+const DICE_VISIBILITY_MARGIN = 0.133;
 const CAMERA_TILT_Z = 0.18;
 const FRAME_MARGIN = 1;
 
