@@ -6,9 +6,9 @@ import { getDiceDramaConfig } from "../dramaConfig";
 const WALL_THICKNESS = 50;
 const WALL_SIZE = 100;
 const FLOOR_Y = -WALL_THICKNESS + 0.005;
-// Arena longa, mas contida o suficiente para permanecer bem enquadrada.
-const WALL_X = WALL_THICKNESS + 2.35;
-const WALL_Z = WALL_THICKNESS + 3.8;
+// Arena compacta para destacar os dados sem cortar suas bordas.
+const WALL_X = WALL_THICKNESS + 2.1;
+const WALL_Z = WALL_THICKNESS + 3.3;
 
 export function TrayColliders() {
   const bounciness = useDice3DStore((s) => s.bounciness);

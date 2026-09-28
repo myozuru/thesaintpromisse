@@ -1,10 +1,10 @@
 export const TRAY_CAMERA_FOV = 42;
 
-const TRAY_HALF_WIDTH = 2.35;
-const TRAY_HALF_DEPTH = 3.8;
-const DICE_VISIBILITY_MARGIN = 0.62;
+const TRAY_HALF_WIDTH = 2.1;
+const TRAY_HALF_DEPTH = 3.3;
+const DICE_VISIBILITY_MARGIN = 0.5;
 const CAMERA_TILT_Z = 0.18;
-const FRAME_MARGIN = 1.08;
+const FRAME_MARGIN = 1.02;
 
 export interface TrayCameraPlacement {
   fov: number;
