@@ -31,7 +31,7 @@ import { TrayColliders } from "./colliders/TrayColliders";
 import { PhysicsDice } from "./PhysicsDice";
 import { DiceMesh } from "./meshes/DiceMesh";
 import { DICE_DRAMA_CONFIG } from "./dramaConfig";
-import { getTrayCameraPlacement, TRAY_CAMERA_FOV } from "./cameraFraming";
+import { getCinematicCameraPlacement, getTrayCameraPlacement, TRAY_CAMERA_FOV } from "./cameraFraming";
 import * as THREE from "three";
 import d4Url from "./meshes/d4.glb?url";
 import d6Url from "./meshes/d6.glb?url";
@@ -100,9 +100,11 @@ function CinematicCamera({ positionRef, settledRef }: {
   positionRef: React.MutableRefObject<DiceTransform["position"] | null>;
   settledRef: React.MutableRefObject<boolean>;
 }) {
+  const { size } = useThree();
   const lookAt = useRef(new THREE.Vector3());
   const desired = useRef(new THREE.Vector3());
   const nextLookAt = useRef(new THREE.Vector3());
+  const smoothedAspect = useRef(1);
   const initialized = useRef(false);
   const settleBlend = useRef(0);
   useFrame(({ camera }, delta) => {
@@ -112,8 +114,11 @@ function CinematicCamera({ positionRef, settledRef }: {
     const dt = Math.min(delta, 0.05);
     settleBlend.current = THREE.MathUtils.damp(settleBlend.current, settled ? 1 : 0, 3.2, dt);
     const blend = settleBlend.current * settleBlend.current * (3 - 2 * settleBlend.current);
-    desired.current.set(point.x, point.y + THREE.MathUtils.lerp(2.25, 0.72, blend), point.z + THREE.MathUtils.lerp(0.38, 0.2, blend));
-    nextLookAt.current.set(point.x, point.y + THREE.MathUtils.lerp(0, 0.08, blend), point.z);
+    const nextAspect = size.width / Math.max(1, size.height);
+    smoothedAspect.current = THREE.MathUtils.damp(smoothedAspect.current, nextAspect, 7, dt);
+    const placement = getCinematicCameraPlacement(blend, smoothedAspect.current);
+    desired.current.set(point.x + placement.offset[0], point.y + placement.offset[1], point.z + placement.offset[2]);
+    nextLookAt.current.set(point.x, point.y + placement.lookHeight, point.z);
     if (!initialized.current) {
       camera.position.copy(desired.current);
       lookAt.current.copy(nextLookAt.current);
@@ -124,8 +129,7 @@ function CinematicCamera({ positionRef, settledRef }: {
     }
     camera.lookAt(lookAt.current);
     if (camera instanceof THREE.PerspectiveCamera) {
-      const targetFov = THREE.MathUtils.lerp(36, 23, blend);
-      camera.fov = THREE.MathUtils.damp(camera.fov, targetFov, 5, dt);
+      camera.fov = THREE.MathUtils.damp(camera.fov, placement.fov, 5, dt);
       camera.updateProjectionMatrix();
     }
   });
