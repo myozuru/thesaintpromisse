@@ -96,9 +96,10 @@ function SlowMoStepper({ scale }: { scale: number }) {
   return null;
 }
 
-function CinematicCamera({ positionRef, settledRef }: {
+function SingleDieCamera({ positionRef, settledRef, cinematic }: {
   positionRef: React.MutableRefObject<DiceTransform["position"] | null>;
   settledRef: React.MutableRefObject<boolean>;
+  cinematic: boolean;
 }) {
   const lookAt = useRef(new THREE.Vector3());
   const desired = useRef(new THREE.Vector3());
@@ -107,22 +108,30 @@ function CinematicCamera({ positionRef, settledRef }: {
     const point = positionRef.current;
     if (!point) return;
     const settled = settledRef.current;
-    // Durante o voo a câmera já fica próxima; ao assentar, fecha bastante
-    // sobre a face do dado sem trocar a cena nem perder sua posição física.
-    desired.current.set(point.x, point.y + (settled ? 0.72 : 2.25), point.z + (settled ? 0.2 : 0.38));
+    // Um único dado sempre permanece grande e legível. O foco cinematográfico
+    // fecha ainda mais, mas ambos acompanham a posição real sem cortar o dado.
+    const height = settled
+      ? (cinematic ? 0.48 : 0.62)
+      : (cinematic ? 0.9 : 1.08);
+    const depth = settled
+      ? (cinematic ? 0.1 : 0.14)
+      : (cinematic ? 0.2 : 0.25);
+    desired.current.set(point.x, point.y + height, point.z + depth);
     const dt = Math.min(delta, 0.05);
     if (!initialized.current) {
       camera.position.copy(desired.current);
       lookAt.current.set(point.x, point.y, point.z);
       initialized.current = true;
     } else {
-      camera.position.lerp(desired.current, 1 - Math.exp(-(settled ? 4.2 : 10) * dt));
+      camera.position.lerp(desired.current, 1 - Math.exp(-(settled ? 7 : 13) * dt));
       lookAt.current.lerp(new THREE.Vector3(point.x, point.y + (settled ? 0.08 : 0), point.z), 1 - Math.exp(-(settled ? 10 : 14) * dt));
     }
     camera.lookAt(lookAt.current);
     if (camera instanceof THREE.PerspectiveCamera) {
-      const targetFov = settled ? 23 : 36;
-      camera.fov = THREE.MathUtils.damp(camera.fov, targetFov, settled ? 4.5 : 6, dt);
+      const targetFov = settled
+        ? (cinematic ? 15 : 18)
+        : (cinematic ? 24 : 28);
+      camera.fov = THREE.MathUtils.damp(camera.fov, targetFov, settled ? 7 : 9, dt);
       camera.updateProjectionMatrix();
     }
   });
@@ -168,7 +177,8 @@ export function DiceTray({
   const expectedRef = useRef(0);
   const focusPositionRef = useRef<DiceTransform["position"] | null>(null);
   const focusSettledRef = useRef(false);
-  const useCinematicCamera = cinematicFocus && dice.length === 1;
+  const useSingleDieCamera = dice.length === 1;
+  const useCinematicCamera = cinematicFocus && useSingleDieCamera;
 
   const spawn = useCallback((types: DiceType[]) => {
     if (!types.length) return;
@@ -259,14 +269,20 @@ export function DiceTray({
         <pointLight position={[2, 1.5, 2]} intensity={1.4} color={palette.accentB} distance={6} decay={2} />
         <spotLight position={[0, 6, 0]} angle={0.6} penumbra={0.8} intensity={1.2} color={palette.accentA} />
         <PerspectiveCamera makeDefault fov={TRAY_CAMERA_FOV} position={[0, 6, 1.1]} />
-        <TrayCameraFraming active={!useCinematicCamera} />
-        {useCinematicCamera && <CinematicCamera positionRef={focusPositionRef} settledRef={focusSettledRef} />}
+        <TrayCameraFraming active={!useSingleDieCamera} />
+        {useSingleDieCamera && (
+          <SingleDieCamera
+            positionRef={focusPositionRef}
+            settledRef={focusSettledRef}
+            cinematic={useCinematicCamera}
+          />
+        )}
         <OrbitControls
           target={[0, 0, 0]}
-          enabled={!useCinematicCamera}
-          enablePan={!useCinematicCamera}
-          enableZoom={!useCinematicCamera}
-          enableRotate={!useCinematicCamera}
+          enabled={!useSingleDieCamera}
+          enablePan={!useSingleDieCamera}
+          enableZoom={!useSingleDieCamera}
+          enableRotate={!useSingleDieCamera}
           minDistance={1.4}
           maxDistance={9}
           maxPolarAngle={Math.PI / 2.05}
@@ -299,7 +315,7 @@ export function DiceTray({
                 power={power}
                 onThrowRequest={() => throwAll(1)}
                 onRollFinished={handleFinished}
-                onPositionChange={useCinematicCamera ? (_id, position) => { focusPositionRef.current = position; } : undefined}
+                onPositionChange={useSingleDieCamera ? (_id, position) => { focusPositionRef.current = position; } : undefined}
               >
                 <DiceMesh diceType={die.type} />
               </PhysicsDice>

@@ -60,10 +60,10 @@ describe("enquadramento da bandeja", () => {
     const wide = getTrayCameraPlacement(16 / 9);
     const narrow = getTrayCameraPlacement(9 / 16);
 
-    expect(wide.position[1]).toBeGreaterThan(7);
-    expect(wide.position[1]).toBeLessThan(8.5);
-    expect(narrow.position[1]).toBeGreaterThan(7.5);
-    expect(narrow.position[1]).toBeLessThan(9.5);
+    expect(wide.position[1]).toBeGreaterThan(4);
+    expect(wide.position[1]).toBeLessThan(4.6);
+    expect(narrow.position[1]).toBeGreaterThan(5);
+    expect(narrow.position[1]).toBeLessThan(5.8);
     expect(narrow.fov).toBeGreaterThan(wide.fov);
   });
 
