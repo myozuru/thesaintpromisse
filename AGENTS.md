@@ -22,4 +22,4 @@
 - Prompt flows use the real-store jsdom harness in `src/test/helpers/mesaReal.ts`; it mocks cloud/socket and verifies real UI clicks quickly.
 - Token framing stays in `Entity.tokenCrop` across circular/free formats for scene and multiplayer persistence.
 - Character sync merges per sheet by `_syncAt` last-edit stamps (src/lib/charSyncStamps.ts) — stale cloud/other-screen copies must never overwrite newer HP/PE edits.
-- Dice keeps one scene through result resizing; camera and aspect ease smoothly, the winning face turns upright, and rendered arena bounds match its colliders. Arena visuals read live die positions through refs and reveal by proximity without React frame updates.
+- Dice keeps one scene through resizing; camera/aspect ease, the winning face turns upright, and arena bounds match colliders. Visuals use position refs; armed dice lock dynamic bodies so launch never rebuilds convex colliders.
