@@ -300,13 +300,16 @@ export function DiceTray({
             {slowMo < 1 && <SlowMoStepper scale={slowMo} />}
             <TrayColliders dicePositionsRef={dicePositionsRef} />
             <Suspense fallback={null}><DiceModelsReady onReady={markReady} /></Suspense>
-            {dice.map(({ die, thrown }) => (
+            {dice.map(({ die, thrown }, index) => (
               <PhysicsDice
                 key={die.id}
                 die={die}
                 dieThrow={thrown}
                 armed={armed}
                 power={power}
+                // Libera um corpo por frame curto: visualmente é um único
+                // lançamento, mas evita concentrar toda a física no pointerup.
+                launchDelayMs={(index + 1) * 20}
                 onThrowRequest={() => throwAll(1)}
                 onRollFinished={handleFinished}
                 onPositionChange={(id, position) => {

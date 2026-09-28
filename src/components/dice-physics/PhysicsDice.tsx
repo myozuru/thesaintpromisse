@@ -33,6 +33,7 @@ export type PhysicsDiceProps = {
   armed: boolean;
   /** Força do lançamento (1 = normal, limitado pelo pai). */
   power?: number;
+  launchDelayMs?: number;
   /** Disparado quando o usuário clica em um dado armado. */
   onThrowRequest?: (id: string) => void;
   onRollFinished?: (id: string, value: number, transform: DiceTransform) => void;
@@ -40,7 +41,7 @@ export type PhysicsDiceProps = {
   children?: React.ReactNode;
 };
 
-export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, onRollFinished, onPositionChange, children }: PhysicsDiceProps) {
+export function PhysicsDice({ die, dieThrow, armed, power = 1, launchDelayMs = 0, onThrowRequest, onRollFinished, onPositionChange, children }: PhysicsDiceProps) {
   const bounciness = useDice3DStore((s) => s.bounciness);
   const drama = useDice3DStore((s) => s.current?.drama ?? 0);
   const dramaConfig = getDiceDramaConfig(drama);
@@ -51,6 +52,15 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
   dramaRef.current = drama;
   const groupRef = useRef<THREE.Group>(null);
   const rigidBodyRef = useRef<RapierRigidBody>(null);
+  const setRigidBodyRef = useCallback((rb: RapierRigidBody | null) => {
+    rigidBodyRef.current = rb;
+    if (!rb || thrownRef.current) return;
+    rb.setEnabledTranslations(false, false, false, false);
+    rb.setEnabledRotations(false, false, false, false);
+    rb.setLinvel({ x: 0, y: 0, z: 0 }, false);
+    rb.setAngvel({ x: 0, y: 0, z: 0 }, false);
+    rb.sleep();
+  }, []);
 
   const [position] = useState<Vec3>(() => [dieThrow.position.x, dieThrow.position.y, dieThrow.position.z]);
   const [rotation] = useState<Vec3>(() => {
@@ -180,33 +190,37 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
     if (armed || thrownRef.current) return;
     const rb = rigidBodyRef.current;
     if (!rb) return;
-    rb.wakeUp?.();
-    rb.setLinvel(
-      {
-        x: dieThrow.linearVelocity.x * THROW_SPEED * power * dramaConfig.velocityMultiplier,
-        y: dieThrow.linearVelocity.y * THROW_SPEED * dramaConfig.verticalImpulse * dramaConfig.velocityMultiplier,
-        z: dieThrow.linearVelocity.z * THROW_SPEED * power * dramaConfig.velocityMultiplier,
-      },
-      true,
-    );
-    rb.setAngvel(
-      {
+    const launch = () => {
+      rb.setEnabledTranslations(true, true, true, false);
+      rb.setEnabledRotations(true, true, true, false);
+      rb.wakeUp?.();
+      rb.setLinvel(
+        {
+          x: dieThrow.linearVelocity.x * THROW_SPEED * power * dramaConfig.velocityMultiplier,
+          y: dieThrow.linearVelocity.y * THROW_SPEED * dramaConfig.verticalImpulse * dramaConfig.velocityMultiplier,
+          z: dieThrow.linearVelocity.z * THROW_SPEED * power * dramaConfig.velocityMultiplier,
+        },
+        true,
+      );
+      const angularVelocity = {
         x: dieThrow.angularVelocity.x * SPIN_SPEED * power * dramaConfig.spinMultiplier,
         y: dieThrow.angularVelocity.y * SPIN_SPEED * power * dramaConfig.spinMultiplier,
         z: dieThrow.angularVelocity.z * SPIN_SPEED * power * dramaConfig.spinMultiplier,
-      },
-      true,
-    );
-    previousAngvelRef.current = {
-      x: dieThrow.angularVelocity.x * SPIN_SPEED * power * dramaConfig.spinMultiplier,
-      y: dieThrow.angularVelocity.y * SPIN_SPEED * power * dramaConfig.spinMultiplier,
-      z: dieThrow.angularVelocity.z * SPIN_SPEED * power * dramaConfig.spinMultiplier,
+      };
+      rb.setAngvel(angularVelocity, true);
+      previousAngvelRef.current = angularVelocity;
+      thrownRef.current = true;
+      thrownAtRef.current = performance.now() / 1000;
+      lowSpeedSinceRef.current = null;
+      dampingAppliedRef.current = false;
     };
-    thrownRef.current = true;
-    thrownAtRef.current = performance.now() / 1000;
-    lowSpeedSinceRef.current = null;
-    dampingAppliedRef.current = false;
-  }, [armed, dieThrow, dramaConfig.spinMultiplier, dramaConfig.velocityMultiplier, dramaConfig.verticalImpulse, power]);
+    if (launchDelayMs <= 0) {
+      launch();
+      return;
+    }
+    const timeout = window.setTimeout(launch, launchDelayMs);
+    return () => window.clearTimeout(timeout);
+  }, [armed, dieThrow, dramaConfig.spinMultiplier, dramaConfig.velocityMultiplier, dramaConfig.verticalImpulse, launchDelayMs, power]);
 
   // Prepara o áudio enquanto o dado ainda aguarda o lançamento.
   useEffect(() => {
@@ -259,13 +273,14 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
 
   return (
     <RigidBody
-      ref={rigidBodyRef}
-      type={armed ? 'fixed' : 'dynamic'}
+      ref={setRigidBodyRef}
+      type="dynamic"
       gravityScale={dramaConfig.gravityScale}
       density={1.3}
       friction={1.1}
       restitution={Math.min(0.99, 0.55 * bounciness * dramaConfig.restitution)}
-      ccd
+      // A arena é compacta e fechada; CCD por dado tornava o primeiro passo
+      // físico muito caro exatamente na soltura, sobretudo em lançamentos múltiplos.
       linearDamping={dramaConfig.linearDamping}
       angularDamping={dramaConfig.angularDamping}
       position={position}
