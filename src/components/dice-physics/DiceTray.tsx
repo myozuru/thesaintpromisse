@@ -286,7 +286,7 @@ export function DiceTray({
 
   return (
     <div className={className} style={{ width: "100%", height: "100%", ...style }}>
-      <Canvas frameloop="always" dpr={[1, 1.25]} gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}>
+      <Canvas frameloop="always" dpr={1} gl={{ antialias: false, alpha: true, powerPreference: "high-performance" }}>
         <color attach="background" args={[palette.bg]} />
         <fog attach="fog" args={[palette.bg, 9, 24]} />
         {/* Iluminação local (sem baixar HDR da internet, que travava/lagava). */}
