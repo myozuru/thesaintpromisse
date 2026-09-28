@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { RigidBody, type RapierRigidBody } from "@react-three/rapier";
 import { useFrame } from "@react-three/fiber";
 
-import type { Die, DiceThrow, DiceTransform } from "./types";
+import type { Die, DiceThrow, DiceTransform, DiceVector3 } from "./types";
 import { getValueFromDiceGroup } from "./helpers/getValueFromDiceGroup";
 import { DiceCollider } from "./colliders/DiceColliders";
 import { DICE_SETTLEMENT, decideDiceSettlement } from "./diceSettlement";
@@ -35,10 +35,11 @@ export type PhysicsDiceProps = {
   /** Disparado quando o usuário clica em um dado armado. */
   onThrowRequest?: (id: string) => void;
   onRollFinished?: (id: string, value: number, transform: DiceTransform) => void;
+  onPositionChange?: (id: string, position: DiceVector3) => void;
   children?: React.ReactNode;
 };
 
-export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, onRollFinished, children }: PhysicsDiceProps) {
+export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, onRollFinished, onPositionChange, children }: PhysicsDiceProps) {
   const bounciness = useDice3DStore((s) => s.bounciness);
   const drama = useDice3DStore((s) => s.current?.drama ?? 0);
   const dramaConfig = getDiceDramaConfig(drama);
@@ -130,7 +131,11 @@ export function PhysicsDice({ die, dieThrow, armed, power = 1, onThrowRequest, o
     }
   }, [resolveNow]);
 
-  useFrame(() => checkRollFinished());
+  useFrame(() => {
+    const currentPosition = rigidBodyRef.current?.translation();
+    if (currentPosition) onPositionChange?.(die.id, currentPosition);
+    checkRollFinished();
+  });
 
   /**
    * Quando o pai destrava (armed=false), aplicamos impulso/torque para
