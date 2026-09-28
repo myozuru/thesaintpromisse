@@ -25,6 +25,7 @@
 - [x] Ampliar os dados em mais 50% na visão e reduzir proporcionalmente a arena 3D.
 - [x] Repetir a ampliação de 50% e compactar novamente toda a área física da bandeja.
 - [x] Recuar somente o zoom da bandeja em 10% para comparação visual.
+- [x] Aproximar em 20% o zoom de teste sem alterar a arena física.
 
 ## Pendências de regras
 - [ ] Suporte Nv 4 — "No Último Segundo": implementar junto com os testes da Porta da Morte (contador de fracassos). Lembrar o usuário quando a Porta da Morte for feita.
