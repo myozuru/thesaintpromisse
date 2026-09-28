@@ -5,7 +5,8 @@ const TRAY_HALF_WIDTH = 0.622;
 const TRAY_HALF_DEPTH = 0.933;
 const DICE_VISIBILITY_MARGIN = 0.133;
 const CAMERA_TILT_Z = 0.18;
-const FRAME_MARGIN = 1;
+// Aproxima 20% sobre o enquadramento de teste anterior, sem alterar a arena.
+const FRAME_MARGIN = 1 / (0.9 * 1.2);
 
 export interface TrayCameraPlacement {
   fov: number;
