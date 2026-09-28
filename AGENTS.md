@@ -23,4 +23,4 @@
 - Token framing stays in `Entity.tokenCrop` across circular/free formats for scene and multiplayer persistence.
 - Character sync merges per sheet by `_syncAt` last-edit stamps (src/lib/charSyncStamps.ts) — stale cloud/other-screen copies must never overwrite newer HP/PE edits.
 - Dice keeps one scene while resizing; cinematic camera targets the live die and smooths only distance/FOV. Final face is upright. Drama alters vertical bounce only; armed bodies launch in batches.
-- Dice zoom centering is checked by a real browser roll: `python tests/browser/dice_zoom_center.py` against the `/dice-lab` page (DiceTray records the die's screen position only when `window.__diceZoomProbe` exists) — catches off-center zooms that unit math can't.
+- Dice zoom centering is checked by a real browser roll plus a large-to-compact tray resize: `python tests/browser/dice_zoom_center.py` against `/dice-lab`; the conditional probe compares the die's projected pixel position with the live tray center.
