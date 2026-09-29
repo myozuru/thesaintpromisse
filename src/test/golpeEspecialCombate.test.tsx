@@ -140,7 +140,7 @@ describe('Golpe Especial em combate', () => {
   it('Sacrifício tira 15 PV do atacante', async () => {
     forcarDados(2, 1, 1);
     const btn = await montar(esp({ hpCurrent: 40, hpMax: 40 } as never));
-    golpe('Atroz'); golpe('Sacrificio'.replace('i', 'í').replace('ficio', 'fício') === 'Sacrífício' ? 'Sacrifício' : 'Sacrifício');
+    golpe('Atroz'); golpe('Sacrifício');
     fireEvent.click(btn);
     await waitFor(() => expect(textoLog()).toMatch(/Sacrifício: ana recebe 15/), { timeout: 8000 });
     expect(pegarFicha('ana').hpCurrent).toBe(25);
