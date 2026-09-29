@@ -47,4 +47,4 @@
 ## Especialista em Combate — Repertório do Especialista
 - [x] Base: estilo no Nv 1 (criação), +1 no Nv 6 e +1 no Nv 12 (retroativo), painel na ficha e aba "Estilos" no combate; Adepto de Combate usa a mesma lista.
 - [x] Estilo Defensivo (CA +2, +1 em 4/8/12/16).
-- [x] Duelista · [x] Distante · [x] Arremessador · [x] Duplo (+1 dano; atributo na 2ª arma PENDENTE — aguardando regra do ataque com a 2ª arma) · [ ] Massivo · [ ] Protetor · [ ] Interceptador (1d10 + FOR)
+- [x] Duelista · [x] Distante · [x] Arremessador · [x] Duplo (+1 dano; atributo na 2ª arma PENDENTE — aguardando regra do ataque com a 2ª arma) · [x] Massivo · [ ] Protetor · [ ] Interceptador (1d10 + FOR)

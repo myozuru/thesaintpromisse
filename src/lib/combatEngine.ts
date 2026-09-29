@@ -1,4 +1,4 @@
-import { duelistaApplies, getDuelistaBonus, distanteApplies, getDistanteBonus, arremessadorApplies, getArremessadorDamage, duploApplies, getDuploDamage } from './combateEstilos';
+import { duelistaApplies, getDuelistaBonus, distanteApplies, getDistanteBonus, arremessadorApplies, getArremessadorDamage, duploApplies, getDuploDamage, massivoApplies, getMassivoDamage } from './combateEstilos';
 import { consumeCritNegated } from '@/lib/suporteNegacao';
 /**
  * Motor de Combate.
@@ -134,6 +134,11 @@ function applyCombatStyleBonuses(ctx: AttackContext, out: ContextualBonus): void
     const dmg = getDuploDamage(ctx.attacker.level ?? 1);
     out.damageFlat += dmg;
     out.notes.push(`Estilo Duplo: +${dmg} dano`);
+  }
+  if (massivoApplies(ctx.attacker, ctx.weapon, !!ctx.situation.twoHanded)) {
+    const dmg = getMassivoDamage(ctx.attacker.level ?? 1);
+    out.damageFlat += dmg;
+    out.notes.push(`Estilo Massivo: +${dmg} dano`);
   }
 }
 
@@ -365,11 +370,27 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
   let damageRolls: number[] = [];
   let damageTotal = 0;
   if (hit) {
+    const massivo = massivoApplies(ctx.attacker, w, !!ctx.situation.twoHanded);
+    const rerolled: string[] = [];
     for (const term of finalDice) {
       const { rolls, total } = await rollDiceCom(ctx.attacker.id, `${term.count}d${term.sides}`);
-      damageRolls.push(...rolls);
-      damageTotal += total;
+      if (massivo && rolls.length === term.count) {
+        // Estilo Massivo: rerrola cada dado que caiu 1 ou 2 (uma vez), fica com o novo.
+        for (let i = 0; i < rolls.length; i++) {
+          if (rolls[i] <= 2) {
+            const r = await rollDiceCom(ctx.attacker.id, `1d${term.sides}`);
+            rerolled.push(`${rolls[i]}→${r.total}`);
+            rolls[i] = r.total;
+          }
+        }
+        damageRolls.push(...rolls);
+        damageTotal += rolls.reduce((a, b) => a + b, 0);
+      } else {
+        damageRolls.push(...rolls);
+        damageTotal += total;
+      }
     }
+    if (rerolled.length) ctxBonus.notes.push(`Estilo Massivo rerrolou: ${rerolled.join(', ')}`);
     damageTotal += ctx.abilityMod + ctxBonus.damageFlat;
   }
 
