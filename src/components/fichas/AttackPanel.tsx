@@ -44,6 +44,7 @@ import {
   applyDistracaoLetal, applyGolpeDescendente, investidaMoveMeters, metadeSab,
   execucaoSilenciosaDice,
 } from '@/lib/artesCombate';
+import { renovacaoSangueAtiva, aplicarRenovacao } from '@/lib/renovacaoSangue';
 import { cn } from '@/lib/utils';
 
 interface Props { character: Character; }
