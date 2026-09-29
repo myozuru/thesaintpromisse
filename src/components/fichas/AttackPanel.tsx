@@ -297,6 +297,10 @@ export function AttackPanel({ character: c }: Props) {
       addLog('combat', `⚠️ ${c.name} não tem arma equipada na mão principal.`);
       return;
     }
+    if (rangeBlockReason) {
+      addLog('combat', `🚫 ${c.name} não pode atacar: ${rangeBlockReason}`);
+      return;
+    }
     if (rollInFlightRef.current || phase === 'rolling-hit' || phase === 'rolling-dmg') return;
     if (isReroll && attackRollCount >= 2) return;
     rollInFlightRef.current = true;
