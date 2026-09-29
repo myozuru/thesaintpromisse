@@ -30,7 +30,7 @@ export const COMBAT_STYLES: CombatStyleDef[] = [
   { id: 'arremessador', name: 'Estilo do Arremessador', summary: 'Saca arma de arremesso como parte do ataque; dano +2 com elas (+1 nos níveis 4, 8, 12 e 16).', implemented: true },
   { id: 'duelista', name: 'Estilo do Duelista', summary: 'Uma arma em uma mão e a outra livre (sem escudo): acerto +1 (+1 nos níveis 8 e 16) e dano +2 (+1 nos níveis 4, 8, 12 e 16).', implemented: true },
   { id: 'interceptador', name: 'Estilo do Interceptador', summary: 'Reação: aliado no seu alcance recebe ataque → reduz o dano em 1d10 + mod. de Força (+1 dado nos níveis 4, 8, 12 e 16).', implemented: false },
-  { id: 'protetor', name: 'Estilo do Protetor', summary: 'Reação: impõe desvantagem em ataque contra aliado a até 1,5 m; também concede vantagem no TR de aliado a até 1,5 m.', implemented: false },
+  { id: 'protetor', name: 'Estilo do Protetor', summary: 'Reação: impõe desvantagem em ataque contra aliado a até 1,5 m; também concede vantagem no TR de aliado a até 1,5 m.', implemented: true },
   { id: 'distante', name: 'Estilo Distante', summary: 'Armas à distância: acerto +1 (+1 nos níveis 8 e 16) e dano +2 (+1 nos níveis 4, 8, 12 e 16).', implemented: true },
   { id: 'duplo', name: 'Estilo Duplo', summary: 'Duas armas: dano +1 (+1 nos níveis 4, 8, 12 e 16) em todos os ataques. (Atributo no dano da segunda arma: em breve.)', implemented: true },
   { id: 'massivo', name: 'Estilo Massivo', summary: 'Arma de duas mãos ou pesada: rerrola 1 e 2 nos dados de dano; dano +1 (+1 nos níveis 4, 8, 12 e 16).', implemented: true },

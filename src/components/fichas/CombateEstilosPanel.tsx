@@ -19,6 +19,44 @@ import {
   type CombatStyleId,
 } from '@/lib/combateEstilos';
 import { cn } from '@/lib/utils';
+import { protetorProteger, protetorResguardarTR, protetorDistance, PROTETOR_RANGE_M } from '@/lib/combateProtetor';
+import { fmtM } from '@/lib/touchRange';
+
+function ProtetorSection({ character: c }: { character: Character }) {
+  const characters = useCharacterStore((s) => s.characters);
+  const [allyId, setAllyId] = useState('');
+  const [attackerId, setAttackerId] = useState('');
+  const [msg, setMsg] = useState<string | null>(null);
+  const others = characters.filter((x) => x.id !== c.id);
+  const tag = (id: string) => {
+    const d = protetorDistance(c.id, id);
+    if (d === null) return ' · fora do mapa';
+    return d > PROTETOR_RANGE_M + 0.05 ? ` · falta ${fmtM(d - PROTETOR_RANGE_M)} m` : ' · ao alcance';
+  };
+  const run = (r: { ok: boolean; reason?: string }) => setMsg(r.ok ? 'Reação usada.' : (r.reason ?? 'Falhou.'));
+  const sel = 'w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground';
+  const btn = 'rounded-md border border-primary bg-primary/25 px-2 py-1.5 text-sm font-bold text-primary hover:bg-primary/45 disabled:opacity-40';
+  return (
+    <div className="space-y-1.5 border-t border-border/50 pt-2" onClick={(e) => e.stopPropagation()}>
+      <p className="text-sm font-bold text-foreground">Protetor — reação ({c.reactionsCurrent ?? 0} disp.)</p>
+      <select aria-label="Aliado protegido" className={sel} value={allyId} onChange={(e) => setAllyId(e.target.value)}>
+        <option value="">Aliado a até 1,5 m…</option>
+        {others.map((x) => <option key={x.id} value={x.id}>{x.name}{tag(x.id)}</option>)}
+      </select>
+      <select aria-label="Quem está atacando" className={sel} value={attackerId} onChange={(e) => setAttackerId(e.target.value)}>
+        <option value="">Quem está atacando…</option>
+        {others.filter((x) => x.id !== allyId).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+      </select>
+      <div className="grid grid-cols-2 gap-1.5">
+        <button type="button" className={btn} disabled={!allyId || !attackerId || (c.reactionsCurrent ?? 0) <= 0}
+          onClick={() => run(protetorProteger(c.id, allyId, attackerId))}>Impor desvantagem</button>
+        <button type="button" className={btn} disabled={!allyId || (c.reactionsCurrent ?? 0) <= 0}
+          onClick={() => run(protetorResguardarTR(c.id, allyId))}>Vantagem no TR</button>
+      </div>
+      {msg && <p className="text-sm text-muted-foreground">{msg}</p>}
+    </div>
+  );
+}
 
 function liveBonus(c: Character, id: CombatStyleId): string | null {
   if (id === 'defensivo') return `CA +${getDefensivoCA(c)} (ativo)`;
@@ -76,6 +114,8 @@ export function CombateEstilosPanel({ character: c }: { character: Character }) 
           );
         })}
       </div>
+
+      {active.includes('protetor') && <ProtetorSection character={c} />}
 
       {pending > 0 && (
         <div className="space-y-1.5 border-t border-border/50 pt-2">
