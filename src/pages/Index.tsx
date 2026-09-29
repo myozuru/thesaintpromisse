@@ -224,10 +224,10 @@ export default function Index() {
             className={mapaImmersive ? '' : 'px-2 py-3 sm:px-3 sm:py-4'}
             style={{
               opacity: transitioning ? 0 : 1,
-              transform: transitioning ? 'translateY(6px)' : 'translateY(0)',
+               transform: transitioning ? 'translateY(6px)' : 'none',
               transition:
                 'opacity 320ms cubic-bezier(0.22, 1, 0.36, 1), transform 320ms cubic-bezier(0.22, 1, 0.36, 1)',
-              willChange: 'opacity, transform',
+               willChange: transitioning ? 'opacity, transform' : 'auto',
             }}
           >
             <Suspense fallback={null}>
