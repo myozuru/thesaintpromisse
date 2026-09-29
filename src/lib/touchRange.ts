@@ -100,11 +100,20 @@ export function charsDistanceMeters<E extends TouchEntity & { characterId?: stri
 ): number | null {
   if (aId === bId) return 0;
   const all = Object.values(entities);
-  const belongsTo = (entity: E, characterId: string, profileId?: string) =>
-    entity.characterId === characterId ||
-    (!!profileId && (entity.avatarProfileId === profileId || entity.ownerProfileId === profileId));
-  const as = all.filter(e => belongsTo(e, aId, identities?.casterProfileId));
-  const bs = all.filter(e => belongsTo(e, bId, identities?.targetProfileId));
+  const resolve = (characterId: string, profileId?: string) => {
+    const explicitlyLinked = all.filter((entity) => entity.characterId === characterId);
+    if (explicitlyLinked.length > 0) return explicitlyLinked;
+    if (!profileId) return [];
+    // Um vínculo explícito sempre vence. O perfil só recupera ícones antigos
+    // que ainda não têm uma ficha atribuída, sem misturar fichas do mesmo dono.
+    return all.filter(
+      (entity) =>
+        !entity.characterId &&
+        (entity.avatarProfileId === profileId || entity.ownerProfileId === profileId),
+    );
+  };
+  const as = resolve(aId, identities?.casterProfileId);
+  const bs = resolve(bId, identities?.targetProfileId);
   if (!as.length || !bs.length) return null;
   let best = Infinity;
   for (const a of as) for (const b of bs) best = Math.min(best, touchDistanceMeters(a, b, grid));

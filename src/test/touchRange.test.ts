@@ -26,14 +26,27 @@ describe('Alcance de toque (1,5 m)', () => {
     expect(checkTouchTarget('A', 'B', { ...ents, b: { ...tok(70, 0), characterId: 'B' } }, grid)).toBeNull();
   });
 
-  it('usa o ícone do perfil mesmo quando ele está vinculado a outra ficha do jogador', () => {
+  it('usa o ícone do perfil quando ele ainda não tem ficha explicitamente vinculada', () => {
     const ents = {
-      suporte: { ...tok(0, 0), characterId: 'ficha-antiga-a', avatarProfileId: 'perfil-a' },
-      aliado: { ...tok(70, 0), characterId: 'ficha-antiga-b', ownerProfileId: 'perfil-b' },
+      suporte: { ...tok(0, 0), avatarProfileId: 'perfil-a' },
+      aliado: { ...tok(70, 0), ownerProfileId: 'perfil-b' },
     };
     const identities = { casterProfileId: 'perfil-a', targetProfileId: 'perfil-b' };
     expect(charsDistanceMeters('A', 'B', ents, grid, identities)).toBeCloseTo(1.5);
     expect(checkTouchTarget('A', 'B', ents, grid, identities)).toBeNull();
+  });
+
+  it('não confunde um ícone explicitamente vinculado a outra ficha', () => {
+    const ents = {
+      suporte: { ...tok(0, 0), characterId: 'A', avatarProfileId: 'perfil-a' },
+      outro: { ...tok(70, 0), characterId: 'C', ownerProfileId: 'perfil-b' },
+    };
+    expect(
+      charsDistanceMeters('A', 'B', ents, grid, {
+        casterProfileId: 'perfil-a',
+        targetProfileId: 'perfil-b',
+      }),
+    ).toBeNull();
   });
 
   it('continua informando quanto falta quando os ícones dos perfis estão longe', () => {

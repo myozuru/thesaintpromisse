@@ -111,10 +111,10 @@ describe('checkWeaponRange — distância e casos especiais', () => {
     expect(distanceBetweenChars('a', 'b', ents, GRID)).toBeCloseTo(3, 5);
   });
 
-  it('mede pelos perfis quando os ícones guardam IDs antigos de ficha', () => {
+  it('mede pelos perfis quando os ícones ainda não têm ficha vinculada', () => {
     const ents = entities(
-      { ...entAt(0, 'ficha-antiga-a'), avatarProfileId: 'perfil-a' },
-      { ...entAt(1, 'ficha-antiga-b'), ownerProfileId: 'perfil-b' },
+      { ...entAt(0, ''), characterId: undefined, avatarProfileId: 'perfil-a' },
+      { ...entAt(1, ''), characterId: undefined, ownerProfileId: 'perfil-b' },
     );
     const identities = { casterProfileId: 'perfil-a', targetProfileId: 'perfil-b' };
     expect(distanceBetweenChars('atk', 'def', ents, GRID, identities)).toBeCloseTo(1.5, 5);
