@@ -8,7 +8,7 @@ import type { Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { useMapStore } from '@/stores/useMapStore';
-import { checkTouchTarget, touchDistanceMeters } from '@/lib/touchRange';
+import { checkTouchTarget, charsDistanceMeters, fmtM, TOUCH_RANGE_M } from '@/lib/touchRange';
 import { rollDiceCom } from '@/lib/dice';
 import {
   isSuporte,
@@ -78,13 +78,16 @@ export function SuportePanel({ character: c }: { character: Character }) {
   /** Motivo de bloqueio por alcance de toque (null = pode tocar). */
   const touchBlock = (targetIdToCheck: string): string | null =>
     checkTouchTarget(c.id, targetIdToCheck, mapEntities, gridConfig);
+  /** Rótulo curto no seletor: "· falta 1,5 m". */
+  const rangeTag = (id: string): string => {
+    const d = charsDistanceMeters(c.id, id, mapEntities, gridConfig);
+    if (d === null) return ' · fora do mapa';
+    return d > TOUCH_RANGE_M + 0.05 ? ` · falta ${fmtM(d - TOUCH_RANGE_M)} m` : ' · ao alcance';
+  };
   /** Aliados dentro do raio da Presença Inspiradora (9 m, borda a borda). */
   const INSPIRACAO_RANGE_M = 9;
   const allyDistance = (ally: Character): number | null => {
-    const a = Object.values(mapEntities).find((e) => e.characterId === c.id);
-    const b = Object.values(mapEntities).find((e) => e.characterId === ally.id);
-    if (!a || !b) return null;
-    return touchDistanceMeters(a, b, gridConfig);
+    return charsDistanceMeters(c.id, ally.id, mapEntities, gridConfig);
   };
 
   /** Cura de toque do Suporte em Combate (também usada pelo Apoio Curativo). */
@@ -228,9 +231,9 @@ export function SuportePanel({ character: c }: { character: Character }) {
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <HeartHandshake className="h-4 w-4 text-primary" />
           <span className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Suporte</span>
-          <span className="rounded-full border border-primary/30 px-2 py-0.5 text-[10px] text-muted-foreground">Nv {c.level} · {keyAttr}</span>
+          <span className="rounded-full border border-primary/30 px-2 py-0.5 text-xs text-muted-foreground">Nv {c.level} · {keyAttr}</span>
         </div>
-        <div className="flex shrink-0 items-center gap-1.5 text-[10px] font-mono">
+        <div className="flex shrink-0 items-center gap-1.5 text-xs font-mono">
           <span className="rounded border border-primary/30 bg-background/50 px-2 py-0.5">CURAS <strong className="text-foreground">{left}/{maxUses}</strong></span>
           <span className="rounded border border-primary/30 bg-background/50 px-2 py-0.5">PE <strong className="text-foreground">{c.peCurrent ?? 0}/{shownPeMax(c)}</strong></span>
         </div>
@@ -238,12 +241,12 @@ export function SuportePanel({ character: c }: { character: Character }) {
       <div className="space-y-2 p-3">
       <div className="grid gap-2 min-[520px]:grid-cols-2">
       <div className="min-w-0 space-y-1.5 rounded-lg border border-border/60 bg-background/40 p-2">
-        <div className="text-[10px] font-bold uppercase tracking-wider text-primary">Apoiar · Ação Bônus</div>
-      <div className="grid min-w-0 gap-2 text-xs sm:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="text-xs font-bold uppercase tracking-wider text-primary">Apoiar · Ação Bônus</div>
+      <div className="grid min-w-0 gap-2 text-sm sm:grid-cols-[minmax(0,1fr)_auto]">
         <select
           value={apoiarTargetId}
           onChange={(e) => setApoiarTargetId(e.target.value)}
-          className="min-w-0 w-full rounded border border-border bg-background px-2 py-1 text-xs"
+          className="min-w-0 w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
           title="Criatura que você está ajudando (não pode ser você)"
         >
           <option value="">Apoiar quem?</option>
@@ -251,23 +254,26 @@ export function SuportePanel({ character: c }: { character: Character }) {
             .filter((a) => a.id !== c.id)
             .map((a) => (
               <option key={a.id} value={a.id}>
-                {a.name}{touchBlock(a.id) ? ' · fora do toque' : ''}
+                {a.name}{rangeTag(a.id)}
               </option>
             ))}
         </select>
         <button
           onClick={handleApoiar}
           disabled={busy || !apoiarTargetId}
-           className="inline-flex min-w-0 items-center justify-center gap-1 rounded border border-border bg-secondary/40 px-2 py-1 text-xs hover:bg-secondary/70 disabled:cursor-not-allowed disabled:opacity-40"
+           className="inline-flex min-w-0 items-center justify-center gap-1 rounded border border-border bg-secondary/40 px-2 py-1.5 text-sm hover:bg-secondary/70 disabled:cursor-not-allowed disabled:opacity-40"
           title="Ação Bônus: o alvo ganha vantagem no próximo teste de perícia da tarefa apoiada, se rolar antes do início do seu próximo turno."
         >
           <HandHelping className="h-3.5 w-3.5" /> Apoiar (Ação Bônus)
         </button>
+        {apoiarTargetId && touchBlock(apoiarTargetId) && (
+          <p className="text-sm font-medium text-destructive sm:col-span-2">{touchBlock(apoiarTargetId)}</p>
+        )}
         {apoiosConhecidos.length > 0 && (
           <select
             value={apoioKey}
             onChange={(e) => setApoioKey(e.target.value as ApoioAvancadoKey | '')}
-            className="min-w-0 w-full rounded border border-border bg-background px-2 py-1 text-xs sm:col-span-2"
+            className="min-w-0 w-full rounded border border-border bg-background px-2 py-1.5 text-sm sm:col-span-2"
             title="Apoio Avançado: efeito extra aplicado junto do Apoiar"
           >
             <option value="">Apoio simples</option>
@@ -281,17 +287,17 @@ export function SuportePanel({ character: c }: { character: Character }) {
       </div>
       </div>
       <div className="min-w-0 space-y-1.5 rounded-lg border border-border/60 bg-background/40 p-2">
-        <div className="text-[10px] font-bold uppercase tracking-wider text-primary">Cura de toque · Ação Bônus</div>
-      <div className="grid min-w-0 gap-2 text-xs sm:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="text-xs font-bold uppercase tracking-wider text-primary">Cura de toque · Ação Bônus</div>
+      <div className="grid min-w-0 gap-2 text-sm sm:grid-cols-[minmax(0,1fr)_auto]">
         <select
           value={targetId}
           onChange={(e) => setTargetId(e.target.value)}
-          className="min-w-0 w-full rounded border border-border bg-background px-2 py-1 text-xs"
+          className="min-w-0 w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
           title="Alvo em alcance de toque"
         >
           {allies.map((a) => (
             <option key={a.id} value={a.id}>
-              {a.name} ({a.hpCurrent}/{shownHpMax(a)}){a.id !== c.id && touchBlock(a.id) ? ' · fora do toque' : ''}
+              {a.name} ({a.hpCurrent}/{shownHpMax(a)}){a.id !== c.id ? rangeTag(a.id) : ''}
             </option>
           ))}
         </select>
@@ -303,6 +309,9 @@ export function SuportePanel({ character: c }: { character: Character }) {
         >
           <HeartHandshake className="h-3.5 w-3.5" /> Curar {dice.count}d{dice.sides} {sign(keyMod)}{hasMedicinaInfalivel(c) ? ` +${getTrainingBonusByLevel(c.level)}` : ''}
         </button>
+        {targetId !== c.id && touchBlock(targetId) && (
+          <p className="text-sm font-medium text-destructive sm:col-span-2">{touchBlock(targetId)}</p>
+        )}
         <span className="text-muted-foreground sm:col-span-2">
           Usos: <strong className="text-foreground">{left}/{maxUses}</strong> · {keyAttr}
         </span>
@@ -342,7 +351,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
                 <select
                   value={trChoice}
                   onChange={(e) => setTrChoice(e.target.value as SuporteBaseTR)}
-                  className="rounded border border-border bg-background px-2 py-1 text-xs"
+                  className="rounded border border-border bg-background px-2 py-1.5 text-sm"
                   title="TR treinado da especialização (Nv 1): Astúcia ou Vontade"
                 >
                   <option value="Astúcia">Astúcia</option>
@@ -391,7 +400,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
           <select
             value={extra}
             onChange={(e) => setInspiracaoExtra(Number(e.target.value))}
-            className="rounded border border-border bg-background px-2 py-1 text-xs"
+            className="rounded border border-border bg-background px-2 py-1.5 text-sm"
             title="PE adicional: +1 no bônus por PE (máx. = metade do mod de Presença)"
           >
             {Array.from({ length: maxExtra + 1 }, (_, i) => (
