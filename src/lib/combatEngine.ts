@@ -1,4 +1,5 @@
 import { duelistaApplies, getDuelistaBonus, distanteApplies, getDistanteBonus, arremessadorApplies, getArremessadorDamage, duploApplies, getDuploDamage, massivoApplies, getMassivoDamage } from './combateEstilos';
+import { execucaoSilenciosaDice } from './artesCombate';
 import { consumeCritNegated } from '@/lib/suporteNegacao';
 /**
  * Motor de Combate.
@@ -53,6 +54,8 @@ export interface AttackSituation {
   attackerConcentratedAura?: number;
   /** Atacante está agarrado (engine de grapple) → desvantagem em ataques. */
   attackerIsGrappled?: boolean;
+  /** Arte do Combate — Execução Silenciosa: +1d6 (+1d6 a cada +2 SAB) se o alvo estiver Desprevenido. */
+  arteExecucao?: boolean;
 }
 
 export interface AttackContext {
@@ -349,6 +352,13 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
   // Dano: aplica step + dados extras + crítico (Mortal/Fatal)
   let finalDice: DamageDice = stepDamage(baseDice, ctxBonus.damageStepDelta);
   finalDice = addBonusDice(finalDice, ctxBonus.bonusDice);
+
+  // Arte do Combate — Execução Silenciosa: +Nd6 vs. alvo Desprevenido.
+  if (ctx.situation.arteExecucao && ctx.situation.targetUnaware) {
+    const n = execucaoSilenciosaDice(ctx.attacker);
+    finalDice.push({ count: n, sides: 6 });
+    notes.push(`Execução Silenciosa: +${n}d6 de dano (alvo Desprevenido)`);
+  }
 
   if (critical) {
     // Crítico padrão: dobra os dados. Mortal: +1 dado do tamanho listado.

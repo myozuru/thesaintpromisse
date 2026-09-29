@@ -252,6 +252,9 @@ export function computeDefenseBreakdown(
   const apoioCA = c.apoioDefensivo?.value ?? 0;
   const guardaCA = c.guardaSincronizadaBonus?.value ?? 0;
   const defensivoCA = getDefensivoCA(c);
+  // Artes do Combate: Distração Letal (penalidade no alvo) e Golpe Descendente (bônus próprio).
+  const arteDistracaoCA = -(c.arteDefensePenalty?.amount ?? 0);
+  const arteGolpeCA = c.arteGolpeDescendente?.amount ?? 0;
 
   const base = c.ca ?? 10;
   const total =
