@@ -620,6 +620,39 @@ export function AttackPanel({ character: c }: Props) {
   };
 
 
+  // ─── Arte: Arremesso Ágil (ação livre após acertar ataque CaC) ─────────────
+  const handleArremessoAgil = async () => {
+    if (!lastResult?.hit || phase !== 'done') return;
+    const alvo2 = characters.find((x) => x.id === arremessoTargetId);
+    const arma = arremessoWeapons[0]?.weapon;
+    if (!arma) { addLog('combat', `🚫 Arremesso Ágil: nenhuma arma de arremesso no inventário.`); return; }
+    if (!alvo2) { addLog('combat', `🚫 Arremesso Ágil: escolha o segundo alvo.`); return; }
+    if (alvo2.id === targetId) { addLog('combat', `🚫 Arremesso Ágil: o segundo alvo deve ser diferente do primeiro.`); return; }
+    const spend = spendPreparo(c.id, 1);
+    if (!spend.ok) { addLog('combat', `🚫 ${c.name}: ${spend.reason}`); return; }
+    const ability2 = pickAttackAbility(c, arma);
+    const def2 = computeTotalDefense(
+      alvo2,
+      { items, omniInventory: omniInventoryList, omniEntidadesMap, omniRuntimeEffects: omniRuntimeEffectsList },
+      'ranged',
+    );
+    const ctx2 = buildAttackContext({
+      attacker: c, weapon: arma, targetDefense: def2,
+      situation: { preferredAbility: ability2, attackerIsGrappled },
+      trainedRanges: [
+        ...(c.meleeTrained ? (['melee'] as const) : []),
+        ...(c.rangedTrained ? (['ranged', 'thrown'] as const) : []),
+      ],
+    });
+    const r = await rollAttack(ctx2);
+    addLog(
+      'combat',
+      `🎯 Arremesso Ágil: ${c.name} ataca ${alvo2.name} com ${arma.name} (ação livre): d20 ${r.natural} · total ${r.attackTotal} → ${r.critical ? '💥 CRÍTICO' : r.hit ? '✅ acerto' : '❌ erro'}${r.hit ? ` · dano ${r.damageTotal} (${r.damageDice})` : ''}`,
+    );
+    recordAttackResult(c.id, r.hit);
+    setArremessoTargetId('');
+  };
+
   const handleRerollDamage = async () => {
     if (!mainWeapon || !lastResult || !lastResult.canRerollDamage) return;
     const ability = pickAttackAbility(c, mainWeapon);
