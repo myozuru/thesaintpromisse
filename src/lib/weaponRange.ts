@@ -14,8 +14,6 @@
 import { hasProperty, type Weapon } from './weapons';
 import {
   TOUCH_RANGE_M,
-  touchDistanceMeters,
-  findCharEntity,
   charsDistanceMeters,
   outOfRangeMessage,
   type TouchEntity,
@@ -49,9 +47,10 @@ export function distanceBetweenChars<E extends TouchEntity & { characterId?: str
   bId: string,
   entities: Record<string, E>,
   grid: TouchGrid,
+  identities?: { casterProfileId?: string; targetProfileId?: string },
 ): number | null {
   if (aId === bId) return 0;
-  return charsDistanceMeters(aId, bId, entities, grid);
+  return charsDistanceMeters(aId, bId, entities, grid, identities);
 }
 
 /**
@@ -66,11 +65,12 @@ export function checkWeaponRange<E extends TouchEntity & { characterId?: string 
   entities: Record<string, E>,
   grid: TouchGrid,
   meleeRangeBonus = 0,
+  identities?: { casterProfileId?: string; targetProfileId?: string },
 ): string | null {
   if (attackerId === targetId) return null;
   const max = weaponMaxRangeMeters(weapon, meleeRangeBonus);
   if (max === null) return null;
-  const d = distanceBetweenChars(attackerId, targetId, entities, grid);
+  const d = distanceBetweenChars(attackerId, targetId, entities, grid, identities);
   if (d === null) return null;
   if (d > max + 0.05) {
     return outOfRangeMessage(d, max, weapon.name);
