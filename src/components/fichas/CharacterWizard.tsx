@@ -627,8 +627,9 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
       dcLinkedAttr: '',
       // Especialista em Técnica: Armas Simples (melee) + Armas a Distância já treinadas.
       // Suporte: Armas Simples (melee) treinadas (regra do livro).
-      meleeTrained: (isTecnica || isSuporte) ? true : false,
-      rangedTrained: isTecnica ? true : false,
+      // Especialista em Combate: TODAS as armas (melee + distância) treinadas.
+      meleeTrained: (isTecnica || isSuporte || isCombate) ? true : false,
+      rangedTrained: (isTecnica || isCombate) ? true : false,
       cursedTrained: false,
       meleeMastery: false,
       rangedMastery: false,
@@ -662,7 +663,9 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
         ? keyAttribute
         : specialization === 'Suporte'
           ? supKeyAttribute
-          : undefined,
+          : specialization === 'Especialista em Combate'
+            ? combKeyAttribute
+            : undefined,
       tecnicaFundamentos: isTecnica ? tecFundamentos : undefined,
       // ===== Origin metadata =====
       originTags: effects.tags,
