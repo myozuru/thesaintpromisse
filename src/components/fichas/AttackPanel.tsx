@@ -33,6 +33,11 @@ import { useMapStore } from '@/stores/useMapStore';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { CombatTrackersCard } from './CombatTrackersCard';
+import { GolpeEspecialSection } from './GolpeEspecialSection';
+import {
+  hasGolpeEspecial, custoGolpeEspecial, isGolpeAtivo, longoBonusMeters, penetranteRD,
+  impactanteMeters, specDCFor, precisoUsesThisTurn, registerPrecisoUse, type GolpeSelecao,
+} from '@/lib/golpeEspecial';
 import { Swords, Dice5, Shield, Zap, RotateCcw, Sparkles, Hand, X, ChevronDown } from 'lucide-react';
 import {
   hasArtesCombate, getPreparoAtual, getPreparoMax, spendPreparo,
@@ -263,6 +268,7 @@ export function AttackPanel({ character: c }: Props) {
   // Reseta a cada nova ação de ataque (handleRoll chamado sem ser reroll).
   const [attackRollCount, setAttackRollCount] = useState<number>(0);
   const rollInFlightRef = useRef(false);
+  const golpeRollRef = useRef<{ sel: GolpeSelecao; target: Character | null | undefined; amploTarget?: Character } | null>(null);
   const luckRollInFlightRef = useRef(false);
 
   // ─── Artes do Combate (Especialista em Combate) ────────────────────────────
@@ -278,13 +284,27 @@ export function AttackPanel({ character: c }: Props) {
     () => inventoryWeapons.filter(({ weapon }) => weapon.range === 'thrown'),
     [inventoryWeapons],
   );
+  // ─── Golpe Especial (Especialista nv 4) ───────────────────────────────────
+  const temGolpe = hasGolpeEspecial(c);
+  const [golpeSel, setGolpeSel] = useState<GolpeSelecao>({});
+  const [amploTargetId, setAmploTargetId] = useState<string>('');
+  const combatRound = useCombatStore((s) => s.round);
+  const combatTurnIdx = useCombatStore((s) => s.currentTurnIndex);
+  const golpeTurnKey = `${combatRound}:${combatTurnIdx}`;
+  const precisoUsado = precisoUsesThisTurn(c.id, golpeTurnKey);
+  const golpeAtivo = temGolpe && isGolpeAtivo(golpeSel);
+  const golpeCusto = golpeAtivo ? custoGolpeEspecial(golpeSel, precisoUsado).total : 0;
+  const longoM = golpeAtivo && mainWeapon ? longoBonusMeters(golpeSel, mainWeapon.range) : 0;
+  const longoCobre = longoM > 0 && !!rangeBlockReason && targetDistanceM !== null && weaponRangeM !== null
+    && targetDistanceM <= weaponRangeM + longoM + 0.01;
   const arteCustoTotal =
     (arteDistracao ? 1 : 0) + (arteExecucao ? 1 : 0) + (arteGolpe ? 1 : 0) + (arteInvestida ? 2 : 0);
   // Investida Imediata cobre a distância faltante (até Mod. SAB × 1,5 m).
   const investidaCobreDistancia =
     temArtes && arteInvestida && !!rangeBlockReason && targetDistanceM !== null && weaponRangeM !== null
-      ? targetDistanceM - investidaMoveMeters(c) <= weaponRangeM + 0.01
+      ? targetDistanceM - investidaMoveMeters(c) <= weaponRangeM + longoM + 0.01
       : false;
+  const rangeOk = !rangeBlockReason || investidaCobreDistancia || longoCobre;
 
   // duas-mãos sempre verdadeiro se a arma exigir
   useEffect(() => {
@@ -338,6 +358,28 @@ export function AttackPanel({ character: c }: Props) {
         return;
       }
     }
+    // ─── Golpe Especial: validações (sem gastar ainda) ──────────────────────
+    const golpeUsado = golpeAtivo && !isReroll;
+    const amploTarget = golpeUsado && golpeSel.amplo ? characters.find((x) => x.id === amploTargetId) : undefined;
+    if (golpeUsado) {
+      if ((c.peCurrent ?? 0) < golpeCusto) {
+        addLog('combat', `🚫 Golpe Especial: PE insuficiente (${c.peCurrent ?? 0}/${golpeCusto}).`);
+        return;
+      }
+      if (golpeSel.amplo) {
+        if (!amploTarget) { addLog('combat', `🚫 Golpe Especial Amplo: escolha a criatura extra.`); return; }
+        if (amploTarget.id === targetId) { addLog('combat', `🚫 Golpe Especial Amplo: a criatura extra deve ser diferente do alvo.`); return; }
+        const d2 = distanceBetweenChars(c.id, amploTarget.id, mapEntities, gridConfig, { casterProfileId: c.profileId, targetProfileId: amploTarget.profileId });
+        if (d2 !== null && weaponRangeM !== null && d2 > weaponRangeM + longoM + 0.01) {
+          addLog('combat', `🚫 Golpe Especial Amplo: ${amploTarget.name} está a ${d2.toFixed(1).replace('.', ',')} m — faltam ${(d2 - weaponRangeM - longoM).toFixed(1).replace('.', ',')} m para o alcance.`);
+          return;
+        }
+      }
+      if (golpeSel.lento && useCombatStore.getState().inCombat && (useCombatStore.getState().movementUsedByChar[c.id] ?? 0) > 0) {
+        addLog('combat', `🚫 Golpe Especial Lento exige ação completa — você já se moveu neste turno.`);
+        return;
+      }
+    }
     // Investida Imediata: move a peça em direção ao alvo (sem AdO) ANTES do
     // ataque — por isso a checagem de alcance acontece depois do movimento.
     if (artesAtivas && arteInvestida && target) {
@@ -371,9 +413,13 @@ export function AttackPanel({ character: c }: Props) {
       }
     }
     // Alcance: com Investida ativa, mede de novo com a posição já atualizada.
-    const blockReason = artesAtivas && arteInvestida && target
+    let blockReason = artesAtivas && arteInvestida && target
       ? checkWeaponRange(c.id, target.id, mainWeapon, useMapStore.getState().entities, useMapStore.getState().gridConfig, meleeRangeBonus, mapIdentities)
       : rangeBlockReason;
+    if (blockReason && golpeUsado && longoM > 0 && target && weaponRangeM !== null) {
+      const dNow = distanceBetweenChars(c.id, target.id, useMapStore.getState().entities, useMapStore.getState().gridConfig, mapIdentities);
+      if (dNow !== null && dNow <= weaponRangeM + longoM + 0.01) blockReason = null;
+    }
     if (blockReason) {
       addLog('combat', `🚫 ${c.name} não pode atacar: ${blockReason}`);
       return;
@@ -393,6 +439,26 @@ export function AttackPanel({ character: c }: Props) {
       ].filter(Boolean).join(', ');
       addLog('combat', `🎯 ${c.name} gasta ${arteCustoTotal} Preparo: ${usadas}.`);
     }
+    if (golpeUsado) {
+      const peNow = useCharacterStore.getState().characters.find((x) => x.id === c.id)?.peCurrent ?? 0;
+      useCharacterStore.getState().updateCharacter(c.id, { peCurrent: peNow - golpeCusto });
+      if (golpeSel.preciso) registerPrecisoUse(c.id, golpeTurnKey);
+      const nomes = Object.entries(golpeSel).filter(([, n]) => (n ?? 0) > 0).map(([k, n]) => `${k}${(n ?? 0) > 1 ? ` ×${n}` : ''}`).join(', ');
+      addLog('combat', `⚔️ ${c.name} monta Golpe Especial (${nomes}) — gasta ${golpeCusto} PE.`);
+      if (golpeSel.sacrificio) {
+        applyDamage(c.id, 15, undefined, { ignoresRD: true, ignoresResistance: true, tags: ['golpe_sacrificio'] });
+        addLog('combat', `🩸 Sacrifício: ${c.name} recebe 15 de dano.`);
+      }
+      if (golpeSel.lento && useCombatStore.getState().inCombat) {
+        useCombatStore.getState().setMovementUsed(c.id, 9999);
+        addLog('combat', `🐢 Golpe Lento: ação completa — ação padrão, bônus e movimento do turno consumidos.`);
+      }
+    }
+    const golpeSit = golpeUsado ? {
+      golpeAtroz: !!golpeSel.atroz, golpeLetal: !!golpeSel.letal,
+      golpePreciso: !!golpeSel.preciso, golpeDesfocado: golpeSel.desfocado ?? 0,
+    } : {};
+    golpeRollRef.current = golpeUsado ? { sel: golpeSel, target, amploTarget } : null;
     if (rollInFlightRef.current || phase === 'rolling-hit' || phase === 'rolling-dmg') return;
     if (isReroll && attackRollCount >= 2) return;
     rollInFlightRef.current = true;
@@ -413,6 +479,7 @@ export function AttackPanel({ character: c }: Props) {
         attackerConcentratedAura,
         attackerIsGrappled,
         arteExecucao: artesAtivas && arteExecucao,
+        ...golpeSit,
       },
       trainedRanges: [
         ...(c.meleeTrained ? (['melee'] as const) : []),
@@ -458,6 +525,29 @@ export function AttackPanel({ character: c }: Props) {
         setArteExecucao(false);
         setArteGolpe(false);
         setArteInvestida(false);
+      }
+      // Golpe Especial: efeitos no acerto + ataque extra do Amplo.
+      const g = golpeRollRef.current;
+      if (g) {
+        if (result.hit && g.target && g.sel.sanguinario) aplicarSangramento(g.target, g.sel.sanguinario);
+        setGolpeSel({});
+        setAmploTargetId('');
+        if (g.amploTarget) {
+          const alvo2 = g.amploTarget;
+          const def2 = computeTotalDefense(alvo2, { items, omniInventory: omniInventoryList, omniEntidadesMap, omniRuntimeEffects: omniRuntimeEffectsList }, attackKind);
+          const ctx2 = buildAttackContext({
+            attacker: c, weapon: mainWeapon, targetDefense: def2,
+            situation: { ...ctx.situation, targetUnaware: false, arteExecucao: false },
+            trainedRanges: [
+              ...(c.meleeTrained ? (['melee'] as const) : []),
+              ...(c.rangedTrained ? (['ranged', 'thrown'] as const) : []),
+            ],
+          });
+          const r2 = await rollAttack(ctx2);
+          addLog('combat', `⚔️ Golpe Amplo: ${c.name} atinge também ${alvo2.name}: d20 ${r2.natural} · total ${r2.attackTotal} → ${r2.criticalFail ? '💀 falha crítica' : r2.critical ? '💥 CRÍTICO' : r2.hit ? '✅ acerto' : '❌ erro'}${r2.hit ? ` · dano ${r2.damageTotal} (${r2.damageDice})` : ''}`);
+          if (r2.hit && g.sel.sanguinario) aplicarSangramento(alvo2, g.sel.sanguinario);
+          if (r2.hit && g.sel.penetrante) addLog('combat', `   ↳ Penetrante: ignora ${penetranteRD(c)} de RD.`);
+        }
       }
     } else {
       // No reroll, atualiza a memória para refletir o resultado final (sobrescreve hit/miss do 1º).
@@ -630,6 +720,46 @@ export function AttackPanel({ character: c }: Props) {
       'combat',
       `   💥 Dano: ${result.damageTotal} (${result.damageDice}${result.damageType ? ' ' + result.damageType : ''})`,
     );
+    const g = golpeRollRef.current;
+    golpeRollRef.current = null;
+    if (g?.sel.penetrante) addLog('combat', `   ↳ Penetrante: ignora ${penetranteRD(c)} de RD.`);
+    if (g?.sel.impactante && g.target) void empurrarImpactante(g.target, result.damageTotal);
+  };
+
+  const aplicarSangramento = (alvo: Character, nivel: number) => {
+    const medio = nivel >= 2;
+    const cd = specDCFor(c);
+    useCharacterStore.getState().addCondition(alvo.id, {
+      id: `sangramento-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      conditionId: 'sangramento',
+      name: medio ? 'Sangramento Médio' : 'Sangramento Leve',
+      icon: '🩸',
+      remainingTurns: -1,
+      remainingRounds: -1,
+      sourceCharName: c.name,
+      endCD: cd,
+    } as never);
+    addLog('combat', `🩸 Sanguinário: ${alvo.name} sofre sangramento ${medio ? 'médio' : 'leve'} (CD ${cd}).`);
+  };
+
+  const empurrarImpactante = async (alvo: Character, dano: number) => {
+    const cd = specDCFor(c);
+    const con = (alvo.attributes ?? []).find((a) => a.name === 'Constituição');
+    const conMod = con ? Math.floor((con.value - 10) / 2) : 0;
+    const d20 = await rollD20Com(alvo.id);
+    const passou = d20 + conMod >= cd;
+    const metros = impactanteMeters(dano, passou);
+    addLog('combat', `💢 Impactante: ${alvo.name} Fortitude d20 ${d20}${conMod >= 0 ? '+' : ''}${conMod} vs CD ${cd} → ${passou ? 'passou (metade)' : 'falhou'} · empurrado ${metros.toFixed(1).replace('.', ',')} m.`);
+    if (metros <= 0) return;
+    const ms = useMapStore.getState();
+    const ents = Object.values(ms.entities ?? {});
+    const atk = ents.find((e) => e?.characterId === c.id);
+    const tgt = ents.find((e) => e?.characterId === alvo.id);
+    if (!atk || !tgt) return;
+    const pxPerM = (ms.gridConfig?.dpi || 70) / (ms.gridConfig?.metersPerCell || 1.5);
+    const dx = tgt.x - atk.x, dy = tgt.y - atk.y;
+    const len = Math.hypot(dx, dy) || 1;
+    ms.updateEntity(tgt.id, { x: tgt.x + (dx / len) * metros * pxPerM, y: tgt.y + (dy / len) * metros * pxPerM });
   };
 
 
