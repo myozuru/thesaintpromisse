@@ -18,6 +18,7 @@ import {
   buildAttackContext, rollAttack, pickAttackAbility, getAbilityMod, type AttackResult,
 } from '@/lib/combatEngine';
 import { computeTotalDefense, type AttackKind } from '@/lib/defenseCalc';
+import { checkWeaponRange, weaponMaxRangeMeters, distanceBetweenChars } from '@/lib/weaponRange';
 import { isAuraToggleActive } from '@/lib/auraEffects';
 import { getAutoCritFromConditions } from '@/lib/conditionEffects';
 import { useLogStore } from '@/stores/useLogStore';
@@ -146,6 +147,7 @@ export function AttackPanel({ character: c }: Props) {
   const requestAoEPlacement = useMapStore((s) => s.requestAoEPlacement);
   const applyDamage = useCharacterStore((s) => s.applyDamage);
   const mapEntities = useMapStore((s) => s.entities);
+  const gridConfig = useMapStore((s) => s.gridConfig);
 
 
   // ─── Alvo automatizado ─────────────────────────────────────────────────────
@@ -184,6 +186,17 @@ export function AttackPanel({ character: c }: Props) {
     [target, items, omniInventoryList, omniEntidadesMap, omniRuntimeEffectsList, attackKind],
   );
   const targetDef = target ? autoDefense : (defenseOverride ?? 15);
+
+  // ─── Alcance da arma no mapa (grade, borda a borda) ──────────────────────
+  const meleeRangeBonus = (c as { meleeRangeBonus?: number }).meleeRangeBonus ?? 0;
+  const weaponRangeM = mainWeapon ? weaponMaxRangeMeters(mainWeapon, meleeRangeBonus) : null;
+  const targetDistanceM = target
+    ? distanceBetweenChars(c.id, target.id, mapEntities, gridConfig)
+    : null;
+  const rangeBlockReason =
+    mainWeapon && target
+      ? checkWeaponRange(c.id, target.id, mainWeapon, mapEntities, gridConfig, meleeRangeBonus)
+      : null;
 
   // Ao trocar de alvo, limpa override
   useEffect(() => { setDefenseOverride(null); }, [targetId]);
@@ -282,6 +295,10 @@ export function AttackPanel({ character: c }: Props) {
     const isReroll = !!opts?.reroll;
     if (!mainWeapon) {
       addLog('combat', `⚠️ ${c.name} não tem arma equipada na mão principal.`);
+      return;
+    }
+    if (rangeBlockReason) {
+      addLog('combat', `🚫 ${c.name} não pode atacar: ${rangeBlockReason}`);
       return;
     }
     if (rollInFlightRef.current || phase === 'rolling-hit' || phase === 'rolling-dmg') return;
@@ -785,6 +802,25 @@ export function AttackPanel({ character: c }: Props) {
           {/* Defesa do alvo é oculta para preservar a dinâmica — apenas o resultado (acerto/erro) é revelado. */}
         </div>
 
+        {/* ─── Alcance (medido no mapa, borda a borda) ────────────────────── */}
+        {mainWeapon && target && weaponRangeM !== null && targetDistanceM !== null && (
+          <div
+            className={cn(
+              'flex items-center gap-2 rounded-md border px-2 py-1.5 text-[11px]',
+              rangeBlockReason
+                ? 'border-destructive/40 bg-destructive/15 text-destructive'
+                : 'border-border bg-background/40 text-muted-foreground',
+            )}
+          >
+            <Shield className="h-3 w-3 shrink-0" />
+            <span>
+              Distância: <b className="font-mono">{targetDistanceM.toFixed(1).replace('.', ',')} m</b>
+              {' / alcance '}<b className="font-mono">{weaponRangeM} m</b>
+              {rangeBlockReason ? ' — fora de alcance!' : ''}
+            </span>
+          </div>
+        )}
+
         {/* ─── Situação (auto-lida do alvo + override manual) ─────────────── */}
         <div className="flex flex-wrap gap-2 text-[11px]">
           {mainWeapon && (hasProperty(mainWeapon, 'versatil') || hasProperty(mainWeapon, 'duas_maos')) && (
@@ -849,10 +885,11 @@ export function AttackPanel({ character: c }: Props) {
           <button
             type="button"
             onClick={() => handleRoll()}
-            disabled={!mainWeapon || phase === 'rolling-hit' || phase === 'await-second-d20' || phase === 'rolling-second-d20' || phase === 'await-dmg' || phase === 'rolling-dmg'}
+            disabled={!mainWeapon || !!rangeBlockReason || phase === 'rolling-hit' || phase === 'await-second-d20' || phase === 'rolling-second-d20' || phase === 'await-dmg' || phase === 'rolling-dmg'}
+            title={rangeBlockReason ?? undefined}
             className={cn(
               'inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-bold transition',
-              mainWeapon && phase !== 'rolling-hit' && phase !== 'await-second-d20' && phase !== 'rolling-second-d20' && phase !== 'await-dmg' && phase !== 'rolling-dmg'
+              mainWeapon && !rangeBlockReason && phase !== 'rolling-hit' && phase !== 'await-second-d20' && phase !== 'rolling-second-d20' && phase !== 'await-dmg' && phase !== 'rolling-dmg'
                 ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                 : 'bg-muted text-muted-foreground cursor-not-allowed',
             )}

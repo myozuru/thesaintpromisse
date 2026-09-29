@@ -31,7 +31,8 @@ import { useLogStore } from '@/stores/useLogStore';
 import type { Spell } from '@/types';
 import { cn } from '@/lib/utils';
 import { isFreeformFor } from '@/lib/freeformMode';
-import { FreeformActionBar, FreeformAttackForm } from './FreeformActionBar';
+import { FreeformActionBar } from './FreeformActionBar';
+import { AttackPanel } from '@/components/fichas/AttackPanel';
 
 type Category = 'ataque' | 'feiticos' | 'aptidoes' | 'especiais' | 'classe';
 
@@ -660,8 +661,8 @@ export function PlayerActionBar() {
                   <SuportePanel character={activeChar} />
                 </div>
               ) : open === 'ataque' && activeChar ? (
-                <div className="p-2" onClick={(e) => e.stopPropagation()}>
-                  <FreeformAttackForm character={activeChar} />
+                <div onClick={(e) => e.stopPropagation()}>
+                  <AttackPanel character={activeChar} />
                 </div>
               ) : activeList.length === 0 ? (
                 <div className="text-xs text-muted-foreground px-3 py-4 text-center">
