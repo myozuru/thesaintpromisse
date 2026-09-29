@@ -187,6 +187,17 @@ export function AttackPanel({ character: c }: Props) {
   );
   const targetDef = target ? autoDefense : (defenseOverride ?? 15);
 
+  // ─── Alcance da arma no mapa (grade, borda a borda) ──────────────────────
+  const meleeRangeBonus = (c as { meleeRangeBonus?: number }).meleeRangeBonus ?? 0;
+  const weaponRangeM = mainWeapon ? weaponMaxRangeMeters(mainWeapon, meleeRangeBonus) : null;
+  const targetDistanceM = target
+    ? distanceBetweenChars(c.id, target.id, mapEntities, gridConfig)
+    : null;
+  const rangeBlockReason =
+    mainWeapon && target
+      ? checkWeaponRange(c.id, target.id, mainWeapon, mapEntities, gridConfig, meleeRangeBonus)
+      : null;
+
   // Ao trocar de alvo, limpa override
   useEffect(() => { setDefenseOverride(null); }, [targetId]);
 
