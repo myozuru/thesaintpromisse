@@ -75,6 +75,17 @@ export function SuportePanel({ character: c }: { character: Character }) {
   const allies = characters.filter((x) => x.category === 'PLAYER' || x.category === 'NPC' || x.id === c.id);
   const sign = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
   const apoiosConhecidos = hasApoioAccess(c) ? getApoiosEscolhidos(c) : [];
+  /** Motivo de bloqueio por alcance de toque (null = pode tocar). */
+  const touchBlock = (targetIdToCheck: string): string | null =>
+    checkTouchTarget(c.id, targetIdToCheck, mapEntities, gridConfig);
+  /** Aliados dentro do raio da Presença Inspiradora (9 m, borda a borda). */
+  const INSPIRACAO_RANGE_M = 9;
+  const allyDistance = (ally: Character): number | null => {
+    const a = Object.values(mapEntities).find((e) => e.characterId === c.id);
+    const b = Object.values(mapEntities).find((e) => e.characterId === ally.id);
+    if (!a || !b) return null;
+    return touchDistanceMeters(a, b, gridConfig);
+  };
 
   /** Cura de toque do Suporte em Combate (também usada pelo Apoio Curativo). */
   const rollSuporteHeal = async (target: Character, origem: string): Promise<number> => {
@@ -104,6 +115,11 @@ export function SuportePanel({ character: c }: { character: Character }) {
   const handleApoiar = async () => {
     const target = characters.find((x) => x.id === apoiarTargetId);
     if (!target || target.id === c.id || busy) return;
+    const blocked = touchBlock(target.id);
+    if (blocked) {
+      addLog('combat', `❌ ${c.name}: Apoiar falhou — ${blocked}`);
+      return;
+    }
     setBusy(true);
     try {
       // Apoio Avançado: valida o efeito ANTES de aplicar o Apoiar.
