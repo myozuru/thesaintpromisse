@@ -52,6 +52,7 @@ import { FahPanel } from './FahPanel';
 import { SpecReactionsPanel } from './SpecReactionsPanel';
 import { SpecActionsPanel } from './SpecActionsPanel';
 import { SuportePanel } from './SuportePanel';
+import { CombateEstilosPanel } from './CombateEstilosPanel';
 import { AttackPanel } from './AttackPanel';
 import { CamDeathReactionDialog } from './CamDeathReactionDialog';
 import { PendingLevelChoicesPanel, hasPendingChoices } from './PendingLevelChoicesPanel';
@@ -1662,6 +1663,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
       {/* ─── Suporte: habilidades base ─── */}
       <div onClick={(e) => e.stopPropagation()}>
         <SuportePanel character={c} />
+        <CombateEstilosPanel character={c} />
       </div>
 
       {/* ─── Painel de Ataque (combatEngine) ─── */}

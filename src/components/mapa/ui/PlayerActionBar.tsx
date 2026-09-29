@@ -16,6 +16,8 @@ import { Swords, Sparkles, Zap, Package, X, Target, AlertTriangle, Check, HeartH
 import { isSuporte } from '@/lib/suporteAbilities';
 import { parseRangeMeters, touchDistanceMeters, outOfRangeMessage } from '@/lib/touchRange';
 import { SuportePanel } from '@/components/fichas/SuportePanel';
+import { CombateEstilosPanel } from '@/components/fichas/CombateEstilosPanel';
+import { isEspecialistaCombate, getAdeptoCombatStyle } from '@/lib/combateEstilos';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { useProfileStore } from '@/stores/useProfileStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
@@ -247,6 +249,8 @@ export function PlayerActionBar() {
     { key: 'especiais', label: 'Especiais & Itens', icon: <Package className="h-5 w-5" /> },
     ...(activeChar && isSuporte(activeChar)
       ? [{ key: 'classe' as Category, label: 'Suporte', icon: <HeartHandshake className="h-5 w-5" /> }]
+      : activeChar && (isEspecialistaCombate(activeChar) || getAdeptoCombatStyle(activeChar))
+      ? [{ key: 'classe' as Category, label: 'Estilos', icon: <Swords className="h-5 w-5" /> }]
       : []),
   ];
 
@@ -658,7 +662,7 @@ export function PlayerActionBar() {
             <div className={cn('overflow-y-auto', open === 'classe' ? 'max-h-[60vh]' : 'max-h-[420px]')}>
               {open === 'classe' && activeChar ? (
                 <div className="py-2 -mx-2" onClick={(e) => e.stopPropagation()}>
-                  <SuportePanel character={activeChar} />
+                  {isSuporte(activeChar) ? <SuportePanel character={activeChar} /> : <CombateEstilosPanel character={activeChar} />}
                 </div>
               ) : open === 'ataque' && activeChar ? (
                 <div onClick={(e) => e.stopPropagation()}>
