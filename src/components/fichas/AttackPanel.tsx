@@ -446,7 +446,8 @@ export function AttackPanel({ character: c }: Props) {
       const nomes = Object.entries(golpeSel).filter(([, n]) => (n ?? 0) > 0).map(([k, n]) => `${k}${(n ?? 0) > 1 ? ` ×${n}` : ''}`).join(', ');
       addLog('combat', `⚔️ ${c.name} monta Golpe Especial (${nomes}) — gasta ${golpeCusto} PE.`);
       if (golpeSel.sacrificio) {
-        applyDamage(c.id, 15, undefined, { ignoresRD: true, ignoresResistance: true, tags: ['golpe_sacrificio'] });
+        const hpNow = useCharacterStore.getState().characters.find((x) => x.id === c.id)?.hpCurrent ?? 0;
+        useCharacterStore.getState().updateCharacter(c.id, { hpCurrent: Math.max(0, hpNow - 15) });
         addLog('combat', `🩸 Sacrifício: ${c.name} recebe 15 de dano.`);
       }
       if (golpeSel.lento && useCombatStore.getState().inCombat) {
