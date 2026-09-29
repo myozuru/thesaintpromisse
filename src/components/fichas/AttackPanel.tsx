@@ -695,6 +695,7 @@ export function AttackPanel({ character: c }: Props) {
     const prefix = isReroll ? `🔁 ${c.name} re-rolou o ataque` : `🗡️ ${c.name} atacou com ${weaponName}`;
     addLog('combat', `${prefix}: ${rollLabel} · ${verdict}`);
     if (result.notes.length) addLog('combat', `   ↳ ${result.notes.join(' · ')}`);
+    if (result.hit && result.critical) checarRenovacaoCritico(true, target?.name);
 
     setPendingRerollMeta(null);
     setFirstD20Revealed(null);
