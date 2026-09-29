@@ -251,7 +251,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
             .filter((a) => a.id !== c.id)
             .map((a) => (
               <option key={a.id} value={a.id}>
-                {a.name}
+                {a.name}{touchBlock(a.id) ? ' · fora do toque' : ''}
               </option>
             ))}
         </select>
@@ -291,7 +291,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
         >
           {allies.map((a) => (
             <option key={a.id} value={a.id}>
-              {a.name} ({a.hpCurrent}/{shownHpMax(a)})
+              {a.name} ({a.hpCurrent}/{shownHpMax(a)}){a.id !== c.id && touchBlock(a.id) ? ' · fora do toque' : ''}
             </option>
           ))}
         </select>
