@@ -14,7 +14,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Swords, Sparkles, Zap, Package, X, Target, AlertTriangle, Check, HeartHandshake } from 'lucide-react';
 import { isSuporte } from '@/lib/suporteAbilities';
-import { parseRangeMeters, touchDistanceMeters } from '@/lib/touchRange';
+import { parseRangeMeters, touchDistanceMeters, outOfRangeMessage } from '@/lib/touchRange';
 import { SuportePanel } from '@/components/fichas/SuportePanel';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { useProfileStore } from '@/stores/useProfileStore';
@@ -614,7 +614,7 @@ export function PlayerActionBar() {
               {outOfRange ? (
                 <div className="flex items-center gap-2 rounded-md bg-destructive/15 border border-destructive/40 px-2 py-1.5 text-xs text-destructive">
                   <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                  <span>Alvo fora de alcance.</span>
+                  <span>{distanceMeters !== null && spellRangeMeters !== null ? outOfRangeMessage(distanceMeters, spellRangeMeters) : "Alvo fora de alcance."}</span>
                 </div>
               ) : (
                 <button

@@ -39,11 +39,9 @@ export function checkTouchTarget<E extends TouchEntity & { characterId?: string 
   grid: TouchGrid,
 ): string | null {
   if (casterId === targetId) return null;
-  const a = findCharEntity(entities, casterId);
-  const b = findCharEntity(entities, targetId);
-  if (!a || !b) return 'Você e o alvo precisam estar no mapa para medir o alcance de toque.';
-  const d = touchDistanceMeters(a, b, grid);
-  if (!isWithinTouch(a, b, grid)) return `Alvo fora do alcance de toque (${d.toFixed(1)} m; máx. 1,5 m).`;
+  const d = charsDistanceMeters(casterId, targetId, entities, grid);
+  if (d === null) return 'Você e o alvo precisam estar no mapa para medir o alcance de toque.';
+  if (d > TOUCH_RANGE_M + 0.05) return outOfRangeMessage(d, TOUCH_RANGE_M, 'toque');
   return null;
 }
 
@@ -64,4 +62,33 @@ export function parseRangeMeters(range: unknown): number | null {
 /** true se o alvo está dentro de `rangeM` metros (borda a borda, mesma regra do toque). */
 export function isWithinRangeMeters(a: TouchEntity, b: TouchEntity, grid: TouchGrid, rangeM: number): boolean {
   return touchDistanceMeters(a, b, grid) <= rangeM + 0.05;
+}
+
+/** Formata metros com vírgula ("1,5"). */
+export const fmtM = (m: number) => (Math.round(m * 10) / 10).toFixed(1).replace('.', ',');
+
+/** Mensagem explicando quanto falta para alcançar. */
+export function outOfRangeMessage(distM: number, maxM: number, label?: string): string {
+  const falta = Math.max(0.1, distM - maxM);
+  return `Fora de alcance${label ? ` (${label})` : ''}: está a ${fmtM(distM)} m, máx. ${fmtM(maxM)} m — aproxime-se mais ${fmtM(falta)} m.`;
+}
+
+/**
+ * Menor distância entre as peças de dois personagens. Considera TODAS as peças
+ * vinculadas a cada ficha (tokens duplicados), ignorando peças carregadas.
+ */
+export function charsDistanceMeters<E extends TouchEntity & { characterId?: string; carriedBy?: string }>(
+  aId: string,
+  bId: string,
+  entities: Record<string, E>,
+  grid: TouchGrid,
+): number | null {
+  if (aId === bId) return 0;
+  const all = Object.values(entities);
+  const as = all.filter(e => e.characterId === aId);
+  const bs = all.filter(e => e.characterId === bId);
+  if (!as.length || !bs.length) return null;
+  let best = Infinity;
+  for (const a of as) for (const b of bs) best = Math.min(best, touchDistanceMeters(a, b, grid));
+  return best;
 }

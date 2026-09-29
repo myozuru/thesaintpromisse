@@ -16,6 +16,8 @@ import {
   TOUCH_RANGE_M,
   touchDistanceMeters,
   findCharEntity,
+  charsDistanceMeters,
+  outOfRangeMessage,
   type TouchEntity,
   type TouchGrid,
 } from './touchRange';
@@ -49,10 +51,7 @@ export function distanceBetweenChars<E extends TouchEntity & { characterId?: str
   grid: TouchGrid,
 ): number | null {
   if (aId === bId) return 0;
-  const a = findCharEntity(entities, aId);
-  const b = findCharEntity(entities, bId);
-  if (!a || !b) return null;
-  return touchDistanceMeters(a, b, grid);
+  return charsDistanceMeters(aId, bId, entities, grid);
 }
 
 /**
@@ -74,7 +73,7 @@ export function checkWeaponRange<E extends TouchEntity & { characterId?: string 
   const d = distanceBetweenChars(attackerId, targetId, entities, grid);
   if (d === null) return null;
   if (d > max + 0.05) {
-    return `Alvo fora de alcance (${d.toFixed(1)} m; máx. ${max} m com ${weapon.name}).`;
+    return outOfRangeMessage(d, max, weapon.name);
   }
   return null;
 }
