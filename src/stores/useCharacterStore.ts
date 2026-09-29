@@ -4445,6 +4445,10 @@ export const useCharacterStore = create<CharacterStore>()(
               ...c,
               hpCurrent: newHp,
               peCurrent: newPe,
+              // Artes do Combate: descanso longo recupera o preparo total.
+              preparoCurrent: c.specialization === 'Especialista em Combate'
+                ? Math.max(0, (c.level ?? 1) + Math.floor(((((c.attributes ?? []).find((a) => a.name === 'Sabedoria')?.value ?? 10) + ((c.attributes ?? []).find((a) => a.name === 'Sabedoria')?.externalBonus ?? 0)) - 10) / 2))
+                : c.preparoCurrent,
               tempPE: 0,
               escCurrent: 0,
               hitDiceCurrent: newHd,
