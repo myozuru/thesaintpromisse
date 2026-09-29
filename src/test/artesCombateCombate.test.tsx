@@ -75,12 +75,16 @@ describe('Artes do Combate em combate', () => {
     }
   });
 
-  it('Execução Silenciosa: exige alvo Desprevenido — sem a condição, o ataque é bloqueado', async () => {
+  it('Execução Silenciosa: sem alvo Desprevenido o botão fica desabilitado e nada é gasto', async () => {
     const btn = await montar(esp());
-    toggle(/Execução Silenciosa/);
+    const chip = screen.getAllByRole('button').find((b) => /Execução Silenciosa/.test(b.textContent ?? ''))!;
+    expect(chip).toBeTruthy();
+    expect((chip as HTMLButtonElement).disabled).toBe(true); // caso inválido bloqueado na UI
+    fireEvent.click(chip);
     fireEvent.click(btn);
-    await waitFor(() => expect(textoLog()).toContain('Execução Silenciosa exige alvo [Desprevenido]'), { timeout: 8000 });
-    expect(pegarFicha('ana').preparoCurrent).toBe(8); // não gastou
+    await waitFor(() => expect(textoLog()).toContain('Rolagem de Ataque'), { timeout: 8000 });
+    expect(pegarFicha('ana').preparoCurrent).toBe(8); // nada gasto
+    expect(textoLog()).not.toContain('Execução Silenciosa: +');
   });
 
   it('Execução Silenciosa com alvo Desprevenido: gasta 1 PP e adiciona +3d6 no dano', async () => {
@@ -104,10 +108,14 @@ describe('Artes do Combate em combate', () => {
     expect(pegarFicha('ana').preparoCurrent).toBe(6); // custou 2 PP
   });
 
-  it('preparo insuficiente bloqueia o ataque com explicação', async () => {
+  it('preparo insuficiente: Investida (2 PP) fica desabilitada com 1 PP e o ataque não gasta nada', async () => {
     const btn = await montar(esp({ preparoCurrent: 1 }));
-    toggle(/Investida Imediata/); // custa 2
+    const chip = screen.getAllByRole('button').find((b) => /Investida Imediata/.test(b.textContent ?? ''))!;
+    expect((chip as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(chip); // clique ignorado
     fireEvent.click(btn);
-    await waitFor(() => expect(textoLog()).toContain('Preparo insuficiente'), { timeout: 8000 });
+    await waitFor(() => expect(textoLog()).toContain('Rolagem de Ataque'), { timeout: 8000 });
+    expect(pegarFicha('ana').preparoCurrent).toBe(1);
+    expect(textoLog()).not.toContain('Investida Imediata:');
   });
 });
