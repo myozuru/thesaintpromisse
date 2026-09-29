@@ -2097,6 +2097,17 @@ export const useCharacterStore = create<CharacterStore>()(
         const NON_ELEMENTAL = new Set<DamageType>(['DCO', 'DP', 'DI', 'DPS', 'DAL']);
         const beforeChar = get().characters.find((cc) => cc.id === id);
 
+        // ─── Especialista — Estilo do Interceptador (redução armada) ─────────
+        if (beforeChar?.interceptGuard && totalDamage > 0 && !opts?.tags?.includes('__interceptado')) {
+          const g = beforeChar.interceptGuard;
+          const reduced = Math.max(0, totalDamage - g.amount);
+          set((s) => ({ characters: s.characters.map((cc) => cc.id === id ? { ...cc, interceptGuard: null } : cc) }));
+          try { useLogStore.getState().addLog('combat', `🗡️ ${g.byName} intercepta: dano em ${beforeChar.name} ${totalDamage} → ${reduced} (−${Math.min(g.amount, totalDamage)}).`); } catch { /* noop */ }
+          if (reduced <= 0) return;
+          get().applyDamage(id, reduced, damageType, { ...opts, tags: [...(opts?.tags ?? []), '__interceptado'] });
+          return;
+        }
+
         // ─── FAH — Alma Maldita (prompt antes de aplicar dano à Alma) ─────────
         // Antes de aplicar DAL, se o alvo é FAH e tem usos disponíveis, enfileira
         // prompt para o jogador decidir gastar 1 uso (reduz à metade ou anula).

@@ -21,6 +21,7 @@ import {
 import { cn } from '@/lib/utils';
 import { protetorProteger, protetorResguardarTR, protetorDistance, PROTETOR_RANGE_M } from '@/lib/combateProtetor';
 import { fmtM } from '@/lib/touchRange';
+import { interceptadorInterceptar, interceptadorDice, interceptadorMod } from '@/lib/combateInterceptador';
 import { useMapStore } from '@/stores/useMapStore';
 
 function ProtetorSection({ character: c }: { character: Character }) {
@@ -63,6 +64,33 @@ function ProtetorSection({ character: c }: { character: Character }) {
 function liveBonus(c: Character, id: CombatStyleId): string | null {
   if (id === 'defensivo') return `CA +${getDefensivoCA(c)} (ativo)`;
   return null;
+}
+
+function InterceptadorSection({ character: c }: { character: Character }) {
+  const characters = useCharacterStore((s) => s.characters);
+  useMapStore((s) => s.entities);
+  const [allyId, setAllyId] = useState('');
+  const [msg, setMsg] = useState<string | null>(null);
+  const others = characters.filter((x) => x.id !== c.id);
+  const tag = (id: string) => {
+    const d = protetorDistance(c.id, id);
+    if (d === null) return ' · fora do mapa';
+    return d > PROTETOR_RANGE_M + 0.05 ? ` · falta ${fmtM(d - PROTETOR_RANGE_M)} m` : ' · ao alcance';
+  };
+  const n = interceptadorDice(c.level ?? 1); const mod = interceptadorMod(c);
+  return (
+    <div className="space-y-1.5 border-t border-border/50 pt-2" onClick={(e) => e.stopPropagation()}>
+      <p className="text-sm font-bold text-foreground">Interceptador — reação ({c.reactionsCurrent ?? 0} disp.) · {n}d10{mod >= 0 ? '+' : ''}{mod}</p>
+      <select aria-label="Aliado interceptado" className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground" value={allyId} onChange={(e) => setAllyId(e.target.value)}>
+        <option value="">Aliado a até 1,5 m…</option>
+        {others.map((x) => <option key={x.id} value={x.id}>{x.name}{tag(x.id)}</option>)}
+      </select>
+      <button type="button" className="w-full rounded-md border border-primary bg-primary/25 px-2 py-1.5 text-sm font-bold text-primary hover:bg-primary/45 disabled:opacity-40"
+        disabled={!allyId || (c.reactionsCurrent ?? 0) <= 0}
+        onClick={() => { const r = interceptadorInterceptar(c.id, allyId); setMsg(r.ok ? `Reação usada: −${r.amount} no próximo dano do aliado.` : r.reason); }}>Interceptar</button>
+      {msg && <p className="text-sm text-muted-foreground">{msg}</p>}
+    </div>
+  );
 }
 
 export function CombateEstilosPanel({ character: c }: { character: Character }) {
@@ -118,6 +146,7 @@ export function CombateEstilosPanel({ character: c }: { character: Character }) 
       </div>
 
       {active.includes('protetor') && <ProtetorSection character={c} />}
+      {active.includes('interceptador') && <InterceptadorSection character={c} />}
 
       {pending > 0 && (
         <div className="space-y-1.5 border-t border-border/50 pt-2">
