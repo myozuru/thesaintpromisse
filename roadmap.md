@@ -58,3 +58,5 @@
 - [x] Investida Imediata (2 PP): aproxima SAB×1,5 m sem AdO antes de atacar (cobre alcance).
 - [x] Recuperação: eliminar inimigo +1; ação "Analisar o campo" +2; descanso curto metade; longo total.
 - [ ] Decisões assumidas (confirmar com o usuário): metade do SAB arredonda para baixo; "Desprevenido" = condição desprevenido/agarrado/atordoado na ficha do alvo.
+
+- [x] Especialista nv 4: Golpe Especial + Implemento Marcial
