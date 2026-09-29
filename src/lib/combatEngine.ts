@@ -354,11 +354,10 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
   finalDice = addBonusDice(finalDice, ctxBonus.bonusDice);
 
   // Arte do Combate — Execução Silenciosa: +Nd6 vs. alvo Desprevenido.
-  if (ctx.situation.arteExecucao && ctx.situation.targetUnaware) {
-    const n = execucaoSilenciosaDice(ctx.attacker);
-    finalDice.push({ count: n, sides: 6 });
-    notes.push(`Execução Silenciosa: +${n}d6 de dano (alvo Desprevenido)`);
-  }
+  const execucaoD6 = ctx.situation.arteExecucao && ctx.situation.targetUnaware
+    ? execucaoSilenciosaDice(ctx.attacker)
+    : 0;
+  if (execucaoD6 > 0) finalDice.push({ count: execucaoD6, sides: 6 });
 
   if (critical) {
     // Crítico padrão: dobra os dados. Mortal: +1 dado do tamanho listado.
@@ -405,6 +404,7 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
   }
 
   const notes = [...ctxBonus.notes];
+  if (execucaoD6 > 0) notes.push(`Execução Silenciosa: +${execucaoD6}d6 de dano (alvo Desprevenido)`);
   if (critical) notes.push(`💥 Crítico (≥${critRange})`);
   if (criticalFail) {
     notes.push('💀 Falha crítica (1 nat)');

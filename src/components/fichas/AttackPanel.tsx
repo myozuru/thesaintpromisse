@@ -275,7 +275,7 @@ export function AttackPanel({ character: c }: Props) {
   const [arteInvestida, setArteInvestida] = useState(false);
   const [arremessoTargetId, setArremessoTargetId] = useState<string>('');
   const arremessoWeapons = useMemo(
-    () => inventoryWeapons.filter(({ weapon }) => weapon.range === 'thrown' || hasProperty(weapon, 'arremesso')),
+    () => inventoryWeapons.filter(({ weapon }) => weapon.range === 'thrown'),
     [inventoryWeapons],
   );
   const arteCustoTotal =
@@ -355,7 +355,7 @@ export function AttackPanel({ character: c }: Props) {
       const ents = Object.values(mapState.entities ?? {});
       const findEnt = (ch: Character) =>
         ents.find((e) => e?.characterId === ch.id) ??
-        ents.find((e) => e?.profileId && e.profileId === ch.profileId);
+        ents.find((e) => (e?.avatarProfileId ?? e?.ownerProfileId) && (e.avatarProfileId === ch.profileId || e.ownerProfileId === ch.profileId));
       const atkEnt = findEnt(c);
       const tgtEnt = findEnt(target);
       if (atkEnt && tgtEnt) {
