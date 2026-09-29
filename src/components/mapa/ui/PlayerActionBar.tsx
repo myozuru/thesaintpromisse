@@ -14,7 +14,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Swords, Sparkles, Zap, Package, X, Target, AlertTriangle, Check, HeartHandshake } from 'lucide-react';
 import { isSuporte } from '@/lib/suporteAbilities';
-import { parseRangeMeters, touchDistanceMeters } from '@/lib/touchRange';
+import { parseRangeMeters, touchDistanceMeters, outOfRangeMessage } from '@/lib/touchRange';
 import { SuportePanel } from '@/components/fichas/SuportePanel';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { useProfileStore } from '@/stores/useProfileStore';
