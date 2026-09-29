@@ -1,3 +1,4 @@
+import { COMBAT_STYLES, type CombatStyleId } from '@/lib/combateEstilos';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Character, CharacterCategory, CharacterClass, Specialization, Motivation, Origin, Attribute, Passive, CHARACTER_CLASSES, SPECIALIZATIONS, MOTIVATIONS, ORIGINS, createEmptyRdByType, createEmptyAccessorySlots, POINT_BUY_COSTS, POINT_BUY_INITIAL, POINT_BUY_MIN, POINT_BUY_MAX, getTrainingBonus, getMasteryBonus, getLevelSkillBonus, DEFAULT_SAVING_THROWS, getDefaultSavingThrowBonus, DAMAGE_TYPES, DAMAGE_TYPE_ABBR, DAMAGE_TYPE_LABELS, type DamageType, type CoreId, CORE_IDS } from '@/types';
@@ -186,9 +187,10 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
   const [combKeyAttribute, setCombKeyAttribute] = useState<'Força' | 'Destreza' | 'Sabedoria'>('Força');
   const [combSaveChoice, setCombSaveChoice] = useState<'Fortitude' | 'Reflexos' | ''>('');
   const [combSkillChoices, setCombSkillChoices] = useState<string[]>([]);
+  const [combStyle, setCombStyle] = useState<CombatStyleId | ''>('');
   const isCombate = charClass === 'Feiticeiro' && specialization === 'Especialista em Combate';
   const COMB_SKILL_OPTIONS = useMemo(() => ['Ofício 1', 'Ofício 2', 'Ofício 3', 'Atletismo', 'Acrobacia'], []);
-  const combChoicesComplete = !isCombate || (!!combSaveChoice && combSkillChoices.length === 2);
+  const combChoicesComplete = !isCombate || (!!combSaveChoice && combSkillChoices.length === 2 && !!combStyle);
 
   // Step 6: Passives
   const [passives, setPassives] = useState<Passive[]>([]);
@@ -667,6 +669,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
             ? combKeyAttribute
             : undefined,
       tecnicaFundamentos: isTecnica ? tecFundamentos : undefined,
+      combatStyles: isCombate && combStyle ? [combStyle] : undefined,
       // ===== Origin metadata =====
       originTags: effects.tags,
       healingHalved: effects.healingHalved,
@@ -1074,6 +1077,30 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                     <p><strong>Automático:</strong> Todas as armas + Escudos.</p>
                     <p><strong>PV:</strong> 12 + CON no Nv 1; d10 (ou 6 fixo) + CON por nível.</p>
                     <p><strong>Livres:</strong> 3 perícias quaisquer (passo Perícias).</p>
+                  </div>
+
+                  {/* Repertório do Especialista: 1 estilo no Nv 1 */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-foreground">⚔️ Estilo de Combate (Repertório do Especialista)</label>
+                    <div className="grid gap-1.5">
+                      {COMBAT_STYLES.map((st) => (
+                        <button
+                          key={st.id}
+                          type="button"
+                          onClick={() => setCombStyle(st.id)}
+                          className={cn(
+                            'rounded border px-2 py-1.5 text-left transition-colors',
+                            combStyle === st.id
+                              ? 'border-primary bg-primary/20'
+                              : 'border-border bg-secondary/40 hover:border-primary/60',
+                          )}
+                        >
+                          <div className="text-xs font-bold text-foreground">{st.name}</div>
+                          <div className="text-[11px] text-muted-foreground">{st.summary}</div>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground italic">Novo estilo nos níveis 6 e 12.</p>
                   </div>
 
                   {/* Atributo-chave: Força | Destreza | Sabedoria */}

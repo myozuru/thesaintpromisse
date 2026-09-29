@@ -43,3 +43,8 @@
 - [ ] Aba "Mapa do Mundo": vários mundos com troca; marcadores; ícone redondo de boss com as bordas temáticas; cartão do boss (ND, Patamar, Fraquezas, Resistências, RDs e campos livres) com visibilidade por campo definida pelo Mestre; estado do boss; Mestre oculta/revela qualquer coisa aos jogadores.
 - [ ] Ideia guardada (não fazer ainda): ligar boss do mapa-múndi à batalha.
 - [x] Corrigir sobreposição do HUD e limitar a barra clicável da ficha aos controles de expansão.
+
+## Especialista em Combate — Repertório do Especialista
+- [x] Base: estilo no Nv 1 (criação), +1 no Nv 6 e +1 no Nv 12 (retroativo), painel na ficha e aba "Estilos" no combate; Adepto de Combate usa a mesma lista.
+- [x] Estilo Defensivo (CA +2, +1 em 4/8/12/16).
+- [ ] Duelista · [ ] Distante · [ ] Arremessador · [ ] Duplo · [ ] Massivo · [ ] Protetor · [ ] Interceptador (1d10 + FOR)
