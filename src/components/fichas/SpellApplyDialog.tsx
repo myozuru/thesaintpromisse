@@ -1,4 +1,5 @@
 import { consumeCritNegated } from '@/lib/suporteNegacao';
+import { implementoMarcialBonus } from '@/lib/golpeEspecial';
 import { useState, useEffect, useRef } from 'react';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLogStore } from '@/stores/useLogStore';
