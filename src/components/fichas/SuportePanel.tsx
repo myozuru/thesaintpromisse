@@ -187,27 +187,27 @@ export function SuportePanel({ character: c }: { character: Character }) {
   };
 
   return (
-    <div className="overflow-hidden rounded-xl border border-primary/30 bg-gradient-to-b from-primary/10 to-transparent">
+    <div className="mx-4 mb-2 overflow-hidden rounded-lg border border-primary/30 bg-gradient-to-b from-primary/10 to-transparent">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-primary/20 bg-primary/10 px-3 py-2">
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           <HeartHandshake className="h-4 w-4 text-primary" />
           <span className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Suporte</span>
           <span className="rounded-full border border-primary/30 px-2 py-0.5 text-[10px] text-muted-foreground">Nv {c.level} · {keyAttr}</span>
         </div>
-        <div className="flex items-center gap-1.5 text-[10px] font-mono">
+        <div className="flex shrink-0 items-center gap-1.5 text-[10px] font-mono">
           <span className="rounded border border-primary/30 bg-background/50 px-2 py-0.5">CURAS <strong className="text-foreground">{left}/{maxUses}</strong></span>
           <span className="rounded border border-primary/30 bg-background/50 px-2 py-0.5">PE <strong className="text-foreground">{c.peCurrent ?? 0}/{shownPeMax(c)}</strong></span>
         </div>
       </div>
       <div className="space-y-2 p-3">
-      <div className="grid gap-2 md:grid-cols-2">
-      <div className="space-y-1.5 rounded-lg border border-border/60 bg-background/40 p-2">
+      <div className="grid gap-2 min-[520px]:grid-cols-2">
+      <div className="min-w-0 space-y-1.5 rounded-lg border border-border/60 bg-background/40 p-2">
         <div className="text-[10px] font-bold uppercase tracking-wider text-primary">Apoiar · Ação Bônus</div>
-      <div className="flex flex-wrap items-center gap-2 text-xs">
+      <div className="grid min-w-0 gap-2 text-xs sm:grid-cols-[minmax(0,1fr)_auto]">
         <select
           value={apoiarTargetId}
           onChange={(e) => setApoiarTargetId(e.target.value)}
-          className="rounded border border-border bg-background px-2 py-1 text-xs"
+          className="min-w-0 w-full rounded border border-border bg-background px-2 py-1 text-xs"
           title="Criatura que você está ajudando (não pode ser você)"
         >
           <option value="">Apoiar quem?</option>
@@ -222,7 +222,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
         <button
           onClick={handleApoiar}
           disabled={busy || !apoiarTargetId}
-          className="inline-flex items-center gap-1 rounded border border-border bg-secondary/40 px-2 py-1 text-xs hover:bg-secondary/70 disabled:cursor-not-allowed disabled:opacity-40"
+           className="inline-flex min-w-0 items-center justify-center gap-1 rounded border border-border bg-secondary/40 px-2 py-1 text-xs hover:bg-secondary/70 disabled:cursor-not-allowed disabled:opacity-40"
           title="Ação Bônus: o alvo ganha vantagem no próximo teste de perícia da tarefa apoiada, se rolar antes do início do seu próximo turno."
         >
           <HandHelping className="h-3.5 w-3.5" /> Apoiar (Ação Bônus)
@@ -231,7 +231,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
           <select
             value={apoioKey}
             onChange={(e) => setApoioKey(e.target.value as ApoioAvancadoKey | '')}
-            className="rounded border border-border bg-background px-2 py-1 text-xs"
+            className="min-w-0 w-full rounded border border-border bg-background px-2 py-1 text-xs sm:col-span-2"
             title="Apoio Avançado: efeito extra aplicado junto do Apoiar"
           >
             <option value="">Apoio simples</option>
@@ -244,13 +244,13 @@ export function SuportePanel({ character: c }: { character: Character }) {
         )}
       </div>
       </div>
-      <div className="space-y-1.5 rounded-lg border border-border/60 bg-background/40 p-2">
+      <div className="min-w-0 space-y-1.5 rounded-lg border border-border/60 bg-background/40 p-2">
         <div className="text-[10px] font-bold uppercase tracking-wider text-primary">Cura de toque · Ação Bônus</div>
-      <div className="flex flex-wrap items-center gap-2 text-xs">
+      <div className="grid min-w-0 gap-2 text-xs sm:grid-cols-[minmax(0,1fr)_auto]">
         <select
           value={targetId}
           onChange={(e) => setTargetId(e.target.value)}
-          className="rounded border border-border bg-background px-2 py-1 text-xs"
+          className="min-w-0 w-full rounded border border-border bg-background px-2 py-1 text-xs"
           title="Alvo em alcance de toque"
         >
           {allies.map((a) => (
@@ -262,18 +262,18 @@ export function SuportePanel({ character: c }: { character: Character }) {
         <button
           onClick={handleHeal}
           disabled={left <= 0 || busy}
-          className="inline-flex items-center gap-1 rounded border border-primary/40 bg-primary/15 px-2 py-1 font-bold text-primary hover:bg-primary/25 disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex min-w-0 items-center justify-center gap-1 rounded border border-primary/40 bg-primary/15 px-2 py-1 font-bold text-primary hover:bg-primary/25 disabled:cursor-not-allowed disabled:opacity-40"
           title="Ação Bônus · alcance de toque. Recupera usos em descanso curto ou longo."
         >
           <HeartHandshake className="h-3.5 w-3.5" /> Curar {dice.count}d{dice.sides} {sign(keyMod)}{hasMedicinaInfalivel(c) ? ` +${getTrainingBonusByLevel(c.level)}` : ''}
         </button>
-        <span className="text-muted-foreground">
+        <span className="text-muted-foreground sm:col-span-2">
           Usos: <strong className="text-foreground">{left}/{maxUses}</strong> · {keyAttr}
         </span>
       </div>
       </div>
       </div>
-      <div className="grid gap-2 md:grid-cols-2">
+      <div className="grid gap-2 min-[520px]:grid-cols-2">
       {hasMedicinaInfalivel(c) && (
         <div className="flex flex-wrap items-center gap-2 text-xs rounded-lg border border-border/60 bg-background/40 p-2">
           <span className="font-bold uppercase tracking-wider text-primary">Medicina Infalível</span>

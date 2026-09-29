@@ -15,16 +15,18 @@ interface Props {
 }
 
 export function StatusBar({ label, current, max, color, icon, baseMax, maxOrigens }: Props) {
-  const pct = max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0;
+  const safeCurrent = Number.isFinite(current) ? Math.max(0, current) : 0;
+  const safeMax = Number.isFinite(max) ? Math.max(0, max) : 0;
+  const pct = safeMax > 0 ? Math.max(0, Math.min(100, (safeCurrent / safeMax) * 100)) : 0;
   const [displayPct, setDisplayPct] = useState(pct);
-  const [displayCurrent, setDisplayCurrent] = useState(current);
-  const prevRef = useRef({ pct, current });
+  const [displayCurrent, setDisplayCurrent] = useState(safeCurrent);
+  const prevRef = useRef({ pct, current: safeCurrent });
 
   useEffect(() => {
     const startPct = prevRef.current.pct;
     const startCurrent = prevRef.current.current;
     const diffPct = pct - startPct;
-    const diffCurrent = current - startCurrent;
+    const diffCurrent = safeCurrent - startCurrent;
     const duration = 500;
     const startTime = performance.now();
     let raf: number;
@@ -38,15 +40,15 @@ export function StatusBar({ label, current, max, color, icon, baseMax, maxOrigen
       if (progress < 1) {
         raf = requestAnimationFrame(animate);
       } else {
-        prevRef.current = { pct, current };
+        prevRef.current = { pct, current: safeCurrent };
       }
     };
 
     raf = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(raf);
-  }, [current, pct]);
+  }, [safeCurrent, pct]);
 
-  const effectiveBase = baseMax ?? max;
+  const effectiveBase = Number.isFinite(baseMax) ? Math.max(0, baseMax ?? 0) : safeMax;
 
   return (
     <div className="flex items-center gap-2 text-sm">
@@ -61,10 +63,10 @@ export function StatusBar({ label, current, max, color, icon, baseMax, maxOrigen
           }}
         />
       </div>
-      <span className="w-14 text-right font-mono text-foreground font-bold text-sm">
+      <span className="w-16 shrink-0 overflow-hidden text-right font-mono text-foreground font-bold text-sm tabular-nums">
         {displayCurrent}/
-        <StatValue valorBase={effectiveBase} valorAtual={max} origens={maxOrigens}>
-          {max}
+        <StatValue valorBase={effectiveBase} valorAtual={safeMax} origens={maxOrigens}>
+          {safeMax}
         </StatValue>
       </span>
     </div>
