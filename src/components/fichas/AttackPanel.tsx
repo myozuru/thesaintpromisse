@@ -549,6 +549,7 @@ export function AttackPanel({ character: c }: Props) {
           addLog('combat', `⚔️ Golpe Amplo: ${c.name} atinge também ${alvo2.name}: d20 ${r2.natural} · total ${r2.attackTotal} → ${r2.criticalFail ? '💀 falha crítica' : r2.critical ? '💥 CRÍTICO' : r2.hit ? '✅ acerto' : '❌ erro'}${r2.hit ? ` · dano ${r2.damageTotal} (${r2.damageDice})` : ''}`);
           if (r2.hit && g.sel.sanguinario) aplicarSangramento(alvo2, g.sel.sanguinario);
           if (r2.hit && g.sel.penetrante) addLog('combat', `   ↳ Penetrante: ignora ${penetranteRD(c)} de RD.`);
+          if (r2.hit && r2.critical) checarRenovacaoCritico(true, alvo2.name);
         }
       }
     } else {
