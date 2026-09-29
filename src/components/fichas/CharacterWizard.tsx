@@ -1058,6 +1058,108 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                 </div>
               )}
 
+              {/* ─── Especialista em Combate: atributo-chave + treinamentos ─── */}
+              {isCombate && (
+                <div className="space-y-3 rounded-lg border-2 border-primary/40 bg-primary/5 p-3">
+                  <div className="flex items-center gap-2">
+                    <ScrollText className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-bold text-primary">Treinamentos de Combate</span>
+                    {combChoicesComplete ? (
+                      <span className="ml-auto text-[10px] text-primary font-bold">✓ Completo</span>
+                    ) : (
+                      <span className="ml-auto text-[10px] text-destructive font-bold">Obrigatório</span>
+                    )}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground space-y-0.5">
+                    <p><strong>Automático:</strong> Todas as armas + Escudos.</p>
+                    <p><strong>PV:</strong> 12 + CON no Nv 1; d10 (ou 6 fixo) + CON por nível.</p>
+                    <p><strong>Livres:</strong> 3 perícias quaisquer (passo Perícias).</p>
+                  </div>
+
+                  {/* Atributo-chave: Força | Destreza | Sabedoria */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-foreground">🔑 Atributo-Chave (CD das habilidades)</label>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {(['Força', 'Destreza', 'Sabedoria'] as const).map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setCombKeyAttribute(s)}
+                          className={cn(
+                            'h-8 rounded border text-[11px] font-bold transition-colors',
+                            combKeyAttribute === s
+                              ? 'border-primary bg-primary text-primary-foreground'
+                              : 'border-border bg-secondary/40 text-foreground hover:border-primary/60',
+                          )}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground italic">
+                      Define a CD das habilidades de especialização (10 + Mod). Não altera o PE (4 × Nv).
+                    </p>
+                  </div>
+
+                  {/* TR Fortitude OU Reflexos */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-foreground">Teste de Resistência (1)</label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {(['Fortitude', 'Reflexos'] as const).map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setCombSaveChoice(s)}
+                          className={cn(
+                            'h-8 rounded border text-[11px] font-bold transition-colors',
+                            combSaveChoice === s
+                              ? 'border-primary bg-primary text-primary-foreground'
+                              : 'border-border bg-secondary/40 text-foreground hover:border-primary/60',
+                          )}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 2 perícias entre Ofício | Atletismo | Acrobacia */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-foreground">
+                      Perícias (2 de 5) — selecionadas: {combSkillChoices.length}/2
+                    </label>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {COMB_SKILL_OPTIONS.map((o) => {
+                        const picked = combSkillChoices.includes(o);
+                        const full = combSkillChoices.length >= 2;
+                        const label = o.startsWith('Ofício') ? (oficioNames[o]?.trim() || o) : o;
+                        return (
+                          <button
+                            key={o}
+                            type="button"
+                            disabled={!picked && full}
+                            onClick={() => {
+                              setCombSkillChoices((prev) =>
+                                picked ? prev.filter((x) => x !== o) : [...prev, o],
+                              );
+                            }}
+                            className={cn(
+                              'h-8 rounded border text-[10px] font-bold transition-colors px-1',
+                              picked
+                                ? 'border-primary bg-primary text-primary-foreground'
+                                : 'border-border bg-secondary/40 text-foreground hover:border-primary/60 disabled:opacity-40 disabled:cursor-not-allowed',
+                            )}
+                            title={label}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* ─── Especialista em Técnica: proficiências obrigatórias ─── */}
               {isTecnica && (
                 <div className="space-y-3 rounded-lg border-2 border-primary/40 bg-primary/5 p-3">
