@@ -2463,6 +2463,10 @@ export const useCharacterStore = create<CharacterStore>()(
               });
               // 2) Só DEPOIS libera todos os agarres bilateralmente.
               get().releaseAllGrapplesOf(id);
+              // Artes do Combate: eliminar um inimigo recupera 1 Ponto de Preparo.
+              if (opts?.attackerId) {
+                void import('@/lib/artesCombate').then((m) => m.recoverPreparoOnKill(opts.attackerId!)).catch(() => {});
+              }
             }
           }
         });
@@ -4326,9 +4330,18 @@ export const useCharacterStore = create<CharacterStore>()(
               if (t?.usage?.scope !== 'rest_short') talentUsage[tid] = used;
             }
             const economiaPEReserve = preEconomia !== undefined ? preEconomia : c.economiaPEReserve;
+            // Artes do Combate: descanso curto recupera metade do preparo máximo.
+            const isEspCombate = c.specialization === 'Especialista em Combate';
+            const sabA = (c.attributes ?? []).find((a) => a.name === 'Sabedoria');
+            const sabM = sabA ? Math.floor((((sabA.value ?? 10) + (sabA.externalBonus ?? 0)) - 10) / 2) : 0;
+            const prepMax = isEspCombate ? Math.max(0, (c.level ?? 1) + sabM) : 0;
+            const newPreparo = isEspCombate
+              ? Math.min(prepMax, (c.preparoCurrent ?? prepMax) + Math.floor(prepMax / 2))
+              : c.preparoCurrent;
             return {
               ...c,
               peCurrent: newPe,
+              preparoCurrent: newPreparo,
               tempPE: 0,
               specAbilityUsage: specUsage,
               auraAptitudeUsage: auraUsage,
