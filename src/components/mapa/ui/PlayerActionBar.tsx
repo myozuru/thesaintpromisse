@@ -614,7 +614,7 @@ export function PlayerActionBar() {
               {outOfRange ? (
                 <div className="flex items-center gap-2 rounded-md bg-destructive/15 border border-destructive/40 px-2 py-1.5 text-xs text-destructive">
                   <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                  <span>Alvo fora de alcance.</span>
+                  <span>{distanceMeters !== null && spellRangeMeters !== null ? outOfRangeMessage(distanceMeters, spellRangeMeters) : "Alvo fora de alcance."}</span>
                 </div>
               ) : (
                 <button
