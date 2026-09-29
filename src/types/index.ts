@@ -376,6 +376,12 @@ export interface Character {
   reactionsCurrent: number;
   /** Estilo do Interceptador: redução pendente para o próximo dano sofrido. */
   interceptGuard?: { amount: number; byName: string } | null;
+  /** Artes do Combate (Especialista em Combate): Pontos de Preparo atuais. */
+  preparoCurrent?: number;
+  /** Distração Letal: penalidade de Defesa sofrida por 1 rodada (limpa ao virar a rodada). */
+  arteDefensePenalty?: { amount: number; byName: string; round: number } | null;
+  /** Golpe Descendente: bônus de Defesa até o começo do próprio próximo turno. */
+  arteGolpeDescendente?: { amount: number } | null;
   opportunityMax: number;
   opportunityCurrent: number;
   activeBuffs: ActiveBuff[];

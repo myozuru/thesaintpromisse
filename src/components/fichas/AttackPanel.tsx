@@ -34,6 +34,11 @@ import { useCombatStore } from '@/stores/useCombatStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { CombatTrackersCard } from './CombatTrackersCard';
 import { Swords, Dice5, Shield, Zap, RotateCcw, Sparkles, Hand, X, ChevronDown } from 'lucide-react';
+import {
+  hasArtesCombate, getPreparoAtual, getPreparoMax, spendPreparo,
+  applyDistracaoLetal, applyGolpeDescendente, investidaMoveMeters, metadeSab,
+  execucaoSilenciosaDice,
+} from '@/lib/artesCombate';
 import { cn } from '@/lib/utils';
 
 interface Props { character: Character; }
@@ -260,6 +265,27 @@ export function AttackPanel({ character: c }: Props) {
   const rollInFlightRef = useRef(false);
   const luckRollInFlightRef = useRef(false);
 
+  // ─── Artes do Combate (Especialista em Combate) ────────────────────────────
+  const temArtes = hasArtesCombate(c);
+  const preparoAtual = temArtes ? getPreparoAtual(c) : 0;
+  const preparoMax = temArtes ? getPreparoMax(c) : 0;
+  const [arteDistracao, setArteDistracao] = useState(false);
+  const [arteExecucao, setArteExecucao] = useState(false);
+  const [arteGolpe, setArteGolpe] = useState(false);
+  const [arteInvestida, setArteInvestida] = useState(false);
+  const [arremessoTargetId, setArremessoTargetId] = useState<string>('');
+  const arremessoWeapons = useMemo(
+    () => inventoryWeapons.filter(({ weapon }) => weapon.range === 'thrown'),
+    [inventoryWeapons],
+  );
+  const arteCustoTotal =
+    (arteDistracao ? 1 : 0) + (arteExecucao ? 1 : 0) + (arteGolpe ? 1 : 0) + (arteInvestida ? 2 : 0);
+  // Investida Imediata cobre a distância faltante (até Mod. SAB × 1,5 m).
+  const investidaCobreDistancia =
+    temArtes && arteInvestida && !!rangeBlockReason && targetDistanceM !== null && weaponRangeM !== null
+      ? targetDistanceM - investidaMoveMeters(c) <= weaponRangeM + 0.01
+      : false;
+
   // duas-mãos sempre verdadeiro se a arma exigir
   useEffect(() => {
     if (usingTwoHanded) setTwoHanded(true);
@@ -300,9 +326,72 @@ export function AttackPanel({ character: c }: Props) {
       addLog('combat', `⚠️ ${c.name} não tem arma equipada na mão principal.`);
       return;
     }
-    if (rangeBlockReason) {
-      addLog('combat', `🚫 ${c.name} não pode atacar: ${rangeBlockReason}`);
+    // ─── Artes do Combate: validações (sem gastar ainda) ────────────────────
+    const artesAtivas = temArtes && arteCustoTotal > 0;
+    if (artesAtivas) {
+      if (arteExecucao && !targetUnaware) {
+        addLog('combat', `🚫 Execução Silenciosa exige alvo [Desprevenido].`);
+        return;
+      }
+      if (arteGolpe && mainWeapon.range !== 'melee') {
+        addLog('combat', `🚫 Golpe Descendente exige ataque corpo a corpo.`);
+        return;
+      }
+    }
+    // Investida Imediata: move a peça em direção ao alvo (sem AdO) ANTES do
+    // ataque — por isso a checagem de alcance acontece depois do movimento.
+    if (artesAtivas && arteInvestida && target) {
+      const mapState = useMapStore.getState();
+      const ents = Object.values(mapState.entities ?? {});
+      const findEnt = (ch: Character) =>
+        ents.find((e) => e?.characterId === ch.id) ??
+        ents.find((e) => (e?.avatarProfileId ?? e?.ownerProfileId) && (e.avatarProfileId === ch.profileId || e.ownerProfileId === ch.profileId));
+      const atkEnt = findEnt(c);
+      const tgtEnt = findEnt(target);
+      if (atkEnt && tgtEnt) {
+        const mpc = mapState.gridConfig?.metersPerCell || 1.5;
+        const dpi = mapState.gridConfig?.dpi || 70;
+        const pxPerM = dpi / mpc;
+        const dx = (tgtEnt.x - atkEnt.x) / pxPerM;
+        const dy = (tgtEnt.y - atkEnt.y) / pxPerM;
+        const distM = Math.hypot(dx, dy);
+        const maxMove = investidaMoveMeters(c);
+        const alcance = weaponRangeM ?? 1.5;
+        const passo = Math.min(maxMove, Math.max(0, distM - alcance));
+        if (passo > 0 && distM > 0) {
+          const nx = atkEnt.x + (dx / distM) * passo * pxPerM;
+          const ny = atkEnt.y + (dy / distM) * passo * pxPerM;
+          mapState.updateEntity(atkEnt.id, { x: nx, y: ny });
+          addLog('combat', `🎯 Investida Imediata: ${c.name} avança ${passo.toFixed(1).replace('.', ',')} m em direção a ${target.name} (sem ataques de oportunidade).`);
+        } else {
+          addLog('combat', `🎯 Investida Imediata: ${c.name} já está no alcance de ${target.name}.`);
+        }
+      } else {
+        addLog('combat', `⚠️ Investida Imediata: peças fora do mapa — movimento ignorado.`);
+      }
+    }
+    // Alcance: com Investida ativa, mede de novo com a posição já atualizada.
+    const blockReason = artesAtivas && arteInvestida && target
+      ? checkWeaponRange(c.id, target.id, mainWeapon, useMapStore.getState().entities, useMapStore.getState().gridConfig, meleeRangeBonus, mapIdentities)
+      : rangeBlockReason;
+    if (blockReason) {
+      addLog('combat', `🚫 ${c.name} não pode atacar: ${blockReason}`);
       return;
+    }
+    // Gasto de preparo só acontece depois de todas as validações passarem.
+    if (artesAtivas) {
+      const spend = spendPreparo(c.id, arteCustoTotal);
+      if (!spend.ok) {
+        addLog('combat', `🚫 ${c.name}: ${spend.reason}`);
+        return;
+      }
+      const usadas = [
+        arteDistracao && 'Distração Letal',
+        arteExecucao && 'Execução Silenciosa',
+        arteGolpe && 'Golpe Descendente',
+        arteInvestida && 'Investida Imediata',
+      ].filter(Boolean).join(', ');
+      addLog('combat', `🎯 ${c.name} gasta ${arteCustoTotal} Preparo: ${usadas}.`);
     }
     if (rollInFlightRef.current || phase === 'rolling-hit' || phase === 'rolling-dmg') return;
     if (isReroll && attackRollCount >= 2) return;
@@ -323,6 +412,7 @@ export function AttackPanel({ character: c }: Props) {
         targetHasAuraEmbacada,
         attackerConcentratedAura,
         attackerIsGrappled,
+        arteExecucao: artesAtivas && arteExecucao,
       },
       trainedRanges: [
         ...(c.meleeTrained ? (['melee'] as const) : []),
@@ -357,6 +447,17 @@ export function AttackPanel({ character: c }: Props) {
       recordAttackResult(c.id, result.hit);
       if (result.hit && attackerConcentratedAura > 0) {
         consumeConcentratedAura(c.id);
+      }
+      // Artes do Combate: efeitos que disparam no acerto.
+      if (artesAtivas) {
+        if (result.hit) {
+          if (arteDistracao && target) applyDistracaoLetal(target.id, metadeSab(c), c.name);
+          if (arteGolpe && mainWeapon.range === 'melee') applyGolpeDescendente(c.id, metadeSab(c));
+        }
+        setArteDistracao(false);
+        setArteExecucao(false);
+        setArteGolpe(false);
+        setArteInvestida(false);
       }
     } else {
       // No reroll, atualiza a memória para refletir o resultado final (sobrescreve hit/miss do 1º).
@@ -531,6 +632,39 @@ export function AttackPanel({ character: c }: Props) {
     );
   };
 
+
+  // ─── Arte: Arremesso Ágil (ação livre após acertar ataque CaC) ─────────────
+  const handleArremessoAgil = async () => {
+    if (!lastResult?.hit || phase !== 'done') return;
+    const alvo2 = characters.find((x) => x.id === arremessoTargetId);
+    const arma = arremessoWeapons[0]?.weapon;
+    if (!arma) { addLog('combat', `🚫 Arremesso Ágil: nenhuma arma de arremesso no inventário.`); return; }
+    if (!alvo2) { addLog('combat', `🚫 Arremesso Ágil: escolha o segundo alvo.`); return; }
+    if (alvo2.id === targetId) { addLog('combat', `🚫 Arremesso Ágil: o segundo alvo deve ser diferente do primeiro.`); return; }
+    const spend = spendPreparo(c.id, 1);
+    if (!spend.ok) { addLog('combat', `🚫 ${c.name}: ${spend.reason}`); return; }
+    const ability2 = pickAttackAbility(c, arma);
+    const def2 = computeTotalDefense(
+      alvo2,
+      { items, omniInventory: omniInventoryList, omniEntidadesMap, omniRuntimeEffects: omniRuntimeEffectsList },
+      'ranged',
+    );
+    const ctx2 = buildAttackContext({
+      attacker: c, weapon: arma, targetDefense: def2,
+      situation: { preferredAbility: ability2, attackerIsGrappled },
+      trainedRanges: [
+        ...(c.meleeTrained ? (['melee'] as const) : []),
+        ...(c.rangedTrained ? (['ranged', 'thrown'] as const) : []),
+      ],
+    });
+    const r = await rollAttack(ctx2);
+    addLog(
+      'combat',
+      `🎯 Arremesso Ágil: ${c.name} ataca ${alvo2.name} com ${arma.name} (ação livre): d20 ${r.natural} · total ${r.attackTotal} → ${r.critical ? '💥 CRÍTICO' : r.hit ? '✅ acerto' : '❌ erro'}${r.hit ? ` · dano ${r.damageTotal} (${r.damageDice})` : ''}`,
+    );
+    recordAttackResult(c.id, r.hit);
+    setArremessoTargetId('');
+  };
 
   const handleRerollDamage = async () => {
     if (!mainWeapon || !lastResult || !lastResult.canRerollDamage) return;
@@ -883,16 +1017,35 @@ export function AttackPanel({ character: c }: Props) {
           </div>
         )}
 
+        {/* ─── Artes do Combate (Especialista em Combate) ─────────────────── */}
+        {temArtes && (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 space-y-1.5">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-300">
+              <Zap className="h-3 w-3" /> Artes do Combate
+              <span className="ml-auto normal-case font-normal text-muted-foreground">
+                Preparo: <b className={preparoAtual > 0 ? 'text-amber-300' : 'text-destructive'}>{preparoAtual}</b>/{preparoMax}
+                {arteCustoTotal > 0 && <span className="text-amber-200"> · custo {arteCustoTotal} PP</span>}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1.5 text-[11px]">
+              <ToggleChip on={arteDistracao} onChange={setArteDistracao} label={`Distração Letal (1 PP) · −${metadeSab(c)} Def do alvo`} disabled={preparoAtual < 1} />
+              <ToggleChip on={arteExecucao} onChange={setArteExecucao} label={`Execução Silenciosa (1 PP) · +${execucaoSilenciosaDice(c)}d6`} disabled={preparoAtual < 1 || !targetUnaware} />
+              <ToggleChip on={arteGolpe} onChange={setArteGolpe} label={`Golpe Descendente (1 PP) · +${metadeSab(c)} Def sua`} disabled={preparoAtual < 1 || mainWeapon?.range !== 'melee'} />
+              <ToggleChip on={arteInvestida} onChange={setArteInvestida} label={`Investida Imediata (2 PP) · ${investidaMoveMeters(c).toLocaleString('pt-BR')} m`} disabled={preparoAtual < 2 || !target} />
+            </div>
+          </div>
+        )}
+
         {/* Botão rolar */}
         <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
             onClick={() => handleRoll()}
-            disabled={!mainWeapon || !!rangeBlockReason || phase === 'rolling-hit' || phase === 'await-second-d20' || phase === 'rolling-second-d20' || phase === 'await-dmg' || phase === 'rolling-dmg'}
-            title={rangeBlockReason ?? undefined}
+            disabled={!mainWeapon || (!!rangeBlockReason && !investidaCobreDistancia) || phase === 'rolling-hit' || phase === 'await-second-d20' || phase === 'rolling-second-d20' || phase === 'await-dmg' || phase === 'rolling-dmg'}
+            title={rangeBlockReason && !investidaCobreDistancia ? rangeBlockReason : investidaCobreDistancia ? 'Investida Imediata cobre a distância' : undefined}
             className={cn(
               'inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-bold transition',
-              mainWeapon && !rangeBlockReason && phase !== 'rolling-hit' && phase !== 'await-second-d20' && phase !== 'rolling-second-d20' && phase !== 'await-dmg' && phase !== 'rolling-dmg'
+              mainWeapon && (!rangeBlockReason || investidaCobreDistancia) && phase !== 'rolling-hit' && phase !== 'await-second-d20' && phase !== 'rolling-second-d20' && phase !== 'await-dmg' && phase !== 'rolling-dmg'
                 ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                 : 'bg-muted text-muted-foreground cursor-not-allowed',
             )}
@@ -1002,6 +1155,41 @@ export function AttackPanel({ character: c }: Props) {
             </button>
           )}
         </div>
+
+        {/* ─── Arremesso Ágil: ataque extra com arma de arremesso ────────── */}
+        {temArtes && lastResult?.hit && phase === 'done' && mainWeapon?.range === 'melee' && arremessoWeapons.length > 0 && (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 space-y-1.5 animate-fade-in">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
+              Arremesso Ágil (1 PP · ação livre)
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <select
+                value={arremessoTargetId}
+                onChange={(e) => setArremessoTargetId(e.target.value)}
+                className="rounded border border-border bg-background px-2 py-1 text-xs"
+              >
+                <option value="">— segundo alvo —</option>
+                {possibleTargets.filter((t) => t.id !== targetId).map((t) => (
+                  <option key={t.id} value={t.id}>{t.name} ({t.category})</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={handleArremessoAgil}
+                disabled={!arremessoTargetId || preparoAtual < 1}
+                className={cn(
+                  'inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-bold transition',
+                  arremessoTargetId && preparoAtual >= 1
+                    ? 'bg-amber-500 text-background hover:bg-amber-400'
+                    : 'bg-muted text-muted-foreground cursor-not-allowed',
+                )}
+                title="Ação livre: um ataque com arma de arremesso contra um segundo alvo"
+              >
+                <Zap className="h-3.5 w-3.5" /> Arremessar {arremessoWeapons[0].weapon.name}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Dramatização: rolagem do d20 em curso */}
         {phase === 'rolling-hit' && (

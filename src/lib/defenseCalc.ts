@@ -252,6 +252,9 @@ export function computeDefenseBreakdown(
   const apoioCA = c.apoioDefensivo?.value ?? 0;
   const guardaCA = c.guardaSincronizadaBonus?.value ?? 0;
   const defensivoCA = getDefensivoCA(c);
+  // Artes do Combate: Distração Letal (penalidade no alvo) e Golpe Descendente (bônus próprio).
+  const arteDistracaoCA = -(c.arteDefensePenalty?.amount ?? 0);
+  const arteGolpeCA = c.arteGolpeDescendente?.amount ?? 0;
 
   const base = c.ca ?? 10;
   const total =
@@ -270,7 +273,9 @@ export function computeDefenseBreakdown(
     conditionsCA +
     apoioCA +
     guardaCA +
-    defensivoCA;
+    defensivoCA +
+    arteDistracaoCA +
+    arteGolpeCA;
 
   const notes: string[] = [];
   notes.push(`CA base ${base}`);
@@ -289,6 +294,8 @@ export function computeDefenseBreakdown(
   if (apoioCA) notes.push(`Apoio Defensivo +${apoioCA}`);
   if (guardaCA) notes.push(`Guarda Sincronizada +${guardaCA}`);
   if (defensivoCA) notes.push(`Estilo Defensivo +${defensivoCA}`);
+  if (arteDistracaoCA) notes.push(`Distração Letal ${arteDistracaoCA}`);
+  if (arteGolpeCA) notes.push(`Golpe Descendente +${arteGolpeCA}`);
 
   return {
     base,
