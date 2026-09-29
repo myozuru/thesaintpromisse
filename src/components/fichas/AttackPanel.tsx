@@ -814,7 +814,7 @@ export function AttackPanel({ character: c }: Props) {
           >
             <Shield className="h-3 w-3 shrink-0" />
             <span>
-              Distância: <b className="font-mono">{targetDistanceM.toFixed(1)} m</b>
+              Distância: <b className="font-mono">{targetDistanceM.toFixed(1).replace('.', ',')} m</b>
               {' / alcance '}<b className="font-mono">{weaponRangeM} m</b>
               {rangeBlockReason ? ' — fora de alcance!' : ''}
             </span>
