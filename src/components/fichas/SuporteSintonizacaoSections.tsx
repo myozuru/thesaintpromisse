@@ -17,11 +17,11 @@ import { HeartPulse } from 'lucide-react';
 export function SintonizacaoVitalSection({ c }: { c: Character }) {
   if (!hasSpecAbility(c, SINTONIZACAO_ID)) return null;
   return (
-    <div className="rounded-md border border-border bg-secondary/20 p-2 space-y-1">
-      <div className="flex items-center gap-2 text-xs font-bold text-foreground">
-        <HeartPulse className="h-3.5 w-3.5 text-primary" /> Sintonização Vital
+    <div className="space-y-2 rounded-md border border-border bg-secondary/20 p-3">
+      <div className="flex items-center gap-2 text-sm font-bold text-foreground">
+        <HeartPulse className="h-4 w-4 text-primary" /> Sintonização Vital
       </div>
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-sm leading-relaxed text-foreground/85">
         Ao curar um aliado, você recebe um aviso: por {SINTONIZACAO_PE} PE, outra criatura a até {SINTONIZACAO_RANGE_M} m
         de você (incluindo você) recupera metade da cura original (arredondada para cima). Sem limite de usos.
       </p>

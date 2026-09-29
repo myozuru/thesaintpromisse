@@ -110,16 +110,16 @@ export function OutraChanceSection({ character: c }: { character: Character }) {
   const left = getOutraChanceUsesLeft(c);
   const max = getOutraChanceMaxUses(c);
   return (
-    <div className="rounded-lg border border-border/60 bg-background/40 p-2.5 space-y-1">
-      <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-primary">
+    <div className="space-y-2 rounded-lg border border-border/60 bg-background/40 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-bold uppercase text-primary">
         <span className="flex items-center gap-1.5">
-          <RotateCcw className="h-3.5 w-3.5" /> Conceder Outra Chance
+          <RotateCcw className="h-4 w-4" /> Conceder Outra Chance
         </span>
-        <span className="font-mono text-muted-foreground normal-case">
+        <span className="font-mono text-sm text-foreground normal-case">
           {left}/{max} usos
         </span>
       </div>
-      <p className="text-[10px] text-muted-foreground">
+      <p className="text-sm leading-relaxed text-foreground/85">
         Quando um aliado a até 6 m falhar num teste com CD conhecida, você será perguntado. Custa {OUTRA_CHANCE_PE_COST} PE;
         usos voltam no descanso longo (metade no curto).
       </p>
