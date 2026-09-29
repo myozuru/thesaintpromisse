@@ -374,6 +374,8 @@ export interface Character {
   bonusActionsCurrent: number;
   reactionsMax: number;
   reactionsCurrent: number;
+  /** Estilo do Interceptador: redução pendente para o próximo dano sofrido. */
+  interceptGuard?: { amount: number; byName: string } | null;
   opportunityMax: number;
   opportunityCurrent: number;
   activeBuffs: ActiveBuff[];
