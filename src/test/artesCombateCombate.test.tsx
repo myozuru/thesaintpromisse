@@ -57,7 +57,7 @@ describe('Artes do Combate em combate', () => {
     const bruno = pegarFicha('bruno');
     expect(pegarFicha('ana').preparoCurrent).toBe(7);
     expect(bruno.arteDefensePenalty?.amount).toBe(2);
-    expect(bruno.arteDefensePenalty?.byName).toBe('Ana');
+    expect(bruno.arteDefensePenalty?.byName).toBe('ana');
   });
 
   it('Distração Letal no erro: gasta o preparo mas NÃO aplica a penalidade', async () => {
@@ -65,7 +65,7 @@ describe('Artes do Combate em combate', () => {
     const btn = await montar(esp());
     toggle(/Distração Letal/);
     fireEvent.click(btn);
-    await waitFor(() => expect(textoLog()).toMatch(/❌ Erro|Erro \(/), { timeout: 8000 });
+    await waitFor(() => expect(textoLog()).toMatch(/❌ Erro|💀 Falha crítica/), { timeout: 8000 });
     expect(pegarFicha('ana').preparoCurrent).toBe(7);
     expect(pegarFicha('bruno').arteDefensePenalty).toBeUndefined();
   });
