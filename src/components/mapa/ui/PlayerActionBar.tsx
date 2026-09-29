@@ -642,7 +642,23 @@ export function PlayerActionBar() {
             : 'opacity-0 translate-y-3 scale-95 pointer-events-none',
         )}
         style={{ minWidth: 360, maxWidth: open === 'classe' ? 640 : 520 }}
-...
+      >
+        {open && (
+          <div className="rounded-xl border border-border/60 bg-background/90 backdrop-blur-md shadow-xl overflow-hidden">
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-border/50 bg-primary/10">
+              <span className="text-xs uppercase tracking-wider font-mono text-primary font-bold flex-1">
+                {activeLabel}
+              </span>
+              <button
+                type="button"
+                onClick={() => setOpen(null)}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                title="Fechar"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <div className={cn('overflow-y-auto', open === 'classe' ? 'max-h-[60vh]' : 'max-h-[420px]')}>
               {open === 'classe' && activeChar ? (
                 <div className="py-2 -mx-2" onClick={(e) => e.stopPropagation()}>
                   <SuportePanel character={activeChar} />
