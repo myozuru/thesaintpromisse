@@ -27,7 +27,7 @@ export interface CombatStyleDef {
 
 export const COMBAT_STYLES: CombatStyleDef[] = [
   { id: 'defensivo', name: 'Estilo Defensivo', summary: 'CA +2; +1 nos níveis 4, 8, 12 e 16.', implemented: true },
-  { id: 'arremessador', name: 'Estilo do Arremessador', summary: 'Saca arma de arremesso como parte do ataque; dano +2 com elas (+1 nos níveis 4, 8, 12 e 16).', implemented: false },
+  { id: 'arremessador', name: 'Estilo do Arremessador', summary: 'Saca arma de arremesso como parte do ataque; dano +2 com elas (+1 nos níveis 4, 8, 12 e 16).', implemented: true },
   { id: 'duelista', name: 'Estilo do Duelista', summary: 'Uma arma em uma mão e a outra livre (sem escudo): acerto +1 (+1 nos níveis 8 e 16) e dano +2 (+1 nos níveis 4, 8, 12 e 16).', implemented: true },
   { id: 'interceptador', name: 'Estilo do Interceptador', summary: 'Reação: aliado no seu alcance recebe ataque → reduz o dano em 1d10 + mod. de Força (+1 dado nos níveis 4, 8, 12 e 16).', implemented: false },
   { id: 'protetor', name: 'Estilo do Protetor', summary: 'Reação: impõe desvantagem em ataque contra aliado a até 1,5 m; também concede vantagem no TR de aliado a até 1,5 m.', implemented: false },
@@ -148,3 +148,16 @@ export function distanteApplies(c: Character, w: { range: string }): boolean {
 }
 /** Mesma escala do Duelista: acerto +1 (8,16), dano +2 (4,8,12,16). */
 export const getDistanteBonus = (level: number) => getDuelistaBonus(level);
+
+// ===================== Estilo do Arremessador =====================
+
+/** Arma de arremesso: alcance 'thrown' ou propriedade Arremessável. */
+export function isThrownWeapon(w: { range: string; properties?: { kind: string }[] }): boolean {
+  return w.range === 'thrown' || (w.properties ?? []).some((p) => p.kind === 'arremessavel');
+}
+export function arremessadorApplies(c: Character, w: { range: string; properties?: { kind: string }[] }): boolean {
+  return hasCombatStyle(c, 'arremessador') && isThrownWeapon(w);
+}
+export function getArremessadorDamage(level: number): number {
+  return 2 + styleStepBonus(level ?? 1);
+}

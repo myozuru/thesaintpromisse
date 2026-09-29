@@ -289,7 +289,7 @@ export function AttackPanel({ character: c }: Props) {
       return;
     }
     const swaps = useCharacterStore.getState().characters.find(x => x.id === c.id)?.weaponSwapsThisTurn ?? 0;
-    const costLabel = res.actionUsed === 'bonus' ? 'Ação Bônus (2ª troca)' : 'Ação Livre';
+    const costLabel = res.actionUsed === 'bonus' ? 'Ação Bônus (2ª troca)' : res.actionUsed === 'arremessador' ? 'parte do ataque (Estilo do Arremessador)' : 'Ação Livre';
     addLog('combat', `🤝 ${c.name} ${weaponName ? 'equipou' : 'guardou'} arma — ${costLabel} · trocas no turno: ${swaps}`);
   };
 
