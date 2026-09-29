@@ -495,6 +495,15 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
         bonusHP: 0, bonusPE: 0, bonusESC: 0, bonusSlots: 0, bonusRD: 0, bonusCA: 0,
       });
     }
+    // Especialista em Combate: TODAS as armas + Escudos (regra do livro).
+    if (isCombate) {
+      passivesForCharacter.push({
+        id: crypto.randomUUID(),
+        name: 'Treinamento: Todas as Armas e Escudos',
+        description: 'Proficiente em todas as armas (corpo a corpo e à distância) e em Escudos (treinamento da especialização Especialista em Combate).',
+        bonusHP: 0, bonusPE: 0, bonusESC: 0, bonusSlots: 0, bonusRD: 0, bonusCA: 0,
+      });
+    }
 
     // HP/PE finais incluem automação de nível (Kamo +1/level, Gojo PE par, etc.)
     const finalHpMax = hpMax + (effects.automation.bonusHP ?? 0);
@@ -585,6 +594,23 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
             trained: true,
             mastery: false,
           });
+        }
+        // Especialista em Combate: adiciona o TR escolhido (Fortitude OU Reflexos)
+        // como Treinado. Fortitude já existe na lista base — marca nela.
+        if (isCombate && combSaveChoice) {
+          const existing = base.find(st => st.name === combSaveChoice);
+          if (existing) {
+            existing.trained = true;
+          } else {
+            base.push({
+              id: crypto.randomUUID(),
+              name: combSaveChoice,
+              value: 0,
+              linkedAttribute: undefined,
+              trained: true,
+              mastery: false,
+            });
+          }
         }
         return base;
       })(),
