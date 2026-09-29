@@ -62,6 +62,7 @@ import { checkDerivadoEmergency } from '@/lib/derivadoOrigin';
 import { applyOriginLevelUp, initOriginPools, resetOriginDailyPools } from '@/lib/originLevelEngine';
 import { rollDice, rollD20Com, rollDiceCom } from '@/lib/dice';
 import { findWeaponByName, requiresTwoHands, isLight } from '@/lib/weapons';
+import { hasCombatStyle, isThrownWeapon } from '@/lib/combateEstilos';
 import { clampExh, getExhaustionHpReduction, syncExhaustionConditions, EXHAUSTION_MAX } from '@/lib/exhaustionEffects';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { selectOmniPassiveBonuses } from '@/lib/omni/omniBridge';
@@ -920,7 +921,7 @@ interface CharacterStore {
   equipWeapons: (
     charId: string,
     payload: { mainHandName: string | null; offHandName?: string | null },
-  ) => { ok: boolean; reason?: string; actionUsed?: 'free' | 'bonus' };
+  ) => { ok: boolean; reason?: string; actionUsed?: 'free' | 'bonus' | 'arremessador' };
   /** Reseta usos de Talentos por escopo (round/scene/rest_short/rest_long/daily). */
   resetTalentUsage: (charId: string, scope: 'round' | 'scene' | 'rest_short' | 'rest_long' | 'daily') => void;
   /** Adiciona PE temporário (consumido antes do peCurrent; expira no fim da cena). */
@@ -4801,10 +4802,17 @@ export const useCharacterStore = create<CharacterStore>()(
         const sameOff = (c.offHandWeaponName ?? null) === finalOff;
         const noChange = sameMain && sameOff;
 
-        let actionUsed: 'free' | 'bonus' = 'free';
+        let actionUsed: 'free' | 'bonus' | 'arremessador' = 'free';
         let nextSwapCount = c.weaponSwapsThisTurn ?? 0;
 
-        if (!noChange) {
+        // Estilo do Arremessador: sacar arma de arremesso faz parte do ataque (não conta troca).
+        const drawn = [finalMain, finalOff].filter((n): n is string => !!n && n !== c.mainHandWeaponName && n !== c.offHandWeaponName);
+        const arremessadorDraw = !noChange && drawn.length > 0 && hasCombatStyle(c, 'arremessador')
+          && drawn.every((n) => { const w = findWeaponByName(n); return !!w && isThrownWeapon(w); });
+
+        if (arremessadorDraw) {
+          actionUsed = 'arremessador';
+        } else if (!noChange) {
           const swapsSoFar = c.weaponSwapsThisTurn ?? 0;
           if (swapsSoFar >= 1) {
             // 2ª (ou mais) troca no mesmo turno → consome Ação Bônus

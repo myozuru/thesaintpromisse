@@ -1,4 +1,4 @@
-import { duelistaApplies, getDuelistaBonus, distanteApplies, getDistanteBonus } from './combateEstilos';
+import { duelistaApplies, getDuelistaBonus, distanteApplies, getDistanteBonus, arremessadorApplies, getArremessadorDamage } from './combateEstilos';
 import { consumeCritNegated } from '@/lib/suporteNegacao';
 /**
  * Motor de Combate.
@@ -124,6 +124,11 @@ function applyCombatStyleBonuses(ctx: AttackContext, out: ContextualBonus): void
     const b = getDistanteBonus(ctx.attacker.level ?? 1);
     out.hit += b.hit; out.damageFlat += b.damage;
     out.notes.push(`Estilo Distante: +${b.hit} acerto, +${b.damage} dano`);
+  }
+  if (arremessadorApplies(ctx.attacker, ctx.weapon)) {
+    const dmg = getArremessadorDamage(ctx.attacker.level ?? 1);
+    out.damageFlat += dmg;
+    out.notes.push(`Estilo do Arremessador: +${dmg} dano`);
   }
 }
 
