@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { checkTouchTarget, isWithinTouch, touchDistanceMeters } from '@/lib/touchRange';
+import { charsDistanceMeters, checkTouchTarget, isWithinTouch, touchDistanceMeters } from '@/lib/touchRange';
 
 const grid = { dpi: 70, metersPerCell: 1.5 };
 const tok = (x: number, y: number, s = 70) => ({ x, y, w: s, h: s });
@@ -24,5 +24,28 @@ describe('Alcance de toque (1,5 m)', () => {
     expect(checkTouchTarget('A', 'C', ents, grid)).toMatch(/no mapa/);
     expect(checkTouchTarget('A', 'B', ents, grid)).toMatch(/aproxime-se mais 3,0 m/);
     expect(checkTouchTarget('A', 'B', { ...ents, b: { ...tok(70, 0), characterId: 'B' } }, grid)).toBeNull();
+  });
+
+  it('usa o ícone do perfil mesmo quando ele está vinculado a outra ficha do jogador', () => {
+    const ents = {
+      suporte: { ...tok(0, 0), characterId: 'ficha-antiga-a', avatarProfileId: 'perfil-a' },
+      aliado: { ...tok(70, 0), characterId: 'ficha-antiga-b', ownerProfileId: 'perfil-b' },
+    };
+    const identities = { casterProfileId: 'perfil-a', targetProfileId: 'perfil-b' };
+    expect(charsDistanceMeters('A', 'B', ents, grid, identities)).toBeCloseTo(1.5);
+    expect(checkTouchTarget('A', 'B', ents, grid, identities)).toBeNull();
+  });
+
+  it('continua informando quanto falta quando os ícones dos perfis estão longe', () => {
+    const ents = {
+      suporte: { ...tok(0, 0), avatarProfileId: 'perfil-a' },
+      aliado: { ...tok(210, 0), avatarProfileId: 'perfil-b' },
+    };
+    expect(
+      checkTouchTarget('A', 'B', ents, grid, {
+        casterProfileId: 'perfil-a',
+        targetProfileId: 'perfil-b',
+      }),
+    ).toMatch(/aproxime-se mais 3,0 m/);
   });
 });
