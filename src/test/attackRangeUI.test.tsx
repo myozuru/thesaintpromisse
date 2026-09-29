@@ -16,13 +16,13 @@ const atacante = (arma: string) =>
   ficha('ana', { profileId: 'p-ana', mainHandWeaponName: arma } as never);
 const alvo = () => ficha('bruno', { category: 'INIMIGO' } as never);
 
-function selecionarAlvo(nome: string) {
+function selecionarAlvo(id: string) {
   const selects = screen.getAllByRole('combobox');
   const sel = selects.find((s) =>
-    Array.from((s as HTMLSelectElement).options).some((o) => o.textContent === nome),
+    Array.from((s as HTMLSelectElement).options).some((o) => o.value === id),
   ) as HTMLSelectElement | undefined;
   expect(sel, 'select de alvo com o personagem').toBeTruthy();
-  fireEvent.change(sel!, { target: { value: nome === 'bruno' ? 'bruno' : nome } });
+  fireEvent.change(sel!, { target: { value: id } });
 }
 
 beforeEach(() => comoTela({ profileId: 'p-ana', role: 'PLAYER' }));
