@@ -22,7 +22,7 @@ describe('Alcance de toque (1,5 m)', () => {
     const ents = { a: { ...tok(0, 0), characterId: 'A' }, b: { ...tok(210, 0), characterId: 'B' } };
     expect(checkTouchTarget('A', 'A', {}, grid)).toBeNull();
     expect(checkTouchTarget('A', 'C', ents, grid)).toMatch(/no mapa/);
-    expect(checkTouchTarget('A', 'B', ents, grid)).toMatch(/fora do alcance/);
+    expect(checkTouchTarget('A', 'B', ents, grid)).toMatch(/aproxime-se mais 3,0 m/);
     expect(checkTouchTarget('A', 'B', { ...ents, b: { ...tok(70, 0), characterId: 'B' } }, grid)).toBeNull();
   });
 });
