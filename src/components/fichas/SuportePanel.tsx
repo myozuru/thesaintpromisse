@@ -7,6 +7,8 @@ import { useState } from 'react';
 import type { Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLogStore } from '@/stores/useLogStore';
+import { useMapStore } from '@/stores/useMapStore';
+import { checkTouchTarget, touchDistanceMeters } from '@/lib/touchRange';
 import { rollDiceCom } from '@/lib/dice';
 import {
   isSuporte,
@@ -53,6 +55,8 @@ export function SuportePanel({ character: c }: { character: Character }) {
   const updateCharacter = useCharacterStore((s) => s.updateCharacter);
   const applyHealing = useCharacterStore((s) => s.applyHealing);
   const addLog = useLogStore((s) => s.addLog);
+  const mapEntities = useMapStore((s) => s.entities);
+  const gridConfig = useMapStore((s) => s.gridConfig);
   const [targetId, setTargetId] = useState<string>(c.id);
   const [apoiarTargetId, setApoiarTargetId] = useState<string>('');
   const [inspiracaoExtra, setInspiracaoExtra] = useState(0);
