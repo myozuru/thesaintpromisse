@@ -205,11 +205,6 @@ export function AttackPanel({ character: c }: Props) {
     mainWeapon && target
       ? checkWeaponRange(c.id, target.id, mainWeapon, mapEntities, gridConfig, meleeRangeBonus, mapIdentities)
       : null;
-  // Investida Imediata cobre a distância faltante (até Mod. SAB × 1,5 m).
-  const investidaCobreDistancia =
-    temArtes && arteInvestida && !!rangeBlockReason && targetDistanceM !== null && weaponRangeM !== null
-      ? targetDistanceM - investidaMoveMeters(c) <= weaponRangeM + 0.01
-      : false;
 
   // Ao trocar de alvo, limpa override
   useEffect(() => { setDefenseOverride(null); }, [targetId]);
@@ -285,6 +280,11 @@ export function AttackPanel({ character: c }: Props) {
   );
   const arteCustoTotal =
     (arteDistracao ? 1 : 0) + (arteExecucao ? 1 : 0) + (arteGolpe ? 1 : 0) + (arteInvestida ? 2 : 0);
+  // Investida Imediata cobre a distância faltante (até Mod. SAB × 1,5 m).
+  const investidaCobreDistancia =
+    temArtes && arteInvestida && !!rangeBlockReason && targetDistanceM !== null && weaponRangeM !== null
+      ? targetDistanceM - investidaMoveMeters(c) <= weaponRangeM + 0.01
+      : false;
 
   // duas-mãos sempre verdadeiro se a arma exigir
   useEffect(() => {
