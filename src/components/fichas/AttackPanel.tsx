@@ -1004,6 +1004,25 @@ export function AttackPanel({ character: c }: Props) {
           </div>
         )}
 
+        {/* ─── Artes do Combate (Especialista em Combate) ─────────────────── */}
+        {temArtes && (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 space-y-1.5">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-300">
+              <Zap className="h-3 w-3" /> Artes do Combate
+              <span className="ml-auto normal-case font-normal text-muted-foreground">
+                Preparo: <b className={preparoAtual > 0 ? 'text-amber-300' : 'text-destructive'}>{preparoAtual}</b>/{preparoMax}
+                {arteCustoTotal > 0 && <span className="text-amber-200"> · custo {arteCustoTotal} PP</span>}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1.5 text-[11px]">
+              <ToggleChip on={arteDistracao} onChange={setArteDistracao} label={`Distração Letal (1 PP) · −${metadeSab(c)} Def do alvo`} disabled={preparoAtual < 1} />
+              <ToggleChip on={arteExecucao} onChange={setArteExecucao} label={`Execução Silenciosa (1 PP) · +${execucaoSilenciosaDice(c)}d6`} disabled={preparoAtual < 1 || !targetUnaware} />
+              <ToggleChip on={arteGolpe} onChange={setArteGolpe} label={`Golpe Descendente (1 PP) · +${metadeSab(c)} Def sua`} disabled={preparoAtual < 1 || mainWeapon?.range !== 'melee'} />
+              <ToggleChip on={arteInvestida} onChange={setArteInvestida} label={`Investida Imediata (2 PP) · ${investidaMoveMeters(c).toLocaleString('pt-BR')} m`} disabled={preparoAtual < 2 || !target} />
+            </div>
+          </div>
+        )}
+
         {/* Botão rolar */}
         <div className="flex items-center gap-2 flex-wrap">
           <button
@@ -1124,7 +1143,40 @@ export function AttackPanel({ character: c }: Props) {
           )}
         </div>
 
-        {/* Dramatização: rolagem do d20 em curso */}
+        {/* ─── Arremesso Ágil: ataque extra com arma de arremesso ────────── */}
+        {temArtes && lastResult?.hit && phase === 'done' && mainWeapon?.range === 'melee' && arremessoWeapons.length > 0 && (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 space-y-1.5 animate-fade-in">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
+              Arremesso Ágil (1 PP · ação livre)
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <select
+                value={arremessoTargetId}
+                onChange={(e) => setArremessoTargetId(e.target.value)}
+                className="rounded border border-border bg-background px-2 py-1 text-xs"
+              >
+                <option value="">— segundo alvo —</option>
+                {possibleTargets.filter((t) => t.id !== targetId).map((t) => (
+                  <option key={t.id} value={t.id}>{t.name} ({t.category})</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={handleArremessoAgil}
+                disabled={!arremessoTargetId || preparoAtual < 1}
+                className={cn(
+                  'inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-bold transition',
+                  arremessoTargetId && preparoAtual >= 1
+                    ? 'bg-amber-500 text-background hover:bg-amber-400'
+                    : 'bg-muted text-muted-foreground cursor-not-allowed',
+                )}
+                title="Ação livre: um ataque com arma de arremesso contra um segundo alvo"
+              >
+                <Zap className="h-3.5 w-3.5" /> Arremessar {arremessoWeapons[0].weapon.name}
+              </button>
+            </div>
+          </div>
+        )}
         {phase === 'rolling-hit' && (
           <div className="rounded-lg border border-primary/40 bg-primary/5 px-3 py-2 text-xs animate-fade-in">
             <div className="font-mono flex items-center gap-2">
