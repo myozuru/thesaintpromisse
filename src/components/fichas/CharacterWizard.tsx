@@ -243,19 +243,23 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
         ? keyAttribute
         : specialization === 'Suporte'
           ? supKeyAttribute
-          : getKeyAttrForSpec(specialization);
+          : specialization === 'Especialista em Combate'
+            ? combKeyAttribute
+            : getKeyAttrForSpec(specialization);
     }
     const keyMod = keyAttrName ? mod(eff(keyAttrName)) : 0;
 
     const hitDie = getClassHitDie(charClass, specialization);
     // Regra do sistema: no Nv 1 o PV é SEMPRE 10 + Mod. de Constituição
     // (independente do dado de vida, que só é rolado em níveis >= 2).
-    const hpMax = Math.max(1, 10 + conMod);
-    const peMax = Math.max(0, getPePerLevelMult(specialization) + keyMod);
+    // EXCEÇÃO (livro): Especialista em Combate começa com 12 + Mod. de Constituição.
+    const hpMax = Math.max(1, (specialization === 'Especialista em Combate' ? 12 : 10) + conMod);
+    // PE: Combate é 4 × Nv SEM mod de atributo (o atributo-chave dele só define CD).
+    const peMax = Math.max(0, getPePerLevelMult(specialization) + (specialization === 'Especialista em Combate' ? 0 : keyMod));
     const ca = 10 + desMod;
     const baseDC = 10 + keyMod;
     return { hpMax, peMax, ca, baseDC, keyAttrName, keyMod, conMod, desMod };
-  }, [attrValues, charClass, specialization, keyAttribute, supKeyAttribute, effects.attrBonuses]);
+  }, [attrValues, charClass, specialization, keyAttribute, supKeyAttribute, combKeyAttribute, effects.attrBonuses]);
   const { hpMax, peMax, ca, baseDC } = derivedStats;
 
   const maxSpells = charClass === 'Feiticeiro'
@@ -295,7 +299,9 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
   // Origens/clãs adicionam pontos extras (effects.trackers.availableTrainings).
   // Suporte recebe +1 ponto extra: o livro concede 3 perícias quaisquer além das fixas
   // (pool padrão nível+1 cobre só 2 no Nv 1).
-  const wizardSkillPoolBase = charClass === 'Feiticeiro' ? (level + 1) + (isSuporte ? 1 : 0) : 0;
+  // Especialista em Combate recebe +3: o livro concede 3 perícias quaisquer além das
+  // 2 escolhidas (Ofício/Atletismo/Acrobacia), que entram como override no finish.
+  const wizardSkillPoolBase = charClass === 'Feiticeiro' ? (level + 1) + (isSuporte ? 1 : 0) + (isCombate ? 3 : 0) : 0;
 
   const liveTrackers = useMemo(() => {
     const totalAttr = (effects.trackers.availableAttrPoints + (effects.automation.extraAttrPoints ?? 0));
