@@ -177,6 +177,19 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
   const SUP_FIXED_SKILLS = ['Medicina', 'Prestidigitação'];
   const supChoicesComplete = !isSuporte || (!!supSaveChoice && supOficioChoices.length === 2);
 
+  // ===== Especialista em Combate — escolhas obrigatórias (regra do livro) =====
+  // Automático: TODAS as armas (melee + distância) + Escudos.
+  // O jogador escolhe: atributo-chave (Força | Destreza | Sabedoria — define a CD
+  // das habilidades de especialização), 1 TR entre Fortitude | Reflexos e
+  // 2 perícias entre Ofício | Atletismo | Acrobacia (Treinadas).
+  // (As "três outras perícias quaisquer" usam o pool normal do passo Perícias.)
+  const [combKeyAttribute, setCombKeyAttribute] = useState<'Força' | 'Destreza' | 'Sabedoria'>('Força');
+  const [combSaveChoice, setCombSaveChoice] = useState<'Fortitude' | 'Reflexos' | ''>('');
+  const [combSkillChoices, setCombSkillChoices] = useState<string[]>([]);
+  const isCombate = charClass === 'Feiticeiro' && specialization === 'Especialista em Combate';
+  const COMB_SKILL_OPTIONS = useMemo(() => ['Ofício 1', 'Ofício 2', 'Ofício 3', 'Atletismo', 'Acrobacia'], []);
+  const combChoicesComplete = !isCombate || (!!combSaveChoice && combSkillChoices.length === 2);
+
   // Step 6: Passives
   const [passives, setPassives] = useState<Passive[]>([]);
   const [passForm, setPassForm] = useState<{ name: string; description: string; spellLevel: SpellLevel; bonusHP: number; bonusPE: number; bonusESC: number; bonusSlots: number; bonusRD: number; bonusCA: number; bonusRdByType: Partial<Record<DamageType, number>> }>({
@@ -230,19 +243,23 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
         ? keyAttribute
         : specialization === 'Suporte'
           ? supKeyAttribute
-          : getKeyAttrForSpec(specialization);
+          : specialization === 'Especialista em Combate'
+            ? combKeyAttribute
+            : getKeyAttrForSpec(specialization);
     }
     const keyMod = keyAttrName ? mod(eff(keyAttrName)) : 0;
 
     const hitDie = getClassHitDie(charClass, specialization);
     // Regra do sistema: no Nv 1 o PV é SEMPRE 10 + Mod. de Constituição
     // (independente do dado de vida, que só é rolado em níveis >= 2).
-    const hpMax = Math.max(1, 10 + conMod);
-    const peMax = Math.max(0, getPePerLevelMult(specialization) + keyMod);
+    // EXCEÇÃO (livro): Especialista em Combate começa com 12 + Mod. de Constituição.
+    const hpMax = Math.max(1, (specialization === 'Especialista em Combate' ? 12 : 10) + conMod);
+    // PE: Combate é 4 × Nv SEM mod de atributo (o atributo-chave dele só define CD).
+    const peMax = Math.max(0, getPePerLevelMult(specialization) + (specialization === 'Especialista em Combate' ? 0 : keyMod));
     const ca = 10 + desMod;
     const baseDC = 10 + keyMod;
     return { hpMax, peMax, ca, baseDC, keyAttrName, keyMod, conMod, desMod };
-  }, [attrValues, charClass, specialization, keyAttribute, supKeyAttribute, effects.attrBonuses]);
+  }, [attrValues, charClass, specialization, keyAttribute, supKeyAttribute, combKeyAttribute, effects.attrBonuses]);
   const { hpMax, peMax, ca, baseDC } = derivedStats;
 
   const maxSpells = charClass === 'Feiticeiro'
@@ -282,7 +299,9 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
   // Origens/clãs adicionam pontos extras (effects.trackers.availableTrainings).
   // Suporte recebe +1 ponto extra: o livro concede 3 perícias quaisquer além das fixas
   // (pool padrão nível+1 cobre só 2 no Nv 1).
-  const wizardSkillPoolBase = charClass === 'Feiticeiro' ? (level + 1) + (isSuporte ? 1 : 0) : 0;
+  // Especialista em Combate recebe +3: o livro concede 3 perícias quaisquer além das
+  // 2 escolhidas (Ofício/Atletismo/Acrobacia), que entram como override no finish.
+  const wizardSkillPoolBase = charClass === 'Feiticeiro' ? (level + 1) + (isSuporte ? 1 : 0) + (isCombate ? 3 : 0) : 0;
 
   const liveTrackers = useMemo(() => {
     const totalAttr = (effects.trackers.availableAttrPoints + (effects.automation.extraAttrPoints ?? 0));
@@ -380,6 +399,8 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
       if (!tecChoicesComplete) return false;
       // Suporte: bloqueia avanço sem TR + 2 Ofícios.
       if (!supChoicesComplete) return false;
+      // Especialista em Combate: bloqueia avanço sem TR + 2 perícias da lista.
+      if (!combChoicesComplete) return false;
       return true;
     }
     if (step === 2) {
@@ -435,6 +456,10 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
       for (const fx of SUP_FIXED_SKILLS) tecTrainedOverride[fx] = true;
       for (const ofKey of supOficioChoices) tecTrainedOverride[ofKey] = true;
     }
+    // Especialista em Combate: 2 perícias escolhidas entre Ofício/Atletismo/Acrobacia.
+    if (isCombate) {
+      for (const sk of combSkillChoices) tecTrainedOverride[sk] = true;
+    }
 
     // Build skills array from fixed definitions
     const skills: Attribute[] = FIXED_SKILLS.map(sd => {
@@ -467,6 +492,15 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
         id: crypto.randomUUID(),
         name: 'Treinamento: Escudos',
         description: 'Proficiente em Escudos (treinamento da especialização Suporte).',
+        bonusHP: 0, bonusPE: 0, bonusESC: 0, bonusSlots: 0, bonusRD: 0, bonusCA: 0,
+      });
+    }
+    // Especialista em Combate: TODAS as armas + Escudos (regra do livro).
+    if (isCombate) {
+      passivesForCharacter.push({
+        id: crypto.randomUUID(),
+        name: 'Treinamento: Todas as Armas e Escudos',
+        description: 'Proficiente em todas as armas (corpo a corpo e à distância) e em Escudos (treinamento da especialização Especialista em Combate).',
         bonusHP: 0, bonusPE: 0, bonusESC: 0, bonusSlots: 0, bonusRD: 0, bonusCA: 0,
       });
     }
@@ -561,6 +595,23 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
             mastery: false,
           });
         }
+        // Especialista em Combate: adiciona o TR escolhido (Fortitude OU Reflexos)
+        // como Treinado. Fortitude já existe na lista base — marca nela.
+        if (isCombate && combSaveChoice) {
+          const existing = base.find(st => st.name === combSaveChoice);
+          if (existing) {
+            existing.trained = true;
+          } else {
+            base.push({
+              id: crypto.randomUUID(),
+              name: combSaveChoice,
+              value: 0,
+              linkedAttribute: undefined,
+              trained: true,
+              mastery: false,
+            });
+          }
+        }
         return base;
       })(),
       passives: passivesForCharacter,
@@ -576,8 +627,9 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
       dcLinkedAttr: '',
       // Especialista em Técnica: Armas Simples (melee) + Armas a Distância já treinadas.
       // Suporte: Armas Simples (melee) treinadas (regra do livro).
-      meleeTrained: (isTecnica || isSuporte) ? true : false,
-      rangedTrained: isTecnica ? true : false,
+      // Especialista em Combate: TODAS as armas (melee + distância) treinadas.
+      meleeTrained: (isTecnica || isSuporte || isCombate) ? true : false,
+      rangedTrained: (isTecnica || isCombate) ? true : false,
       cursedTrained: false,
       meleeMastery: false,
       rangedMastery: false,
@@ -611,7 +663,9 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
         ? keyAttribute
         : specialization === 'Suporte'
           ? supKeyAttribute
-          : undefined,
+          : specialization === 'Especialista em Combate'
+            ? combKeyAttribute
+            : undefined,
       tecnicaFundamentos: isTecnica ? tecFundamentos : undefined,
       // ===== Origin metadata =====
       originTags: effects.tags,
@@ -996,6 +1050,108 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                             )}
                           >
                             {o}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ─── Especialista em Combate: atributo-chave + treinamentos ─── */}
+              {isCombate && (
+                <div className="space-y-3 rounded-lg border-2 border-primary/40 bg-primary/5 p-3">
+                  <div className="flex items-center gap-2">
+                    <ScrollText className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-bold text-primary">Treinamentos de Combate</span>
+                    {combChoicesComplete ? (
+                      <span className="ml-auto text-[10px] text-primary font-bold">✓ Completo</span>
+                    ) : (
+                      <span className="ml-auto text-[10px] text-destructive font-bold">Obrigatório</span>
+                    )}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground space-y-0.5">
+                    <p><strong>Automático:</strong> Todas as armas + Escudos.</p>
+                    <p><strong>PV:</strong> 12 + CON no Nv 1; d10 (ou 6 fixo) + CON por nível.</p>
+                    <p><strong>Livres:</strong> 3 perícias quaisquer (passo Perícias).</p>
+                  </div>
+
+                  {/* Atributo-chave: Força | Destreza | Sabedoria */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-foreground">🔑 Atributo-Chave (CD das habilidades)</label>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {(['Força', 'Destreza', 'Sabedoria'] as const).map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setCombKeyAttribute(s)}
+                          className={cn(
+                            'h-8 rounded border text-[11px] font-bold transition-colors',
+                            combKeyAttribute === s
+                              ? 'border-primary bg-primary text-primary-foreground'
+                              : 'border-border bg-secondary/40 text-foreground hover:border-primary/60',
+                          )}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground italic">
+                      Define a CD das habilidades de especialização (10 + Mod). Não altera o PE (4 × Nv).
+                    </p>
+                  </div>
+
+                  {/* TR Fortitude OU Reflexos */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-foreground">Teste de Resistência (1)</label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {(['Fortitude', 'Reflexos'] as const).map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setCombSaveChoice(s)}
+                          className={cn(
+                            'h-8 rounded border text-[11px] font-bold transition-colors',
+                            combSaveChoice === s
+                              ? 'border-primary bg-primary text-primary-foreground'
+                              : 'border-border bg-secondary/40 text-foreground hover:border-primary/60',
+                          )}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 2 perícias entre Ofício | Atletismo | Acrobacia */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-foreground">
+                      Perícias (2 de 5) — selecionadas: {combSkillChoices.length}/2
+                    </label>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {COMB_SKILL_OPTIONS.map((o) => {
+                        const picked = combSkillChoices.includes(o);
+                        const full = combSkillChoices.length >= 2;
+                        const label = o.startsWith('Ofício') ? (oficioNames[o]?.trim() || o) : o;
+                        return (
+                          <button
+                            key={o}
+                            type="button"
+                            disabled={!picked && full}
+                            onClick={() => {
+                              setCombSkillChoices((prev) =>
+                                picked ? prev.filter((x) => x !== o) : [...prev, o],
+                              );
+                            }}
+                            className={cn(
+                              'h-8 rounded border text-[10px] font-bold transition-colors px-1',
+                              picked
+                                ? 'border-primary bg-primary text-primary-foreground'
+                                : 'border-border bg-secondary/40 text-foreground hover:border-primary/60 disabled:opacity-40 disabled:cursor-not-allowed',
+                            )}
+                            title={label}
+                          >
+                            {label}
                           </button>
                         );
                       })}

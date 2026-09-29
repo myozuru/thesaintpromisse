@@ -723,7 +723,7 @@ export interface Character {
   // ===== Especialista em Técnica =====
   /** Atributo-chave da especialização. Técnica: 'Inteligência' ou 'Sabedoria';
    * Suporte: 'Presença' ou 'Sabedoria'. Definido no wizard. */
-  keyAttribute?: 'Inteligência' | 'Sabedoria' | 'Presença';
+  keyAttribute?: 'Inteligência' | 'Sabedoria' | 'Presença' | 'Força' | 'Destreza';
   /** Suporte em Combate: usos da cura de toque gastos desde o último descanso. */
   suporteHealUsed?: number;
   /** Suporte Nv 6 — Apoio Avançado: apoios conhecidos (1 no Nv 6, +1 no Nv 12). */

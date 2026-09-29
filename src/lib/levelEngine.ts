@@ -449,7 +449,8 @@ export function buildSkillTrainingTalentChoice(level: number): PendingLevelChoic
 /** Dado de vida da classe. Default d8.
  *
  * Prioridade: a especialização define o dado quando aplicável (Lutador/Golpeador
- * → d10, demais Feiticeiros → d8). Só caímos no dado por classe (Maldição d10,
+ * → d10, Especialista em Combate → d10 (regra do livro: 1d10 ou fixo 6 + CON),
+ * demais Feiticeiros → d8). Só caímos no dado por classe (Maldição d10,
  * Não-Feiticeiro d6) quando a especialização não traz informação útil. Isso evita
  * inconsistências em personagens migrados onde `characterClass` ficou como
  * 'Não-Feiticeiro' mas a `specialization` é uma de Feiticeiro.
@@ -458,9 +459,9 @@ export function getClassHitDie(charClass: CharacterClass, spec: Specialization):
   switch (spec) {
     case 'Lutador':
     case 'Golpeador':
+    case 'Especialista em Combate':
       return 10;
     case 'Especialista em Técnica':
-    case 'Especialista em Combate':
     case 'Restringido':
     case 'Controlador':
     case 'Suporte':
