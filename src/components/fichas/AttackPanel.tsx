@@ -885,10 +885,11 @@ export function AttackPanel({ character: c }: Props) {
           <button
             type="button"
             onClick={() => handleRoll()}
-            disabled={!mainWeapon || phase === 'rolling-hit' || phase === 'await-second-d20' || phase === 'rolling-second-d20' || phase === 'await-dmg' || phase === 'rolling-dmg'}
+            disabled={!mainWeapon || !!rangeBlockReason || phase === 'rolling-hit' || phase === 'await-second-d20' || phase === 'rolling-second-d20' || phase === 'await-dmg' || phase === 'rolling-dmg'}
+            title={rangeBlockReason ?? undefined}
             className={cn(
               'inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-bold transition',
-              mainWeapon && phase !== 'rolling-hit' && phase !== 'await-second-d20' && phase !== 'rolling-second-d20' && phase !== 'await-dmg' && phase !== 'rolling-dmg'
+              mainWeapon && !rangeBlockReason && phase !== 'rolling-hit' && phase !== 'await-second-d20' && phase !== 'rolling-second-d20' && phase !== 'await-dmg' && phase !== 'rolling-dmg'
                 ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                 : 'bg-muted text-muted-foreground cursor-not-allowed',
             )}
