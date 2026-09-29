@@ -5,6 +5,7 @@ O arquivo traz a habilidade de nível 1 **Repertório do Especialista**: o perso
 ## Etapa 0 — Base comum
 - Escolha obrigatória do estilo na criação do personagem (nível 1) e visível na ficha.
 - Aparece também na barra de combate (aba própria do Especialista) com o estilo ativo e seus bônus atuais.
+- Estilos adicionais: ao subir para o nível 6 e para o nível 12, surge uma escolha pendente de um novo estilo (sem repetir os já escolhidos). Todos os estilos escolhidos ficam ativos ao mesmo tempo. Fichas que já passaram desses níveis recebem as escolhas atrasadas.
 - O talento geral "Adepto de Combate" (que já existe e pede um estilo) passa a usar a mesma lista, escalando pelo nível do personagem.
 - Escala comum: bônus que "aumentam nos níveis 4, 8, 12 e 16" calculados automaticamente pelo nível.
 
