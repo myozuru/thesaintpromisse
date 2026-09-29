@@ -248,7 +248,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
   // Bônus de CD de classe (Refino: +floor(TB/2); O Honrado: +5; Implemento Marcial).
   // Implemento Marcial do Especialista em Combate (+2 nv4 / +3 nv8 / +4 nv16)
   // é calculado dinamicamente, pois não é gravado em classCdBonus.
-  const classCdBonus = (source.classCdBonus || 0) + implementoMarcialBonus(source as Character);
+  const classCdBonus = (source.classCdBonus || 0) + implementoMarcialBonus(source);
   // Fundamentos Cruel (+CD) entra aqui, junto com os demais bônus de CD.
   const effectiveDC = baseDC + dcAttrMod + halfLevelSrc + passiveDC + itemDC + buffDC + cdIncrease + classCdBonus + fundOutcome.cdBonus;
   const baseTotalDC = effectiveDC + spellDCBonus;
