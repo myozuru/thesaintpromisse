@@ -205,6 +205,11 @@ export function AttackPanel({ character: c }: Props) {
     mainWeapon && target
       ? checkWeaponRange(c.id, target.id, mainWeapon, mapEntities, gridConfig, meleeRangeBonus, mapIdentities)
       : null;
+  // Investida Imediata cobre a distância faltante (até Mod. SAB × 1,5 m).
+  const investidaCobreDistancia =
+    temArtes && arteInvestida && !!rangeBlockReason && targetDistanceM !== null && weaponRangeM !== null
+      ? targetDistanceM - investidaMoveMeters(c) <= weaponRangeM + 0.01
+      : false;
 
   // Ao trocar de alvo, limpa override
   useEffect(() => { setDefenseOverride(null); }, [targetId]);
@@ -321,11 +326,7 @@ export function AttackPanel({ character: c }: Props) {
       addLog('combat', `⚠️ ${c.name} não tem arma equipada na mão principal.`);
       return;
     }
-    if (rangeBlockReason) {
-      addLog('combat', `🚫 ${c.name} não pode atacar: ${rangeBlockReason}`);
-      return;
-    }
-    // ─── Artes do Combate: gasta preparo ANTES de rolar ─────────────────────
+    // ─── Artes do Combate: validações (sem gastar ainda) ────────────────────
     const artesAtivas = temArtes && arteCustoTotal > 0;
     if (artesAtivas) {
       if (arteExecucao && !targetUnaware) {
@@ -333,23 +334,13 @@ export function AttackPanel({ character: c }: Props) {
         return;
       }
       if (arteGolpe && mainWeapon.range !== 'melee') {
+        addLog('🚫 Golpe Descendente exige ataque corpo a corpo.' as never, '');
         addLog('combat', `🚫 Golpe Descendente exige ataque corpo a corpo.`);
         return;
       }
-      const spend = spendPreparo(c.id, arteCustoTotal);
-      if (!spend.ok) {
-        addLog('combat', `🚫 ${c.name}: ${spend.reason}`);
-        return;
-      }
-      const usadas = [
-        arteDistracao && 'Distração Letal',
-        arteExecucao && 'Execução Silenciosa',
-        arteGolpe && 'Golpe Descendente',
-        arteInvestida && 'Investida Imediata',
-      ].filter(Boolean).join(', ');
-      addLog('combat', `🎯 ${c.name} gasta ${arteCustoTotal} Preparo: ${usadas}.`);
     }
-    // Investida Imediata: move a peça em direção ao alvo (sem AdO) antes do ataque.
+    // Investida Imediata: move a peça em direção ao alvo (sem AdO) ANTES do
+    // ataque — por isso a checagem de alcance acontece depois do movimento.
     if (artesAtivas && arteInvestida && target) {
       const mapState = useMapStore.getState();
       const ents = Object.values(mapState.entities ?? {});
@@ -379,6 +370,29 @@ export function AttackPanel({ character: c }: Props) {
       } else {
         addLog('combat', `⚠️ Investida Imediata: peças fora do mapa — movimento ignorado.`);
       }
+    }
+    // Alcance: com Investida ativa, mede de novo com a posição já atualizada.
+    const blockReason = artesAtivas && arteInvestida && target
+      ? checkWeaponRange(c.id, target.id, mainWeapon, useMapStore.getState().entities, useMapStore.getState().gridConfig, meleeRangeBonus, mapIdentities)
+      : rangeBlockReason;
+    if (blockReason) {
+      addLog('combat', `🚫 ${c.name} não pode atacar: ${blockReason}`);
+      return;
+    }
+    // Gasto de preparo só acontece depois de todas as validações passarem.
+    if (artesAtivas) {
+      const spend = spendPreparo(c.id, arteCustoTotal);
+      if (!spend.ok) {
+        addLog('combat', `🚫 ${c.name}: ${spend.reason}`);
+        return;
+      }
+      const usadas = [
+        arteDistracao && 'Distração Letal',
+        arteExecucao && 'Execução Silenciosa',
+        arteGolpe && 'Golpe Descendente',
+        arteInvestida && 'Investida Imediata',
+      ].filter(Boolean).join(', ');
+      addLog('combat', `🎯 ${c.name} gasta ${arteCustoTotal} Preparo: ${usadas}.`);
     }
     if (rollInFlightRef.current || phase === 'rolling-hit' || phase === 'rolling-dmg') return;
     if (isReroll && attackRollCount >= 2) return;
