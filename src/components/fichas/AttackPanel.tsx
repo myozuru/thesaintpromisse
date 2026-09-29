@@ -325,6 +325,61 @@ export function AttackPanel({ character: c }: Props) {
       addLog('combat', `🚫 ${c.name} não pode atacar: ${rangeBlockReason}`);
       return;
     }
+    // ─── Artes do Combate: gasta preparo ANTES de rolar ─────────────────────
+    const artesAtivas = temArtes && arteCustoTotal > 0;
+    if (artesAtivas) {
+      if (arteExecucao && !targetUnaware) {
+        addLog('combat', `🚫 Execução Silenciosa exige alvo [Desprevenido].`);
+        return;
+      }
+      if (arteGolpe && mainWeapon.range !== 'melee') {
+        addLog('combat', `🚫 Golpe Descendente exige ataque corpo a corpo.`);
+        return;
+      }
+      const spend = spendPreparo(c.id, arteCustoTotal);
+      if (!spend.ok) {
+        addLog('combat', `🚫 ${c.name}: ${spend.reason}`);
+        return;
+      }
+      const usadas = [
+        arteDistracao && 'Distração Letal',
+        arteExecucao && 'Execução Silenciosa',
+        arteGolpe && 'Golpe Descendente',
+        arteInvestida && 'Investida Imediata',
+      ].filter(Boolean).join(', ');
+      addLog('combat', `🎯 ${c.name} gasta ${arteCustoTotal} Preparo: ${usadas}.`);
+    }
+    // Investida Imediata: move a peça em direção ao alvo (sem AdO) antes do ataque.
+    if (artesAtivas && arteInvestida && target) {
+      const mapState = useMapStore.getState();
+      const ents = Object.values(mapState.entities ?? {});
+      const findEnt = (ch: Character) =>
+        ents.find((e) => e?.characterId === ch.id) ??
+        ents.find((e) => e?.profileId && e.profileId === ch.profileId);
+      const atkEnt = findEnt(c);
+      const tgtEnt = findEnt(target);
+      if (atkEnt && tgtEnt) {
+        const mpc = mapState.gridConfig?.metersPerCell || 1.5;
+        const dpi = mapState.gridConfig?.dpi || 70;
+        const pxPerM = dpi / mpc;
+        const dx = (tgtEnt.x - atkEnt.x) / pxPerM;
+        const dy = (tgtEnt.y - atkEnt.y) / pxPerM;
+        const distM = Math.hypot(dx, dy);
+        const maxMove = investidaMoveMeters(c);
+        const alcance = weaponRangeM ?? 1.5;
+        const passo = Math.min(maxMove, Math.max(0, distM - alcance));
+        if (passo > 0 && distM > 0) {
+          const nx = atkEnt.x + (dx / distM) * passo * pxPerM;
+          const ny = atkEnt.y + (dy / distM) * passo * pxPerM;
+          mapState.updateEntity(atkEnt.id, { x: nx, y: ny });
+          addLog('combat', `🎯 Investida Imediata: ${c.name} avança ${passo.toFixed(1).replace('.', ',')} m em direção a ${target.name} (sem ataques de oportunidade).`);
+        } else {
+          addLog('combat', `🎯 Investida Imediata: ${c.name} já está no alcance de ${target.name}.`);
+        }
+      } else {
+        addLog('combat', `⚠️ Investida Imediata: peças fora do mapa — movimento ignorado.`);
+      }
+    }
     if (rollInFlightRef.current || phase === 'rolling-hit' || phase === 'rolling-dmg') return;
     if (isReroll && attackRollCount >= 2) return;
     rollInFlightRef.current = true;
@@ -344,6 +399,7 @@ export function AttackPanel({ character: c }: Props) {
         targetHasAuraEmbacada,
         attackerConcentratedAura,
         attackerIsGrappled,
+        arteExecucao: artesAtivas && arteExecucao,
       },
       trainedRanges: [
         ...(c.meleeTrained ? (['melee'] as const) : []),
