@@ -33,7 +33,7 @@ export const COMBAT_STYLES: CombatStyleDef[] = [
   { id: 'protetor', name: 'Estilo do Protetor', summary: 'Reação: impõe desvantagem em ataque contra aliado a até 1,5 m; também concede vantagem no TR de aliado a até 1,5 m.', implemented: false },
   { id: 'distante', name: 'Estilo Distante', summary: 'Armas à distância: acerto +1 (+1 nos níveis 8 e 16) e dano +2 (+1 nos níveis 4, 8, 12 e 16).', implemented: true },
   { id: 'duplo', name: 'Estilo Duplo', summary: 'Duas armas: dano +1 (+1 nos níveis 4, 8, 12 e 16) em todos os ataques. (Atributo no dano da segunda arma: em breve.)', implemented: true },
-  { id: 'massivo', name: 'Estilo Massivo', summary: 'Arma de duas mãos ou pesada: rerrola 1 e 2 nos dados de dano; dano +1 (+1 nos níveis 4, 8, 12 e 16).', implemented: false },
+  { id: 'massivo', name: 'Estilo Massivo', summary: 'Arma de duas mãos ou pesada: rerrola 1 e 2 nos dados de dano; dano +1 (+1 nos níveis 4, 8, 12 e 16).', implemented: true },
 ];
 
 export const COMBAT_STYLE_LEVELS = [1, 6, 12] as const;
@@ -173,5 +173,17 @@ export function duploApplies(c: Character): boolean {
   return hasCombatStyle(c, 'duplo') && isDualWielding(c);
 }
 export function getDuploDamage(level: number): number {
+  return 1 + styleStepBonus(level ?? 1);
+}
+
+// ===================== Estilo Massivo =====================
+
+/** Arma pesada, de duas mãos, ou empunhada com as duas mãos (versátil). */
+export function massivoApplies(c: Character, w: { properties?: { kind: string }[] }, twoHandedGrip = false): boolean {
+  if (!hasCombatStyle(c, 'massivo')) return false;
+  const props = w.properties ?? [];
+  return twoHandedGrip || props.some((p) => p.kind === 'pesada' || p.kind === 'duas_maos');
+}
+export function getMassivoDamage(level: number): number {
   return 1 + styleStepBonus(level ?? 1);
 }
