@@ -1,4 +1,5 @@
 import { consumeCritNegated } from '@/lib/suporteNegacao';
+import { implementoMarcialBonus } from '@/lib/golpeEspecial';
 import { InspiradoButton } from './SuporteNivel4Sections';
 import { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import { Character, Attribute, Passive, Spell, DAMAGE_TYPES, DAMAGE_TYPE_LABELS, DAMAGE_TYPE_ABBR, DamageType, SpellBuff, createEmptyRdByType, CHARACTER_CLASSES, CharacterClass, SPECIALIZATIONS, Specialization, MOTIVATIONS, Motivation, ORIGINS, Origin, createEmptyAccessorySlots, AccessorySlots, ItemSlotType, ITEM_SLOT_LABELS, ALL_CONDITIONS, SPELL_LEVELS, SpellLevel, SpellCondition, SPELL_RANGES, SPELL_TARGET_MODES, SpellTargetMode, getTrainingBonus, getMasteryBonus, getLevelSkillBonus, getBaseAttackBonus, getTrainingValue, SaveAttr, SAVE_ATTRS, APTITUDE_KEYS, APTITUDE_LABELS, APTITUDE_MAX, createDefaultCursedAptitudes, type AptitudeKey } from '@/types';
@@ -827,12 +828,13 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
   // Bônus de CD de classe (Refino: +floor(TB/2); O Honrado: +5; Implemento Marcial: Lutador).
   const classCdBonusCC = c.classCdBonus || 0;
   const exhaustionPenalty = -(c.exhaustionLevel ?? 0);
-  const effectiveDC = baseDCCC + dcAttrModCC + halfLevelCC + trainingBonusCC + passiveDC + itemDC + buffDC + cdIncreaseCC + classCdBonusCC + exhaustionPenalty;
+  const implementoCC = implementoMarcialBonus(c);
+  const effectiveDC = baseDCCC + dcAttrModCC + halfLevelCC + trainingBonusCC + passiveDC + itemDC + buffDC + cdIncreaseCC + classCdBonusCC + exhaustionPenalty + implementoCC;
   // ===== CD de Especialização — atributo-chave da especialização (Suporte: Presença/Sabedoria) =====
   const specKeyNameCC = getKeyAttrForSpec(c.specialization as never, c.keyAttribute) ?? c.keyAttribute ?? null;
   const specKeyAttrCC = specKeyNameCC ? (c.attributes || []).find(a => a.name === specKeyNameCC) : undefined;
   const specKeyModCC = specKeyAttrCC ? Math.floor((specKeyAttrCC.value - 10) / 2) : 0;
-  const specDC = baseDCCC + specKeyModCC + halfLevelCC + trainingBonusCC + passiveDC + itemDC + buffDC + cdIncreaseCC + exhaustionPenalty;
+  const specDC = baseDCCC + specKeyModCC + halfLevelCC + trainingBonusCC + passiveDC + itemDC + buffDC + cdIncreaseCC + exhaustionPenalty + implementoCC;
 
   // Grava o PE máximo final na ficha para que mapa, painéis e diálogos mostrem o mesmo número.
   useEffect(() => {
@@ -1442,7 +1444,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
           </div>
           <div
             className="flex flex-col items-center justify-center rounded-xl border-2 border-primary/50 bg-gradient-to-br from-primary/20 to-primary/5 px-3 py-1.5"
-            title={`CD de Especialização: base ${baseDCCC}${specKeyAttrCC ? ` + ${specKeyAttrCC.name.slice(0,3).toUpperCase()} ${specKeyModCC >= 0 ? '+' : ''}${specKeyModCC}` : ' (sem atributo-chave)'} + ½ Nv ${halfLevelCC} + Treinamento ${trainingBonusCC}${passiveDC ? ` + Passivas ${passiveDC}` : ''}${itemDC ? ` + Itens ${itemDC}` : ''}${buffDC ? ` + Buffs ${buffDC}` : ''}${cdIncreaseCC ? ` + Aumento ${cdIncreaseCC}` : ''}`}
+            title={`CD de Especialização: base ${baseDCCC}${specKeyAttrCC ? ` + ${specKeyAttrCC.name.slice(0,3).toUpperCase()} ${specKeyModCC >= 0 ? '+' : ''}${specKeyModCC}` : ' (sem atributo-chave)'} + ½ Nv ${halfLevelCC} + Treinamento ${trainingBonusCC}${passiveDC ? ` + Passivas ${passiveDC}` : ''}${itemDC ? ` + Itens ${itemDC}` : ''}${buffDC ? ` + Buffs ${buffDC}` : ''}${cdIncreaseCC ? ` + Aumento ${cdIncreaseCC}` : ''}${implementoCC ? ` + Implemento Marcial ${implementoCC}` : ''}`}
           >
             <span className="text-xs font-bold uppercase tracking-wider text-primary/80 leading-none">CD Espec.</span>
             <span className="font-mono text-2xl font-black leading-none text-primary">{specDC}</span>
