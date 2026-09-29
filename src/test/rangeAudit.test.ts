@@ -25,7 +25,7 @@ describe('auditoria de alcance', () => {
 
   it('peças grandes medem borda a borda', () => {
     // criatura 2x2 centrada entre casas: adjacente pela borda
-    expect(touchDistanceMeters(at(0, 0), { x: 1.5 * 70 + 35, y: 0, w: 140, h: 140 }, grid)).toBeLessThanOrEqual(1.55);
+    expect(touchDistanceMeters(at(0, 0), { x: 105, y: 0, w: 140, h: 140 }, grid)).toBeLessThanOrEqual(1.55);
   });
 
   it('respeita metros por casa configurados no mapa', () => {
