@@ -157,4 +157,17 @@ describe('Golpe Especial em combate', () => {
     render(<AttackPanel character={pegarFicha('ana')} />);
     expect(screen.getByRole('button', { name: 'Golpe Preciso' }).textContent).toContain('+2 PE');
   });
+
+  it('Impactante empurra o alvo no mapa após o dano (Fortitude falha)', async () => {
+    forcarDados(20, 8, 8, 8, 8, 8, 8, 8, 8, 1);
+    const btn = await montar(esp({ attributes: [{ name: 'Sabedoria', value: 14 }, { name: 'Força', value: 20 }] } as never), undefined, { bruno: { attributes: [{ name: 'Constituição', value: 1 }] } });
+    const antes = Object.values(useMapStore.getState().entities).find((e) => e?.characterId === 'bruno')!.x;
+    golpe('Impactante'); golpe('Atroz');
+    fireEvent.click(btn);
+    const dano = await screen.findByRole('button', { name: /Rolar Dano/ }, { timeout: 4000 });
+    fireEvent.click(dano);
+    await waitFor(() => expect(textoLog()).toMatch(/Impactante: bruno Fortitude .* falhou · empurrado [1-9]/), { timeout: 4000 });
+    const depois = Object.values(useMapStore.getState().entities).find((e) => e?.characterId === 'bruno')!.x;
+    expect(depois).toBeGreaterThan(antes);
+  });
 });
