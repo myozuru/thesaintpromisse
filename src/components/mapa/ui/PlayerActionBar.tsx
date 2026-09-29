@@ -12,7 +12,9 @@
  * continua sendo feita pelos painéis dedicados da ficha.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { Swords, Sparkles, Zap, Package, X, Target, AlertTriangle, Check } from 'lucide-react';
+import { Swords, Sparkles, Zap, Package, X, Target, AlertTriangle, Check, HeartHandshake } from 'lucide-react';
+import { isSuporte } from '@/lib/suporteAbilities';
+import { SuportePanel } from '@/components/fichas/SuportePanel';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { useProfileStore } from '@/stores/useProfileStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
@@ -30,7 +32,7 @@ import { cn } from '@/lib/utils';
 import { isFreeformFor } from '@/lib/freeformMode';
 import { FreeformActionBar, FreeformAttackForm } from './FreeformActionBar';
 
-type Category = 'ataque' | 'feiticos' | 'aptidoes' | 'especiais';
+type Category = 'ataque' | 'feiticos' | 'aptidoes' | 'especiais' | 'classe';
 
 interface ListEntry {
   id: string;
@@ -233,6 +235,7 @@ export function PlayerActionBar() {
     feiticos: spellEntries,
     aptidoes: aptitudeEntries,
     especiais: specialEntries,
+    classe: [],
   };
 
   const buttons: { key: Category; label: string; icon: React.ReactNode }[] = [
@@ -240,6 +243,9 @@ export function PlayerActionBar() {
     { key: 'feiticos', label: 'Feitiços', icon: <Zap className="h-5 w-5" /> },
     { key: 'aptidoes', label: 'Aptidões', icon: <Sparkles className="h-5 w-5" /> },
     { key: 'especiais', label: 'Especiais & Itens', icon: <Package className="h-5 w-5" /> },
+    ...(activeChar && isSuporte(activeChar)
+      ? [{ key: 'classe' as Category, label: 'Suporte', icon: <HeartHandshake className="h-5 w-5" /> }]
+      : []),
   ];
 
   // ─── Cálculo de distância entre o token do conjurador e o alvo ─────────
@@ -635,25 +641,13 @@ export function PlayerActionBar() {
             ? 'opacity-100 translate-y-0 scale-100'
             : 'opacity-0 translate-y-3 scale-95 pointer-events-none',
         )}
-        style={{ minWidth: 360, maxWidth: 520 }}
-      >
-        {open && (
-          <div className="rounded-xl border border-border/60 bg-background/90 backdrop-blur-md shadow-xl overflow-hidden">
-            <div className="flex items-center gap-2 px-3 py-2 border-b border-border/50 bg-primary/10">
-              <span className="text-xs uppercase tracking-wider font-mono text-primary font-bold flex-1">
-                {activeLabel}
-              </span>
-              <button
-                type="button"
-                onClick={() => setOpen(null)}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                title="Fechar"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <div className="max-h-[420px] overflow-y-auto">
-              {open === 'ataque' && activeChar ? (
+        style={{ minWidth: 360, maxWidth: open === 'classe' ? 640 : 520 }}
+...
+              {open === 'classe' && activeChar ? (
+                <div className="py-2 -mx-2" onClick={(e) => e.stopPropagation()}>
+                  <SuportePanel character={activeChar} />
+                </div>
+              ) : open === 'ataque' && activeChar ? (
                 <div className="p-2" onClick={(e) => e.stopPropagation()}>
                   <FreeformAttackForm character={activeChar} />
                 </div>
