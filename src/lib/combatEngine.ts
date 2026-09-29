@@ -1,3 +1,4 @@
+import { duelistaApplies, getDuelistaBonus } from './combateEstilos';
 import { consumeCritNegated } from '@/lib/suporteNegacao';
 /**
  * Motor de Combate.
@@ -107,6 +108,18 @@ interface ContextualBonus {
   critRangeBonus: number;
   /** Notas narrativas para empilhar no log. */
   notes: string[];
+}
+
+/** Estilos de combate do Especialista (Repertório). */
+function applyCombatStyleBonuses(ctx: AttackContext, out: ContextualBonus): void {
+  const d = duelistaApplies(ctx.attacker, ctx.weapon, !!ctx.situation.twoHanded);
+  if (d.ok) {
+    const b = getDuelistaBonus(ctx.attacker.level ?? 1);
+    out.hit += b.hit; out.damageFlat += b.damage;
+    out.notes.push(`Estilo do Duelista: +${b.hit} acerto, +${b.damage} dano`);
+  } else if (d.reason) {
+    out.notes.push(`Estilo do Duelista inativo (${d.reason})`);
+  }
 }
 
 const emptyCtx = (): ContextualBonus => ({
@@ -242,6 +255,7 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
   // Bônus contextuais (talentos + propriedades)
   const ctxBonus = emptyCtx();
   applyTalentContextualBonuses(ctx, ctxBonus);
+  applyCombatStyleBonuses(ctx, ctxBonus);
 
   // Bônus globais (só os relevantes ao ataque)
   const globals = aggregateTalentBonuses(ctx.attacker);

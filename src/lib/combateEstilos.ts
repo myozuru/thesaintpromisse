@@ -28,7 +28,7 @@ export interface CombatStyleDef {
 export const COMBAT_STYLES: CombatStyleDef[] = [
   { id: 'defensivo', name: 'Estilo Defensivo', summary: 'CA +2; +1 nos níveis 4, 8, 12 e 16.', implemented: true },
   { id: 'arremessador', name: 'Estilo do Arremessador', summary: 'Saca arma de arremesso como parte do ataque; dano +2 com elas (+1 nos níveis 4, 8, 12 e 16).', implemented: false },
-  { id: 'duelista', name: 'Estilo do Duelista', summary: 'Uma arma em uma mão e a outra livre (sem escudo): acerto +1 (+1 nos níveis 8 e 16) e dano +2 (+1 nos níveis 4, 8, 12 e 16).', implemented: false },
+  { id: 'duelista', name: 'Estilo do Duelista', summary: 'Uma arma em uma mão e a outra livre (sem escudo): acerto +1 (+1 nos níveis 8 e 16) e dano +2 (+1 nos níveis 4, 8, 12 e 16).', implemented: true },
   { id: 'interceptador', name: 'Estilo do Interceptador', summary: 'Reação: aliado no seu alcance recebe ataque → reduz o dano em 1d10 + mod. de Força (+1 dado nos níveis 4, 8, 12 e 16).', implemented: false },
   { id: 'protetor', name: 'Estilo do Protetor', summary: 'Reação: impõe desvantagem em ataque contra aliado a até 1,5 m; também concede vantagem no TR de aliado a até 1,5 m.', implemented: false },
   { id: 'distante', name: 'Estilo Distante', summary: 'Armas à distância: acerto +1 (+1 nos níveis 8 e 16) e dano +2 (+1 nos níveis 4, 8, 12 e 16).', implemented: false },
@@ -110,4 +110,32 @@ export function styleStepBonus(level: number): number {
 export function getDefensivoCA(c: Character): number {
   if (!hasCombatStyle(c, 'defensivo')) return 0;
   return 2 + styleStepBonus(c.level ?? 1);
+}
+
+// ===================== Estilo do Duelista =====================
+
+export interface DuelistaWeaponInfo {
+  name: string;
+  range: string;
+  properties?: { kind: string }[];
+}
+
+/**
+ * Duelista vale quando: arma corpo a corpo empunhada em UMA mão (sem duas mãos /
+ * versátil em duas mãos), outra mão livre (sem segunda arma e sem escudo).
+ */
+export function duelistaApplies(c: Character, w: DuelistaWeaponInfo, twoHandedGrip = false): { ok: boolean; reason?: string } {
+  if (!hasCombatStyle(c, 'duelista')) return { ok: false };
+  if (w.range !== 'melee') return { ok: false, reason: 'só armas corpo a corpo' };
+  if (twoHandedGrip || (w.properties ?? []).some((p) => p.kind === 'duas_maos')) return { ok: false, reason: 'arma em duas mãos' };
+  if (c.equippedShieldId) return { ok: false, reason: 'escudo na outra mão' };
+  const off = c.offHandWeaponName;
+  if (off && off !== c.mainHandWeaponName) return { ok: false, reason: 'outra mão ocupada' };
+  if (off && off === c.mainHandWeaponName) return { ok: false, reason: 'arma em duas mãos' };
+  return { ok: true };
+}
+
+export function getDuelistaBonus(level: number): { hit: number; damage: number } {
+  const lv = level ?? 1;
+  return { hit: 1 + [8, 16].filter((l) => lv >= l).length, damage: 2 + styleStepBonus(lv) };
 }
