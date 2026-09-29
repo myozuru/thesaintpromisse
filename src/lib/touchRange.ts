@@ -46,3 +46,22 @@ export function checkTouchTarget<E extends TouchEntity & { characterId?: string 
   if (!isWithinTouch(a, b, grid)) return `Alvo fora do alcance de toque (${d.toFixed(1)} m; máx. 1,5 m).`;
   return null;
 }
+
+/**
+ * Alcance em metros de um texto de feitiço/habilidade ("9 m", "Toque", "Pessoal").
+ * Toque/corpo-a-corpo = 1,5 m; Pessoal/Próprio = 0; sem número = null (sem limite definido).
+ */
+export function parseRangeMeters(range: unknown): number | null {
+  const s = String(range ?? '').trim().toLowerCase();
+  if (!s) return null;
+  const m = s.match(/(\d+(?:[.,]\d+)?)/);
+  if (m) return parseFloat(m[1].replace(',', '.'));
+  if (/toque|corpo|adjacente|melee/.test(s)) return TOUCH_RANGE_M;
+  if (/pessoal|pr[óo]prio|si mesmo/.test(s)) return 0;
+  return null;
+}
+
+/** true se o alvo está dentro de `rangeM` metros (borda a borda, mesma regra do toque). */
+export function isWithinRangeMeters(a: TouchEntity, b: TouchEntity, grid: TouchGrid, rangeM: number): boolean {
+  return touchDistanceMeters(a, b, grid) <= rangeM + 0.05;
+}

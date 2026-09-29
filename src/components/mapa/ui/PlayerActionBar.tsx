@@ -14,6 +14,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Swords, Sparkles, Zap, Package, X, Target, AlertTriangle, Check, HeartHandshake } from 'lucide-react';
 import { isSuporte } from '@/lib/suporteAbilities';
+import { parseRangeMeters, touchDistanceMeters } from '@/lib/touchRange';
 import { SuportePanel } from '@/components/fichas/SuportePanel';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { useProfileStore } from '@/stores/useProfileStore';
@@ -278,23 +279,18 @@ export function PlayerActionBar() {
 
   const distanceMeters = useMemo(() => {
     if (!casterEntity || !targetEntity) return null;
-    // (x,y) já é o CENTRO da entidade (convenção do EntityEngine).
-    const ax = casterEntity.x;
-    const ay = casterEntity.y;
-    const bx = targetEntity.x;
-    const by = targetEntity.y;
-    const dpx = Math.hypot(bx - ax, by - ay);
-    const metersPerPx = (gridConfig.metersPerCell || 1.5) / (gridConfig.dpi || 70);
-    return dpx * metersPerPx;
+    // Mesma regra de todas as habilidades: grade, borda a borda.
+    if (casterEntity === targetEntity) return 0;
+    return touchDistanceMeters(casterEntity, targetEntity, gridConfig);
   }, [casterEntity, targetEntity, gridConfig]);
 
-  /** Tenta extrair o alcance numérico (em metros) do campo `range`. null = sem alcance definido. */
+  /** Alcance em metros (Toque = 1,5 m) + bônus de alcance ativo. null = sem alcance definido. */
   const spellRangeMeters = useMemo(() => {
-    if (!armedSpell?.range) return null;
-    const m = String(armedSpell.range).match(/(\d+(?:[.,]\d+)?)/);
-    if (!m) return null;
-    return parseFloat(m[1].replace(',', '.'));
-  }, [armedSpell]);
+    if (!armedSpell) return null;
+    const base = parseRangeMeters(armedSpell.range);
+    if (base === null) return null;
+    return base + (activeChar ? getActiveSpellRangeBonus(activeChar) : 0);
+  }, [armedSpell, activeChar]);
 
   const targetCharacter = targetCharId
     ? allCharacters.find((c) => c.id === targetCharId) ?? null
