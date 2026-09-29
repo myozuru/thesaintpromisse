@@ -720,6 +720,8 @@ export interface Character {
    */
   lastHungerHourKey?: number;
 
+  /** Especialista em Combate: estilos do Repertório (Nv 1, 6 e 12). */
+  combatStyles?: import('@/lib/combateEstilos').CombatStyleId[];
   // ===== Especialista em Técnica =====
   /** Atributo-chave da especialização. Técnica: 'Inteligência' ou 'Sabedoria';
    * Suporte: 'Presença' ou 'Sabedoria'. Definido no wizard. */

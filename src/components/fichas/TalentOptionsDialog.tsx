@@ -1,3 +1,4 @@
+import { COMBAT_STYLES, getSpecCombatStyles } from '@/lib/combateEstilos';
 /**
  * Modal de OPÇÕES de talentos que exigem uma escolha do jogador na compra.
  *
@@ -144,15 +145,8 @@ export function TalentOptionsDialog({ character: c, kind, onCancel, onConfirm }:
           {kind === 'adepto-combate' && (
             <NarrativeChoiceForm
               field="combatStyle"
-              options={[
-                'Defensor (escudo)',
-                'Duelista (1 arma)',
-                'Atirador (à distância)',
-                'Brigão (desarmado)',
-                'Dois Mundos (duas armas)',
-                'Pesado (duas mãos)',
-              ]}
-              note="A escolha fica registrada como nota narrativa para o Mestre aplicar manualmente."
+              options={COMBAT_STYLES.filter((s) => !getSpecCombatStyles(c).includes(s.id)).map((s) => s.name)}
+              note="Mesmos estilos do Especialista em Combate, escalando pelo seu nível."
               onConfirm={onConfirm}
             />
           )}

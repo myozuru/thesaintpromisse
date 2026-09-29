@@ -1,3 +1,4 @@
+import { getDefensivoCA } from '@/lib/combateEstilos';
 /**
  * defenseCalc — seletor central de Defesa (CA) usado por automações de
  * combate (alvo do AttackPanel, prompts de reação, simulações etc.).
@@ -250,6 +251,7 @@ export function computeDefenseBreakdown(
   // Apoio Defensivo (Suporte Nv 6): bônus temporário até o início do turno de quem apoiou.
   const apoioCA = c.apoioDefensivo?.value ?? 0;
   const guardaCA = c.guardaSincronizadaBonus?.value ?? 0;
+  const defensivoCA = getDefensivoCA(c);
 
   const base = c.ca ?? 10;
   const total =
@@ -267,7 +269,8 @@ export function computeDefenseBreakdown(
     shieldCA +
     conditionsCA +
     apoioCA +
-    guardaCA;
+    guardaCA +
+    defensivoCA;
 
   const notes: string[] = [];
   notes.push(`CA base ${base}`);
@@ -285,6 +288,7 @@ export function computeDefenseBreakdown(
   if (conditionsCA) notes.push(`Condições ${conditionsCA >= 0 ? '+' : ''}${conditionsCA}`);
   if (apoioCA) notes.push(`Apoio Defensivo +${apoioCA}`);
   if (guardaCA) notes.push(`Guarda Sincronizada +${guardaCA}`);
+  if (defensivoCA) notes.push(`Estilo Defensivo +${defensivoCA}`);
 
   return {
     base,
