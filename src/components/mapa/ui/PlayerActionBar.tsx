@@ -17,6 +17,7 @@ import { isSuporte } from '@/lib/suporteAbilities';
 import { parseRangeMeters, touchDistanceMeters, outOfRangeMessage } from '@/lib/touchRange';
 import { SuportePanel } from '@/components/fichas/SuportePanel';
 import { CombateEstilosPanel } from '@/components/fichas/CombateEstilosPanel';
+import { ArtesCombatePanel } from '@/components/fichas/ArtesCombatePanel';
 import { isEspecialistaCombate, getAdeptoCombatStyle } from '@/lib/combateEstilos';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { useProfileStore } from '@/stores/useProfileStore';
@@ -36,7 +37,7 @@ import { isFreeformFor } from '@/lib/freeformMode';
 import { FreeformActionBar } from './FreeformActionBar';
 import { AttackPanel } from '@/components/fichas/AttackPanel';
 
-type Category = 'ataque' | 'feiticos' | 'aptidoes' | 'especiais' | 'classe';
+type Category = 'ataque' | 'feiticos' | 'aptidoes' | 'especiais' | 'classe' | 'artes';
 
 interface ListEntry {
   id: string;
@@ -240,6 +241,7 @@ export function PlayerActionBar() {
     aptidoes: aptitudeEntries,
     especiais: specialEntries,
     classe: [],
+    artes: [],
   };
 
   const buttons: { key: Category; label: string; icon: React.ReactNode }[] = [
@@ -251,6 +253,9 @@ export function PlayerActionBar() {
       ? [{ key: 'classe' as Category, label: 'Suporte', icon: <HeartHandshake className="h-5 w-5" /> }]
       : activeChar && (isEspecialistaCombate(activeChar) || getAdeptoCombatStyle(activeChar))
       ? [{ key: 'classe' as Category, label: 'Estilos', icon: <Swords className="h-5 w-5" /> }]
+      : []),
+    ...(activeChar && isEspecialistaCombate(activeChar)
+      ? [{ key: 'artes' as Category, label: 'Artes', icon: <BatteryCharging className="h-5 w-5" /> }]
       : []),
   ];
 
