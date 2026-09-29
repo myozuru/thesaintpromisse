@@ -6,6 +6,7 @@ import { temImunidade as omniTemImunidade } from '@/lib/omni/immunity';
 import { useLogStore } from '@/stores/useLogStore';
 import { Character, CharacterCategory, Attribute, Passive, Spell, DamageType, ActiveBuff, createEmptyRdByType, CharacterClass, Specialization, Origin, createEmptyAccessorySlots, ActiveCondition, CoreId, AptitudeKey, APTITUDE_MIN, APTITUDE_MAX, createDefaultCursedAptitudes, DEFAULT_SAVING_THROWS } from '@/types';
 import { recalcAnatomyPassives } from '@/lib/anatomyEffects';
+import { renovacaoSangueAtiva, aplicarRenovacao } from '@/lib/renovacaoSangue';
 import { recalcCursedExclusivePassives } from '@/lib/cursedExclusiveEffects';
 import { recalcDotePassives } from '@/lib/doteEffects';
 import { DOTE_BY_ID } from '@/lib/dotes';
