@@ -802,6 +802,25 @@ export function AttackPanel({ character: c }: Props) {
           {/* Defesa do alvo é oculta para preservar a dinâmica — apenas o resultado (acerto/erro) é revelado. */}
         </div>
 
+        {/* ─── Alcance (medido no mapa, borda a borda) ────────────────────── */}
+        {mainWeapon && target && weaponRangeM !== null && targetDistanceM !== null && (
+          <div
+            className={cn(
+              'flex items-center gap-2 rounded-md border px-2 py-1.5 text-[11px]',
+              rangeBlockReason
+                ? 'border-destructive/40 bg-destructive/15 text-destructive'
+                : 'border-border bg-background/40 text-muted-foreground',
+            )}
+          >
+            <Shield className="h-3 w-3 shrink-0" />
+            <span>
+              Distância: <b className="font-mono">{targetDistanceM.toFixed(1)} m</b>
+              {' / alcance '}<b className="font-mono">{weaponRangeM} m</b>
+              {rangeBlockReason ? ' — fora de alcance!' : ''}
+            </span>
+          </div>
+        )}
+
         {/* ─── Situação (auto-lida do alvo + override manual) ─────────────── */}
         <div className="flex flex-wrap gap-2 text-[11px]">
           {mainWeapon && (hasProperty(mainWeapon, 'versatil') || hasProperty(mainWeapon, 'duas_maos')) && (
