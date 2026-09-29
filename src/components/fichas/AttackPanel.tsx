@@ -728,6 +728,15 @@ export function AttackPanel({ character: c }: Props) {
     if (g?.sel.impactante && g.target) void empurrarImpactante(g.target, result.damageTotal);
   };
 
+  // Renovação pelo Sangue (Nv 6): crítico em inimigo recupera 1 PE.
+  // (Reduzir o alvo a 0 PV é tratado em applyDamage, que conhece o HP final.)
+  const checarRenovacaoCritico = (critico: boolean, alvoNome?: string) => {
+    if (!critico || !renovacaoSangueAtiva(c)) return;
+    const fresco = useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c;
+    const ok = aplicarRenovacao(fresco, useCharacterStore.getState().updateCharacter);
+    if (ok) addLog('combat', `🩸 Renovação pelo Sangue: crítico em ${alvoNome ?? 'inimigo'} — ${c.name} recupera 1 PE.`);
+  };
+
   const aplicarSangramento = (alvo: Character, nivel: number) => {
     const medio = nivel >= 2;
     const cd = specDCFor(c);
