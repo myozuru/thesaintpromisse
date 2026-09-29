@@ -1166,6 +1166,21 @@ export function AttackPanel({ character: c }: Props) {
           </div>
         )}
 
+        {temGolpe && (
+          <GolpeEspecialSection
+            sel={golpeSel}
+            onChange={setGolpeSel}
+            custo={golpeCusto}
+            peAtual={c.peCurrent ?? 0}
+            precisoUsado={precisoUsado}
+            amploTargetId={amploTargetId}
+            onAmploTarget={setAmploTargetId}
+            amploOptions={characters.filter((x) => x.id !== c.id && x.id !== targetId).map((x) => ({ id: x.id, name: x.name }))}
+            longoM={mainWeapon ? longoBonusMeters({ longo: 1 }, mainWeapon.range) : 0}
+            penetranteRD={penetranteRD(c)}
+          />
+        )}
+
         {/* Botão rolar */}
         <div className="flex items-center gap-2 flex-wrap">
           <button
