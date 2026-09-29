@@ -177,6 +177,19 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
   const SUP_FIXED_SKILLS = ['Medicina', 'Prestidigitação'];
   const supChoicesComplete = !isSuporte || (!!supSaveChoice && supOficioChoices.length === 2);
 
+  // ===== Especialista em Combate — escolhas obrigatórias (regra do livro) =====
+  // Automático: TODAS as armas (melee + distância) + Escudos.
+  // O jogador escolhe: atributo-chave (Força | Destreza | Sabedoria — define a CD
+  // das habilidades de especialização), 1 TR entre Fortitude | Reflexos e
+  // 2 perícias entre Ofício | Atletismo | Acrobacia (Treinadas).
+  // (As "três outras perícias quaisquer" usam o pool normal do passo Perícias.)
+  const [combKeyAttribute, setCombKeyAttribute] = useState<'Força' | 'Destreza' | 'Sabedoria'>('Força');
+  const [combSaveChoice, setCombSaveChoice] = useState<'Fortitude' | 'Reflexos' | ''>('');
+  const [combSkillChoices, setCombSkillChoices] = useState<string[]>([]);
+  const isCombate = charClass === 'Feiticeiro' && specialization === 'Especialista em Combate';
+  const COMB_SKILL_OPTIONS = useMemo(() => ['Ofício 1', 'Ofício 2', 'Ofício 3', 'Atletismo', 'Acrobacia'], []);
+  const combChoicesComplete = !isCombate || (!!combSaveChoice && combSkillChoices.length === 2);
+
   // Step 6: Passives
   const [passives, setPassives] = useState<Passive[]>([]);
   const [passForm, setPassForm] = useState<{ name: string; description: string; spellLevel: SpellLevel; bonusHP: number; bonusPE: number; bonusESC: number; bonusSlots: number; bonusRD: number; bonusCA: number; bonusRdByType: Partial<Record<DamageType, number>> }>({
