@@ -17,7 +17,7 @@ import { ficha, montarMesa, limparMesa, comoTela, pegarFicha } from './helpers/m
 
 const esp = (sab: number, extra: Record<string, unknown> = {}) =>
   ficha('ana', {
-    profileId: 'p-ana', specialization: 'Especialista em Combate', level: 5,
+    profileId: 'p-ana', characterClass: 'Feiticeiro', specialization: 'Especialista em Combate', level: 5,
     attributes: [{ name: 'Sabedoria', value: sab }],
     actionsCurrent: 1, actionsMax: 1, ...extra,
   } as never);
