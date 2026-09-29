@@ -9,7 +9,7 @@ describe('Golpe Especial — regras', () => {
     expect(custoGolpeEspecial({ amplo: 1, letal: 1 }).total).toBe(4);
     expect(custoGolpeEspecial({ atroz: 1, lento: 1, sacrificio: 1 }).total).toBe(1);
     expect(custoGolpeEspecial({ sanguinario: 2 }).total).toBe(4);
-    expect(custoGolpeEspecial({ desfocado: 5, amplo: 1, letal: 1 }).bruno).toBe(1);
+    expect(custoGolpeEspecial({ desfocado: 5, amplo: 1, letal: 1 }).bruto).toBe(1);
   });
   it('Preciso escala por turno', () => {
     resetPrecisoUses();
