@@ -48,3 +48,13 @@
 - [x] Base: estilo no Nv 1 (criação), +1 no Nv 6 e +1 no Nv 12 (retroativo), painel na ficha e aba "Estilos" no combate; Adepto de Combate usa a mesma lista.
 - [x] Estilo Defensivo (CA +2, +1 em 4/8/12/16).
 - [x] Duelista · [x] Distante · [x] Arremessador · [x] Duplo (+1 dano; atributo na 2ª arma PENDENTE — aguardando regra do ataque com a 2ª arma) · [x] Massivo · [x] Protetor · [x] Interceptador (Nd10 + mod. do atributo-chave)
+
+## Especialista em Combate — Artes do Combate (Nv 1)
+- [x] Pontos de Preparo = nível + Mod. SAB; aba "Artes" no combate + toggles no painel de Ataque.
+- [x] Arremesso Ágil (1 PP): ataque extra com arma de arremesso em 2º alvo após acertar CaC.
+- [x] Distração Letal (1 PP): no acerto, −(SAB/2, mín 1) Defesa do alvo por 1 rodada.
+- [x] Execução Silenciosa (1 PP): vs Desprevenido, +1d6 + 1d6 a cada +2 de SAB.
+- [x] Golpe Descendente (1 PP): no acerto CaC, +(SAB/2, mín 1) Defesa própria até o próximo turno.
+- [x] Investida Imediata (2 PP): aproxima SAB×1,5 m sem AdO antes de atacar (cobre alcance).
+- [x] Recuperação: eliminar inimigo +1; ação "Analisar o campo" +2; descanso curto metade; longo total.
+- [ ] Decisões assumidas (confirmar com o usuário): metade do SAB arredonda para baixo; "Desprevenido" = condição desprevenido/agarrado/atordoado na ficha do alvo.
