@@ -31,7 +31,7 @@ export const COMBAT_STYLES: CombatStyleDef[] = [
   { id: 'duelista', name: 'Estilo do Duelista', summary: 'Uma arma em uma mão e a outra livre (sem escudo): acerto +1 (+1 nos níveis 8 e 16) e dano +2 (+1 nos níveis 4, 8, 12 e 16).', implemented: true },
   { id: 'interceptador', name: 'Estilo do Interceptador', summary: 'Reação: aliado no seu alcance recebe ataque → reduz o dano em 1d10 + mod. de Força (+1 dado nos níveis 4, 8, 12 e 16).', implemented: false },
   { id: 'protetor', name: 'Estilo do Protetor', summary: 'Reação: impõe desvantagem em ataque contra aliado a até 1,5 m; também concede vantagem no TR de aliado a até 1,5 m.', implemented: false },
-  { id: 'distante', name: 'Estilo Distante', summary: 'Armas à distância: acerto +1 (+1 nos níveis 8 e 16) e dano +2 (+1 nos níveis 4, 8, 12 e 16).', implemented: false },
+  { id: 'distante', name: 'Estilo Distante', summary: 'Armas à distância: acerto +1 (+1 nos níveis 8 e 16) e dano +2 (+1 nos níveis 4, 8, 12 e 16).', implemented: true },
   { id: 'duplo', name: 'Estilo Duplo', summary: 'Duas armas: soma o atributo no dano da segunda arma e dano +1 (+1 nos níveis 4, 8, 12 e 16).', implemented: false },
   { id: 'massivo', name: 'Estilo Massivo', summary: 'Arma de duas mãos ou pesada: rerrola 1 e 2 nos dados de dano; dano +1 (+1 nos níveis 4, 8, 12 e 16).', implemented: false },
 ];
@@ -139,3 +139,12 @@ export function getDuelistaBonus(level: number): { hit: number; damage: number }
   const lv = level ?? 1;
   return { hit: 1 + [8, 16].filter((l) => lv >= l).length, damage: 2 + styleStepBonus(lv) };
 }
+
+// ===================== Estilo Distante =====================
+
+/** Vale para armas à distância (range 'ranged'); arremesso é do Arremessador. */
+export function distanteApplies(c: Character, w: { range: string }): boolean {
+  return hasCombatStyle(c, 'distante') && w.range === 'ranged';
+}
+/** Mesma escala do Duelista: acerto +1 (8,16), dano +2 (4,8,12,16). */
+export const getDistanteBonus = (level: number) => getDuelistaBonus(level);
