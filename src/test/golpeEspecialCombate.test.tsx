@@ -151,7 +151,7 @@ describe('Golpe Especial em combate', () => {
     const btn = await montar(esp());
     golpe('Preciso');
     fireEvent.click(btn);
-    await waitFor(() => expect(textoLog()).toMatch(/Preciso: vantagem/), { timeout: 8000 });
+    await waitFor(() => expect(textoLog()).toMatch(/1º d20 \(vantagem\)/), { timeout: 4000 });
     expect(pegarFicha('ana').peCurrent).toBe(9);
     cleanup();
     render(<AttackPanel character={pegarFicha('ana')} />);
