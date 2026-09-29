@@ -19,7 +19,7 @@ const esp = (extra: Record<string, unknown> = {}) =>
     attributes: [{ name: 'Sabedoria', value: 14 }],
     mainHandWeaponName: 'Espada Longa', peCurrent: 5, peMax: 10, ...extra,
   } as never);
-const inimigo = (id: string, extra: Record<string, unknown> = {}) => ficha(id, { category: 'INIMIGO', ...extra } as never);
+const inimigo = (id: string, extra: Record<string, unknown> = {}) => ficha(id, { category: 'INIMIGO', hpCurrent: 30, hpMax: 30, escCurrent: 0, ...extra } as never);
 
 const textoLog = () => useLogStore.getState().logs.map((l) => l.message).join('\n');
 function selecionarAlvo(id: string) {
