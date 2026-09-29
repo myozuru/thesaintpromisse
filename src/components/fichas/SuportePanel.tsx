@@ -155,14 +155,25 @@ export function SuportePanel({ character: c }: { character: Character }) {
     if (!canInspirar || busy) return;
     setBusy(true);
     try {
-      const r = applyPresencaInspiradora(c, allies, extra);
+      // Só alcança aliados a até 9 m no mapa (quem não tem peça no mapa fica de fora).
+      const inRange = allies.filter((a) => {
+        if (a.id === c.id) return false;
+        const d = allyDistance(a);
+        return d !== null && d <= INSPIRACAO_RANGE_M + 0.05;
+      });
+      const outOfRange = allies.filter((a) => a.id !== c.id && !inRange.includes(a));
+      if (inRange.length === 0) {
+        addLog('combat', `❌ ${c.name}: Presença Inspiradora falhou — nenhum aliado a até ${INSPIRACAO_RANGE_M} m no mapa.`);
+        return;
+      }
+      const r = applyPresencaInspiradora(c, inRange, extra);
       if (!r.ok) {
         addLog('combat', `✨ ${c.name}: Presença Inspiradora falhou — ${r.reason}`);
         return;
       }
       addLog(
         'combat',
-        `✨ ${c.name} usa Presença Inspiradora (−${r.totalCost} PE): aliados em até 9 m recebem +${r.bonus} em TODAS as rolagens de perícia durante a cena.`,
+        `✨ ${c.name} usa Presença Inspiradora (−${r.totalCost} PE): aliados em até 9 m recebem +${r.bonus} em TODAS as rolagens de perícia durante a cena.${outOfRange.length ? ` Fora de alcance: ${outOfRange.map((a) => a.name).join(', ')}.` : ''}`,
       );
       setInspiracaoExtra(0);
     } finally {
@@ -174,6 +185,11 @@ export function SuportePanel({ character: c }: { character: Character }) {
     if (left <= 0 || busy) return;
     const target = characters.find((x) => x.id === targetId);
     if (!target) return;
+    const blocked = target.id === c.id ? null : touchBlock(target.id);
+    if (blocked) {
+      addLog('combat', `❌ ${c.name}: Cura de toque falhou — ${blocked}`);
+      return;
+    }
     setBusy(true);
     try {
       const notation = `${dice.count}d${dice.sides}`;
