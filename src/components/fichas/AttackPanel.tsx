@@ -34,6 +34,11 @@ import { useCombatStore } from '@/stores/useCombatStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { CombatTrackersCard } from './CombatTrackersCard';
 import { Swords, Dice5, Shield, Zap, RotateCcw, Sparkles, Hand, X, ChevronDown } from 'lucide-react';
+import {
+  hasArtesCombate, getPreparoAtual, getPreparoMax, spendPreparo,
+  applyDistracaoLetal, applyGolpeDescendente, investidaMoveMeters, metadeSab,
+  execucaoSilenciosaDice,
+} from '@/lib/artesCombate';
 import { cn } from '@/lib/utils';
 
 interface Props { character: Character; }
@@ -259,6 +264,22 @@ export function AttackPanel({ character: c }: Props) {
   const [attackRollCount, setAttackRollCount] = useState<number>(0);
   const rollInFlightRef = useRef(false);
   const luckRollInFlightRef = useRef(false);
+
+  // ─── Artes do Combate (Especialista em Combate) ────────────────────────────
+  const temArtes = hasArtesCombate(c);
+  const preparoAtual = temArtes ? getPreparoAtual(c) : 0;
+  const preparoMax = temArtes ? getPreparoMax(c) : 0;
+  const [arteDistracao, setArteDistracao] = useState(false);
+  const [arteExecucao, setArteExecucao] = useState(false);
+  const [arteGolpe, setArteGolpe] = useState(false);
+  const [arteInvestida, setArteInvestida] = useState(false);
+  const [arremessoTargetId, setArremessoTargetId] = useState<string>('');
+  const arremessoWeapons = useMemo(
+    () => inventoryWeapons.filter(({ weapon }) => weapon.range === 'thrown' || hasProperty(weapon, 'arremesso')),
+    [inventoryWeapons],
+  );
+  const arteCustoTotal =
+    (arteDistracao ? 1 : 0) + (arteExecucao ? 1 : 0) + (arteGolpe ? 1 : 0) + (arteInvestida ? 2 : 0);
 
   // duas-mãos sempre verdadeiro se a arma exigir
   useEffect(() => {
