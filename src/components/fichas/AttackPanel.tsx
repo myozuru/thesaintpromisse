@@ -435,6 +435,17 @@ export function AttackPanel({ character: c }: Props) {
       if (result.hit && attackerConcentratedAura > 0) {
         consumeConcentratedAura(c.id);
       }
+      // Artes do Combate: efeitos que disparam no acerto.
+      if (artesAtivas) {
+        if (result.hit) {
+          if (arteDistracao && target) applyDistracaoLetal(target.id, metadeSab(c), c.name);
+          if (arteGolpe && mainWeapon.range === 'melee') applyGolpeDescendente(c.id, metadeSab(c));
+        }
+        setArteDistracao(false);
+        setArteExecucao(false);
+        setArteGolpe(false);
+        setArteInvestida(false);
+      }
     } else {
       // No reroll, atualiza a memória para refletir o resultado final (sobrescreve hit/miss do 1º).
       recordAttackResult(c.id, result.hit, { replaceLast: true });
