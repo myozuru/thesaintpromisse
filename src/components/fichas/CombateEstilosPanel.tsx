@@ -21,9 +21,11 @@ import {
 import { cn } from '@/lib/utils';
 import { protetorProteger, protetorResguardarTR, protetorDistance, PROTETOR_RANGE_M } from '@/lib/combateProtetor';
 import { fmtM } from '@/lib/touchRange';
+import { useMapStore } from '@/stores/useMapStore';
 
 function ProtetorSection({ character: c }: { character: Character }) {
   const characters = useCharacterStore((s) => s.characters);
+  useMapStore((s) => s.entities); // re-mede quando peças se movem
   const [allyId, setAllyId] = useState('');
   const [attackerId, setAttackerId] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
