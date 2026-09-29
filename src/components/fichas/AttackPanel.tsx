@@ -1171,11 +1171,11 @@ export function AttackPanel({ character: c }: Props) {
           <button
             type="button"
             onClick={() => handleRoll()}
-            disabled={!mainWeapon || (!!rangeBlockReason && !investidaCobreDistancia) || phase === 'rolling-hit' || phase === 'await-second-d20' || phase === 'rolling-second-d20' || phase === 'await-dmg' || phase === 'rolling-dmg'}
-            title={rangeBlockReason && !investidaCobreDistancia ? rangeBlockReason : investidaCobreDistancia ? 'Investida Imediata cobre a distância' : undefined}
+            disabled={!mainWeapon || !rangeOk || phase === 'rolling-hit' || phase === 'await-second-d20' || phase === 'rolling-second-d20' || phase === 'await-dmg' || phase === 'rolling-dmg'}
+            title={!rangeOk ? rangeBlockReason ?? undefined : investidaCobreDistancia ? 'Investida Imediata cobre a distância' : longoCobre ? 'Golpe Longo cobre a distância' : undefined}
             className={cn(
               'inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-bold transition',
-              mainWeapon && (!rangeBlockReason || investidaCobreDistancia) && phase !== 'rolling-hit' && phase !== 'await-second-d20' && phase !== 'rolling-second-d20' && phase !== 'await-dmg' && phase !== 'rolling-dmg'
+              mainWeapon && rangeOk && phase !== 'rolling-hit' && phase !== 'await-second-d20' && phase !== 'rolling-second-d20' && phase !== 'await-dmg' && phase !== 'rolling-dmg'
                 ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                 : 'bg-muted text-muted-foreground cursor-not-allowed',
             )}
