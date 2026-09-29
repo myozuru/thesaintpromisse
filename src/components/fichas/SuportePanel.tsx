@@ -7,6 +7,8 @@ import { useState } from 'react';
 import type { Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLogStore } from '@/stores/useLogStore';
+import { useMapStore } from '@/stores/useMapStore';
+import { checkTouchTarget, touchDistanceMeters } from '@/lib/touchRange';
 import { rollDiceCom } from '@/lib/dice';
 import {
   isSuporte,
@@ -53,6 +55,8 @@ export function SuportePanel({ character: c }: { character: Character }) {
   const updateCharacter = useCharacterStore((s) => s.updateCharacter);
   const applyHealing = useCharacterStore((s) => s.applyHealing);
   const addLog = useLogStore((s) => s.addLog);
+  const mapEntities = useMapStore((s) => s.entities);
+  const gridConfig = useMapStore((s) => s.gridConfig);
   const [targetId, setTargetId] = useState<string>(c.id);
   const [apoiarTargetId, setApoiarTargetId] = useState<string>('');
   const [inspiracaoExtra, setInspiracaoExtra] = useState(0);
@@ -71,6 +75,17 @@ export function SuportePanel({ character: c }: { character: Character }) {
   const allies = characters.filter((x) => x.category === 'PLAYER' || x.category === 'NPC' || x.id === c.id);
   const sign = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
   const apoiosConhecidos = hasApoioAccess(c) ? getApoiosEscolhidos(c) : [];
+  /** Motivo de bloqueio por alcance de toque (null = pode tocar). */
+  const touchBlock = (targetIdToCheck: string): string | null =>
+    checkTouchTarget(c.id, targetIdToCheck, mapEntities, gridConfig);
+  /** Aliados dentro do raio da Presença Inspiradora (9 m, borda a borda). */
+  const INSPIRACAO_RANGE_M = 9;
+  const allyDistance = (ally: Character): number | null => {
+    const a = Object.values(mapEntities).find((e) => e.characterId === c.id);
+    const b = Object.values(mapEntities).find((e) => e.characterId === ally.id);
+    if (!a || !b) return null;
+    return touchDistanceMeters(a, b, gridConfig);
+  };
 
   /** Cura de toque do Suporte em Combate (também usada pelo Apoio Curativo). */
   const rollSuporteHeal = async (target: Character, origem: string): Promise<number> => {
@@ -100,6 +115,11 @@ export function SuportePanel({ character: c }: { character: Character }) {
   const handleApoiar = async () => {
     const target = characters.find((x) => x.id === apoiarTargetId);
     if (!target || target.id === c.id || busy) return;
+    const blocked = touchBlock(target.id);
+    if (blocked) {
+      addLog('combat', `❌ ${c.name}: Apoiar falhou — ${blocked}`);
+      return;
+    }
     setBusy(true);
     try {
       // Apoio Avançado: valida o efeito ANTES de aplicar o Apoiar.
@@ -135,14 +155,25 @@ export function SuportePanel({ character: c }: { character: Character }) {
     if (!canInspirar || busy) return;
     setBusy(true);
     try {
-      const r = applyPresencaInspiradora(c, allies, extra);
+      // Só alcança aliados a até 9 m no mapa (quem não tem peça no mapa fica de fora).
+      const inRange = allies.filter((a) => {
+        if (a.id === c.id) return false;
+        const d = allyDistance(a);
+        return d !== null && d <= INSPIRACAO_RANGE_M + 0.05;
+      });
+      const outOfRange = allies.filter((a) => a.id !== c.id && !inRange.includes(a));
+      if (inRange.length === 0) {
+        addLog('combat', `❌ ${c.name}: Presença Inspiradora falhou — nenhum aliado a até ${INSPIRACAO_RANGE_M} m no mapa.`);
+        return;
+      }
+      const r = applyPresencaInspiradora(c, inRange, extra);
       if (!r.ok) {
         addLog('combat', `✨ ${c.name}: Presença Inspiradora falhou — ${r.reason}`);
         return;
       }
       addLog(
         'combat',
-        `✨ ${c.name} usa Presença Inspiradora (−${r.totalCost} PE): aliados em até 9 m recebem +${r.bonus} em TODAS as rolagens de perícia durante a cena.`,
+        `✨ ${c.name} usa Presença Inspiradora (−${r.totalCost} PE): aliados em até 9 m recebem +${r.bonus} em TODAS as rolagens de perícia durante a cena.${outOfRange.length ? ` Fora de alcance: ${outOfRange.map((a) => a.name).join(', ')}.` : ''}`,
       );
       setInspiracaoExtra(0);
     } finally {
@@ -154,6 +185,11 @@ export function SuportePanel({ character: c }: { character: Character }) {
     if (left <= 0 || busy) return;
     const target = characters.find((x) => x.id === targetId);
     if (!target) return;
+    const blocked = target.id === c.id ? null : touchBlock(target.id);
+    if (blocked) {
+      addLog('combat', `❌ ${c.name}: Cura de toque falhou — ${blocked}`);
+      return;
+    }
     setBusy(true);
     try {
       const notation = `${dice.count}d${dice.sides}`;
@@ -215,7 +251,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
             .filter((a) => a.id !== c.id)
             .map((a) => (
               <option key={a.id} value={a.id}>
-                {a.name}
+                {a.name}{touchBlock(a.id) ? ' · fora do toque' : ''}
               </option>
             ))}
         </select>
@@ -255,7 +291,7 @@ export function SuportePanel({ character: c }: { character: Character }) {
         >
           {allies.map((a) => (
             <option key={a.id} value={a.id}>
-              {a.name} ({a.hpCurrent}/{shownHpMax(a)})
+              {a.name} ({a.hpCurrent}/{shownHpMax(a)}){a.id !== c.id && touchBlock(a.id) ? ' · fora do toque' : ''}
             </option>
           ))}
         </select>
