@@ -1177,6 +1177,8 @@ export function AttackPanel({ character: c }: Props) {
             </div>
           </div>
         )}
+
+        {/* Dramatização: rolagem do d20 em curso */}
         {phase === 'rolling-hit' && (
           <div className="rounded-lg border border-primary/40 bg-primary/5 px-3 py-2 text-xs animate-fade-in">
             <div className="font-mono flex items-center gap-2">
