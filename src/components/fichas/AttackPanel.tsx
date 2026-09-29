@@ -18,6 +18,7 @@ import {
   buildAttackContext, rollAttack, pickAttackAbility, getAbilityMod, type AttackResult,
 } from '@/lib/combatEngine';
 import { computeTotalDefense, type AttackKind } from '@/lib/defenseCalc';
+import { checkWeaponRange, weaponMaxRangeMeters, distanceBetweenChars } from '@/lib/weaponRange';
 import { isAuraToggleActive } from '@/lib/auraEffects';
 import { getAutoCritFromConditions } from '@/lib/conditionEffects';
 import { useLogStore } from '@/stores/useLogStore';
@@ -146,6 +147,7 @@ export function AttackPanel({ character: c }: Props) {
   const requestAoEPlacement = useMapStore((s) => s.requestAoEPlacement);
   const applyDamage = useCharacterStore((s) => s.applyDamage);
   const mapEntities = useMapStore((s) => s.entities);
+  const gridConfig = useMapStore((s) => s.gridConfig);
 
 
   // ─── Alvo automatizado ─────────────────────────────────────────────────────
