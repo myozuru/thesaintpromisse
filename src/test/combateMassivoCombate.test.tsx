@@ -12,7 +12,7 @@ import { ficha, montarMesa, limparMesa, comoTela, forcarDados } from './helpers/
 
 const esp = (main: string, styles = ['massivo']) => ficha('ana', {
   profileId: 'p-ana', characterClass: 'Feiticeiro', specialization: 'Especialista em Combate',
-  combatStyles: styles, level: 1, mainHandWeaponName: main,
+  combatStyles: styles, level: 1, attributes: [{ name: 'FOR', value: 16 }, { name: 'DES', value: 12 }, { name: 'CON', value: 12 }], mainHandWeaponName: main,
   offHandWeaponName: main === 'Espada Grande' ? main : null,
 } as never);
 const alvo = () => ficha('bruno', { category: 'INIMIGO' } as never);
@@ -38,8 +38,7 @@ describe('Estilo Massivo em combate', () => {
     const btn = preparar(esp('Espada Grande'), { ana: [0, 0], bruno: [1, 0] });
     expect(btn.disabled).toBe(false);
     fireEvent.click(btn);
-    await new Promise(r => setTimeout(r, 2000)); console.log('LOGDUMP', log().slice(0, 1500));
-    await waitFor(() => expect(log()).toContain('Estilo Massivo: +1 dano'), { timeout: 2000 });
+    await waitFor(() => expect(log()).toContain('Estilo Massivo: +1 dano'), { timeout: 4000 });
     expect(log()).toContain('Estilo Massivo rerrolou: 2→9');
   });
   it('Espada Grande a 4,5 m: bloqueado', () => {
