@@ -1319,8 +1319,8 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
       >
       {/* ─── Header ─── */}
       <div className={cn(
-        "flex w-full items-center gap-3 px-4 py-3 text-left",
-        compactHeader && "flex-wrap content-start",
+        "flex w-full flex-wrap items-center gap-2 px-4 py-3 text-left",
+        compactHeader && "content-start",
       )}>
         <div className="flex items-center gap-2 text-foreground font-bold text-sm rounded-lg p-1">
           <span className="font-mono text-muted-foreground">A</span>
@@ -1369,7 +1369,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
             {c.hiddenFromPlayers ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
         )}
-        <div className={cn("flex-1 min-w-0 text-left p-1", compactHeader && "order-first basis-full")}>
+        <div className="order-first min-w-0 basis-full text-left px-1 pb-1">
           <div className="flex flex-wrap items-center gap-2 min-w-0">
             <span className="truncate min-w-0 flex-1 basis-32 font-semibold text-foreground">{c.name}</span>
             {(c.omniFlags?.bloqueio_total ?? 0) >= 1 && (
@@ -1404,7 +1404,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
             <span className="text-muted-foreground">Dados de Vida: {c.hitDiceCurrent ?? c.hitDiceMax ?? getHitDiceMax(c.level)}/{getHitDiceMax(c.level)}</span>
           </div>
         </div>
-        <div className={cn("flex items-center gap-2", compactHeader && "order-2 min-w-0 flex-1 flex-wrap")}>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
           <div
             className="flex flex-col items-center justify-center rounded-xl border-2 border-primary/50 bg-gradient-to-br from-primary/20 to-primary/5 px-3 py-1.5 shadow-[0_0_20px_-5px_hsl(var(--primary)/0.4)]"
             title={`CA base ${c.ca} + DES ${desModCC >= 0 ? '+' : ''}${desModCC} + ½ Nv ${halfLevelCC}${passiveBonuses.ca ? ` + Passivas ${passiveBonuses.ca}` : ''}${itemBonuses.ca ? ` + Itens ${itemBonuses.ca}` : ''}${buffCA ? ` + Buffs ${buffCA}` : ''}${conditionMods.defense ? ` ${conditionMods.defense >= 0 ? '+' : ''}${conditionMods.defense} Condições` : ''}${hasDirectionalDef ? `\n— Direcionais (aplicados pelo motor):\n  vs CaC: ${caVsMelee + buffCA} (${conditionMods.defenseMelee >= 0 ? '+' : ''}${conditionMods.defenseMelee})\n  vs Distância: ${caVsRanged + buffCA} (${conditionMods.defenseRanged >= 0 ? '+' : ''}${conditionMods.defenseRanged})` : ''}`}
@@ -1484,6 +1484,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
           {c.category}
         </span>
         <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform duration-300', expanded && 'rotate-180')} />
+      </div>
       </div>
 
       {/* ─── Status bars ─── */}
@@ -1659,7 +1660,9 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
       <InspiradoButton c={c} />
 
       {/* ─── Suporte: habilidades base ─── */}
-      <SuportePanel character={c} />
+      <div onClick={(e) => e.stopPropagation()}>
+        <SuportePanel character={c} />
+      </div>
 
       {/* ─── Painel de Ataque (combatEngine) ─── */}
       {/* Visível apenas durante combate ativo. */}
@@ -1875,8 +1878,6 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
           )}
         </div>
       </div>
-      </div>
-
       {/* Active Buffs */}
       {activeBuffs.length > 0 && (
         <div className="px-4 pb-2 flex flex-wrap gap-1">

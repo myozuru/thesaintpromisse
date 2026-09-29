@@ -42,3 +42,4 @@
 - [ ] Movimento por cômodos: jogador vê só o cômodo onde está; setas nas portas levam ao próximo cômodo (só na visão dele). Em combate, só na vez dele e limitado por metros percorridos; fora de combate, livre. Portas trancadas exigem chave (puzzles depois).
 - [ ] Aba "Mapa do Mundo": vários mundos com troca; marcadores; ícone redondo de boss com as bordas temáticas; cartão do boss (ND, Patamar, Fraquezas, Resistências, RDs e campos livres) com visibilidade por campo definida pelo Mestre; estado do boss; Mestre oculta/revela qualquer coisa aos jogadores.
 - [ ] Ideia guardada (não fazer ainda): ligar boss do mapa-múndi à batalha.
+- [x] Corrigir sobreposição do HUD e limitar a barra clicável da ficha aos controles de expansão.
