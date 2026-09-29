@@ -399,6 +399,8 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
       if (!tecChoicesComplete) return false;
       // Suporte: bloqueia avanço sem TR + 2 Ofícios.
       if (!supChoicesComplete) return false;
+      // Especialista em Combate: bloqueia avanço sem TR + 2 perícias da lista.
+      if (!combChoicesComplete) return false;
       return true;
     }
     if (step === 2) {
@@ -453,6 +455,10 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
     if (isSuporte) {
       for (const fx of SUP_FIXED_SKILLS) tecTrainedOverride[fx] = true;
       for (const ofKey of supOficioChoices) tecTrainedOverride[ofKey] = true;
+    }
+    // Especialista em Combate: 2 perícias escolhidas entre Ofício/Atletismo/Acrobacia.
+    if (isCombate) {
+      for (const sk of combSkillChoices) tecTrainedOverride[sk] = true;
     }
 
     // Build skills array from fixed definitions
