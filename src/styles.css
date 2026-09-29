@@ -193,6 +193,8 @@
 html {
   scrollbar-width: thin;
   scrollbar-color: hsl(268 40% 28%) hsl(265 30% 5%);
+  text-rendering: optimizeLegibility;
+  font-kerning: normal;
 }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
