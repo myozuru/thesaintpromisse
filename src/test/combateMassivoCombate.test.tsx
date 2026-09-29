@@ -38,7 +38,8 @@ describe('Estilo Massivo em combate', () => {
     const btn = preparar(esp('Espada Grande'), { ana: [0, 0], bruno: [1, 0] });
     expect(btn.disabled).toBe(false);
     fireEvent.click(btn);
-    await waitFor(() => expect(log()).toContain('Estilo Massivo: +1 dano'), { timeout: 8000 });
+    await new Promise(r => setTimeout(r, 2000)); console.log('LOGDUMP', log().slice(0, 1500));
+    await waitFor(() => expect(log()).toContain('Estilo Massivo: +1 dano'), { timeout: 2000 });
     expect(log()).toContain('Estilo Massivo rerrolou: 2→9');
   });
   it('Espada Grande a 4,5 m: bloqueado', () => {
