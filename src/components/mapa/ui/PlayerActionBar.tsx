@@ -12,7 +12,7 @@
  * continua sendo feita pelos painéis dedicados da ficha.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { Swords, Sparkles, Zap, Package, X, Target, AlertTriangle, Check, HeartHandshake } from 'lucide-react';
+import { Swords, Sparkles, Zap, Package, X, Target, AlertTriangle, Check, HeartHandshake, BatteryCharging } from 'lucide-react';
 import { isSuporte } from '@/lib/suporteAbilities';
 import { parseRangeMeters, touchDistanceMeters, outOfRangeMessage } from '@/lib/touchRange';
 import { SuportePanel } from '@/components/fichas/SuportePanel';
@@ -668,6 +668,10 @@ export function PlayerActionBar() {
               {open === 'classe' && activeChar ? (
                 <div className="py-2 -mx-2" onClick={(e) => e.stopPropagation()}>
                   {isSuporte(activeChar) ? <SuportePanel character={activeChar} /> : <CombateEstilosPanel character={activeChar} />}
+                </div>
+              ) : open === 'artes' && activeChar ? (
+                <div className="py-2 -mx-2" onClick={(e) => e.stopPropagation()}>
+                  <ArtesCombatePanel character={activeChar} />
                 </div>
               ) : open === 'ataque' && activeChar ? (
                 <div onClick={(e) => e.stopPropagation()}>
