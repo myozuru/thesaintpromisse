@@ -1,4 +1,4 @@
-import { duelistaApplies, getDuelistaBonus } from './combateEstilos';
+import { duelistaApplies, getDuelistaBonus, distanteApplies, getDistanteBonus } from './combateEstilos';
 import { consumeCritNegated } from '@/lib/suporteNegacao';
 /**
  * Motor de Combate.
@@ -119,6 +119,11 @@ function applyCombatStyleBonuses(ctx: AttackContext, out: ContextualBonus): void
     out.notes.push(`Estilo do Duelista: +${b.hit} acerto, +${b.damage} dano`);
   } else if (d.reason) {
     out.notes.push(`Estilo do Duelista inativo (${d.reason})`);
+  }
+  if (distanteApplies(ctx.attacker, ctx.weapon)) {
+    const b = getDistanteBonus(ctx.attacker.level ?? 1);
+    out.hit += b.hit; out.damageFlat += b.damage;
+    out.notes.push(`Estilo Distante: +${b.hit} acerto, +${b.damage} dano`);
   }
 }
 
