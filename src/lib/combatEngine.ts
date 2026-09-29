@@ -56,6 +56,11 @@ export interface AttackSituation {
   attackerIsGrappled?: boolean;
   /** Arte do Combate — Execução Silenciosa: +1d6 (+1d6 a cada +2 SAB) se o alvo estiver Desprevenido. */
   arteExecucao?: boolean;
+  /** Golpe Especial (Especialista nv 4). */
+  golpeAtroz?: boolean;
+  golpeLetal?: boolean;
+  golpePreciso?: boolean;
+  golpeDesfocado?: number;
 }
 
 export interface AttackContext {
@@ -306,6 +311,13 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
   // Bônus fixos de rolagem (Comando Motivador, etc.) somam no acerto.
   const flatAtk = consumeFlatBonusFor(ctx.attacker.id, { kind: 'attack', subtype: attackSubtype, weaponGroup: w.group, weaponName: w.name });
   if (flatAtk.bonus) { ctxBonus.hit = (ctxBonus.hit ?? 0) + flatAtk.bonus; for (const n of flatAtk.notes) ctxBonus.notes.push(n); }
+
+  // Golpe Especial
+  if (ctx.situation.golpeAtroz) { ctxBonus.bonusDice += 1; ctxBonus.notes.push('Golpe Especial Atroz: +1 dado'); }
+  if (ctx.situation.golpeLetal) { ctxBonus.critRangeBonus += 1; ctxBonus.notes.push('Golpe Especial Letal: margem de crítico −1'); }
+  if (ctx.situation.golpePreciso) { ctxBonus.advantage = true; ctxBonus.notes.push('Golpe Especial Preciso: vantagem'); }
+  const desf = Math.min(3, Math.max(0, ctx.situation.golpeDesfocado ?? 0));
+  if (desf) { ctxBonus.hit -= 4 * desf; ctxBonus.notes.push(`Golpe Especial Desfocado: −${4 * desf} acerto`); }
 
   // Margem crítica (menor = mais fácil)
   const baseCrit = w.critRange ?? 20;
