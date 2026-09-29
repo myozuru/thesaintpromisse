@@ -6,8 +6,21 @@
  */
 export const TOUCH_RANGE_M = 1.5;
 
-export interface TouchEntity { x: number; y: number; w: number; h: number }
+export interface TouchEntity {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  characterId?: string;
+  ownerProfileId?: string;
+  avatarProfileId?: string;
+}
 export interface TouchGrid { dpi?: number; metersPerCell?: number }
+
+export interface CharacterMapIdentity {
+  characterId: string;
+  profileId?: string;
+}
 
 export function touchDistanceMeters(a: TouchEntity, b: TouchEntity, grid: TouchGrid): number {
   const dpi = grid.dpi || 70;
@@ -37,9 +50,10 @@ export function checkTouchTarget<E extends TouchEntity & { characterId?: string 
   targetId: string,
   entities: Record<string, E>,
   grid: TouchGrid,
+  identities?: { casterProfileId?: string; targetProfileId?: string },
 ): string | null {
   if (casterId === targetId) return null;
-  const d = charsDistanceMeters(casterId, targetId, entities, grid);
+  const d = charsDistanceMeters(casterId, targetId, entities, grid, identities);
   if (d === null) return 'Você e o alvo precisam estar no mapa para medir o alcance de toque.';
   if (d > TOUCH_RANGE_M + 0.05) return outOfRangeMessage(d, TOUCH_RANGE_M, 'toque');
   return null;
@@ -82,11 +96,24 @@ export function charsDistanceMeters<E extends TouchEntity & { characterId?: stri
   bId: string,
   entities: Record<string, E>,
   grid: TouchGrid,
+  identities?: { casterProfileId?: string; targetProfileId?: string },
 ): number | null {
   if (aId === bId) return 0;
   const all = Object.values(entities);
-  const as = all.filter(e => e.characterId === aId);
-  const bs = all.filter(e => e.characterId === bId);
+  const resolve = (characterId: string, profileId?: string) => {
+    const explicitlyLinked = all.filter((entity) => entity.characterId === characterId);
+    if (explicitlyLinked.length > 0) return explicitlyLinked;
+    if (!profileId) return [];
+    // Um vínculo explícito sempre vence. O perfil só recupera ícones antigos
+    // que ainda não têm uma ficha atribuída, sem misturar fichas do mesmo dono.
+    return all.filter(
+      (entity) =>
+        !entity.characterId &&
+        (entity.avatarProfileId === profileId || entity.ownerProfileId === profileId),
+    );
+  };
+  const as = resolve(aId, identities?.casterProfileId);
+  const bs = resolve(bId, identities?.targetProfileId);
   if (!as.length || !bs.length) return null;
   let best = Infinity;
   for (const a of as) for (const b of bs) best = Math.min(best, touchDistanceMeters(a, b, grid));

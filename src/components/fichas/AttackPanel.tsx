@@ -190,12 +190,15 @@ export function AttackPanel({ character: c }: Props) {
   // ─── Alcance da arma no mapa (grade, borda a borda) ──────────────────────
   const meleeRangeBonus = (c as { meleeRangeBonus?: number }).meleeRangeBonus ?? 0;
   const weaponRangeM = mainWeapon ? weaponMaxRangeMeters(mainWeapon, meleeRangeBonus) : null;
+  const mapIdentities = target
+    ? { casterProfileId: c.profileId, targetProfileId: target.profileId }
+    : undefined;
   const targetDistanceM = target
-    ? distanceBetweenChars(c.id, target.id, mapEntities, gridConfig)
+    ? distanceBetweenChars(c.id, target.id, mapEntities, gridConfig, mapIdentities)
     : null;
   const rangeBlockReason =
     mainWeapon && target
-      ? checkWeaponRange(c.id, target.id, mainWeapon, mapEntities, gridConfig, meleeRangeBonus)
+      ? checkWeaponRange(c.id, target.id, mainWeapon, mapEntities, gridConfig, meleeRangeBonus, mapIdentities)
       : null;
 
   // Ao trocar de alvo, limpa override

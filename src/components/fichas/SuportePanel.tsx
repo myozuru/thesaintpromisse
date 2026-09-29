@@ -77,17 +77,26 @@ export function SuportePanel({ character: c }: { character: Character }) {
   const apoiosConhecidos = hasApoioAccess(c) ? getApoiosEscolhidos(c) : [];
   /** Motivo de bloqueio por alcance de toque (null = pode tocar). */
   const touchBlock = (targetIdToCheck: string): string | null =>
-    checkTouchTarget(c.id, targetIdToCheck, mapEntities, gridConfig);
+    checkTouchTarget(c.id, targetIdToCheck, mapEntities, gridConfig, {
+      casterProfileId: c.profileId,
+      targetProfileId: characters.find((character) => character.id === targetIdToCheck)?.profileId,
+    });
   /** Rótulo curto no seletor: "· falta 1,5 m". */
   const rangeTag = (id: string): string => {
-    const d = charsDistanceMeters(c.id, id, mapEntities, gridConfig);
+    const d = charsDistanceMeters(c.id, id, mapEntities, gridConfig, {
+      casterProfileId: c.profileId,
+      targetProfileId: characters.find((character) => character.id === id)?.profileId,
+    });
     if (d === null) return ' · fora do mapa';
     return d > TOUCH_RANGE_M + 0.05 ? ` · falta ${fmtM(d - TOUCH_RANGE_M)} m` : ' · ao alcance';
   };
   /** Aliados dentro do raio da Presença Inspiradora (9 m, borda a borda). */
   const INSPIRACAO_RANGE_M = 9;
   const allyDistance = (ally: Character): number | null => {
-    return charsDistanceMeters(c.id, ally.id, mapEntities, gridConfig);
+    return charsDistanceMeters(c.id, ally.id, mapEntities, gridConfig, {
+      casterProfileId: c.profileId,
+      targetProfileId: ally.profileId,
+    });
   };
 
   /** Cura de toque do Suporte em Combate (também usada pelo Apoio Curativo). */

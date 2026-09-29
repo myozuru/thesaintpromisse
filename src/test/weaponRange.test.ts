@@ -15,6 +15,7 @@ const CELL = 70;
 
 interface Ent {
   x: number; y: number; w: number; h: number; characterId?: string;
+  ownerProfileId?: string; avatarProfileId?: string;
 }
 
 /** Peça de 1 casa na coluna `cells` (0 = origem), mesma linha. */
@@ -108,5 +109,15 @@ describe('checkWeaponRange — distância e casos especiais', () => {
   it('distanceBetweenChars mede borda a borda na grade', () => {
     const ents = entities(entAt(0, 'a'), entAt(2, 'b'));
     expect(distanceBetweenChars('a', 'b', ents, GRID)).toBeCloseTo(3, 5);
+  });
+
+  it('mede pelos perfis quando os ícones ainda não têm ficha vinculada', () => {
+    const ents = entities(
+      { ...entAt(0, ''), characterId: undefined, avatarProfileId: 'perfil-a' },
+      { ...entAt(1, ''), characterId: undefined, ownerProfileId: 'perfil-b' },
+    );
+    const identities = { casterProfileId: 'perfil-a', targetProfileId: 'perfil-b' };
+    expect(distanceBetweenChars('atk', 'def', ents, GRID, identities)).toBeCloseTo(1.5, 5);
+    expect(checkWeaponRange('atk', 'def', arco, ents, GRID, 0, identities)).toBeNull();
   });
 });
