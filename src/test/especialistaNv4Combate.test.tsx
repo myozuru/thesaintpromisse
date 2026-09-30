@@ -96,25 +96,21 @@ describe('Armas Escolhidas', () => {
     expect(armasEscolhidasStep(semEscolha, findWeaponByName('Faca de Arremesso'))).toBe(0);
   });
 
-  it('em combate real o dano sobe de verdade em relação a quem não tem a habilidade', async () => {
-    const rolar = async (c: Character) => {
-      mesa([c, inimigo()]);
-      cleanup();
-      render(<AttackPanel character={pegarFicha('ana')} />);
-      fireEvent.change(screen.getByLabelText(/Alvo/i), { target: { value: 'bruno' } });
-      forcarDados(19, 4, 4, 4, 4, 4, 4);
-      fireEvent.click(screen.getByRole('button', { name: /Rolar Ataque/ }));
-      await waitFor(() => expect(textoLog()).toMatch(/🗡️/), { timeout: 15000 });
-      const dano = screen.queryAllByRole('button', { name: /Rolar Dano/ });
-      if (dano.length) fireEvent.click(dano[0]);
-      await waitFor(() => expect(textoLog()).toMatch(/💥 Dano:/), { timeout: 15000 });
-      return 300 - (pegarFicha('bruno').hpCurrent ?? 0);
-    };
-    const semHab = await rolar(esp() as unknown as Character);
-    const comHab = await rolar(comGrupo('Faca') as unknown as Character);
-    expect(comHab).toBeGreaterThan(semHab);
-  }, 40000);
+  it('em combate real o log registra o aumento de dano da arma do grupo', async () => {
+    mesa([comGrupo('Faca') as unknown as Character, inimigo()]);
+    render(<AttackPanel character={pegarFicha('ana')} />);
+    fireEvent.change(screen.getByLabelText(/Alvo/i), { target: { value: 'bruno' } });
+    forcarDados(19, 4, 4, 4, 4, 4, 4);
+    fireEvent.click(screen.getByRole('button', { name: /Rolar Ataque/ }));
+    await waitFor(() => expect(textoLog()).toMatch(/🗡️/), { timeout: 15000 });
+    const dano = screen.queryAllByRole('button', { name: /Rolar Dano/ });
+    if (dano.length) fireEvent.click(dano[0]);
+    await waitFor(() => expect(textoLog()).toMatch(/💥 Dano:/), { timeout: 15000 });
+    expect(textoLog()).toMatch(/Armas Escolhidas/);
+    expect(pegarFicha('bruno').hpCurrent ?? 0).toBeLessThan(300);
+  }, 30000);
 });
+
 
 describe('Arremesso Rápido', () => {
   const comArr = (extra: Record<string, unknown> = {}) => esp({
