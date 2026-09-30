@@ -257,7 +257,7 @@ function applyTalentContextualBonuses(ctx: AttackContext, out: ContextualBonus):
   // Pesada [X]: FOR insuficiente → desvantagem em ataque (cancelada por vantagem).
   const pesada = getProperty(w, 'pesada');
   if (pesada && pesada.value != null) {
-    const forAttr = (ctx.attacker.attributes ?? []).find(a => a.name.toUpperCase() === 'FOR');
+    const forAttr = findAbilityAttr(ctx.attacker, 'FOR');
     if ((forAttr?.value ?? 0) < pesada.value) {
       out.disadvantage = true;
       out.notes.push(`Pesada [${pesada.value}]: FOR insuficiente — desvantagem em ataque`);
@@ -293,6 +293,15 @@ function applyTalentContextualBonuses(ctx: AttackContext, out: ContextualBonus):
 
 // ===== Resolução do ataque =================================================
 
+const ABILITY_FULL: Record<'FOR' | 'DES', string> = { FOR: 'FORÇA', DES: 'DESTREZA' };
+/** Acha o atributo aceitando sigla (FOR/DES) ou nome completo (Força/Destreza). */
+export function findAbilityAttr(c: Character, name: 'FOR' | 'DES') {
+  return (c.attributes ?? []).find(x => {
+    const n = (x.name ?? '').trim().toUpperCase();
+    return n === name || n === ABILITY_FULL[name];
+  });
+}
+
 /** Determina se a arma usa FOR ou DES (considera fineza). */
 export function pickAttackAbility(
   c: Character, w: Weapon, preferred?: 'FOR' | 'DES',
@@ -304,7 +313,7 @@ export function pickAttackAbility(
 }
 
 export function getAbilityMod(c: Character, name: 'FOR' | 'DES'): number {
-  const a = (c.attributes ?? []).find(x => x.name.toUpperCase() === name);
+  const a = findAbilityAttr(c, name);
   if (!a) return 0;
   return Math.floor(((a.value ?? 10) - 10) / 2);
 }
