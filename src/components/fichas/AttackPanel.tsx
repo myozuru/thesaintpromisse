@@ -325,6 +325,23 @@ export function AttackPanel({ character: cProp }: Props) {
     });
     addLog('combat', `🎯 Arremessos Potentes: ${c.name} gasta 1 PE — arremessos ignoram ${getTrainingBonusByLevel(c.level ?? 1)} de RD neste turno.`);
   };
+  // ─── Pistoleiro Iniciado / Precisão Definitiva (Especialista em Combate) ──
+  const temPistoleiro = hasPistoleiroIniciado(cVivo);
+  const pistoleiroCheck = podeUsarPistoleiro(cVivo, mainWeapon);
+  const [pistoleiroOn, setPistoleiroOn] = useState(false);
+  const armaTravada = armaEstaEmperrada(cVivo, mainWeapon);
+  const temPrecisao = hasPrecisaoDefinitiva(cVivo);
+  const precisaoMax = precisaoPeMax(cVivo);
+  const [precisaoPe, setPrecisaoPe] = useState(0);
+  const [precisaoModo, setPrecisaoModo] = useState<PrecisaoModo>('acerto');
+  const handleDesemperrar = () => {
+    const fresh = useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c;
+    const nome = fresh.armaEmperrada;
+    if (!nome) return;
+    useCharacterStore.getState().updateCharacter(c.id, { armaEmperrada: null });
+    addLog('combat', `🔧 ${c.name} gasta uma Ação Comum e desemperra ${nome}.`);
+  };
+
   /** RD ignorada por este ataque (Penetrante + Arremessos Potentes). */
   const devRdRef = useRef(0);
   const rdIgnoradaAtaque = (penetrante: boolean, devastacaoRd = 0): number =>
