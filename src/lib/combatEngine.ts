@@ -62,6 +62,8 @@ export interface AttackSituation {
   golpeLetal?: boolean;
   golpePreciso?: boolean;
   golpeDesfocado?: number;
+  /** Arsenal Cíclico: +1 dado com a arma trocada. */
+  arsenalCiclico?: boolean;
 }
 
 export interface AttackContext {
@@ -319,6 +321,7 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
   if (flatAtk.bonus) { ctxBonus.hit = (ctxBonus.hit ?? 0) + flatAtk.bonus; for (const n of flatAtk.notes) ctxBonus.notes.push(n); }
 
   // Golpe Especial
+  if (ctx.situation.arsenalCiclico) { ctxBonus.bonusDice += 1; ctxBonus.notes.push('Arsenal Cíclico: +1 dado'); }
   if (ctx.situation.golpeAtroz) { ctxBonus.bonusDice += 1; ctxBonus.notes.push('Golpe Especial Atroz: +1 dado'); }
   if (ctx.situation.golpeLetal) { ctxBonus.critRangeBonus += 1; ctxBonus.notes.push('Golpe Especial Letal: margem de crítico −1'); }
   if (ctx.situation.golpePreciso) { ctxBonus.advantage = true; ctxBonus.notes.push('Golpe Especial Preciso: vantagem'); }
