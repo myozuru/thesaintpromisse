@@ -1654,7 +1654,32 @@ const ESPECIALISTA_COMBATE: SpecAbility[] = [
     triggerText: 'Pergunta automática ao falhar em um teste de resistência.',
     logicText: 'Usos = ⌊nível ÷ 2⌋, mínimo 1. Rerrola o d20 e mantém o melhor entre os dois.',
   },
+  {
+    id: 'ec-pistoleiro-iniciado', name: 'Pistoleiro Iniciado', tier: 2, specialization: 'Especialista em Combate',
+    flavor: 'Atirando com volatilidade, você impõe mais poder em troca de um risco maior.',
+    mechanic: 'Antes da jogada de ataque com uma arma de fogo, você pode aumentar a margem de Emperrar em 2 e, em troca, causar 1 dado de dano adicional caso acerte.',
+    activation: 'free',
+    triggerText: 'Interruptor "Pistoleiro Iniciado" na aba de Ataque, antes de rolar.',
+    logicText: 'Emperra em 1 natural (base) ou 1-3 com a habilidade. Emperrar = erro automático e a arma trava até uma Ação Comum de desemperrar. Acertando, +1 dado da arma (dobra em crítico).',
+  },
+  {
+    id: 'ec-posicionamento-ameacador', name: 'Posicionamento Ameaçador', tier: 2, specialization: 'Especialista em Combate',
+    flavor: 'Você se posiciona de maneira estratégica, sendo reconhecido como ameaça constante.',
+    mechanic: 'A menos que esteja furtivo, você pode conceder os benefícios de Flanco para aliados mesmo usando armas à distância ou de fogo, desde que o alvo esteja dentro do primeiro alcance da sua arma.',
+    activation: 'passive',
+    triggerText: 'Sempre ativa, com arma à distância/de fogo empunhada.',
+    logicText: 'Você conta como um dos flanqueadores à distância (1º alcance). Com Flanqueador Superior, o alvo recebe −2 em TRs. Ficar furtivo ou sair do alcance encerra o efeito.',
+  },
+  {
+    id: 'ec-precisao-definitiva', name: 'Precisão Definitiva', tier: 2, specialization: 'Especialista em Combate',
+    flavor: 'Você canaliza energia amaldiçoada na arma para alcançar precisão definitiva.',
+    mechanic: 'Ao fazer um ataque, gaste 1 PE para receber +2 na rolagem de acerto. A cada quatro níveis, pode gastar 1 ponto a mais para aumentar o bônus em +2. Você também pode adicionar esse bônus na rolagem de dano, com +4 por ponto em vez de +2.',
+    activation: 'free', peCost: 1,
+    triggerText: 'Seletor "Precisão Definitiva" na aba de Ataque, antes de rolar.',
+    logicText: 'Máximo de PE = 1 + ⌊nível ÷ 4⌋. Escolha antes do ataque: +2 acerto por PE OU +4 dano por PE.',
+  },
 ];
+
 
 // ===== Registry global =====================================================
 

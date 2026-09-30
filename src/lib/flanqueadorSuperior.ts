@@ -8,6 +8,8 @@
 import type { Character } from '@/types';
 import { isEspecialistaCombate } from '@/lib/combateEstilos';
 import { charsDistanceMeters, TOUCH_RANGE_M, type TouchEntity, type TouchGrid } from '@/lib/touchRange';
+import { ameacaADistancia } from '@/lib/posicionamentoAmeacador';
+
 
 export const FLANQUEADOR_SUPERIOR_ID = 'ec-flanqueador-superior';
 export const FLANQUEADOR_TR_PENALIDADE = -2;
@@ -48,7 +50,10 @@ export function estaFlanqueando(
 ): boolean {
   if (esp.id === alvo.id) return false;
   if (mesmoLado(esp, alvo)) return false;
-  if (!adjacentes(esp.id, alvo.id, entities, grid)) return false;
+  // Posicionamento Ameaçador permite flanquear à distância (1º alcance da arma).
+  const ameaca = adjacentes(esp.id, alvo.id, entities, grid)
+    || ameacaADistancia(esp, alvo, entities as never, grid);
+  if (!ameaca) return false;
   return characters.some(
     (ch) =>
       ch.id !== esp.id &&
@@ -57,6 +62,7 @@ export function estaFlanqueando(
       adjacentes(ch.id, alvo.id, entities, grid),
   );
 }
+
 
 /** −2 se algum Especialista com Flanqueador Superior estiver flanqueando o alvo. */
 export function penalidadeTRFlanqueado(

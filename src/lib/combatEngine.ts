@@ -33,6 +33,9 @@ import {
 import { arremessosPotentesStep } from '@/lib/arremessosPotentes';
 import { golpesPotentesStep, golpesPotentesDano, GOLPES_POTENTES_DANO } from '@/lib/golpesPotentes';
 import { extensaoAtaqueBonus } from '@/lib/extensaoCorpo';
+import { ehArmaDeFogo, margemEmperrar, emperrou as emperrouArma } from '@/lib/pistoleiroIniciado';
+import { precisaoBonus } from '@/lib/precisaoDefinitiva';
+
 import { aggregateTalentBonuses } from '@/lib/talentEffects';
 import { getTalentById } from '@/lib/talents';
 import { consumeAdvantageFor, consumeFlatBonusFor } from '@/lib/omni/rollAdvantage';
@@ -71,7 +74,13 @@ export interface AttackSituation {
   devastacaoHit?: number;
   /** Postura da Fortuna: pode rerrolar d20 baixo. */
   fortuna?: boolean;
+  /** Pistoleiro Iniciado: margem de Emperrar +2 e +1 dado de dano. */
+  pistoleiro?: boolean;
+  /** Precisão Definitiva: PE gastos e destino do bônus. */
+  precisaoPe?: number;
+  precisaoModo?: 'acerto' | 'dano';
 }
+
 
 export interface AttackContext {
   attacker: Character;
@@ -99,6 +108,9 @@ export interface AttackResult {
   hit: boolean;
   critical: boolean;
   criticalFail: boolean;
+  /** Arma de fogo emperrou nesta jogada (precisa de Ação Comum para soltar). */
+  emperrou?: boolean;
+
   damageDice: string;
   damageRolls: number[];
   damageTotal: number;
@@ -350,6 +362,23 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
   const desf = Math.min(3, Math.max(0, ctx.situation.golpeDesfocado ?? 0));
   if (desf) { ctxBonus.hit -= 4 * desf; ctxBonus.notes.push(`Golpe Especial Desfocado: −${4 * desf} acerto`); }
 
+  // Pistoleiro Iniciado: margem de Emperrar +2 em troca de +1 dado de dano.
+  const pistoleiroOn = !!ctx.situation.pistoleiro && ehArmaDeFogo(w);
+  if (pistoleiroOn) {
+    ctxBonus.bonusDice += 1;
+    ctxBonus.notes.push(`Pistoleiro Iniciado: +1 dado de dano · margem de Emperrar ${margemEmperrar(w, true)} (1-${margemEmperrar(w, true)})`);
+  }
+  // Precisão Definitiva: PE convertidos em acerto (+2/PE) ou dano (+4/PE).
+  const precPe = Math.max(0, Math.floor(ctx.situation.precisaoPe ?? 0));
+  if (precPe > 0) {
+    const modo = ctx.situation.precisaoModo === 'dano' ? 'dano' : 'acerto';
+    const b = precisaoBonus(precPe, modo);
+    if (modo === 'dano') ctxBonus.damageFlat += b;
+    else ctxBonus.hit = (ctxBonus.hit ?? 0) + b;
+    ctxBonus.notes.push(`Precisão Definitiva: ${precPe} PE → +${b} ${modo === 'dano' ? 'no dano' : 'no acerto'}`);
+  }
+
+
   // Margem crítica (menor = mais fácil)
   const baseCrit = w.critRange ?? 20;
   const critRange = Math.max(2, baseCrit - ctxBonus.critRangeBonus);
@@ -383,7 +412,10 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
   }
   const natural = d20;
   const criticalFail = natural === 1 && !consumeCritNegated(ctx.attacker.id);
-  const critical = natural >= critRange;
+  // Emperrar: 1 natural (regra base) ou até 3 com Pistoleiro Iniciado declarado.
+  const jammed = emperrouArma(natural, w, pistoleiroOn);
+  const critical = !jammed && natural >= critRange;
+
 
   // Modificadores
   const mods: AttackResult['modifiers'] = [];
@@ -400,7 +432,7 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
   }
 
   const attackTotal = natural + mods.reduce((a, m) => a + m.value, 0);
-  const hit = !criticalFail && (critical || attackTotal >= ctx.targetDefense);
+  const hit = !criticalFail && !jammed && (critical || attackTotal >= ctx.targetDefense);
 
   // Dano: aplica step + dados extras + crítico (Mortal/Fatal)
   let finalDice: DamageDice = stepDamage(baseDice, ctxBonus.damageStepDelta);
@@ -465,9 +497,12 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
       notes.push('🛡 Guarda Infalível: inimigo NÃO ganha reação por essa falha.');
     }
   }
+  if (jammed) notes.push(`🔧 ${w.name} EMPERROU (d20 ${natural} ≤ margem ${margemEmperrar(w, pistoleiroOn)}) — ação comum para desemperrar.`);
 
   return {
     d20: natural, attackRolls, rollMode, natural, attackTotal, hit, critical, criticalFail,
+    emperrou: jammed,
+
     damageDice: formatDamage(finalDice),
     damageRolls, damageTotal,
     damageType: w.damageType,

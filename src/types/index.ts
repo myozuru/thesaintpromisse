@@ -517,6 +517,9 @@ export interface Character {
   attacksThisTurn?: number;
   /** Arremessos Potentes: turno (rodada:id) em que o PE foi gasto para ignorar RD. */
   arremessosPotentesTurnKey?: string;
+  /** Pistoleiro Iniciado / Emperrar: nome da arma de fogo travada (null = nenhuma). */
+  armaEmperrada?: string | null;
+
   /** Arsenal Cíclico: rodada em que a troca livre extra foi usada. */
   arsenalFreeSwapRound?: number;
   /** Arsenal Cíclico: grupo da última arma usada para atacar e em que rodada. */

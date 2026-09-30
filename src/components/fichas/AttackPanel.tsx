@@ -50,6 +50,9 @@ import { posturaAtiva, fortitudeMod, imuneMovimentoForcado, hasAssumirPostura, p
 import { PosturasPanel } from '@/components/fichas/PosturasPanel';
 import { arsenalRegistroAtaque, arsenalBonusAtivo, hasArsenalCiclico } from '@/lib/arsenalCiclico';
 import { hasArremessosPotentes, podeAtivarArremessos, arremessosAtivo, arremessosRdIgnorada, turnKeyFor } from '@/lib/arremessosPotentes';
+import { hasPistoleiroIniciado, podeUsarPistoleiro, armaEstaEmperrada, ehArmaDeFogo, margemEmperrar } from '@/lib/pistoleiroIniciado';
+import { hasPrecisaoDefinitiva, precisaoPeMax, precisaoBonus, podeUsarPrecisao, type PrecisaoModo } from '@/lib/precisaoDefinitiva';
+
 import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import { extensaoAlcanceBonus } from '@/lib/extensaoCorpo';
 import { penalidadeTRFlanqueado } from '@/lib/flanqueadorSuperior';
@@ -325,6 +328,23 @@ export function AttackPanel({ character: cProp }: Props) {
     });
     addLog('combat', `🎯 Arremessos Potentes: ${c.name} gasta 1 PE — arremessos ignoram ${getTrainingBonusByLevel(c.level ?? 1)} de RD neste turno.`);
   };
+  // ─── Pistoleiro Iniciado / Precisão Definitiva (Especialista em Combate) ──
+  const temPistoleiro = hasPistoleiroIniciado(cVivo);
+  const pistoleiroCheck = podeUsarPistoleiro(cVivo, mainWeapon);
+  const [pistoleiroOn, setPistoleiroOn] = useState(false);
+  const armaTravada = armaEstaEmperrada(cVivo, mainWeapon);
+  const temPrecisao = hasPrecisaoDefinitiva(cVivo);
+  const precisaoMax = precisaoPeMax(cVivo);
+  const [precisaoPe, setPrecisaoPe] = useState(0);
+  const [precisaoModo, setPrecisaoModo] = useState<PrecisaoModo>('acerto');
+  const handleDesemperrar = () => {
+    const fresh = useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c;
+    const nome = fresh.armaEmperrada;
+    if (!nome) return;
+    useCharacterStore.getState().updateCharacter(c.id, { armaEmperrada: null });
+    addLog('combat', `🔧 ${c.name} gasta uma Ação Comum e desemperra ${nome}.`);
+  };
+
   /** RD ignorada por este ataque (Penetrante + Arremessos Potentes). */
   const devRdRef = useRef(0);
   const rdIgnoradaAtaque = (penetrante: boolean, devastacaoRd = 0): number =>
@@ -386,6 +406,23 @@ export function AttackPanel({ character: cProp }: Props) {
       addLog('combat', `⚠️ ${c.name} não tem arma equipada na mão principal.`);
       return;
     }
+    // ─── Emperrar: arma de fogo travada não dispara ─────────────────────────
+    if (armaEstaEmperrada(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, mainWeapon)) {
+      addLog('combat', `🚫 ${mainWeapon.name} está emperrada — gaste uma Ação Comum para desemperrar.`);
+      return;
+    }
+    // ─── Precisão Definitiva: gasta PE antes da jogada ──────────────────────
+    let precisaoUsada = 0;
+    if (!isReroll && temPrecisao && precisaoPe > 0) {
+      const fresh = useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c;
+      const chk = podeUsarPrecisao(fresh, precisaoPe);
+      if (!chk.ok) { addLog('combat', `🚫 Precisão Definitiva: ${chk.reason}`); return; }
+      precisaoUsada = precisaoPe;
+      useCharacterStore.getState().updateCharacter(c.id, { peCurrent: Math.max(0, (fresh.peCurrent ?? 0) - precisaoUsada) });
+      addLog('combat', `🎯 Precisão Definitiva: ${c.name} gasta ${precisaoUsada} PE → +${precisaoBonus(precisaoUsada, precisaoModo)} ${precisaoModo === 'dano' ? 'no dano' : 'no acerto'}.`);
+    }
+    const pistoleiroUsado = temPistoleiro && pistoleiroOn && ehArmaDeFogo(mainWeapon);
+
     // ─── Artes do Combate: validações (sem gastar ainda) ────────────────────
     const artesAtivas = temArtes && arteCustoTotal > 0;
     if (artesAtivas) {
@@ -514,7 +551,11 @@ export function AttackPanel({ character: cProp }: Props) {
       weapon: mainWeapon,
       targetDefense: targetDef,
       situation: {
+        pistoleiro: pistoleiroUsado,
+        precisaoPe: temPrecisao ? precisaoPe : 0,
+        precisaoModo,
         devastacaoHit: devB.hit,
+
         twoHanded: usingTwoHanded || twoHanded,
         targetUnaware,
         targetProne,
@@ -543,9 +584,16 @@ export function AttackPanel({ character: cProp }: Props) {
     } finally {
       rollInFlightRef.current = false;
     }
+    // Emperrou: trava a arma até uma Ação Comum de desemperrar.
+    if (result.emperrou) {
+      useCharacterStore.getState().updateCharacter(c.id, { armaEmperrada: mainWeapon.name });
+      setPistoleiroOn(false);
+      addLog('combat', `🔧 ${mainWeapon.name} emperrou! O ataque falha automaticamente — gaste uma Ação Comum para desemperrar.`);
+    }
     // Auto-crit contra alvos Inconsciente / Indefeso / Paralisado (CaC).
     const auto = target ? getAutoCritFromConditions(target, attackKind) : null;
-    if (auto && !result.criticalFail) {
+
+    if (auto && !result.criticalFail && !result.emperrou) {
       const extraDamage = result.hit ? result.damageTotal : Math.max(0, ctx.abilityMod);
       result = {
         ...result,
@@ -1442,6 +1490,75 @@ export function AttackPanel({ character: cProp }: Props) {
             </p>
           </div>
         )}
+
+        {temPistoleiro && (
+          <div className="rounded-lg border border-primary/30 bg-background/40 p-2 space-y-1" data-testid="pistoleiro-iniciado">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-semibold text-foreground">Pistoleiro Iniciado</span>
+              {armaTravada ? (
+                <button
+                  type="button"
+                  onClick={handleDesemperrar}
+                  data-testid="desemperrar-arma"
+                  className="rounded-md border border-destructive/50 bg-destructive/10 px-2 py-1 text-xs font-semibold text-destructive"
+                >
+                  Desemperrar (Ação Comum)
+                </button>
+              ) : (
+                <ToggleChip
+                  on={pistoleiroOn}
+                  onChange={setPistoleiroOn}
+                  label={`Margem de Emperrar 1-${margemEmperrar(mainWeapon, true) || 3} · +1 dado`}
+                  disabled={!pistoleiroCheck.ok}
+                />
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {armaTravada
+                ? `${cVivo.armaEmperrada} está emperrada e não dispara até ser desemperrada.`
+                : pistoleiroCheck.ok
+                  ? 'Declarado antes do ataque: emperra em 1-3 no d20, mas causa 1 dado de dano adicional ao acertar.'
+                  : pistoleiroCheck.reason}
+            </p>
+          </div>
+        )}
+
+        {temPrecisao && (
+          <div className="rounded-lg border border-primary/30 bg-background/40 p-2 space-y-1" data-testid="precisao-definitiva">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span className="text-sm font-semibold text-foreground">Precisão Definitiva</span>
+              <div className="flex items-center gap-1">
+                <select
+                  aria-label="PE da Precisão Definitiva"
+                  data-testid="precisao-pe"
+                  value={precisaoPe}
+                  onChange={(e) => setPrecisaoPe(Number(e.target.value))}
+                  className="rounded-md border border-border bg-background px-1 py-0.5 text-xs"
+                >
+                  {Array.from({ length: precisaoMax + 1 }, (_, i) => i).map((n) => (
+                    <option key={n} value={n}>{n} PE</option>
+                  ))}
+                </select>
+                <select
+                  aria-label="Destino do bônus da Precisão Definitiva"
+                  data-testid="precisao-modo"
+                  value={precisaoModo}
+                  onChange={(e) => setPrecisaoModo(e.target.value as PrecisaoModo)}
+                  className="rounded-md border border-border bg-background px-1 py-0.5 text-xs"
+                >
+                  <option value="acerto">Acerto (+2/PE)</option>
+                  <option value="dano">Dano (+4/PE)</option>
+                </select>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {precisaoPe > 0
+                ? `Gastando ${precisaoPe} PE: +${precisaoBonus(precisaoPe, precisaoModo)} ${precisaoModo === 'dano' ? 'no dano' : 'no acerto'}. (PE: ${cVivo.peCurrent ?? 0})`
+                : `Até ${precisaoMax} PE por ataque no seu nível. (PE: ${cVivo.peCurrent ?? 0})`}
+            </p>
+          </div>
+        )}
+
 
         {temGolpe && (
           <GolpeEspecialSection
