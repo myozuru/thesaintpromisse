@@ -51,6 +51,9 @@ import { PosturasPanel } from '@/components/fichas/PosturasPanel';
 import { arsenalRegistroAtaque, arsenalBonusAtivo, hasArsenalCiclico } from '@/lib/arsenalCiclico';
 import { hasArremessosPotentes, podeAtivarArremessos, arremessosAtivo, arremessosRdIgnorada, turnKeyFor } from '@/lib/arremessosPotentes';
 import { getTrainingBonusByLevel } from '@/lib/levelEngine';
+import { extensaoAlcanceBonus } from '@/lib/extensaoCorpo';
+import { penalidadeTRFlanqueado } from '@/lib/flanqueadorSuperior';
+import { hasDisparosSincronizados, podeSincronizar } from '@/lib/disparosSincronizados';
 import { cn } from '@/lib/utils';
 
 interface Props { character: Character; }
@@ -207,7 +210,7 @@ export function AttackPanel({ character: cProp }: Props) {
   const targetDef = target ? autoDefense : (defenseOverride ?? 15);
 
   // ─── Alcance da arma no mapa (grade, borda a borda) ──────────────────────
-  const meleeRangeBonus = (c as { meleeRangeBonus?: number }).meleeRangeBonus ?? 0;
+  const meleeRangeBonus = ((c as { meleeRangeBonus?: number }).meleeRangeBonus ?? 0) + extensaoAlcanceBonus(c);
   const weaponRangeBase = mainWeapon ? weaponMaxRangeMeters(mainWeapon, meleeRangeBonus) : null;
   const weaponRangeM = weaponRangeBase !== null ? weaponRangeBase * posturaAlcanceMult(c) : null;
   const mapIdentities = target
@@ -808,6 +811,15 @@ export function AttackPanel({ character: cProp }: Props) {
     if (target && result.damageTotal > 0) void explosaoDragao(target, result.damageTotal, result.damageType ?? undefined);
   };
 
+  // Fortitude do alvo já com a penalidade de Flanqueador Superior (−2 em TRs).
+  const trFortitude = (alvo: Character): number => {
+    const ms = useMapStore.getState();
+    return (
+      fortitudeMod(alvo) +
+      penalidadeTRFlanqueado(alvo, useCharacterStore.getState().characters, ms.entities as never, ms.gridConfig as never)
+    );
+  };
+
   // Postura da Devastação: acumula acertos no mesmo alvo; trocar de alvo zera.
   const registrarDevastacao = (alvoId: string, acertou: boolean) => {
     const eu = useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c;
@@ -827,7 +839,7 @@ export function AttackPanel({ character: cProp }: Props) {
     const jaCaido = (vivo.activeConditions ?? []).some((x) => x.conditionId === 'caido');
     const cd = specDCFor(eu);
     const d20 = await rollD20Com(vivo.id);
-    const mod = fortitudeMod(vivo);
+    const mod = trFortitude(vivo);
     const passou = d20 + mod >= cd;
     const efeito = jaCaido ? 'fica Imóvel até o começo do turno de ' + eu.name : 'fica Caído';
     addLog('combat', `🌩️ Postura da Tempestade: ${vivo.name} Fortitude d20 ${d20}${mod >= 0 ? '+' : ''}${mod} vs CD ${cd} → ${passou ? 'passou' : `falhou — ${efeito}`}.`);
@@ -861,7 +873,7 @@ export function AttackPanel({ character: cProp }: Props) {
       const casas = Math.max(Math.abs(e.x - tEnt.x), Math.abs(e.y - tEnt.y)) / cell;
       if (casas > 1.01) continue;
       const d20 = await rollD20Com(ch.id);
-      const mod = fortitudeMod(ch);
+      const mod = trFortitude(ch);
       const passou = d20 + mod >= cd;
       addLog('combat', `🐉 Postura do Dragão: ${ch.name} Fortitude d20 ${d20}${mod >= 0 ? '+' : ''}${mod} vs CD ${cd} → ${passou ? 'passou' : `falhou — sofre ${meio} de dano`}.`);
       if (!passou) applyDamage(ch.id, meio, tipo as never, { attackerId: c.id, tags: ['__dragao'] });
@@ -895,7 +907,7 @@ export function AttackPanel({ character: cProp }: Props) {
 
   const empurrarImpactante = async (alvo: Character, dano: number) => {
     const cd = specDCFor(c);
-    const conMod = fortitudeMod(alvo);
+    const conMod = trFortitude(alvo);
     const d20 = await rollD20Com(alvo.id);
     const passou = d20 + conMod >= cd;
     const metros = impactanteMeters(dano, passou);
