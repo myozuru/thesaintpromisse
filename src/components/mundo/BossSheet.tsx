@@ -199,12 +199,15 @@ export function BossSheet({ bossId, isMaster, onClose }: Props) {
 
         {/* Abas */}
         <div className="flex gap-1 px-4 pt-3">
-          {([
-            ['geral', 'Geral', Sparkles],
-            ['combate', 'Combate', Shield],
-            ['habilidades', 'Habilidades', Swords],
-            ...(isMaster ? [['mestre', 'Mestre', EyeOff] as const] : []),
-          ] as [typeof tab, string, React.ElementType][]).map(([id, label, Icon]) => (
+          {(() => {
+            const tabs: { id: typeof tab; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
+              { id: 'geral', label: 'Geral', Icon: Sparkles },
+              { id: 'combate', label: 'Combate', Icon: Shield },
+              { id: 'habilidades', label: 'Habilidades', Icon: Swords },
+            ];
+            if (isMaster) tabs.push({ id: 'mestre', label: 'Mestre', Icon: EyeOff });
+            return tabs;
+          })().map(({ id, label, Icon }) => (
             <button
               key={id}
               type="button"
