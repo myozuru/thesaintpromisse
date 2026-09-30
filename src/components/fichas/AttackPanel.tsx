@@ -58,6 +58,9 @@ import { extensaoAlcanceBonus } from '@/lib/extensaoCorpo';
 import { penalidadeTRFlanqueado } from '@/lib/flanqueadorSuperior';
 import { hasDisparosSincronizados, podeSincronizar } from '@/lib/disparosSincronizados';
 import { GolpeFalsoSection } from './GolpeFalsoSection';
+import { TiroFalsoSection } from './TiroFalsoSection';
+import { RevigorarButton } from './RevigorarButton';
+
 import { cn } from '@/lib/utils';
 
 interface Props { character: Character; }
@@ -1384,6 +1387,13 @@ export function AttackPanel({ character: cProp }: Props) {
 
         {/* ─── Golpe Falso (reação) ───────────────────────────────────────── */}
         <GolpeFalsoSection character={c} target={target} />
+
+        {/* ─── Tiro Falso (reação) ────────────────────────────────────────── */}
+        <TiroFalsoSection character={c} target={target} />
+
+        {/* ─── Revigorar (ação bônus) ─────────────────────────────────────── */}
+        <RevigorarButton character={c} />
+
 
 
 

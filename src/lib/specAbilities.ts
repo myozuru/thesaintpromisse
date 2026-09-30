@@ -1678,7 +1678,32 @@ const ESPECIALISTA_COMBATE: SpecAbility[] = [
     triggerText: 'Seletor "Precisão Definitiva" na aba de Ataque, antes de rolar.',
     logicText: 'Máximo de PE = 1 + ⌊nível ÷ 4⌋. Escolha antes do ataque: +2 acerto por PE OU +4 dano por PE.',
   },
+  {
+    id: 'ec-presenca-suprimida', name: 'Presença Suprimida', tier: 2, specialization: 'Especialista em Combate',
+    flavor: 'A furtividade e a discrição podem ser essenciais em um combate.',
+    mechanic: 'Você recebe +2 em rolagens de Furtividade. Sua penalidade em Furtividade por atacar e fazer outras ações chamativas é reduzida para −5.',
+    activation: 'passive',
+    triggerText: 'Sempre ativa. Na rolagem de Furtividade há a opção "após ataque / ação chamativa".',
+    logicText: '+2 fixo em Furtividade. Penalidade por ação chamativa: −5 (em vez de −10).',
+  },
+  {
+    id: 'ec-revigorar', name: 'Revigorar', tier: 2, specialization: 'Especialista em Combate',
+    flavor: 'Você é capaz de focar e recuperar seu vigor em meio ao combate.',
+    mechanic: 'Ação Bônus para se curar em 1d10 + o dobro do seu modificador de Constituição + bônus de treinamento, aumentando em um dado a cada 4 níveis. Usos iguais ao bônus de treinamento; recupera tudo no descanso longo e metade no curto.',
+    activation: 'bonus', usage: { max: 'training', scope: 'rest_long' },
+    triggerText: 'Botão "Revigorar" na aba de Ataque da ficha.',
+    logicText: 'Cura = Nd10 + 2×Mod.CON + Bônus de Treinamento, com N = 1 + dados extras nos níveis 4, 8, 12, 16 e 20. Gasta 1 ação bônus e 1 uso. Descanso curto devolve ⌊usos máximos ÷ 2⌋.',
+  },
+  {
+    id: 'ec-tiro-falso', name: 'Tiro Falso', tier: 2, specialization: 'Especialista em Combate',
+    flavor: 'Você finge falsos disparos, distraindo um inimigo.',
+    mechanic: 'Como reação a um aliado atacando um inimigo dentro do seu alcance de ataque, empunhando uma arma à distância ou de fogo, o inimigo faz um TR de Astúcia. Se falhar, seu aliado recebe vantagem no teste de ataque.',
+    activation: 'reaction',
+    triggerText: 'Painel de Ataque — seção "Tiro Falso" (sua ficha) e aviso na ficha do aliado.',
+    logicText: 'Exige arma à distância ou de fogo. Alcance = alcance máximo da arma. TR de Astúcia vs CD de Especialização. Falha → vantagem no próximo ataque do aliado.',
+  },
 ];
+
 
 
 // ===== Registry global =====================================================

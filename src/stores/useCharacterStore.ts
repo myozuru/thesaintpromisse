@@ -51,6 +51,8 @@ import {
   isCamActive,
 } from '@/lib/camCores';
 import { getSpecAbilityById, resolveUsageMax as resolveSpecUsageMax } from '@/lib/specAbilities';
+
+
 import { getTalentById, resolveTalentUsageMax } from '@/lib/talents';
 import { aggregateTalentBonuses, computeDiscursoMotivador } from '@/lib/talentEffects';
 import { getShieldById, effectiveShieldRD } from '@/lib/shields';
@@ -4359,6 +4361,17 @@ export const useCharacterStore = create<CharacterStore>()(
               const ab = getSpecAbilityById(aid);
               if (ab?.usage?.scope !== 'rest_short') specUsage[aid] = used;
             }
+            // Revigorar (EC Nv2): descanso curto devolve METADE dos usos máximos (p/ baixo).
+            // Lógica inline para não criar ciclo de import com '@/lib/revigorar'.
+            const revUsados = specUsage['ec-revigorar'];
+            if (revUsados !== undefined) {
+              const revMax = Math.max(1, getTrainingBonusByLevel(c.level ?? 1));
+              const restante = Math.max(0, revUsados - Math.floor(revMax / 2));
+              if (restante <= 0) delete specUsage['ec-revigorar'];
+              else specUsage['ec-revigorar'] = restante;
+            }
+
+
             const auraUsage: Record<string, number> = {};
             for (const [aid, used] of Object.entries(c.auraAptitudeUsage ?? {})) {
               const apt = getAuraAptitudeById(aid);
