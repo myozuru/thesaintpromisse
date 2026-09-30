@@ -590,7 +590,7 @@ export function AttackPanel({ character: cProp }: Props) {
     // Auto-crit contra alvos Inconsciente / Indefeso / Paralisado (CaC).
     const auto = target ? getAutoCritFromConditions(target, attackKind) : null;
 
-    if (auto && !result.criticalFail) {
+    if (auto && !result.criticalFail && !result.emperrou) {
       const extraDamage = result.hit ? result.damageTotal : Math.max(0, ctx.abilityMod);
       result = {
         ...result,
