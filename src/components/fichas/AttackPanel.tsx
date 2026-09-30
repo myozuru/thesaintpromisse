@@ -45,6 +45,8 @@ import {
   execucaoSilenciosaDice,
 } from '@/lib/artesCombate';
 import { renovacaoSangueAtiva, aplicarRenovacao } from '@/lib/renovacaoSangue';
+import { hasArremessosPotentes, podeAtivarArremessos, arremessosAtivo, arremessosRdIgnorada, turnKeyFor } from '@/lib/arremessosPotentes';
+import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import { cn } from '@/lib/utils';
 
 interface Props { character: Character; }
@@ -291,6 +293,28 @@ export function AttackPanel({ character: c }: Props) {
   const [amploTargetId, setAmploTargetId] = useState<string>('');
   const combatRound = useCombatStore((s) => s.round);
   const combatTurnIdx = useCombatStore((s) => s.currentTurnIndex);
+  const turnInfo = {
+    inCombat,
+    round: combatRound,
+    currentCharId: initiativeOrder[combatTurnIdx]?.charId ?? null,
+  };
+  const cVivo = useCharacterStore((s) => s.characters.find((x) => x.id === c.id)) ?? c;
+  const temArremessos = hasArremessosPotentes(cVivo);
+  const arremessosLigado = arremessosAtivo(cVivo, turnInfo);
+  const arremessosCheck = podeAtivarArremessos(cVivo, turnInfo);
+  const handleAtivarArremessos = () => {
+    const fresh = useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c;
+    const chk = podeAtivarArremessos(fresh, turnInfo);
+    if (!chk.ok) { addLog('combat', `🚫 Arremessos Potentes: ${chk.reason}`); return; }
+    useCharacterStore.getState().updateCharacter(c.id, {
+      peCurrent: Math.max(0, (fresh.peCurrent ?? 0) - 1),
+      arremessosPotentesTurnKey: turnKeyFor(turnInfo.round, c.id),
+    });
+    addLog('combat', `🎯 Arremessos Potentes: ${c.name} gasta 1 PE — arremessos ignoram ${getTrainingBonusByLevel(c.level ?? 1)} de RD neste turno.`);
+  };
+  /** RD ignorada por este ataque (Penetrante + Arremessos Potentes). */
+  const rdIgnoradaAtaque = (penetrante: boolean): number =>
+    (penetrante ? penetranteRD(c) : 0) + (mainWeapon ? arremessosRdIgnorada(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, mainWeapon, turnInfo) : 0);
   const golpeTurnKey = `${combatRound}:${combatTurnIdx}`;
   const precisoUsado = precisoUsesThisTurn(c.id, golpeTurnKey);
   const golpeAtivo = temGolpe && isGolpeAtivo(golpeSel);
@@ -549,6 +573,11 @@ export function AttackPanel({ character: c }: Props) {
           addLog('combat', `⚔️ Golpe Amplo: ${c.name} atinge também ${alvo2.name}: d20 ${r2.natural} · total ${r2.attackTotal} → ${r2.criticalFail ? '💀 falha crítica' : r2.critical ? '💥 CRÍTICO' : r2.hit ? '✅ acerto' : '❌ erro'}${r2.hit ? ` · dano ${r2.damageTotal} (${r2.damageDice})` : ''}`);
           if (r2.hit && g.sel.sanguinario) aplicarSangramento(alvo2, g.sel.sanguinario);
           if (r2.hit && g.sel.penetrante) addLog('combat', `   ↳ Penetrante: ignora ${penetranteRD(c)} de RD.`);
+          if (r2.hit && r2.damageTotal > 0) {
+            applyDamage(alvo2.id, r2.damageTotal, (r2.damageType ?? undefined) as never, {
+              attackerId: c.id, isMelee: mainWeapon.range === 'melee', rdIgnore: rdIgnoradaAtaque(!!g.sel.penetrante),
+            });
+          }
           if (r2.hit && r2.critical) checarRenovacaoCritico(true, alvo2.name);
         }
       }
@@ -727,6 +756,15 @@ export function AttackPanel({ character: c }: Props) {
     const g = golpeRollRef.current;
     golpeRollRef.current = null;
     if (g?.sel.penetrante) addLog('combat', `   ↳ Penetrante: ignora ${penetranteRD(c)} de RD.`);
+    const rdIgn = rdIgnoradaAtaque(!!g?.sel.penetrante);
+    if (mainWeapon && arremessosRdIgnorada(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, mainWeapon, turnInfo) > 0) {
+      addLog('combat', `   ↳ Arremessos Potentes: ignora ${arremessosRdIgnorada(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, mainWeapon, turnInfo)} de RD.`);
+    }
+    if (target && result.damageTotal > 0) {
+      applyDamage(target.id, result.damageTotal, (result.damageType ?? undefined) as never, {
+        attackerId: c.id, isMelee: mainWeapon.range === 'melee', rdIgnore: rdIgn,
+      });
+    }
     if (g?.sel.impactante && g.target) void empurrarImpactante(g.target, result.damageTotal);
   };
 
@@ -806,6 +844,10 @@ export function AttackPanel({ character: c }: Props) {
       `🎯 Arremesso Ágil: ${c.name} ataca ${alvo2.name} com ${arma.name} (ação livre): d20 ${r.natural} · total ${r.attackTotal} → ${r.critical ? '💥 CRÍTICO' : r.hit ? '✅ acerto' : '❌ erro'}${r.hit ? ` · dano ${r.damageTotal} (${r.damageDice})` : ''}`,
     );
     recordAttackResult(c.id, r.hit);
+    if (r.hit && r.damageTotal > 0) {
+      const ign = arremessosRdIgnorada(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, arma, turnInfo);
+      applyDamage(alvo2.id, r.damageTotal, (r.damageType ?? undefined) as never, { attackerId: c.id, isMelee: false, rdIgnore: ign });
+    }
     if (r.hit && r.critical) checarRenovacaoCritico(true, alvo2.name);
     setArremessoTargetId('');
   };
@@ -833,6 +875,12 @@ export function AttackPanel({ character: c }: Props) {
     if (r2.damageTotal > lastResult.damageTotal) {
       setLastResult({ ...lastResult, damageTotal: r2.damageTotal, damageRolls: r2.damageRolls, canRerollDamage: false });
       addLog('combat', `🎲 Ataque Infalível: novo dano ${r2.damageTotal} (substituiu ${lastResult.damageTotal}).`);
+      // O dano original já foi aplicado: aplica só a diferença (sem RD de novo).
+      if (target) {
+        applyDamage(target.id, r2.damageTotal - lastResult.damageTotal, (lastResult.damageType ?? undefined) as never, {
+          attackerId: c.id, isMelee: mainWeapon.range === 'melee', ignoresRD: true,
+        });
+      }
     } else {
       setLastResult({ ...lastResult, canRerollDamage: false });
       addLog('combat', `🎲 Ataque Infalível: dano original mantido (${lastResult.damageTotal} ≥ ${r2.damageTotal}).`);
@@ -1177,6 +1225,30 @@ export function AttackPanel({ character: c }: Props) {
               <ToggleChip on={arteGolpe} onChange={setArteGolpe} label={`Golpe Descendente (1 PP) · +${metadeSab(c)} Def sua`} disabled={preparoAtual < 1 || mainWeapon?.range !== 'melee'} />
               <ToggleChip on={arteInvestida} onChange={setArteInvestida} label={`Investida Imediata (2 PP) · ${investidaMoveMeters(c).toLocaleString('pt-BR')} m`} disabled={preparoAtual < 2 || !target} />
             </div>
+          </div>
+        )}
+
+        {temArremessos && (
+          <div className="rounded-lg border border-primary/30 bg-background/40 p-2 space-y-1" data-testid="arremessos-potentes">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-semibold text-foreground">Arremessos Potentes</span>
+              {arremessosLigado ? (
+                <span className="text-xs font-semibold text-primary">Ativo neste turno</span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleAtivarArremessos}
+                  disabled={!arremessosCheck.ok}
+                  className="rounded-md border border-primary/40 bg-primary/10 px-2 py-1 text-xs font-semibold text-primary disabled:opacity-50"
+                >
+                  Gastar 1 PE
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Arremessos: +1 nível de dano. Com 1 PE no começo do turno, ignoram {getTrainingBonusByLevel(c.level ?? 1)} de RD.
+              {!arremessosLigado && !arremessosCheck.ok && arremessosCheck.reason ? ` (${arremessosCheck.reason})` : ''}
+            </p>
           </div>
         )}
 

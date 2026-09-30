@@ -1579,12 +1579,42 @@ const SUPORTE: SpecAbility[] = [
   },
 ];
 
+
+// ===== Especialista em Combate =============================================
+const ESPECIALISTA_COMBATE: SpecAbility[] = [
+  {
+    id: 'ec-arremessos-potentes', name: 'Arremessos Potentes', tier: 2, specialization: 'Especialista em Combate',
+    flavor: 'Você se torna capaz de arremessar armas com mais potência.',
+    mechanic: 'Ataques com armas de arremesso contam como um nível de dano acima. No começo do seu turno, pode gastar 1 PE para que seus ataques com armas de arremesso ignorem RD igual ao seu bônus de treinamento.',
+    activation: 'free', peCost: 1,
+    triggerText: 'Botão na aba de Ataque, no começo do seu turno (antes de atacar).',
+    logicText: 'Dado da arma de arremesso sobe 1 passo sempre. Com PE gasto, a RD do alvo é reduzida pelo bônus de treinamento até o fim do turno.',
+  },
+  {
+    id: 'ec-arsenal-ciclico', name: 'Arsenal Cíclico', tier: 2, specialization: 'Especialista em Combate',
+    flavor: 'Você mantém uma ciclagem do seu arsenal para golpear com eficiência.',
+    mechanic: 'Uma vez por rodada, pode sacar ou trocar um item com uma ação livre. Ao golpear com um grupo de armas e trocar para uma arma de outro grupo na mesma rodada ou na próxima, recebe +1 dado de dano até o fim do seu próximo turno com a arma trocada.',
+    activation: 'free', usage: { max: 1, scope: 'round' },
+    triggerText: 'Troca de arma em combate.',
+    logicText: 'Grupo = grupo da arma (Faca, Espada, Arco…).',
+  },
+  {
+    id: 'ec-assumir-postura', name: 'Assumir Postura', tier: 2, specialization: 'Especialista em Combate',
+    flavor: 'A postura que você mantém em combate molda suas capacidades.',
+    mechanic: 'Você aprende uma das oito posturas de combate (mais uma nos níveis 8 e 16). Entrar em uma postura é uma ação bônus e dura 1 minuto ou até ser derrubado, ficar incapacitado ou trocar de postura. Usos iguais ao bônus de treinamento.',
+    activation: 'bonus', usage: { max: 'training', scope: 'rest_long' },
+    triggerText: 'Aba de Posturas na barra de combate.',
+    logicText: 'Sol, Lua, Terra, Dragão, Fortuna, Devastação (nv 6), Tempestade (nv 10), Céu (nv 12).',
+  },
+];
+
 // ===== Registry global =====================================================
 
 const REGISTRY: Partial<Record<Specialization, SpecAbility[]>> = {
   Lutador: LUTADOR,
   'Especialista em Técnica': ESPECIALISTA_TECNICA,
   Suporte: SUPORTE,
+  'Especialista em Combate': ESPECIALISTA_COMBATE,
 };
 
 export function getSpecAbilitiesFor(spec: Specialization): SpecAbility[] {
