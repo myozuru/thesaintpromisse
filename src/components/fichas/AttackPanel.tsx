@@ -45,6 +45,7 @@ import {
   execucaoSilenciosaDice,
 } from '@/lib/artesCombate';
 import { renovacaoSangueAtiva, aplicarRenovacao } from '@/lib/renovacaoSangue';
+import { arsenalRegistroAtaque, arsenalBonusAtivo, hasArsenalCiclico } from '@/lib/arsenalCiclico';
 import { hasArremessosPotentes, podeAtivarArremessos, arremessosAtivo, arremessosRdIgnorada, turnKeyFor } from '@/lib/arremessosPotentes';
 import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import { cn } from '@/lib/utils';
@@ -509,6 +510,7 @@ export function AttackPanel({ character: c }: Props) {
         attackerIsGrappled,
         arteExecucao: artesAtivas && arteExecucao,
         ...golpeSit,
+        ...arsenalSit,
       },
       trainedRanges: [
         ...(c.meleeTrained ? (['melee'] as const) : []),
@@ -1119,6 +1121,14 @@ export function AttackPanel({ character: c }: Props) {
             </div>
           )}
         </div>
+
+        {hasArsenalCiclico(c) && inCombat && (
+          <div className="rounded-md border border-primary/30 bg-background/40 px-2 py-1 text-[11px] text-muted-foreground" data-testid="arsenal-ciclico">
+            <b className="text-foreground">Arsenal Cíclico</b>
+            {' · '}troca livre extra: {c.arsenalFreeSwapRound === combatRound ? 'usada nesta rodada' : 'disponível'}
+            {arsenalBonusAtivo(c, c.arsenalBonus?.weaponName, combatRound) && <> {' · '}<b className="text-primary">+1 dado com {c.arsenalBonus?.weaponName}</b></>}
+          </div>
+        )}
 
         {/* ─── ALVO ─────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-2 text-xs">
