@@ -164,7 +164,7 @@ describe('Técnicas de Avanço', () => {
     combate(['ana', 'bruno', 'caio']);
     render(<AttackPanel character={c} />);
     fireEvent.change(screen.getByTestId('avanco-alvo'), { target: { value: 'bruno' } });
-    forcarDados(20, 6, 6, 6, 20, 6, 6, 6);
+    forcarDados(...Array(16).fill(20));
     fireEvent.click(screen.getByTestId('sombra-descendente'));
     await waitFor(() => expect(screen.getByTestId('sombra-segundo')).toBeTruthy(), { timeout: 8000 });
     expect(pegarFicha('ana').actionsCurrent).toBe(0);
