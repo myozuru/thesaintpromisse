@@ -137,3 +137,13 @@ describe('Zona de Risco', () => {
     expect(screen.getByRole('dialog', { name: 'Zona de Risco' })).toBeTruthy();
   });
 });
+
+import { getAbilityMod as __gam, findAbilityAttr as __faa } from '@/lib/combatEngine';
+describe('atributos por nome completo', () => {
+  it('reconhece Força/Destreza (sem desvantagem falsa de Pesada)', () => {
+    const c = { attributes: [{ id: 'a', name: 'Força', value: 16 }, { id: 'b', name: 'Destreza', value: 12 }] } as never;
+    expect(__faa(c, 'FOR')?.value).toBe(16);
+    expect(__gam(c, 'FOR')).toBe(3);
+    expect(__gam(c, 'DES')).toBe(1);
+  });
+});
