@@ -4,7 +4,7 @@ import { useLogStore } from '@/stores/useLogStore';
 import { Button } from '@/components/ui/button';
 import {
   POSTURAS, getPostura, podeAprender, podeEntrar, patchEntrar, posturaAtiva,
-  posturaUsosRestantes, posturaUsosMax, posturasLimite, type PosturaId,
+  posturaUsosRestantes, posturaUsosMax, posturasLimiteChar, type PosturaId,
 } from '@/lib/posturas';
 
 export function PosturasPanel({ charId, inCombat, round }: { charId: string; inCombat: boolean; round: number }) {
