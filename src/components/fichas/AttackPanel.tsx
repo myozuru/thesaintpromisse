@@ -298,9 +298,10 @@ export function AttackPanel({ character: c }: Props) {
     round: combatRound,
     currentCharId: initiativeOrder[combatTurnIdx]?.charId ?? null,
   };
-  const temArremessos = hasArremessosPotentes(c);
-  const arremessosLigado = arremessosAtivo(c, turnInfo);
-  const arremessosCheck = podeAtivarArremessos(c, turnInfo);
+  const cVivo = useCharacterStore((s) => s.characters.find((x) => x.id === c.id)) ?? c;
+  const temArremessos = hasArremessosPotentes(cVivo);
+  const arremessosLigado = arremessosAtivo(cVivo, turnInfo);
+  const arremessosCheck = podeAtivarArremessos(cVivo, turnInfo);
   const handleAtivarArremessos = () => {
     const fresh = useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c;
     const chk = podeAtivarArremessos(fresh, turnInfo);
@@ -313,7 +314,7 @@ export function AttackPanel({ character: c }: Props) {
   };
   /** RD ignorada por este ataque (Penetrante + Arremessos Potentes). */
   const rdIgnoradaAtaque = (penetrante: boolean): number =>
-    (penetrante ? penetranteRD(c) : 0) + (mainWeapon ? arremessosRdIgnorada(c, mainWeapon, turnInfo) : 0);
+    (penetrante ? penetranteRD(c) : 0) + (mainWeapon ? arremessosRdIgnorada(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, mainWeapon, turnInfo) : 0);
   const golpeTurnKey = `${combatRound}:${combatTurnIdx}`;
   const precisoUsado = precisoUsesThisTurn(c.id, golpeTurnKey);
   const golpeAtivo = temGolpe && isGolpeAtivo(golpeSel);
