@@ -1491,6 +1491,75 @@ export function AttackPanel({ character: cProp }: Props) {
           </div>
         )}
 
+        {temPistoleiro && (
+          <div className="rounded-lg border border-primary/30 bg-background/40 p-2 space-y-1" data-testid="pistoleiro-iniciado">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-semibold text-foreground">Pistoleiro Iniciado</span>
+              {armaTravada ? (
+                <button
+                  type="button"
+                  onClick={handleDesemperrar}
+                  data-testid="desemperrar-arma"
+                  className="rounded-md border border-destructive/50 bg-destructive/10 px-2 py-1 text-xs font-semibold text-destructive"
+                >
+                  Desemperrar (Ação Comum)
+                </button>
+              ) : (
+                <ToggleChip
+                  on={pistoleiroOn}
+                  onChange={setPistoleiroOn}
+                  label={`Margem de Emperrar 1-${margemEmperrar(mainWeapon, true) || 3} · +1 dado`}
+                  disabled={!pistoleiroCheck.ok}
+                />
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {armaTravada
+                ? `${cVivo.armaEmperrada} está emperrada e não dispara até ser desemperrada.`
+                : pistoleiroCheck.ok
+                  ? 'Declarado antes do ataque: emperra em 1-3 no d20, mas causa 1 dado de dano adicional ao acertar.'
+                  : pistoleiroCheck.reason}
+            </p>
+          </div>
+        )}
+
+        {temPrecisao && (
+          <div className="rounded-lg border border-primary/30 bg-background/40 p-2 space-y-1" data-testid="precisao-definitiva">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span className="text-sm font-semibold text-foreground">Precisão Definitiva</span>
+              <div className="flex items-center gap-1">
+                <select
+                  aria-label="PE da Precisão Definitiva"
+                  data-testid="precisao-pe"
+                  value={precisaoPe}
+                  onChange={(e) => setPrecisaoPe(Number(e.target.value))}
+                  className="rounded-md border border-border bg-background px-1 py-0.5 text-xs"
+                >
+                  {Array.from({ length: precisaoMax + 1 }, (_, i) => i).map((n) => (
+                    <option key={n} value={n}>{n} PE</option>
+                  ))}
+                </select>
+                <select
+                  aria-label="Destino do bônus da Precisão Definitiva"
+                  data-testid="precisao-modo"
+                  value={precisaoModo}
+                  onChange={(e) => setPrecisaoModo(e.target.value as PrecisaoModo)}
+                  className="rounded-md border border-border bg-background px-1 py-0.5 text-xs"
+                >
+                  <option value="acerto">Acerto (+2/PE)</option>
+                  <option value="dano">Dano (+4/PE)</option>
+                </select>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {precisaoPe > 0
+                ? `Gastando ${precisaoPe} PE: +${precisaoBonus(precisaoPe, precisaoModo)} ${precisaoModo === 'dano' ? 'no dano' : 'no acerto'}. (PE: ${cVivo.peCurrent ?? 0})`
+                : `Até ${precisaoMax} PE por ataque no seu nível. (PE: ${cVivo.peCurrent ?? 0})`}
+            </p>
+          </div>
+        )}
+
+
         {temGolpe && (
           <GolpeEspecialSection
             sel={golpeSel}
