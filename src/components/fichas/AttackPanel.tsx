@@ -843,6 +843,10 @@ export function AttackPanel({ character: c }: Props) {
       `🎯 Arremesso Ágil: ${c.name} ataca ${alvo2.name} com ${arma.name} (ação livre): d20 ${r.natural} · total ${r.attackTotal} → ${r.critical ? '💥 CRÍTICO' : r.hit ? '✅ acerto' : '❌ erro'}${r.hit ? ` · dano ${r.damageTotal} (${r.damageDice})` : ''}`,
     );
     recordAttackResult(c.id, r.hit);
+    if (r.hit && r.damageTotal > 0) {
+      const ign = arremessosRdIgnorada(c, arma, turnInfo);
+      applyDamage(alvo2.id, r.damageTotal, (r.damageType ?? undefined) as never, { attackerId: c.id, isMelee: false, rdIgnore: ign });
+    }
     if (r.hit && r.critical) checarRenovacaoCritico(true, alvo2.name);
     setArremessoTargetId('');
   };
