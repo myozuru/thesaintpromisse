@@ -1,4 +1,5 @@
 import { markCharacterDeleted } from "@/lib/charSyncStamps";
+import { arsenalTrocaLivreDisponivel, arsenalBonusAoTrocar } from '@/lib/arsenalCiclico';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { dispararGatilhoEfeitosItens } from '@/lib/omni/triggerEfeitos';
@@ -922,7 +923,8 @@ interface CharacterStore {
   equipWeapons: (
     charId: string,
     payload: { mainHandName: string | null; offHandName?: string | null },
-  ) => { ok: boolean; reason?: string; actionUsed?: 'free' | 'bonus' | 'arremessador' };
+    ctx?: { round?: number; inCombat?: boolean },
+  ) => { ok: boolean; reason?: string; actionUsed?: 'free' | 'bonus' | 'arremessador' | 'arsenal'; arsenalBonus?: boolean };
   /** Reseta usos de Talentos por escopo (round/scene/rest_short/rest_long/daily). */
   resetTalentUsage: (charId: string, scope: 'round' | 'scene' | 'rest_short' | 'rest_long' | 'daily') => void;
   /** Adiciona PE temporário (consumido antes do peCurrent; expira no fim da cena). */
@@ -4794,7 +4796,7 @@ export const useCharacterStore = create<CharacterStore>()(
             return { ...x, chosenTalents: next };
           }),
         })),
-      equipWeapons: (charId, payload) => {
+      equipWeapons: (charId, payload, ctx) => {
         const c = get().characters.find((x) => x.id === charId);
         if (!c) return { ok: false, reason: 'Personagem não encontrado.' };
 
@@ -4845,7 +4847,8 @@ export const useCharacterStore = create<CharacterStore>()(
         const sameOff = (c.offHandWeaponName ?? null) === finalOff;
         const noChange = sameMain && sameOff;
 
-        let actionUsed: 'free' | 'bonus' | 'arremessador' = 'free';
+        let actionUsed: 'free' | 'bonus' | 'arremessador' | 'arsenal' = 'free';
+        const arsRound = ctx?.inCombat ? (ctx.round ?? 1) : null;
         let nextSwapCount = c.weaponSwapsThisTurn ?? 0;
 
         // Estilo do Arremessador: sacar arma de arremesso faz parte do ataque (não conta troca).
@@ -4857,7 +4860,9 @@ export const useCharacterStore = create<CharacterStore>()(
           actionUsed = 'arremessador';
         } else if (!noChange) {
           const swapsSoFar = c.weaponSwapsThisTurn ?? 0;
-          if (swapsSoFar >= 1) {
+          if (swapsSoFar >= 1 && arsRound !== null && arsenalTrocaLivreDisponivel(c, arsRound)) {
+            actionUsed = 'arsenal';
+          } else if (swapsSoFar >= 1) {
             // 2ª (ou mais) troca no mesmo turno → consome Ação Bônus
             if ((c.bonusActionsCurrent ?? 0) <= 0) {
               return { ok: false, reason: 'Sem Ação Bônus disponível para uma 2ª troca de arma neste turno.' };
@@ -4867,11 +4872,15 @@ export const useCharacterStore = create<CharacterStore>()(
           nextSwapCount = swapsSoFar + 1;
         }
 
+        const newArsBonus = arsRound !== null && !noChange && finalMain !== c.mainHandWeaponName
+          ? arsenalBonusAoTrocar(c, finalMain, arsRound) : null;
         set((s) => ({
           characters: s.characters.map((x) => {
             if (x.id !== charId) return x;
             return {
               ...x,
+              ...(actionUsed === 'arsenal' ? { arsenalFreeSwapRound: arsRound ?? undefined } : {}),
+              ...(newArsBonus ? { arsenalBonus: newArsBonus } : {}),
               mainHandWeaponName: finalMain,
               offHandWeaponName: finalOff,
               dualWielding: weaponsCount === 2,
@@ -4883,7 +4892,7 @@ export const useCharacterStore = create<CharacterStore>()(
           }),
         }));
 
-        return { ok: true, actionUsed };
+        return { ok: true, actionUsed, arsenalBonus: !!newArsBonus };
       },
       resetTalentUsage: (charId, scope) =>
         set((state) => ({
