@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { terraPvtPatch } from '@/lib/posturas';
 import { persist } from 'zustand/middleware';
 import { useCharacterStore } from './useCharacterStore';
 import { useReactionStore } from './useReactionStore';
@@ -448,6 +449,17 @@ export const useCombatStore = create<CombatStore>()(
           const firstEntry = initiativeOrder[0];
           if (firstEntry) {
             charStore.updateCharacter(firstEntry.charId, { weaponSwapsThisTurn: 0, attacksThisTurn: 0, lastAttackHit: undefined, mobilidadeReacaoM: 0, mobilidadeReacaoBase: 0, arteGolpeDescendente: null });
+            // Assumir Postura: termina após 1 minuto (10 rodadas).
+            for (const ch of charStore.characters) {
+              if (ch.posturaAtiva && newRound > ch.posturaAtiva.untilRound) {
+                charStore.updateCharacter(ch.id, { posturaAtiva: null });
+                import('@/stores/useLogStore').then(({ useLogStore }) => useLogStore.getState().addLog('combat', `⏳ ${ch.name}: a postura terminou (1 minuto).`));
+              }
+            }
+            {
+              const terra = terraPvtPatch(useCharacterStore.getState().characters.find((x) => x.id === firstEntry.charId) as never);
+              if (terra) charStore.updateCharacter(firstEntry.charId, terra);
+            }
             // Distração Letal: expira penalidades aplicadas em rodadas anteriores.
             for (const ch of charStore.characters) {
               if (ch.arteDefensePenalty && newRound > ch.arteDefensePenalty.round) {
@@ -518,6 +530,10 @@ export const useCombatStore = create<CombatStore>()(
           useCharacterStore.getState().updateCharacter(nextEntry.charId, { weaponSwapsThisTurn: 0, attacksThisTurn: 0, lastAttackHit: undefined, mobilidadeReacaoM: 0, mobilidadeReacaoBase: 0, arteGolpeDescendente: null });
           // Fase 2 — Reaplica pool dedicado de Aptidões (Mestre das Aptidões).
           useCharacterStore.getState().applyTurnStartSpecHooks(nextEntry.charId);
+          {
+            const terra = terraPvtPatch(useCharacterStore.getState().characters.find((x) => x.id === nextEntry.charId) as never);
+            if (terra) useCharacterStore.getState().updateCharacter(nextEntry.charId, terra);
+          }
           import('@/lib/omni/eventBus').then(({ emitirEvento }) => {
             emitirEvento('noInicioDoTurno', { usuarioId: nextEntry.charId, incluirPassivas: true });
           });

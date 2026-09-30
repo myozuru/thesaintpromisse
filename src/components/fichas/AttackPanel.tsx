@@ -45,6 +45,8 @@ import {
   execucaoSilenciosaDice,
 } from '@/lib/artesCombate';
 import { renovacaoSangueAtiva, aplicarRenovacao } from '@/lib/renovacaoSangue';
+import { posturaAtiva, fortitudeMod, imuneMovimentoForcado, hasAssumirPostura } from '@/lib/posturas';
+import { PosturasPanel } from '@/components/fichas/PosturasPanel';
 import { arsenalRegistroAtaque, arsenalBonusAtivo, hasArsenalCiclico } from '@/lib/arsenalCiclico';
 import { hasArremessosPotentes, podeAtivarArremessos, arremessosAtivo, arremessosRdIgnorada, turnKeyFor } from '@/lib/arremessosPotentes';
 import { getTrainingBonusByLevel } from '@/lib/levelEngine';
@@ -82,7 +84,9 @@ const REACTION_LABELS: Record<string, { name: string; trigger: string; effect: s
   },
 };
 
-export function AttackPanel({ character: c }: Props) {
+export function AttackPanel({ character: cProp }: Props) {
+  // Sempre a ficha viva da mesa (posturas, bônus e PE mudam durante o turno).
+  const c = useCharacterStore((s) => s.characters.find((x) => x.id === cProp.id)) ?? cProp;
   const addLog = useLogStore(s => s.addLog);
   const items = useItemStore(s => s.items);
   const characters = useCharacterStore(s => s.characters);
@@ -775,6 +779,34 @@ export function AttackPanel({ character: c }: Props) {
       });
     }
     if (g?.sel.impactante && g.target) void empurrarImpactante(g.target, result.damageTotal);
+    if (target && result.damageTotal > 0) void explosaoDragao(target, result.damageTotal, result.damageType ?? undefined);
+  };
+
+  // Postura do Dragão: inimigos a 1,5 m do alvo fazem Fortitude ou sofrem metade do dano.
+  const explosaoDragao = async (alvo: Character, dano: number, tipo?: string) => {
+    const eu = useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c;
+    if (posturaAtiva(eu) !== 'dragao') return;
+    const meio = Math.floor(dano / 2);
+    if (meio <= 0) return;
+    const ms = useMapStore.getState();
+    const ents = Object.values(ms.entities ?? {});
+    const tEnt = ents.find((e) => e?.characterId === alvo.id);
+    if (!tEnt) return;
+    const cell = ms.gridConfig?.dpi || 70;
+    const cd = specDCFor(eu);
+    const todos = useCharacterStore.getState().characters;
+    for (const e of ents) {
+      if (!e?.characterId || e.characterId === alvo.id || e.characterId === c.id) continue;
+      const ch = todos.find((x) => x.id === e.characterId);
+      if (!ch || (ch.category !== 'INIMIGO' && ch.category !== 'NPC')) continue;
+      const casas = Math.max(Math.abs(e.x - tEnt.x), Math.abs(e.y - tEnt.y)) / cell;
+      if (casas > 1.01) continue;
+      const d20 = await rollD20Com(ch.id);
+      const mod = fortitudeMod(ch);
+      const passou = d20 + mod >= cd;
+      addLog('combat', `🐉 Postura do Dragão: ${ch.name} Fortitude d20 ${d20}${mod >= 0 ? '+' : ''}${mod} vs CD ${cd} → ${passou ? 'passou' : `falhou — sofre ${meio} de dano`}.`);
+      if (!passou) applyDamage(ch.id, meio, tipo as never, { attackerId: c.id, tags: ['__dragao'] });
+    }
   };
 
   // Renovação pelo Sangue (Nv 6): crítico em inimigo recupera 1 PE.
@@ -804,13 +836,13 @@ export function AttackPanel({ character: c }: Props) {
 
   const empurrarImpactante = async (alvo: Character, dano: number) => {
     const cd = specDCFor(c);
-    const con = (alvo.attributes ?? []).find((a) => a.name === 'Constituição');
-    const conMod = con ? Math.floor((con.value - 10) / 2) : 0;
+    const conMod = fortitudeMod(alvo);
     const d20 = await rollD20Com(alvo.id);
     const passou = d20 + conMod >= cd;
     const metros = impactanteMeters(dano, passou);
     addLog('combat', `💢 Impactante: ${alvo.name} Fortitude d20 ${d20}${conMod >= 0 ? '+' : ''}${conMod} vs CD ${cd} → ${passou ? 'passou (metade)' : 'falhou'} · empurrado ${metros.toFixed(1).replace('.', ',')} m.`);
     if (metros <= 0) return;
+    if (imuneMovimentoForcado(alvo)) { addLog('combat', `⛰️ Postura da Terra: ${alvo.name} é imune a movimento forçado.`); return; }
     const ms = useMapStore.getState();
     const ents = Object.values(ms.entities ?? {});
     const atk = ents.find((e) => e?.characterId === c.id);
@@ -1244,6 +1276,8 @@ export function AttackPanel({ character: c }: Props) {
             </div>
           </div>
         )}
+
+        {hasAssumirPostura(c) && <PosturasPanel charId={c.id} inCombat={inCombat} round={combatRound} />}
 
         {temArremessos && (
           <div className="rounded-lg border border-primary/30 bg-background/40 p-2 space-y-1" data-testid="arremessos-potentes">

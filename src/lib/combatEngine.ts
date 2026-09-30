@@ -1,4 +1,5 @@
 import { duelistaApplies, getDuelistaBonus, distanteApplies, getDistanteBonus, arremessadorApplies, getArremessadorDamage, duploApplies, getDuploDamage, massivoApplies, getMassivoDamage } from './combateEstilos';
+import { posturaAtaque } from '@/lib/posturas';
 import { execucaoSilenciosaDice } from './artesCombate';
 import { consumeCritNegated } from '@/lib/suporteNegacao';
 /**
@@ -321,6 +322,10 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
   if (flatAtk.bonus) { ctxBonus.hit = (ctxBonus.hit ?? 0) + flatAtk.bonus; for (const n of flatAtk.notes) ctxBonus.notes.push(n); }
 
   // Golpe Especial
+  const post = posturaAtaque(ctx.attacker);
+  if (post.hit) ctxBonus.hit = (ctxBonus.hit ?? 0) + post.hit;
+  ctxBonus.bonusDice += post.bonusDice;
+  ctxBonus.notes.push(...post.notes);
   if (ctx.situation.arsenalCiclico) { ctxBonus.bonusDice += 1; ctxBonus.notes.push('Arsenal Cíclico: +1 dado'); }
   if (ctx.situation.golpeAtroz) { ctxBonus.bonusDice += 1; ctxBonus.notes.push('Golpe Especial Atroz: +1 dado'); }
   if (ctx.situation.golpeLetal) { ctxBonus.critRangeBonus += 1; ctxBonus.notes.push('Golpe Especial Letal: margem de crítico −1'); }
@@ -421,7 +426,7 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
       }
     }
     if (rerolled.length) ctxBonus.notes.push(`Estilo Massivo rerrolou: ${rerolled.join(', ')}`);
-    damageTotal += ctx.abilityMod + ctxBonus.damageFlat;
+    damageTotal += (posturaAtaque(ctx.attacker).semAtributo ? 0 : ctx.abilityMod) + ctxBonus.damageFlat;
   }
 
   const notes = [...ctxBonus.notes];

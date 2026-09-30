@@ -38,6 +38,7 @@ import { getDefensivoCA } from '@/lib/combateEstilos';
  *     'ca' contam. Buffs novos precisam estender o switch ou virar passivas.
  *   • RD por tipo NÃO é CA: continua sendo aplicada no `damageStep`, não aqui.
  */
+import { posturaDefesa } from '@/lib/posturas';
 import type { Character, Item, Passive } from '@/types';
 import { aggregateConditionMods } from '@/lib/conditionEffects';
 import { aggregateAuraEffects } from '@/lib/auraEffects';
@@ -256,6 +257,7 @@ export function computeDefenseBreakdown(
   const arteDistracaoCA = -(c.arteDefensePenalty?.amount ?? 0);
   const arteGolpeCA = c.arteGolpeDescendente?.amount ?? 0;
 
+  const posturaCA = posturaDefesa(c as never);
   const base = c.ca ?? 10;
   const total =
     base +
@@ -275,12 +277,14 @@ export function computeDefenseBreakdown(
     guardaCA +
     defensivoCA +
     arteDistracaoCA +
-    arteGolpeCA;
+    arteGolpeCA +
+    posturaCA;
 
   const notes: string[] = [];
   notes.push(`CA base ${base}`);
   if (desMod) notes.push(`DES ${desMod >= 0 ? '+' : ''}${desMod}`);
   if (halfLevel) notes.push(`½ Nível +${halfLevel}`);
+  if (posturaCA) notes.push(`Postura ${posturaCA > 0 ? '+' : ''}${posturaCA}`);
   notes.push(...passives.notes);
   notes.push(...omniPassives.notes);
   notes.push(...classicItems.notes);

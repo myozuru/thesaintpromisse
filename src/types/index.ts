@@ -523,6 +523,12 @@ export interface Character {
   arsenalLastAttack?: { group: string; round: number };
   /** Arsenal Cíclico: +1 dado com esta arma até o fim da rodada `untilRound`. */
   arsenalBonus?: { weaponName: string; untilRound: number } | null;
+  /** Assumir Postura: posturas conhecidas. */
+  posturasAprendidas?: string[];
+  /** Assumir Postura: postura em vigor (termina após `untilRound`). */
+  posturaAtiva?: { id: string; untilRound: number } | null;
+  /** Assumir Postura: usos gastos (recarrega no descanso longo). */
+  posturaUsos?: number;
   /**
    * Resultado do último ataque deste personagem no turno atual:
    *   true  = acertou
