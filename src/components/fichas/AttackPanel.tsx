@@ -354,14 +354,15 @@ export function AttackPanel({ character: c }: Props) {
         : slot === 'main'
           ? { mainHandName: weaponName, offHandName: c.offHandWeaponName ?? null }
           : { mainHandName: c.mainHandWeaponName ?? null, offHandName: weaponName };
-    const res = equipWeapons(c.id, payload);
+    const res = equipWeapons(c.id, payload, { inCombat, round: combatRound });
     if (!res.ok) {
       addLog('combat', `❌ ${res.reason}`);
       return;
     }
     const swaps = useCharacterStore.getState().characters.find(x => x.id === c.id)?.weaponSwapsThisTurn ?? 0;
-    const costLabel = res.actionUsed === 'bonus' ? 'Ação Bônus (2ª troca)' : res.actionUsed === 'arremessador' ? 'parte do ataque (Estilo do Arremessador)' : 'Ação Livre';
+    const costLabel = res.actionUsed === 'bonus' ? 'Ação Bônus (2ª troca)' : res.actionUsed === 'arremessador' ? 'parte do ataque (Estilo do Arremessador)' : res.actionUsed === 'arsenal' ? 'Ação Livre (Arsenal Cíclico)' : 'Ação Livre';
     addLog('combat', `🤝 ${c.name} ${weaponName ? 'equipou' : 'guardou'} arma — ${costLabel} · trocas no turno: ${swaps}`);
+    if (res.arsenalBonus) addLog('combat', `🔄 Arsenal Cíclico: +1 dado de dano com ${weaponName} até o fim do próximo turno.`);
   };
 
   // ─── Rolar ataque ──────────────────────────────────────────────────────────
@@ -484,6 +485,8 @@ export function AttackPanel({ character: c }: Props) {
       golpeAtroz: !!golpeSel.atroz, golpeLetal: !!golpeSel.letal,
       golpePreciso: !!golpeSel.preciso, golpeDesfocado: golpeSel.desfocado ?? 0,
     } : {};
+    const arsenalSit = inCombat && arsenalBonusAtivo(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, mainWeapon.name, combatRound)
+      ? { arsenalCiclico: true } : {};
     golpeRollRef.current = golpeUsado ? { sel: golpeSel, target, amploTarget } : null;
     if (rollInFlightRef.current || phase === 'rolling-hit' || phase === 'rolling-dmg') return;
     if (isReroll && attackRollCount >= 2) return;
@@ -538,6 +541,10 @@ export function AttackPanel({ character: c }: Props) {
     // Memória de turno: contabiliza apenas no PRIMEIRO disparo (reroll não conta como novo ataque).
     if (!isReroll) {
       recordAttackResult(c.id, result.hit);
+      if (inCombat) {
+        const reg = arsenalRegistroAtaque(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, mainWeapon.name, combatRound);
+        if (reg) useCharacterStore.getState().updateCharacter(c.id, reg);
+      }
       if (result.hit && attackerConcentratedAura > 0) {
         consumeConcentratedAura(c.id);
       }
