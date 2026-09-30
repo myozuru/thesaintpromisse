@@ -529,6 +529,12 @@ export interface Character {
   posturaAtiva?: { id: string; untilRound: number } | null;
   /** Assumir Postura: usos gastos (recarrega no descanso longo). */
   posturaUsos?: number;
+  /** Postura da Devastação: alvo atual e acertos acumulados nele. */
+  devastacao?: { alvoId: string; acertos: number } | null;
+  /** Postura da Fortuna: rerrolagens usadas na rodada. */
+  fortunaUsos?: { round: number; used: number } | null;
+  /** Postura do Céu: pontos de preparo temporários (somem no começo do turno seguinte). */
+  preparoTemp?: number;
   /**
    * Resultado do último ataque deste personagem no turno atual:
    *   true  = acertou

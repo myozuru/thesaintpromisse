@@ -5,8 +5,7 @@
  *  - Entrar: Ação Bônus, em combate. Dura 10 rodadas (1 minuto) ou até ficar
  *    Caído/incapacitado ou trocar. Usos = bônus de treinamento (descanso longo).
  *
- * Parte 1: Sol, Lua, Terra, Dragão. (Fortuna, Devastação, Tempestade e Céu
- * aparecem no catálogo mas a mecânica vem na parte 2.)
+ * Todas as 8 posturas: Sol, Lua, Terra, Dragão, Fortuna, Devastação, Tempestade e Céu.
  */
 import type { Character } from '@/types';
 import { isEspecialistaCombate } from '@/lib/combateEstilos';
@@ -23,10 +22,10 @@ export const POSTURAS: PosturaDef[] = [
   { id: 'lua', name: 'Lua', minLevel: 2, pronta: true, summary: '+3 Defesa; reação reduz dano pelo seu nível; −4 acerto e sem atributo no dano.' },
   { id: 'terra', name: 'Terra', minLevel: 2, pronta: true, summary: 'Imune a movimento forçado, +treinamento em Fortitude, PV temporários = nível no começo do turno.' },
   { id: 'dragao', name: 'Dragão', minLevel: 2, pronta: true, summary: 'Inimigos a 1,5 m do alvo atingido: Fortitude (CD Especialização) ou metade do dano.' },
-  { id: 'fortuna', name: 'Fortuna', minLevel: 2, pronta: false, summary: 'Rerrola d20 ≤ treinamento em ataques e resistências.' },
-  { id: 'devastacao', name: 'Devastação', minLevel: 6, pronta: false, summary: 'Acertos no mesmo alvo acumulam acerto e ignoram RD.' },
-  { id: 'tempestade', name: 'Tempestade', minLevel: 10, pronta: false, summary: 'Acerto força Fortitude ou derruba.' },
-  { id: 'ceu', name: 'Céu', minLevel: 12, pronta: false, summary: 'Alcance dobrado, 2 Pontos de Preparo por turno, +2 perícias.' },
+  { id: 'fortuna', name: 'Fortuna', minLevel: 2, pronta: true, summary: 'd20 ≤ treinamento em ataque ou resistência: pode rolar de novo (metade do treinamento por rodada, 1x por dado).' },
+  { id: 'devastacao', name: 'Devastação', minLevel: 6, pronta: true, summary: 'Cada acerto no mesmo alvo: +1 acerto e ignora 2 RD (máx. treinamento / dobro). Trocar de alvo zera.' },
+  { id: 'tempestade', name: 'Tempestade', minLevel: 10, pronta: true, summary: 'Acerto: alvo faz Fortitude ou fica Caído; se já Caído, falha deixa Imóvel até seu próximo turno.' },
+  { id: 'ceu', name: 'Céu', minLevel: 12, pronta: true, summary: 'Alcance dobrado, 2 pontos de preparo temporários por turno, +2 em perícias.' },
 ];
 
 export const POSTURA_DURACAO_RODADAS = 10;
@@ -84,6 +83,7 @@ export function patchEntrar(c: Character, id: PosturaId, round: number): Partial
   return {
     posturaAtiva: { id, untilRound: round + POSTURA_DURACAO_RODADAS - 1 },
     posturaUsos: (c.posturaUsos ?? 0) + 1,
+    devastacao: null,
     bonusActionsCurrent: Math.max(0, (c.bonusActionsCurrent ?? 0) - 1),
   };
 }
@@ -127,3 +127,48 @@ export function fortitudeMod(c: Character): number {
   const con = (c.attributes ?? []).find((a) => a.name === 'Constituição');
   return (con ? Math.floor((con.value - 10) / 2) : 0) + posturaFortitude(c);
 }
+
+// ─── Parte 2 ─────────────────────────────────────────────────────────────────
+const bt = (c: Character) => getTrainingBonusByLevel(c.level ?? 1);
+
+/** Devastação: bônus contra o alvo informado (acumulado de acertos anteriores). */
+export function devastacaoBonus(c: Character, alvoId: string | undefined | null): { hit: number; rd: number } {
+  if (posturaAtiva(c) !== 'devastacao' || !alvoId || c.devastacao?.alvoId !== alvoId) return { hit: 0, rd: 0 };
+  const n = Math.min(c.devastacao.acertos, bt(c));
+  return { hit: n, rd: n * 2 };
+}
+
+/** Devastação: atualiza acúmulo após atacar (trocar de alvo zera; errar não zera). */
+export function devastacaoPatch(c: Character, alvoId: string, acertou: boolean): Partial<Character> | null {
+  if (posturaAtiva(c) !== 'devastacao') return null;
+  const mesmo = c.devastacao?.alvoId === alvoId;
+  const base = mesmo ? c.devastacao!.acertos : 0;
+  const acertos = Math.min(bt(c), base + (acertou ? 1 : 0));
+  if (mesmo && acertos === base) return null;
+  return { devastacao: { alvoId, acertos } };
+}
+
+/** Fortuna: usos por rodada = metade do treinamento (baixo), mínimo 1. */
+export const fortunaUsosMax = (c: Character) => Math.max(1, Math.floor(bt(c) / 2));
+export function fortunaUsosRestantes(c: Character, round: number): number {
+  const used = c.fortunaUsos?.round === round ? c.fortunaUsos.used : 0;
+  return Math.max(0, fortunaUsosMax(c) - used);
+}
+export function fortunaElegivel(c: Character, d20: number, round: number): boolean {
+  return posturaAtiva(c) === 'fortuna' && d20 <= bt(c) && fortunaUsosRestantes(c, round) > 0;
+}
+export function fortunaPatchUso(c: Character, round: number): Partial<Character> {
+  const used = c.fortunaUsos?.round === round ? c.fortunaUsos.used : 0;
+  return { fortunaUsos: { round, used: used + 1 } };
+}
+
+/** Céu: alcance das armas dobrado. */
+export const posturaAlcanceMult = (c: Character) => (posturaAtiva(c) === 'ceu' ? 2 : 1);
+/** Céu: +2 em rolagens de perícia (não em TR). */
+export const posturaPericia = (c: Character) => (posturaAtiva(c) === 'ceu' ? 2 : 0);
+/** Céu: 2 pontos de preparo temporários no começo do turno (sobras somem). */
+export function ceuPreparoPatch(c: Character): Partial<Character> | null {
+  if (posturaAtiva(c) === 'ceu') return { preparoTemp: 2 };
+  return (c.preparoTemp ?? 0) > 0 ? { preparoTemp: 0 } : null;
+}
+export const TEMPESTADE_IMOVEL_PREFIX = 'tempestade-imovel:';
