@@ -70,7 +70,7 @@ async function atacar(...dados: number[]) {
   useLogStore.getState().clearLogs();
   forcarDados(...(dados.length ? dados : [18, 4, 4, 4, 4, 4]));
   fireEvent.click(screen.getByRole('button', { name: /Rolar Ataque/ }));
-  await waitFor(() => expect(textoLog()).toMatch(/🎲|EMPERROU|emperrou|Ataque/), { timeout: 15000 });
+  await waitFor(() => expect(textoLog()).toMatch(/🗡️|EMPERROU|emperrou|emperrada/), { timeout: 15000 });
   const btn = screen.queryAllByRole('button', { name: /Rolar Dano/ });
   if (btn.length) {
     fireEvent.click(btn[0]);
