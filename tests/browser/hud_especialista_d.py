@@ -108,6 +108,12 @@ async def main():
             dado = linha.locator("button[title=\'Rolar d20\']")
             print("PERICIA visivel:", await pg.get_by_text("Furtividade").first.is_visible(), "| botoes:", await dado.count())
             if await dado.count():
+                fechar = pg.locator("button").filter(has=pg.locator("svg")).last
+                try:
+                    await pg.get_by_text("AUSPÍCIO DOS DADOS").locator("xpath=following::button[1]").click(force=True)
+                except Exception as e:
+                    print("fechar tray:", e)
+                await pg.wait_for_timeout(1500)
                 await dado.first.scroll_into_view_if_needed()
                 await dado.first.click(force=True); await pg.wait_for_timeout(4000)
                 print("TRAY:", await pg.get_by_text("Clique ou segure").count(), "| pend:", await pg.evaluate("document.body.innerText.includes('AUSPÍCIO')"))
