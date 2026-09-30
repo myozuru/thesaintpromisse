@@ -84,7 +84,9 @@ const REACTION_LABELS: Record<string, { name: string; trigger: string; effect: s
   },
 };
 
-export function AttackPanel({ character: c }: Props) {
+export function AttackPanel({ character: cProp }: Props) {
+  // Sempre a ficha viva da mesa (posturas, bônus e PE mudam durante o turno).
+  const c = useCharacterStore((s) => s.characters.find((x) => x.id === cProp.id)) ?? cProp;
   const addLog = useLogStore(s => s.addLog);
   const items = useItemStore(s => s.items);
   const characters = useCharacterStore(s => s.characters);

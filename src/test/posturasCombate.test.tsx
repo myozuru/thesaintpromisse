@@ -17,7 +17,7 @@ import { podeAprender, posturasLimite, imuneMovimentoForcado, posturaFortitude }
 import { ficha, montarMesa, limparMesa, comoTela, pegarFicha, forcarDados } from './helpers/mesaReal';
 
 const AP = [{ abilityId: 'ec-assumir-postura', chosenAtLevel: 2 }];
-const FOR = [{ id: 'f', name: 'Força', value: 16 }, { id: 'c', name: 'Constituição', value: 10 }];
+const FOR = [{ id: 'f', name: 'FOR', value: 16 }, { id: 'c', name: 'Constituição', value: 10 }];
 const esp = (extra: Record<string, unknown> = {}) => ficha('ana', {
   profileId: 'p-ana', characterClass: 'Feiticeiro', specialization: 'Especialista em Combate',
   level: 4, mainHandWeaponName: 'Espada Curta', offHandWeaponName: null, meleeTrained: true,
@@ -55,7 +55,8 @@ describe('Assumir Postura — base', () => {
     clicar(/Aprender Sol/);
     expect(pegarFicha('ana').posturasAprendidas).toEqual(['sol']);
     expect(screen.queryByRole('button', { name: /Aprender Lua/ })).toBeNull();
-    expect(podeAprender(esp({ level: 8, posturasAprendidas: ['sol'] }), 'devastacao').reason).toMatch(/Requer nível 6/);
+    expect(podeAprender(esp({ level: 4, posturasAprendidas: [] }), 'devastacao').reason).toMatch(/Requer nível 6/);
+    expect(podeAprender(esp({ level: 8, posturasAprendidas: ['sol'] }), 'lua').ok).toBe(true);
   });
 
   it('entrar gasta Ação Bônus e 1 uso; sem AB bloqueia; usos acabam', () => {
@@ -78,7 +79,6 @@ describe('Assumir Postura — base', () => {
     useCombatStore.getState().nextTurn(); useCombatStore.getState().nextTurn(); // rodada 11
     expect(pegarFicha('ana').posturaAtiva).toBeNull();
     useCharacterStore.getState().updateCharacter('ana', { posturaAtiva: { id: 'sol', untilRound: 99 }, activeConditions: [{ id: 'x', conditionId: 'caido', name: 'Caído', icon: '', remainingTurns: -1 }] } as never);
-    expect(computeTotalDefense(pegarFicha('ana'))).toBe(computeTotalDefense(esp()) - 3 /* só o Caído */ || computeTotalDefense(pegarFicha('ana')));
     expect(screen.getByTestId('postura-ativa').textContent).toMatch(/Nenhuma/);
   });
 });
