@@ -59,7 +59,7 @@ export function PendingMoveOverlay() {
         grants: oppState.grants,
         charNames,
         grid: gridConfig,
-      });
+      }).filter((cand) => !(movingChar?.desengajadoDe ?? []).includes(cand.charId));
       if (candidates.length > 0) {
         oppState.setPending({
           id: `${Date.now().toString(36)}`,

@@ -1745,6 +1745,30 @@ const ESPECIALISTA_COMBATE: SpecAbility[] = [
     triggerText: 'Seção "Arremesso Rápido" na aba de Ataque, depois do primeiro arremesso do turno.',
     logicText: 'Exige arma de arremesso empunhada e um ataque já feito no turno. Gasta 1 PE + Ação Bônus e libera um ataque extra contra o alvo escolhido (pode ser o mesmo se for o único).',
   },
+  {
+    id: 'ec-tecnicas-avanco', name: 'Técnicas de Avanço', tier: 4, specialization: 'Especialista em Combate',
+    flavor: 'As técnicas de avanço misturam o deslocamento com os golpes.',
+    mechanic: 'Você aprende duas artes do combate: Avanço Bumerangue (3 Preparo: na ação Atacar, salta até 6 m na direção de um inimigo a até 6 m, ataca e volta ao ponto de partida, sem ataques de oportunidade; no retorno, 1 Preparo para um ataque de arremesso ou à distância no mesmo alvo) e Sombra Descendente (3 Preparo, Ação Comum: avança contra um inimigo a até 6 m e ataca; depois pode cair sobre outro inimigo a até 6 m dele, atacar e pousar num espaço livre a até 3 m).',
+    activation: 'passive',
+    triggerText: 'Seção "Técnicas de Avanço" na aba de Ataque.',
+    logicText: 'Bumerangue: jogador clica onde parar (até 6 m), precisa ficar no alcance da arma; retorno gratuito. Sombra: gasta Ação Comum; 2º alvo opcional a até 6 m do 1º; queda escolhida no mapa a até 3 m do 2º alvo; sem 2º alvo fica ao lado do 1º.',
+  },
+  {
+    id: 'ec-buscar-oportunidade', name: 'Buscar Oportunidade', tier: 4, specialization: 'Especialista em Combate',
+    flavor: 'Você sabe encontrar a oportunidade certa para fazer o que é necessário.',
+    mechanic: 'Como Ação Livre, faça um teste de Percepção com CD 16 + 2 para cada inimigo em campo. Caso suceda, você pode usar Andar, Desengajar ou Esconder como Ação Livre.',
+    activation: 'free',
+    triggerText: 'Seção "Buscar Oportunidade" na aba de Ataque (em combate).',
+    logicText: 'Um teste por inimigo vivo, uma vez por inimigo por combate. Escolhe UMA ação, válida só contra os inimigos vencidos: Andar (recupera o deslocamento), Desengajar (eles não fazem AdO até o fim do turno) ou Esconder (próximo ataque contra cada um conta como Desprevenido).',
+  },
+  {
+    id: 'ec-compensar-erro', name: 'Compensar Erro', tier: 4, specialization: 'Especialista em Combate',
+    flavor: 'Você compensa erros com a liberação bruta de energia.',
+    mechanic: 'Uma vez por rodada, ao errar um ataque com arma corpo a corpo, gaste até seu bônus de treinamento em PE: para cada ponto, o alvo recebe 1d10 de dano Energético, somando uma vez seu modificador de Força, Destreza ou Sabedoria.',
+    activation: 'free', usage: { max: 1, scope: 'round' },
+    triggerText: 'Aparece na aba de Ataque logo após errar um ataque corpo a corpo.',
+    logicText: 'Nd10 + mod escolhido (FOR/DES/SAB) de dano Energético; RD e resistências do alvo se aplicam.',
+  },
 ];
 
 

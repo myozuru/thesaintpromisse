@@ -177,6 +177,8 @@ export interface InitiativeEntry {
 
 interface CombatStore {
   inCombat: boolean;
+  /** Identificador do combate atual (muda a cada startCombat). */
+  combatId?: string | null;
   round: number;
   currentTurnIndex: number;
   initiativeOrder: InitiativeEntry[];
@@ -316,6 +318,7 @@ export const useCombatStore = create<CombatStore>()(
         const sorted = [...entries].sort((a, b) => b.total - a.total);
         set((s) => ({
           inCombat: true,
+          combatId: `cb-${Date.now().toString(36)}`,
           round: 1,
           currentTurnIndex: 0,
           initiativeOrder: sorted,
@@ -404,6 +407,7 @@ export const useCombatStore = create<CombatStore>()(
         if (currentEntry) {
           const ce = useCharacterStore.getState().characters.find((c) => c.id === currentEntry.charId);
           if (ce?.desengajado) useCharacterStore.getState().updateCharacter(currentEntry.charId, { desengajado: false });
+          if (ce?.desengajadoDe?.length) useCharacterStore.getState().updateCharacter(currentEntry.charId, { desengajadoDe: [] });
         }
         if (currentEntry) {
           useCharacterStore.getState().tickBuffs(currentEntry.charId);

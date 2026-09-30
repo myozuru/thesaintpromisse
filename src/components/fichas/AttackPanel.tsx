@@ -62,6 +62,9 @@ import { useZonaRiscoStore } from '@/lib/zonaRisco';
 import { hasArremessoRapido, arremessoRapidoPodeUsar, arremessoRapidoUsar, useArremessoRapidoStore } from '@/lib/arremessoRapido';
 import { TiroFalsoSection } from './TiroFalsoSection';
 import { RevigorarButton } from './RevigorarButton';
+import { EspecialistaNv4Sections } from './EspecialistaNv4Sections';
+import { escondidoDe, revelarPara } from '@/lib/buscarOportunidade';
+import { registrarAtaqueCompensar } from '@/lib/compensarErro';
 
 import { cn } from '@/lib/utils';
 
@@ -271,7 +274,7 @@ export function AttackPanel({ character: cProp }: Props) {
   const [twoHanded, setTwoHanded] = useState<boolean>(false);
   // Desprevenido/caído são lidos exclusivamente das condições ativas na ficha do alvo.
   // Não há mais override manual: se for preciso aplicar o efeito, registre a condição no alvo.
-  const targetUnaware = autoUnaware;
+  const targetUnaware = autoUnaware || escondidoDe(c, target?.id);
   const targetProne = autoProne;
   // Aura Embaçada do alvo (toggle): aplica desvantagem ao atacante.
   const targetHasAuraEmbacada = !!target && isAuraToggleActive(target, 'aura_embacada');
@@ -633,6 +636,7 @@ export function AttackPanel({ character: cProp }: Props) {
     // Memória de turno: contabiliza apenas no PRIMEIRO disparo (reroll não conta como novo ataque).
     if (!isReroll) {
       recordAttackResult(c.id, result.hit);
+      if (target) revelarPara(c.id, target.id);
       if (target) registrarDevastacao(target.id, result.hit);
       primeiroDisparoRef.current = target ? { alvoId: target.id, hit: result.hit } : null;
       if (result.hit && target) void tempestadeGolpe(target);
@@ -842,6 +846,7 @@ export function AttackPanel({ character: cProp }: Props) {
     addLog('combat', `${prefix}: ${rollLabel} · ${verdict}`);
     if (result.notes.length) addLog('combat', `   ↳ ${result.notes.join(' · ')}`);
     if (result.hit && result.critical) checarRenovacaoCritico(true, target?.name);
+    registrarAtaqueCompensar(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, target?.id, result.hit, mainWeapon?.range === 'melee');
 
     setPendingRerollMeta(null);
     setFirstD20Revealed(null);
@@ -884,6 +889,40 @@ export function AttackPanel({ character: cProp }: Props) {
     }
     if (g?.sel.impactante && g.target) void empurrarImpactante(g.target, result.damageTotal);
     if (target && result.damageTotal > 0) void explosaoDragao(target, result.damageTotal, result.damageType ?? undefined);
+  };
+
+  /** Ataque completo fora do fluxo principal (Técnicas de Avanço): rola, aplica dano e registra. */
+  const ataqueExtra = async (alvo: Character, arma: Weapon): Promise<AttackResult | null> => {
+    const eu = useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c;
+    const kind: AttackKind = arma.range === 'melee' ? 'melee' : 'ranged';
+    const def = computeTotalDefense(alvo, { items, omniInventory: omniInventoryList, omniEntidadesMap, omniRuntimeEffects: omniRuntimeEffectsList }, kind);
+    const ids = new Set((alvo.activeConditions ?? []).map((x) => (x as { conditionId?: string }).conditionId));
+    const unaware = ids.has('desprevenido') || ids.has('agarrado') || ids.has('atordoado') || escondidoDe(eu, alvo.id);
+    const ctx = buildAttackContext({
+      attacker: eu, weapon: arma, targetDefense: def,
+      situation: {
+        previousAttacksThisTurn: eu.attacksThisTurn ?? 0, previousMissed: eu.lastAttackHit === false,
+        targetUnaware: unaware, targetProne: ids.has('caido'), preferredAbility: pickAttackAbility(eu, arma),
+      },
+      trainedRanges: [
+        ...(c.meleeTrained ? (['melee'] as const) : []),
+        ...(c.rangedTrained ? (['ranged', 'thrown'] as const) : []),
+      ],
+    });
+    let r: AttackResult;
+    try { r = await rollAttack(ctx); } catch (e) { console.error('[AttackPanel] ataque extra falhou:', e); return null; }
+    recordAttackResult(c.id, r.hit);
+    revelarPara(c.id, alvo.id);
+    const verdict = r.criticalFail ? '💀 falha crítica' : r.critical ? '💥 CRÍTICO' : r.hit ? '✅ acerto' : '❌ erro';
+    addLog('combat', `🗡️ ${c.name} ataca ${alvo.name} com ${arma.name}: d20 ${r.natural} · total ${r.attackTotal} vs Def ${def} → ${verdict}${r.hit ? ` · dano ${r.damageTotal} (${r.damageDice})` : ''}`);
+    if (r.hit && r.damageTotal > 0) {
+      applyDamage(alvo.id, r.damageTotal, (r.damageType ?? undefined) as never, {
+        attackerId: c.id, isMelee: arma.range === 'melee', rdIgnore: arremessosRdIgnorada(eu, arma, turnInfo),
+      });
+    }
+    if (r.hit && r.critical) checarRenovacaoCritico(true, alvo.name);
+    registrarAtaqueCompensar(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, alvo.id, r.hit, arma.range === 'melee');
+    return r;
   };
 
   // Fortitude do alvo já com a penalidade de Flanqueador Superior (−2 em TRs).
@@ -1422,6 +1461,21 @@ export function AttackPanel({ character: cProp }: Props) {
 
         {/* ─── Revigorar (ação bônus) ─────────────────────────────────────── */}
         <RevigorarButton character={c} />
+
+        {/* ─── Técnicas de Avanço / Buscar Oportunidade / Compensar Erro ─── */}
+        <EspecialistaNv4Sections
+          character={c}
+          possibleTargets={possibleTargets}
+          mainWeapon={mainWeapon ?? null}
+          rangedWeapons={inventoryWeapons.map(({ weapon }) => weapon).filter((w) => w.range !== 'melee')}
+          ataque={ataqueExtra}
+          reachBlock={(alvoId, arma) => {
+            const ms = useMapStore.getState();
+            const al = characters.find((x) => x.id === alvoId);
+            const eu = useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c;
+            return checkWeaponRange(c.id, alvoId, arma, ms.entities, ms.gridConfig, meleeRangeBonus, al ? { casterProfileId: c.profileId, targetProfileId: al.profileId } : undefined, posturaAlcanceMult(eu));
+          }}
+        />
 
 
 
