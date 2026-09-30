@@ -105,6 +105,9 @@ export interface AttackResult {
   hit: boolean;
   critical: boolean;
   criticalFail: boolean;
+  /** Arma de fogo emperrou nesta jogada (precisa de Ação Comum para soltar). */
+  emperrou?: boolean;
+
   damageDice: string;
   damageRolls: number[];
   damageTotal: number;
