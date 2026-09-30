@@ -185,7 +185,7 @@ describe('Precisão Definitiva', () => {
 });
 
 describe('Posicionamento Ameaçador', () => {
-  const grid = () => ({ cellSize: useMapStore.getState().cellSize ?? 50, metersPerCell: useMapStore.getState().metersPerCell ?? 1.5 });
+  const grid = () => useMapStore.getState().gridConfig;
   const pen = () => penalidadeTRFlanqueado(
     pegarFicha('bruno'),
     useCharacterStore.getState().characters,
