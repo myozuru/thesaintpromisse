@@ -200,6 +200,11 @@ export function AttackPanel({ character: cProp }: Props) {
   useEffect(() => {
     if (zonaAtaque) setTargetId(zonaAtaque.alvoId);
   }, [zonaAtaque]);
+  // Arremesso Rápido: ataque extra liberado → pré-seleciona o alvo escolhido.
+  const arremessoAtaqueSel = useArremessoRapidoStore((s) => (s.ataque?.espId === c.id ? s.ataque : null));
+  useEffect(() => {
+    if (arremessoAtaqueSel) setTargetId(arremessoAtaqueSel.alvoId);
+  }, [arremessoAtaqueSel]);
   // Tipo de ataque (CaC vs Distância) — define defesa específica do alvo.
   const attackKind: AttackKind = useMemo(() => {
     if (!mainWeapon) return 'melee';
