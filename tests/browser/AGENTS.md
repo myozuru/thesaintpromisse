@@ -5,3 +5,4 @@
 - HUD do Especialista: `python tests/browser/hud_especialista.py` cria fichas/peças/combate só no navegador (gravações bloqueadas), rola ataque+dano e checa PE, vida do alvo e flanco dentro/fora/furtivo.
 - HUD nível 4 (Armas Escolhidas + Arremesso Rápido): `python tests/browser/hud_especialista_nv4.py` cria ficha/peças temporárias, bloqueia gravações e confere seção, PE, ação bônus, banner e dano real.
 - HUD nível 4 parte B (Técnicas de Avanço, Buscar Oportunidade, Compensar Erro): `python tests/browser/hud_especialista_nv4b.py` — escolha no mapa é resolvida pelo store (`resolveAoEPlacement`).
+- HUD nível 4 parte C (Preparo Imediato, Recarga Rápida, Uso Rápido): `python tests/browser/hud_especialista_nv4c.py` — prompt na iniciativa, disparo da ação preparada, munição por ataque, recarga e item adicional por 1 PE, tudo com gravações bloqueadas.
