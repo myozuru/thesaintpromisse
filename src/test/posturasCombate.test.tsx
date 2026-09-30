@@ -79,6 +79,7 @@ describe('Assumir Postura — base', () => {
     useCombatStore.getState().nextTurn(); useCombatStore.getState().nextTurn(); // rodada 11
     expect(pegarFicha('ana').posturaAtiva).toBeNull();
     useCharacterStore.getState().updateCharacter('ana', { posturaAtiva: { id: 'sol', untilRound: 99 }, activeConditions: [{ id: 'x', conditionId: 'caido', name: 'Caído', icon: '', remainingTurns: -1 }] } as never);
+    console.log('DBG', JSON.stringify(pegarFicha('ana').activeConditions), JSON.stringify(pegarFicha('ana').posturaAtiva));
     expect(screen.getByTestId('postura-ativa').textContent).toMatch(/Nenhuma/);
   });
 });
@@ -99,7 +100,7 @@ describe('Posturas em combate', () => {
     mesa(esp({ posturasAprendidas: ['lua'] }));
     clicar(/Entrar: Lua/);
     expect(computeTotalDefense(pegarFicha('ana'))).toBe(base + 3);
-    await atacar(19, 4, 4, 4);
+    await atacar(17, 4, 4, 4);
     expect(log()).toContain('Postura da Lua');
     expect(Number(/💥 Dano: (\d+)/.exec(log())![1])).toBe(4); // 1d6=4, sem +3 de Força
     useCharacterStore.getState().applyDamage('ana', 10, undefined, { attackerId: 'bruno' });
