@@ -1919,6 +1919,7 @@ const REQUIRES_CONFIG_TO_SCHEMA_KIND: Record<NonNullable<SpecAbility['requiresCo
   spell_level_choice: 'spell-level',
   single_release_choice: 'single-release',
   spells: 'spells',
+  weapon_group: 'weapon-group',
 };
 
 /**
