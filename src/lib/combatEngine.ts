@@ -429,7 +429,7 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
   }
 
   const attackTotal = natural + mods.reduce((a, m) => a + m.value, 0);
-  const hit = !criticalFail && (critical || attackTotal >= ctx.targetDefense);
+  const hit = !criticalFail && !jammed && (critical || attackTotal >= ctx.targetDefense);
 
   // Dano: aplica step + dados extras + crítico (Mortal/Fatal)
   let finalDice: DamageDice = stepDamage(baseDice, ctxBonus.damageStepDelta);
