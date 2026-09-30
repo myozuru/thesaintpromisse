@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  LogOut, Clock, Users, Swords, CalendarDays, Settings, BookOpen, Wand2, Coins, Store, GripVertical, Sparkles, Library, Map as MapIcon, Archive, Skull,
+  LogOut, Clock, Users, Swords, CalendarDays, Settings, BookOpen, Wand2, Coins, Store, GripVertical, Sparkles, Library, Map as MapIcon, Globe, Archive, Skull,
 } from 'lucide-react';
 import { RIcon } from '@/components/icons/RIcon';
 import { useRoleStore, type UserRole } from '@/stores/useRoleStore';
@@ -11,7 +11,7 @@ import { usePendingDebates } from '@/hooks/usePendingDebates';
 import { MasterAccountsDialog } from '@/components/MasterAccountsDialog';
 import { signOutAll } from '@/lib/auth';
 
-export type TabId = 'relogio' | 'fichas' | 'itens' | 'baus' | 'calendario' | 'sistema' | 'guia' | 'feiticos-players' | 'money' | 'cardapios' | 'omni' | 'catalogo' | 'testes' | 'mapa' | 'grimorio';
+export type TabId = 'relogio' | 'fichas' | 'itens' | 'baus' | 'calendario' | 'sistema' | 'guia' | 'feiticos-players' | 'money' | 'cardapios' | 'omni' | 'catalogo' | 'testes' | 'mapa' | 'mundo' | 'grimorio';
 
 const TAB_LABELS: Record<TabId, string> = {
   relogio: 'Relógio',
@@ -28,6 +28,7 @@ const TAB_LABELS: Record<TabId, string> = {
   catalogo: 'Catálogo',
   testes: 'Testes',
   mapa: 'Mapa',
+  mundo: 'Mundo',
   grimorio: 'Grimório',
 };
 
@@ -46,11 +47,12 @@ const TAB_ICONS: Record<TabId, React.ElementType> = {
   catalogo: Library,
   testes: RIcon,
   mapa: MapIcon,
+  mundo: Globe,
   grimorio: Skull,
 };
 
-const PLAYER_TABS: TabId[] = ['relogio', 'fichas', 'feiticos-players', 'money', 'cardapios', 'calendario', 'omni', 'mapa', 'guia'];
-const ALL_TABS: TabId[] = ['relogio', 'fichas', 'feiticos-players', 'itens', 'baus', 'money', 'cardapios', 'calendario', 'omni', 'catalogo', 'mapa', 'grimorio', 'sistema', 'guia'];
+const PLAYER_TABS: TabId[] = ['relogio', 'fichas', 'feiticos-players', 'money', 'cardapios', 'calendario', 'omni', 'mapa', 'mundo', 'guia'];
+const ALL_TABS: TabId[] = ['relogio', 'fichas', 'feiticos-players', 'itens', 'baus', 'money', 'cardapios', 'calendario', 'omni', 'catalogo', 'mapa', 'mundo', 'grimorio', 'sistema', 'guia'];
 
 export function getTabsForRole(role: UserRole): TabId[] {
   if (role === 'PLAYER') return PLAYER_TABS;

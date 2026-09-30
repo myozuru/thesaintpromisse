@@ -35,6 +35,7 @@ const OmniModule = lazy(() => import("@/components/omni/OmniModule").then(m => (
 const CatalogoModule = lazy(() => import("@/components/catalogo/CatalogoModule").then(m => ({ default: m.CatalogoModule })));
 const MapaModule = lazy(() => import("@/components/mapa/MapaModule").then(m => ({ default: m.MapaModule })));
 const GrimorioModule = lazy(() => import("@/components/grimorio/GrimorioModule").then(m => ({ default: m.GrimorioModule })));
+const MundoModule = lazy(() => import("@/components/mundo/MundoModule").then(m => ({ default: m.MundoModule })));
 
 const MODULES: Partial<Record<TabId, React.ComponentType>> = {
   relogio: ChronosModule,
@@ -48,12 +49,13 @@ const MODULES: Partial<Record<TabId, React.ComponentType>> = {
   omni: OmniModule,
   catalogo: CatalogoModule,
   mapa: MapaModule,
+  mundo: MundoModule,
   grimorio: GrimorioModule,
   sistema: SistemaModule,
   guia: GuiaModule,
 };
 
-const TABS: TabId[] = ["relogio", "fichas", "feiticos-players", "itens", "baus", "money", "cardapios", "calendario", "omni", "catalogo", "mapa", "grimorio", "sistema", "guia"];
+const TABS: TabId[] = ["relogio", "fichas", "feiticos-players", "itens", "baus", "money", "cardapios", "calendario", "omni", "catalogo", "mapa", "mundo", "grimorio", "sistema", "guia"];
 
 export default function Index() {
   const role = useRoleStore((s) => s.role);
