@@ -31,6 +31,7 @@ import {
   type Weapon, type WeaponGroup, type WeaponRange,
 } from '@/lib/weapons';
 import { arremessosPotentesStep } from '@/lib/arremessosPotentes';
+import { extensaoAtaqueBonus } from '@/lib/extensaoCorpo';
 import { aggregateTalentBonuses } from '@/lib/talentEffects';
 import { getTalentById } from '@/lib/talents';
 import { consumeAdvantageFor, consumeFlatBonusFor } from '@/lib/omni/rollAdvantage';
@@ -331,6 +332,8 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
   ctxBonus.bonusDice += post.bonusDice;
   ctxBonus.notes.push(...post.notes);
   if (ctx.situation.devastacaoHit) { ctxBonus.hit = (ctxBonus.hit ?? 0) + ctx.situation.devastacaoHit; ctxBonus.notes.push(`Postura da Devastação: +${ctx.situation.devastacaoHit} acerto`); }
+  const extHit = extensaoAtaqueBonus(ctx.attacker, w);
+  if (extHit) { ctxBonus.hit = (ctxBonus.hit ?? 0) + extHit; ctxBonus.notes.push(`Extensão do Corpo: +${extHit} acerto (corpo a corpo)`); }
   if (ctx.situation.arsenalCiclico) { ctxBonus.bonusDice += 1; ctxBonus.notes.push('Arsenal Cíclico: +1 dado'); }
   if (ctx.situation.golpeAtroz) { ctxBonus.bonusDice += 1; ctxBonus.notes.push('Golpe Especial Atroz: +1 dado'); }
   if (ctx.situation.golpeLetal) { ctxBonus.critRangeBonus += 1; ctxBonus.notes.push('Golpe Especial Letal: margem de crítico −1'); }

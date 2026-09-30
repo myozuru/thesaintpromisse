@@ -23,6 +23,9 @@ import { useLogStore } from '@/stores/useLogStore';
 import { rollD20Com } from '@/lib/dice';
 import { perguntarFortuna } from '@/lib/fortuna';
 import { posturaPericia } from '@/lib/posturas';
+import { penalidadeTRFlanqueado } from '@/lib/flanqueadorSuperior';
+import { ehTesteDeDesarme, extensaoDesarmeBonus } from '@/lib/extensaoCorpo';
+import { useMapStore } from '@/stores/useMapStore';
 import { getAttrModifier } from '@/components/fichas/CharacterCard';
 import { getTrainingBonus, getLevelSkillBonus } from '@/types';
 import { hasRecompensaNote, recompensaPEPatch } from '@/lib/suportePreAnaliseRecompensa';
@@ -36,13 +39,33 @@ import { cn } from '@/lib/utils';
 import type { Character } from '@/types';
 import { canViewerRollTestRequest, isPlayerOwnedTestRequest } from '@/lib/testRequestAudience';
 
+/** Modificadores externos de combate que valem para qualquer teste pedido. */
+function bonusDeCombate(c: Character, req: TestRequest): { bonus: number; parts: string[] } {
+  const parts: string[] = [];
+  let bonus = 0;
+  if (ehTesteDeDesarme(req.testName)) {
+    const ext = extensaoDesarmeBonus(c);
+    if (ext) { bonus += ext; parts.push(`Extensão do Corpo +${ext}`); }
+  }
+  if (req.kind === 'save') {
+    const ms = useMapStore.getState();
+    const pen = penalidadeTRFlanqueado(c, useCharacterStore.getState().characters, ms.entities as never, ms.gridConfig as never);
+    if (pen) { bonus += pen; parts.push(`Flanqueador Superior ${pen}`); }
+  }
+  return { bonus, parts };
+}
+
 function computeBonus(c: Character, req: TestRequest): { bonus: number; breakdown: string } {
   const level = c.level || 1;
+  const extra = bonusDeCombate(c, req);
   if (req.kind === 'attribute') {
     const attr = c.attributes.find((a) => a.name === req.testName);
     if (!attr) return { bonus: 0, breakdown: 'sem atributo' };
     const mod = getAttrModifier(attr.value);
-    return { bonus: mod, breakdown: `mod ${req.testName} ${mod >= 0 ? '+' : ''}${mod}` };
+    return {
+      bonus: mod + extra.bonus,
+      breakdown: [`mod ${req.testName} ${mod >= 0 ? '+' : ''}${mod}`, ...extra.parts].join(' · '),
+    };
   }
   if (req.kind === 'skill') {
     const sk = c.skills.find((s) => s.name === req.testName);
@@ -63,7 +86,7 @@ function computeBonus(c: Character, req: TestRequest): { bonus: number; breakdow
       ext ? `ext ${ext >= 0 ? '+' : ''}${ext}` : null,
       insp ? `inspirado +${insp}` : null,
     ].filter(Boolean);
-    return { bonus, breakdown: parts.join(' · ') };
+    return { bonus: bonus + extra.bonus, breakdown: [...parts, ...extra.parts].join(' · ') };
   }
   // save
   const st = c.savingThrows?.find((s) => s.name === req.testName);
@@ -82,7 +105,10 @@ function computeBonus(c: Character, req: TestRequest): { bonus: number; breakdow
     train ? `treino +${train}` : null,
     ext ? `ext ${ext >= 0 ? '+' : ''}${ext}` : null,
   ].filter(Boolean);
-  return { bonus, breakdown: parts.join(' · ') || 'sem mods' };
+  return {
+    bonus: bonus + extra.bonus,
+    breakdown: [...parts, ...extra.parts].join(' · ') || 'sem mods',
+  };
 }
 
 function buildRollContext(req: TestRequest): RollContext {

@@ -1606,6 +1606,30 @@ const ESPECIALISTA_COMBATE: SpecAbility[] = [
     triggerText: 'Aba de Posturas na barra de combate.',
     logicText: 'Sol, Lua, Terra, Dragão, Fortuna, Devastação (nv 6), Tempestade (nv 10), Céu (nv 12).',
   },
+  {
+    id: 'ec-disparos-sincronizados', name: 'Disparos Sincronizados', tier: 2, specialization: 'Especialista em Combate',
+    flavor: 'Você sincroniza seus disparos e tiros, fazendo-os parecer um só.',
+    mechanic: 'Manejando duas armas à distância ou de fogo, você pode usar suas ações de ataque juntas. Realize os dois ataques: se ambos acertarem, o dano vira uma única instância, com efeitos das duas armas e resistências/fraquezas aplicadas uma só vez.',
+    activation: 'action',
+    triggerText: 'Botão "Disparos Sincronizados" na aba de Ataque (Ação Comum).',
+    logicText: 'Se qualquer um dos dois tiros errar, nenhum dano é causado. RD aplicada uma vez sobre o dano somado.',
+  },
+  {
+    id: 'ec-extensao-corpo', name: 'Extensão do Corpo', tier: 2, specialization: 'Especialista em Combate',
+    flavor: 'Suas armas são praticamente extensões do seu próprio corpo.',
+    mechanic: 'Seu alcance em ataques com armas corpo a corpo aumenta em 1,5 m e você recebe +2 em jogadas de ataque e em testes para evitar ser desarmado.',
+    activation: 'passive',
+    triggerText: 'Sempre ativa.',
+    logicText: '+1,5 m de alcance CaC, +2 no acerto com armas corpo a corpo, +2 em testes contra desarme.',
+  },
+  {
+    id: 'ec-flanqueador-superior', name: 'Flanqueador Superior', tier: 2, specialization: 'Especialista em Combate',
+    flavor: 'Você sabe perfeitamente como manter um flanco perigoso.',
+    mechanic: 'Enquanto estiver flanqueando uma criatura, ela recebe −2 em testes de resistência.',
+    activation: 'passive',
+    triggerText: 'Você e um aliado adjacentes (1,5 m) à mesma criatura.',
+    logicText: '−2 em todos os TRs da criatura flanqueada enquanto o flanco existir.',
+  },
 ];
 
 // ===== Registry global =====================================================
