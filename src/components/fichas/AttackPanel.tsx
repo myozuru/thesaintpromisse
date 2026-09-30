@@ -440,6 +440,15 @@ export function AttackPanel({ character: cProp }: Props) {
       addLog('combat', `🚫 ${mainWeapon.name} está emperrada — gaste uma Ação Comum para desemperrar.`);
       return;
     }
+    // ─── Munição: armas com Recarga [X] gastam 1 tiro por ataque ────────────
+    if (!isReroll) {
+      const tiro = consumirTiro(c.id, mainWeapon.name);
+      if (!tiro.ok) { addLog('combat', `🚫 ${tiro.reason}`); return; }
+      if (tiro.restante !== undefined) {
+        addLog('combat', `🔫 ${mainWeapon.name}: ${tiro.restante} tiro(s) restante(s).`);
+      }
+    }
+
     // ─── Precisão Definitiva: gasta PE antes da jogada ──────────────────────
     let precisaoUsada = 0;
     if (!isReroll && temPrecisao && precisaoPe > 0) {
