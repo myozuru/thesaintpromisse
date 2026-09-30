@@ -13,7 +13,7 @@ import { useLogStore } from '@/stores/useLogStore';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { computeTotalDefense } from '@/lib/defenseCalc';
-import { podeAprender, posturasLimite, imuneMovimentoForcado, posturaFortitude } from '@/lib/posturas';
+import { podeEntrar, podeAprender, posturasLimite, imuneMovimentoForcado, posturaFortitude } from '@/lib/posturas';
 import { ficha, montarMesa, limparMesa, comoTela, pegarFicha, forcarDados } from './helpers/mesaReal';
 
 const AP = [{ abilityId: 'ec-assumir-postura', chosenAtLevel: 2 }];
@@ -25,6 +25,7 @@ const esp = (extra: Record<string, unknown> = {}) => ficha('ana', {
   reactionsCurrent: 1, reactionsMax: 1, hpCurrent: 50, hpMax: 50, escCurrent: 0, rd: 0, ca: 10, ...extra,
 } as never);
 const inimigo = (id: string) => ficha(id, { category: 'INIMIGO', hpCurrent: 200, hpMax: 200, escCurrent: 0, rd: 0, attributes: [{ id: 'c', name: 'Constituição', value: 10 }] } as never);
+const podeEntrarFora = () => podeEntrar(esp({ posturasAprendidas: ['sol'] }), 'sol', { inCombat: false }).reason;
 const log = () => useLogStore.getState().logs.map((l) => l.message).join('\n');
 
 function mesa(c = esp(), extra: Record<string, [number, number]> = {}) {
@@ -71,7 +72,8 @@ describe('Assumir Postura — base', () => {
     expect((screen.getByRole('button', { name: /Entrar: Sol/ }) as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('fora de combate não entra; termina após 10 rodadas; Caído encerra', () => {
+  it('fora de combate não entra; termina após 10 rodadas; Caído encerra', async () => {
+    expect(podeEntrarFora()).toMatch(/Só em combate/);
     mesa(esp({ posturasAprendidas: ['sol'] }));
     clicar(/Entrar: Sol/);
     for (let i = 0; i < 18; i++) useCombatStore.getState().nextTurn(); // rodada 10
@@ -79,8 +81,11 @@ describe('Assumir Postura — base', () => {
     useCombatStore.getState().nextTurn(); useCombatStore.getState().nextTurn(); // rodada 11
     expect(pegarFicha('ana').posturaAtiva).toBeNull();
     useCharacterStore.getState().updateCharacter('ana', { posturaAtiva: { id: 'sol', untilRound: 99 }, activeConditions: [{ id: 'x', conditionId: 'caido', name: 'Caído', icon: '', remainingTurns: -1 }] } as never);
-    console.log('DBG', JSON.stringify(pegarFicha('ana').activeConditions), JSON.stringify(pegarFicha('ana').posturaAtiva));
-    expect(screen.getByTestId('postura-ativa').textContent).toMatch(/Nenhuma/);
+    expect(pegarFicha('ana').posturaAtiva).toBeNull();
+    // levantar não traz a postura de volta
+    useCharacterStore.getState().updateCharacter('ana', { activeConditions: [] } as never);
+    expect(pegarFicha('ana').posturaAtiva).toBeNull();
+    await waitFor(() => expect(screen.getByTestId('postura-ativa').textContent).toMatch(/Nenhuma/));
   });
 });
 

@@ -1,5 +1,5 @@
 import { markCharacterDeleted } from "@/lib/charSyncStamps";
-import { luaReducao } from '@/lib/posturas';
+import { luaReducao, quebraPostura } from '@/lib/posturas';
 import { arsenalTrocaLivreDisponivel, arsenalBonusAoTrocar } from '@/lib/arsenalCiclico';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -1204,6 +1204,8 @@ export const useCharacterStore = create<CharacterStore>()(
             updates = rest as Partial<Character>;
           }
           let merged: Character = { ...c, ...updates };
+          // Assumir Postura: ficar Caído/incapacitado encerra a postura de vez.
+          if (merged.posturaAtiva && quebraPostura(merged)) merged = { ...merged, posturaAtiva: null };
           const classChanged = updates.characterClass && updates.characterClass !== c.characterClass;
           if (merged.characterClass !== 'Feiticeiro') {
             merged = {
