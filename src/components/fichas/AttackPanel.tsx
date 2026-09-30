@@ -403,6 +403,23 @@ export function AttackPanel({ character: cProp }: Props) {
       addLog('combat', `⚠️ ${c.name} não tem arma equipada na mão principal.`);
       return;
     }
+    // ─── Emperrar: arma de fogo travada não dispara ─────────────────────────
+    if (armaEstaEmperrada(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, mainWeapon)) {
+      addLog('combat', `🚫 ${mainWeapon.name} está emperrada — gaste uma Ação Comum para desemperrar.`);
+      return;
+    }
+    // ─── Precisão Definitiva: gasta PE antes da jogada ──────────────────────
+    let precisaoUsada = 0;
+    if (!isReroll && temPrecisao && precisaoPe > 0) {
+      const fresh = useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c;
+      const chk = podeUsarPrecisao(fresh, precisaoPe);
+      if (!chk.ok) { addLog('combat', `🚫 Precisão Definitiva: ${chk.reason}`); return; }
+      precisaoUsada = precisaoPe;
+      useCharacterStore.getState().updateCharacter(c.id, { peCurrent: Math.max(0, (fresh.peCurrent ?? 0) - precisaoUsada) });
+      addLog('combat', `🎯 Precisão Definitiva: ${c.name} gasta ${precisaoUsada} PE → +${precisaoBonus(precisaoUsada, precisaoModo)} ${precisaoModo === 'dano' ? 'no dano' : 'no acerto'}.`);
+    }
+    const pistoleiroUsado = temPistoleiro && pistoleiroOn && ehArmaDeFogo(mainWeapon);
+
     // ─── Artes do Combate: validações (sem gastar ainda) ────────────────────
     const artesAtivas = temArtes && arteCustoTotal > 0;
     if (artesAtivas) {
