@@ -65,4 +65,4 @@
 - [x] Progressão geral conferida; catálogo de habilidades do Especialista criado
 - [x] Arremessos Potentes (+1 nível de dano; 1 PE ignora RD = treinamento) — dano do ataque agora desconta da vida do alvo
 - [x] Arsenal Cíclico
-- [ ] Assumir Postura (8 posturas)
+- [ ] Assumir Postura — parte 1 (base, Sol, Lua, Terra, Dragão) ✔; parte 2: Fortuna, Devastação, Tempestade, Céu (aguarda confirmação)
