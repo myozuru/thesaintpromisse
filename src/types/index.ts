@@ -819,6 +819,15 @@ export interface Character {
   buscarOportunidade?: { combatId: string; resultados: Record<string, boolean>; ganhos: string[] };
   /** Compensar Erro: rodada em que foi usado. */
   compensarErroRound?: number;
+  /** Preparo Imediato: ação preparada na iniciativa, aguardando o gatilho. */
+  prontidaoPreparada?: { tipo: 'bonus' | 'action'; combatId: string; custo: number } | null;
+  /** Preparo Imediato: combates em que a oferta na iniciativa já foi respondida. */
+  preparoImediatoOferta?: string | null;
+  /** Munição carregada por arma (chave = nome da arma). */
+  weaponAmmo?: Record<string, number>;
+  /** Uso Rápido: chave de turno em que o item adicional já foi usado. */
+  usoRapidoTurnKey?: string;
+
   /** Mobilidade Avançada: metros liberados pela reação (fora do turno). */
   mobilidadeReacaoM?: number;
   /** Mobilidade Avançada: movimento já usado quando a reação foi aceita. */

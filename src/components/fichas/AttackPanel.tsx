@@ -63,6 +63,9 @@ import { hasArremessoRapido, arremessoRapidoPodeUsar, arremessoRapidoUsar, useAr
 import { TiroFalsoSection } from './TiroFalsoSection';
 import { RevigorarButton } from './RevigorarButton';
 import { EspecialistaNv4Sections } from './EspecialistaNv4Sections';
+import { EspecialistaNv4CSections } from './EspecialistaNv4CSections';
+import { consumirTiro } from '@/lib/recargaRapida';
+
 import { escondidoDe, revelarPara } from '@/lib/buscarOportunidade';
 import { registrarAtaqueCompensar } from '@/lib/compensarErro';
 
@@ -440,6 +443,15 @@ export function AttackPanel({ character: cProp }: Props) {
       addLog('combat', `🚫 ${mainWeapon.name} está emperrada — gaste uma Ação Comum para desemperrar.`);
       return;
     }
+    // ─── Munição: armas com Recarga [X] gastam 1 tiro por ataque ────────────
+    if (!isReroll) {
+      const tiro = consumirTiro(c.id, mainWeapon.name);
+      if (!tiro.ok) { addLog('combat', `🚫 ${tiro.reason}`); return; }
+      if (tiro.restante !== undefined) {
+        addLog('combat', `🔫 ${mainWeapon.name}: ${tiro.restante} tiro(s) restante(s).`);
+      }
+    }
+
     // ─── Precisão Definitiva: gasta PE antes da jogada ──────────────────────
     let precisaoUsada = 0;
     if (!isReroll && temPrecisao && precisaoPe > 0) {
@@ -1476,6 +1488,10 @@ export function AttackPanel({ character: cProp }: Props) {
             return checkWeaponRange(c.id, alvoId, arma, ms.entities, ms.gridConfig, meleeRangeBonus, al ? { casterProfileId: c.profileId, targetProfileId: al.profileId } : undefined, posturaAlcanceMult(eu));
           }}
         />
+
+        {/* ─── Preparo Imediato / Munição / Uso Rápido ─────────────────────── */}
+        <EspecialistaNv4CSections character={c} />
+
 
 
 

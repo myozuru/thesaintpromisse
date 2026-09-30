@@ -122,3 +122,8 @@ export const useItemStore = create<ItemStore>()(
     { name: 'rpg-items' }
   )
 );
+
+// Dev-only hook for browser tests (never in production builds).
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  (window as unknown as Record<string, unknown>).__itemStore = useItemStore;
+}
