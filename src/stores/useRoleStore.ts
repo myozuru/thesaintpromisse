@@ -13,3 +13,8 @@ export const useRoleStore = create<RoleState>()((set) => ({
   setRole: (role) => set({ role }),
   logout: () => set({ role: null }),
 }));
+
+// Dev-only hook for browser tests (never in production builds).
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  (window as unknown as Record<string, unknown>).__roleStore = useRoleStore;
+}
