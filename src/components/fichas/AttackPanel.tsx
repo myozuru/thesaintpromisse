@@ -548,7 +548,11 @@ export function AttackPanel({ character: cProp }: Props) {
       weapon: mainWeapon,
       targetDefense: targetDef,
       situation: {
+        pistoleiro: pistoleiroUsado,
+        precisaoPe: temPrecisao ? precisaoPe : 0,
+        precisaoModo,
         devastacaoHit: devB.hit,
+
         twoHanded: usingTwoHanded || twoHanded,
         targetUnaware,
         targetProne,
