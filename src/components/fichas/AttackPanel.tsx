@@ -50,6 +50,9 @@ import { posturaAtiva, fortitudeMod, imuneMovimentoForcado, hasAssumirPostura, p
 import { PosturasPanel } from '@/components/fichas/PosturasPanel';
 import { arsenalRegistroAtaque, arsenalBonusAtivo, hasArsenalCiclico } from '@/lib/arsenalCiclico';
 import { hasArremessosPotentes, podeAtivarArremessos, arremessosAtivo, arremessosRdIgnorada, turnKeyFor } from '@/lib/arremessosPotentes';
+import { hasPistoleiroIniciado, podeUsarPistoleiro, armaEstaEmperrada, ehArmaDeFogo, margemEmperrar } from '@/lib/pistoleiroIniciado';
+import { hasPrecisaoDefinitiva, precisaoPeMax, precisaoBonus, podeUsarPrecisao, type PrecisaoModo } from '@/lib/precisaoDefinitiva';
+
 import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import { extensaoAlcanceBonus } from '@/lib/extensaoCorpo';
 import { penalidadeTRFlanqueado } from '@/lib/flanqueadorSuperior';
