@@ -126,6 +126,11 @@ async def main():
             await pg.wait_for_timeout(6000)
             body = await pg.inner_text("body")
             logtxt = await pg.inner_text("body")
+            try:
+                tray = pg.get_by_text("AUSPÍCIO DOS DADOS").locator("xpath=ancestor::div[2]")
+                print("TRAY TEXTO:", (await tray.first.inner_text()).replace("\n"," | ")[:300])
+            except Exception as e:
+                print("tray err", e)
             print("LOG FURT:", [l for l in logtxt.split("\n") if "Furtividade" in l or "d20" in l][:6])
             print("ROLAGEM:", [l for l in body.split("\n") if _re.search("Furtividade|chamativa|presença suprimida", l)][:8])
             await pg.screenshot(path=S + "furtividade_rolagem.png")
