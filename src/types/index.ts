@@ -517,6 +517,12 @@ export interface Character {
   attacksThisTurn?: number;
   /** Arremessos Potentes: turno (rodada:id) em que o PE foi gasto para ignorar RD. */
   arremessosPotentesTurnKey?: string;
+  /** Arsenal Cíclico: rodada em que a troca livre extra foi usada. */
+  arsenalFreeSwapRound?: number;
+  /** Arsenal Cíclico: grupo da última arma usada para atacar e em que rodada. */
+  arsenalLastAttack?: { group: string; round: number };
+  /** Arsenal Cíclico: +1 dado com esta arma até o fim da rodada `untilRound`. */
+  arsenalBonus?: { weaponName: string; untilRound: number } | null;
   /**
    * Resultado do último ataque deste personagem no turno atual:
    *   true  = acertou
