@@ -581,8 +581,15 @@ export function AttackPanel({ character: cProp }: Props) {
     } finally {
       rollInFlightRef.current = false;
     }
+    // Emperrou: trava a arma até uma Ação Comum de desemperrar.
+    if (result.emperrou) {
+      useCharacterStore.getState().updateCharacter(c.id, { armaEmperrada: mainWeapon.name });
+      setPistoleiroOn(false);
+      addLog('combat', `🔧 ${mainWeapon.name} emperrou! O ataque falha automaticamente — gaste uma Ação Comum para desemperrar.`);
+    }
     // Auto-crit contra alvos Inconsciente / Indefeso / Paralisado (CaC).
     const auto = target ? getAutoCritFromConditions(target, attackKind) : null;
+
     if (auto && !result.criticalFail) {
       const extraDamage = result.hit ? result.damageTotal : Math.max(0, ctx.abilityMod);
       result = {
