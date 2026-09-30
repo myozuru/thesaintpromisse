@@ -874,6 +874,12 @@ export function AttackPanel({ character: c }: Props) {
     if (r2.damageTotal > lastResult.damageTotal) {
       setLastResult({ ...lastResult, damageTotal: r2.damageTotal, damageRolls: r2.damageRolls, canRerollDamage: false });
       addLog('combat', `🎲 Ataque Infalível: novo dano ${r2.damageTotal} (substituiu ${lastResult.damageTotal}).`);
+      // O dano original já foi aplicado: aplica só a diferença (sem RD de novo).
+      if (target) {
+        applyDamage(target.id, r2.damageTotal - lastResult.damageTotal, (lastResult.damageType ?? undefined) as never, {
+          attackerId: c.id, isMelee: mainWeapon.range === 'melee', ignoresRD: true,
+        });
+      }
     } else {
       setLastResult({ ...lastResult, canRerollDamage: false });
       addLog('combat', `🎲 Ataque Infalível: dano original mantido (${lastResult.damageTotal} ≥ ${r2.damageTotal}).`);
