@@ -31,6 +31,8 @@ import { usePassiveProposalStore } from '@/stores/usePassiveProposalStore';
 import { rollD20Com, rollDiceCom } from '@/lib/dice';
 import { perguntarFortuna } from '@/lib/fortuna';
 import { posturaPericia } from '@/lib/posturas';
+import { ehFurtividade, penalidadeChamativa, presencaSuprimidaBonus } from '@/lib/presencaSuprimida';
+
 import { hasSpecAbility } from '@/lib/suporteNivel2';
 import { PRE_ANALISE_ATENCAO, PRE_ANALISE_ID } from '@/lib/suportePreAnaliseRecompensa';
 import { consumeAdvantageFor, consumeFlatBonusFor, applyAdvantageToD20 } from '@/lib/omni/rollAdvantage';
@@ -399,6 +401,9 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
   const [pendingSpellAreaTemplateId, setPendingSpellAreaTemplateId] = useState<string | null>(null);
   const [rollResult, setRollResult] = useState<RollResult | null>(null);
   const [rollAnimating, setRollAnimating] = useState(false);
+  /** Presença Suprimida: marca rolagens de Furtividade feitas após ação chamativa. */
+  const [acaoChamativa, setAcaoChamativa] = useState(false);
+
   const [removing, setRemoving] = useState(false);
   const [showRestModal, setShowRestModal] = useState(false);
   const [showLevelUp, setShowLevelUp] = useState(false);
@@ -910,6 +915,10 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
   };
 
   const handleSkillRoll = async (name: string, skillValue: number, linkedAttrId?: string, trained?: boolean, mastery?: boolean, externalBonus?: number) => {
+    // Presença Suprimida (EC Nv2): +2 em Furtividade e penalidade chamativa −5 (em vez de −10).
+    const furtBonus = presencaSuprimidaBonus(c, name);
+    const chamativa = ehFurtividade(name) && acaoChamativa ? penalidadeChamativa(c) : 0;
+
     let attrMod = 0;
     if (linkedAttrId) {
       const attr = c.attributes.find((a) => a.id === linkedAttrId);
@@ -957,7 +966,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     const isSavingThrow = (c.savingThrows || []).some(st => st.name === name);
     // Presença Inspiradora (Suporte Nv 3): bônus de cena em TODAS as perícias (não em TRs).
     const inspiracao = (isSavingThrow ? 0 : (c.inspiracaoBonus ?? 0)) + (isSavingThrow ? 0 : posturaPericia(c));
-    const totalBonus = baseBonus + attrMod + itemBonus + trainBonus + levelBonus + extBonus + auraSkillBonus + conditionSkillBonus + saveBonus + sentidosBonus + concentrationBonus + omniSkillBonus + inspiracao;
+    const totalBonus = baseBonus + attrMod + itemBonus + trainBonus + levelBonus + extBonus + auraSkillBonus + conditionSkillBonus + saveBonus + sentidosBonus + concentrationBonus + omniSkillBonus + inspiracao + furtBonus + chamativa;
     const activeCondIds = (c.activeConditions || []).map(ac => (ac.conditionId || '').toLowerCase());
     const triggersBastiao =
       isSavingThrow &&
@@ -985,7 +994,10 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     const inspiracaoLabel = inspiracao > 0 ? ` (+${inspiracao} inspiração)` : '';
     const masteryLabel = promotedMastery && !mastery ? ' [Maestria/Spec]' : '';
     const flatLabel = flat.bonus ? ` (${flat.bonus > 0 ? '+' : ''}${flat.bonus} comando/apoio)` : '';
-    showRollAnimation(name + auraLabel + condLabel + specLabel + sentidosLabel + inspiracaoLabel + flatLabel + masteryLabel + bastiaoLabel + modeLabel, d20, totalBonus + flat.bonus, d20 + totalBonus + flat.bonus);
+    const furtLabel = furtBonus > 0 ? ` (+${furtBonus} presença suprimida)` : '';
+    const chamativaLabel = chamativa !== 0 ? ` (${chamativa} ação chamativa)` : '';
+    showRollAnimation(name + auraLabel + condLabel + specLabel + sentidosLabel + inspiracaoLabel + flatLabel + furtLabel + chamativaLabel + masteryLabel + bastiaoLabel + modeLabel, d20, totalBonus + flat.bonus, d20 + totalBonus + flat.bonus);
+
     maybeApplyRecompensa(c.id, flat, { find: (id) => useCharacterStore.getState().characters.find((x) => x.id === id), update: updateCharacter, log: (m) => addLog('combat', m) });
   };
 
@@ -2657,7 +2669,17 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
           )}
 
           <Section icon={<ScrollText className="h-4 w-4" />} title="Perícias">
+            <label className="mb-1 flex items-center gap-2 text-[11px] text-muted-foreground" data-testid="chamativa-label">
+              <input
+                type="checkbox"
+                data-testid="chamativa-check"
+                checked={acaoChamativa}
+                onChange={(e) => setAcaoChamativa(e.target.checked)}
+              />
+              Após ataque / ação chamativa (penalidade de {penalidadeChamativa(c)} em Furtividade)
+            </label>
             <SkillBlock
+
               items={c.skills}
               attributes={c.attributes}
               editMode={editMode}
