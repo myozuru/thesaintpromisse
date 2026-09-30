@@ -63,6 +63,9 @@ import { hasArremessoRapido, arremessoRapidoPodeUsar, arremessoRapidoUsar, useAr
 import { TiroFalsoSection } from './TiroFalsoSection';
 import { RevigorarButton } from './RevigorarButton';
 import { EspecialistaNv4Sections } from './EspecialistaNv4Sections';
+import { EspecialistaNv4CSections } from './EspecialistaNv4CSections';
+import { consumirTiro } from '@/lib/recargaRapida';
+
 import { escondidoDe, revelarPara } from '@/lib/buscarOportunidade';
 import { registrarAtaqueCompensar } from '@/lib/compensarErro';
 
@@ -1485,6 +1488,10 @@ export function AttackPanel({ character: cProp }: Props) {
             return checkWeaponRange(c.id, alvoId, arma, ms.entities, ms.gridConfig, meleeRangeBonus, al ? { casterProfileId: c.profileId, targetProfileId: al.profileId } : undefined, posturaAlcanceMult(eu));
           }}
         />
+
+        {/* ─── Preparo Imediato / Munição / Uso Rápido ─────────────────────── */}
+        <EspecialistaNv4CSections character={c} />
+
 
 
 
