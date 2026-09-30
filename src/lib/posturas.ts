@@ -55,9 +55,9 @@ export function podeAprender(c: Character, id: PosturaId): { ok: boolean; reason
 export const posturaUsosMax = (c: Character) => getTrainingBonusByLevel(c.level ?? 1);
 export const posturaUsosRestantes = (c: Character) => Math.max(0, posturaUsosMax(c) - (c.posturaUsos ?? 0));
 
-const QUEBRA = new Set(['caido', 'inconsciente', 'paralisado', 'incapacitado', 'atordoado']);
+const QUEBRA = new Set(['caido', 'atordoado', 'inconsciente', 'paralisado', 'indefeso', 'morto', 'desmaiado']);
 function condIds(c: Character): string[] {
-  return (c.activeConditions ?? []).map((x) => (typeof x === 'string' ? x : (x as { id?: string }).id ?? '')).filter(Boolean);
+  return (c.activeConditions ?? []).map((x) => x.conditionId);
 }
 export function quebraPostura(c: Character): boolean {
   return condIds(c).some((id) => QUEBRA.has(id));
