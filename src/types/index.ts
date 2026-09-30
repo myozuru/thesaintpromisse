@@ -811,6 +811,14 @@ export interface Character {
   repertorioBonusSkill?: string;
   /** Desengajar: não provoca ataques de oportunidade até o fim do próprio turno. */
   desengajado?: boolean;
+  /** Buscar Oportunidade → Desengajar só contra estes inimigos (até o fim do turno). */
+  desengajadoDe?: string[];
+  /** Buscar Oportunidade → Escondido só destes inimigos (neste combate). */
+  escondidoDe?: { combatId: string; ids: string[] };
+  /** Buscar Oportunidade: testes já feitos neste combate e inimigos vencidos aguardando a escolha da ação livre. */
+  buscarOportunidade?: { combatId: string; resultados: Record<string, boolean>; ganhos: string[] };
+  /** Compensar Erro: rodada em que foi usado. */
+  compensarErroRound?: number;
   /** Mobilidade Avançada: metros liberados pela reação (fora do turno). */
   mobilidadeReacaoM?: number;
   /** Mobilidade Avançada: movimento já usado quando a reação foi aceita. */
