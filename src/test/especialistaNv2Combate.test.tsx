@@ -78,15 +78,12 @@ describe('Extensão do Corpo', () => {
     // Sem a habilidade: Espada Curta alcança 1,5 m; alvo a 2 casas = 3 m.
     mesa(esp(), [inimigo()], { ana: [0, 0], bruno: [2, 0] });
     abrirPainel();
-    forcarDados(18, 4, 4);
-    fireEvent.click(screen.getByRole('button', { name: /Rolar Ataque/ }));
-    await waitFor(() => expect(textoLog()).toMatch(/não pode atacar/));
+    expect(screen.getByRole('button', { name: /Rolar Ataque/ }).hasAttribute('disabled')).toBe(true);
 
     // Com a habilidade: +1,5 m → alcança.
     mesa(esp({ chosenSpecAbilities: EXT }), [inimigo()], { ana: [0, 0], bruno: [2, 0] });
     await atacar();
     await waitFor(() => expect(textoLog()).toMatch(/💥 Dano:/), { timeout: 15000 });
-    expect(textoLog()).not.toMatch(/não pode atacar/);
   }, 20000);
 
   it('dá +2 no acerto com arma corpo a corpo', async () => {
@@ -105,9 +102,7 @@ describe('Extensão do Corpo', () => {
   it('ainda respeita o limite: alvo a 6 m continua fora de alcance', async () => {
     mesa(esp({ chosenSpecAbilities: EXT }), [inimigo()], { ana: [0, 0], bruno: [4, 0] });
     abrirPainel();
-    forcarDados(18, 4, 4);
-    fireEvent.click(screen.getByRole('button', { name: /Rolar Ataque/ }));
-    await waitFor(() => expect(textoLog()).toMatch(/não pode atacar/));
+    expect(screen.getByRole('button', { name: /Rolar Ataque/ }).hasAttribute('disabled')).toBe(true);
   }, 20000);
 });
 
@@ -144,7 +139,7 @@ describe('Disparos Sincronizados', () => {
   it('com arma corpo a corpo na mão principal, o botão fica bloqueado', () => {
     mesa(atirador({ mainHandWeaponName: 'Espada Curta' }), [inimigo()], { ana: [0, 0], bruno: [1, 0] });
     abrirPainel();
-    expect(screen.getByTestId('disparos-sincronizados')).toBeDisabled();
+    expect(screen.getByTestId('disparos-sincronizados').hasAttribute('disabled')).toBe(true);
   });
 
   it('sem a habilidade o botão nem aparece', () => {
