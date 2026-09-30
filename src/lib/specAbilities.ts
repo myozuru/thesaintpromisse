@@ -234,7 +234,8 @@ export type SpecAbilityChoiceValue =
   | { kind: 'spell-and-ritual-upgrade'; spellId: string; upgradeId: string }
   | { kind: 'single-spell'; spellId: string }
   | { kind: 'single-release'; releaseId: string }
-  | { kind: 'spells'; spellIds: string[] };
+  | { kind: 'spells'; spellIds: string[] }
+  | { kind: 'weapon-group'; group: string };
 
 // ===== LUTADOR =============================================================
 
