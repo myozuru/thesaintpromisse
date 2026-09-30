@@ -115,7 +115,7 @@ async def main():
                     print("fechar tray:", e)
                 await pg.wait_for_timeout(1500)
                 await dado.first.scroll_into_view_if_needed()
-                await dado.first.click(force=True); await pg.wait_for_timeout(4000)
+                await dado.first.evaluate("el=>el.click()"); await pg.wait_for_timeout(5000)
                 print("TRAY:", await pg.get_by_text("Clique ou segure").count(), "| pend:", await pg.evaluate("document.body.innerText.includes('AUSPÍCIO')"))
                 for _ in range(3):
                     tr = pg.get_by_text("Clique ou segure")
