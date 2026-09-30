@@ -145,9 +145,9 @@ describe('Posturas — parte 2', () => {
     expect(cond('bruno')).toContain('imovel');
     useCombatStore.getState().nextTurn(); // começo do turno de ana: Imóvel acaba
     await waitFor(() => expect(cond('bruno')).not.toContain('imovel'));
+    useCharacterStore.getState().updateCharacter('caio', { attributes: [{ id: 'c', name: 'Constituição', value: 30 }] } as never);
     await atacarAlvo('caio', 19, 20, 20, 20, 20);
     await waitFor(() => expect(log()).toContain('caio Fortitude'));
-    console.log('LOGCAIO', log());
     expect(cond('caio')).not.toContain('caido');
     await atacarAlvo('davi', 2, 1, 1, 1); // errou: sem teste
     expect(log()).not.toContain('davi Fortitude');
