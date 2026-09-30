@@ -142,13 +142,14 @@ describe('Posturas — parte 2', () => {
     await waitFor(() => expect(log()).toMatch(/💥 Dano:/), { timeout: 8000 });
     expect(pegarFicha('ana').devastacao).toEqual({ alvoId: 'bruno', acertos: 1 });
     expect(log()).toContain('a rerrolagem acertou');
-    // 2º ataque acerta; a rerrolagem erra → o acúmulo volta a 0.
+    // 2º ataque acerta (acúmulo 1→2); a rerrolagem erra → perde só o acerto da rerrolagem (volta a 1).
     useCharacterStore.getState().updateCharacter('ana', { attacksThisTurn: 0, actionsCurrent: 1 } as never);
     alvo('bruno');
     forcarDados(18, 2);
     clicar(/Rolar Ataque/);
+    await waitFor(() => expect(pegarFicha('ana').devastacao?.acertos).toBe(2), { timeout: 8000 });
     fireEvent.click(await screen.findByRole('button', { name: /Rerolar Ataque/ }, { timeout: 8000 }));
-    await waitFor(() => expect(pegarFicha('ana').devastacao?.acertos).toBe(0), { timeout: 8000 });
+    await waitFor(() => expect(pegarFicha('ana').devastacao?.acertos).toBe(1), { timeout: 8000 });
     expect(log()).toContain('a rerrolagem errou');
   });
 
