@@ -10,6 +10,7 @@ import { useCombatStore } from '@/stores/useCombatStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useOpportunityStore } from '@/stores/useOpportunityStore';
 import { detectOpportunityCandidates } from '../opportunityEngine';
+import { detectarZonaRisco } from '@/lib/zonaRisco';
 import { getSocket } from '@/lib/socket';
 import { holdLocalMapSync } from '../mapSyncGuards';
 import { combatMoveBudget } from '@/lib/movementBudget';
@@ -70,6 +71,8 @@ export function PendingMoveOverlay() {
         });
       }
     } catch { /* ignore */ }
+    // ─── Zona de Risco (Especialista em Combate) ─────────────────────────
+    try { detectarZonaRisco(pending.charId); } catch { /* ignore */ }
     setPendingMove(null);
   };
   const cancel = () => {

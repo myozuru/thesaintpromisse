@@ -58,6 +58,7 @@ import { extensaoAlcanceBonus } from '@/lib/extensaoCorpo';
 import { penalidadeTRFlanqueado } from '@/lib/flanqueadorSuperior';
 import { hasDisparosSincronizados, podeSincronizar } from '@/lib/disparosSincronizados';
 import { GolpeFalsoSection } from './GolpeFalsoSection';
+import { useZonaRiscoStore } from '@/lib/zonaRisco';
 import { TiroFalsoSection } from './TiroFalsoSection';
 import { RevigorarButton } from './RevigorarButton';
 
@@ -193,6 +194,11 @@ export function AttackPanel({ character: cProp }: Props) {
   const [targetId, setTargetId] = useState<string>('');
   const [defenseOverride, setDefenseOverride] = useState<number | null>(null);
   const target = useMemo(() => characters.find(x => x.id === targetId) ?? null, [characters, targetId]);
+  // Zona de Risco: ataque liberado → pré-seleciona o inimigo que entrou no alcance.
+  const zonaAtaque = useZonaRiscoStore((s) => (s.ataque?.espId === c.id ? s.ataque : null));
+  useEffect(() => {
+    if (zonaAtaque) setTargetId(zonaAtaque.alvoId);
+  }, [zonaAtaque]);
   // Tipo de ataque (CaC vs Distância) — define defesa específica do alvo.
   const attackKind: AttackKind = useMemo(() => {
     if (!mainWeapon) return 'melee';
@@ -1348,6 +1354,12 @@ export function AttackPanel({ character: cProp }: Props) {
           </div>
         )}
 
+        {zonaAtaque && (
+          <div className="flex items-center justify-between gap-2 rounded border border-primary/60 bg-primary/10 px-2 py-1 text-[11px]" data-testid="zona-risco-banner">
+            <span>⚔️ Zona de Risco: ataque liberado contra <b>{characters.find((x) => x.id === zonaAtaque.alvoId)?.name ?? 'alvo'}</b> — role o ataque.</span>
+            <button onClick={() => useZonaRiscoStore.getState().setAtaque(null)} className="text-muted-foreground hover:text-foreground">✕</button>
+          </div>
+        )}
         {/* ─── ALVO ─────────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-2 text-xs">
           <label className="flex flex-col gap-0.5">
