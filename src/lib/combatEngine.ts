@@ -33,6 +33,9 @@ import {
 import { arremessosPotentesStep } from '@/lib/arremessosPotentes';
 import { golpesPotentesStep, golpesPotentesDano, GOLPES_POTENTES_DANO } from '@/lib/golpesPotentes';
 import { extensaoAtaqueBonus } from '@/lib/extensaoCorpo';
+import { ehArmaDeFogo, margemEmperrar, emperrou as emperrouArma } from '@/lib/pistoleiroIniciado';
+import { precisaoBonus } from '@/lib/precisaoDefinitiva';
+
 import { aggregateTalentBonuses } from '@/lib/talentEffects';
 import { getTalentById } from '@/lib/talents';
 import { consumeAdvantageFor, consumeFlatBonusFor } from '@/lib/omni/rollAdvantage';
