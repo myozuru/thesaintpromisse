@@ -359,6 +359,23 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
   const desf = Math.min(3, Math.max(0, ctx.situation.golpeDesfocado ?? 0));
   if (desf) { ctxBonus.hit -= 4 * desf; ctxBonus.notes.push(`Golpe Especial Desfocado: −${4 * desf} acerto`); }
 
+  // Pistoleiro Iniciado: margem de Emperrar +2 em troca de +1 dado de dano.
+  const pistoleiroOn = !!ctx.situation.pistoleiro && ehArmaDeFogo(w);
+  if (pistoleiroOn) {
+    ctxBonus.bonusDice += 1;
+    ctxBonus.notes.push(`Pistoleiro Iniciado: +1 dado de dano · margem de Emperrar ${margemEmperrar(w, true)} (1-${margemEmperrar(w, true)})`);
+  }
+  // Precisão Definitiva: PE convertidos em acerto (+2/PE) ou dano (+4/PE).
+  const precPe = Math.max(0, Math.floor(ctx.situation.precisaoPe ?? 0));
+  if (precPe > 0) {
+    const modo = ctx.situation.precisaoModo === 'dano' ? 'dano' : 'acerto';
+    const b = precisaoBonus(precPe, modo);
+    if (modo === 'dano') ctxBonus.damageFlat += b;
+    else ctxBonus.hit = (ctxBonus.hit ?? 0) + b;
+    ctxBonus.notes.push(`Precisão Definitiva: ${precPe} PE → +${b} ${modo === 'dano' ? 'no dano' : 'no acerto'}`);
+  }
+
+
   // Margem crítica (menor = mais fácil)
   const baseCrit = w.critRange ?? 20;
   const critRange = Math.max(2, baseCrit - ctxBonus.critRangeBonus);
