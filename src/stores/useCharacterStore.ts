@@ -6,6 +6,7 @@ import { temImunidade as omniTemImunidade } from '@/lib/omni/immunity';
 import { useLogStore } from '@/stores/useLogStore';
 import { Character, CharacterCategory, Attribute, Passive, Spell, DamageType, ActiveBuff, createEmptyRdByType, CharacterClass, Specialization, Origin, createEmptyAccessorySlots, ActiveCondition, CoreId, AptitudeKey, APTITUDE_MIN, APTITUDE_MAX, createDefaultCursedAptitudes, DEFAULT_SAVING_THROWS } from '@/types';
 import { recalcAnatomyPassives } from '@/lib/anatomyEffects';
+import { renovacaoSangueAtiva, aplicarRenovacao } from '@/lib/renovacaoSangue';
 import { recalcCursedExclusivePassives } from '@/lib/cursedExclusiveEffects';
 import { recalcDotePassives } from '@/lib/doteEffects';
 import { DOTE_BY_ID } from '@/lib/dotes';
@@ -2302,6 +2303,20 @@ export const useCharacterStore = create<CharacterStore>()(
               damageType,
             }));
           } catch { /* noop */ }
+        }
+
+        // ─── Especialista — Renovação pelo Sangue (alvo reduzido a 0 PV) ─────
+        // Se o dano zerou os PV do alvo e há um atacante identificado que seja
+        // Especialista em Combate Nv 6+, ele recupera 1 PE (até o máximo).
+        if (damageResolved && opts?.attackerId) {
+          const alvoDepois = get().characters.find((c) => c.id === id);
+          const atacante = get().characters.find((c) => c.id === opts.attackerId);
+          if (alvoDepois && (alvoDepois.hpCurrent ?? 0) <= 0 && atacante && renovacaoSangueAtiva(atacante)) {
+            const ok = aplicarRenovacao(atacante, get().updateCharacter);
+            if (ok) {
+              try { useLogStore.getState().addLog('combat', `🩸 Renovação pelo Sangue: ${atacante.name} reduziu ${alvoDepois.name} a 0 PV e recupera 1 PE.`); } catch { /* noop */ }
+            }
+          }
         }
 
         // ─── CL — Cobrir-se reativo (após dano comprometer Esc/HP) ──────────

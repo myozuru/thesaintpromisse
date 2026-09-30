@@ -44,6 +44,7 @@ import {
   applyDistracaoLetal, applyGolpeDescendente, investidaMoveMeters, metadeSab,
   execucaoSilenciosaDice,
 } from '@/lib/artesCombate';
+import { renovacaoSangueAtiva, aplicarRenovacao } from '@/lib/renovacaoSangue';
 import { cn } from '@/lib/utils';
 
 interface Props { character: Character; }
@@ -548,6 +549,7 @@ export function AttackPanel({ character: c }: Props) {
           addLog('combat', `⚔️ Golpe Amplo: ${c.name} atinge também ${alvo2.name}: d20 ${r2.natural} · total ${r2.attackTotal} → ${r2.criticalFail ? '💀 falha crítica' : r2.critical ? '💥 CRÍTICO' : r2.hit ? '✅ acerto' : '❌ erro'}${r2.hit ? ` · dano ${r2.damageTotal} (${r2.damageDice})` : ''}`);
           if (r2.hit && g.sel.sanguinario) aplicarSangramento(alvo2, g.sel.sanguinario);
           if (r2.hit && g.sel.penetrante) addLog('combat', `   ↳ Penetrante: ignora ${penetranteRD(c)} de RD.`);
+          if (r2.hit && r2.critical) checarRenovacaoCritico(true, alvo2.name);
         }
       }
     } else {
@@ -694,6 +696,7 @@ export function AttackPanel({ character: c }: Props) {
     const prefix = isReroll ? `🔁 ${c.name} re-rolou o ataque` : `🗡️ ${c.name} atacou com ${weaponName}`;
     addLog('combat', `${prefix}: ${rollLabel} · ${verdict}`);
     if (result.notes.length) addLog('combat', `   ↳ ${result.notes.join(' · ')}`);
+    if (result.hit && result.critical) checarRenovacaoCritico(true, target?.name);
 
     setPendingRerollMeta(null);
     setFirstD20Revealed(null);
@@ -725,6 +728,15 @@ export function AttackPanel({ character: c }: Props) {
     golpeRollRef.current = null;
     if (g?.sel.penetrante) addLog('combat', `   ↳ Penetrante: ignora ${penetranteRD(c)} de RD.`);
     if (g?.sel.impactante && g.target) void empurrarImpactante(g.target, result.damageTotal);
+  };
+
+  // Renovação pelo Sangue (Nv 6): crítico em inimigo recupera 1 PE.
+  // (Reduzir o alvo a 0 PV é tratado em applyDamage, que conhece o HP final.)
+  const checarRenovacaoCritico = (critico: boolean, alvoNome?: string) => {
+    if (!critico || !renovacaoSangueAtiva(c)) return;
+    const fresco = useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c;
+    const ok = aplicarRenovacao(fresco, useCharacterStore.getState().updateCharacter);
+    if (ok) addLog('combat', `🩸 Renovação pelo Sangue: crítico em ${alvoNome ?? 'inimigo'} — ${c.name} recupera 1 PE.`);
   };
 
   const aplicarSangramento = (alvo: Character, nivel: number) => {
@@ -794,6 +806,7 @@ export function AttackPanel({ character: c }: Props) {
       `🎯 Arremesso Ágil: ${c.name} ataca ${alvo2.name} com ${arma.name} (ação livre): d20 ${r.natural} · total ${r.attackTotal} → ${r.critical ? '💥 CRÍTICO' : r.hit ? '✅ acerto' : '❌ erro'}${r.hit ? ` · dano ${r.damageTotal} (${r.damageDice})` : ''}`,
     );
     recordAttackResult(c.id, r.hit);
+    if (r.hit && r.critical) checarRenovacaoCritico(true, alvo2.name);
     setArremessoTargetId('');
   };
 
