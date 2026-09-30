@@ -59,6 +59,7 @@ import { penalidadeTRFlanqueado } from '@/lib/flanqueadorSuperior';
 import { hasDisparosSincronizados, podeSincronizar } from '@/lib/disparosSincronizados';
 import { GolpeFalsoSection } from './GolpeFalsoSection';
 import { useZonaRiscoStore } from '@/lib/zonaRisco';
+import { hasArremessoRapido, arremessoRapidoPodeUsar, arremessoRapidoUsar, useArremessoRapidoStore } from '@/lib/arremessoRapido';
 import { TiroFalsoSection } from './TiroFalsoSection';
 import { RevigorarButton } from './RevigorarButton';
 
