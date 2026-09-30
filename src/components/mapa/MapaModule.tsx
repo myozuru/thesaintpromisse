@@ -74,6 +74,8 @@ import { SelectionToolbar } from './ui/SelectionToolbar';
 import { PendingMoveOverlay } from './ui/PendingMoveOverlay';
 import { OpportunityPromptOverlay } from './ui/OpportunityPromptOverlay';
 import { ZonaRiscoPrompt } from '@/components/fichas/ZonaRiscoPrompt';
+import { PreparoImediatoPrompt } from '@/components/fichas/PreparoImediatoPrompt';
+
 import { PendingAoEOverlay } from './ui/PendingAoEOverlay';
 import { LootOverlay } from './ui/LootOverlay';
 import { ChestOverlay } from './ui/ChestOverlay';
@@ -3434,6 +3436,8 @@ export function MapaModule() {
           <PendingMoveOverlay />
           <OpportunityPromptOverlay />
           <ZonaRiscoPrompt />
+          <PreparoImediatoPrompt />
+
           <PendingAoEOverlay />
           <LootOverlay />
           <ChestOverlay />
