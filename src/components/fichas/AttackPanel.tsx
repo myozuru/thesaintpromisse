@@ -45,7 +45,7 @@ import {
   execucaoSilenciosaDice,
 } from '@/lib/artesCombate';
 import { renovacaoSangueAtiva, aplicarRenovacao } from '@/lib/renovacaoSangue';
-import { posturaAtiva, fortitudeMod, imuneMovimentoForcado, hasAssumirPostura } from '@/lib/posturas';
+import { posturaAtiva, fortitudeMod, imuneMovimentoForcado, hasAssumirPostura, posturaAlcanceMult, devastacaoBonus, devastacaoPatch, TEMPESTADE_IMOVEL_PREFIX } from '@/lib/posturas';
 import { PosturasPanel } from '@/components/fichas/PosturasPanel';
 import { arsenalRegistroAtaque, arsenalBonusAtivo, hasArsenalCiclico } from '@/lib/arsenalCiclico';
 import { hasArremessosPotentes, podeAtivarArremessos, arremessosAtivo, arremessosRdIgnorada, turnKeyFor } from '@/lib/arremessosPotentes';
@@ -207,7 +207,8 @@ export function AttackPanel({ character: cProp }: Props) {
 
   // ─── Alcance da arma no mapa (grade, borda a borda) ──────────────────────
   const meleeRangeBonus = (c as { meleeRangeBonus?: number }).meleeRangeBonus ?? 0;
-  const weaponRangeM = mainWeapon ? weaponMaxRangeMeters(mainWeapon, meleeRangeBonus) : null;
+  const weaponRangeBase = mainWeapon ? weaponMaxRangeMeters(mainWeapon, meleeRangeBonus) : null;
+  const weaponRangeM = weaponRangeBase !== null ? weaponRangeBase * posturaAlcanceMult(c) : null;
   const mapIdentities = target
     ? { casterProfileId: c.profileId, targetProfileId: target.profileId }
     : undefined;
@@ -318,8 +319,9 @@ export function AttackPanel({ character: cProp }: Props) {
     addLog('combat', `🎯 Arremessos Potentes: ${c.name} gasta 1 PE — arremessos ignoram ${getTrainingBonusByLevel(c.level ?? 1)} de RD neste turno.`);
   };
   /** RD ignorada por este ataque (Penetrante + Arremessos Potentes). */
-  const rdIgnoradaAtaque = (penetrante: boolean): number =>
-    (penetrante ? penetranteRD(c) : 0) + (mainWeapon ? arremessosRdIgnorada(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, mainWeapon, turnInfo) : 0);
+  const devRdRef = useRef(0);
+  const rdIgnoradaAtaque = (penetrante: boolean, devastacaoRd = 0): number =>
+    devastacaoRd + (penetrante ? penetranteRD(c) : 0) + (mainWeapon ? arremessosRdIgnorada(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, mainWeapon, turnInfo) : 0);
   const golpeTurnKey = `${combatRound}:${combatTurnIdx}`;
   const precisoUsado = precisoUsesThisTurn(c.id, golpeTurnKey);
   const golpeAtivo = temGolpe && isGolpeAtivo(golpeSel);
@@ -498,11 +500,14 @@ export function AttackPanel({ character: cProp }: Props) {
     rollInFlightRef.current = true;
     setPhase('rolling-hit');
     const ability = pickAttackAbility(c, mainWeapon);
+    const devB = devastacaoBonus(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, target?.id);
+    devRdRef.current = devB.rd;
     const ctx = buildAttackContext({
       attacker: c,
       weapon: mainWeapon,
       targetDefense: targetDef,
       situation: {
+        devastacaoHit: devB.hit,
         twoHanded: usingTwoHanded || twoHanded,
         targetUnaware,
         targetProne,
@@ -547,6 +552,8 @@ export function AttackPanel({ character: cProp }: Props) {
     // Memória de turno: contabiliza apenas no PRIMEIRO disparo (reroll não conta como novo ataque).
     if (!isReroll) {
       recordAttackResult(c.id, result.hit);
+      if (target) registrarDevastacao(target.id, result.hit);
+      if (result.hit && target) void tempestadeGolpe(target);
       if (inCombat) {
         const reg = arsenalRegistroAtaque(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, mainWeapon.name, combatRound);
         if (reg) useCharacterStore.getState().updateCharacter(c.id, reg);
@@ -576,7 +583,7 @@ export function AttackPanel({ character: cProp }: Props) {
           const def2 = computeTotalDefense(alvo2, { items, omniInventory: omniInventoryList, omniEntidadesMap, omniRuntimeEffects: omniRuntimeEffectsList }, attackKind);
           const ctx2 = buildAttackContext({
             attacker: c, weapon: mainWeapon, targetDefense: def2,
-            situation: { ...ctx.situation, targetUnaware: false, arteExecucao: false },
+            situation: { ...ctx.situation, targetUnaware: false, arteExecucao: false, devastacaoHit: 0 },
             trainedRanges: [
               ...(c.meleeTrained ? (['melee'] as const) : []),
               ...(c.rangedTrained ? (['ranged', 'thrown'] as const) : []),
@@ -592,6 +599,8 @@ export function AttackPanel({ character: cProp }: Props) {
             });
           }
           if (r2.hit && r2.critical) checarRenovacaoCritico(true, alvo2.name);
+          registrarDevastacao(alvo2.id, r2.hit);
+          if (r2.hit) void tempestadeGolpe(alvo2);
         }
       }
     } else {
@@ -769,7 +778,8 @@ export function AttackPanel({ character: cProp }: Props) {
     const g = golpeRollRef.current;
     golpeRollRef.current = null;
     if (g?.sel.penetrante) addLog('combat', `   ↳ Penetrante: ignora ${penetranteRD(c)} de RD.`);
-    const rdIgn = rdIgnoradaAtaque(!!g?.sel.penetrante);
+    if (devRdRef.current > 0) addLog('combat', `   ↳ Postura da Devastação: ignora ${devRdRef.current} de RD.`);
+    const rdIgn = rdIgnoradaAtaque(!!g?.sel.penetrante, devRdRef.current);
     if (mainWeapon && arremessosRdIgnorada(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, mainWeapon, turnInfo) > 0) {
       addLog('combat', `   ↳ Arremessos Potentes: ignora ${arremessosRdIgnorada(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, mainWeapon, turnInfo)} de RD.`);
     }
@@ -780,6 +790,39 @@ export function AttackPanel({ character: cProp }: Props) {
     }
     if (g?.sel.impactante && g.target) void empurrarImpactante(g.target, result.damageTotal);
     if (target && result.damageTotal > 0) void explosaoDragao(target, result.damageTotal, result.damageType ?? undefined);
+  };
+
+  // Postura da Devastação: acumula acertos no mesmo alvo; trocar de alvo zera.
+  const registrarDevastacao = (alvoId: string, acertou: boolean) => {
+    const eu = useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c;
+    const patch = devastacaoPatch(eu, alvoId, acertou);
+    if (!patch) return;
+    const trocou = eu.devastacao?.alvoId && eu.devastacao.alvoId !== alvoId;
+    useCharacterStore.getState().updateCharacter(c.id, patch);
+    const n = patch.devastacao?.acertos ?? 0;
+    addLog('combat', `💢 Postura da Devastação: ${trocou ? 'trocou de alvo — acúmulo zerado. ' : ''}${n} acerto(s) acumulado(s) (+${n} acerto, ignora ${n * 2} RD no próximo golpe).`);
+  };
+
+  // Postura da Tempestade: acerto → Fortitude ou Caído; alvo já Caído → Imóvel até o começo do seu turno.
+  const tempestadeGolpe = async (alvo: Character) => {
+    const eu = useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c;
+    if (posturaAtiva(eu) !== 'tempestade') return;
+    const vivo = useCharacterStore.getState().characters.find((x) => x.id === alvo.id) ?? alvo;
+    const jaCaido = (vivo.activeConditions ?? []).some((x) => x.conditionId === 'caido');
+    const cd = specDCFor(eu);
+    const d20 = await rollD20Com(vivo.id);
+    const mod = fortitudeMod(vivo);
+    const passou = d20 + mod >= cd;
+    const efeito = jaCaido ? 'fica Imóvel até o começo do turno de ' + eu.name : 'fica Caído';
+    addLog('combat', `🌩️ Postura da Tempestade: ${vivo.name} Fortitude d20 ${d20}${mod >= 0 ? '+' : ''}${mod} vs CD ${cd} → ${passou ? 'passou' : `falhou — ${efeito}`}.`);
+    if (passou) return;
+    const def = CONDITIONS.find((x) => x.id === (jaCaido ? 'imovel' : 'caido'));
+    if (!def) return;
+    useCharacterStore.getState().addCondition(vivo.id, {
+      id: jaCaido ? `${TEMPESTADE_IMOVEL_PREFIX}${eu.id}:${Date.now()}` : `tempestade-caido:${Date.now()}`,
+      conditionId: def.id, name: def.name, icon: def.icon,
+      remainingTurns: -1, remainingRounds: -1, sourceCharName: eu.name,
+    });
   };
 
   // Postura do Dragão: inimigos a 1,5 m do alvo fazem Fortitude ou sofrem metade do dano.
@@ -890,6 +933,8 @@ export function AttackPanel({ character: cProp }: Props) {
       applyDamage(alvo2.id, r.damageTotal, (r.damageType ?? undefined) as never, { attackerId: c.id, isMelee: false, rdIgnore: ign });
     }
     if (r.hit && r.critical) checarRenovacaoCritico(true, alvo2.name);
+    registrarDevastacao(alvo2.id, r.hit);
+    if (r.hit) void tempestadeGolpe(alvo2);
     setArremessoTargetId('');
   };
 
