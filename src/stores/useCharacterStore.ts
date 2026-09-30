@@ -2118,11 +2118,18 @@ export const useCharacterStore = create<CharacterStore>()(
         if (beforeChar && opts?.attackerId && totalDamage > 0 && !opts?.tags?.includes('__lua')) {
           const red = luaReducao(beforeChar);
           if (red > 0) {
-            const reduced = Math.max(0, totalDamage - red);
-            set((s) => ({ characters: s.characters.map((cc) => cc.id === id ? { ...cc, reactionsCurrent: Math.max(0, (cc.reactionsCurrent ?? 0) - 1) } : cc) }));
-            try { useLogStore.getState().addLog('combat', `🌙 Postura da Lua: ${beforeChar.name} usa a reação — dano ${totalDamage} → ${reduced} (−${Math.min(red, totalDamage)}).`); } catch { /* noop */ }
-            if (reduced <= 0) return;
-            get().applyDamage(id, reduced, damageType, { ...opts, tags: [...(opts?.tags ?? []), '__lua'] });
+            // Pergunta ao jogador se usa a reação; o dano fica pendente até decidir.
+            setTimeout(() => {
+              import('@/stores/useReactionStore').then(({ useReactionStore }) => {
+                useReactionStore.getState().enqueue({
+                  charId: beforeChar.id,
+                  charName: beforeChar.name,
+                  kind: 'lua_reacao_offer',
+                  message: `🌙 ${beforeChar.name} foi atingido (${totalDamage} de dano). Usar a reação da Postura da Lua? Reduz ${red} e permite Andar e Desengajar.`,
+                  payload: { luaDamage: totalDamage, luaDamageType: damageType, luaReducao: red, luaOpts: { ...(opts ?? {}) } as Record<string, unknown> },
+                });
+              });
+            }, 0);
             return;
           }
         }

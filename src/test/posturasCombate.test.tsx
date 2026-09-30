@@ -4,11 +4,14 @@
  * peças no mapa, turnos de iniciativa, cliques reais no painel e no ataque.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+vi.mock('@/lib/sounds', () => ({ playSuccessSound: () => {}, playErrorSound: () => {}, playClickSound: () => {} }));
 vi.mock('@/integrations/supabase/client', async () => ({ supabase: (await import('./helpers/mesaReal')).nuvemFalsa }));
 vi.mock('@/lib/socket', () => ({ getSocket: () => null }));
 vi.mock('@/integrations/supabase/safeClient', async () => ({ hasWorkspaceCloud: false, supabase: (await import('./helpers/mesaReal')).nuvemFalsa }));
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { AttackPanel } from '@/components/fichas/AttackPanel';
+import { ReactionPromptOverlay } from '@/components/fichas/ReactionPromptOverlay';
+import { reactionMoveBudget, effectiveMovement } from '@/lib/movementBudget';
 import { useLogStore } from '@/stores/useLogStore';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
@@ -102,17 +105,49 @@ describe('Posturas em combate', () => {
 
   it('Lua: +3 Defesa, −4 acerto, dano sem Força; reação reduz dano pelo nível (1x)', async () => {
     const base = computeTotalDefense(esp());
-    mesa(esp({ posturasAprendidas: ['lua'] }));
+    mesa(esp({ posturasAprendidas: ['lua'], movement: 9 }));
     clicar(/Entrar: Lua/);
     expect(computeTotalDefense(pegarFicha('ana'))).toBe(base + 3);
     await atacar(17, 4, 4, 4);
     expect(log()).toContain('Postura da Lua');
     expect(Number(/💥 Dano: (\d+)/.exec(log())![1])).toBe(4); // 1d6=4, sem +3 de Força
+    const ativo = () => { const c = useCombatStore.getState(); return c.initiativeOrder[c.currentTurnIndex]?.charId; };
+    while (ativo() === 'ana') useCombatStore.getState().nextTurn(); // turno do inimigo
+    useCharacterStore.getState().updateCharacter('ana', { reactionsCurrent: 1 });
+    render(<ReactionPromptOverlay />);
+    // 1º ataque: aparece a pergunta; dano fica pendente até decidir.
     useCharacterStore.getState().applyDamage('ana', 10, undefined, { attackerId: 'bruno' });
+    expect(pegarFicha('ana').hpCurrent).toBe(50);
+    fireEvent.click(await screen.findByRole('button', { name: /Usar reação/ }));
     expect(pegarFicha('ana').hpCurrent).toBe(50 - 6);
     expect(pegarFicha('ana').reactionsCurrent).toBe(0);
+    // Andar fora do turno: deslocamento inteiro liberado; Desengajado.
+    expect(reactionMoveBudget(pegarFicha('ana'))).toBe(9);
+    expect(effectiveMovement(pegarFicha('ana'))).toBe(9);
+    expect(pegarFicha('ana').desengajado).toBe(true);
+    // 2º ataque: sem reação, nenhuma pergunta e dano cheio.
     useCharacterStore.getState().applyDamage('ana', 10, undefined, { attackerId: 'bruno' });
-    expect(pegarFicha('ana').hpCurrent).toBe(50 - 16); // sem reação: dano cheio
+    await waitFor(() => expect(pegarFicha('ana').hpCurrent).toBe(50 - 16));
+    expect(screen.queryByRole('button', { name: /Usar reação/ })).toBeNull();
+    // Desengajar acaba no fim do próprio turno de ana, movimento extra zera no início dele.
+    while (ativo() !== 'ana') useCombatStore.getState().nextTurn(); // → ana começa
+    expect(reactionMoveBudget(pegarFicha('ana'))).toBeNull();
+    expect(pegarFicha('ana').desengajado).toBe(true);
+    useCombatStore.getState().nextTurn(); // ana termina
+    expect(pegarFicha('ana').desengajado).toBe(false);
+  });
+
+  it('Lua: recusar a reação aplica dano cheio e guarda a reação; dano sem atacante não pergunta', async () => {
+    mesa(esp({ posturasAprendidas: ['lua'] }));
+    clicar(/Entrar: Lua/);
+    render(<ReactionPromptOverlay />);
+    useCharacterStore.getState().applyDamage('ana', 10, undefined, { attackerId: 'bruno' });
+    fireEvent.click(await screen.findByRole('button', { name: /Aceitar dano/ }));
+    expect(pegarFicha('ana').hpCurrent).toBe(40);
+    expect(pegarFicha('ana').reactionsCurrent).toBe(1);
+    expect(pegarFicha('ana').desengajado).toBeFalsy();
+    useCharacterStore.getState().applyDamage('ana', 5);
+    expect(pegarFicha('ana').hpCurrent).toBe(35);
   });
 
   it('Terra: PV temporários = nível no começo do turno, +treinamento em Fortitude, imune a empurrão', () => {

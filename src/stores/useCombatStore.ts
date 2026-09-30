@@ -383,6 +383,11 @@ export const useCombatStore = create<CombatStore>()(
         );
         const { currentTurnIndex, initiativeOrder, round } = get();
         const currentEntry = initiativeOrder[currentTurnIndex];
+        // Desengajar dura até o fim do turno de quem desengajou.
+        if (currentEntry) {
+          const ce = useCharacterStore.getState().characters.find((c) => c.id === currentEntry.charId);
+          if (ce?.desengajado) useCharacterStore.getState().updateCharacter(currentEntry.charId, { desengajado: false });
+        }
         if (currentEntry) {
           useCharacterStore.getState().tickBuffs(currentEntry.charId);
           useCharacterStore.getState().tickConditions(currentEntry.charId);

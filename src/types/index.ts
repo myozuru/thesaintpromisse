@@ -796,6 +796,8 @@ export interface Character {
   repertorioSkills?: string[];
   /** Expandir Repertório: perícia que recebeu o +2. */
   repertorioBonusSkill?: string;
+  /** Desengajar: não provoca ataques de oportunidade até o fim do próprio turno. */
+  desengajado?: boolean;
   /** Mobilidade Avançada: metros liberados pela reação (fora do turno). */
   mobilidadeReacaoM?: number;
   /** Mobilidade Avançada: movimento já usado quando a reação foi aceita. */

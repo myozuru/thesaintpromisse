@@ -49,7 +49,8 @@ export function PendingMoveOverlay() {
       const chars = useCharacterStore.getState().characters;
       const charNames: Record<string, string> = {};
       for (const c of chars) charNames[c.id] = c.name;
-      const candidates = detectOpportunityCandidates({
+      const movingChar = useCharacterStore.getState().characters.find((c) => c.id === pending.charId);
+      const candidates = movingChar?.desengajado ? [] : detectOpportunityCandidates({
         moving: ent,
         prevX: pending.startX,
         prevY: pending.startY,
