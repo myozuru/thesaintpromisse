@@ -209,7 +209,7 @@ export type SpecAbilityChoiceSchema =
   | { kind: 'spell'; label?: string }
   | { kind: 'skills'; count: number; mustBeTrained?: boolean; onlyTrained?: boolean; label?: string }
   | { kind: 'weapons'; count: number; label?: string }
-  | { kind: 'save'; options?: Array<'Fortitude' | 'Reflexos' | 'Astúcia' | 'Vontade'>; label?: string }
+  | { kind: 'save'; options?: Array<'Fortitude' | 'Reflexos' | 'Astúcia' | 'Vontade' | 'Integridade'>; label?: string }
   // — Novos kinds (Tier 2-16, briefing oficial). Sem UI dedicada ainda — a
   //   escolha permanece "pendente" até o modal específico ser construído.
   | { kind: 'spell-or-variation'; spellCount: number; variationCount: number; label?: string }
@@ -229,7 +229,7 @@ export type SpecAbilityChoiceValue =
   | { kind: 'spell'; spellId: string }
   | { kind: 'skills'; skills: string[] }
   | { kind: 'weapons'; weapons: string[] }
-  | { kind: 'save'; save: 'Fortitude' | 'Reflexos' | 'Astúcia' | 'Vontade' }
+  | { kind: 'save'; save: 'Fortitude' | 'Reflexos' | 'Astúcia' | 'Vontade' | 'Integridade' }
   | { kind: 'spell-or-variation'; spellIds: string[]; variationIds: string[] }
   | { kind: 'save-skill'; save: 'Fortitude' | 'Reflexos' | 'Astúcia' | 'Vontade' }
   | { kind: 'spell-and-ritual-upgrade'; spellId: string; upgradeId: string }
@@ -1792,6 +1792,27 @@ const ESPECIALISTA_COMBATE: SpecAbility[] = [
     activation: 'free', peCost: 1, usage: { max: 1, scope: 'round' },
     triggerText: 'Botão "Usar item adicional (1 PE)" no inventário, depois de usar um consumível.',
     logicText: 'Vale para qualquer consumível; no máximo 1 item adicional por turno, sem gastar ação.',
+  },
+  {
+    id: 'ec-guarda-estudada', name: 'Guarda Estudada', tier: 4, specialization: 'Especialista em Combate',
+    flavor: 'Sua guarda surge a partir do estudo e da reflexão.',
+    mechanic: 'Você soma metade do seu modificador de Sabedoria na sua Defesa, limitado pelo seu nível. Além disso, escolha um Teste de Resistência para receber um bônus de +2.',
+    activation: 'passive',
+    choiceSchema: {
+      kind: 'save',
+      options: ['Astúcia', 'Fortitude', 'Integridade', 'Reflexos', 'Vontade'],
+      label: 'Escolha o Teste de Resistência com +2',
+    },
+    triggerText: 'Sempre ativa: Defesa da ficha e rolagens do TR escolhido.',
+    logicText: 'Defesa += ⌊Mod. SAB ÷ 2⌋, limitado ao nível (penalidade entra inteira se o modificador for negativo). TR escolhido recebe +2; a escolha pode ser trocada em um descanso.',
+  },
+  {
+    id: 'ec-espirito-luta', name: 'Espírito de Luta', tier: 4, specialization: 'Especialista em Combate',
+    flavor: 'O combate é um caminho, no qual você nutre um espírito intenso para lutar.',
+    mechanic: 'Como Ação Livre, gaste 1 PE para receber +2 em jogadas de ataque até o fim da cena. Ao usar, você também ganha PV temporários iguais ao seu nível de personagem.',
+    activation: 'free', peCost: 1, usage: { max: 1, scope: 'scene' },
+    triggerText: 'Botão "Espírito de Luta" na aba de Ataque.',
+    logicText: '+2 em todas as jogadas de ataque até o fim da cena e PV temporários (escudo) = nível. 1 uso por cena.',
   },
 ];
 
