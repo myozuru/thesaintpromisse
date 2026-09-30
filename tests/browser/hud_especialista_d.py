@@ -108,6 +108,7 @@ async def main():
             dado = linha.locator("button[title=\'Rolar d20\']")
             print("PERICIA visivel:", await pg.get_by_text("Furtividade").first.is_visible(), "| botoes:", await dado.count())
             if await dado.count():
+                await dado.first.scroll_into_view_if_needed()
                 await dado.first.click(force=True); await pg.wait_for_timeout(4000)
                 for _ in range(3):
                     tr = pg.get_by_text("Clique ou segure")
@@ -115,7 +116,10 @@ async def main():
                         await tr.first.click(); await pg.wait_for_timeout(6000)
             await pg.wait_for_timeout(2000)
             import re as _re
+            await pg.wait_for_timeout(6000)
             body = await pg.inner_text("body")
+            logtxt = await pg.inner_text("body")
+            print("LOG FURT:", [l for l in logtxt.split("\n") if "Furtividade" in l or "d20" in l][:6])
             print("ROLAGEM:", [l for l in body.split("\n") if _re.search("Furtividade|chamativa|presença suprimida", l)][:8])
             await pg.screenshot(path=S + "furtividade_rolagem.png")
         else:
