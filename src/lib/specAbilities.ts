@@ -1789,7 +1789,7 @@ const ESPECIALISTA_COMBATE: SpecAbility[] = [
     id: 'ec-uso-rapido', name: 'Uso Rápido', tier: 4, specialization: 'Especialista em Combate',
     flavor: 'Você agiliza o uso do seu inventário de ferramentas.',
     mechanic: 'Ao utilizar uma ação para usar um item, você pode pagar 1 ponto de energia amaldiçoada para usar um item adicional.',
-    activation: 'free', peCost: 1, usage: { max: 1, scope: 'turn' },
+    activation: 'free', peCost: 1, usage: { max: 1, scope: 'round' },
     triggerText: 'Botão "Usar item adicional (1 PE)" no inventário, depois de usar um consumível.',
     logicText: 'Vale para qualquer consumível; no máximo 1 item adicional por turno, sem gastar ação.',
   },
