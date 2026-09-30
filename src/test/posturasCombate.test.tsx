@@ -4,6 +4,7 @@
  * peças no mapa, turnos de iniciativa, cliques reais no painel e no ataque.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+vi.mock('@/lib/sounds', () => ({ playSuccessSound: () => {}, playErrorSound: () => {}, playClickSound: () => {} }));
 vi.mock('@/integrations/supabase/client', async () => ({ supabase: (await import('./helpers/mesaReal')).nuvemFalsa }));
 vi.mock('@/lib/socket', () => ({ getSocket: () => null }));
 vi.mock('@/integrations/supabase/safeClient', async () => ({ hasWorkspaceCloud: false, supabase: (await import('./helpers/mesaReal')).nuvemFalsa }));
