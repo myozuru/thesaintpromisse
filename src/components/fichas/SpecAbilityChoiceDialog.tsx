@@ -87,6 +87,32 @@ export function SpecAbilityChoiceDialog({ charId, ability, current, open, onClos
             />
           )}
 
+          {schema.kind === 'weapon-group' && (
+            <div className="space-y-2" data-testid="weapon-group-picker">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                {schema.label ?? 'Escolha o grupo de armas'}
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {schema.options.map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    data-testid={`weapon-group-${g}`}
+                    onClick={() => { playClickSound(); setDraft({ kind: 'weapon-group', group: g }); }}
+                    className={cn(
+                      'rounded-md border-2 px-2 py-2 text-xs font-bold transition-colors',
+                      draft?.kind === 'weapon-group' && draft.group === g
+                        ? 'border-primary bg-primary/30 text-primary'
+                        : 'border-border bg-background/40 text-foreground hover:border-primary/60 hover:bg-primary/10',
+                    )}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {schema.kind === 'spell' && (
             <PlaceholderBox label="Catálogo de Feitiços conhecidos" />
           )}
