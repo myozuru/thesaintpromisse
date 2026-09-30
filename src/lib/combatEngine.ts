@@ -174,6 +174,12 @@ function applyCombatStyleBonuses(ctx: AttackContext, out: ContextualBonus): void
     out.damageFlat += golpesPotentesDano(ctx.attacker, ctx.trained);
     out.notes.push(`Golpes Potentes: +1 nível de dano, +${GOLPES_POTENTES_DANO} dano`);
   }
+  // Armas Escolhidas (nv 4): +3 níveis de dano com o grupo escolhido.
+  const aeStep = armasEscolhidasStep(ctx.attacker, ctx.weapon);
+  if (aeStep) {
+    out.damageStepDelta += aeStep;
+    out.notes.push(`Armas Escolhidas (${ctx.weapon.group}): +${ARMAS_ESCOLHIDAS_STEP} níveis de dano`);
+  }
   if (duploApplies(ctx.attacker)) {
     const dmg = getDuploDamage(ctx.attacker.level ?? 1);
     out.damageFlat += dmg;
