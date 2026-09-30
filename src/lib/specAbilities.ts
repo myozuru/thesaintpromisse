@@ -1630,6 +1630,30 @@ const ESPECIALISTA_COMBATE: SpecAbility[] = [
     triggerText: 'Você e um aliado adjacentes (1,5 m) à mesma criatura.',
     logicText: '−2 em todos os TRs da criatura flanqueada enquanto o flanco existir.',
   },
+  {
+    id: 'ec-golpe-falso', name: 'Golpe Falso', tier: 2, specialization: 'Especialista em Combate',
+    flavor: 'Você finge desferir um golpe, distraindo seus inimigos para auxiliar aliados.',
+    mechanic: 'Como reação a um aliado atacando um inimigo dentro do seu alcance de ataque, o inimigo faz um TR de Astúcia. Se falhar, seu aliado recebe vantagem no teste de ataque.',
+    activation: 'reaction',
+    triggerText: 'Painel de Ataque — seção "Golpe Falso" (sua ficha) e aviso na ficha do aliado.',
+    logicText: 'Alcance = arma empunhada (com Extensão do Corpo, se houver). TR de Astúcia vs CD de Especialização. Falha → vantagem no próximo ataque do aliado.',
+  },
+  {
+    id: 'ec-golpes-potentes', name: 'Golpes Potentes', tier: 2, specialization: 'Especialista em Combate',
+    flavor: 'Seus golpes se tornam inatamente mais potentes.',
+    mechanic: 'Sempre que usar uma arma com a qual seja treinado, o dano dela aumenta em um nível e suas rolagens de dano recebem +2.',
+    activation: 'passive',
+    triggerText: 'Sempre ativa, com armas treinadas.',
+    logicText: '+1 nível de dano (acumula com Arremessos Potentes) e +2 fixo no dano.',
+  },
+  {
+    id: 'ec-indomavel', name: 'Indomável', tier: 2, specialization: 'Especialista em Combate',
+    flavor: 'Em combate, você não se deixa render, resistindo ao que vier.',
+    mechanic: 'Metade do seu nível de personagem em vezes por descanso curto ou longo, gaste 1 PE para rolar novamente um teste de resistência em que falhou, ficando com o melhor resultado.',
+    activation: 'reaction', peCost: 1, usage: { max: 'level_half', scope: 'rest_short' },
+    triggerText: 'Pergunta automática ao falhar em um teste de resistência.',
+    logicText: 'Usos = ⌊nível ÷ 2⌋, mínimo 1. Rerrola o d20 e mantém o melhor entre os dois.',
+  },
 ];
 
 // ===== Registry global =====================================================

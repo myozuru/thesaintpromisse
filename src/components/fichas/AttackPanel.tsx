@@ -54,6 +54,7 @@ import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import { extensaoAlcanceBonus } from '@/lib/extensaoCorpo';
 import { penalidadeTRFlanqueado } from '@/lib/flanqueadorSuperior';
 import { hasDisparosSincronizados, podeSincronizar } from '@/lib/disparosSincronizados';
+import { GolpeFalsoSection } from './GolpeFalsoSection';
 import { cn } from '@/lib/utils';
 
 interface Props { character: Character; }
@@ -1332,6 +1333,11 @@ export function AttackPanel({ character: cProp }: Props) {
             </span>
           </div>
         )}
+
+        {/* ─── Golpe Falso (reação) ───────────────────────────────────────── */}
+        <GolpeFalsoSection character={c} target={target} />
+
+
 
         {/* ─── Situação (auto-lida do alvo + override manual) ─────────────── */}
         <div className="flex flex-wrap gap-2 text-[11px]">

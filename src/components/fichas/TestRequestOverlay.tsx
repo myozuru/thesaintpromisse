@@ -22,6 +22,7 @@ import { useProfileStore } from '@/stores/useProfileStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { rollD20Com } from '@/lib/dice';
 import { perguntarFortuna } from '@/lib/fortuna';
+import { perguntarIndomavel } from '@/lib/indomavel';
 import { posturaPericia } from '@/lib/posturas';
 import { penalidadeTRFlanqueado } from '@/lib/flanqueadorSuperior';
 import { ehTesteDeDesarme, extensaoDesarmeBonus } from '@/lib/extensaoCorpo';
@@ -372,6 +373,23 @@ export function TestRequestOverlay() {
       if (auto.outcome === 'success' && total < current.dc) total = current.dc;
       if (auto.outcome === 'failure' && total >= current.dc) total = current.dc - 1;
     }
+
+    // Indomável (Especialista em Combate): falhou no TR → pode gastar 1 PE
+    // para rolar de novo e ficar com o melhor resultado.
+    if (!auto.outcome && current.kind === 'save' && current.dc != null) {
+      const melhor = await perguntarIndomavel(
+        char.id, current.testName, d20, total, current.dc,
+        () => rollD20Com(char.id, undefined, { label: `${current.testName} — Indomável`, layout: 'test-request' }),
+      );
+      if (melhor !== d20) {
+        const i = rolls.lastIndexOf(d20);
+        if (i >= 0) rolls[i] = melhor;
+        d20 = melhor;
+        total = d20 + totalBonus;
+      }
+    }
+
+
 
     // A própria física já cria o suspense; revela logo após o dado parar.
     setTimeout(() => {
