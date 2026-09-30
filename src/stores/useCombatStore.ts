@@ -483,6 +483,9 @@ export const useCombatStore = create<CombatStore>()(
               }
             }
             inicioTurnoPostura(firstEntry.charId);
+            // Preparo Imediato: a ação preparada expira no começo do próprio turno.
+            import('@/lib/preparoImediato').then(({ expirarPreparoNoTurno }) => expirarPreparoNoTurno(firstEntry.charId));
+
             // Distração Letal: expira penalidades aplicadas em rodadas anteriores.
             for (const ch of charStore.characters) {
               if (ch.arteDefensePenalty && newRound > ch.arteDefensePenalty.round) {
@@ -554,6 +557,9 @@ export const useCombatStore = create<CombatStore>()(
           // Fase 2 — Reaplica pool dedicado de Aptidões (Mestre das Aptidões).
           useCharacterStore.getState().applyTurnStartSpecHooks(nextEntry.charId);
           inicioTurnoPostura(nextEntry.charId);
+          // Preparo Imediato: a ação preparada expira no começo do próprio turno.
+          import('@/lib/preparoImediato').then(({ expirarPreparoNoTurno }) => expirarPreparoNoTurno(nextEntry.charId));
+
           import('@/lib/omni/eventBus').then(({ emitirEvento }) => {
             emitirEvento('noInicioDoTurno', { usuarioId: nextEntry.charId, incluirPassivas: true });
           });
