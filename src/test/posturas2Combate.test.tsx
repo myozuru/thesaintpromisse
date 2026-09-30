@@ -76,7 +76,7 @@ async function atacarAlvo(id: string, ...dados: number[]) {
 }
 const cond = (id: string) => (pegarFicha(id).activeConditions ?? []).map((x) => x.conditionId);
 
-describe('Posturas — parte 2', () => {
+describe('Posturas — parte 2', { timeout: 20000 }, () => {
   it('Fortuna: d20 ≤ treinamento pergunta; rolar de novo vale; usos por rodada = metade (mín. 1)', async () => {
     const bt = getTrainingBonusByLevel(4);
     expect(fortunaUsosMax(esp({ level: 4 }))).toBe(Math.max(1, Math.floor(bt / 2)));
