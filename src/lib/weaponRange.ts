@@ -66,10 +66,13 @@ export function checkWeaponRange<E extends TouchEntity & { characterId?: string 
   grid: TouchGrid,
   meleeRangeBonus = 0,
   identities?: { casterProfileId?: string; targetProfileId?: string },
+  /** Multiplicador de alcance (Postura do Céu = 2). */
+  rangeMult = 1,
 ): string | null {
   if (attackerId === targetId) return null;
-  const max = weaponMaxRangeMeters(weapon, meleeRangeBonus);
-  if (max === null) return null;
+  const base = weaponMaxRangeMeters(weapon, meleeRangeBonus);
+  if (base === null) return null;
+  const max = base * rangeMult;
   const d = distanceBetweenChars(attackerId, targetId, entities, grid, identities);
   if (d === null) return null;
   if (d > max + 0.05) {

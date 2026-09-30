@@ -29,6 +29,8 @@ import { executarCombatEffect } from '@/lib/omni/executarSubEfeito';
 import { useSpellProposalStore } from '@/stores/useSpellProposalStore';
 import { usePassiveProposalStore } from '@/stores/usePassiveProposalStore';
 import { rollD20Com, rollDiceCom } from '@/lib/dice';
+import { perguntarFortuna } from '@/lib/fortuna';
+import { posturaPericia } from '@/lib/posturas';
 import { hasSpecAbility } from '@/lib/suporteNivel2';
 import { PRE_ANALISE_ATENCAO, PRE_ANALISE_ID } from '@/lib/suportePreAnaliseRecompensa';
 import { consumeAdvantageFor, consumeFlatBonusFor, applyAdvantageToD20 } from '@/lib/omni/rollAdvantage';
@@ -954,7 +956,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     // Bastião Interior (Tier 6) — Vantagem em TR vs Amedrontado / Desorientado / Enfeitiçado.
     const isSavingThrow = (c.savingThrows || []).some(st => st.name === name);
     // Presença Inspiradora (Suporte Nv 3): bônus de cena em TODAS as perícias (não em TRs).
-    const inspiracao = isSavingThrow ? 0 : (c.inspiracaoBonus ?? 0);
+    const inspiracao = (isSavingThrow ? 0 : (c.inspiracaoBonus ?? 0)) + (isSavingThrow ? 0 : posturaPericia(c));
     const totalBonus = baseBonus + attrMod + itemBonus + trainBonus + levelBonus + extBonus + auraSkillBonus + conditionSkillBonus + saveBonus + sentidosBonus + concentrationBonus + omniSkillBonus + inspiracao;
     const activeCondIds = (c.activeConditions || []).map(ac => (ac.conditionId || '').toLowerCase());
     const triggersBastiao =
@@ -969,7 +971,9 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     // se já não há desvantagem; desvantagem Omni cancela).
     let netRoll: 'normal' | 'advantage' | 'disadvantage' = omniAdv.net;
     if (triggersBastiao && netRoll !== 'disadvantage') netRoll = 'advantage';
-    const { d20, rolls, modeLabel } = await applyAdvantageToD20(netRoll, () => rollD20Com(c.id));
+    const adv = await applyAdvantageToD20(netRoll, () => rollD20Com(c.id));
+    const { rolls, modeLabel } = adv;
+    const d20 = isSavingThrow ? await perguntarFortuna(c.id, adv.d20, 'resistencia', () => rollD20Com(c.id)) : adv.d20;
     let bastiaoLabel = '';
     if (triggersBastiao && rolls.length === 2 && netRoll === 'advantage' && omniAdv.net !== 'advantage') {
       bastiaoLabel = ` [Bastião 2d20(${rolls[0]},${rolls[1]})→${d20}]`;
@@ -1034,7 +1038,9 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     const omniAdv = consumeAdvantageFor(c.id, { kind: 'attack', subtype: type });
     const flatAtk = consumeFlatBonusFor(c.id, { kind: 'attack', subtype: type });
     const totalBonus = getAttackTotalBonus(type) + flatAtk.bonus;
-    const { d20, modeLabel } = await applyAdvantageToD20(omniAdv.net, () => rollD20Com(c.id));
+    const advAtk = await applyAdvantageToD20(omniAdv.net, () => rollD20Com(c.id));
+    const { modeLabel } = advAtk;
+    const d20 = await perguntarFortuna(c.id, advAtk.d20, 'ataque', () => rollD20Com(c.id));
     const finalResult = d20 + totalBonus;
     const targets = attackTargets[type];
 
@@ -1131,7 +1137,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     // escopos genéricos como next_attack/attack_all funcionam normalmente.
     const omniAdv = consumeAdvantageFor(c.id, { kind: 'attack', subtype: 'melee' });
     const flatAtk = consumeFlatBonusFor(c.id, { kind: 'attack', subtype: 'melee' });
-    const { d20 } = await applyAdvantageToD20(omniAdv.net, () => rollD20Com(c.id));
+    const d20 = await perguntarFortuna(c.id, (await applyAdvantageToD20(omniAdv.net, () => rollD20Com(c.id))).d20, 'ataque', () => rollD20Com(c.id));
     const totalHitBonus = c.customHitBonus + buffHit + flatAtk.bonus;
     const result = d20 + totalHitBonus;
     maybeApplyRecompensa(c.id, flatAtk, { find: (id) => useCharacterStore.getState().characters.find((x) => x.id === id), update: updateCharacter, log: (m) => addLog('combat', m) });

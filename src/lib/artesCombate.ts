@@ -79,7 +79,7 @@ export function getPreparoMax(c: Character): number {
 
 /** Preparo atual; se nunca inicializado, começa cheio. */
 export function getPreparoAtual(c: Character): number {
-  return c.preparoCurrent ?? getPreparoMax(c);
+  return (c.preparoCurrent ?? getPreparoMax(c)) + Math.max(0, c.preparoTemp ?? 0);
 }
 
 type R = { ok: true } | { ok: false; reason: string };
@@ -90,7 +90,10 @@ export function spendPreparo(charId: string, n: number): R {
   if (!p) return { ok: false, reason: 'Personagem não encontrado.' };
   const cur = getPreparoAtual(p);
   if (cur < n) return { ok: false, reason: `Preparo insuficiente (${cur}/${n}).` };
-  st.updateCharacter(charId, { preparoCurrent: cur - n } as Partial<Character>);
+  const temp = Math.max(0, p.preparoTemp ?? 0);
+  const doTemp = Math.min(temp, n);
+  const base = p.preparoCurrent ?? getPreparoMax(p);
+  st.updateCharacter(charId, { preparoTemp: temp - doTemp, preparoCurrent: base - (n - doTemp) } as Partial<Character>);
   return { ok: true };
 }
 
@@ -99,7 +102,7 @@ export function gainPreparo(charId: string, n: number, silent = false): void {
   const p = st.characters.find((c) => c.id === charId);
   if (!p || !hasArtesCombate(p)) return;
   const max = getPreparoMax(p);
-  const cur = getPreparoAtual(p);
+  const cur = p.preparoCurrent ?? max;
   const next = Math.min(max, cur + n);
   if (next === cur) return;
   st.updateCharacter(charId, { preparoCurrent: next } as Partial<Character>);

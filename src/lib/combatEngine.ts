@@ -65,6 +65,10 @@ export interface AttackSituation {
   golpeDesfocado?: number;
   /** Arsenal Cíclico: +1 dado com a arma trocada. */
   arsenalCiclico?: boolean;
+  /** Postura da Devastação: acerto acumulado contra o mesmo alvo. */
+  devastacaoHit?: number;
+  /** Postura da Fortuna: pode rerrolar d20 baixo. */
+  fortuna?: boolean;
 }
 
 export interface AttackContext {
@@ -326,6 +330,7 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
   if (post.hit) ctxBonus.hit = (ctxBonus.hit ?? 0) + post.hit;
   ctxBonus.bonusDice += post.bonusDice;
   ctxBonus.notes.push(...post.notes);
+  if (ctx.situation.devastacaoHit) { ctxBonus.hit = (ctxBonus.hit ?? 0) + ctx.situation.devastacaoHit; ctxBonus.notes.push(`Postura da Devastação: +${ctx.situation.devastacaoHit} acerto`); }
   if (ctx.situation.arsenalCiclico) { ctxBonus.bonusDice += 1; ctxBonus.notes.push('Arsenal Cíclico: +1 dado'); }
   if (ctx.situation.golpeAtroz) { ctxBonus.bonusDice += 1; ctxBonus.notes.push('Golpe Especial Atroz: +1 dado'); }
   if (ctx.situation.golpeLetal) { ctxBonus.critRangeBonus += 1; ctxBonus.notes.push('Golpe Especial Letal: margem de crítico −1'); }
@@ -353,6 +358,16 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
     attackRolls.push(r2);
     rollMode = 'disadvantage';
     if (r2 < d20) d20 = r2;
+  }
+  if (ctx.situation.fortuna !== false) {
+    const { perguntarFortuna } = await import('@/lib/fortuna');
+    const novo = await perguntarFortuna(ctx.attacker.id, d20, 'ataque', () => rollD20Com(ctx.attacker.id));
+    if (novo !== d20) {
+      const i = attackRolls.lastIndexOf(d20);
+      if (i >= 0) attackRolls[i] = novo;
+      ctxBonus.notes.push(`Postura da Fortuna: d20 ${d20} → ${novo}`);
+      d20 = novo;
+    }
   }
   const natural = d20;
   const criticalFail = natural === 1 && !consumeCritNegated(ctx.attacker.id);

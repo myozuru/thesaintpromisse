@@ -21,6 +21,8 @@ import { useRoleStore } from '@/stores/useRoleStore';
 import { useProfileStore } from '@/stores/useProfileStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { rollD20Com } from '@/lib/dice';
+import { perguntarFortuna } from '@/lib/fortuna';
+import { posturaPericia } from '@/lib/posturas';
 import { getAttrModifier } from '@/components/fichas/CharacterCard';
 import { getTrainingBonus, getLevelSkillBonus } from '@/types';
 import { hasRecompensaNote, recompensaPEPatch } from '@/lib/suportePreAnaliseRecompensa';
@@ -326,12 +328,16 @@ export function TestRequestOverlay() {
         rolls = [a, b];
         d20 = adv.net === 'advantage' ? Math.max(a, b) : Math.min(a, b);
       }
+      if (current.kind === 'save') {
+        const novo = await perguntarFortuna(char.id, d20, 'resistencia', () => rollD20Com(char.id, undefined, { label: `${current.testName} — Fortuna`, layout: 'test-request' }));
+        if (novo !== d20) { const i = rolls.lastIndexOf(d20); if (i >= 0) rolls[i] = novo; d20 = novo; }
+      }
     }
 
     // Bônus fixos (ex: Apoio Focado do Suporte) somam no total e são consumidos.
     const flat = consumeFlatBonusFor(char.id, ctx);
     const masterBonus = current.masterBonus ?? 0;
-    const totalBonus = bonus + flat.bonus + masterBonus;
+    const totalBonus = bonus + flat.bonus + masterBonus + (current.kind === 'skill' ? posturaPericia(char) : 0);
 
     let total = d20 + totalBonus;
     // Quando o resultado é FORÇADO e há CD, ajusta `total` pra garantir
