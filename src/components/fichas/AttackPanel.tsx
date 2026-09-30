@@ -362,7 +362,7 @@ export function AttackPanel({ character: cProp }: Props) {
   // ─── Arremesso Rápido (Especialista nv 4) ─────────────────────────────────
   const temArremessoRapido = hasArremessoRapido(cVivo);
   const [arremessoRapidoAlvo, setArremessoRapidoAlvo] = useState<string>('');
-  const arremessoAtaque = useArremessoRapidoStore((s) => s.ataque);
+  const arremessoAtaque = arremessoAtaqueSel;
   const arremessoRapidoCtx = { inCombat, round: combatRound };
   const arremessoRapidoCheck = arremessoRapidoPodeUsar(cVivo, arremessoRapidoCtx);
   const handleArremessoRapido = () => {
