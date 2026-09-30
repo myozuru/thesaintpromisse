@@ -29,6 +29,7 @@ import {
   hasProperty, getProperty, resolveWeaponDamage,
   type Weapon, type WeaponGroup, type WeaponRange,
 } from '@/lib/weapons';
+import { arremessosPotentesStep } from '@/lib/arremessosPotentes';
 import { aggregateTalentBonuses } from '@/lib/talentEffects';
 import { getTalentById } from '@/lib/talents';
 import { consumeAdvantageFor, consumeFlatBonusFor } from '@/lib/omni/rollAdvantage';
@@ -137,6 +138,11 @@ function applyCombatStyleBonuses(ctx: AttackContext, out: ContextualBonus): void
     const dmg = getArremessadorDamage(ctx.attacker.level ?? 1);
     out.damageFlat += dmg;
     out.notes.push(`Estilo do Arremessador: +${dmg} dano`);
+  }
+  const apStep = arremessosPotentesStep(ctx.attacker, ctx.weapon);
+  if (apStep) {
+    out.damageStepDelta += apStep;
+    out.notes.push('Arremessos Potentes: +1 nível de dano');
   }
   if (duploApplies(ctx.attacker)) {
     const dmg = getDuploDamage(ctx.attacker.level ?? 1);

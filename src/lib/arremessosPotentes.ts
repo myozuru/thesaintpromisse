@@ -45,7 +45,7 @@ export function podeAtivarArremessos(c: Character, t: TurnInfo): { ok: boolean; 
   if (t.currentCharId !== c.id) return { ok: false, reason: 'Só no começo do seu turno.' };
   if ((c.arremessosPotentesTurnKey ?? '') === turnKeyFor(t.round, c.id)) return { ok: false, reason: 'Já ativado neste turno.' };
   if ((c.attacksThisTurn ?? 0) > 0) return { ok: false, reason: 'Só no começo do turno (você já atacou).' };
-  if ((c.currentPE ?? 0) < 1) return { ok: false, reason: 'PE insuficiente (precisa de 1).' };
+  if ((c.peCurrent ?? 0) < 1) return { ok: false, reason: 'PE insuficiente (precisa de 1).' };
   return { ok: true };
 }
 

@@ -736,7 +736,7 @@ interface CharacterStore {
    * onde X = AU. Acumulam. Retorna o roll para log.
    */
   triggerAuraDrenadora: (charId: string) => Promise<{ ok: boolean; reason?: string; rolls?: number[]; conMod?: number; total?: number }>;
-  applyDamage: (id: string, rawDamage: number, damageType?: DamageType, opts?: { ignoresRD?: boolean; ignoresResistance?: boolean; attackerId?: string; isMelee?: boolean; tags?: string[] }) => void;
+  applyDamage: (id: string, rawDamage: number, damageType?: DamageType, opts?: { ignoresRD?: boolean; ignoresResistance?: boolean; attackerId?: string; isMelee?: boolean; tags?: string[]; rdIgnore?: number }) => void;
   /**
    * Aplica cura. `source` controla o redutor FAH:
    * - 'cursed_energy_external' → cura de Energia Reversa vinda de TERCEIROS
@@ -2269,7 +2269,7 @@ export const useCharacterStore = create<CharacterStore>()(
             const typeRd = damageType ? (rdByType[damageType] || 0) : 0;
             // RD geral + RD por tipo somam (não se substituem).
             const baseRd = (c.rd || 0) + typeRd;
-            const effectiveRd = opts?.ignoresRD ? 0 : Math.max(0, baseRd + buffRD + negacaoRD + revestimentoRD + shieldRD);
+            const effectiveRd = opts?.ignoresRD ? 0 : Math.max(0, baseRd + buffRD + negacaoRD + revestimentoRD + shieldRD - Math.max(0, opts?.rdIgnore ?? 0));
 
             let damageFinal = Math.max(0, rawDamage - effectiveRd);
             rdApplied = Math.min(rawDamage, effectiveRd);

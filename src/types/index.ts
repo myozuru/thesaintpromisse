@@ -515,6 +515,8 @@ export interface Character {
    * Reseta no início do próprio turno e em `resetActions`.
    */
   attacksThisTurn?: number;
+  /** Arremessos Potentes: turno (rodada:id) em que o PE foi gasto para ignorar RD. */
+  arremessosPotentesTurnKey?: string;
   /**
    * Resultado do último ataque deste personagem no turno atual:
    *   true  = acertou
