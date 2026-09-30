@@ -216,7 +216,8 @@ export type SpecAbilityChoiceSchema =
   | { kind: 'spell-and-ritual-upgrade'; label?: string }
   | { kind: 'single-spell'; label?: string }
   | { kind: 'single-release'; label?: string }
-  | { kind: 'spells'; countFormula: 'training_bonus' | number; label?: string };
+  | { kind: 'spells'; countFormula: 'training_bonus' | number; label?: string }
+  | { kind: 'weapon-group'; options: string[]; label?: string };
 
 /**
  * Valor concreto de uma escolha realizada. Persistido em
