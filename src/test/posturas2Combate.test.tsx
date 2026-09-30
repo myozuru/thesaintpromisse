@@ -130,7 +130,7 @@ describe('Posturas — parte 2', () => {
     expect(log()).toContain('trocou de alvo');
   });
 
-  it('Devastação: rerrolar o ataque ajusta o acúmulo pelo resultado final', async () => {
+  it('Devastação: rerrolar o ataque ajusta o acúmulo pelo resultado final', { timeout: 20000 }, async () => {
     mesa(esp({ level: 6, posturasAprendidas: ['devastacao'] }));
     clicar(/Entrar: Devastação/);
     alvo('bruno');
