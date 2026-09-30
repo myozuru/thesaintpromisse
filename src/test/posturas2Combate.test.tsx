@@ -109,7 +109,7 @@ describe('Posturas — parte 2', () => {
 
   it('Devastação: acertos no mesmo alvo dão acerto e ignoram RD; erro não zera; trocar de alvo zera', async () => {
     const bt = getTrainingBonusByLevel(6);
-    mesa(esp({ level: 6, posturasAprendidas: ['devastacao'] }));
+    mesa(esp({ level: 6, posturasAprendidas: ['devastacao'] }), { caio: [0, 1], davi: [1, 1] });
     useCharacterStore.getState().updateCharacter('bruno', { rd: 20 } as never);
     clicar(/Entrar: Devastação/);
     await atacarAlvo('bruno', 18, 4, 4, 4);
@@ -130,7 +130,7 @@ describe('Posturas — parte 2', () => {
   });
 
   it('Tempestade: acerto → Fortitude ou Caído; já Caído → Imóvel até o começo do turno do Especialista; passar não faz nada', async () => {
-    mesa(esp({ level: 10, posturasAprendidas: ['tempestade'] }));
+    mesa(esp({ level: 10, posturasAprendidas: ['tempestade'] }), { caio: [0, 1], davi: [1, 1] });
     clicar(/Entrar: Tempestade/);
     await atacarAlvo('bruno', 19, 1, 1, 1, 1);
     await waitFor(() => expect(cond('bruno')).toContain('caido'));
