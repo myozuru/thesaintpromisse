@@ -22,7 +22,7 @@ const esp = (arma: string, extra: Record<string, unknown> = {}) => ficha('ana', 
   level: 2, mainHandWeaponName: arma, offHandWeaponName: null, rangedTrained: true, meleeTrained: true,
   chosenSpecAbilities: AP, peCurrent: 5, peMax: 10, attacksThisTurn: 0, ...extra,
 } as never);
-const alvo = (rd = 3) => ficha('bruno', { category: 'INIMIGO', hpCurrent: 100, hpMax: 100, rd } as never);
+const alvo = (rd = 3) => ficha('bruno', { category: 'INIMIGO', hpCurrent: 100, hpMax: 100, escCurrent: 0, rd } as never);
 const textoLog = () => useLogStore.getState().logs.map((l) => l.message).join('\n');
 const danoDoLog = () => Number(/💥 Dano: (\d+)/.exec(textoLog())?.[1] ?? NaN);
 
