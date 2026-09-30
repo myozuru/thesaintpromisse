@@ -31,6 +31,7 @@ import {
   type Weapon, type WeaponGroup, type WeaponRange,
 } from '@/lib/weapons';
 import { arremessosPotentesStep } from '@/lib/arremessosPotentes';
+import { golpesPotentesStep, golpesPotentesDano, GOLPES_POTENTES_DANO } from '@/lib/golpesPotentes';
 import { extensaoAtaqueBonus } from '@/lib/extensaoCorpo';
 import { aggregateTalentBonuses } from '@/lib/talentEffects';
 import { getTalentById } from '@/lib/talents';
@@ -151,6 +152,14 @@ function applyCombatStyleBonuses(ctx: AttackContext, out: ContextualBonus): void
   if (apStep) {
     out.damageStepDelta += apStep;
     out.notes.push('Arremessos Potentes: +1 nível de dano');
+  }
+  // Golpes Potentes: arma treinada sobe 1 nível de dano e ganha +2 fixo.
+  // Acumula com Arremessos Potentes (arma de arremesso treinada = +2 níveis).
+  const gpStep = golpesPotentesStep(ctx.attacker, ctx.trained);
+  if (gpStep) {
+    out.damageStepDelta += gpStep;
+    out.damageFlat += golpesPotentesDano(ctx.attacker, ctx.trained);
+    out.notes.push(`Golpes Potentes: +1 nível de dano, +${GOLPES_POTENTES_DANO} dano`);
   }
   if (duploApplies(ctx.attacker)) {
     const dmg = getDuploDamage(ctx.attacker.level ?? 1);

@@ -12,6 +12,7 @@ import { TemporaryCharacterCard } from './TemporaryCharacterCard';
 import { CharacterWizard } from './CharacterWizard';
 import { ReactionPromptOverlay } from './ReactionPromptOverlay';
 import { FortunaPrompt } from './FortunaPrompt';
+import { IndomavelPrompt } from './IndomavelPrompt';
 import { MercadoLauncher } from './MercadoLauncher';
 import { rollD20Com } from '@/lib/dice';
 import { applyLutadorProgression } from '@/lib/lutadorProgression';
@@ -195,6 +196,7 @@ export function FichasModule() {
       {/* Fase 9 — Overlay global de prompts de reação (Anuladora/Absorção/Redirecionadora) */}
       <ReactionPromptOverlay />
       <FortunaPrompt />
+      <IndomavelPrompt />
       <ModuleHeader
         icon={ScrollText}
         title="Fichas"
