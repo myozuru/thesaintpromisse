@@ -13,6 +13,7 @@ import { CharacterWizard } from './CharacterWizard';
 import { ReactionPromptOverlay } from './ReactionPromptOverlay';
 import { FortunaPrompt } from './FortunaPrompt';
 import { IndomavelPrompt } from './IndomavelPrompt';
+import { ZonaRiscoPrompt } from './ZonaRiscoPrompt';
 import { MercadoLauncher } from './MercadoLauncher';
 import { rollD20Com } from '@/lib/dice';
 import { applyLutadorProgression } from '@/lib/lutadorProgression';
@@ -197,6 +198,7 @@ export function FichasModule() {
       <ReactionPromptOverlay />
       <FortunaPrompt />
       <IndomavelPrompt />
+      <ZonaRiscoPrompt />
       <ModuleHeader
         icon={ScrollText}
         title="Fichas"

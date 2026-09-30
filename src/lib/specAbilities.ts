@@ -1702,6 +1702,14 @@ const ESPECIALISTA_COMBATE: SpecAbility[] = [
     triggerText: 'Painel de Ataque — seção "Tiro Falso" (sua ficha) e aviso na ficha do aliado.',
     logicText: 'Exige arma à distância ou de fogo. Alcance = alcance máximo da arma. TR de Astúcia vs CD de Especialização. Falha → vantagem no próximo ataque do aliado.',
   },
+  {
+    id: 'ec-zona-risco', name: 'Zona de Risco', tier: 2, specialization: 'Especialista em Combate',
+    flavor: 'Ter uma arma com o alcance maior permite criar uma efetiva zona de risco.',
+    mechanic: 'Uma vez por rodada, se estiver empunhando uma arma corpo a corpo com a propriedade Estendida e um inimigo entrar no seu alcance de ataque, você pode gastar 2 pontos de energia amaldiçoada para realizar um ataque contra ele.',
+    activation: 'reaction',
+    triggerText: 'Pergunta automática quando um inimigo termina um movimento no mapa dentro do seu alcance.',
+    logicText: 'Custa 2 PE (não gasta reação), 1 vez por rodada, em qualquer turno. Exige arma CaC com Estendida na mão principal. Aceitar seleciona o inimigo no Painel de Ataque para rolar o ataque.',
+  },
 ];
 
 

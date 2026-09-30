@@ -73,6 +73,7 @@ import { NotesOverlay } from './ui/NotesOverlay';
 import { SelectionToolbar } from './ui/SelectionToolbar';
 import { PendingMoveOverlay } from './ui/PendingMoveOverlay';
 import { OpportunityPromptOverlay } from './ui/OpportunityPromptOverlay';
+import { ZonaRiscoPrompt } from '@/components/fichas/ZonaRiscoPrompt';
 import { PendingAoEOverlay } from './ui/PendingAoEOverlay';
 import { LootOverlay } from './ui/LootOverlay';
 import { ChestOverlay } from './ui/ChestOverlay';
@@ -3432,6 +3433,7 @@ export function MapaModule() {
           <SelectionToolbar visible={selectionToolbarVisible} onAdjustToken={setTokenCropEntityId} />
           <PendingMoveOverlay />
           <OpportunityPromptOverlay />
+          <ZonaRiscoPrompt />
           <PendingAoEOverlay />
           <LootOverlay />
           <ChestOverlay />
