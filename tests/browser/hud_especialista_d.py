@@ -104,9 +104,8 @@ async def main():
             await chk.first.evaluate("el=>el.click()"); await pg.wait_for_timeout(500)
             print("CHECKBOX marcado:", await chk.first.is_checked())
             # Rola Furtividade de verdade e confere os rótulos do resultado.
-            linha = pg.get_by_text("Furtividade", exact=True).first.locator("xpath=ancestor::div[3]")
-            print("LINHA HTML:", (await linha.inner_html())[:400])
-            dado = linha.get_by_role("button")
+            linha = pg.get_by_text("Furtividade", exact=True).first.locator("xpath=ancestor::div[contains(@class,\'rounded-lg\')][1]")
+            dado = linha.locator("button[title=\'Rolar d20\']")
             print("PERICIA visivel:", await pg.get_by_text("Furtividade").first.is_visible(), "| botoes:", await dado.count())
             if await dado.count():
                 await dado.first.click(force=True); await pg.wait_for_timeout(4000)
