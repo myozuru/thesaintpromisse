@@ -10,6 +10,7 @@
  *     `computeTotalDefense`. Permite override manual.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ALL_CONDITIONS } from '@/types/conditions';
 import type { Character } from '@/types';
 import {
   findWeaponByName, hasProperty, requiresTwoHands, type Weapon,
@@ -816,7 +817,7 @@ export function AttackPanel({ character: cProp }: Props) {
     const efeito = jaCaido ? 'fica Imóvel até o começo do turno de ' + eu.name : 'fica Caído';
     addLog('combat', `🌩️ Postura da Tempestade: ${vivo.name} Fortitude d20 ${d20}${mod >= 0 ? '+' : ''}${mod} vs CD ${cd} → ${passou ? 'passou' : `falhou — ${efeito}`}.`);
     if (passou) return;
-    const def = CONDITIONS.find((x) => x.id === (jaCaido ? 'imovel' : 'caido'));
+    const def = ALL_CONDITIONS.find((x) => x.id === (jaCaido ? 'imovel' : 'caido'));
     if (!def) return;
     useCharacterStore.getState().addCondition(vivo.id, {
       id: jaCaido ? `${TEMPESTADE_IMOVEL_PREFIX}${eu.id}:${Date.now()}` : `tempestade-caido:${Date.now()}`,
