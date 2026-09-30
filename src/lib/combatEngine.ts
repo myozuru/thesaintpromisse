@@ -494,9 +494,12 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
       notes.push('🛡 Guarda Infalível: inimigo NÃO ganha reação por essa falha.');
     }
   }
+  if (jammed) notes.push(`🔧 ${w.name} EMPERROU (d20 ${natural} ≤ margem ${margemEmperrar(w, pistoleiroOn)}) — ação comum para desemperrar.`);
 
   return {
     d20: natural, attackRolls, rollMode, natural, attackTotal, hit, critical, criticalFail,
+    emperrou: jammed,
+
     damageDice: formatDamage(finalDice),
     damageRolls, damageTotal,
     damageType: w.damageType,
