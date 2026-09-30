@@ -147,6 +147,7 @@ describe('Posturas — parte 2', () => {
     await waitFor(() => expect(cond('bruno')).not.toContain('imovel'));
     await atacarAlvo('caio', 19, 20, 20, 20, 20);
     await waitFor(() => expect(log()).toContain('caio Fortitude'));
+    console.log('LOGCAIO', log());
     expect(cond('caio')).not.toContain('caido');
     await atacarAlvo('davi', 2, 1, 1, 1); // errou: sem teste
     expect(log()).not.toContain('davi Fortitude');
