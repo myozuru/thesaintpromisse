@@ -24,6 +24,7 @@ export type ReactionKind =
   | 'fah_devorador_energia_offer' // FAH — passou em TR contra Feitiço, oferecer +1 tempPE
   | 'fah_presenca_nefasta'     // FAH — início de combate, rolar TR Vontade dos inimigos vs CD Amaldiçoada
   | 'condition_end_tr_offer'    // Condição com modo "TR todos os rounds" / "Até passar em TR" — rolar TR no turno do alvo
+  | 'lua_reacao_offer'         // Postura da Lua — atingido por ataque: usar reação para reduzir dano?
   | 'persistent_area_tr_offer'; // Área Persistente — rolar TR para evitar dano/condição do tick
 
 export interface ReactionPrompt {
@@ -81,6 +82,12 @@ export interface ReactionPrompt {
     perPe?: number;
     /** cobrir_se_offer — true se tem Cobertura Avançada. */
     hasCoberturaAvancada?: boolean;
+    /** lua_reacao_offer — dano do ataque antes da redução. */
+    luaDamage?: number;
+    luaDamageType?: DamageType;
+    luaReducao?: number;
+    /** lua_reacao_offer — opções originais do applyDamage (atacante, RD ignorada...). */
+    luaOpts?: Record<string, unknown>;
   };
   /** Timestamp de criação — usado para ordenação. */
   createdAt: number;
@@ -96,6 +103,7 @@ const REACTION_CONSUMING_KINDS: ReadonlySet<ReactionKind> = new Set<ReactionKind
   'cobrir_se_offer',
   'fah_alma_maldita_offer',
   'fah_anatomia_incompr_offer',
+  'lua_reacao_offer',
 ]);
 
 export function kindConsumesReaction(kind: ReactionKind): boolean {

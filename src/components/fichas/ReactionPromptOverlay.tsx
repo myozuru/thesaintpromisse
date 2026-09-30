@@ -14,6 +14,8 @@
 import { useState } from 'react';
 import { useReactionStore, type ReactionPrompt, kindConsumesReaction } from '@/stores/useReactionStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
+import { useCombatStore } from '@/stores/useCombatStore';
+import { effectiveMovement } from '@/lib/movementBudget';
 import { useLogStore } from '@/stores/useLogStore';
 import { DAMAGE_TYPE_LABELS, type DamageType } from '@/types';
 import { rollDiceCom } from '@/lib/dice';
@@ -170,6 +172,33 @@ export function ReactionPromptOverlay() {
             addLog('combat', `💀 Presença Nefasta de ${p.charName} → ${enemy.name}: TR Vontade ${total} vs CD ${dc} ${failed ? '❌ Amedrontado' : '✅ Abalado'} (1 rodada).`);
             playClickSound();
           }}
+          onLua={(useIt) => {
+            const raw = p.payload?.luaDamage ?? 0;
+            const type = p.payload?.luaDamageType;
+            const opts = (p.payload?.luaOpts ?? {}) as Parameters<typeof applyDamage>[3] & { tags?: string[] };
+            const tags = [...(opts?.tags ?? []), '__lua'];
+            const c = useCharacterStore.getState().characters.find((x) => x.id === p.charId);
+            if (useIt && c && (c.reactionsCurrent ?? 0) > 0 && canReact(p.charId, p.kind)) {
+              const red = p.payload?.luaReducao ?? c.level ?? 1;
+              const reduced = Math.max(0, raw - red);
+              const used = useCombatStore.getState().movementUsedByChar[p.charId] ?? 0;
+              useCharacterStore.getState().updateCharacter(p.charId, {
+                reactionsCurrent: Math.max(0, (c.reactionsCurrent ?? 0) - 1),
+                mobilidadeReacaoM: effectiveMovement(c),
+                mobilidadeReacaoBase: used,
+                desengajado: true,
+              });
+              consumeReaction(p.charId);
+              playSuccessSound();
+              addLog('combat', `🌙 Postura da Lua: ${p.charName} usa a reação — dano ${raw} → ${reduced} (−${Math.min(red, raw)}). Pode Andar (${effectiveMovement(c)} m) e está Desengajado até o fim do seu turno.`);
+              if (reduced > 0) applyDamage(p.charId, reduced, type, { ...opts, tags });
+            } else {
+              if (useIt) addLog('system', `${p.charName}: sem reação disponível — dano cheio.`);
+              else addLog('combat', `🌙 ${p.charName}: não usou a reação da Lua — sofreu ${raw} de dano.`);
+              applyDamage(p.charId, raw, type, { ...opts, tags });
+            }
+            dismiss(p.id);
+          }}
           onDevoradorAck={() => {
             addLog('combat', `⚡ ${p.charName}: Devorador de Energia — +1 tempPE.`);
             dismiss(p.id);
@@ -311,6 +340,7 @@ interface PromptCardProps {
   onAnatomiaIncompreensivel: () => void;
   onPresencaNefastaRoll: (enemy: { id: string; name: string }) => void;
   onDevoradorAck: () => void;
+  onLua: (useIt: boolean) => void;
   onConditionEndTR: () => void;
   onPersistentAreaTR: () => void;
   onCobrirSe: (peSpent: number) => void;
@@ -318,7 +348,7 @@ interface PromptCardProps {
 
 function PromptCard({
   prompt: p, reactionLocked = false, onDismiss, onNullify, onAbsorb, onRedirect,
-  onAlmaMaldita, onAnatomiaIncompreensivel, onPresencaNefastaRoll, onDevoradorAck,
+  onAlmaMaldita, onAnatomiaIncompreensivel, onPresencaNefastaRoll, onDevoradorAck, onLua,
   onConditionEndTR, onPersistentAreaTR, onCobrirSe,
 }: PromptCardProps) {
   const [tier, setTier] = useState<'fraca' | 'media' | 'forte' | 'extrema'>('fraca');
@@ -397,6 +427,23 @@ function PromptCard({
         >
           🎯 Redirecionar (2 PE)
         </button>
+      )}
+
+      {p.kind === 'lua_reacao_offer' && (
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => onLua(true)}
+            className="flex-1 text-[10px] px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
+          >
+            🌙 Usar reação
+          </button>
+          <button
+            onClick={() => onLua(false)}
+            className="flex-1 text-[10px] px-2 py-1 rounded border border-border bg-secondary/40 hover:bg-secondary"
+          >
+            Aceitar dano
+          </button>
+        </div>
       )}
 
       {p.kind === 'fah_alma_maldita_offer' && (
