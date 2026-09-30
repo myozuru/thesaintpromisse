@@ -218,7 +218,7 @@ export function AttackPanel({ character: cProp }: Props) {
     : null;
   const rangeBlockReason =
     mainWeapon && target
-      ? checkWeaponRange(c.id, target.id, mainWeapon, mapEntities, gridConfig, meleeRangeBonus, mapIdentities)
+      ? checkWeaponRange(c.id, target.id, mainWeapon, mapEntities, gridConfig, meleeRangeBonus, mapIdentities, posturaAlcanceMult(c))
       : null;
 
   // Ao trocar de alvo, limpa override
@@ -448,7 +448,7 @@ export function AttackPanel({ character: cProp }: Props) {
     }
     // Alcance: com Investida ativa, mede de novo com a posição já atualizada.
     let blockReason = artesAtivas && arteInvestida && target
-      ? checkWeaponRange(c.id, target.id, mainWeapon, useMapStore.getState().entities, useMapStore.getState().gridConfig, meleeRangeBonus, mapIdentities)
+      ? checkWeaponRange(c.id, target.id, mainWeapon, useMapStore.getState().entities, useMapStore.getState().gridConfig, meleeRangeBonus, mapIdentities, posturaAlcanceMult(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c))
       : rangeBlockReason;
     if (blockReason && golpeUsado && longoM > 0 && target && weaponRangeM !== null) {
       const dNow = distanceBetweenChars(c.id, target.id, useMapStore.getState().entities, useMapStore.getState().gridConfig, mapIdentities);

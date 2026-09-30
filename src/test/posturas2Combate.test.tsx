@@ -64,6 +64,8 @@ const alvo = (id: string) => {
   fireEvent.change(sel, { target: { value: id } });
 };
 async function atacarAlvo(id: string, ...dados: number[]) {
+  useCharacterStore.getState().updateCharacter('ana', { attacksThisTurn: 0, actionsCurrent: 1 } as never);
+  await waitFor(() => expect(screen.getAllByRole('combobox').length).toBeGreaterThan(0));
   alvo(id);
   useLogStore.getState().clearLogs();
   forcarDados(...dados);
