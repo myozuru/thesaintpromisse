@@ -4,7 +4,7 @@ import { useLogStore } from '@/stores/useLogStore';
 import { Button } from '@/components/ui/button';
 import {
   POSTURAS, getPostura, podeAprender, podeEntrar, patchEntrar, posturaAtiva,
-  posturaUsosRestantes, posturaUsosMax, posturasLimite, type PosturaId,
+  posturaUsosRestantes, posturaUsosMax, posturasLimiteChar, type PosturaId,
 } from '@/lib/posturas';
 
 export function PosturasPanel({ charId, inCombat, round }: { charId: string; inCombat: boolean; round: number }) {
@@ -14,7 +14,7 @@ export function PosturasPanel({ charId, inCombat, round }: { charId: string; inC
   if (!c) return null;
   const known = (c.posturasAprendidas ?? []) as PosturaId[];
   const ativa = posturaAtiva(c);
-  const limite = posturasLimite(c.level ?? 1);
+  const limite = posturasLimiteChar(c);
 
   const aprender = (id: PosturaId) => {
     const fresh = useCharacterStore.getState().characters.find((x) => x.id === charId)!;

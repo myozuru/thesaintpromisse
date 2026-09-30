@@ -524,6 +524,8 @@ export interface Character {
   arsenalFreeSwapRound?: number;
   /** Zona de Risco: rodada em que foi usada. */
   zonaRiscoRound?: number;
+  /** Arremesso Rápido: rodada em que o ataque extra foi usado. */
+  arremessoRapidoRound?: number;
   /** Arsenal Cíclico: grupo da última arma usada para atacar e em que rodada. */
   arsenalLastAttack?: { group: string; round: number };
   /** Arsenal Cíclico: +1 dado com esta arma até o fim da rodada `untilRound`. */

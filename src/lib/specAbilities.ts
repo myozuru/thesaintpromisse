@@ -161,7 +161,8 @@ export interface SpecAbility {
     | 'single_spell_choice'
     | 'spell_level_choice'
     | 'single_release_choice'
-    | 'spells';
+    | 'spells'
+    | 'weapon_group';
   /**
    * Limite de quantas vezes a habilidade pode ser comprada quando
    * `allowMultiplePurchases` é true. Fórmulas suportadas:
@@ -216,7 +217,8 @@ export type SpecAbilityChoiceSchema =
   | { kind: 'spell-and-ritual-upgrade'; label?: string }
   | { kind: 'single-spell'; label?: string }
   | { kind: 'single-release'; label?: string }
-  | { kind: 'spells'; countFormula: 'training_bonus' | number; label?: string };
+  | { kind: 'spells'; countFormula: 'training_bonus' | number; label?: string }
+  | { kind: 'weapon-group'; options: string[]; label?: string };
 
 /**
  * Valor concreto de uma escolha realizada. Persistido em
@@ -233,7 +235,8 @@ export type SpecAbilityChoiceValue =
   | { kind: 'spell-and-ritual-upgrade'; spellId: string; upgradeId: string }
   | { kind: 'single-spell'; spellId: string }
   | { kind: 'single-release'; releaseId: string }
-  | { kind: 'spells'; spellIds: string[] };
+  | { kind: 'spells'; spellIds: string[] }
+  | { kind: 'weapon-group'; group: string };
 
 // ===== LUTADOR =============================================================
 
@@ -1710,6 +1713,38 @@ const ESPECIALISTA_COMBATE: SpecAbility[] = [
     triggerText: 'Pergunta automática quando um inimigo termina um movimento no mapa dentro do seu alcance.',
     logicText: 'Custa 2 PE (não gasta reação), 1 vez por rodada, em qualquer turno. Exige arma CaC com Estendida na mão principal. Aceitar seleciona o inimigo no Painel de Ataque para rolar o ataque.',
   },
+  // ============ TIER 4 ============
+  {
+    id: 'ec-aprender-postura', name: 'Aprender Postura', tier: 4, specialization: 'Especialista em Combate',
+    flavor: 'Você continua seu estudo sobre as posturas de combate, expandindo seu repertório.',
+    mechanic: 'Você aprende uma postura adicional à sua escolha. No 10º nível você aprende outra postura.',
+    activation: 'passive',
+    prerequisites: ['ec-assumir-postura'],
+    triggerText: 'Painel de Posturas — vagas extras para aprender.',
+    logicText: '+1 postura conhecida ao obter, +1 no nível 10. Cada postura ainda respeita seu nível mínimo.',
+  },
+  {
+    id: 'ec-armas-escolhidas', name: 'Armas Escolhidas', tier: 4, specialization: 'Especialista em Combate',
+    flavor: 'Um tipo de arma ressoa de maneira única com você.',
+    mechanic: 'Escolha um grupo de armas: seus ataques com armas dele têm o nível de dano aumentado em 3.',
+    activation: 'passive',
+    requiresConfig: 'weapon_group',
+    choiceSchema: {
+      kind: 'weapon-group',
+      options: ['Faca', 'Bastão', 'Espada', 'Haste', 'Machado', 'Martelo', 'Chicote', 'Pugilato', 'Arco', 'Besta', 'Tiro', 'Dardo'],
+      label: 'Escolha o grupo de armas',
+    },
+    triggerText: 'Sempre ativa, com armas do grupo escolhido.',
+    logicText: '+3 níveis de dano na tabela de passos. Acumula com Golpes Potentes e Arremessos Potentes.',
+  },
+  {
+    id: 'ec-arremesso-rapido', name: 'Arremesso Rápido', tier: 4, specialization: 'Especialista em Combate',
+    flavor: 'Utilizando armas leves e menores, você consegue arremessá-las com velocidade.',
+    mechanic: 'Uma vez por rodada, ao realizar um ataque com uma arma de arremesso, gaste 1 PE e sua Ação Bônus para realizar um ataque com arma de arremesso contra outro alvo.',
+    activation: 'bonus', peCost: 1, usage: { max: 1, scope: 'round' },
+    triggerText: 'Seção "Arremesso Rápido" na aba de Ataque, depois do primeiro arremesso do turno.',
+    logicText: 'Exige arma de arremesso empunhada e um ataque já feito no turno. Gasta 1 PE + Ação Bônus e libera um ataque extra contra o alvo escolhido (pode ser o mesmo se for o único).',
+  },
 ];
 
 
@@ -1884,6 +1919,7 @@ const REQUIRES_CONFIG_TO_SCHEMA_KIND: Record<NonNullable<SpecAbility['requiresCo
   spell_level_choice: 'spell-level',
   single_release_choice: 'single-release',
   spells: 'spells',
+  weapon_group: 'weapon-group',
 };
 
 /**
