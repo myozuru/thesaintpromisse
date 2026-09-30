@@ -1565,3 +1565,8 @@ export const useMapStore = create<MapState>()(
 
 
 
+
+// Dev-only hook for browser tests (never in production builds).
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  (window as unknown as Record<string, unknown>).__mapStore = useMapStore;
+}
