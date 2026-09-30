@@ -274,6 +274,8 @@ export function AttackPanel({ character: cProp }: Props) {
   // Para vantagem/desvantagem: revela o 1º d20, espera clique, anima o 2º d20, depois finaliza.
   const [firstD20Revealed, setFirstD20Revealed] = useState<number | null>(null);
   const [pendingRerollMeta, setPendingRerollMeta] = useState<{ isReroll: boolean } | null>(null);
+  // Resultado do 1º disparo do ataque atual — usado para reconciliar a Devastação numa rerrolagem.
+  const primeiroDisparoRef = useRef<{ alvoId: string; hit: boolean } | null>(null);
   // Quantas vezes o d20 de ataque foi rolado nesta tentativa (máx 2).
   // Reseta a cada nova ação de ataque (handleRoll chamado sem ser reroll).
   const [attackRollCount, setAttackRollCount] = useState<number>(0);
@@ -554,6 +556,7 @@ export function AttackPanel({ character: cProp }: Props) {
     if (!isReroll) {
       recordAttackResult(c.id, result.hit);
       if (target) registrarDevastacao(target.id, result.hit);
+      primeiroDisparoRef.current = target ? { alvoId: target.id, hit: result.hit } : null;
       if (result.hit && target) void tempestadeGolpe(target);
       if (inCombat) {
         const reg = arsenalRegistroAtaque(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, mainWeapon.name, combatRound);
