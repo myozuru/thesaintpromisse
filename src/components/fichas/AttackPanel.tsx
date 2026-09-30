@@ -46,7 +46,7 @@ import {
   execucaoSilenciosaDice,
 } from '@/lib/artesCombate';
 import { renovacaoSangueAtiva, aplicarRenovacao } from '@/lib/renovacaoSangue';
-import { posturaAtiva, fortitudeMod, imuneMovimentoForcado, hasAssumirPostura, posturaAlcanceMult, devastacaoBonus, devastacaoPatch, TEMPESTADE_IMOVEL_PREFIX } from '@/lib/posturas';
+import { posturaAtiva, fortitudeMod, imuneMovimentoForcado, hasAssumirPostura, posturaAlcanceMult, devastacaoBonus, devastacaoPatch, devastacaoPatchReroll, TEMPESTADE_IMOVEL_PREFIX } from '@/lib/posturas';
 import { PosturasPanel } from '@/components/fichas/PosturasPanel';
 import { arsenalRegistroAtaque, arsenalBonusAtivo, hasArsenalCiclico } from '@/lib/arsenalCiclico';
 import { hasArremessosPotentes, podeAtivarArremessos, arremessosAtivo, arremessosRdIgnorada, turnKeyFor } from '@/lib/arremessosPotentes';
