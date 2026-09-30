@@ -64,5 +64,5 @@
 ## Especialista em Combate — Habilidades de 2º nível
 - [x] Progressão geral conferida; catálogo de habilidades do Especialista criado
 - [x] Arremessos Potentes (+1 nível de dano; 1 PE ignora RD = treinamento) — dano do ataque agora desconta da vida do alvo
-- [ ] Arsenal Cíclico
+- [ ] Arsenal Cíclico ✅
 - [ ] Assumir Postura (8 posturas)
