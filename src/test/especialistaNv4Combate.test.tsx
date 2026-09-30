@@ -59,7 +59,7 @@ describe('Aprender Postura', () => {
 
   it('aumenta o limite de posturas em +1, e +1 a mais no nível 10', () => {
     expect(posturasLimiteChar(comPostura() as never)).toBe(2);
-    expect(posturasLimiteChar(comPostura({ level: 10 }) as never)).toBe(3);
+    expect(posturasLimiteChar(comPostura({ level: 10 }) as never)).toBe(4); // 1 base + 1 (nv8) + 2 (Aprender nv4 e nv10)
     expect(posturasLimiteChar(comPostura({ level: 16 }) as never)).toBe(5);
   });
 
