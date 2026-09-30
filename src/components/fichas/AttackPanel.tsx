@@ -966,6 +966,67 @@ export function AttackPanel({ character: cProp }: Props) {
     setArremessoTargetId('');
   };
 
+  // ─── Disparos Sincronizados (Especialista nv 2) ───────────────────────────
+  const sincroCheck = podeSincronizar(c, mainWeapon, offWeapon);
+  const temDisparos = hasDisparosSincronizados(c);
+  const handleDisparosSincronizados = async () => {
+    if (phase === 'rolling-hit' || phase === 'rolling-dmg') return;
+    const chk = podeSincronizar(c, mainWeapon, offWeapon);
+    if (!chk.ok || !mainWeapon || !offWeapon) { addLog('combat', `🚫 Disparos Sincronizados: ${chk.reason}`); return; }
+    if (!target) { addLog('combat', `🚫 Disparos Sincronizados: escolha o alvo.`); return; }
+    const ms = useMapStore.getState();
+    for (const arma of [mainWeapon, offWeapon]) {
+      const bloqueio = checkWeaponRange(c.id, target.id, arma, ms.entities, ms.gridConfig, meleeRangeBonus, mapIdentities, posturaAlcanceMult(c));
+      if (bloqueio) { addLog('combat', `🚫 Disparos Sincronizados (${arma.name}): ${bloqueio}`); return; }
+    }
+    setPhase('rolling-hit');
+    const base = {
+      twoHanded: false, targetUnaware, targetProne,
+      previousAttacksThisTurn: previousAttacks, previousMissed,
+      targetHasAuraEmbacada, attackerConcentratedAura, attackerIsGrappled,
+    };
+    const trained = [
+      ...(c.meleeTrained ? (['melee'] as const) : []),
+      ...(c.rangedTrained ? (['ranged', 'thrown'] as const) : []),
+    ];
+    const tiros: { arma: Weapon; r: AttackResult }[] = [];
+    try {
+      for (const arma of [mainWeapon, offWeapon]) {
+        const ctxT = buildAttackContext({
+          attacker: c, weapon: arma, targetDefense: targetDef,
+          situation: { ...base, preferredAbility: pickAttackAbility(c, arma) },
+          trainedRanges: trained,
+        });
+        const r = await rollAttack(ctxT);
+        tiros.push({ arma, r });
+        addLog('combat', `🔫 Disparos Sincronizados (${arma.name}): d20 ${r.natural} · total ${r.attackTotal} → ${r.criticalFail ? '💀 falha crítica' : r.critical ? '💥 CRÍTICO' : r.hit ? '✅ acerto' : '❌ erro'}`);
+        recordAttackResult(c.id, r.hit);
+      }
+    } catch (err) {
+      console.error('[Disparos Sincronizados] erro:', err);
+      setPhase('idle');
+      return;
+    }
+    const ambos = tiros.every((t) => t.r.hit);
+    registrarDevastacao(target.id, ambos);
+    if (!ambos) {
+      addLog('combat', `   ↳ Um dos tiros errou — os disparos não se sincronizam e nenhum dano é causado.`);
+      setLastResult({ ...tiros[0].r, hit: false, damageTotal: 0, damageRolls: [] });
+      setPhase('done');
+      return;
+    }
+    const total = tiros.reduce((a, t) => a + t.r.damageTotal, 0);
+    const tipo = tiros[0].r.damageType ?? undefined;
+    addLog('combat', `   💥 Dano combinado: ${total} (${tiros.map((t) => `${t.arma.name} ${t.r.damageTotal}`).join(' + ')}) — RD e resistências aplicadas uma única vez.`);
+    const rdIgn = rdIgnoradaAtaque(false);
+    applyDamage(target.id, total, tipo as never, { attackerId: c.id, isMelee: false, rdIgnore: rdIgn });
+    if (tiros.some((t) => t.r.critical)) checarRenovacaoCritico(true, target.name);
+    void tempestadeGolpe(target);
+    void explosaoDragao(target, total, tipo);
+    setLastResult({ ...tiros[0].r, damageTotal: total, damageRolls: tiros.flatMap((t) => t.r.damageRolls) });
+    setPhase('done');
+  };
+
   const handleRerollDamage = async () => {
     if (!mainWeapon || !lastResult || !lastResult.canRerollDamage) return;
     const ability = pickAttackAbility(c, mainWeapon);
@@ -1408,6 +1469,22 @@ export function AttackPanel({ character: cProp }: Props) {
             <Dice5 className={cn('h-3.5 w-3.5', phase === 'rolling-hit' && 'animate-spin')} />
             {phase === 'rolling-hit' ? 'Rolando ataque…' : 'Rolar Ataque'}
           </button>
+          {temDisparos && (
+            <button
+              type="button"
+              data-testid="disparos-sincronizados"
+              onClick={() => void handleDisparosSincronizados()}
+              disabled={!sincroCheck.ok || !target || phase === 'rolling-hit' || phase === 'rolling-dmg'}
+              title={sincroCheck.ok ? 'Ação Comum: dispara as duas armas juntas. Se ambos acertarem, o dano vira uma instância só.' : `Disparos Sincronizados: ${sincroCheck.reason}`}
+              className={cn(
+                'inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-xs font-bold transition',
+                'border-accent/60 bg-accent/15 text-accent hover:bg-accent/25',
+                (!sincroCheck.ok || !target || phase === 'rolling-hit' || phase === 'rolling-dmg') && 'opacity-50 cursor-not-allowed',
+              )}
+            >
+              <Zap className="h-3.5 w-3.5" /> Disparos Sincronizados
+            </button>
+          )}
           {weaponAoE && (
             <button
               type="button"
