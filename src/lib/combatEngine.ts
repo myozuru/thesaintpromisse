@@ -71,7 +71,13 @@ export interface AttackSituation {
   devastacaoHit?: number;
   /** Postura da Fortuna: pode rerrolar d20 baixo. */
   fortuna?: boolean;
+  /** Pistoleiro Iniciado: margem de Emperrar +2 e +1 dado de dano. */
+  pistoleiro?: boolean;
+  /** Precisão Definitiva: PE gastos e destino do bônus. */
+  precisaoPe?: number;
+  precisaoModo?: 'acerto' | 'dano';
 }
+
 
 export interface AttackContext {
   attacker: Character;
