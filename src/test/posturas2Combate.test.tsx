@@ -130,6 +130,28 @@ describe('Posturas — parte 2', () => {
     expect(log()).toContain('trocou de alvo');
   });
 
+  it('Devastação: rerrolar o ataque ajusta o acúmulo pelo resultado final', async () => {
+    mesa(esp({ level: 6, posturasAprendidas: ['devastacao'] }));
+    clicar(/Entrar: Devastação/);
+    alvo('bruno');
+    // 1º ataque erra (d20 2); a rerrolagem acerta (d20 18) → acumula 1.
+    forcarDados(2, 18, 4, 4, 4);
+    clicar(/Rolar Ataque/);
+    fireEvent.click(await screen.findByRole('button', { name: /Rerolar Ataque/ }, { timeout: 8000 }));
+    fireEvent.click(await screen.findByRole('button', { name: /Rolar Dano/ }, { timeout: 8000 }));
+    await waitFor(() => expect(log()).toMatch(/💥 Dano:/), { timeout: 8000 });
+    expect(pegarFicha('ana').devastacao).toEqual({ alvoId: 'bruno', acertos: 1 });
+    expect(log()).toContain('a rerrolagem acertou');
+    // 2º ataque acerta; a rerrolagem erra → o acúmulo volta a 0.
+    useCharacterStore.getState().updateCharacter('ana', { attacksThisTurn: 0, actionsCurrent: 1 } as never);
+    alvo('bruno');
+    forcarDados(18, 2);
+    clicar(/Rolar Ataque/);
+    fireEvent.click(await screen.findByRole('button', { name: /Rerolar Ataque/ }, { timeout: 8000 }));
+    await waitFor(() => expect(pegarFicha('ana').devastacao?.acertos).toBe(0), { timeout: 8000 });
+    expect(log()).toContain('a rerrolagem errou');
+  });
+
   it('Tempestade: acerto → Fortitude ou Caído; já Caído → Imóvel até o começo do turno do Especialista; passar não faz nada', async () => {
     mesa(esp({ level: 10, posturasAprendidas: ['tempestade'] }), { caio: [0, 1], davi: [1, 1] });
     useCombatStore.setState({ initiativeOrder: [{ charId: 'ana' }, { charId: 'bruno' }, { charId: 'caio' }, { charId: 'davi' }] as never });
