@@ -148,6 +148,14 @@ export function devastacaoPatch(c: Character, alvoId: string, acertou: boolean):
   return { devastacao: { alvoId, acertos } };
 }
 
+/** Devastação: reconcilia o acúmulo quando o ataque é rerrolado — o resultado final é o que vale. */
+export function devastacaoPatchReroll(c: Character, alvoId: string, acertouAntes: boolean, acertouAgora: boolean): Partial<Character> | null {
+  if (posturaAtiva(c) !== 'devastacao' || acertouAntes === acertouAgora) return null;
+  if (c.devastacao?.alvoId !== alvoId) return acertouAgora ? { devastacao: { alvoId, acertos: 1 } } : null;
+  const acertos = Math.max(0, Math.min(bt(c), c.devastacao.acertos + (acertouAgora ? 1 : -1)));
+  return { devastacao: { alvoId, acertos } };
+}
+
 /** Fortuna: usos por rodada = metade do treinamento (baixo), mínimo 1. */
 export const fortunaUsosMax = (c: Character) => Math.max(1, Math.floor(bt(c) / 2));
 export function fortunaUsosRestantes(c: Character, round: number): number {

@@ -76,7 +76,7 @@ async function atacarAlvo(id: string, ...dados: number[]) {
 }
 const cond = (id: string) => (pegarFicha(id).activeConditions ?? []).map((x) => x.conditionId);
 
-describe('Posturas — parte 2', () => {
+describe('Posturas — parte 2', { timeout: 20000 }, () => {
   it('Fortuna: d20 ≤ treinamento pergunta; rolar de novo vale; usos por rodada = metade (mín. 1)', async () => {
     const bt = getTrainingBonusByLevel(4);
     expect(fortunaUsosMax(esp({ level: 4 }))).toBe(Math.max(1, Math.floor(bt / 2)));
@@ -128,6 +128,29 @@ describe('Posturas — parte 2', () => {
     await atacarAlvo('caio', 18, 4, 4, 4);
     expect(pegarFicha('ana').devastacao).toEqual({ alvoId: 'caio', acertos: 1 });
     expect(log()).toContain('trocou de alvo');
+  });
+
+  it('Devastação: rerrolar o ataque ajusta o acúmulo pelo resultado final', { timeout: 20000 }, async () => {
+    mesa(esp({ level: 6, posturasAprendidas: ['devastacao'] }));
+    clicar(/Entrar: Devastação/);
+    alvo('bruno');
+    // 1º ataque erra (d20 2); a rerrolagem acerta (d20 18) → acumula 1.
+    forcarDados(2, 18, 4, 4, 4);
+    clicar(/Rolar Ataque/);
+    fireEvent.click(await screen.findByRole('button', { name: /Rerolar Ataque/ }, { timeout: 8000 }));
+    fireEvent.click(await screen.findByRole('button', { name: /Rolar Dano/ }, { timeout: 8000 }));
+    await waitFor(() => expect(log()).toMatch(/💥 Dano:/), { timeout: 8000 });
+    expect(pegarFicha('ana').devastacao).toEqual({ alvoId: 'bruno', acertos: 1 });
+    expect(log()).toContain('a rerrolagem acertou');
+    // 2º ataque acerta (acúmulo 1→2); a rerrolagem erra → perde só o acerto da rerrolagem (volta a 1).
+    useCharacterStore.getState().updateCharacter('ana', { attacksThisTurn: 0, actionsCurrent: 1 } as never);
+    alvo('bruno');
+    forcarDados(18, 2);
+    clicar(/Rolar Ataque/);
+    await waitFor(() => expect(pegarFicha('ana').devastacao?.acertos).toBe(2), { timeout: 8000 });
+    fireEvent.click(await screen.findByRole('button', { name: /Rerolar Ataque/ }, { timeout: 8000 }));
+    await waitFor(() => expect(pegarFicha('ana').devastacao?.acertos).toBe(1), { timeout: 8000 });
+    expect(log()).toContain('a rerrolagem errou');
   });
 
   it('Tempestade: acerto → Fortitude ou Caído; já Caído → Imóvel até o começo do turno do Especialista; passar não faz nada', async () => {

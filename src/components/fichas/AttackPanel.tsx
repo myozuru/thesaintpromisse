@@ -46,7 +46,7 @@ import {
   execucaoSilenciosaDice,
 } from '@/lib/artesCombate';
 import { renovacaoSangueAtiva, aplicarRenovacao } from '@/lib/renovacaoSangue';
-import { posturaAtiva, fortitudeMod, imuneMovimentoForcado, hasAssumirPostura, posturaAlcanceMult, devastacaoBonus, devastacaoPatch, TEMPESTADE_IMOVEL_PREFIX } from '@/lib/posturas';
+import { posturaAtiva, fortitudeMod, imuneMovimentoForcado, hasAssumirPostura, posturaAlcanceMult, devastacaoBonus, devastacaoPatch, devastacaoPatchReroll, TEMPESTADE_IMOVEL_PREFIX } from '@/lib/posturas';
 import { PosturasPanel } from '@/components/fichas/PosturasPanel';
 import { arsenalRegistroAtaque, arsenalBonusAtivo, hasArsenalCiclico } from '@/lib/arsenalCiclico';
 import { hasArremessosPotentes, podeAtivarArremessos, arremessosAtivo, arremessosRdIgnorada, turnKeyFor } from '@/lib/arremessosPotentes';
@@ -274,6 +274,8 @@ export function AttackPanel({ character: cProp }: Props) {
   // Para vantagem/desvantagem: revela o 1º d20, espera clique, anima o 2º d20, depois finaliza.
   const [firstD20Revealed, setFirstD20Revealed] = useState<number | null>(null);
   const [pendingRerollMeta, setPendingRerollMeta] = useState<{ isReroll: boolean } | null>(null);
+  // Resultado do 1º disparo do ataque atual — usado para reconciliar a Devastação numa rerrolagem.
+  const primeiroDisparoRef = useRef<{ alvoId: string; hit: boolean } | null>(null);
   // Quantas vezes o d20 de ataque foi rolado nesta tentativa (máx 2).
   // Reseta a cada nova ação de ataque (handleRoll chamado sem ser reroll).
   const [attackRollCount, setAttackRollCount] = useState<number>(0);
@@ -554,6 +556,7 @@ export function AttackPanel({ character: cProp }: Props) {
     if (!isReroll) {
       recordAttackResult(c.id, result.hit);
       if (target) registrarDevastacao(target.id, result.hit);
+      primeiroDisparoRef.current = target ? { alvoId: target.id, hit: result.hit } : null;
       if (result.hit && target) void tempestadeGolpe(target);
       if (inCombat) {
         const reg = arsenalRegistroAtaque(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, mainWeapon.name, combatRound);
@@ -607,6 +610,18 @@ export function AttackPanel({ character: cProp }: Props) {
     } else {
       // No reroll, atualiza a memória para refletir o resultado final (sobrescreve hit/miss do 1º).
       recordAttackResult(c.id, result.hit, { replaceLast: true });
+      // Devastação: o resultado final é o que vale — ajusta o acúmulo se a rerrolagem mudou acerto/erro.
+      const prev = primeiroDisparoRef.current;
+      if (prev && target && prev.alvoId === target.id && prev.hit !== result.hit) {
+        const eu = useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c;
+        const patch = devastacaoPatchReroll(eu, target.id, prev.hit, result.hit);
+        if (patch) {
+          useCharacterStore.getState().updateCharacter(c.id, patch);
+          const n = patch.devastacao?.acertos ?? 0;
+          addLog('combat', `💢 Postura da Devastação: a rerrolagem ${result.hit ? 'acertou' : 'errou'} — acúmulo ajustado para ${n} acerto(s) (+${n} acerto, ignora ${n * 2} RD).`);
+        }
+      }
+      primeiroDisparoRef.current = null;
     }
 
     const nextRollCount = isReroll ? attackRollCount + 1 : 1;
