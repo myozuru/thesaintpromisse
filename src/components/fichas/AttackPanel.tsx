@@ -1582,6 +1582,49 @@ export function AttackPanel({ character: cProp }: Props) {
         )}
 
 
+        {temArremessoRapido && (
+          <div className="rounded-lg border border-primary/30 bg-background/40 p-2 space-y-1" data-testid="arremesso-rapido">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span className="text-sm font-semibold text-foreground">Arremesso Rápido</span>
+              <div className="flex items-center gap-1">
+                <select
+                  aria-label="Alvo do Arremesso Rápido"
+                  data-testid="arremesso-rapido-alvo"
+                  value={arremessoRapidoAlvo}
+                  onChange={(e) => setArremessoRapidoAlvo(e.target.value)}
+                  className="rounded-md border border-border bg-background px-1 py-0.5 text-xs"
+                >
+                  <option value="">— alvo —</option>
+                  {possibleTargets.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  data-testid="arremesso-rapido-usar"
+                  disabled={!arremessoRapidoCheck.ok || !arremessoRapidoAlvo}
+                  onClick={handleArremessoRapido}
+                  className="rounded-md border border-primary/40 bg-primary/10 px-2 py-1 text-xs font-semibold text-primary disabled:opacity-50"
+                >
+                  Ataque extra (1 PE + AB)
+                </button>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {arremessoRapidoCheck.ok
+                ? 'Gasta 1 PE e sua Ação Bônus: arremesse novamente contra outro alvo (ou o mesmo, se for o único).'
+                : arremessoRapidoCheck.reason}
+            </p>
+          </div>
+        )}
+
+        {arremessoAtaque && arremessoAtaque.espId === c.id && (
+          <div className="flex items-center justify-between gap-2 rounded border border-primary/60 bg-primary/10 px-2 py-1 text-[11px]" data-testid="arremesso-rapido-banner">
+            <span>🌀 Arremesso Rápido: ataque extra liberado contra <b>{characters.find((x) => x.id === arremessoAtaque.alvoId)?.name ?? 'alvo'}</b> — role o ataque.</span>
+            <button onClick={() => useArremessoRapidoStore.getState().setAtaque(null)} className="text-muted-foreground hover:text-foreground">✕</button>
+          </div>
+        )}
+
         {temGolpe && (
           <GolpeEspecialSection
             sel={golpeSel}
