@@ -16,7 +16,7 @@ import { useTabOrderStore } from '@/stores/useTabOrderStore';
 import { getTabsForRole, type TabId } from '@/components/Header';
 import { usePendingDebates } from '@/hooks/usePendingDebates';
 import {
-  Clock, Users, Swords, CalendarDays, Settings, BookOpen, Wand2, Coins, Store, GripVertical, Sparkles, Library, Map as MapIcon, Archive, Skull,
+  Clock, Users, Swords, CalendarDays, Settings, BookOpen, Wand2, Coins, Store, GripVertical, Sparkles, Library, Map as MapIcon, Globe, Archive, Skull,
 } from 'lucide-react';
 import { RIcon } from '@/components/icons/RIcon';
 
@@ -38,6 +38,7 @@ const ALL_ITEMS: { id: TabId; label: string; icon: React.ElementType }[] = [
   { id: 'omni', label: 'Omni-Engine', icon: Sparkles },
   { id: 'catalogo', label: 'Catálogo', icon: Library },
   { id: 'mapa', label: 'Mapa', icon: MapIcon },
+  { id: 'mundo', label: 'Mundo', icon: Globe },
   { id: 'grimorio', label: 'Grimório', icon: Skull },
   { id: 'sistema', label: 'Sistema', icon: Settings },
   { id: 'guia', label: 'Guia', icon: BookOpen },
