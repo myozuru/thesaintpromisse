@@ -24,7 +24,7 @@ const esp = (habs: string[], extra: Record<string, unknown> = {}) =>
     chosenSpecAbilities: habs.map((abilityId) => ({ abilityId })), ...extra,
   } as never);
 const inimigo = (id: string, extra: Record<string, unknown> = {}) =>
-  ficha(id, { category: 'INIMIGO', hpCurrent: 100, hpMax: 100, ...extra } as never);
+  ficha(id, { category: 'INIMIGO', hpCurrent: 100, hpMax: 100, escCurrent: 0, rd: 0, defense: 5, ...extra } as never);
 
 function combate(ids: string[]) {
   useCombatStore.setState({
