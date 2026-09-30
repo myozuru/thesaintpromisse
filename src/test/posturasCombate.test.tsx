@@ -127,7 +127,9 @@ describe('Posturas em combate', () => {
     await waitFor(() => expect(pegarFicha('ana').hpCurrent).toBe(50 - 16));
     expect(screen.queryByRole('button', { name: /Usar reação/ })).toBeNull();
     // Desengajar acaba no fim do próprio turno de ana, movimento extra zera no início dele.
-    useCombatStore.getState().nextTurn(); // → ana começa
+    const ativo = () => { const c = useCombatStore.getState(); return c.initiativeOrder[c.currentTurnIndex]?.charId; };
+    if (ativo() === 'ana') useCombatStore.getState().nextTurn();
+    while (ativo() !== 'ana') useCombatStore.getState().nextTurn(); // → ana começa
     expect(reactionMoveBudget(pegarFicha('ana'))).toBeNull();
     expect(pegarFicha('ana').desengajado).toBe(true);
     useCombatStore.getState().nextTurn(); // ana termina
