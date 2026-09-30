@@ -409,7 +409,10 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
   }
   const natural = d20;
   const criticalFail = natural === 1 && !consumeCritNegated(ctx.attacker.id);
-  const critical = natural >= critRange;
+  // Emperrar: 1 natural (regra base) ou até 3 com Pistoleiro Iniciado declarado.
+  const jammed = emperrouArma(natural, w, pistoleiroOn);
+  const critical = !jammed && natural >= critRange;
+
 
   // Modificadores
   const mods: AttackResult['modifiers'] = [];
