@@ -161,7 +161,8 @@ export interface SpecAbility {
     | 'single_spell_choice'
     | 'spell_level_choice'
     | 'single_release_choice'
-    | 'spells';
+    | 'spells'
+    | 'weapon_group';
   /**
    * Limite de quantas vezes a habilidade pode ser comprada quando
    * `allowMultiplePurchases` é true. Fórmulas suportadas:
