@@ -111,6 +111,9 @@ describe('Posturas em combate', () => {
     await atacar(17, 4, 4, 4);
     expect(log()).toContain('Postura da Lua');
     expect(Number(/💥 Dano: (\d+)/.exec(log())![1])).toBe(4); // 1d6=4, sem +3 de Força
+    const ativo = () => { const c = useCombatStore.getState(); return c.initiativeOrder[c.currentTurnIndex]?.charId; };
+    while (ativo() === 'ana') useCombatStore.getState().nextTurn(); // turno do inimigo
+    useCharacterStore.getState().updateCharacter('ana', { reactionsCurrent: 1 });
     render(<ReactionPromptOverlay />);
     // 1º ataque: aparece a pergunta; dano fica pendente até decidir.
     useCharacterStore.getState().applyDamage('ana', 10, undefined, { attackerId: 'bruno' });
@@ -127,8 +130,6 @@ describe('Posturas em combate', () => {
     await waitFor(() => expect(pegarFicha('ana').hpCurrent).toBe(50 - 16));
     expect(screen.queryByRole('button', { name: /Usar reação/ })).toBeNull();
     // Desengajar acaba no fim do próprio turno de ana, movimento extra zera no início dele.
-    const ativo = () => { const c = useCombatStore.getState(); return c.initiativeOrder[c.currentTurnIndex]?.charId; };
-    if (ativo() === 'ana') useCombatStore.getState().nextTurn();
     while (ativo() !== 'ana') useCombatStore.getState().nextTurn(); // → ana começa
     expect(reactionMoveBudget(pegarFicha('ana'))).toBeNull();
     expect(pegarFicha('ana').desengajado).toBe(true);
