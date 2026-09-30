@@ -68,15 +68,28 @@ async def main():
         print("FICHA:", defesa)
         await pg.screenshot(path=S + "1_ficha.png")
 
-        # TR escolhido recebe +2 na rolagem da ficha
+        # TR escolhido (Fortitude) recebe +2; Reflexos não
+        async def rolar_tr(nome):
+            ok = await pg.evaluate("""(n)=>{
+              const el=[...document.querySelectorAll('*')].find(e=>e.children.length===0&&e.textContent.trim()===n);
+              if(!el) return false;
+              const row=el.closest('div'); const b=row&&row.querySelector('button[title="Rolar d20"]');
+              if(!b) return false; b.click(); return true;
+            }""", nome)
+            await pg.wait_for_timeout(1200); await dados(pg, 3)
+            return ok
         for alvo in ["Fortitude", "Reflexos"]:
-            botao = pg.get_by_text(alvo, exact=True)
-            if await botao.count():
-                await botao.first.scroll_into_view_if_needed()
-                await botao.first.click(force=True); await pg.wait_for_timeout(2500)
-                await dados(pg, 3)
-        logs = await pg.evaluate("window.__logStore?window.__logStore.getState().logs.slice(0,8).map(l=>l.message):null")
+            print("rolou", alvo, await rolar_tr(alvo))
+        logs = await pg.evaluate("window.__logStore?window.__logStore.getState().logs.slice(0,6).map(l=>l.message):null")
         print("LOG TR:", json.dumps(logs, ensure_ascii=False)[:1200])
+        # Defesa exibida com e sem a habilidade
+        def_com = await pg.evaluate("()=>document.body.innerText.match(/CA[^0-9]{0,6}(\\d+)/)?.[1]")
+        await pg.evaluate("window.__charStore.getState().updateCharacter('teste-esp',{chosenSpecAbilities:[{abilityId:'ec-espirito-luta',chosenAtLevel:4}]})")
+        await pg.wait_for_timeout(1200)
+        def_sem = await pg.evaluate("()=>document.body.innerText.match(/CA[^0-9]{0,6}(\\d+)/)?.[1]")
+        await pg.evaluate("window.__charStore.getState().updateCharacter('teste-esp',{chosenSpecAbilities:[{abilityId:'ec-guarda-estudada',chosenAtLevel:4},{abilityId:'ec-espirito-luta',chosenAtLevel:4}]})")
+        await pg.wait_for_timeout(1000)
+        print("DEFESA com/sem Guarda Estudada:", def_com, def_sem)
         await pg.screenshot(path=S + "2_tr.png")
 
         # ── Espírito de Luta ─────────────────────────────────────────────────
