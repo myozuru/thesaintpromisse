@@ -32,6 +32,7 @@ import {
 } from '@/lib/weapons';
 import { arremessosPotentesStep } from '@/lib/arremessosPotentes';
 import { golpesPotentesStep, golpesPotentesDano, GOLPES_POTENTES_DANO } from '@/lib/golpesPotentes';
+import { armasEscolhidasStep, ARMAS_ESCOLHIDAS_STEP } from '@/lib/armasEscolhidas';
 import { extensaoAtaqueBonus } from '@/lib/extensaoCorpo';
 import { ehArmaDeFogo, margemEmperrar, emperrou as emperrouArma } from '@/lib/pistoleiroIniciado';
 import { precisaoBonus } from '@/lib/precisaoDefinitiva';
