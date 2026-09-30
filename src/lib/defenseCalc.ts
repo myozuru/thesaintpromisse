@@ -39,6 +39,7 @@ import { getDefensivoCA } from '@/lib/combateEstilos';
  *   • RD por tipo NÃO é CA: continua sendo aplicada no `damageStep`, não aqui.
  */
 import { posturaDefesa } from '@/lib/posturas';
+import { guardaEstudadaDefesa } from '@/lib/guardaEstudada';
 import type { Character, Item, Passive } from '@/types';
 import { aggregateConditionMods } from '@/lib/conditionEffects';
 import { aggregateAuraEffects } from '@/lib/auraEffects';
@@ -223,7 +224,7 @@ export function computeDefenseBreakdown(
   const shieldCA = equippedShield?.defenseBonus ?? 0;
 
   const specEff = aggregateSpecAbilityEffects(c);
-  const specAbilityCA = specEff.defenseBonus;
+  const specAbilityCA = specEff.defenseBonus + guardaEstudadaDefesa(c);
 
   // Mescla condições do char + condições aplicadas via Omni runtime no alvo.
   // Sintetiza um proxy de Character só com `activeConditions` aumentadas para

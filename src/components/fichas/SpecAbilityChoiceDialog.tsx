@@ -83,7 +83,7 @@ export function SpecAbilityChoiceDialog({ charId, ability, current, open, onClos
               label={schema.label ?? 'Escolha o Teste de Resistência'}
               options={schema.options}
               value={draft?.kind === 'save-skill' ? draft.save : undefined}
-              onChange={(save) => setDraft({ kind: 'save-skill', save })}
+              onChange={(save) => setDraft({ kind: 'save-skill', save: save as 'Fortitude' | 'Reflexos' | 'Astúcia' | 'Vontade' })}
             />
           )}
 
@@ -197,9 +197,9 @@ function SavePicker({
   label, options, value, onChange,
 }: {
   label: string;
-  options: Array<'Fortitude' | 'Reflexos' | 'Astúcia' | 'Vontade'>;
-  value?: 'Fortitude' | 'Reflexos' | 'Astúcia' | 'Vontade';
-  onChange: (s: 'Fortitude' | 'Reflexos' | 'Astúcia' | 'Vontade') => void;
+  options: Array<'Fortitude' | 'Reflexos' | 'Astúcia' | 'Vontade' | 'Integridade'>;
+  value?: 'Fortitude' | 'Reflexos' | 'Astúcia' | 'Vontade' | 'Integridade';
+  onChange: (s: 'Fortitude' | 'Reflexos' | 'Astúcia' | 'Vontade' | 'Integridade') => void;
 }) {
   return (
     <div className="space-y-2">

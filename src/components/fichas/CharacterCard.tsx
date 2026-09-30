@@ -32,6 +32,7 @@ import { rollD20Com, rollDiceCom } from '@/lib/dice';
 import { perguntarFortuna } from '@/lib/fortuna';
 import { posturaPericia } from '@/lib/posturas';
 import { ehFurtividade, penalidadeChamativa, presencaSuprimidaBonus } from '@/lib/presencaSuprimida';
+import { guardaEstudadaTrBonus } from '@/lib/guardaEstudada';
 
 import { hasSpecAbility } from '@/lib/suporteNivel2';
 import { PRE_ANALISE_ATENCAO, PRE_ANALISE_ID } from '@/lib/suportePreAnaliseRecompensa';
@@ -966,7 +967,9 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     const isSavingThrow = (c.savingThrows || []).some(st => st.name === name);
     // Presença Inspiradora (Suporte Nv 3): bônus de cena em TODAS as perícias (não em TRs).
     const inspiracao = (isSavingThrow ? 0 : (c.inspiracaoBonus ?? 0)) + (isSavingThrow ? 0 : posturaPericia(c));
-    const totalBonus = baseBonus + attrMod + itemBonus + trainBonus + levelBonus + extBonus + auraSkillBonus + conditionSkillBonus + saveBonus + sentidosBonus + concentrationBonus + omniSkillBonus + inspiracao + furtBonus + chamativa;
+    // Guarda Estudada (EC Nv4): +2 no TR escolhido.
+    const guardaBonus = guardaEstudadaTrBonus(c, name, isSavingThrow);
+    const totalBonus = guardaBonus + baseBonus + attrMod + itemBonus + trainBonus + levelBonus + extBonus + auraSkillBonus + conditionSkillBonus + saveBonus + sentidosBonus + concentrationBonus + omniSkillBonus + inspiracao + furtBonus + chamativa;
     const activeCondIds = (c.activeConditions || []).map(ac => (ac.conditionId || '').toLowerCase());
     const triggersBastiao =
       isSavingThrow &&
@@ -990,13 +993,14 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     const auraLabel = auraSkillBonus > 0 ? ` (+${auraSkillBonus} aura)` : '';
     const condLabel = conditionSkillBonus !== 0 ? ` (${conditionSkillBonus > 0 ? '+' : ''}${conditionSkillBonus} cond.)` : '';
     const specLabel = saveBonus > 0 ? ` (+${saveBonus} foco)` : '';
+    const guardaLabel = guardaBonus > 0 ? ` (+${guardaBonus} guarda estudada)` : '';
     const sentidosLabel = sentidosBonus > 0 ? ` (+${sentidosBonus} sentidos)` : '';
     const inspiracaoLabel = inspiracao > 0 ? ` (+${inspiracao} inspiração)` : '';
     const masteryLabel = promotedMastery && !mastery ? ' [Maestria/Spec]' : '';
     const flatLabel = flat.bonus ? ` (${flat.bonus > 0 ? '+' : ''}${flat.bonus} comando/apoio)` : '';
     const furtLabel = furtBonus > 0 ? ` (+${furtBonus} presença suprimida)` : '';
     const chamativaLabel = chamativa !== 0 ? ` (${chamativa} ação chamativa)` : '';
-    showRollAnimation(name + auraLabel + condLabel + specLabel + sentidosLabel + inspiracaoLabel + flatLabel + furtLabel + chamativaLabel + masteryLabel + bastiaoLabel + modeLabel, d20, totalBonus + flat.bonus, d20 + totalBonus + flat.bonus);
+    showRollAnimation(name + auraLabel + condLabel + specLabel + guardaLabel + sentidosLabel + inspiracaoLabel + flatLabel + furtLabel + chamativaLabel + masteryLabel + bastiaoLabel + modeLabel, d20, totalBonus + flat.bonus, d20 + totalBonus + flat.bonus);
 
     maybeApplyRecompensa(c.id, flat, { find: (id) => useCharacterStore.getState().characters.find((x) => x.id === id), update: updateCharacter, log: (m) => addLog('combat', m) });
   };

@@ -62,6 +62,7 @@ import { useZonaRiscoStore } from '@/lib/zonaRisco';
 import { hasArremessoRapido, arremessoRapidoPodeUsar, arremessoRapidoUsar, useArremessoRapidoStore } from '@/lib/arremessoRapido';
 import { TiroFalsoSection } from './TiroFalsoSection';
 import { RevigorarButton } from './RevigorarButton';
+import { EspiritoLutaButton } from './EspiritoLutaButton';
 import { EspecialistaNv4Sections } from './EspecialistaNv4Sections';
 import { EspecialistaNv4CSections } from './EspecialistaNv4CSections';
 import { consumirTiro } from '@/lib/recargaRapida';
@@ -1473,6 +1474,7 @@ export function AttackPanel({ character: cProp }: Props) {
 
         {/* ─── Revigorar (ação bônus) ─────────────────────────────────────── */}
         <RevigorarButton character={c} />
+        <EspiritoLutaButton character={c} />
 
         {/* ─── Técnicas de Avanço / Buscar Oportunidade / Compensar Erro ─── */}
         <EspecialistaNv4Sections

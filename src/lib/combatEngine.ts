@@ -36,6 +36,7 @@ import { armasEscolhidasStep, ARMAS_ESCOLHIDAS_STEP } from '@/lib/armasEscolhida
 import { extensaoAtaqueBonus } from '@/lib/extensaoCorpo';
 import { ehArmaDeFogo, margemEmperrar, emperrou as emperrouArma } from '@/lib/pistoleiroIniciado';
 import { precisaoBonus } from '@/lib/precisaoDefinitiva';
+import { espiritoLutaBonus } from '@/lib/espiritoLuta';
 
 import { aggregateTalentBonuses } from '@/lib/talentEffects';
 import { getTalentById } from '@/lib/talents';
@@ -362,6 +363,10 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
   // Bônus fixos de rolagem (Comando Motivador, etc.) somam no acerto.
   const flatAtk = consumeFlatBonusFor(ctx.attacker.id, { kind: 'attack', subtype: attackSubtype, weaponGroup: w.group, weaponName: w.name });
   if (flatAtk.bonus) { ctxBonus.hit = (ctxBonus.hit ?? 0) + flatAtk.bonus; for (const n of flatAtk.notes) ctxBonus.notes.push(n); }
+
+  // Espírito de Luta: +2 em jogadas de ataque até o fim da cena.
+  const espLuta = espiritoLutaBonus(ctx.attacker);
+  if (espLuta) { ctxBonus.hit = (ctxBonus.hit ?? 0) + espLuta; ctxBonus.notes.push(`Espírito de Luta: +${espLuta} no acerto`); }
 
   // Golpe Especial
   const post = posturaAtaque(ctx.attacker);

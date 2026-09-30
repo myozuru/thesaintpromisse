@@ -39,6 +39,7 @@ import { DiceTrayPanel } from '@/components/dice-physics/DiceTrayPanel';
 import { cn } from '@/lib/utils';
 import type { Character } from '@/types';
 import { canViewerRollTestRequest, isPlayerOwnedTestRequest } from '@/lib/testRequestAudience';
+import { guardaEstudadaTrBonus } from '@/lib/guardaEstudada';
 
 /** Modificadores externos de combate que valem para qualquer teste pedido. */
 function bonusDeCombate(c: Character, req: TestRequest): { bonus: number; parts: string[] } {
@@ -52,6 +53,8 @@ function bonusDeCombate(c: Character, req: TestRequest): { bonus: number; parts:
     const ms = useMapStore.getState();
     const pen = penalidadeTRFlanqueado(c, useCharacterStore.getState().characters, ms.entities as never, ms.gridConfig as never);
     if (pen) { bonus += pen; parts.push(`Flanqueador Superior ${pen}`); }
+    const guarda = guardaEstudadaTrBonus(c, req.testName);
+    if (guarda) { bonus += guarda; parts.push(`Guarda Estudada +${guarda}`); }
   }
   return { bonus, parts };
 }
