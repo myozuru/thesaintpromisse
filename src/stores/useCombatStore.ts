@@ -1,5 +1,22 @@
 import { create } from 'zustand';
-import { terraPvtPatch } from '@/lib/posturas';
+import { terraPvtPatch, ceuPreparoPatch, TEMPESTADE_IMOVEL_PREFIX } from '@/lib/posturas';
+
+/** Posturas no começo do turno: Terra (PVT), Céu (preparo temporário) e fim do Imóvel da Tempestade. */
+function inicioTurnoPostura(charId: string) {
+  const st = useCharacterStore.getState();
+  const eu = st.characters.find((x) => x.id === charId);
+  if (eu) {
+    const terra = terraPvtPatch(eu as never);
+    const ceu = ceuPreparoPatch(eu as never);
+    if (terra || ceu) st.updateCharacter(charId, { ...(terra ?? {}), ...(ceu ?? {}) });
+  }
+  const marca = `${TEMPESTADE_IMOVEL_PREFIX}${charId}:`;
+  for (const ch of useCharacterStore.getState().characters) {
+    for (const ac of ch.activeConditions ?? []) {
+      if (ac.id.startsWith(marca)) useCharacterStore.getState().removeCondition(ch.id, ac.id);
+    }
+  }
+}
 import { persist } from 'zustand/middleware';
 import { useCharacterStore } from './useCharacterStore';
 import { useReactionStore } from './useReactionStore';
@@ -461,10 +478,7 @@ export const useCombatStore = create<CombatStore>()(
                 import('@/stores/useLogStore').then(({ useLogStore }) => useLogStore.getState().addLog('combat', `⏳ ${ch.name}: a postura terminou (1 minuto).`));
               }
             }
-            {
-              const terra = terraPvtPatch(useCharacterStore.getState().characters.find((x) => x.id === firstEntry.charId) as never);
-              if (terra) charStore.updateCharacter(firstEntry.charId, terra);
-            }
+            inicioTurnoPostura(firstEntry.charId);
             // Distração Letal: expira penalidades aplicadas em rodadas anteriores.
             for (const ch of charStore.characters) {
               if (ch.arteDefensePenalty && newRound > ch.arteDefensePenalty.round) {
@@ -535,10 +549,7 @@ export const useCombatStore = create<CombatStore>()(
           useCharacterStore.getState().updateCharacter(nextEntry.charId, { weaponSwapsThisTurn: 0, attacksThisTurn: 0, lastAttackHit: undefined, mobilidadeReacaoM: 0, mobilidadeReacaoBase: 0, arteGolpeDescendente: null });
           // Fase 2 — Reaplica pool dedicado de Aptidões (Mestre das Aptidões).
           useCharacterStore.getState().applyTurnStartSpecHooks(nextEntry.charId);
-          {
-            const terra = terraPvtPatch(useCharacterStore.getState().characters.find((x) => x.id === nextEntry.charId) as never);
-            if (terra) useCharacterStore.getState().updateCharacter(nextEntry.charId, terra);
-          }
+          inicioTurnoPostura(nextEntry.charId);
           import('@/lib/omni/eventBus').then(({ emitirEvento }) => {
             emitirEvento('noInicioDoTurno', { usuarioId: nextEntry.charId, incluirPassivas: true });
           });
