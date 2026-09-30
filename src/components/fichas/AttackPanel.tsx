@@ -757,8 +757,8 @@ export function AttackPanel({ character: c }: Props) {
     golpeRollRef.current = null;
     if (g?.sel.penetrante) addLog('combat', `   ↳ Penetrante: ignora ${penetranteRD(c)} de RD.`);
     const rdIgn = rdIgnoradaAtaque(!!g?.sel.penetrante);
-    if (mainWeapon && arremessosRdIgnorada(c, mainWeapon, turnInfo) > 0) {
-      addLog('combat', `   ↳ Arremessos Potentes: ignora ${arremessosRdIgnorada(c, mainWeapon, turnInfo)} de RD.`);
+    if (mainWeapon && arremessosRdIgnorada(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, mainWeapon, turnInfo) > 0) {
+      addLog('combat', `   ↳ Arremessos Potentes: ignora ${arremessosRdIgnorada(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, mainWeapon, turnInfo)} de RD.`);
     }
     if (target && result.damageTotal > 0) {
       applyDamage(target.id, result.damageTotal, (result.damageType ?? undefined) as never, {
@@ -845,7 +845,7 @@ export function AttackPanel({ character: c }: Props) {
     );
     recordAttackResult(c.id, r.hit);
     if (r.hit && r.damageTotal > 0) {
-      const ign = arremessosRdIgnorada(c, arma, turnInfo);
+      const ign = arremessosRdIgnorada(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, arma, turnInfo);
       applyDamage(alvo2.id, r.damageTotal, (r.damageType ?? undefined) as never, { attackerId: c.id, isMelee: false, rdIgnore: ign });
     }
     if (r.hit && r.critical) checarRenovacaoCritico(true, alvo2.name);
