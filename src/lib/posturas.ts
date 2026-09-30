@@ -41,13 +41,30 @@ export function posturasLimite(level: number): number {
   return 1 + (level >= 8 ? 1 : 0) + (level >= 16 ? 1 : 0);
 }
 
+/** Aprender Postura (nv 4): +1 postura ao obter e +1 no nível 10. */
+export const APRENDER_POSTURA_ID = 'ec-aprender-postura';
+
+export function hasAprenderPostura(c: Character): boolean {
+  return isEspecialistaCombate(c) && (c.chosenSpecAbilities ?? []).some((a) => a.abilityId === APRENDER_POSTURA_ID);
+}
+
+export function aprenderPosturaExtra(c: Character): number {
+  if (!hasAprenderPostura(c)) return 0;
+  return 1 + ((c.level ?? 1) >= 10 ? 1 : 0);
+}
+
+/** Limite efetivo da ficha (Assumir Postura + Aprender Postura). */
+export function posturasLimiteChar(c: Character): number {
+  return posturasLimite(c.level ?? 1) + aprenderPosturaExtra(c);
+}
+
 export function podeAprender(c: Character, id: PosturaId): { ok: boolean; reason?: string } {
   const def = getPostura(id);
   if (!def || !hasAssumirPostura(c)) return { ok: false, reason: 'Sem Assumir Postura.' };
   const known = c.posturasAprendidas ?? [];
   if (known.includes(id)) return { ok: false, reason: 'Já conhecida.' };
   if ((c.level ?? 1) < def.minLevel) return { ok: false, reason: `Requer nível ${def.minLevel}.` };
-  if (known.length >= posturasLimite(c.level ?? 1)) return { ok: false, reason: 'Limite de posturas atingido.' };
+  if (known.length >= posturasLimiteChar(c)) return { ok: false, reason: 'Limite de posturas atingido.' };
   return { ok: true };
 }
 
