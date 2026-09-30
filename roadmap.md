@@ -60,3 +60,9 @@
 - [ ] Decisões assumidas (confirmar com o usuário): metade do SAB arredonda para baixo; "Desprevenido" = condição desprevenido/agarrado/atordoado na ficha do alvo.
 
 - [x] Especialista nv 4: Golpe Especial + Implemento Marcial
+
+## Especialista em Combate — Habilidades de 2º nível
+- [x] Progressão geral conferida; catálogo de habilidades do Especialista criado
+- [x] Arremessos Potentes (+1 nível de dano; 1 PE ignora RD = treinamento) — dano do ataque agora desconta da vida do alvo
+- [ ] Arsenal Cíclico
+- [ ] Assumir Postura (8 posturas)
