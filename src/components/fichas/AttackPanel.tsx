@@ -610,6 +610,18 @@ export function AttackPanel({ character: cProp }: Props) {
     } else {
       // No reroll, atualiza a memória para refletir o resultado final (sobrescreve hit/miss do 1º).
       recordAttackResult(c.id, result.hit, { replaceLast: true });
+      // Devastação: o resultado final é o que vale — ajusta o acúmulo se a rerrolagem mudou acerto/erro.
+      const prev = primeiroDisparoRef.current;
+      if (prev && target && prev.alvoId === target.id && prev.hit !== result.hit) {
+        const eu = useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c;
+        const patch = devastacaoPatchReroll(eu, target.id, prev.hit, result.hit);
+        if (patch) {
+          useCharacterStore.getState().updateCharacter(c.id, patch);
+          const n = patch.devastacao?.acertos ?? 0;
+          addLog('combat', `💢 Postura da Devastação: a rerrolagem ${result.hit ? 'acertou' : 'errou'} — acúmulo ajustado para ${n} acerto(s) (+${n} acerto, ignora ${n * 2} RD).`);
+        }
+      }
+      primeiroDisparoRef.current = null;
     }
 
     const nextRollCount = isReroll ? attackRollCount + 1 : 1;
