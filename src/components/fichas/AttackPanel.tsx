@@ -353,6 +353,17 @@ export function AttackPanel({ character: cProp }: Props) {
     useCharacterStore.getState().updateCharacter(c.id, { armaEmperrada: null });
     addLog('combat', `🔧 ${c.name} gasta uma Ação Comum e desemperra ${nome}.`);
   };
+  // ─── Arremesso Rápido (Especialista nv 4) ─────────────────────────────────
+  const temArremessoRapido = hasArremessoRapido(cVivo);
+  const [arremessoRapidoAlvo, setArremessoRapidoAlvo] = useState<string>('');
+  const arremessoAtaque = useArremessoRapidoStore((s) => s.ataque);
+  const arremessoRapidoCtx = { inCombat, round: combatRound };
+  const arremessoRapidoCheck = arremessoRapidoPodeUsar(cVivo, arremessoRapidoCtx);
+  const handleArremessoRapido = () => {
+    const r = arremessoRapidoUsar(c.id, arremessoRapidoAlvo, { inCombat, round: combatRound });
+    if (!r.ok) { addLog('combat', `🚫 Arremesso Rápido: ${r.reason}`); return; }
+    setTargetId(arremessoRapidoAlvo);
+  };
 
   /** RD ignorada por este ataque (Penetrante + Arremessos Potentes). */
   const devRdRef = useRef(0);
