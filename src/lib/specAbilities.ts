@@ -1769,7 +1769,32 @@ const ESPECIALISTA_COMBATE: SpecAbility[] = [
     triggerText: 'Aparece na aba de Ataque logo após errar um ataque corpo a corpo.',
     logicText: 'Nd10 + mod escolhido (FOR/DES/SAB) de dano Energético; RD e resistências do alvo se aplicam.',
   },
+  {
+    id: 'ec-preparo-imediato', name: 'Preparo Imediato', tier: 4, specialization: 'Especialista em Combate',
+    flavor: 'Utilizando do seu preparo, você se coloca rapidamente pronto para agir.',
+    mechanic: 'Durante uma rolagem de iniciativa, gaste 3 Pontos de Preparo para usar Preparar, mas apenas para uma Ação Bônus. A partir do 10º nível, você pode gastar 7 Pontos de Preparo para preparar uma Ação Comum.',
+    activation: 'free',
+    triggerText: 'Pergunta na rolagem de iniciativa; depois, botão "Disparar ação preparada" na aba de Ataque.',
+    logicText: '3 Preparo = Ação Bônus preparada; 7 Preparo = Ação Comum (nível 10+). Disparar fora do próprio turno gasta a Reação. Expira no começo do próprio turno.',
+  },
+  {
+    id: 'ec-recarga-rapida', name: 'Recarga Rápida', tier: 4, specialization: 'Especialista em Combate',
+    flavor: 'Você se treinou para recarregar rapidamente.',
+    mechanic: 'O custo em ações para recarregar armas a distância que você empunhar diminui em um nível: Ação Comum vira Ação Bônus e Ação Bônus vira Ação Livre.',
+    activation: 'passive',
+    triggerText: 'Contador de munição e botão "Recarregar" na aba de Ataque.',
+    logicText: 'Armas com Recarga [X] têm X tiros; cada ataque gasta 1. Custo base: Ação Comum (Ação Bônus se a arma for Leve), reduzido em um nível por esta habilidade.',
+  },
+  {
+    id: 'ec-uso-rapido', name: 'Uso Rápido', tier: 4, specialization: 'Especialista em Combate',
+    flavor: 'Você agiliza o uso do seu inventário de ferramentas.',
+    mechanic: 'Ao utilizar uma ação para usar um item, você pode pagar 1 ponto de energia amaldiçoada para usar um item adicional.',
+    activation: 'free', peCost: 1, usage: { max: 1, scope: 'turn' },
+    triggerText: 'Botão "Usar item adicional (1 PE)" no inventário, depois de usar um consumível.',
+    logicText: 'Vale para qualquer consumível; no máximo 1 item adicional por turno, sem gastar ação.',
+  },
 ];
+
 
 
 
