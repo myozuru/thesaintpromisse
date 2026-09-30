@@ -94,6 +94,8 @@ async def main():
         per = pg.get_by_text("PERÍCIAS", exact=True)
         if await per.count():
             await per.first.click(force=True); await pg.wait_for_timeout(1500)
+            await per.first.scroll_into_view_if_needed(); await pg.wait_for_timeout(500)
+            await pg.screenshot(path=S + "pericias_aberta.png")
         chk = pg.get_by_test_id("chamativa-check")
         if await chk.count():
             await chk.first.scroll_into_view_if_needed()
@@ -102,7 +104,8 @@ async def main():
             await chk.first.evaluate("el=>el.click()"); await pg.wait_for_timeout(500)
             print("CHECKBOX marcado:", await chk.first.is_checked())
             # Rola Furtividade de verdade e confere os rótulos do resultado.
-            linha = pg.get_by_text("Furtividade", exact=True).first.locator("xpath=ancestor::div[.//button][1]")
+            linha = pg.get_by_text("Furtividade", exact=True).first.locator("xpath=ancestor::div[3]")
+            print("LINHA HTML:", (await linha.inner_html())[:400])
             dado = linha.get_by_role("button")
             print("PERICIA visivel:", await pg.get_by_text("Furtividade").first.is_visible(), "| botoes:", await dado.count())
             if await dado.count():
