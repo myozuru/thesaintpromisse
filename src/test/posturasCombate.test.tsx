@@ -105,7 +105,7 @@ describe('Posturas em combate', () => {
 
   it('Lua: +3 Defesa, −4 acerto, dano sem Força; reação reduz dano pelo nível (1x)', async () => {
     const base = computeTotalDefense(esp());
-    mesa(esp({ posturasAprendidas: ['lua'] }));
+    mesa(esp({ posturasAprendidas: ['lua'], movement: 9 }));
     clicar(/Entrar: Lua/);
     expect(computeTotalDefense(pegarFicha('ana'))).toBe(base + 3);
     await atacar(17, 4, 4, 4);
@@ -119,7 +119,8 @@ describe('Posturas em combate', () => {
     expect(pegarFicha('ana').hpCurrent).toBe(50 - 6);
     expect(pegarFicha('ana').reactionsCurrent).toBe(0);
     // Andar fora do turno: deslocamento inteiro liberado; Desengajado.
-    expect(reactionMoveBudget(pegarFicha('ana'))).toBe(effectiveMovement(pegarFicha('ana')));
+    expect(reactionMoveBudget(pegarFicha('ana'))).toBe(9);
+    expect(effectiveMovement(pegarFicha('ana'))).toBe(9);
     expect(pegarFicha('ana').desengajado).toBe(true);
     // 2º ataque: sem reação, nenhuma pergunta e dano cheio.
     useCharacterStore.getState().applyDamage('ana', 10, undefined, { attackerId: 'bruno' });
