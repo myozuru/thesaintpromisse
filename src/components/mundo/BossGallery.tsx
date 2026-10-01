@@ -37,12 +37,12 @@ export function BossGallery() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Buscar chefe…"
-          className="h-8 max-w-[220px] text-xs"
+            className="h-10 max-w-[260px] text-sm"
         />
         {isMaster && (
           <Button
             size="sm"
-            className="h-8 text-xs"
+            className="h-10 text-sm"
             onClick={() => {
               const boss = create();
               setOpenId(boss.id);
@@ -54,7 +54,7 @@ export function BossGallery() {
       </div>
 
       {list.length === 0 ? (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           {isMaster ? 'Nenhum chefe criado ainda.' : 'Nenhum chefe revelado até agora.'}
         </p>
       ) : (
