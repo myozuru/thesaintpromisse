@@ -51,29 +51,35 @@ export function WorldMapView() {
   const [view, setView] = useState({ scale: 1, x: 0, y: 0 });
   const imgRef = useRef<HTMLImageElement>(null);
 
-  /** Zoom mínimo: mapa inteiro visível, sem sobrar espaço vazio. */
-  const fitScale = useCallback(() => {
+  /** A imagem ocupa 100% da largura da área no zoom 1; a altura segue a proporção. */
+  const baseSize = useCallback(() => {
     const el = viewRef.current;
     const img = imgRef.current;
-    if (!el || !img || !img.naturalWidth) return 1;
+    if (!el || !img || !img.naturalWidth) return null;
     const r = el.getBoundingClientRect();
-    return Math.max(r.width / img.naturalWidth, r.height / img.naturalHeight);
+    const w = r.width;
+    return { w, h: (w * img.naturalHeight) / img.naturalWidth, vw: r.width, vh: r.height };
   }, []);
+
+  /** Zoom mínimo: mapa inteiro visível, sem sobrar espaço vazio. */
+  const fitScale = useCallback(() => {
+    const b = baseSize();
+    if (!b) return 1;
+    return Math.max(1, b.vh / b.h);
+  }, [baseSize]);
 
   /** Mantém o mapa sempre cobrindo a área, sem bordas vazias. */
   const clampView = useCallback((v: { scale: number; x: number; y: number }) => {
-    const el = viewRef.current;
-    const img = imgRef.current;
-    if (!el || !img || !img.naturalWidth) return v;
-    const r = el.getBoundingClientRect();
-    const min = Math.max(r.width / img.naturalWidth, r.height / img.naturalHeight);
+    const b = baseSize();
+    if (!b) return v;
+    const min = Math.max(1, b.vh / b.h);
     const scale = Math.max(min, Math.min(MAX_SCALE, v.scale));
-    const w = img.naturalWidth * scale;
-    const h = img.naturalHeight * scale;
-    const x = w <= r.width ? (r.width - w) / 2 : Math.min(0, Math.max(r.width - w, v.x));
-    const y = h <= r.height ? (r.height - h) / 2 : Math.min(0, Math.max(r.height - h, v.y));
+    const w = b.w * scale;
+    const h = b.h * scale;
+    const x = w <= b.vw ? (b.vw - w) / 2 : Math.min(0, Math.max(b.vw - w, v.x));
+    const y = h <= b.vh ? (b.vh - h) / 2 : Math.min(0, Math.max(b.vh - h, v.y));
     return { scale, x, y };
-  }, []);
+  }, [baseSize]);
   const dragRef = useRef<{ id: string; moved: boolean } | null>(null);
   const panRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
 
@@ -299,7 +305,7 @@ export function WorldMapView() {
               <button type="button" title="Afastar" onClick={() => zoomAt(1 / 1.25)} className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
                 <ZoomOut className="h-4 w-4" />
               </button>
-              <button type="button" title="Enquadrar" onClick={() => setView({ scale: 1, x: 0, y: 0 })} className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+              <button type="button" title="Enquadrar" onClick={() => setView(clampView({ scale: fitScale(), x: 0, y: 0 }))} className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
                 <Maximize2 className="h-4 w-4" />
               </button>
             </div>
