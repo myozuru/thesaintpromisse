@@ -145,7 +145,7 @@ export function WorldMapView() {
   };
 
   return (
-    <div className="space-y-3 animate-fade-in">
+    <div className="space-y-2 animate-fade-in">
       {isMaster && (
         <div className="flex flex-wrap items-center gap-2">
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => onUpload(e.target.files?.[0])} />
