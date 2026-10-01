@@ -181,7 +181,7 @@ export function WorldMapView() {
           {/* Área navegável */}
           <div
             ref={viewRef}
-            className={`relative h-[70vh] min-w-0 flex-1 select-none overflow-hidden rounded-xl border border-border bg-background/60 ${placing ? 'cursor-crosshair' : 'cursor-grab'}`}
+            className={`relative h-[80vh] min-w-0 flex-1 select-none overflow-hidden rounded-xl border border-border bg-background/60 ${placing ? 'cursor-crosshair' : 'cursor-grab'}`}
             onContextMenu={addPing}
             onPointerDown={(e) => {
               if (placing || e.button !== 0) return;
@@ -324,7 +324,7 @@ export function WorldMapView() {
                 animate={{ width: 380, opacity: 1 }}
                 exit={{ width: 0, opacity: 0 }}
                 transition={{ type: 'spring', stiffness: 220, damping: 28 }}
-                className="h-[70vh] shrink-0 overflow-hidden rounded-xl border border-border bg-card/95 backdrop-blur-xl"
+                className="h-[80vh] shrink-0 overflow-hidden rounded-xl border border-border bg-card/95 backdrop-blur-xl"
               >
                 <div className="h-full w-[380px]">
                   <BossSheetContent bossId={openId} isMaster={isMaster} onClose={() => setOpenId(null)} inline />
