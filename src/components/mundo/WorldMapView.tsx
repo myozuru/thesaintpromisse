@@ -14,6 +14,7 @@ import { useBossStore } from '@/stores/useBossStore';
 import { canSeeField } from '@/lib/bosses';
 import { BossGallery } from './BossGallery';
 import { BossSheetContent } from './BossSheet';
+import { BossPortrait } from './BossPortrait';
 
 const MAX_SCALE = 6;
 
@@ -271,7 +272,7 @@ export function WorldMapView() {
                       className={`flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border-2 bg-card shadow-lg transition-transform hover:scale-110 ${openId === b.id ? 'border-primary ring-2 ring-primary/50' : 'border-accent'} ${isMaster ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} ${!b.visivel ? 'opacity-60' : ''}`}
                     >
                       {showFace ? (
-                        <img src={b.retrato} alt="" className="h-full w-full object-cover" draggable={false} />
+                        <BossPortrait boss={b} draggable={false} />
                       ) : (
                         <Skull className="h-5 w-5 text-accent" />
                       )}
