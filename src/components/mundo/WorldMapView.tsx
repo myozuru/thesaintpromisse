@@ -1,12 +1,24 @@
-/** Mapa do Mundo: imagem enviada pelo Mestre com chefes como ícones. */
-import { useMemo, useRef, useState } from 'react';
-import { ImagePlus, Skull, Trash2, X } from 'lucide-react';
+/**
+ * Mapa do Mundo: imagem enviada pelo Mestre com chefes como ícones.
+ *
+ * Suporta zoom (roda do mouse e botões), arrastar para navegar e marcação
+ * rápida com o botão direito. Clicar num chefe abre a ficha no painel lateral.
+ */
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ChevronDown, ChevronUp, ImagePlus, Maximize2, MousePointerClick, Skull, Trash2, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { useBossStore } from '@/stores/useBossStore';
+import { canSeeField } from '@/lib/bosses';
 import { BossGallery } from './BossGallery';
-import { BossSheet } from './BossSheet';
+import { BossSheetContent } from './BossSheet';
+
+const MIN_SCALE = 0.4;
+const MAX_SCALE = 6;
+
+interface Ping { id: string; x: number; y: number }
 
 /** Reduz a imagem para caber no armazenamento local. */
 function compressImage(file: File, max = 2048): Promise<string> {
@@ -31,10 +43,15 @@ export function WorldMapView() {
   const isMaster = useRoleStore((s) => s.role) === 'MASTER';
   const { worldMap, worldMarkers, bosses, setWorldMap, addMarker, moveMarker, removeMarker } = useBossStore();
   const fileRef = useRef<HTMLInputElement>(null);
-  const areaRef = useRef<HTMLDivElement>(null);
+  const viewRef = useRef<HTMLDivElement>(null);
+  const layerRef = useRef<HTMLDivElement>(null);
   const [placing, setPlacing] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [showGallery, setShowGallery] = useState(false);
+  const [pings, setPings] = useState<Ping[]>([]);
+  const [view, setView] = useState({ scale: 1, x: 0, y: 0 });
   const dragRef = useRef<{ id: string; moved: boolean } | null>(null);
+  const panRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
 
   const markers = useMemo(
     () => worldMarkers.filter((m) => bosses[m.bossId] && (isMaster || bosses[m.bossId].visivel)),
@@ -42,12 +59,48 @@ export function WorldMapView() {
   );
   const unplaced = Object.values(bosses).filter((b) => !worldMarkers.some((m) => m.bossId === b.id));
 
+  /** Posição em % relativa à imagem já transformada. */
   const pos = (e: { clientX: number; clientY: number }) => {
-    const r = areaRef.current!.getBoundingClientRect();
+    const r = layerRef.current!.getBoundingClientRect();
     return {
       x: Math.max(0, Math.min(100, ((e.clientX - r.left) / r.width) * 100)),
       y: Math.max(0, Math.min(100, ((e.clientY - r.top) / r.height) * 100)),
     };
+  };
+
+  const zoomAt = useCallback((factor: number, cx?: number, cy?: number) => {
+    const el = viewRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const px = cx ?? r.left + r.width / 2;
+    const py = cy ?? r.top + r.height / 2;
+    setView((v) => {
+      const next = Math.max(MIN_SCALE, Math.min(MAX_SCALE, v.scale * factor));
+      const k = next / v.scale;
+      const ox = px - r.left;
+      const oy = py - r.top;
+      return { scale: next, x: ox - (ox - v.x) * k, y: oy - (oy - v.y) * k };
+    });
+  }, []);
+
+  // Zoom pela roda do mouse sem rolar a página.
+  useEffect(() => {
+    const el = viewRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      zoomAt(e.deltaY < 0 ? 1.12 : 1 / 1.12, e.clientX, e.clientY);
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [zoomAt, worldMap]);
+
+  const addPing = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const p = pos(e);
+    const id = `${Date.now()}-${Math.random()}`;
+    setPings((list) => [...list, { id, ...p }]);
+    window.setTimeout(() => setPings((list) => list.filter((x) => x.id !== id)), 4000);
   };
 
   const onUpload = async (f?: File) => {
@@ -61,7 +114,7 @@ export function WorldMapView() {
   };
 
   return (
-    <div className="space-y-4 animate-fade-in">
+    <div className="space-y-3 animate-fade-in">
       {isMaster && (
         <div className="flex flex-wrap items-center gap-2">
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => onUpload(e.target.files?.[0])} />
@@ -73,6 +126,10 @@ export function WorldMapView() {
               <Trash2 className="mr-1 h-3.5 w-3.5" /> Remover mapa
             </Button>
           )}
+          <Button size="sm" variant="secondary" className="h-8 text-xs" onClick={() => setShowGallery((v) => !v)}>
+            <Skull className="mr-1 h-3.5 w-3.5" /> Chefes
+            {showGallery ? <ChevronUp className="ml-1 h-3.5 w-3.5" /> : <ChevronDown className="ml-1 h-3.5 w-3.5" />}
+          </Button>
           {worldMap && unplaced.length > 0 && (
             <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
               Colocar no mapa:
@@ -93,71 +150,154 @@ export function WorldMapView() {
       )}
 
       {worldMap ? (
-        <div
-          ref={areaRef}
-          className={`relative w-full select-none overflow-hidden rounded-xl border border-border ${placing ? 'cursor-crosshair' : ''}`}
-          onClick={(e) => {
-            if (!placing) return;
-            const p = pos(e);
-            addMarker(placing, p.x, p.y);
-            setPlacing(null);
-          }}
-          onPointerMove={(e) => {
-            const d = dragRef.current;
-            if (!d) return;
-            d.moved = true;
-            const p = pos(e);
-            moveMarker(d.id, p.x, p.y);
-          }}
-          onPointerUp={() => setTimeout(() => (dragRef.current = null), 0)}
-          onPointerLeave={() => (dragRef.current = null)}
-        >
-          <img src={worldMap} alt="Mapa do mundo" className="block w-full" draggable={false} />
-          {markers.map((m) => {
-            const b = bosses[m.bossId];
-            return (
-              <div
-                key={m.id}
-                className="group absolute -translate-x-1/2 -translate-y-1/2"
-                style={{ left: `${m.x}%`, top: `${m.y}%` }}
-              >
-                <button
-                  type="button"
-                  title={b.nome}
-                  onPointerDown={(e) => {
-                    if (!isMaster) return;
-                    e.stopPropagation();
-                    (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
-                    dragRef.current = { id: m.id, moved: false };
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (dragRef.current?.moved) return;
-                    setOpenId(b.id);
-                  }}
-                  className={`flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border-2 border-accent bg-card shadow-lg transition-transform hover:scale-110 ${isMaster ? 'cursor-grab active:cursor-grabbing' : ''} ${!b.visivel ? 'opacity-60' : ''}`}
-                >
-                  {b.retrato ? <img src={b.retrato} alt="" className="h-full w-full object-cover" draggable={false} /> : <Skull className="h-5 w-5 text-accent" />}
-                </button>
-                <div className="pointer-events-none absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap rounded bg-background/85 px-1.5 py-0.5 text-[10px] font-semibold">
-                  {b.nome}
-                </div>
-                {isMaster && (
-                  <button
-                    type="button"
-                    title="Tirar do mapa"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeMarker(m.id);
-                    }}
-                    className="absolute -right-1 -top-1 hidden h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground group-hover:flex"
+        <div className="flex gap-3">
+          {/* Área navegável */}
+          <div
+            ref={viewRef}
+            className={`relative h-[70vh] min-w-0 flex-1 select-none overflow-hidden rounded-xl border border-border bg-background/60 ${placing ? 'cursor-crosshair' : 'cursor-grab'}`}
+            onContextMenu={addPing}
+            onPointerDown={(e) => {
+              if (placing || e.button !== 0) return;
+              panRef.current = { x: e.clientX, y: e.clientY, ox: view.x, oy: view.y };
+            }}
+            onPointerMove={(e) => {
+              const d = dragRef.current;
+              if (d) {
+                d.moved = true;
+                const p = pos(e);
+                moveMarker(d.id, p.x, p.y);
+                return;
+              }
+              const pan = panRef.current;
+              if (!pan) return;
+              setView((v) => ({ ...v, x: pan.ox + (e.clientX - pan.x), y: pan.oy + (e.clientY - pan.y) }));
+            }}
+            onPointerUp={() => {
+              panRef.current = null;
+              setTimeout(() => (dragRef.current = null), 0);
+            }}
+            onPointerLeave={() => {
+              panRef.current = null;
+              dragRef.current = null;
+            }}
+            onClick={(e) => {
+              if (!placing) return;
+              const p = pos(e);
+              addMarker(placing, p.x, p.y);
+              setPlacing(null);
+            }}
+          >
+            <div
+              ref={layerRef}
+              className="absolute left-0 top-0 origin-top-left"
+              style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`, width: '100%' }}
+            >
+              <img src={worldMap} alt="Mapa do mundo" className="block w-full" draggable={false} />
+
+              {/* Marcações do botão direito */}
+              <AnimatePresence>
+                {pings.map((p) => (
+                  <motion.div
+                    key={p.id}
+                    initial={{ scale: 0.4, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 1.6, opacity: 0 }}
+                    className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
+                    style={{ left: `${p.x}%`, top: `${p.y}%` }}
                   >
-                    <X className="h-3 w-3" />
-                  </button>
-                )}
-              </div>
-            );
-          })}
+                    <span className="block h-6 w-6 animate-ping rounded-full border-2 border-accent" />
+                    <span className="absolute inset-0 m-auto block h-2 w-2 rounded-full bg-accent" />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+
+              {markers.map((m) => {
+                const b = bosses[m.bossId];
+                const showFace = b.retrato && canSeeField(b, 'retrato', isMaster);
+                return (
+                  <div
+                    key={m.id}
+                    className="group absolute -translate-x-1/2 -translate-y-1/2"
+                    style={{ left: `${m.x}%`, top: `${m.y}%`, transform: `translate(-50%, -50%) scale(${1 / view.scale})` }}
+                  >
+                    <button
+                      type="button"
+                      title={b.nome}
+                      onPointerDown={(e) => {
+                        if (!isMaster) return;
+                        e.stopPropagation();
+                        (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+                        dragRef.current = { id: m.id, moved: false };
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (dragRef.current?.moved) return;
+                        setOpenId(b.id);
+                      }}
+                      className={`flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border-2 bg-card shadow-lg transition-transform hover:scale-110 ${openId === b.id ? 'border-primary ring-2 ring-primary/50' : 'border-accent'} ${isMaster ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} ${!b.visivel ? 'opacity-60' : ''}`}
+                    >
+                      {showFace ? (
+                        <img src={b.retrato} alt="" className="h-full w-full object-cover" draggable={false} />
+                      ) : (
+                        <Skull className="h-5 w-5 text-accent" />
+                      )}
+                    </button>
+                    <div className="pointer-events-none absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap rounded bg-background/85 px-1.5 py-0.5 text-[10px] font-semibold">
+                      {b.nome}
+                    </div>
+                    {isMaster && (
+                      <button
+                        type="button"
+                        title="Tirar do mapa"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeMarker(m.id);
+                        }}
+                        className="absolute -right-1 -top-1 hidden h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground group-hover:flex"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Controles de zoom */}
+            <div className="absolute bottom-3 right-3 flex flex-col gap-1 rounded-lg border border-border bg-card/90 p-1 backdrop-blur">
+              <button type="button" title="Aproximar" onClick={() => zoomAt(1.25)} className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+                <ZoomIn className="h-4 w-4" />
+              </button>
+              <button type="button" title="Afastar" onClick={() => zoomAt(1 / 1.25)} className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+                <ZoomOut className="h-4 w-4" />
+              </button>
+              <button type="button" title="Enquadrar" onClick={() => setView({ scale: 1, x: 0, y: 0 })} className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+                <Maximize2 className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="pointer-events-none absolute bottom-3 left-3 flex items-center gap-1 rounded-md bg-background/75 px-2 py-1 text-[10px] text-muted-foreground">
+              <MousePointerClick className="h-3 w-3" /> Arraste para mover · roda para zoom · botão direito marca o local
+            </div>
+          </div>
+
+          {/* Painel lateral da ficha */}
+          <AnimatePresence initial={false}>
+            {openId && (
+              <motion.aside
+                key="boss-panel"
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: 380, opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 220, damping: 28 }}
+                className="h-[70vh] shrink-0 overflow-hidden rounded-xl border border-border bg-card/95 backdrop-blur-xl"
+              >
+                <div className="h-full w-[380px]">
+                  <BossSheetContent bossId={openId} isMaster={isMaster} onClose={() => setOpenId(null)} inline />
+                </div>
+              </motion.aside>
+            )}
+          </AnimatePresence>
         </div>
       ) : (
         <div className="rounded-xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
@@ -165,8 +305,7 @@ export function WorldMapView() {
         </div>
       )}
 
-      <BossGallery />
-      <BossSheet bossId={openId} isMaster={isMaster} onClose={() => setOpenId(null)} />
+      {(showGallery || !worldMap) && <BossGallery />}
     </div>
   );
 }
