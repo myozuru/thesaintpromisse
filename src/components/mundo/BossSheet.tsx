@@ -10,12 +10,13 @@
 import { useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Eye, EyeOff, Plus, Trash2, Image as ImageIcon, Shield, Heart, Swords, Sparkles, Skull, X,
+  Eye, EyeOff, Plus, Trash2, Image as ImageIcon, Shield, Heart, Swords, Sparkles, Skull, X, RotateCcw,
 } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import { DAMAGE_TYPES, DAMAGE_TYPE_LABELS, type DamageType } from '@/types';
 import {
@@ -23,6 +24,7 @@ import {
   bossHpRatio, canSeeField, type Boss, type BossAbilityKind, type BossRevealField,
 } from '@/lib/bosses';
 import { useBossStore } from '@/stores/useBossStore';
+import { BossPortrait } from './BossPortrait';
 
 const HIDDEN = '???';
 
@@ -79,7 +81,12 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
   const pickPortrait = (file?: File) => {
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => update(boss.id, { retrato: String(reader.result) });
+    reader.onload = () => update(boss.id, {
+      retrato: String(reader.result),
+      retratoZoom: 1,
+      retratoX: 50,
+      retratoY: 50,
+    });
     reader.readAsDataURL(file);
   };
 
@@ -102,7 +109,7 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
           >
             <div className={cn('overflow-hidden rounded-full border-2 border-accent/60 shadow-[0_0_28px_-6px_hsl(var(--primary)/0.9)]', inline ? 'h-20 w-20' : 'h-24 w-24')}>
               {boss.retrato && see('retrato') ? (
-                <img src={boss.retrato} alt={boss.nome} className="h-full w-full object-cover" />
+                <BossPortrait boss={boss} alt={boss.nome} />
               ) : (
                 <div className="flex h-full w-full items-center justify-center bg-secondary/60">
                   <Skull className="h-9 w-9 text-muted-foreground" />
@@ -189,6 +196,42 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
                   transition={{ type: 'spring', stiffness: 120, damping: 22 }}
                 />
               </div>
+        {isMaster && boss.retrato && (
+          <div className="relative grid gap-2 border-t border-border/50 px-5 py-3 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
+            <PortraitControl
+              label="Tamanho"
+              value={boss.retratoZoom ?? 1}
+              min={1}
+              max={3}
+              onChange={(retratoZoom) => update(boss.id, { retratoZoom })}
+            />
+            <PortraitControl
+              label="Horizontal"
+              value={boss.retratoX ?? 50}
+              min={0}
+              max={100}
+              onChange={(retratoX) => update(boss.id, { retratoX })}
+            />
+            <PortraitControl
+              label="Vertical"
+              value={boss.retratoY ?? 50}
+              min={0}
+              max={100}
+              onChange={(retratoY) => update(boss.id, { retratoY })}
+            />
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              title="Restaurar enquadramento"
+              aria-label="Restaurar enquadramento da foto"
+              onClick={() => update(boss.id, { retratoZoom: 1, retratoX: 50, retratoY: 50 })}
+              className="h-8 w-8"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
             </div>
           </div>
 
@@ -473,6 +516,30 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
         </AnimatePresence>
       </div>
     </div>
+  );
+}
+
+function PortraitControl({
+  label, value, min, max, onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label className="min-w-0 text-[10px] uppercase tracking-widest text-muted-foreground">
+      <span className="mb-1 block">{label}</span>
+      <Slider
+        value={[value]}
+        min={min}
+        max={max}
+        step={1}
+        onValueChange={([next]) => onChange(next ?? value)}
+        aria-label={label}
+      />
+    </label>
   );
 }
 

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Skull, Eye, EyeOff, Copy, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BOSS_STATE_LABELS, BOSS_TIER_ACCENT, bossHpRatio, canSeeField, type Boss } from '@/lib/bosses';
+import { BossPortrait } from './BossPortrait';
 
 interface Props {
   boss: Boss;
@@ -33,7 +34,7 @@ export function BossCard({ boss, isMaster, onOpen, onToggleVisible, onDuplicate,
       <div className="relative flex items-center gap-3">
         <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full border-2 border-accent/50 shadow-[0_0_18px_-6px_hsl(var(--primary)/0.9)] transition-transform duration-300 group-hover:scale-105">
           {boss.retrato && canSeeField(boss, 'retrato', isMaster) ? (
-            <img src={boss.retrato} alt={boss.nome} className="h-full w-full object-cover" />
+            <BossPortrait boss={boss} alt={boss.nome} />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-secondary/60">
               <Skull className="h-6 w-6 text-muted-foreground" />
