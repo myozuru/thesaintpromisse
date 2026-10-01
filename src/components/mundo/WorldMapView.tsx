@@ -95,7 +95,7 @@ export function WorldMapView() {
   const panRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
 
   const markers = useMemo(
-    () => worldMarkers.filter((m) => bosses[m.bossId] && (isMaster || bosses[m.bossId].visivel)),
+    () => (isMaster ? worldMarkers.filter((m) => bosses[m.bossId]) : []),
     [worldMarkers, bosses, isMaster],
   );
   const unplaced = Object.values(bosses).filter((b) => !worldMarkers.some((m) => m.bossId === b.id));
@@ -374,7 +374,7 @@ export function WorldMapView() {
                  className="absolute right-2 top-2 z-20 h-[calc(80vh-1rem)] max-w-[calc(100%-1rem)] overflow-hidden rounded-xl border border-border bg-card/95 shadow-2xl backdrop-blur-xl"
               >
                 <div className="h-full w-[520px] max-w-full">
-                  <BossSheetContent bossId={openId} isMaster={isMaster} onClose={() => setOpenId(null)} inline />
+                  {isMaster && <BossSheetContent bossId={openId} isMaster={isMaster} onClose={() => setOpenId(null)} inline />}
                 </div>
               </motion.aside>
             )}
@@ -386,13 +386,13 @@ export function WorldMapView() {
         </div>
       )}
 
-      <div>
+      {isMaster && <div>
         <Button size="sm" variant="secondary" className="h-8 text-xs" onClick={() => setShowGallery((v) => !v)}>
           <Skull className="mr-1 h-3.5 w-3.5" /> Chefes
           {showGallery ? <ChevronUp className="ml-1 h-3.5 w-3.5" /> : <ChevronDown className="ml-1 h-3.5 w-3.5" />}
         </Button>
-      </div>
-      {(showGallery || !worldMap) && <BossGallery />}
+      </div>}
+      {isMaster && (showGallery || !worldMap) && <BossGallery />}
 
     </div>
   );

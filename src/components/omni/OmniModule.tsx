@@ -14,6 +14,8 @@ import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useOmniProposalStore } from '@/stores/useOmniProposalStore';
 import { useLogStore } from '@/stores/useLogStore';
+import { useProfileStore } from '@/stores/useProfileStore';
+import { findMyCharacter } from '@/lib/myCharacter';
 import type { CategoriaEntidade, EntidadeOmni } from '@/lib/omni/tipos';
 import { PacoteOmniSchema } from '@/lib/omni/validacao';
 import { ConstrutorEntidade } from './ConstrutorEntidade';
@@ -117,12 +119,14 @@ export function OmniModule() {
     substituirEntidade(novo.id, { ...ent, id: novo.id, nome: novo.nome });
   };
 
-  const playerCharacters = useMemo(
-    () => characters.filter((c) => c.createdBy !== 'MASTER'),
-    [characters],
-  );
+  const activeProfileId = useProfileStore((s) => s.activeProfileId);
+  // Jogador só pode propor com a PRÓPRIA ficha (ligada ao perfil logado).
+  const playerCharacters = useMemo(() => {
+    const mine = findMyCharacter(characters, activeProfileId);
+    return mine ? [mine] : [];
+  }, [characters, activeProfileId]);
 
-  if (!isMaster && !propondoCharId && playerCharacters.length > 0) {
+  if (!isMaster && playerCharacters.length > 0 && propondoCharId !== playerCharacters[0].id) {
     setPropondoCharId(playerCharacters[0].id);
   }
 
@@ -166,15 +170,7 @@ export function OmniModule() {
           <>
             <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/20 bg-card/60 p-2 text-xs">
               <span className="text-muted-foreground">Propondo como:</span>
-              <select
-                value={propondoCharId}
-                onChange={(e) => setPropondoCharId(e.target.value)}
-                className="bg-background border border-border rounded px-2 py-1"
-              >
-                {playerCharacters.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+              <span className="font-semibold text-foreground">{playerCharacters[0]?.name}</span>
               <span className="ml-auto text-muted-foreground italic">
                 Suas criações precisam ser aprovadas pelo Mestre antes de virarem reais.
               </span>
