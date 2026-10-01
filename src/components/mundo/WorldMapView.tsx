@@ -91,7 +91,7 @@ export function WorldMapView() {
     const scale = Math.max(min, Math.min(MAX_SCALE, v.scale));
     return { ...v, scale };
   }, [baseSize]);
-  const dragRef = useRef<{ id: string; moved: boolean } | null>(null);
+  const dragRef = useRef<{ id: string; moved: boolean; dx: number; dy: number; sx: number; sy: number } | null>(null);
   const panRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
 
   const markers = useMemo(
@@ -235,8 +235,9 @@ export function WorldMapView() {
             onPointerMove={(e) => {
               const d = dragRef.current;
               if (d) {
+                if (!d.moved && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < 4) return;
                 d.moved = true;
-                const p = pos(e);
+                const p = pos({ clientX: e.clientX - d.dx, clientY: e.clientY - d.dy });
                 moveMarker(d.id, p.x, p.y);
                 return;
               }
@@ -303,17 +304,18 @@ export function WorldMapView() {
                       type="button"
                       title={b.nome}
                       onPointerDown={(e) => {
-                        if (!isMaster) return;
                         e.stopPropagation();
+                        if (!isMaster || e.button !== 0) return;
                         (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
-                        dragRef.current = { id: m.id, moved: false };
+                        const r = e.currentTarget.getBoundingClientRect();
+                        dragRef.current = { id: m.id, moved: false, dx: e.clientX - (r.left + r.width / 2), dy: e.clientY - (r.top + r.height / 2), sx: e.clientX, sy: e.clientY };
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
                         if (dragRef.current?.moved) return;
                         setOpenId(b.id);
                       }}
-                      className={`flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border-2 bg-card shadow-lg transition-transform hover:scale-110 ${openId === b.id ? 'border-primary ring-2 ring-primary/50' : 'border-accent'} ${isMaster ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} ${!b.visivel ? 'opacity-60' : ''}`}
+                      className={`flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border-2 bg-card shadow-lg transition-transform ${openId === b.id ? 'border-primary ring-2 ring-primary/50' : 'border-accent'} ${isMaster ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} ${!b.visivel ? 'opacity-60' : ''}`}
                     >
                       {showFace ? (
                         <BossPortrait boss={b} draggable={false} />
