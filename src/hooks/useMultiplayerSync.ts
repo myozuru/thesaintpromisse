@@ -477,14 +477,13 @@ function applyRemote(slice: WorldSlice, data: unknown) {
       useBossStore.setState({ worldMap: d.worldMap ?? null, ...(d.worldBackgroundColor ? { worldBackgroundColor: d.worldBackgroundColor } : {}) });
     }
     else if (slice === 'worldBosses' && data && typeof data === 'object') {
-      // Fichas e marcadores de chefes são exclusivos do Mestre.
-      if (useRoleStore.getState().role === 'MASTER') {
-        const d = data as { bosses?: unknown; worldMarkers?: unknown };
-        useBossStore.setState({
-          ...(d.bosses && typeof d.bosses === 'object' ? { bosses: d.bosses as never } : {}),
-          ...(Array.isArray(d.worldMarkers) ? { worldMarkers: d.worldMarkers as never } : {}),
-        });
-      }
+      // Jogadores precisam dos marcadores e das fichas para abrir os chefes no mapa;
+      // BossSheet aplica a revelação individual de cada informação.
+      const d = data as { bosses?: unknown; worldMarkers?: unknown };
+      useBossStore.setState({
+        ...(d.bosses && typeof d.bosses === 'object' ? { bosses: d.bosses as never } : {}),
+        ...(Array.isArray(d.worldMarkers) ? { worldMarkers: d.worldMarkers as never } : {}),
+      });
     }
     else if (slice === 'fog' && data && typeof data === 'object') {
       const d = data as { walls?: unknown; doors?: unknown; lights?: unknown };
@@ -649,6 +648,17 @@ export function useMultiplayerSync() {
       if (!p || p.clientId === clientId || typeof p.x !== 'number' || typeof p.y !== 'number') return;
       window.dispatchEvent(new CustomEvent('mapa:remote-ping', { detail: { x: p.x, y: p.y, color: p.color || '#fbbf24' } }));
     });
+    worldBus.on('broadcast', { event: 'world-map-ping' }, ({ payload }) => {
+      const p = payload as { clientId?: string; x?: number; y?: number } | null;
+      if (!p || p.clientId === clientId || typeof p.x !== 'number' || typeof p.y !== 'number') return;
+      window.dispatchEvent(new CustomEvent('mapa-mundo:remote-ping', { detail: { x: p.x, y: p.y } }));
+    });
+    const onWorldMapPingSend = (event: Event) => {
+      const detail = (event as CustomEvent).detail as { x?: number; y?: number } | undefined;
+      if (typeof detail?.x !== 'number' || typeof detail?.y !== 'number') return;
+      void worldBus.send({ type: 'broadcast', event: 'world-map-ping', payload: { clientId, x: detail.x, y: detail.y } });
+    };
+    window.addEventListener('mapa-mundo:ping-send', onWorldMapPingSend);
     worldBus.on('broadcast', { event: 'cursor' }, ({ payload }) => {
       const p = payload as { clientId?: string; x?: number; y?: number; name?: string; color?: string } | null;
       if (!p || p.clientId === clientId) return;
@@ -999,7 +1009,7 @@ export function useMultiplayerSync() {
       socket.emit('state:update', { slice: 'items', data: next });
     });
 
-    // Mapa do mundo: imagem/fundo vão para todos; chefes só entre Mestres.
+    // Mapa do mundo, marcadores e fichas vão para todos; a ficha filtra cada campo revelado aos jogadores.
     const pickWorldMap = (st: ReturnType<typeof useBossStore.getState>) => ({ worldMap: st.worldMap, worldBackgroundColor: st.worldBackgroundColor });
     const pickWorldBosses = (st: ReturnType<typeof useBossStore.getState>) => ({ bosses: st.bosses, worldMarkers: st.worldMarkers });
     let lastWorldMap = JSON.stringify(pickWorldMap(useBossStore.getState()));
@@ -1239,6 +1249,7 @@ export function useMultiplayerSync() {
       window.removeEventListener('negacao:send', onNegacaoSend);
       window.removeEventListener('protetor:send', onProtetorSend);
       window.removeEventListener('mobilidade:send', onMobilidadeSend);
+      window.removeEventListener('mapa-mundo:ping-send', onWorldMapPingSend);
       void supabase.removeChannel(worldBus);
       if (chronosTimer) clearTimeout(chronosTimer);
       if (mapSceneTimer) clearTimeout(mapSceneTimer);
