@@ -544,3 +544,14 @@ export function novoBloco(): BlocoLogico {
     acoes: [],
   };
 }
+
+export type ReplicaPorte = 'minusculo' | 'pequeno' | 'medio' | 'grande' | 'enorme' | 'colossal';
+
+/** Configuração de Réplica Materializável definida pelo Mestre. */
+export interface ReplicaConfig {
+  porte: ReplicaPorte;
+  peInvocacao: number;
+  peSustentacao: number;
+  desintegrarAoSoltar: boolean;
+  cobrarPorRodada: boolean;
+}
