@@ -15,7 +15,6 @@ import { canSeeField } from '@/lib/bosses';
 import { BossGallery } from './BossGallery';
 import { BossSheetContent } from './BossSheet';
 
-const MIN_SCALE = 0.4;
 const MAX_SCALE = 6;
 
 interface Ping { id: string; x: number; y: number }
@@ -50,6 +49,31 @@ export function WorldMapView() {
   const [showGallery, setShowGallery] = useState(false);
   const [pings, setPings] = useState<Ping[]>([]);
   const [view, setView] = useState({ scale: 1, x: 0, y: 0 });
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  /** Zoom mínimo: mapa inteiro visível, sem sobrar espaço vazio. */
+  const fitScale = useCallback(() => {
+    const el = viewRef.current;
+    const img = imgRef.current;
+    if (!el || !img || !img.naturalWidth) return 1;
+    const r = el.getBoundingClientRect();
+    return Math.max(r.width / img.naturalWidth, r.height / img.naturalHeight);
+  }, []);
+
+  /** Mantém o mapa sempre cobrindo a área, sem bordas vazias. */
+  const clampView = useCallback((v: { scale: number; x: number; y: number }) => {
+    const el = viewRef.current;
+    const img = imgRef.current;
+    if (!el || !img || !img.naturalWidth) return v;
+    const r = el.getBoundingClientRect();
+    const min = Math.max(r.width / img.naturalWidth, r.height / img.naturalHeight);
+    const scale = Math.max(min, Math.min(MAX_SCALE, v.scale));
+    const w = img.naturalWidth * scale;
+    const h = img.naturalHeight * scale;
+    const x = w <= r.width ? (r.width - w) / 2 : Math.min(0, Math.max(r.width - w, v.x));
+    const y = h <= r.height ? (r.height - h) / 2 : Math.min(0, Math.max(r.height - h, v.y));
+    return { scale, x, y };
+  }, []);
   const dragRef = useRef<{ id: string; moved: boolean } | null>(null);
   const panRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
 
