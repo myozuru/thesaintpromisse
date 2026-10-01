@@ -416,16 +416,21 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
                   />
                 </Field>
 
-                <Field label="RD por tipo de dano" reveal={<RevealToggle field="rd" />}>
+                <Field label="RD por tipo de dano">
                   <RdPorTipoPicker
                     values={boss.rdPorTipo}
+                    revealed={boss.rdTipoRevelado ?? {}}
                     readOnly={!isMaster}
-                    hidden={!see('rd')}
                     onChange={(t, v) => {
                       const next = { ...boss.rdPorTipo };
                       if (v > 0) next[t] = v; else delete next[t];
                       update(boss.id, { rdPorTipo: next });
                     }}
+                    onToggleReveal={(t) =>
+                      update(boss.id, {
+                        rdTipoRevelado: { ...boss.rdTipoRevelado, [t]: !boss.rdTipoRevelado?.[t] },
+                      })
+                    }
                   />
                 </Field>
 
