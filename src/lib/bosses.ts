@@ -9,6 +9,7 @@ import type { DamageType } from '@/types';
 export const BOSS_TIERS = [
   'Lacaio',
   'Capanga',
+  'Comum',
   'Desafio',
   'Especial',
   'Santo',
@@ -20,6 +21,7 @@ export type BossTier = (typeof BOSS_TIERS)[number];
 export const BOSS_TIER_ACCENT: Record<BossTier, string> = {
   Lacaio: 'text-muted-foreground border-muted-foreground/40 bg-muted/30',
   Capanga: 'text-sky-300 border-sky-400/40 bg-sky-500/10',
+  Comum: 'text-teal-300 border-teal-400/40 bg-teal-500/10',
   Desafio: 'text-emerald-300 border-emerald-400/40 bg-emerald-500/10',
   Especial: 'text-amber-300 border-amber-400/40 bg-amber-500/10',
   Santo: 'text-fuchsia-300 border-fuchsia-400/50 bg-fuchsia-500/10',
