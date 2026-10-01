@@ -197,7 +197,7 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
                 />
               </div>
         {isMaster && boss.retrato && (
-          <div className="relative grid gap-2 border-t border-border/50 px-5 py-3 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
+          <div className="relative grid gap-3 border-t border-border/50 px-5 py-3 pr-14">
             <PortraitControl
               label="Tamanho"
               value={boss.retratoZoom ?? 1}
@@ -226,7 +226,7 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
               title="Restaurar enquadramento"
               aria-label="Restaurar enquadramento da foto"
               onClick={() => update(boss.id, { retratoZoom: 1, retratoX: 50, retratoY: 50 })}
-              className="h-8 w-8"
+              className="absolute right-4 top-3 h-8 w-8"
             >
               <RotateCcw className="h-3.5 w-3.5" />
             </Button>
@@ -529,8 +529,8 @@ function PortraitControl({
   onChange: (value: number) => void;
 }) {
   return (
-    <label className="min-w-0 text-[10px] uppercase tracking-widest text-muted-foreground">
-      <span className="mb-1 block">{label}</span>
+    <label className="grid min-w-0 grid-cols-[5rem_1fr] items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+      <span>{label}</span>
       <Slider
         value={[value]}
         min={min}
