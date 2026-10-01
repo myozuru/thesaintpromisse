@@ -191,7 +191,7 @@ export function WorldMapView() {
               }
               const pan = panRef.current;
               if (!pan) return;
-              setView((v) => ({ ...v, x: pan.ox + (e.clientX - pan.x), y: pan.oy + (e.clientY - pan.y) }));
+              setView((v) => clampView({ ...v, x: pan.ox + (e.clientX - pan.x), y: pan.oy + (e.clientY - pan.y) }));
             }}
             onPointerUp={() => {
               panRef.current = null;
@@ -213,7 +213,14 @@ export function WorldMapView() {
               className="absolute left-0 top-0 origin-top-left"
               style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`, width: '100%' }}
             >
-              <img src={worldMap} alt="Mapa do mundo" className="block w-full" draggable={false} />
+              <img
+                ref={imgRef}
+                src={worldMap}
+                alt="Mapa do mundo"
+                className="block w-full"
+                draggable={false}
+                onLoad={() => setView((v) => clampView({ ...v, scale: fitScale(), x: 0, y: 0 }))}
+              />
 
               {/* Marcações do botão direito */}
               <AnimatePresence>
