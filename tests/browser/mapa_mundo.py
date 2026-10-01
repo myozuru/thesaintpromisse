@@ -42,7 +42,18 @@ async def main():
     # Abrir aba Mapa > Mapa do Mundo
     await pg.get_by_role("button", name="Mapa").first.click()
     await pg.wait_for_timeout(1500)
-    await pg.get_by_text("Mapa do Mundo").first.click()
+    # fecha tutorial de boas-vindas da mesa, se aparecer
+    for _ in range(3):
+      tut = pg.locator("div.fixed.inset-0.z-\\[2100\\]")
+      if await tut.count() == 0:
+        break
+      btns = tut.first.get_by_role("button")
+      if await btns.count():
+        await btns.last.click(force=True)
+      else:
+        await pg.keyboard.press("Escape")
+      await pg.wait_for_timeout(800)
+    await pg.get_by_text("Mapa do Mundo").first.click(force=True)
     await pg.wait_for_timeout(1500)
     await pg.screenshot(path=S + "1-mapa.png")
 
