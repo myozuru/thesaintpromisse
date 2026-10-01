@@ -15,8 +15,10 @@ export interface WorldMarker { id: string; bossId: string; x: number; y: number 
 
 interface BossState {
   worldMap: string | null;
+  worldBackgroundColor: string;
   worldMarkers: WorldMarker[];
   setWorldMap: (img: string | null) => void;
+  setWorldBackgroundColor: (color: string) => void;
   addMarker: (bossId: string, x: number, y: number) => void;
   moveMarker: (id: string, x: number, y: number) => void;
   removeMarker: (id: string) => void;
@@ -37,8 +39,10 @@ export const useBossStore = create<BossState>()(
     (set, get) => ({
       bosses: {},
       worldMap: null,
+      worldBackgroundColor: '#0e0b15',
       worldMarkers: [],
       setWorldMap: (img) => set({ worldMap: img }),
+      setWorldBackgroundColor: (color) => set({ worldBackgroundColor: color }),
       addMarker: (bossId, x, y) =>
         set((s) => ({ worldMarkers: [...s.worldMarkers.filter((m) => m.bossId !== bossId), { id: uidBoss(), bossId, x, y }] })),
       moveMarker: (id, x, y) =>

@@ -6,7 +6,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronDown, ChevronUp, ImagePlus, Maximize2, MousePointerClick, Skull, Trash2, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { ChevronDown, ChevronUp, ImagePlus, Maximize2, MousePointerClick, Pipette, Skull, Trash2, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useRoleStore } from '@/stores/useRoleStore';
@@ -17,6 +17,10 @@ import { BossSheetContent } from './BossSheet';
 import { BossPortrait } from './BossPortrait';
 
 const MAX_SCALE = 6;
+
+interface EyeDropperResult { sRGBHex: string }
+interface EyeDropperInstance { open: () => Promise<EyeDropperResult> }
+type EyeDropperConstructor = new () => EyeDropperInstance;
 
 interface Ping { id: string; x: number; y: number }
 
@@ -41,7 +45,17 @@ function compressImage(file: File, max = 2048): Promise<string> {
 
 export function WorldMapView() {
   const isMaster = useRoleStore((s) => s.role) === 'MASTER';
-  const { worldMap, worldMarkers, bosses, setWorldMap, addMarker, moveMarker, removeMarker } = useBossStore();
+  const {
+    worldMap,
+    worldBackgroundColor,
+    worldMarkers,
+    bosses,
+    setWorldMap,
+    setWorldBackgroundColor,
+    addMarker,
+    moveMarker,
+    removeMarker,
+  } = useBossStore();
   const fileRef = useRef<HTMLInputElement>(null);
   const viewRef = useRef<HTMLDivElement>(null);
   const layerRef = useRef<HTMLDivElement>(null);
@@ -69,17 +83,13 @@ export function WorldMapView() {
     return Math.max(1, b.vh / b.h);
   }, [baseSize]);
 
-  /** Mantém o mapa sempre cobrindo a área, sem bordas vazias. */
-  const clampView = useCallback((v: { scale: number; x: number; y: number }) => {
+  /** Limita apenas o zoom; o mapa pode ser arrastado livremente sobre o fundo. */
+  const limitZoom = useCallback((v: { scale: number; x: number; y: number }) => {
     const b = baseSize();
     if (!b) return v;
     const min = Math.max(1, b.vh / b.h);
     const scale = Math.max(min, Math.min(MAX_SCALE, v.scale));
-    const w = b.w * scale;
-    const h = b.h * scale;
-    const x = w <= b.vw ? (b.vw - w) / 2 : Math.min(0, Math.max(b.vw - w, v.x));
-    const y = h <= b.vh ? (b.vh - h) / 2 : Math.min(0, Math.max(b.vh - h, v.y));
-    return { scale, x, y };
+    return { ...v, scale };
   }, [baseSize]);
   const dragRef = useRef<{ id: string; moved: boolean } | null>(null);
   const panRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
@@ -110,9 +120,9 @@ export function WorldMapView() {
       const k = next / v.scale;
       const ox = px - r.left;
       const oy = py - r.top;
-      return clampView({ scale: next, x: ox - (ox - v.x) * k, y: oy - (oy - v.y) * k });
+      return limitZoom({ scale: next, x: ox - (ox - v.x) * k, y: oy - (oy - v.y) * k });
     });
-  }, [clampView]);
+  }, [limitZoom]);
 
   // Zoom pela roda do mouse sem rolar a página.
   useEffect(() => {
@@ -145,6 +155,20 @@ export function WorldMapView() {
     }
   };
 
+  const pickBackgroundFromScreen = async () => {
+    const EyeDropperApi = (window as typeof window & { EyeDropper?: EyeDropperConstructor }).EyeDropper;
+    if (!EyeDropperApi) {
+      toast.error('O conta-gotas não está disponível neste navegador');
+      return;
+    }
+    try {
+      const result = await new EyeDropperApi().open();
+      setWorldBackgroundColor(result.sRGBHex);
+    } catch {
+      // Fechar o conta-gotas sem escolher uma cor não altera o fundo.
+    }
+  };
+
   return (
     <div className="space-y-2 animate-fade-in">
       {isMaster && (
@@ -157,6 +181,23 @@ export function WorldMapView() {
             <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setWorldMap(null)}>
               <Trash2 className="mr-1 h-3.5 w-3.5" /> Remover mapa
             </Button>
+          )}
+          {worldMap && (
+            <div className="flex h-8 items-center gap-1 rounded-md border border-border bg-card px-1.5">
+              <label className="flex cursor-pointer items-center gap-1.5 text-xs" title="Escolher cor do fundo">
+                <input
+                  type="color"
+                  aria-label="Cor do fundo do mapa"
+                  value={worldBackgroundColor}
+                  onChange={(e) => setWorldBackgroundColor(e.target.value)}
+                  className="h-5 w-6 cursor-pointer border-0 bg-transparent p-0"
+                />
+                Fundo
+              </label>
+              <Button type="button" size="icon" variant="ghost" className="h-6 w-6" title="Pegar cor da tela" aria-label="Pegar cor da tela" onClick={pickBackgroundFromScreen}>
+                <Pipette className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           )}
           {worldMap && unplaced.length > 0 && (
             <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
@@ -182,7 +223,8 @@ export function WorldMapView() {
           {/* Área navegável */}
           <div
             ref={viewRef}
-            className={`relative h-[80vh] min-w-0 flex-1 select-none overflow-hidden rounded-xl border border-border bg-background/60 ${placing ? 'cursor-crosshair' : 'cursor-grab'}`}
+            className={`relative h-[80vh] min-w-0 flex-1 select-none overflow-hidden rounded-xl border border-border ${placing ? 'cursor-crosshair' : 'cursor-grab'}`}
+            style={{ backgroundColor: worldBackgroundColor }}
             onContextMenu={addPing}
             onPointerDown={(e) => {
               if (placing || e.button !== 0) return;
@@ -198,7 +240,7 @@ export function WorldMapView() {
               }
               const pan = panRef.current;
               if (!pan) return;
-              setView((v) => clampView({ ...v, x: pan.ox + (e.clientX - pan.x), y: pan.oy + (e.clientY - pan.y) }));
+              setView((v) => ({ ...v, x: pan.ox + (e.clientX - pan.x), y: pan.oy + (e.clientY - pan.y) }));
             }}
             onPointerUp={() => {
               panRef.current = null;
@@ -226,7 +268,7 @@ export function WorldMapView() {
                 alt="Mapa do mundo"
                 className="block w-full"
                 draggable={false}
-                onLoad={() => setView((v) => clampView({ ...v, scale: fitScale(), x: 0, y: 0 }))}
+                onLoad={() => setView((v) => limitZoom({ ...v, scale: fitScale(), x: 0, y: 0 }))}
               />
 
               {/* Marcações do botão direito */}
@@ -306,13 +348,13 @@ export function WorldMapView() {
               <button type="button" title="Afastar" onClick={() => zoomAt(1 / 1.25)} className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
                 <ZoomOut className="h-4 w-4" />
               </button>
-              <button type="button" title="Enquadrar" onClick={() => setView(clampView({ scale: fitScale(), x: 0, y: 0 }))} className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+              <button type="button" title="Enquadrar" onClick={() => setView(limitZoom({ scale: fitScale(), x: 0, y: 0 }))} className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
                 <Maximize2 className="h-4 w-4" />
               </button>
             </div>
 
             <div className="pointer-events-none absolute bottom-3 left-3 flex items-center gap-1 rounded-md bg-background/75 px-2 py-1 text-[10px] text-muted-foreground">
-              <MousePointerClick className="h-3 w-3" /> Arraste para mover · roda para zoom · botão direito marca o local
+              <MousePointerClick className="h-3 w-3" /> Arraste livremente · roda para zoom · botão direito marca o local
             </div>
           </div>
 
