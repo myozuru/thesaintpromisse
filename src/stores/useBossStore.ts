@@ -5,6 +5,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import {
   createBoss,
+  normalizeBossTier,
   uidBoss,
   type Boss,
   type BossAbility,

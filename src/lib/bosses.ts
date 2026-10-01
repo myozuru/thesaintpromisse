@@ -161,7 +161,7 @@ export function createBoss(nome = 'Novo Chefe'): Boss {
     retratoX: 50,
     retratoY: 50,
     nd: 1,
-    patamar: 'Grau 4',
+    patamar: 'Lacaio',
     estado: 'ATIVO',
     pv: 100,
     pvMax: 100,
