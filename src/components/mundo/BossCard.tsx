@@ -44,15 +44,15 @@ export function BossCard({ boss, isMaster, onOpen, onToggleVisible, onDuplicate,
         </div>
 
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-bold text-foreground" style={{ fontFamily: "'Cinzel', serif" }}>
+          <h3 className="truncate text-base font-bold text-foreground" style={{ fontFamily: "'Cinzel', serif" }}>
             {boss.nome}
           </h3>
-          {boss.titulo && <p className="truncate text-[11px] italic text-muted-foreground">{boss.titulo}</p>}
+          {boss.titulo && <p className="truncate text-sm italic text-muted-foreground">{boss.titulo}</p>}
           <div className="mt-1 flex flex-wrap items-center gap-1">
-            <span className={cn('rounded-full border px-2 py-0.5 text-[10px]', BOSS_TIER_ACCENT[boss.patamar])}>
+            <span className={cn('rounded-full border px-2.5 py-1 text-xs', BOSS_TIER_ACCENT[boss.patamar])}>
               {canSeeField(boss, 'patamar', isMaster) ? boss.patamar : '???'}
             </span>
-            <span className="rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
+            <span className="rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs text-primary">
               {canSeeField(boss, 'estado', isMaster) ? BOSS_STATE_LABELS[boss.estado] : '???'}
             </span>
 
