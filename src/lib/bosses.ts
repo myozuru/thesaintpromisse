@@ -112,6 +112,8 @@ export interface Boss {
   defesa: number;
   rdGeral: number;
   rdPorTipo: Partial<Record<DamageType, number>>;
+  /** Revelação individual de cada tipo de RD para jogadores. */
+  rdTipoRevelado?: Partial<Record<DamageType, boolean>>;
   fraquezas: DamageType[];
   resistencias: DamageType[];
   descricao: string;

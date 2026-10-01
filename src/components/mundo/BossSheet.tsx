@@ -416,16 +416,21 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
                   />
                 </Field>
 
-                <Field label="RD por tipo de dano" reveal={<RevealToggle field="rd" />}>
+                <Field label="RD por tipo de dano">
                   <RdPorTipoPicker
                     values={boss.rdPorTipo}
+                    revealed={boss.rdTipoRevelado ?? {}}
                     readOnly={!isMaster}
-                    hidden={!see('rd')}
                     onChange={(t, v) => {
                       const next = { ...boss.rdPorTipo };
                       if (v > 0) next[t] = v; else delete next[t];
                       update(boss.id, { rdPorTipo: next });
                     }}
+                    onToggleReveal={(t) =>
+                      update(boss.id, {
+                        rdTipoRevelado: { ...boss.rdTipoRevelado, [t]: !boss.rdTipoRevelado?.[t] },
+                      })
+                    }
                   />
                 </Field>
 
@@ -678,22 +683,23 @@ function DamagePicker({
   );
 }
 
-/** RD individual por tipo de dano — Mestre edita valores; jogadores veem só os tipos com RD. */
+/** RD individual por tipo de dano — Mestre edita valores e revela cada tipo; jogadores veem só os revelados. */
 function RdPorTipoPicker({
-  values, readOnly, hidden, onChange,
+  values, revealed, readOnly, onChange, onToggleReveal,
 }: {
   values: Partial<Record<DamageType, number>>;
+  revealed: Partial<Record<DamageType, boolean>>;
   readOnly: boolean;
-  hidden: boolean;
   onChange: (t: DamageType, v: number) => void;
+  onToggleReveal: (t: DamageType) => void;
 }) {
-  if (hidden) return <p className="text-base text-muted-foreground">{HIDDEN}</p>;
   const entries = DAMAGE_TYPES.filter((t) => (values[t] ?? 0) > 0);
   if (readOnly) {
-    if (entries.length === 0) return <p className="text-base text-muted-foreground">—</p>;
+    const visiveis = entries.filter((t) => revealed[t]);
+    if (visiveis.length === 0) return <p className="text-base text-muted-foreground">{entries.length > 0 ? HIDDEN : '—'}</p>;
     return (
       <div className="flex flex-wrap gap-1">
-        {entries.map((t) => (
+        {visiveis.map((t) => (
           <span
             key={t}
             className="rounded-full border border-accent/60 bg-accent/15 px-2.5 py-1 text-base text-accent"
@@ -708,23 +714,37 @@ function RdPorTipoPicker({
     <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
       {DAMAGE_TYPES.map((t) => {
         const v = values[t] ?? 0;
+        const shown = revealed[t] === true;
         return (
-          <label
+          <div
             key={t}
             className={cn(
-              'flex items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-base transition-colors',
+              'flex items-center justify-between gap-1.5 rounded-lg border px-2.5 py-1.5 text-base transition-colors',
               v > 0 ? 'border-accent/60 bg-accent/10 text-accent' : 'border-border/60 text-muted-foreground',
             )}
           >
-            <span className="truncate">{DAMAGE_TYPE_LABELS[t]}</span>
+            <span className="flex min-w-0 items-center truncate">
+              {DAMAGE_TYPE_LABELS[t]}
+              <button
+                type="button"
+                onClick={() => onToggleReveal(t)}
+                title={shown ? 'Visível para jogadores' : 'Oculto dos jogadores'}
+                className={cn(
+                  'ml-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded transition-all duration-200 hover:scale-110',
+                  shown ? 'text-accent' : 'text-muted-foreground/50',
+                )}
+              >
+                {shown ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+              </button>
+            </span>
             <Input
               type="number"
               min={0}
               value={v}
               onChange={(e) => onChange(t, Math.max(0, Number(e.target.value) || 0))}
-              className="h-8 w-16 border-transparent bg-transparent text-right text-base font-bold focus-visible:border-border"
+              className="h-8 w-14 shrink-0 border-transparent bg-transparent text-right text-base font-bold focus-visible:border-border"
             />
-          </label>
+          </div>
         );
       })}
     </div>
