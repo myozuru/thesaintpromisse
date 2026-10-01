@@ -12,6 +12,8 @@ import {
   type BossRevealField,
 } from '@/lib/bosses';
 
+const BOSS_TIERS_SET = new Set<string>(BOSS_TIERS);
+
 export interface WorldMarker { id: string; bossId: string; x: number; y: number }
 
 interface BossState {
