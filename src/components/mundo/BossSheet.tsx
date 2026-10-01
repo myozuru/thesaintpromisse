@@ -535,7 +535,7 @@ function PortraitControl({
         value={[value]}
         min={min}
         max={max}
-        step={1}
+        step={max === 3 ? 0.05 : 1}
         onValueChange={([next]) => onChange(next ?? value)}
         aria-label={label}
       />
