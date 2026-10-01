@@ -301,7 +301,14 @@ export function WorldMapView() {
         </div>
       )}
 
+      <div>
+        <Button size="sm" variant="secondary" className="h-8 text-xs" onClick={() => setShowGallery((v) => !v)}>
+          <Skull className="mr-1 h-3.5 w-3.5" /> Chefes
+          {showGallery ? <ChevronUp className="ml-1 h-3.5 w-3.5" /> : <ChevronDown className="ml-1 h-3.5 w-3.5" />}
+        </Button>
+      </div>
       {(showGallery || !worldMap) && <BossGallery />}
+
     </div>
   );
 }
