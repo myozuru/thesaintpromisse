@@ -11,7 +11,15 @@ import {
   type BossRevealField,
 } from '@/lib/bosses';
 
+export interface WorldMarker { id: string; bossId: string; x: number; y: number }
+
 interface BossState {
+  worldMap: string | null;
+  worldMarkers: WorldMarker[];
+  setWorldMap: (img: string | null) => void;
+  addMarker: (bossId: string, x: number, y: number) => void;
+  moveMarker: (id: string, x: number, y: number) => void;
+  removeMarker: (id: string) => void;
   bosses: Record<string, Boss>;
   create: (nome?: string) => Boss;
   update: (id: string, patch: Partial<Omit<Boss, 'id' | 'createdAt'>>) => void;
@@ -28,6 +36,14 @@ export const useBossStore = create<BossState>()(
   persist(
     (set, get) => ({
       bosses: {},
+      worldMap: null,
+      worldMarkers: [],
+      setWorldMap: (img) => set({ worldMap: img }),
+      addMarker: (bossId, x, y) =>
+        set((s) => ({ worldMarkers: [...s.worldMarkers.filter((m) => m.bossId !== bossId), { id: uidBoss(), bossId, x, y }] })),
+      moveMarker: (id, x, y) =>
+        set((s) => ({ worldMarkers: s.worldMarkers.map((m) => (m.id === id ? { ...m, x, y } : m)) })),
+      removeMarker: (id) => set((s) => ({ worldMarkers: s.worldMarkers.filter((m) => m.id !== id) })),
 
       create: (nome) => {
         const boss = createBoss(nome?.trim() || 'Novo Chefe');
@@ -51,7 +67,7 @@ export const useBossStore = create<BossState>()(
         set((s) => {
           const next = { ...s.bosses };
           delete next[id];
-          return { bosses: next };
+          return { bosses: next, worldMarkers: s.worldMarkers.filter((m) => m.bossId !== id) };
         }),
 
       duplicate: (id) => {

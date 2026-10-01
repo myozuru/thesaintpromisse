@@ -51,8 +51,8 @@ const TAB_ICONS: Record<TabId, React.ElementType> = {
   grimorio: Skull,
 };
 
-const PLAYER_TABS: TabId[] = ['relogio', 'fichas', 'feiticos-players', 'money', 'cardapios', 'calendario', 'omni', 'mapa', 'mundo', 'guia'];
-const ALL_TABS: TabId[] = ['relogio', 'fichas', 'feiticos-players', 'itens', 'baus', 'money', 'cardapios', 'calendario', 'omni', 'catalogo', 'mapa', 'mundo', 'grimorio', 'sistema', 'guia'];
+const PLAYER_TABS: TabId[] = ['relogio', 'fichas', 'feiticos-players', 'money', 'cardapios', 'calendario', 'omni', 'mapa', 'guia'];
+const ALL_TABS: TabId[] = ['relogio', 'fichas', 'feiticos-players', 'itens', 'baus', 'money', 'cardapios', 'calendario', 'omni', 'catalogo', 'mapa', 'grimorio', 'sistema', 'guia'];
 
 export function getTabsForRole(role: UserRole): TabId[] {
   if (role === 'PLAYER') return PLAYER_TABS;

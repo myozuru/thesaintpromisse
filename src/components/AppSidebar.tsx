@@ -38,7 +38,6 @@ const ALL_ITEMS: { id: TabId; label: string; icon: React.ElementType }[] = [
   { id: 'omni', label: 'Omni-Engine', icon: Sparkles },
   { id: 'catalogo', label: 'Catálogo', icon: Library },
   { id: 'mapa', label: 'Mapa', icon: MapIcon },
-  { id: 'mundo', label: 'Mundo', icon: Globe },
   { id: 'grimorio', label: 'Grimório', icon: Skull },
   { id: 'sistema', label: 'Sistema', icon: Settings },
   { id: 'guia', label: 'Guia', icon: BookOpen },
