@@ -52,8 +52,9 @@ export function BossCard({ boss, isMaster, onOpen, onToggleVisible, onDuplicate,
               {canSeeField(boss, 'patamar', isMaster) ? boss.patamar : '???'}
             </span>
             <span className="rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
-              {BOSS_STATE_LABELS[boss.estado]}
+              {canSeeField(boss, 'estado', isMaster) ? BOSS_STATE_LABELS[boss.estado] : '???'}
             </span>
+
           </div>
         </div>
       </div>
