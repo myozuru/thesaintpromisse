@@ -98,7 +98,7 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col text-sm [&_input]:text-sm [&_select]:text-sm [&_textarea]:text-sm">
+    <div className="flex h-full min-h-0 flex-col text-base [&_input]:text-base [&_select]:text-base [&_textarea]:text-base">
       {/* Cabeçalho com retrato e barra de vida */}
       <div className="relative shrink-0">
         <div className="absolute inset-0 gradient-mystic opacity-20" aria-hidden />
@@ -158,35 +158,35 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
                 <Input
                   value={boss.nome}
                   onChange={(e) => update(boss.id, { nome: e.target.value })}
-                  className="h-11 border-transparent bg-transparent px-0 text-2xl font-bold focus-visible:border-border"
+                  className="h-11 border-transparent bg-transparent px-0 text-3xl font-bold focus-visible:border-border"
                   style={{ fontFamily: "'Cinzel Decorative', serif" }}
                 />
                 <Input
                   value={boss.titulo ?? ''}
                   onChange={(e) => update(boss.id, { titulo: e.target.value })}
                   placeholder="Epíteto / título"
-                  className="h-9 border-transparent bg-transparent px-0 text-sm italic text-muted-foreground focus-visible:border-border"
+                  className="h-9 border-transparent bg-transparent px-0 text-base italic text-muted-foreground focus-visible:border-border"
                 />
               </>
             ) : (
               <>
-                <h2 className="truncate text-2xl font-bold text-gradient-mystic" style={{ fontFamily: "'Cinzel Decorative', serif" }}>
+                <h2 className="truncate text-3xl font-bold text-gradient-mystic" style={{ fontFamily: "'Cinzel Decorative', serif" }}>
                   {boss.nome}
                 </h2>
-                {boss.titulo && <p className="text-sm italic text-muted-foreground">{boss.titulo}</p>}
+                {boss.titulo && <p className="text-base italic text-muted-foreground">{boss.titulo}</p>}
               </>
             )}
 
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <span className={cn('rounded-full border px-2.5 py-1 text-sm font-semibold', tierAccent)}>
+              <span className={cn('rounded-full border px-2.5 py-1 text-base font-semibold', tierAccent)}>
                 {see('patamar') ? boss.patamar : HIDDEN}
               </span>
               <RevealToggle field="patamar" />
-              <span className="rounded-full border border-border/70 bg-secondary/50 px-2.5 py-1 text-sm text-muted-foreground">
+              <span className="rounded-full border border-border/70 bg-secondary/50 px-2.5 py-1 text-base text-muted-foreground">
                 ND {see('nd') ? boss.nd : HIDDEN}
               </span>
               <RevealToggle field="nd" />
-              <span className="rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-sm text-primary">
+              <span className="rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-base text-primary">
                 {see('estado') ? BOSS_STATE_LABELS[boss.estado] : HIDDEN}
               </span>
               <RevealToggle field="estado" />
@@ -194,7 +194,7 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
 
             {/* Barra de vida fluida */}
             <div className="mt-3">
-              <div className="mb-1.5 flex items-center justify-between text-sm text-muted-foreground">
+              <div className="mb-1.5 flex items-center justify-between text-base text-muted-foreground">
                 <span className="flex items-center gap-1"><Heart className="h-3 w-3 text-hp" /> Vitalidade</span>
                 <span>
                   {see('pv') ? boss.pv : HIDDEN} / {see('pvMax') ? boss.pvMax : HIDDEN}
@@ -285,7 +285,7 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
             type="button"
             onClick={() => setTab(id)}
             className={cn(
-               'relative flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-all duration-200',
+               'relative flex items-center gap-2 rounded-md px-3 py-2 text-base transition-all duration-200',
               tab === id
                 ? 'bg-primary/15 text-primary font-semibold'
                 : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
@@ -311,10 +311,10 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
                       value={boss.descricao}
                       onChange={(e) => update(boss.id, { descricao: e.target.value })}
                       placeholder="Aparência, comportamento, lenda…"
-                      className="min-h-[90px] text-sm leading-relaxed"
+                      className="min-h-[90px] text-base leading-relaxed"
                     />
                   ) : (
-                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+                    <p className="whitespace-pre-wrap text-base leading-relaxed text-muted-foreground">
                       {see('descricao') ? boss.descricao || '—' : HIDDEN}
                     </p>
                   )}
@@ -323,16 +323,16 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
                 <div className={cn('grid gap-3', inline ? 'grid-cols-1' : 'sm:grid-cols-3')}>
                   <Field label="Tamanho" reveal={<RevealToggle field="tamanho" />}>
                     {isMaster ? (
-                      <Input value={boss.tamanho} onChange={(e) => update(boss.id, { tamanho: e.target.value })} className="h-10 text-sm" />
+                      <Input value={boss.tamanho} onChange={(e) => update(boss.id, { tamanho: e.target.value })} className="h-10 text-base" />
                     ) : (
-                      <p className="text-sm text-muted-foreground">{see('tamanho') ? boss.tamanho || '—' : HIDDEN}</p>
+                      <p className="text-base text-muted-foreground">{see('tamanho') ? boss.tamanho || '—' : HIDDEN}</p>
                     )}
                   </Field>
                   <Field label="Tipo" reveal={<RevealToggle field="tipo" />}>
                     {isMaster ? (
-                      <Input value={boss.tipo} onChange={(e) => update(boss.id, { tipo: e.target.value })} className="h-10 text-sm" />
+                      <Input value={boss.tipo} onChange={(e) => update(boss.id, { tipo: e.target.value })} className="h-10 text-base" />
                     ) : (
-                      <p className="text-sm text-muted-foreground">{see('tipo') ? boss.tipo || '—' : HIDDEN}</p>
+                      <p className="text-base text-muted-foreground">{see('tipo') ? boss.tipo || '—' : HIDDEN}</p>
                     )}
                   </Field>
                   <Field label="Patamar" reveal={<RevealToggle field="patamar" />}>
@@ -340,12 +340,12 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
                       <select
                         value={boss.patamar}
                         onChange={(e) => update(boss.id, { patamar: e.target.value as Boss['patamar'] })}
-                        className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
+                        className="h-10 w-full rounded-md border border-border bg-background px-3 text-base"
                       >
                         {BOSS_TIERS.map((t) => <option key={t} value={t}>{t}</option>)}
                       </select>
                     ) : (
-                      <p className="text-sm text-muted-foreground">{see('patamar') ? boss.patamar : HIDDEN}</p>
+                      <p className="text-base text-muted-foreground">{see('patamar') ? boss.patamar : HIDDEN}</p>
                     )}
                   </Field>
                 </div>
@@ -356,7 +356,7 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
                       <select
                         value={boss.estado}
                         onChange={(e) => update(boss.id, { estado: e.target.value as Boss['estado'] })}
-                        className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
+                        className="h-10 w-full rounded-md border border-border bg-background px-3 text-base"
                       >
                         {BOSS_STATES.map((s) => <option key={s} value={s}>{BOSS_STATE_LABELS[s]}</option>)}
                       </select>
@@ -366,17 +366,17 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
                         type="number"
                         value={boss.nd}
                         onChange={(e) => update(boss.id, { nd: Number(e.target.value) || 0 })}
-                        className="h-10 text-sm"
+                        className="h-10 text-base"
                       />
                     </Field>
                   </div>
                 ) : (
                   <div className={cn('grid gap-3', inline ? 'grid-cols-1' : 'sm:grid-cols-2')}>
                     <Field label="Estado">
-                      <p className="text-sm text-muted-foreground">{see('estado') ? BOSS_STATE_LABELS[boss.estado] : HIDDEN}</p>
+                      <p className="text-base text-muted-foreground">{see('estado') ? BOSS_STATE_LABELS[boss.estado] : HIDDEN}</p>
                     </Field>
                     <Field label="ND">
-                      <p className="text-sm text-muted-foreground">{see('nd') ? boss.nd : HIDDEN}</p>
+                      <p className="text-base text-muted-foreground">{see('nd') ? boss.nd : HIDDEN}</p>
                     </Field>
                   </div>
                 )}
@@ -422,7 +422,7 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
                       value={boss.tatica}
                       onChange={(e) => update(boss.id, { tatica: e.target.value })}
                       placeholder="Como o chefe age em combate…"
-                      className="min-h-[70px] text-sm leading-relaxed"
+                      className="min-h-[70px] text-base leading-relaxed"
                     />
                   </Field>
                 )}
@@ -432,12 +432,12 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
             {tab === 'habilidades' && (
               <div className="space-y-2">
                 {isMaster && (
-                  <Button size="sm" variant="secondary" onClick={() => addAbility(boss.id)} className="h-9 text-sm">
+                  <Button size="sm" variant="secondary" onClick={() => addAbility(boss.id)} className="h-9 text-base">
                     <Plus className="mr-1 h-3 w-3" /> Nova habilidade
                   </Button>
                 )}
                 {abilities.length === 0 && (
-                  <p className="text-sm text-muted-foreground">Nenhuma habilidade revelada.</p>
+                  <p className="text-base text-muted-foreground">Nenhuma habilidade revelada.</p>
                 )}
                 <AnimatePresence initial={false}>
                   {abilities.map((ab) => (
@@ -455,12 +455,12 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
                             <Input
                               value={ab.nome}
                               onChange={(e) => updateAbility(boss.id, ab.id, { nome: e.target.value })}
-                              className="h-9 flex-1 text-sm font-semibold"
+                              className="h-9 flex-1 text-base font-semibold"
                             />
                             <select
                               value={ab.kind}
                               onChange={(e) => updateAbility(boss.id, ab.id, { kind: e.target.value as BossAbilityKind })}
-                              className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+                              className="h-9 rounded-md border border-border bg-background px-2 text-base"
                             >
                               {Object.entries(BOSS_ABILITY_LABELS).map(([k, l]) => (
                                 <option key={k} value={k}>{l}</option>
@@ -484,8 +484,8 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
                           </>
                         ) : (
                           <>
-                            <span className="flex-1 text-sm font-semibold text-foreground">{ab.nome}</span>
-                            <span className="rounded-full border border-border/70 px-2.5 py-1 text-sm text-muted-foreground">
+                            <span className="flex-1 text-base font-semibold text-foreground">{ab.nome}</span>
+                            <span className="rounded-full border border-border/70 px-2.5 py-1 text-base text-muted-foreground">
                               {BOSS_ABILITY_LABELS[ab.kind]}
                             </span>
                           </>
@@ -496,10 +496,10 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
                           value={ab.texto}
                           onChange={(e) => updateAbility(boss.id, ab.id, { texto: e.target.value })}
                           placeholder="Efeito da habilidade…"
-                          className="mt-2 min-h-[72px] text-sm leading-relaxed"
+                          className="mt-2 min-h-[72px] text-base leading-relaxed"
                         />
                       ) : (
-                        ab.texto && <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{ab.texto}</p>
+                        ab.texto && <p className="mt-2 whitespace-pre-wrap text-base leading-relaxed text-muted-foreground">{ab.texto}</p>
                       )}
                     </motion.div>
                   ))}
@@ -514,17 +514,17 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
                     value={boss.segredos}
                     onChange={(e) => update(boss.id, { segredos: e.target.value })}
                     placeholder="Segredos, gatilhos de fase, fraqueza oculta…"
-                    className="min-h-[90px] text-sm leading-relaxed"
+                    className="min-h-[90px] text-base leading-relaxed"
                   />
                 </Field>
                 <Field label="Recompensas">
                   <Textarea
                     value={boss.recompensas}
                     onChange={(e) => update(boss.id, { recompensas: e.target.value })}
-                    className="min-h-[70px] text-sm leading-relaxed"
+                    className="min-h-[70px] text-base leading-relaxed"
                   />
                 </Field>
-                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                <label className="flex items-center gap-2 text-base text-muted-foreground">
                   <input
                     type="checkbox"
                     checked={boss.visivel}
@@ -551,7 +551,7 @@ function PortraitControl({
   onChange: (value: number) => void;
 }) {
   return (
-    <label className="grid min-w-0 grid-cols-[6.5rem_1fr] items-center gap-3 text-sm font-semibold uppercase text-muted-foreground">
+    <label className="grid min-w-0 grid-cols-[7.5rem_1fr] items-center gap-3 text-base font-semibold uppercase text-muted-foreground">
       <span>{label}</span>
       <Slider
         value={[value]}
@@ -587,7 +587,7 @@ export function BossSheet({ bossId, isMaster, onClose }: Props) {
 function Field({ label, reveal, children }: { label: string; reveal?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div>
-      <div className="mb-1.5 flex items-center text-sm font-semibold uppercase text-muted-foreground">
+      <div className="mb-1.5 flex items-center text-base font-semibold uppercase text-muted-foreground">
         {label}
         {reveal}
       </div>
@@ -607,7 +607,7 @@ function Stat({
 }) {
   return (
     <div className="rounded-lg border border-border/70 bg-secondary/30 p-2 text-center transition-transform duration-200 hover:-translate-y-px">
-      <div className="flex items-center justify-center text-sm font-semibold uppercase text-muted-foreground">
+      <div className="flex items-center justify-center text-base font-semibold uppercase text-muted-foreground">
         {label}
         {reveal}
       </div>
@@ -616,10 +616,10 @@ function Stat({
           type="number"
           value={typeof value === 'number' ? value : 0}
           onChange={(e) => onChange(Number(e.target.value) || 0)}
-          className="mt-1 h-9 border-transparent bg-transparent text-center text-base font-bold focus-visible:border-border"
+          className="mt-1 h-9 border-transparent bg-transparent text-center text-lg font-bold focus-visible:border-border"
         />
       ) : (
-        <div className="mt-1 text-base font-bold text-foreground">{value}</div>
+        <div className="mt-1 text-lg font-bold text-foreground">{value}</div>
       )}
     </div>
   );
@@ -634,9 +634,9 @@ function DamagePicker({
   tone: 'weak' | 'strong';
   onToggle: (t: DamageType) => void;
 }) {
-  if (hidden) return <p className="text-sm text-muted-foreground">{HIDDEN}</p>;
+  if (hidden) return <p className="text-base text-muted-foreground">{HIDDEN}</p>;
   const list = readOnly ? selected : DAMAGE_TYPES;
-  if (readOnly && selected.length === 0) return <p className="text-sm text-muted-foreground">—</p>;
+  if (readOnly && selected.length === 0) return <p className="text-base text-muted-foreground">—</p>;
   return (
     <div className="flex flex-wrap gap-1">
       {list.map((t) => {
@@ -648,7 +648,7 @@ function DamagePicker({
             disabled={readOnly}
             onClick={() => onToggle(t)}
             className={cn(
-              'rounded-full border px-2.5 py-1 text-sm transition-all duration-200',
+              'rounded-full border px-2.5 py-1 text-base transition-all duration-200',
               on && (tone === 'weak'
                 ? 'border-hp/60 bg-hp/15 text-hp'
                 : 'border-accent/60 bg-accent/15 text-accent'),

@@ -27,8 +27,8 @@ export function BossPortraitEditor({ boss, onApply, onCancel }: Props) {
   return (
     <div className="fixed inset-0 z-[2200] flex items-center justify-center bg-background/85 p-4 backdrop-blur-sm" onPointerDown={onCancel}>
       <div className="w-full max-w-md rounded-lg border border-border bg-card p-5 shadow-2xl" onPointerDown={(event) => event.stopPropagation()}>
-        <h2 className="text-xl font-semibold">Ajustar foto do chefe</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Arraste a foto e use o controle para escolher o enquadramento.</p>
+        <h2 className="text-2xl font-semibold">Ajustar foto do chefe</h2>
+        <p className="mt-1 text-base text-muted-foreground">Arraste a foto e use o controle para escolher o enquadramento.</p>
 
         <div className="mx-auto my-5 aspect-square w-full max-w-[320px] overflow-hidden rounded-full border-2 border-accent/60 bg-secondary shadow-inner">
           <div
@@ -61,7 +61,7 @@ export function BossPortraitEditor({ boss, onApply, onCancel }: Props) {
         </div>
 
         <label className="block">
-          <span className="mb-2 flex items-center justify-between text-sm text-muted-foreground">
+          <span className="mb-2 flex items-center justify-between text-base text-muted-foreground">
             <span className="flex items-center gap-1.5"><ZoomIn className="h-3.5 w-3.5" /> Tamanho</span>
             <span className="font-mono text-foreground">{Math.round(crop.zoom * 100)}%</span>
           </span>
@@ -74,7 +74,7 @@ export function BossPortraitEditor({ boss, onApply, onCancel }: Props) {
             aria-label="Tamanho da foto"
           />
         </label>
-        <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground"><Move className="h-4 w-4" /> Arraste a foto para reposicionar.</p>
+        <p className="mt-4 flex items-center gap-2 text-base text-muted-foreground"><Move className="h-4 w-4" /> Arraste a foto para reposicionar.</p>
 
         <div className="mt-6 flex items-center justify-between gap-2">
           <Button type="button" variant="ghost" size="sm" onClick={() => setCrop({ zoom: 1, x: 50, y: 50 })}>
