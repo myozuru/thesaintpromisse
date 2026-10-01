@@ -116,11 +116,13 @@ export function WorldMapView() {
     const px = cx ?? r.left + r.width / 2;
     const py = cy ?? r.top + r.height / 2;
     setView((v) => {
-      const next = v.scale * factor;
-      const k = next / v.scale;
+      const requestedScale = v.scale * factor;
+      const nextScale = limitZoom({ ...v, scale: requestedScale }).scale;
+      if (nextScale === v.scale) return v;
+      const k = nextScale / v.scale;
       const ox = px - r.left;
       const oy = py - r.top;
-      return limitZoom({ scale: next, x: ox - (ox - v.x) * k, y: oy - (oy - v.y) * k });
+      return { scale: nextScale, x: ox - (ox - v.x) * k, y: oy - (oy - v.y) * k };
     });
   }, [limitZoom]);
 
