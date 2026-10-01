@@ -373,7 +373,7 @@ export function WorldMapView() {
                 transition={{ type: 'spring', stiffness: 220, damping: 28 }}
                  className="absolute right-2 top-2 z-20 h-[calc(80vh-1rem)] max-w-[calc(100%-1rem)] overflow-hidden rounded-xl border border-border bg-card/95 shadow-2xl backdrop-blur-xl"
               >
-                <div className="h-full w-[460px] max-w-full">
+                <div className="h-full w-[520px] max-w-full">
                   <BossSheetContent bossId={openId} isMaster={isMaster} onClose={() => setOpenId(null)} inline />
                 </div>
               </motion.aside>

@@ -551,7 +551,7 @@ function PortraitControl({
   onChange: (value: number) => void;
 }) {
   return (
-    <label className="grid min-w-0 grid-cols-[6.5rem_1fr] items-center gap-3 text-base font-semibold uppercase text-muted-foreground">
+    <label className="grid min-w-0 grid-cols-[7.5rem_1fr] items-center gap-3 text-base font-semibold uppercase text-muted-foreground">
       <span>{label}</span>
       <Slider
         value={[value]}
