@@ -416,6 +416,19 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
                   />
                 </Field>
 
+                <Field label="RD por tipo de dano" reveal={<RevealToggle field="rd" />}>
+                  <RdPorTipoPicker
+                    values={boss.rdPorTipo}
+                    readOnly={!isMaster}
+                    hidden={!see('rd')}
+                    onChange={(t, v) => {
+                      const next = { ...boss.rdPorTipo };
+                      if (v > 0) next[t] = v; else delete next[t];
+                      update(boss.id, { rdPorTipo: next });
+                    }}
+                  />
+                </Field>
+
                 {isMaster && (
                   <Field label="Tática do Mestre">
                     <Textarea
