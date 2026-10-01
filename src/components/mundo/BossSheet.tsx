@@ -25,6 +25,7 @@ import {
 } from '@/lib/bosses';
 import { useBossStore } from '@/stores/useBossStore';
 import { BossPortrait } from './BossPortrait';
+import { BossPortraitEditor } from './BossPortraitEditor';
 
 const HIDDEN = '???';
 
@@ -51,6 +52,7 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
   const removeAbility = useBossStore((s) => s.removeAbility);
   const fileRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<'geral' | 'combate' | 'habilidades' | 'mestre'>('geral');
+  const [editingPortrait, setEditingPortrait] = useState(false);
 
   const abilities = useMemo(() => {
     if (!boss) return [];
@@ -107,7 +109,17 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
             transition={{ type: 'spring', stiffness: 220, damping: 20 }}
             className="relative shrink-0"
           >
-            <div className={cn('overflow-hidden rounded-full border-2 border-accent/60 shadow-[0_0_28px_-6px_hsl(var(--primary)/0.9)]', inline ? 'h-20 w-20' : 'h-24 w-24')}>
+            <button
+              type="button"
+              disabled={!isMaster || !boss.retrato}
+              onClick={() => setEditingPortrait(true)}
+              title={isMaster && boss.retrato ? 'Ajustar foto' : undefined}
+              className={cn(
+                'block overflow-hidden rounded-full border-2 border-accent/60 shadow-[0_0_28px_-6px_hsl(var(--primary)/0.9)]',
+                inline ? 'h-20 w-20' : 'h-24 w-24',
+                isMaster && boss.retrato && 'cursor-move transition-transform hover:scale-105',
+              )}
+            >
               {boss.retrato && see('retrato') ? (
                 <BossPortrait boss={boss} alt={boss.nome} />
               ) : (
@@ -115,7 +127,7 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
                   <Skull className="h-9 w-9 text-muted-foreground" />
                 </div>
               )}
-            </div>
+            </button>
             {isMaster && (
               <>
                 <button
@@ -246,6 +258,16 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
         </div>
         <div className="ornament-divider h-px w-full" aria-hidden />
       </div>
+      {editingPortrait && boss.retrato && (
+        <BossPortraitEditor
+          boss={boss}
+          onCancel={() => setEditingPortrait(false)}
+          onApply={(crop) => {
+            update(boss.id, crop);
+            setEditingPortrait(false);
+          }}
+        />
+      )}
 
       {/* Abas */}
       <div className="flex shrink-0 gap-1 px-4 pt-3">
