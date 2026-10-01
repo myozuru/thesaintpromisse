@@ -221,7 +221,7 @@ export function WorldMapView() {
       )}
 
       {worldMap ? (
-        <div className="flex gap-3">
+        <div className="relative flex gap-3">
           {/* Área navegável */}
           <div
             ref={viewRef}
@@ -371,7 +371,7 @@ export function WorldMapView() {
                 animate={{ width: 380, opacity: 1 }}
                 exit={{ width: 0, opacity: 0 }}
                 transition={{ type: 'spring', stiffness: 220, damping: 28 }}
-                className="h-[80vh] shrink-0 overflow-hidden rounded-xl border border-border bg-card/95 backdrop-blur-xl"
+                className="absolute right-2 top-2 z-20 h-[calc(80vh-1rem)] overflow-hidden rounded-xl border border-border bg-card/95 shadow-2xl backdrop-blur-xl"
               >
                 <div className="h-full w-[380px]">
                   <BossSheetContent bossId={openId} isMaster={isMaster} onClose={() => setOpenId(null)} inline />
