@@ -99,13 +99,13 @@ export function WorldMapView() {
     const px = cx ?? r.left + r.width / 2;
     const py = cy ?? r.top + r.height / 2;
     setView((v) => {
-      const next = Math.max(MIN_SCALE, Math.min(MAX_SCALE, v.scale * factor));
+      const next = v.scale * factor;
       const k = next / v.scale;
       const ox = px - r.left;
       const oy = py - r.top;
-      return { scale: next, x: ox - (ox - v.x) * k, y: oy - (oy - v.y) * k };
+      return clampView({ scale: next, x: ox - (ox - v.x) * k, y: oy - (oy - v.y) * k });
     });
-  }, []);
+  }, [clampView]);
 
   // Zoom pela roda do mouse sem rolar a página.
   useEffect(() => {
@@ -113,7 +113,8 @@ export function WorldMapView() {
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      zoomAt(e.deltaY < 0 ? 1.12 : 1 / 1.12, e.clientX, e.clientY);
+      const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1);
+      zoomAt(Math.exp(-dy * 0.0018), e.clientX, e.clientY);
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
