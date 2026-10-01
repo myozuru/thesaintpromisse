@@ -25,6 +25,7 @@ import { getAutoCritFromConditions } from '@/lib/conditionEffects';
 import { useLogStore } from '@/stores/useLogStore';
 import { useItemStore } from '@/stores/useItemStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
+import { ReplicasSection } from './ReplicasSection';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useOmniRuntimeStore } from '@/stores/useOmniRuntimeStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
@@ -153,7 +154,9 @@ export function AttackPanel({ character: cProp }: Props) {
     // (b) Inventário Omni do personagem
     for (const inv of omniInventoryList) {
       if (inv.ownerId !== c.id) continue;
-      const w = findWeaponByName(inv.entity.nome);
+      // Réplicas só aparecem nas mãos enquanto materializadas.
+      if (inv.entity.replica && !inv.materializada) continue;
+      const w = inv.entity.replica ? (inv.replicaArma ? findWeaponByName(inv.replicaArma) : undefined) : findWeaponByName(inv.entity.nome);
       if (w && !seenNames.has(w.name)) {
         out.push({ item: { id: inv.entity.id, name: inv.entity.nome }, weapon: w });
         seenNames.add(w.name);
@@ -1378,6 +1381,7 @@ export function AttackPanel({ character: cProp }: Props) {
             </span>
           </div>
 
+          <ReplicasSection charId={c.id} />
           {inventoryWeapons.length === 0 ? (
             <div className="text-[11px] text-muted-foreground italic">
               Nenhuma arma do catálogo no inventário deste personagem. Adicione armas pelo módulo Itens (vincule ao personagem).

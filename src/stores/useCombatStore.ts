@@ -483,6 +483,7 @@ export const useCombatStore = create<CombatStore>()(
               }
             }
             inicioTurnoPostura(firstEntry.charId);
+            import('@/lib/replicas').then(({ inicioTurnoReplicas }) => inicioTurnoReplicas(firstEntry.charId));
             // Preparo Imediato: a ação preparada expira no começo do próprio turno.
             import('@/lib/preparoImediato').then(({ expirarPreparoNoTurno }) => expirarPreparoNoTurno(firstEntry.charId));
 
@@ -557,6 +558,7 @@ export const useCombatStore = create<CombatStore>()(
           // Fase 2 — Reaplica pool dedicado de Aptidões (Mestre das Aptidões).
           useCharacterStore.getState().applyTurnStartSpecHooks(nextEntry.charId);
           inicioTurnoPostura(nextEntry.charId);
+          import('@/lib/replicas').then(({ inicioTurnoReplicas }) => inicioTurnoReplicas(nextEntry.charId));
           // Preparo Imediato: a ação preparada expira no começo do próprio turno.
           import('@/lib/preparoImediato').then(({ expirarPreparoNoTurno }) => expirarPreparoNoTurno(nextEntry.charId));
 

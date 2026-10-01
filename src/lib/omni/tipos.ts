@@ -181,6 +181,11 @@ export interface EntidadeOmni {
     recarga: 'diaria' | 'porCena' | 'descansoCurto' | 'manual';
   };
   /**
+   * Réplica Materializável: o jogador materializa no turno pagando
+   * `peInvocacao` e sustenta pagando `peSustentacao` no começo de cada turno.
+   */
+  replica?: ReplicaConfig;
+  /**
    * Camada de Comércio (visível apenas para o Mestre no construtor).
    * Aplicável principalmente a categoria 'item', mas o schema permite
    * em qualquer entidade para casos futuros (pergaminhos de feitiço, etc.).
@@ -538,4 +543,15 @@ export function novoBloco(): BlocoLogico {
     modo: 'todas',
     acoes: [],
   };
+}
+
+export type ReplicaPorte = 'minusculo' | 'pequeno' | 'medio' | 'grande' | 'enorme' | 'colossal';
+
+/** Configuração de Réplica Materializável definida pelo Mestre. */
+export interface ReplicaConfig {
+  porte: ReplicaPorte;
+  peInvocacao: number;
+  peSustentacao: number;
+  desintegrarAoSoltar: boolean;
+  cobrarPorRodada: boolean;
 }

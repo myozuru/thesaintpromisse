@@ -3,6 +3,8 @@
  * Abas: Geral | Efeitos | Custos | Gatilhos.
  * Inclui Simulador Preview lateral.
  */
+import { PORTES_REPLICA, custosDoPorte, replicaPadrao } from '@/lib/replicas';
+import type { ReplicaPorte } from '@/lib/omni/tipos';
 import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -493,6 +495,75 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                     </div>
                   </div>
                 </div>
+                {(ent.categoria === 'arma' || ent.categoria === 'item') && (
+                  <div className="rounded-md border border-primary/40 bg-primary/5 p-3 space-y-2" data-testid="omni-replica-bloco">
+                    <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
+                      <input
+                        type="checkbox"
+                        data-testid="omni-replica-toggle"
+                        checked={!!ent.replica}
+                        onChange={(e) => {
+                          if (e.target.checked) setEnt({ ...ent, replica: replicaPadrao('medio') });
+                          else { const { replica: _r, ...rest } = ent; setEnt(rest); }
+                        }}
+                      />
+                      Réplica / Item Materializável
+                    </label>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      O jogador escolhe quando materializar no combate: paga o PE de invocação,
+                      a arma surge na mão e, no começo de cada turno dele, paga a sustentação ou deixa ela se desfazer.
+                    </p>
+                    {ent.replica && (
+                      <div className="space-y-2">
+                        <div>
+                          <Label className="text-xs">Porte (preenche a tabela)</Label>
+                          <Select
+                            value={ent.replica.porte}
+                            onValueChange={(v) => {
+                              const p = custosDoPorte(v as ReplicaPorte);
+                              setEnt({ ...ent, replica: { ...ent.replica!, porte: p.id, peInvocacao: p.invocacao, peSustentacao: p.sustentacao } });
+                            }}
+                          >
+                            <SelectTrigger data-testid="omni-replica-porte"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {PORTES_REPLICA.map((p) => (
+                                <SelectItem key={p.id} value={p.id}>{p.label} — {p.invocacao} PE / {p.sustentacao} PE por rodada</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-xs">PE para Materializar</Label>
+                            <Input
+                              type="number" min={0} data-testid="omni-replica-invocacao"
+                              value={ent.replica.peInvocacao}
+                              onChange={(e) => setEnt({ ...ent, replica: { ...ent.replica!, peInvocacao: Math.max(0, parseInt(e.target.value, 10) || 0) } })}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">PE de Sustentação (por rodada)</Label>
+                            <Input
+                              type="number" min={0} data-testid="omni-replica-sustentacao"
+                              value={ent.replica.peSustentacao}
+                              onChange={(e) => setEnt({ ...ent, replica: { ...ent.replica!, peSustentacao: Math.max(0, parseInt(e.target.value, 10) || 0) } })}
+                            />
+                          </div>
+                        </div>
+                        <label className="flex items-center gap-2 text-xs">
+                          <input type="checkbox" checked={ent.replica.desintegrarAoSoltar}
+                            onChange={(e) => setEnt({ ...ent, replica: { ...ent.replica!, desintegrarAoSoltar: e.target.checked } })} />
+                          Desintegrar ao soltar / ser desarmado
+                        </label>
+                        <label className="flex items-center gap-2 text-xs">
+                          <input type="checkbox" checked={ent.replica.cobrarPorRodada}
+                            onChange={(e) => setEnt({ ...ent, replica: { ...ent.replica!, cobrarPorRodada: e.target.checked } })} />
+                          Cobrar sustentação no começo de cada turno
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {ent.custos.map((c, i) => (
                   <div key={i} className="rounded-md border border-border/60 p-3 space-y-2">
                     <div className="flex items-center gap-2">

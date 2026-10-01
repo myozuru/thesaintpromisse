@@ -17,6 +17,7 @@
  *   - Delete: remove selecionadas.
  *   - Ctrl/Cmd: bypass de snap.
  */
+import { ReplicaSustentacaoPrompt } from '@/components/fichas/ReplicasSection';
 import { shownPeMax, shownHpMax } from '@/lib/peDisplay';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -3437,6 +3438,7 @@ export function MapaModule() {
           <OpportunityPromptOverlay />
           <ZonaRiscoPrompt />
           <PreparoImediatoPrompt />
+          <ReplicaSustentacaoPrompt />
 
           <PendingAoEOverlay />
           <LootOverlay />
