@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
+import { ALL_CONDITIONS } from '@/types/conditions';
 import { cn } from '@/lib/utils';
 import { DAMAGE_TYPES, DAMAGE_TYPE_LABELS, type DamageType } from '@/types';
 import {
@@ -96,6 +97,9 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
     const next = list.includes(type) ? list.filter((t) => t !== type) : [...list, type];
     update(boss.id, { [key]: next } as Partial<Boss>);
   };
+
+  const toggleItemReveal = (key: string) =>
+    update(boss.id, { itemRevelado: { ...boss.itemRevelado, [key]: !boss.itemRevelado?.[key] } });
 
   return (
     <div className="flex h-full min-h-0 flex-col text-base [&_input]:text-base [&_select]:text-base [&_textarea]:text-base">
@@ -397,22 +401,47 @@ export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: 
                 </div>
 
                 <Field label="Fraquezas" reveal={<RevealToggle field="fraquezas" />}>
-                  <DamagePicker
+                  <ItemPicker
+                    options={DAMAGE_TYPES.map((t) => ({ id: t, label: DAMAGE_TYPE_LABELS[t] }))}
                     selected={boss.fraquezas}
+                    prefix="fraq"
+                    revealed={boss.itemRevelado ?? {}}
                     readOnly={!isMaster}
                     hidden={!see('fraquezas')}
                     tone="weak"
-                    onToggle={(t) => toggleDamage(boss.fraquezas, t, 'fraquezas')}
+                    onToggle={(t) => toggleDamage(boss.fraquezas, t as DamageType, 'fraquezas')}
+                    onToggleReveal={toggleItemReveal}
                   />
                 </Field>
 
                 <Field label="Resistências" reveal={<RevealToggle field="resistencias" />}>
-                  <DamagePicker
+                  <ItemPicker
+                    options={DAMAGE_TYPES.map((t) => ({ id: t, label: DAMAGE_TYPE_LABELS[t] }))}
                     selected={boss.resistencias}
+                    prefix="res"
+                    revealed={boss.itemRevelado ?? {}}
                     readOnly={!isMaster}
                     hidden={!see('resistencias')}
                     tone="strong"
-                    onToggle={(t) => toggleDamage(boss.resistencias, t, 'resistencias')}
+                    onToggle={(t) => toggleDamage(boss.resistencias, t as DamageType, 'resistencias')}
+                    onToggleReveal={toggleItemReveal}
+                  />
+                </Field>
+
+                <Field label="Imunidades a condições" reveal={<RevealToggle field="imunidades" />}>
+                  <ItemPicker
+                    options={ALL_CONDITIONS.map((c) => ({ id: c.id, label: `${c.icon} ${c.name}` }))}
+                    selected={boss.imunidades ?? []}
+                    prefix="imu"
+                    revealed={boss.itemRevelado ?? {}}
+                    readOnly={!isMaster}
+                    hidden={!see('imunidades')}
+                    tone="strong"
+                    onToggle={(id) => {
+                      const cur = boss.imunidades ?? [];
+                      update(boss.id, { imunidades: cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id] });
+                    }}
+                    onToggleReveal={toggleItemReveal}
                   />
                 </Field>
 
@@ -643,40 +672,49 @@ function Stat({
   );
 }
 
-function DamagePicker({
-  selected, readOnly, hidden, tone, onToggle,
+/** Lista selecionável; cada item marcado tem seu próprio olho de revelação para jogadores. */
+function ItemPicker({
+  options, selected, prefix, revealed, readOnly, hidden, tone, onToggle, onToggleReveal,
 }: {
-  selected: DamageType[];
+  options: { id: string; label: string }[];
+  selected: string[];
+  prefix: string;
+  revealed: Record<string, boolean>;
   readOnly: boolean;
   hidden: boolean;
   tone: 'weak' | 'strong';
-  onToggle: (t: DamageType) => void;
+  onToggle: (id: string) => void;
+  onToggleReveal: (key: string) => void;
 }) {
   if (hidden) return <p className="text-base text-muted-foreground">{HIDDEN}</p>;
-  const list = readOnly ? selected : DAMAGE_TYPES;
-  if (readOnly && selected.length === 0) return <p className="text-base text-muted-foreground">—</p>;
+  const onCls = tone === 'weak' ? 'border-hp/60 bg-hp/15 text-hp' : 'border-accent/60 bg-accent/15 text-accent';
+  if (readOnly) {
+    const vis = options.filter((o) => selected.includes(o.id) && revealed[`${prefix}:${o.id}`]);
+    if (vis.length === 0) return <p className="text-base text-muted-foreground">{selected.length > 0 ? HIDDEN : '—'}</p>;
+    return (
+      <div className="flex flex-wrap gap-1">
+        {vis.map((o) => <span key={o.id} className={cn('rounded-full border px-2.5 py-1 text-base', onCls)}>{o.label}</span>)}
+      </div>
+    );
+  }
   return (
     <div className="flex flex-wrap gap-1">
-      {list.map((t) => {
-        const on = selected.includes(t);
+      {options.map((o) => {
+        const on = selected.includes(o.id);
+        const key = `${prefix}:${o.id}`;
+        const shown = revealed[key] === true;
         return (
-          <button
-            key={t}
-            type="button"
-            disabled={readOnly}
-            onClick={() => onToggle(t)}
-            className={cn(
-              'rounded-full border px-2.5 py-1 text-base transition-all duration-200',
-              on && (tone === 'weak'
-                ? 'border-hp/60 bg-hp/15 text-hp'
-                : 'border-accent/60 bg-accent/15 text-accent'),
-
-              !on && 'border-border/60 text-muted-foreground hover:border-accent/40 hover:text-foreground',
-              !readOnly && 'hover:scale-105',
+          <span key={o.id} className={cn('inline-flex items-center rounded-full border text-base transition-all duration-200',
+            on ? onCls : 'border-border/60 text-muted-foreground hover:border-accent/40 hover:text-foreground')}>
+            <button type="button" onClick={() => onToggle(o.id)} className="px-2.5 py-1">{o.label}</button>
+            {on && (
+              <button type="button" onClick={() => onToggleReveal(key)}
+                title={shown ? 'Visível para jogadores' : 'Oculto dos jogadores'}
+                className={cn('mr-1.5 inline-flex h-5 w-5 items-center justify-center rounded hover:scale-110', shown ? '' : 'opacity-50')}>
+                {shown ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+              </button>
             )}
-          >
-            {DAMAGE_TYPE_LABELS[t]}
-          </button>
+          </span>
         );
       })}
     </div>

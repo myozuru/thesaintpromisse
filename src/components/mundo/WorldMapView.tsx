@@ -374,7 +374,7 @@ export function WorldMapView() {
                  className="absolute right-2 top-2 z-20 h-[calc(80vh-1rem)] max-w-[calc(100%-1rem)] overflow-hidden rounded-xl border border-border bg-card/95 shadow-2xl backdrop-blur-xl"
               >
                 <div className="h-full w-[520px] max-w-full">
-                  {isMaster && <BossSheetContent bossId={openId} isMaster={isMaster} onClose={() => setOpenId(null)} inline />
+                  {isMaster && <BossSheetContent bossId={openId} isMaster={isMaster} onClose={() => setOpenId(null)} inline />}
                 </div>
               </motion.aside>
             )}

@@ -88,6 +88,7 @@ export const BOSS_REVEAL_FIELDS = [
   'rd',
   'fraquezas',
   'resistencias',
+  'imunidades',
   'descricao',
   'habilidades',
 ] as const;
@@ -106,6 +107,7 @@ export const BOSS_REVEAL_LABELS: Record<BossRevealField, string> = {
   rd: 'RD',
   fraquezas: 'Fraquezas',
   resistencias: 'Resistências',
+  imunidades: 'Imunidades',
   descricao: 'Descrição',
   habilidades: 'Habilidades',
 };
@@ -133,6 +135,10 @@ export interface Boss {
   rdTipoRevelado?: Partial<Record<DamageType, boolean>>;
   fraquezas: DamageType[];
   resistencias: DamageType[];
+  /** Imunidades a condições (ids de ALL_CONDITIONS). */
+  imunidades?: string[];
+  /** Revelação individual de cada fraqueza/resistência/imunidade (chave "fraq:X", "res:X", "imu:X"). */
+  itemRevelado?: Record<string, boolean>;
   descricao: string;
   tamanho: string;
   tipo: string;
@@ -172,6 +178,8 @@ export function createBoss(nome = 'Novo Chefe'): Boss {
     rdPorTipo: {},
     fraquezas: [],
     resistencias: [],
+    imunidades: [],
+    itemRevelado: {},
     descricao: '',
     tamanho: 'Médio',
     tipo: 'Maldição',
