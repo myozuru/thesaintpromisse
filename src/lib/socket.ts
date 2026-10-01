@@ -67,5 +67,7 @@ export type WorldSlice =
   | 'mapScene'
   | 'testRequests'
   | 'tempTemplates'
-  | 'fog';
+  | 'fog'
+  | 'worldMap'
+  | 'worldBosses';
 

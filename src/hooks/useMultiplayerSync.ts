@@ -10,6 +10,7 @@ import { useRoleStore } from '@/stores/useRoleStore';
 import { useMoneyStore } from '@/stores/useMoneyStore';
 import { useItemStore } from '@/stores/useItemStore';
 import { useCalendarStore } from '@/stores/useCalendarStore';
+import { useBossStore } from '@/stores/useBossStore';
 import { useSpellProposalStore } from '@/stores/useSpellProposalStore';
 import { useMenuStore } from '@/stores/useMenuStore';
 import { useDiscountStore } from '@/stores/useDiscountStore';
@@ -470,6 +471,20 @@ function applyRemote(slice: WorldSlice, data: unknown) {
     }
     else if (slice === 'tempTemplates' && Array.isArray(data)) {
       useTempTemplateStore.setState({ templates: data as TempTemplate[] });
+    }
+    else if (slice === 'worldMap' && data && typeof data === 'object') {
+      const d = data as { worldMap?: string | null; worldBackgroundColor?: string };
+      useBossStore.setState({ worldMap: d.worldMap ?? null, ...(d.worldBackgroundColor ? { worldBackgroundColor: d.worldBackgroundColor } : {}) });
+    }
+    else if (slice === 'worldBosses' && data && typeof data === 'object') {
+      // Fichas e marcadores de chefes são exclusivos do Mestre.
+      if (useRoleStore.getState().role === 'MASTER') {
+        const d = data as { bosses?: unknown; worldMarkers?: unknown };
+        useBossStore.setState({
+          ...(d.bosses && typeof d.bosses === 'object' ? { bosses: d.bosses as never } : {}),
+          ...(Array.isArray(d.worldMarkers) ? { worldMarkers: d.worldMarkers as never } : {}),
+        });
+      }
     }
     else if (slice === 'fog' && data && typeof data === 'object') {
       const d = data as { walls?: unknown; doors?: unknown; lights?: unknown };
@@ -984,6 +999,21 @@ export function useMultiplayerSync() {
       socket.emit('state:update', { slice: 'items', data: next });
     });
 
+    // Mapa do mundo: imagem/fundo vão para todos; chefes só entre Mestres.
+    const pickWorldMap = (st: ReturnType<typeof useBossStore.getState>) => ({ worldMap: st.worldMap, worldBackgroundColor: st.worldBackgroundColor });
+    const pickWorldBosses = (st: ReturnType<typeof useBossStore.getState>) => ({ bosses: st.bosses, worldMarkers: st.worldMarkers });
+    let lastWorldMap = JSON.stringify(pickWorldMap(useBossStore.getState()));
+    let lastWorldBosses = JSON.stringify(pickWorldBosses(useBossStore.getState()));
+    const unsubWorld = useBossStore.subscribe((state) => {
+      const wm = pickWorldMap(state); const wmS = JSON.stringify(wm);
+      const wb = pickWorldBosses(state); const wbS = JSON.stringify(wb);
+      const mapChanged = wmS !== lastWorldMap; const bossChanged = wbS !== lastWorldBosses;
+      lastWorldMap = wmS; lastWorldBosses = wbS;
+      if (applyingRemote || useRoleStore.getState().role !== 'MASTER') return;
+      if (mapChanged) socket.emit('state:update', { slice: 'worldMap', data: wm });
+      if (bossChanged) socket.emit('state:update', { slice: 'worldBosses', data: wb });
+    });
+
     let lastCalendar = JSON.stringify(pickCalendar(useCalendarStore.getState()));
     const unsubCalendar = useCalendarStore.subscribe((state) => {
       const next = pickCalendar(state);
@@ -1220,6 +1250,7 @@ export function useMultiplayerSync() {
       unsubMoney();
       unsubItems();
       unsubCalendar();
+      unsubWorld();
       unsubProposals();
       unsubEsts();
       unsubDiscounts();
