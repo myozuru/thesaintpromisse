@@ -677,3 +677,56 @@ function DamagePicker({
     </div>
   );
 }
+
+/** RD individual por tipo de dano — Mestre edita valores; jogadores veem só os tipos com RD. */
+function RdPorTipoPicker({
+  values, readOnly, hidden, onChange,
+}: {
+  values: Partial<Record<DamageType, number>>;
+  readOnly: boolean;
+  hidden: boolean;
+  onChange: (t: DamageType, v: number) => void;
+}) {
+  if (hidden) return <p className="text-base text-muted-foreground">{HIDDEN}</p>;
+  const entries = DAMAGE_TYPES.filter((t) => (values[t] ?? 0) > 0);
+  if (readOnly) {
+    if (entries.length === 0) return <p className="text-base text-muted-foreground">—</p>;
+    return (
+      <div className="flex flex-wrap gap-1">
+        {entries.map((t) => (
+          <span
+            key={t}
+            className="rounded-full border border-accent/60 bg-accent/15 px-2.5 py-1 text-base text-accent"
+          >
+            {DAMAGE_TYPE_LABELS[t]} {values[t]}
+          </span>
+        ))}
+      </div>
+    );
+  }
+  return (
+    <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+      {DAMAGE_TYPES.map((t) => {
+        const v = values[t] ?? 0;
+        return (
+          <label
+            key={t}
+            className={cn(
+              'flex items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-base transition-colors',
+              v > 0 ? 'border-accent/60 bg-accent/10 text-accent' : 'border-border/60 text-muted-foreground',
+            )}
+          >
+            <span className="truncate">{DAMAGE_TYPE_LABELS[t]}</span>
+            <Input
+              type="number"
+              min={0}
+              value={v}
+              onChange={(e) => onChange(t, Math.max(0, Number(e.target.value) || 0))}
+              className="h-8 w-16 border-transparent bg-transparent text-right text-base font-bold focus-visible:border-border"
+            />
+          </label>
+        );
+      })}
+    </div>
+  );
+}
