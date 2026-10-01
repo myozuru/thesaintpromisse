@@ -95,7 +95,7 @@ export function WorldMapView() {
   const panRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
 
   const markers = useMemo(
-    () => (isMaster ? worldMarkers.filter((m) => bosses[m.bossId]) : []),
+    () => worldMarkers.filter((m) => bosses[m.bossId]),
     [worldMarkers, bosses, isMaster],
   );
   const unplaced = Object.values(bosses).filter((b) => !worldMarkers.some((m) => m.bossId === b.id));
@@ -145,7 +145,21 @@ export function WorldMapView() {
     const id = `${Date.now()}-${Math.random()}`;
     setPings((list) => [...list, { id, ...p }]);
     window.setTimeout(() => setPings((list) => list.filter((x) => x.id !== id)), 4000);
+    window.dispatchEvent(new CustomEvent('mapa-mundo:ping-send', { detail: p }));
   };
+
+  // Pings do Mapa do Mundo são transientes, mas aparecem para Mestre e jogadores.
+  useEffect(() => {
+    const onRemotePing = (event: Event) => {
+      const detail = (event as CustomEvent).detail as { x?: number; y?: number } | undefined;
+      if (typeof detail?.x !== 'number' || typeof detail?.y !== 'number') return;
+      const ping = { id: `${Date.now()}-${Math.random()}`, x: detail.x, y: detail.y };
+      setPings((list) => [...list, ping]);
+      window.setTimeout(() => setPings((list) => list.filter((item) => item.id !== ping.id)), 4000);
+    };
+    window.addEventListener('mapa-mundo:remote-ping', onRemotePing);
+    return () => window.removeEventListener('mapa-mundo:remote-ping', onRemotePing);
+  }, []);
 
   const onUpload = async (f?: File) => {
     if (!f) return;
@@ -374,7 +388,7 @@ export function WorldMapView() {
                  className="absolute right-2 top-2 z-20 h-[calc(80vh-1rem)] max-w-[calc(100%-1rem)] overflow-hidden rounded-xl border border-border bg-card/95 shadow-2xl backdrop-blur-xl"
               >
                 <div className="h-full w-[520px] max-w-full">
-                  {isMaster && <BossSheetContent bossId={openId} isMaster={isMaster} onClose={() => setOpenId(null)} inline />}
+                  <BossSheetContent bossId={openId} isMaster={isMaster} onClose={() => setOpenId(null)} inline />
                 </div>
               </motion.aside>
             )}
