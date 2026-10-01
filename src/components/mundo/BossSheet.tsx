@@ -560,10 +560,10 @@ function DamagePicker({
             onClick={() => onToggle(t)}
             className={cn(
               'rounded-full border px-2 py-0.5 text-[10px] transition-all duration-200',
-              on
-                ? tone === 'weak'
-                  ? 'border-hp/60 bg-hp/15 text-hp'
-                  : 'border-accent/60 bg-accent/15 text-accent',
+              on && (tone === 'weak'
+                ? 'border-hp/60 bg-hp/15 text-hp'
+                : 'border-accent/60 bg-accent/15 text-accent'),
+
               !on && 'border-border/60 text-muted-foreground hover:border-accent/40 hover:text-foreground',
               !readOnly && 'hover:scale-105',
             )}
