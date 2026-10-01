@@ -59,9 +59,14 @@ export interface BossAbility {
 
 /** Campos que o Mestre pode revelar individualmente. */
 export const BOSS_REVEAL_FIELDS = [
+  'retrato',
   'nd',
   'patamar',
+  'estado',
+  'tamanho',
+  'tipo',
   'pv',
+  'pvMax',
   'defesa',
   'rd',
   'fraquezas',
@@ -70,6 +75,24 @@ export const BOSS_REVEAL_FIELDS = [
   'habilidades',
 ] as const;
 export type BossRevealField = (typeof BOSS_REVEAL_FIELDS)[number];
+
+export const BOSS_REVEAL_LABELS: Record<BossRevealField, string> = {
+  retrato: 'Foto',
+  nd: 'ND',
+  patamar: 'Patamar',
+  estado: 'Estado',
+  tamanho: 'Tamanho',
+  tipo: 'Tipo',
+  pv: 'PV atual',
+  pvMax: 'PV máximo',
+  defesa: 'Defesa',
+  rd: 'RD',
+  fraquezas: 'Fraquezas',
+  resistencias: 'Resistências',
+  descricao: 'Descrição',
+  habilidades: 'Habilidades',
+};
+
 
 export interface Boss {
   id: string;
