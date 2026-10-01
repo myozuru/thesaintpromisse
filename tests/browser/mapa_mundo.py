@@ -39,6 +39,13 @@ async def main():
     await pg.mouse.click(700, 420)
     await pg.wait_for_timeout(4000)
 
+    # Abrir aba Mapa > Mapa do Mundo
+    await pg.get_by_role("button", name="Mapa").first.click()
+    await pg.wait_for_timeout(1500)
+    await pg.get_by_text("Mapa do Mundo").first.click()
+    await pg.wait_for_timeout(1500)
+    await pg.screenshot(path=S + "1-mapa.png")
+
     print("hooks", await pg.evaluate("!!window.__bossStore && !!window.__roleStore"))
     await pg.evaluate("""() => {
       const st = window.__roleStore.getState();
@@ -61,13 +68,6 @@ async def main():
       return boss.id;
     }""")
     print("boss", created)
-
-    # Abrir aba Mapa > Mapa do Mundo
-    await pg.get_by_role("button", name="Mapa").first.click()
-    await pg.wait_for_timeout(1500)
-    await pg.get_by_text("Mapa do Mundo").first.click()
-    await pg.wait_for_timeout(1500)
-    await pg.screenshot(path=S + "1-mapa.png")
 
     box = await pg.locator("img[alt='Mapa do mundo']").first.bounding_box()
     print("mapa visivel", box is not None)
