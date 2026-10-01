@@ -100,6 +100,10 @@ export interface Boss {
   titulo?: string;
   /** Retrato em data URL (opcional). */
   retrato?: string;
+  /** Enquadramento do retrato nos avatares circulares. */
+  retratoZoom?: number;
+  retratoX?: number;
+  retratoY?: number;
   nd: number;
   patamar: BossTier;
   estado: BossState;
@@ -136,6 +140,9 @@ export function createBoss(nome = 'Novo Chefe'): Boss {
     id: uidBoss(),
     nome,
     titulo: '',
+    retratoZoom: 1,
+    retratoX: 50,
+    retratoY: 50,
     nd: 1,
     patamar: 'Grau 4',
     estado: 'ATIVO',
