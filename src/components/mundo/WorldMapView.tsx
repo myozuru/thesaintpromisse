@@ -126,10 +126,6 @@ export function WorldMapView() {
               <Trash2 className="mr-1 h-3.5 w-3.5" /> Remover mapa
             </Button>
           )}
-          <Button size="sm" variant="secondary" className="h-8 text-xs" onClick={() => setShowGallery((v) => !v)}>
-            <Skull className="mr-1 h-3.5 w-3.5" /> Chefes
-            {showGallery ? <ChevronUp className="ml-1 h-3.5 w-3.5" /> : <ChevronDown className="ml-1 h-3.5 w-3.5" />}
-          </Button>
           {worldMap && unplaced.length > 0 && (
             <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
               Colocar no mapa:
