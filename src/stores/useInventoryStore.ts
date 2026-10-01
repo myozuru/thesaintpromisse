@@ -30,6 +30,12 @@ export interface InventoryItem {
   usosRestantes?: number;
   /** Cópia do total no momento da criação para fórmulas/UI. */
   usosTotais?: number;
+  /** Réplica: está materializada agora. */
+  materializada?: boolean;
+  /** Réplica: sustentação deste turno ainda não paga. */
+  sustentacaoPendente?: boolean;
+  /** Réplica: nome da arma do catálogo colocada na mão. */
+  replicaArma?: string;
 }
 
 interface InventoryState {
