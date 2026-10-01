@@ -30,19 +30,19 @@ export function BossGallery() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="flex items-center gap-2 text-lg font-bold text-gradient-mystic" style={{ fontFamily: "'Cinzel Decorative', serif" }}>
+        <h2 className="flex items-center gap-2 text-xl font-bold text-gradient-mystic" style={{ fontFamily: "'Cinzel Decorative', serif" }}>
           <Skull className="h-4 w-4 text-accent" /> Chefes
         </h2>
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Buscar chefe…"
-            className="h-10 max-w-[260px] text-sm"
+            className="h-10 max-w-[260px] text-base"
         />
         {isMaster && (
           <Button
             size="sm"
-            className="h-10 text-sm"
+            className="h-10 text-base"
             onClick={() => {
               const boss = create();
               setOpenId(boss.id);
@@ -54,7 +54,7 @@ export function BossGallery() {
       </div>
 
       {list.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-base text-muted-foreground">
           {isMaster ? 'Nenhum chefe criado ainda.' : 'Nenhum chefe revelado até agora.'}
         </p>
       ) : (
