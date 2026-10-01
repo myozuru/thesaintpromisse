@@ -7,26 +7,41 @@
 import type { DamageType } from '@/types';
 
 export const BOSS_TIERS = [
-  'Grau 4',
-  'Grau 3',
-  'Grau 2',
-  'Grau 1',
-  'Semi-Especial',
-  'Grau Especial',
+  'Lacaio',
+  'Capanga',
+  'Desafio',
+  'Especial',
+  'Santo',
   'Calamidade',
 ] as const;
 export type BossTier = (typeof BOSS_TIERS)[number];
 
 /** Cor/acento de cada patamar (usa tokens do tema, sem cores cruas). */
 export const BOSS_TIER_ACCENT: Record<BossTier, string> = {
-  'Grau 4': 'text-muted-foreground border-muted-foreground/40 bg-muted/30',
-  'Grau 3': 'text-sky-300 border-sky-400/40 bg-sky-500/10',
-  'Grau 2': 'text-emerald-300 border-emerald-400/40 bg-emerald-500/10',
-  'Grau 1': 'text-amber-300 border-amber-400/40 bg-amber-500/10',
-  'Semi-Especial': 'text-orange-300 border-orange-400/40 bg-orange-500/10',
-  'Grau Especial': 'text-fuchsia-300 border-fuchsia-400/50 bg-fuchsia-500/10',
+  Lacaio: 'text-muted-foreground border-muted-foreground/40 bg-muted/30',
+  Capanga: 'text-sky-300 border-sky-400/40 bg-sky-500/10',
+  Desafio: 'text-emerald-300 border-emerald-400/40 bg-emerald-500/10',
+  Especial: 'text-amber-300 border-amber-400/40 bg-amber-500/10',
+  Santo: 'text-fuchsia-300 border-fuchsia-400/50 bg-fuchsia-500/10',
   Calamidade: 'text-red-300 border-red-400/60 bg-red-500/15',
 };
+
+/** Patamares antigos (Graus/Semi-Especial) mapeados para a nova lista. */
+const LEGACY_TIER_MAP: Record<string, BossTier> = {
+  'Grau 4': 'Lacaio',
+  'Grau 3': 'Capanga',
+  'Grau 2': 'Desafio',
+  'Grau 1': 'Especial',
+  'Semi-Especial': 'Especial',
+  'Grau Especial': 'Santo',
+  Calamidade: 'Calamidade',
+};
+
+/** Normaliza um patamar salvo no armazenamento para a lista atual. */
+export function normalizeBossTier(value: unknown): BossTier {
+  if (typeof value === 'string' && value in LEGACY_TIER_MAP) return LEGACY_TIER_MAP[value];
+  return 'Lacaio';
+}
 
 export const BOSS_STATES = ['ATIVO', 'FURIA', 'ENFRAQUECIDO', 'DERROTADO', 'SELADO'] as const;
 export type BossState = (typeof BOSS_STATES)[number];
@@ -146,7 +161,7 @@ export function createBoss(nome = 'Novo Chefe'): Boss {
     retratoX: 50,
     retratoY: 50,
     nd: 1,
-    patamar: 'Grau 4',
+    patamar: 'Lacaio',
     estado: 'ATIVO',
     pv: 100,
     pvMax: 100,
