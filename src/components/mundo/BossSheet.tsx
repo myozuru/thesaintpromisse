@@ -3,6 +3,9 @@
  *
  * Mestre vê tudo e controla o que é revelado; jogadores veem apenas os campos
  * liberados (o resto aparece velado).
+ *
+ * `BossSheetContent` é reutilizado tanto no diálogo (galeria) quanto no painel
+ * lateral do Mapa do Mundo.
  */
 import { useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -29,14 +32,16 @@ const fade = {
   exit: { opacity: 0, y: -6 },
 };
 
-interface Props {
-  bossId: string | null;
+interface ContentProps {
+  bossId: string;
   isMaster: boolean;
   onClose: () => void;
+  /** Painel lateral usa altura total disponível em vez de limite de viewport. */
+  inline?: boolean;
 }
 
-export function BossSheet({ bossId, isMaster, onClose }: Props) {
-  const boss = useBossStore((s) => (bossId ? s.bosses[bossId] : undefined));
+export function BossSheetContent({ bossId, isMaster, onClose, inline = false }: ContentProps) {
+  const boss = useBossStore((s) => s.bosses[bossId]);
   const update = useBossStore((s) => s.update);
   const toggleReveal = useBossStore((s) => s.toggleReveal);
   const addAbility = useBossStore((s) => s.addAbility);
@@ -45,9 +50,6 @@ export function BossSheet({ bossId, isMaster, onClose }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<'geral' | 'combate' | 'habilidades' | 'mestre'>('geral');
 
-  const hp = boss ? bossHpRatio(boss) : 0;
-  const tierAccent = boss ? BOSS_TIER_ACCENT[boss.patamar] : '';
-
   const abilities = useMemo(() => {
     if (!boss) return [];
     return isMaster ? boss.habilidades : boss.habilidades.filter((a) => a.revelada);
@@ -55,6 +57,8 @@ export function BossSheet({ bossId, isMaster, onClose }: Props) {
 
   if (!boss) return null;
 
+  const hp = bossHpRatio(boss);
+  const tierAccent = BOSS_TIER_ACCENT[boss.patamar];
   const see = (field: BossRevealField) => canSeeField(boss, field, isMaster);
 
   const RevealToggle = ({ field }: { field: BossRevealField }) =>
@@ -85,377 +89,407 @@ export function BossSheet({ bossId, isMaster, onClose }: Props) {
   };
 
   return (
+    <div className="flex h-full min-h-0 flex-col">
+      {/* Cabeçalho com retrato e barra de vida */}
+      <div className="relative shrink-0">
+        <div className="absolute inset-0 gradient-mystic opacity-20" aria-hidden />
+        <div className="relative flex items-start gap-4 p-5">
+          <motion.div
+            initial={{ scale: 0.85, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 220, damping: 20 }}
+            className="relative shrink-0"
+          >
+            <div className={cn('overflow-hidden rounded-full border-2 border-accent/60 shadow-[0_0_28px_-6px_hsl(var(--primary)/0.9)]', inline ? 'h-20 w-20' : 'h-24 w-24')}>
+              {boss.retrato && see('retrato') ? (
+                <img src={boss.retrato} alt={boss.nome} className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-secondary/60">
+                  <Skull className="h-9 w-9 text-muted-foreground" />
+                </div>
+              )}
+            </div>
+            {isMaster && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  title="Trocar retrato"
+                  className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-all hover:scale-110 hover:text-foreground"
+                >
+                  <ImageIcon className="h-3.5 w-3.5" />
+                </button>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={(e) => pickPortrait(e.target.files?.[0])}
+                />
+                <div className="absolute -left-1 -top-1">
+                  <RevealToggle field="retrato" />
+                </div>
+              </>
+            )}
+          </motion.div>
+
+          <div className="min-w-0 flex-1">
+            {isMaster ? (
+              <>
+                <Input
+                  value={boss.nome}
+                  onChange={(e) => update(boss.id, { nome: e.target.value })}
+                  className="h-9 border-transparent bg-transparent px-0 text-xl font-bold focus-visible:border-border"
+                  style={{ fontFamily: "'Cinzel Decorative', serif" }}
+                />
+                <Input
+                  value={boss.titulo ?? ''}
+                  onChange={(e) => update(boss.id, { titulo: e.target.value })}
+                  placeholder="Epíteto / título"
+                  className="h-7 border-transparent bg-transparent px-0 text-xs italic text-muted-foreground focus-visible:border-border"
+                />
+              </>
+            ) : (
+              <>
+                <h2 className="truncate text-xl font-bold text-gradient-mystic" style={{ fontFamily: "'Cinzel Decorative', serif" }}>
+                  {boss.nome}
+                </h2>
+                {boss.titulo && <p className="text-xs italic text-muted-foreground">{boss.titulo}</p>}
+              </>
+            )}
+
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-semibold tracking-wide', tierAccent)}>
+                {see('patamar') ? boss.patamar : HIDDEN}
+              </span>
+              <RevealToggle field="patamar" />
+              <span className="rounded-full border border-border/70 bg-secondary/50 px-2 py-0.5 text-[10px] text-muted-foreground">
+                ND {see('nd') ? boss.nd : HIDDEN}
+              </span>
+              <RevealToggle field="nd" />
+              <span className="rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
+                {see('estado') ? BOSS_STATE_LABELS[boss.estado] : HIDDEN}
+              </span>
+              <RevealToggle field="estado" />
+            </div>
+
+            {/* Barra de vida fluida */}
+            <div className="mt-3">
+              <div className="mb-1 flex items-center justify-between text-[10px] text-muted-foreground">
+                <span className="flex items-center gap-1"><Heart className="h-3 w-3 text-hp" /> Vitalidade</span>
+                <span>
+                  {see('pv') ? boss.pv : HIDDEN} / {see('pvMax') ? boss.pvMax : HIDDEN}
+                </span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-secondary/70">
+                <motion.div
+                  className="h-full rounded-full bg-hp shadow-[0_0_12px_hsl(var(--hp)/0.8)]"
+                  initial={false}
+                  animate={{ width: `${(see('pv') && see('pvMax') ? hp : 1) * 100}%` }}
+                  transition={{ type: 'spring', stiffness: 120, damping: 22 }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            title="Fechar"
+            className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="ornament-divider h-px w-full" aria-hidden />
+      </div>
+
+      {/* Abas */}
+      <div className="flex shrink-0 gap-1 px-4 pt-3">
+        {(() => {
+          const tabs: { id: typeof tab; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
+            { id: 'geral', label: 'Geral', Icon: Sparkles },
+            { id: 'combate', label: 'Combate', Icon: Shield },
+            { id: 'habilidades', label: 'Habilidades', Icon: Swords },
+          ];
+          if (isMaster) tabs.push({ id: 'mestre', label: 'Mestre', Icon: EyeOff });
+          return tabs;
+        })().map(({ id, label, Icon }) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setTab(id)}
+            className={cn(
+              'relative flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition-all duration-200',
+              tab === id
+                ? 'bg-primary/15 text-primary font-semibold'
+                : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+            )}
+          >
+            <Icon className="h-3.5 w-3.5" />
+            {label}
+            {tab === id && (
+              <motion.span layoutId={inline ? 'boss-tab-inline' : 'boss-tab'} className="absolute inset-x-2 -bottom-px h-px bg-accent" />
+            )}
+          </button>
+        ))}
+      </div>
+
+      <div className={cn('overflow-y-auto px-5 pb-5 pt-3 scrollbar-thin', inline ? 'min-h-0 flex-1' : 'max-h-[52vh]')}>
+        <AnimatePresence mode="wait">
+          <motion.div key={tab} {...fade} transition={{ duration: 0.18 }} className="space-y-4">
+            {tab === 'geral' && (
+              <>
+                <Field label="Descrição" reveal={<RevealToggle field="descricao" />}>
+                  {isMaster ? (
+                    <Textarea
+                      value={boss.descricao}
+                      onChange={(e) => update(boss.id, { descricao: e.target.value })}
+                      placeholder="Aparência, comportamento, lenda…"
+                      className="min-h-[90px] text-xs"
+                    />
+                  ) : (
+                    <p className="whitespace-pre-wrap text-xs text-muted-foreground">
+                      {see('descricao') ? boss.descricao || '—' : HIDDEN}
+                    </p>
+                  )}
+                </Field>
+
+                <div className={cn('grid gap-3', inline ? 'grid-cols-1' : 'sm:grid-cols-3')}>
+                  <Field label="Tamanho" reveal={<RevealToggle field="tamanho" />}>
+                    {isMaster ? (
+                      <Input value={boss.tamanho} onChange={(e) => update(boss.id, { tamanho: e.target.value })} className="h-8 text-xs" />
+                    ) : (
+                      <p className="text-xs text-muted-foreground">{see('tamanho') ? boss.tamanho || '—' : HIDDEN}</p>
+                    )}
+                  </Field>
+                  <Field label="Tipo" reveal={<RevealToggle field="tipo" />}>
+                    {isMaster ? (
+                      <Input value={boss.tipo} onChange={(e) => update(boss.id, { tipo: e.target.value })} className="h-8 text-xs" />
+                    ) : (
+                      <p className="text-xs text-muted-foreground">{see('tipo') ? boss.tipo || '—' : HIDDEN}</p>
+                    )}
+                  </Field>
+                  <Field label="Patamar" reveal={<RevealToggle field="patamar" />}>
+                    {isMaster ? (
+                      <select
+                        value={boss.patamar}
+                        onChange={(e) => update(boss.id, { patamar: e.target.value as Boss['patamar'] })}
+                        className="h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
+                      >
+                        {BOSS_TIERS.map((t) => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">{see('patamar') ? boss.patamar : HIDDEN}</p>
+                    )}
+                  </Field>
+                </div>
+
+                {isMaster ? (
+                  <div className={cn('grid gap-3', inline ? 'grid-cols-1' : 'sm:grid-cols-2')}>
+                    <Field label="Estado" reveal={<RevealToggle field="estado" />}>
+                      <select
+                        value={boss.estado}
+                        onChange={(e) => update(boss.id, { estado: e.target.value as Boss['estado'] })}
+                        className="h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
+                      >
+                        {BOSS_STATES.map((s) => <option key={s} value={s}>{BOSS_STATE_LABELS[s]}</option>)}
+                      </select>
+                    </Field>
+                    <Field label="ND" reveal={<RevealToggle field="nd" />}>
+                      <Input
+                        type="number"
+                        value={boss.nd}
+                        onChange={(e) => update(boss.id, { nd: Number(e.target.value) || 0 })}
+                        className="h-8 text-xs"
+                      />
+                    </Field>
+                  </div>
+                ) : (
+                  <div className={cn('grid gap-3', inline ? 'grid-cols-1' : 'sm:grid-cols-2')}>
+                    <Field label="Estado">
+                      <p className="text-xs text-muted-foreground">{see('estado') ? BOSS_STATE_LABELS[boss.estado] : HIDDEN}</p>
+                    </Field>
+                    <Field label="ND">
+                      <p className="text-xs text-muted-foreground">{see('nd') ? boss.nd : HIDDEN}</p>
+                    </Field>
+                  </div>
+                )}
+              </>
+            )}
+
+            {tab === 'combate' && (
+              <>
+                <div className={cn('grid gap-3', inline ? 'grid-cols-2' : 'sm:grid-cols-4')}>
+                  <Stat label="PV" value={see('pv') ? boss.pv : HIDDEN} editable={isMaster}
+                    onChange={(v) => update(boss.id, { pv: v })} reveal={<RevealToggle field="pv" />} />
+                  <Stat label="PV máx." value={see('pvMax') ? boss.pvMax : HIDDEN} editable={isMaster}
+                    onChange={(v) => update(boss.id, { pvMax: v })} reveal={<RevealToggle field="pvMax" />} />
+                  <Stat label="Defesa" value={see('defesa') ? boss.defesa : HIDDEN} editable={isMaster}
+                    onChange={(v) => update(boss.id, { defesa: v })} reveal={<RevealToggle field="defesa" />} />
+                  <Stat label="RD geral" value={see('rd') ? boss.rdGeral : HIDDEN} editable={isMaster}
+                    onChange={(v) => update(boss.id, { rdGeral: v })} reveal={<RevealToggle field="rd" />} />
+                </div>
+
+                <Field label="Fraquezas" reveal={<RevealToggle field="fraquezas" />}>
+                  <DamagePicker
+                    selected={boss.fraquezas}
+                    readOnly={!isMaster}
+                    hidden={!see('fraquezas')}
+                    tone="weak"
+                    onToggle={(t) => toggleDamage(boss.fraquezas, t, 'fraquezas')}
+                  />
+                </Field>
+
+                <Field label="Resistências" reveal={<RevealToggle field="resistencias" />}>
+                  <DamagePicker
+                    selected={boss.resistencias}
+                    readOnly={!isMaster}
+                    hidden={!see('resistencias')}
+                    tone="strong"
+                    onToggle={(t) => toggleDamage(boss.resistencias, t, 'resistencias')}
+                  />
+                </Field>
+
+                {isMaster && (
+                  <Field label="Tática do Mestre">
+                    <Textarea
+                      value={boss.tatica}
+                      onChange={(e) => update(boss.id, { tatica: e.target.value })}
+                      placeholder="Como o chefe age em combate…"
+                      className="min-h-[70px] text-xs"
+                    />
+                  </Field>
+                )}
+              </>
+            )}
+
+            {tab === 'habilidades' && (
+              <div className="space-y-2">
+                {isMaster && (
+                  <Button size="sm" variant="secondary" onClick={() => addAbility(boss.id)} className="h-7 text-xs">
+                    <Plus className="mr-1 h-3 w-3" /> Nova habilidade
+                  </Button>
+                )}
+                {abilities.length === 0 && (
+                  <p className="text-xs text-muted-foreground">Nenhuma habilidade revelada.</p>
+                )}
+                <AnimatePresence initial={false}>
+                  {abilities.map((ab) => (
+                    <motion.div
+                      key={ab.id}
+                      layout
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="rounded-lg border border-border/70 bg-secondary/30 p-3 transition-colors hover:border-accent/50"
+                    >
+                      <div className="flex items-center gap-2">
+                        {isMaster ? (
+                          <>
+                            <Input
+                              value={ab.nome}
+                              onChange={(e) => updateAbility(boss.id, ab.id, { nome: e.target.value })}
+                              className="h-7 flex-1 text-xs font-semibold"
+                            />
+                            <select
+                              value={ab.kind}
+                              onChange={(e) => updateAbility(boss.id, ab.id, { kind: e.target.value as BossAbilityKind })}
+                              className="h-7 rounded-md border border-border bg-background px-1 text-[10px]"
+                            >
+                              {Object.entries(BOSS_ABILITY_LABELS).map(([k, l]) => (
+                                <option key={k} value={k}>{l}</option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={() => updateAbility(boss.id, ab.id, { revelada: !ab.revelada })}
+                              className={cn('rounded p-1 transition-colors', ab.revelada ? 'text-accent' : 'text-muted-foreground/60')}
+                              title={ab.revelada ? 'Visível para jogadores' : 'Oculta'}
+                            >
+                              {ab.revelada ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeAbility(boss.id, ab.id)}
+                              className="rounded p-1 text-muted-foreground transition-colors hover:text-destructive"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <span className="flex-1 text-xs font-semibold text-foreground">{ab.nome}</span>
+                            <span className="rounded-full border border-border/70 px-2 py-0.5 text-[10px] text-muted-foreground">
+                              {BOSS_ABILITY_LABELS[ab.kind]}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      {isMaster ? (
+                        <Textarea
+                          value={ab.texto}
+                          onChange={(e) => updateAbility(boss.id, ab.id, { texto: e.target.value })}
+                          placeholder="Efeito da habilidade…"
+                          className="mt-2 min-h-[56px] text-xs"
+                        />
+                      ) : (
+                        ab.texto && <p className="mt-2 whitespace-pre-wrap text-xs text-muted-foreground">{ab.texto}</p>
+                      )}
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            )}
+
+            {tab === 'mestre' && isMaster && (
+              <>
+                <Field label="Notas privadas">
+                  <Textarea
+                    value={boss.segredos}
+                    onChange={(e) => update(boss.id, { segredos: e.target.value })}
+                    placeholder="Segredos, gatilhos de fase, fraqueza oculta…"
+                    className="min-h-[90px] text-xs"
+                  />
+                </Field>
+                <Field label="Recompensas">
+                  <Textarea
+                    value={boss.recompensas}
+                    onChange={(e) => update(boss.id, { recompensas: e.target.value })}
+                    className="min-h-[70px] text-xs"
+                  />
+                </Field>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={boss.visivel}
+                    onChange={(e) => update(boss.id, { visivel: e.target.checked })}
+                  />
+                  Ficha visível para os jogadores
+                </label>
+              </>
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+interface Props {
+  bossId: string | null;
+  isMaster: boolean;
+  onClose: () => void;
+}
+
+export function BossSheet({ bossId, isMaster, onClose }: Props) {
+  return (
     <Dialog open={!!bossId} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent
         className="max-w-3xl border-border/60 bg-card/95 p-0 backdrop-blur-xl overflow-hidden"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        {/* Cabeçalho com retrato e barra de vida */}
-        <div className="relative">
-          <div className="absolute inset-0 gradient-mystic opacity-20" aria-hidden />
-          <div className="relative flex items-start gap-4 p-5">
-            <motion.div
-              initial={{ scale: 0.85, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 220, damping: 20 }}
-              className="relative shrink-0"
-            >
-              <div className="h-24 w-24 overflow-hidden rounded-full border-2 border-accent/60 shadow-[0_0_28px_-6px_hsl(var(--primary)/0.9)]">
-                {boss.retrato ? (
-                  <img src={boss.retrato} alt={boss.nome} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-secondary/60">
-                    <Skull className="h-9 w-9 text-muted-foreground" />
-                  </div>
-                )}
-              </div>
-              {isMaster && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => fileRef.current?.click()}
-                    title="Trocar retrato"
-                    className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-all hover:scale-110 hover:text-foreground"
-                  >
-                    <ImageIcon className="h-3.5 w-3.5" />
-                  </button>
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    accept="image/*"
-                    hidden
-                    onChange={(e) => pickPortrait(e.target.files?.[0])}
-                  />
-                </>
-              )}
-            </motion.div>
-
-            <div className="min-w-0 flex-1">
-              {isMaster ? (
-                <>
-                  <Input
-                    value={boss.nome}
-                    onChange={(e) => update(boss.id, { nome: e.target.value })}
-                    className="h-9 border-transparent bg-transparent px-0 text-xl font-bold focus-visible:border-border"
-                    style={{ fontFamily: "'Cinzel Decorative', serif" }}
-                  />
-                  <Input
-                    value={boss.titulo ?? ''}
-                    onChange={(e) => update(boss.id, { titulo: e.target.value })}
-                    placeholder="Epíteto / título"
-                    className="h-7 border-transparent bg-transparent px-0 text-xs italic text-muted-foreground focus-visible:border-border"
-                  />
-                </>
-              ) : (
-                <>
-                  <h2 className="truncate text-xl font-bold text-gradient-mystic" style={{ fontFamily: "'Cinzel Decorative', serif" }}>
-                    {boss.nome}
-                  </h2>
-                  {boss.titulo && <p className="text-xs italic text-muted-foreground">{boss.titulo}</p>}
-                </>
-              )}
-
-              <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-semibold tracking-wide', tierAccent)}>
-                  {see('patamar') ? boss.patamar : HIDDEN}
-                </span>
-                <RevealToggle field="patamar" />
-                <span className="rounded-full border border-border/70 bg-secondary/50 px-2 py-0.5 text-[10px] text-muted-foreground">
-                  ND {see('nd') ? boss.nd : HIDDEN}
-                </span>
-                <RevealToggle field="nd" />
-                <span className="rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
-                  {BOSS_STATE_LABELS[boss.estado]}
-                </span>
-              </div>
-
-              {/* Barra de vida fluida */}
-              <div className="mt-3">
-                <div className="mb-1 flex items-center justify-between text-[10px] text-muted-foreground">
-                  <span className="flex items-center gap-1"><Heart className="h-3 w-3 text-hp" /> Vitalidade</span>
-                  <span>{see('pv') ? `${boss.pv} / ${boss.pvMax}` : HIDDEN}</span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-secondary/70">
-                  <motion.div
-                    className="h-full rounded-full bg-hp shadow-[0_0_12px_hsl(var(--hp)/0.8)]"
-                    initial={false}
-                    animate={{ width: `${(see('pv') ? hp : 1) * 100}%` }}
-                    transition={{ type: 'spring', stiffness: 120, damping: 22 }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-          <div className="ornament-divider h-px w-full" aria-hidden />
-        </div>
-
-        {/* Abas */}
-        <div className="flex gap-1 px-4 pt-3">
-          {(() => {
-            const tabs: { id: typeof tab; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
-              { id: 'geral', label: 'Geral', Icon: Sparkles },
-              { id: 'combate', label: 'Combate', Icon: Shield },
-              { id: 'habilidades', label: 'Habilidades', Icon: Swords },
-            ];
-            if (isMaster) tabs.push({ id: 'mestre', label: 'Mestre', Icon: EyeOff });
-            return tabs;
-          })().map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setTab(id)}
-              className={cn(
-                'relative flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition-all duration-200',
-                tab === id
-                  ? 'bg-primary/15 text-primary font-semibold'
-                  : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
-              )}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {label}
-              {tab === id && (
-                <motion.span layoutId="boss-tab" className="absolute inset-x-2 -bottom-px h-px bg-accent" />
-              )}
-            </button>
-          ))}
-        </div>
-
-        <div className="max-h-[52vh] overflow-y-auto px-5 pb-5 pt-3 scrollbar-thin">
-          <AnimatePresence mode="wait">
-            <motion.div key={tab} {...fade} transition={{ duration: 0.18 }} className="space-y-4">
-              {tab === 'geral' && (
-                <>
-                  <Field label="Descrição" reveal={<RevealToggle field="descricao" />}>
-                    {isMaster ? (
-                      <Textarea
-                        value={boss.descricao}
-                        onChange={(e) => update(boss.id, { descricao: e.target.value })}
-                        placeholder="Aparência, comportamento, lenda…"
-                        className="min-h-[90px] text-xs"
-                      />
-                    ) : (
-                      <p className="whitespace-pre-wrap text-xs text-muted-foreground">
-                        {see('descricao') ? boss.descricao || '—' : HIDDEN}
-                      </p>
-                    )}
-                  </Field>
-
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <Field label="Tamanho">
-                      {isMaster ? (
-                        <Input value={boss.tamanho} onChange={(e) => update(boss.id, { tamanho: e.target.value })} className="h-8 text-xs" />
-                      ) : (
-                        <p className="text-xs text-muted-foreground">{boss.tamanho || '—'}</p>
-                      )}
-                    </Field>
-                    <Field label="Tipo">
-                      {isMaster ? (
-                        <Input value={boss.tipo} onChange={(e) => update(boss.id, { tipo: e.target.value })} className="h-8 text-xs" />
-                      ) : (
-                        <p className="text-xs text-muted-foreground">{boss.tipo || '—'}</p>
-                      )}
-                    </Field>
-                    <Field label="Patamar">
-                      {isMaster ? (
-                        <select
-                          value={boss.patamar}
-                          onChange={(e) => update(boss.id, { patamar: e.target.value as Boss['patamar'] })}
-                          className="h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
-                        >
-                          {BOSS_TIERS.map((t) => <option key={t} value={t}>{t}</option>)}
-                        </select>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">{see('patamar') ? boss.patamar : HIDDEN}</p>
-                      )}
-                    </Field>
-                  </div>
-
-                  {isMaster && (
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <Field label="Estado">
-                        <select
-                          value={boss.estado}
-                          onChange={(e) => update(boss.id, { estado: e.target.value as Boss['estado'] })}
-                          className="h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
-                        >
-                          {BOSS_STATES.map((s) => <option key={s} value={s}>{BOSS_STATE_LABELS[s]}</option>)}
-                        </select>
-                      </Field>
-                      <Field label="ND">
-                        <Input
-                          type="number"
-                          value={boss.nd}
-                          onChange={(e) => update(boss.id, { nd: Number(e.target.value) || 0 })}
-                          className="h-8 text-xs"
-                        />
-                      </Field>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {tab === 'combate' && (
-                <>
-                  <div className="grid gap-3 sm:grid-cols-4">
-                    <Stat label="PV" value={see('pv') ? boss.pv : HIDDEN} editable={isMaster}
-                      onChange={(v) => update(boss.id, { pv: v })} reveal={<RevealToggle field="pv" />} />
-                    <Stat label="PV máx." value={see('pv') ? boss.pvMax : HIDDEN} editable={isMaster}
-                      onChange={(v) => update(boss.id, { pvMax: v })} />
-                    <Stat label="Defesa" value={see('defesa') ? boss.defesa : HIDDEN} editable={isMaster}
-                      onChange={(v) => update(boss.id, { defesa: v })} reveal={<RevealToggle field="defesa" />} />
-                    <Stat label="RD geral" value={see('rd') ? boss.rdGeral : HIDDEN} editable={isMaster}
-                      onChange={(v) => update(boss.id, { rdGeral: v })} reveal={<RevealToggle field="rd" />} />
-                  </div>
-
-                  <Field label="Fraquezas" reveal={<RevealToggle field="fraquezas" />}>
-                    <DamagePicker
-                      selected={boss.fraquezas}
-                      readOnly={!isMaster}
-                      hidden={!see('fraquezas')}
-                      tone="weak"
-                      onToggle={(t) => toggleDamage(boss.fraquezas, t, 'fraquezas')}
-                    />
-                  </Field>
-
-                  <Field label="Resistências" reveal={<RevealToggle field="resistencias" />}>
-                    <DamagePicker
-                      selected={boss.resistencias}
-                      readOnly={!isMaster}
-                      hidden={!see('resistencias')}
-                      tone="strong"
-                      onToggle={(t) => toggleDamage(boss.resistencias, t, 'resistencias')}
-                    />
-                  </Field>
-
-                  {isMaster && (
-                    <Field label="Tática do Mestre">
-                      <Textarea
-                        value={boss.tatica}
-                        onChange={(e) => update(boss.id, { tatica: e.target.value })}
-                        placeholder="Como o chefe age em combate…"
-                        className="min-h-[70px] text-xs"
-                      />
-                    </Field>
-                  )}
-                </>
-              )}
-
-              {tab === 'habilidades' && (
-                <div className="space-y-2">
-                  {isMaster && (
-                    <Button size="sm" variant="secondary" onClick={() => addAbility(boss.id)} className="h-7 text-xs">
-                      <Plus className="mr-1 h-3 w-3" /> Nova habilidade
-                    </Button>
-                  )}
-                  {abilities.length === 0 && (
-                    <p className="text-xs text-muted-foreground">Nenhuma habilidade revelada.</p>
-                  )}
-                  <AnimatePresence initial={false}>
-                    {abilities.map((ab) => (
-                      <motion.div
-                        key={ab.id}
-                        layout
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="rounded-lg border border-border/70 bg-secondary/30 p-3 transition-colors hover:border-accent/50"
-                      >
-                        <div className="flex items-center gap-2">
-                          {isMaster ? (
-                            <>
-                              <Input
-                                value={ab.nome}
-                                onChange={(e) => updateAbility(boss.id, ab.id, { nome: e.target.value })}
-                                className="h-7 flex-1 text-xs font-semibold"
-                              />
-                              <select
-                                value={ab.kind}
-                                onChange={(e) => updateAbility(boss.id, ab.id, { kind: e.target.value as BossAbilityKind })}
-                                className="h-7 rounded-md border border-border bg-background px-1 text-[10px]"
-                              >
-                                {Object.entries(BOSS_ABILITY_LABELS).map(([k, l]) => (
-                                  <option key={k} value={k}>{l}</option>
-                                ))}
-                              </select>
-                              <button
-                                type="button"
-                                onClick={() => updateAbility(boss.id, ab.id, { revelada: !ab.revelada })}
-                                className={cn('rounded p-1 transition-colors', ab.revelada ? 'text-accent' : 'text-muted-foreground/60')}
-                                title={ab.revelada ? 'Visível para jogadores' : 'Oculta'}
-                              >
-                                {ab.revelada ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => removeAbility(boss.id, ab.id)}
-                                className="rounded p-1 text-muted-foreground transition-colors hover:text-destructive"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <span className="flex-1 text-xs font-semibold text-foreground">{ab.nome}</span>
-                              <span className="rounded-full border border-border/70 px-2 py-0.5 text-[10px] text-muted-foreground">
-                                {BOSS_ABILITY_LABELS[ab.kind]}
-                              </span>
-                            </>
-                          )}
-                        </div>
-                        {isMaster ? (
-                          <Textarea
-                            value={ab.texto}
-                            onChange={(e) => updateAbility(boss.id, ab.id, { texto: e.target.value })}
-                            placeholder="Efeito da habilidade…"
-                            className="mt-2 min-h-[56px] text-xs"
-                          />
-                        ) : (
-                          ab.texto && <p className="mt-2 whitespace-pre-wrap text-xs text-muted-foreground">{ab.texto}</p>
-                        )}
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </div>
-              )}
-
-              {tab === 'mestre' && isMaster && (
-                <>
-                  <Field label="Notas privadas">
-                    <Textarea
-                      value={boss.segredos}
-                      onChange={(e) => update(boss.id, { segredos: e.target.value })}
-                      placeholder="Segredos, gatilhos de fase, fraqueza oculta…"
-                      className="min-h-[90px] text-xs"
-                    />
-                  </Field>
-                  <Field label="Recompensas">
-                    <Textarea
-                      value={boss.recompensas}
-                      onChange={(e) => update(boss.id, { recompensas: e.target.value })}
-                      className="min-h-[70px] text-xs"
-                    />
-                  </Field>
-                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <input
-                      type="checkbox"
-                      checked={boss.visivel}
-                      onChange={(e) => update(boss.id, { visivel: e.target.checked })}
-                    />
-                    Ficha visível para os jogadores
-                  </label>
-                </>
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
+        {bossId && <BossSheetContent bossId={bossId} isMaster={isMaster} onClose={onClose} />}
       </DialogContent>
     </Dialog>
   );
@@ -529,8 +563,8 @@ function DamagePicker({
               on
                 ? tone === 'weak'
                   ? 'border-hp/60 bg-hp/15 text-hp'
-                  : 'border-accent/60 bg-accent/15 text-accent'
-                : 'border-border/60 text-muted-foreground hover:border-accent/40 hover:text-foreground',
+                  : 'border-accent/60 bg-accent/15 text-accent',
+              !on && 'border-border/60 text-muted-foreground hover:border-accent/40 hover:text-foreground',
               !readOnly && 'hover:scale-105',
             )}
           >
