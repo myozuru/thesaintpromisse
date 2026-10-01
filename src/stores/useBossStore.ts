@@ -160,7 +160,25 @@ export const useBossStore = create<BossState>()(
       list: () =>
         Object.values(get().bosses).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
     }),
-    { name: 'tp-bosses' },
+    {
+      name: 'tp-bosses',
+      version: 1,
+      // Patamares antigos (Graus/Semi-Especial) viram a nova lista
+      // (Lacaio/Capanga/Desafio/Especial/Santo/Calamidade) ao carregar.
+      migrate: (persisted) => {
+        const state = (persisted ?? {}) as Partial<BossState> & { bosses?: Record<string, Boss> };
+        const bosses = state.bosses ?? {};
+        return {
+          ...state,
+          bosses: Object.fromEntries(
+            Object.entries(bosses).map(([id, boss]) => [
+              id,
+              boss.patamar in BOSS_TIERS_SET ? boss : { ...boss, patamar: normalizeBossTier(boss.patamar) },
+            ]),
+          ),
+        } as BossState;
+      },
+    },
   ),
 );
 
