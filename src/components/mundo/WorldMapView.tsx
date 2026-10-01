@@ -15,7 +15,6 @@ import { canSeeField } from '@/lib/bosses';
 import { BossGallery } from './BossGallery';
 import { BossSheetContent } from './BossSheet';
 
-const MIN_SCALE = 0.4;
 const MAX_SCALE = 6;
 
 interface Ping { id: string; x: number; y: number }
@@ -50,6 +49,37 @@ export function WorldMapView() {
   const [showGallery, setShowGallery] = useState(false);
   const [pings, setPings] = useState<Ping[]>([]);
   const [view, setView] = useState({ scale: 1, x: 0, y: 0 });
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  /** A imagem ocupa 100% da largura da área no zoom 1; a altura segue a proporção. */
+  const baseSize = useCallback(() => {
+    const el = viewRef.current;
+    const img = imgRef.current;
+    if (!el || !img || !img.naturalWidth) return null;
+    const r = el.getBoundingClientRect();
+    const w = r.width;
+    return { w, h: (w * img.naturalHeight) / img.naturalWidth, vw: r.width, vh: r.height };
+  }, []);
+
+  /** Zoom mínimo: mapa inteiro visível, sem sobrar espaço vazio. */
+  const fitScale = useCallback(() => {
+    const b = baseSize();
+    if (!b) return 1;
+    return Math.max(1, b.vh / b.h);
+  }, [baseSize]);
+
+  /** Mantém o mapa sempre cobrindo a área, sem bordas vazias. */
+  const clampView = useCallback((v: { scale: number; x: number; y: number }) => {
+    const b = baseSize();
+    if (!b) return v;
+    const min = Math.max(1, b.vh / b.h);
+    const scale = Math.max(min, Math.min(MAX_SCALE, v.scale));
+    const w = b.w * scale;
+    const h = b.h * scale;
+    const x = w <= b.vw ? (b.vw - w) / 2 : Math.min(0, Math.max(b.vw - w, v.x));
+    const y = h <= b.vh ? (b.vh - h) / 2 : Math.min(0, Math.max(b.vh - h, v.y));
+    return { scale, x, y };
+  }, [baseSize]);
   const dragRef = useRef<{ id: string; moved: boolean } | null>(null);
   const panRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
 
@@ -75,13 +105,13 @@ export function WorldMapView() {
     const px = cx ?? r.left + r.width / 2;
     const py = cy ?? r.top + r.height / 2;
     setView((v) => {
-      const next = Math.max(MIN_SCALE, Math.min(MAX_SCALE, v.scale * factor));
+      const next = v.scale * factor;
       const k = next / v.scale;
       const ox = px - r.left;
       const oy = py - r.top;
-      return { scale: next, x: ox - (ox - v.x) * k, y: oy - (oy - v.y) * k };
+      return clampView({ scale: next, x: ox - (ox - v.x) * k, y: oy - (oy - v.y) * k });
     });
-  }, []);
+  }, [clampView]);
 
   // Zoom pela roda do mouse sem rolar a página.
   useEffect(() => {
@@ -89,7 +119,8 @@ export function WorldMapView() {
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      zoomAt(e.deltaY < 0 ? 1.12 : 1 / 1.12, e.clientX, e.clientY);
+      const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1);
+      zoomAt(Math.exp(-dy * 0.0018), e.clientX, e.clientY);
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
@@ -114,7 +145,7 @@ export function WorldMapView() {
   };
 
   return (
-    <div className="space-y-3 animate-fade-in">
+    <div className="space-y-2 animate-fade-in">
       {isMaster && (
         <div className="flex flex-wrap items-center gap-2">
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => onUpload(e.target.files?.[0])} />
@@ -150,7 +181,7 @@ export function WorldMapView() {
           {/* Área navegável */}
           <div
             ref={viewRef}
-            className={`relative h-[70vh] min-w-0 flex-1 select-none overflow-hidden rounded-xl border border-border bg-background/60 ${placing ? 'cursor-crosshair' : 'cursor-grab'}`}
+            className={`relative h-[80vh] min-w-0 flex-1 select-none overflow-hidden rounded-xl border border-border bg-background/60 ${placing ? 'cursor-crosshair' : 'cursor-grab'}`}
             onContextMenu={addPing}
             onPointerDown={(e) => {
               if (placing || e.button !== 0) return;
@@ -166,7 +197,7 @@ export function WorldMapView() {
               }
               const pan = panRef.current;
               if (!pan) return;
-              setView((v) => ({ ...v, x: pan.ox + (e.clientX - pan.x), y: pan.oy + (e.clientY - pan.y) }));
+              setView((v) => clampView({ ...v, x: pan.ox + (e.clientX - pan.x), y: pan.oy + (e.clientY - pan.y) }));
             }}
             onPointerUp={() => {
               panRef.current = null;
@@ -188,7 +219,14 @@ export function WorldMapView() {
               className="absolute left-0 top-0 origin-top-left"
               style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`, width: '100%' }}
             >
-              <img src={worldMap} alt="Mapa do mundo" className="block w-full" draggable={false} />
+              <img
+                ref={imgRef}
+                src={worldMap}
+                alt="Mapa do mundo"
+                className="block w-full"
+                draggable={false}
+                onLoad={() => setView((v) => clampView({ ...v, scale: fitScale(), x: 0, y: 0 }))}
+              />
 
               {/* Marcações do botão direito */}
               <AnimatePresence>
@@ -267,7 +305,7 @@ export function WorldMapView() {
               <button type="button" title="Afastar" onClick={() => zoomAt(1 / 1.25)} className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
                 <ZoomOut className="h-4 w-4" />
               </button>
-              <button type="button" title="Enquadrar" onClick={() => setView({ scale: 1, x: 0, y: 0 })} className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+              <button type="button" title="Enquadrar" onClick={() => setView(clampView({ scale: fitScale(), x: 0, y: 0 }))} className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
                 <Maximize2 className="h-4 w-4" />
               </button>
             </div>
@@ -286,7 +324,7 @@ export function WorldMapView() {
                 animate={{ width: 380, opacity: 1 }}
                 exit={{ width: 0, opacity: 0 }}
                 transition={{ type: 'spring', stiffness: 220, damping: 28 }}
-                className="h-[70vh] shrink-0 overflow-hidden rounded-xl border border-border bg-card/95 backdrop-blur-xl"
+                className="h-[80vh] shrink-0 overflow-hidden rounded-xl border border-border bg-card/95 backdrop-blur-xl"
               >
                 <div className="h-full w-[380px]">
                   <BossSheetContent bossId={openId} isMaster={isMaster} onClose={() => setOpenId(null)} inline />
