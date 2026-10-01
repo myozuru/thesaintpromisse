@@ -1,3 +1,4 @@
+import { ReplicaSustentacaoPrompt } from '@/components/fichas/ReplicasSection';
 import { useState, useEffect } from 'react';
 import { playFichaCreateSound, playCategoryToggleSound, playDiceSound } from '@/lib/sounds';
 import { useCharacterStore } from '@/stores/useCharacterStore';
@@ -202,6 +203,7 @@ export function FichasModule() {
       <IndomavelPrompt />
       <ZonaRiscoPrompt />
       <PreparoImediatoPrompt />
+      <ReplicaSustentacaoPrompt />
 
       <ModuleHeader
         icon={ScrollText}
