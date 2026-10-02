@@ -23,9 +23,9 @@ async def main():
         await pg.goto("http://localhost:8080")
         await pg.evaluate(f"localStorage.setItem({json.dumps(os.environ['LOVABLE_BROWSER_SUPABASE_STORAGE_KEY'])},{json.dumps(os.environ['LOVABLE_BROWSER_SUPABASE_SESSION_JSON'])})")
         await pg.goto("http://localhost:8080"); await pg.wait_for_timeout(6000)
-        await pg.mouse.click(640, 400); await pg.wait_for_timeout(3000)
+        
         out = await pg.evaluate("""async ()=>{
-          const cs=window.__charStore, ms=window.__mapStore, os=window.__omniEntStore||(await import('/src/stores/useOmniEntidadesStore.ts')).useOmniEntidadesStore, cb=window.__combatStore;
+          const cs=window.__charStore, ms=window.__mapStore, os=window.__omniEntStore, cb=window.__combatStore;
           const D=(ms.getState().gridConfig.dpi||50), mpc=ms.getState().gridConfig.metersPerCell||1.5;
           const src=cs.getState().characters[0]||{};
           const base={...src,temporary:false,escCurrent:0,escMax:0,activeConditions:[],conditions:[],rd:0,isDead:false,dead:false,chosenSpecAbilities:[],omniCounters:{}};
@@ -49,8 +49,9 @@ async def main():
           const wait=(ms)=>new Promise(r=>setTimeout(r,ms));
           const get=(id)=>cs.getState().characters.find(c=>c.id===id);
           const hit=async(id,atk)=>{cs.getState().applyDamage(id,2,undefined,{attackerId:atk,ignoresRD:true});await wait(150);};
-          const {montarVariaveisDoPersonagem}=await import('/src/lib/omni/resolvedor.ts');
-          const {dispararGatilhoEfeitosItens}=await import('/src/lib/omni/triggerEfeitos.ts');
+          await hit('portador','inimigo'); cs.getState().updateCharacter('portador',{hpCurrent:60,omniCounters:{}});
+          for(let i=0;i<30&&!window.__omniTrigger;i++) await wait(100);
+          const {montarVariaveisDoPersonagem,dispararGatilhoEfeitosItens}=window.__omniTrigger;
           const treino=montarVariaveisDoPersonagem(get('portador'),'USUARIO').USUARIO_TREINO;
           const r={D,mpc,treino};
           for(let i=0;i<treino+2;i++) await hit('aliadoPerto','inimigo');

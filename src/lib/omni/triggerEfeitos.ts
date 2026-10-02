@@ -271,3 +271,8 @@ export function dispararGatilhoEfeitosItens(
   console.groupEnd();
   return aplicados;
 }
+
+// Dev-only hook for browser tests (never in production builds).
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  (window as unknown as Record<string, unknown>).__omniTrigger = { dispararGatilhoEfeitosItens, montarVariaveisDoPersonagem };
+}
