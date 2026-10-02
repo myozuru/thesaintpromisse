@@ -99,6 +99,7 @@ const ATALHOS_PT_BR: Record<string, string> = {
   energiamax: 'PE_MAX',
   defesa: 'DEFESA',
   deslocamento: 'DESLOCAMENTO',
+  desloc: 'DESLOCAMENTO',
   exaustao: 'EXAUSTAO',
   nivel: 'NIVEL',
   treino: 'TREINO',

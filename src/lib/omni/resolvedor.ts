@@ -22,6 +22,7 @@ import { useMapStore } from '@/stores/useMapStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { findWeaponByName } from '@/lib/weapons';
 import { ALL_CONDITIONS } from '@/types/conditions';
+import { canonicalizarChave, expandirParaCaminhoLegado } from './keyAliases';
 
 
 
@@ -90,7 +91,7 @@ export function projetarPersonagemParaOmni(c: Character): Record<string, unknown
     deslocamento: c.movement ?? 0,
     defesa: c.ca ?? 0,
     bonusTreinamento: c.trainingBonus ?? getTrainingBonusByLevel(level),
-    nivelExaustao: 0,
+    nivelExaustao: c.exhaustionLevel ?? 0,
     nivel: level,
   };
   const pericias: Record<string, number> = {};
@@ -109,14 +110,21 @@ export function projetarPersonagemParaOmni(c: Character): Record<string, unknown
 
 /** Lê um caminho Omni diretamente do Character. */
 export function lerCaminhoOmni(c: Character, caminho: string): number {
+  const chave = canonicalizarChave(caminho);
+  if (!chave) return 0;
+  let legado = expandirParaCaminhoLegado(chave);
+  if (chave.startsWith('pericia_')) legado = `pericias.${chave.slice('pericia_'.length)}`;
+  if (/^(fortitude|reflexos|integridade|astucia|vontade)$/.test(chave)) legado = `tr.${chave}`;
   const proj = projetarPersonagemParaOmni(c);
-  const v = lerCaminho(proj, caminho);
+  const v = lerCaminho(proj, legado);
   if (typeof v === 'number') return v;
   if (v && typeof v === 'object' && 'value' in (v as Record<string, unknown>)) {
     const inner = (v as Record<string, unknown>).value;
     if (typeof inner === 'number') return inner;
   }
-  return 0;
+  // Keys derivadas, flags e contadores usam a mesma fonte das fórmulas.
+  const variaveis = montarVariaveisDoPersonagem(c);
+  return variaveis[chave.toUpperCase()] ?? 0;
 }
 
 /**

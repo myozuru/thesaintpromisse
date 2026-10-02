@@ -9,11 +9,18 @@ import type { EntidadeOmni, AcaoLogica, BlocoLogico, GatilhoEntidade, ValorDinam
 import { canonicalizarChave } from './keyAliases';
 
 function canonExpr(expr: string): string {
-  // Substitui caminhos profundos ("status.vida.atual", "atributos.forca")
-  // dentro da string da fórmula por suas formas canônicas curtas.
-  return expr.replace(/[a-zA-Z]+(?:\.[a-zA-Z]+){1,3}/g, (m) => {
-    const c = canonicalizarChave(m);
-    return c || m;
+  // Canonicaliza o caminho, preservando quem fornece o valor. CENA/ITEM
+  // têm namespaces próprios e não usam os aliases de personagem.
+  return expr.replace(/@?[A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_]*(?:\.[A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_]*)+/g, (m) => {
+    const scoped = m.match(/^(@?)(USUARIO|ALVO|CENA|AREA|ITEM)\.(.+)$/i);
+    if (scoped) {
+      const [, at, escopo, caminho] = scoped;
+      if (!/^(USUARIO|ALVO)$/i.test(escopo)) return m;
+      return `${at}${escopo.toUpperCase()}.${canonicalizarChave(caminho) || caminho}`;
+    }
+    const at = m.startsWith('@') ? '@' : '';
+    const caminho = at ? m.slice(1) : m;
+    return `${at}${canonicalizarChave(caminho) || caminho}`;
   });
 }
 
