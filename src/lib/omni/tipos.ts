@@ -259,7 +259,18 @@ export interface CustoRecursosAtivo {
   pe_por_turno?: string;
 }
 
+export type GatilhoReacaoAtiva = 'quando_inimigo_entrar_alcance' | 'quando_inimigo_sair_alcance' | 'quando_alvo_declarar_ataque' | 'quando_ataque_errar' | 'quando_inimigo_conjurar';
+export interface ReacaoAtivaConfig {
+  gatilho: GatilhoReacaoAtiva;
+  alcance_m: number;
+  protegido: 'usuario' | 'aliados' | 'todos';
+  alvo: 'origem' | 'protegido' | 'usuario';
+  cancelar_evento?: boolean;
+  defesa_bonus?: number;
+}
+
 export interface AcaoAtivaConfig {
+  reacao?: ReacaoAtivaConfig;
   custo_recursos?: CustoRecursosAtivo;
   mod_acerto?: number;
   id: string;

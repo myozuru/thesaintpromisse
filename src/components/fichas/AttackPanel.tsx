@@ -598,7 +598,7 @@ export function AttackPanel({ character: cProp }: Props) {
     const ctx = buildAttackContext({
       attacker: c,
       weapon: mainWeapon,
-      targetDefense: targetDef,
+      targetDefense: targetDef, targetId: isReroll ? undefined : target?.id,
       situation: {
         pistoleiro: pistoleiroUsado,
         precisaoPe: temPrecisao ? precisaoPe : 0,
@@ -633,6 +633,7 @@ export function AttackPanel({ character: cProp }: Props) {
     let result: AttackResult;
     try {
       result = await rollAttack(ctx);
+      if (result.cancelled) { addLog('combat', '⛔ Ataque interrompido.'); setPhase('idle'); return; }
     } catch (error) {
       console.error('[AttackPanel] falha ao concluir rolagem:', error);
       setPhase('idle');
@@ -698,7 +699,7 @@ export function AttackPanel({ character: cProp }: Props) {
           const alvo2 = g.amploTarget;
           const def2 = computeTotalDefense(alvo2, { items, omniInventory: omniInventoryList, omniEntidadesMap, omniRuntimeEffects: omniRuntimeEffectsList }, attackKind);
           const ctx2 = buildAttackContext({
-            attacker: c, weapon: mainWeapon, targetDefense: def2,
+            attacker: c, weapon: mainWeapon, targetDefense: def2, targetId: alvo2.id,
             situation: { ...ctx.situation, targetUnaware: false, arteExecucao: false, devastacaoHit: 0 },
             trainedRanges: [
               ...(c.meleeTrained ? (['melee'] as const) : []),
@@ -932,7 +933,7 @@ export function AttackPanel({ character: cProp }: Props) {
     const furtivo = escondidoDe(eu, alvo.id);
     const unaware = ids.has('desprevenido') || ids.has('agarrado') || ids.has('atordoado') || escondidoDe(eu, alvo.id);
     const ctx = buildAttackContext({
-      attacker: eu, weapon: arma, targetDefense: def,
+      attacker: eu, weapon: arma, targetDefense: def, targetId: alvo.id,
       situation: {
         previousAttacksThisTurn: eu.attacksThisTurn ?? 0, previousMissed: eu.lastAttackHit === false,
         targetUnaware: unaware, targetProne: ids.has('caido'), preferredAbility: pickAttackAbility(eu, arma),
@@ -1091,7 +1092,7 @@ export function AttackPanel({ character: cProp }: Props) {
       'ranged',
     );
     const ctx2 = buildAttackContext({
-      attacker: c, weapon: arma, targetDefense: def2,
+      attacker: c, weapon: arma, targetDefense: def2, targetId: alvo2.id,
       situation: { preferredAbility: ability2, attackerIsGrappled },
       trainedRanges: [
         ...(c.meleeTrained ? (['melee'] as const) : []),
@@ -1141,7 +1142,7 @@ export function AttackPanel({ character: cProp }: Props) {
     try {
       for (const arma of [mainWeapon, offWeapon]) {
         const ctxT = buildAttackContext({
-          attacker: c, weapon: arma, targetDefense: targetDef,
+          attacker: c, weapon: arma, targetDefense: targetDef, targetId: target?.id,
           situation: { ...base, preferredAbility: pickAttackAbility(c, arma) },
           trainedRanges: trained,
         });

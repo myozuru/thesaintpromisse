@@ -72,6 +72,11 @@ const CondicionalAtivoSchema = z.object({
   desvantagem_tr_alvo: z.boolean().optional(), vantagem_acerto: z.boolean().optional(),
 });
 const AcaoAtivaSchema = z.object({
+  reacao: z.object({
+    gatilho: z.enum(['quando_inimigo_entrar_alcance', 'quando_inimigo_sair_alcance', 'quando_alvo_declarar_ataque', 'quando_ataque_errar', 'quando_inimigo_conjurar']),
+    alcance_m: z.number().finite().positive(), protegido: z.enum(['usuario', 'aliados', 'todos']),
+    alvo: z.enum(['origem', 'protegido', 'usuario']), cancelar_evento: z.boolean().optional(), defesa_bonus: z.number().finite().nonnegative().optional(),
+  }).optional(),
   id: z.string(), nome: z.string(), acao: z.enum(['comum', 'bonus', 'reacao', 'livre']),
   custo_recursos: z.object({
     pe_base: z.string().optional(), pe_por_intensificacao: z.string().optional(),

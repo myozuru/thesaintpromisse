@@ -1,3 +1,4 @@
+import { ReacoesAtivasOverlay } from '@/components/omni/ReacoesAtivasOverlay';
 import { useEffect } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -65,6 +66,7 @@ export default function TpFichasApp() {
         <AuthSync />
         {hasWorkspaceCloud ? <MultiplayerBridge /> : null}
         <Toaster />
+        <ReacoesAtivasOverlay />
         <Sonner />
         <Index />
         <Global3DDiceOverlay />

@@ -616,6 +616,7 @@ export const useCombatStore = create<CombatStore>()(
           st.setAoETargetPreview(null);
         });
 
+        import('@/lib/omni/reacoesAtivas').then(({ cancelarJanelasReacoesAtivas }) => cancelarJanelasReacoesAtivas());
         // Limpa estado de combate
         set((s) => ({
           inCombat: false,

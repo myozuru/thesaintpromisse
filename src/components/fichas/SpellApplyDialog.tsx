@@ -1,3 +1,4 @@
+import { abrirJanelaReacaoAtiva, ofertasReacaoAtiva } from '@/lib/omni/reacoesAtivas';
 import { consumeCritNegated } from '@/lib/suporteNegacao';
 import { implementoMarcialBonus } from '@/lib/golpeEspecial';
 import { useState, useEffect, useRef } from 'react';
@@ -58,6 +59,10 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
   const items = useItemStore((s) => s.items);
   const addLog = useLogStore((s) => s.addLog);
   const isMaster = useRoleStore((s) => s.role) === 'MASTER';
+  const janelaCastRef = useRef(false);
+  const defesaReacaoRef = useRef<Record<string, number>>({});
+  const montadoRef = useRef(true);
+  useEffect(() => { montadoRef.current = true; return () => { montadoRef.current = false; }; }, []);
   const [selectedIds, setSelectedIds] = useState<string[]>(initialTargetIds ?? []);
   const [phase, setPhase] = useState<'select' | 'sustain_confirm' | 'saves' | 'attacks' | 'done'>('select');
   const [pendingNext, setPendingNext] = useState<'saves' | 'attacks' | 'direct' | null>(null);
@@ -305,6 +310,8 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
     fundOutcome.asBonusAction && spell.actionType === 'action' ? 'bonus' : spell.actionType;
 
   const canCast = () => {
+    const source = useCharacterStore.getState().characters.find(c => c.id === sourceCharId);
+    if (!source || (source.hpCurrent ?? 1) <= 0) return false;
     if (!spellLevelAllowed) return false;
     if (currentCooldown > 0) return false;
     if (source.peCurrent < effectiveCostPE) return false;
@@ -404,13 +411,19 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
     autoFiredRef.current = true;
     // Área sem nenhum alvo atingido: consome PE/ação, loga "nenhum acerto" e fecha.
     if (areaMode && selectedIds.length === 0) {
-      const updates: Partial<typeof source> = { peCurrent: source.peCurrent - effectiveCostPE };
+      void (async () => {
+      const evento = { gatilho: 'quando_inimigo_conjurar' as const, origemId: sourceCharId };
+      const janela = ofertasReacaoAtiva(evento).length ? await abrirJanelaReacaoAtiva(evento) : { cancelado: false };
+      if (!montadoRef.current) return;
+      if (janela.cancelado || !canCast()) { onClose(); return; }
+      const updates: Partial<typeof source> = { peCurrent: (useCharacterStore.getState().characters.find(c => c.id === sourceCharId)?.peCurrent ?? 0) - effectiveCostPE };
       consumeActionUpdates(updates);
       updateCharacter(sourceCharId, withTecnicaMaximaCooldown(updates));
       emitFundLogLines();
       applySpecPostCast();
       addLog('spell', `✨ ${source.name} lança ${spell.name} em área — nenhum alvo atingido.`);
       onClose();
+      })();
       return;
     }
     let next: 'saves' | 'attacks' | 'direct';
@@ -428,7 +441,23 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
   }, [phase, selectedIds]);
 
 
-  const runNext = (next: 'saves' | 'attacks' | 'direct') => {
+  const runNext = async (next: 'saves' | 'attacks' | 'direct') => {
+    if (janelaCastRef.current) return;
+    janelaCastRef.current = true;
+    try {
+      const evento = { gatilho: 'quando_inimigo_conjurar' as const, origemId: sourceCharId };
+      const janela = ofertasReacaoAtiva(evento).length ? await abrirJanelaReacaoAtiva(evento) : { cancelado: false };
+      if (!montadoRef.current) return;
+      if (janela.cancelado || !canCast()) { addLog('spell', `⛔ ${spell.name}: conjuração interrompida ou recursos indisponíveis.`); onClose(); return; }
+      defesaReacaoRef.current = {};
+      if (next === 'attacks') for (const id of selectedIds) {
+        const eventoAtaque = { gatilho: 'quando_alvo_declarar_ataque' as const, origemId: sourceCharId, protegidoId: id };
+        const defesa = ofertasReacaoAtiva(eventoAtaque).length ? await abrirJanelaReacaoAtiva(eventoAtaque) : { cancelado: false, defesaBonus: 0 };
+        if (!montadoRef.current) return;
+        if (defesa.cancelado || !canCast()) { addLog('spell', `⛔ ${spell.name}: ataque mágico interrompido.`); onClose(); return; }
+        defesaReacaoRef.current[id] = defesa.defesaBonus;
+      }
+
     if (next === 'direct') { handleCastDirect(); return; }
     if (next === 'saves') {
       setTargetSaves(selectedIds.map(id => {
@@ -443,11 +472,12 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
       }));
       setPhase('attacks');
     }
+    } finally { janelaCastRef.current = false; }
   };
 
   // CA efetiva do alvo: base + mod. DES + ½ nível + passivas + itens equipados + buffs ativos
   const getEffectiveCA = (targetId: string): number => {
-    const t = characters.find(c => c.id === targetId);
+    const t = useCharacterStore.getState().characters.find(c => c.id === targetId);
     if (!t) return 10;
     const desAttr = (t.attributes || []).find(a => a.name?.toUpperCase() === 'DES');
     const desMod = desAttr ? Math.floor((desAttr.value - 10) / 2) : 0;
@@ -496,7 +526,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
       const num = parseInt(value);
       let result: 'pending' | 'hit' | 'miss' | 'crit_hit' = 'pending';
       if (!isNaN(num)) {
-        const targetCA = getEffectiveCA(targetId);
+        const targetCA = getEffectiveCA(targetId) + (defesaReacaoRef.current[targetId] ?? 0);
         if (num >= targetCA) result = 'hit';
         else result = 'miss';
       }
@@ -519,7 +549,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
     const d20 = await rollD20Com(source.id);
     const bonus = getSourceAtkBonus();
     const total = d20 + bonus;
-    const targetCA = getEffectiveCA(targetId);
+    const targetCA = getEffectiveCA(targetId) + (defesaReacaoRef.current[targetId] ?? 0);
     const critMargin = source.critMargin || 20;
     let result: 'hit' | 'miss' | 'crit_hit' = total >= targetCA ? 'hit' : 'miss';
     if (d20 >= critMargin) result = 'crit_hit';
@@ -737,6 +767,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
   // (effectiveActionType já declarado acima, antes de canCast.)
 
   const consumeActionUpdates = (updates: Partial<typeof source>) => {
+    const source = useCharacterStore.getState().characters.find(c => c.id === sourceCharId)!;
     if (effectiveActionType === 'bonus') updates.bonusActionsCurrent = source.bonusActionsCurrent - 1;
     else if (effectiveActionType === 'action') updates.actionsCurrent = source.actionsCurrent - 1;
     else if (effectiveActionType === 'reaction') updates.reactionsCurrent = source.reactionsCurrent - 1;
@@ -780,12 +811,15 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
 
 
   const handleCastWithAttacks = async () => {
+    if (!canCast()) return;
     // Consume PE and actions
-    const updates: Partial<typeof source> = { peCurrent: source.peCurrent - effectiveCostPE };
+    const updates: Partial<typeof source> = { peCurrent: (useCharacterStore.getState().characters.find(c => c.id === sourceCharId)?.peCurrent ?? 0) - effectiveCostPE };
     consumeActionUpdates(updates);
     updateCharacter(sourceCharId, withTecnicaMaximaCooldown(updates));
     emitFundLogLines();
     applySpecPostCast();
+    for (const t of targetAttacks) if (t.result === 'miss') await abrirJanelaReacaoAtiva({ gatilho: 'quando_ataque_errar', origemId: sourceCharId, protegidoId: t.id });
+    if (!montadoRef.current) return;
 
     // Extract source buffs
     const activeBuffs = source.activeBuffs || [];
@@ -944,8 +978,9 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
   };
 
   const handleCastWithSaves = async () => {
+    if (!canCast()) return;
     // Consume action slot
-    const updates: Partial<typeof source> = { peCurrent: source.peCurrent - effectiveCostPE };
+    const updates: Partial<typeof source> = { peCurrent: (useCharacterStore.getState().characters.find(c => c.id === sourceCharId)?.peCurrent ?? 0) - effectiveCostPE };
     consumeActionUpdates(updates);
     updateCharacter(sourceCharId, withTecnicaMaximaCooldown(updates));
     emitFundLogLines();
@@ -1154,7 +1189,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
   const handleCastDirect = async () => {
     if (selectedIds.length === 0 || !canCast()) return;
 
-    const updates: Partial<typeof source> = { peCurrent: source.peCurrent - effectiveCostPE };
+    const updates: Partial<typeof source> = { peCurrent: (useCharacterStore.getState().characters.find(c => c.id === sourceCharId)?.peCurrent ?? 0) - effectiveCostPE };
     consumeActionUpdates(updates);
     updateCharacter(sourceCharId, withTecnicaMaximaCooldown(updates));
     emitFundLogLines();
@@ -1704,7 +1739,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
           <div className="space-y-1.5">
             {targetAttacks.map((ta) => {
               const target = characters.find(c => c.id === ta.id);
-              const targetCA = getEffectiveCA(ta.id);
+              const targetCA = getEffectiveCA(ta.id) + (defesaReacaoRef.current[ta.id] ?? 0);
               const isRolling = rollingAttackIds.has(ta.id);
               return (
                 <div key={ta.id} className={cn(

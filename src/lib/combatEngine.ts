@@ -1,3 +1,10 @@
+import { useMapStore } from '@/stores/useMapStore';
+import { checkWeaponRange, distanceBetweenChars } from './weaponRange';
+import { posturaAlcanceMult } from './posturas';
+import { extensaoAlcanceBonus } from './extensaoCorpo';
+import { useCharacterStore } from '@/stores/useCharacterStore';
+import { abrirJanelaReacaoAtiva } from './omni/reacoesAtivas';
+import { computeTotalDefense } from './defenseCalc';
 import { duelistaApplies, getDuelistaBonus, distanteApplies, getDistanteBonus, arremessadorApplies, getArremessadorDamage, duploApplies, getDuploDamage, massivoApplies, getMassivoDamage } from './combateEstilos';
 import { posturaAtaque } from '@/lib/posturas';
 import { execucaoSilenciosaDice } from './artesCombate';
@@ -15,9 +22,8 @@ import { consumeCritNegated } from '@/lib/suporteNegacao';
  *
  * Não-objetivos:
  *   - Posicionamento/grid (fica narrativo).
- *   - Reações automáticas que dependem do turno do oponente — para essas,
- *     expomos `evaluateReactionTriggers` que devolve uma lista de prompts
- *     a ser oferecida via `useReactionStore`.
+ * Reações OMNI com alvo identificado são aguardadas antes da rolagem e após erros.
+ * `evaluateReactionTriggers` preserva as sugestões legadas de talentos.
  */
 
 import type { Character } from '@/types';
@@ -91,6 +97,9 @@ export interface AttackSituation {
 
 
 export interface AttackContext {
+  targetId?: string;
+  alcanceM?: number;
+  ignorarReacoes?: boolean;
   attacker: Character;
   weapon: Weapon;
   /** Modificador de atributo já calculado (FOR ou DES). */
@@ -105,6 +114,7 @@ export interface AttackContext {
 }
 
 export interface AttackResult {
+  cancelled?: boolean;
   d20: number;
   /** Todos os d20 rolados no ataque. Em vantagem/desvantagem contém 2 valores. */
   attackRolls: number[];
@@ -332,8 +342,30 @@ export function getAbilityMod(c: Character, name: 'FOR' | 'DES'): number {
   return Math.floor(((a.value ?? 10) - 10) / 2);
 }
 
-/** Resolve um ataque completo. Não muta nada — devolve resultado puro. */
+/** Resolve ataque e janelas de reação; a aplicação do dano principal continua no chamador. */
 export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
+  if (ctx.targetId && !ctx.ignorarReacoes) {
+    const posicoes = () => Object.values(useMapStore.getState().entities).filter(e => e.characterId === ctx.attacker.id || e.characterId === ctx.targetId).map(e => `${e.id}:${e.x}:${e.y}`).join('|');
+    const posAntes = posicoes();
+    const antes = useCharacterStore.getState().characters.find(c => c.id === ctx.targetId);
+    const kind = ctx.weapon.range === 'melee' ? 'melee' : 'ranged';
+    const defesaAntes = antes ? computeTotalDefense(antes, {}, kind) : 0;
+    const janela = await abrirJanelaReacaoAtiva({ gatilho: 'quando_alvo_declarar_ataque', origemId: ctx.attacker.id, protegidoId: ctx.targetId });
+    const chars = useCharacterStore.getState().characters;
+    const atacante = chars.find(c => c.id === ctx.attacker.id), alvo = chars.find(c => c.id === ctx.targetId);
+    let foraDeAlcance = false;
+    if (atacante && alvo && posicoes() !== posAntes) {
+      const ms = useMapStore.getState();
+      const d = distanceBetweenChars(atacante.id, alvo.id, ms.entities, ms.gridConfig);
+      foraDeAlcance = ctx.alcanceM !== undefined ? ctx.alcanceM > 0 && (d === null || d > ctx.alcanceM + 0.05) : !!checkWeaponRange(atacante.id, alvo.id, ctx.weapon, ms.entities, ms.gridConfig, (atacante.meleeRangeBonus ?? 0) + extensaoAlcanceBonus(atacante), { casterProfileId: atacante.profileId, targetProfileId: alvo.profileId }, posturaAlcanceMult(atacante));
+    }
+    if (janela.cancelado || foraDeAlcance || !atacante || !alvo || (atacante.hpCurrent ?? 1) <= 0 || (alvo.hpCurrent ?? 1) <= 0) return {
+      cancelled: true, d20: 0, attackRolls: [], rollMode: 'normal', natural: 0, attackTotal: 0, hit: false, critical: false, criticalFail: false,
+      damageDice: '', damageRolls: [], damageTotal: 0, damageType: null, modifiers: [], notes: ['Ataque interrompido antes da rolagem.'], canRerollDamage: false,
+    };
+    ctx = { ...ctx, attacker: atacante, abilityMod: getAbilityMod(atacante, ctx.situation.preferredAbility ?? pickAttackAbility(atacante, ctx.weapon)), trainingBonus: atacante.trainingBonus ?? 0,
+      targetDefense: ctx.targetDefense + computeTotalDefense(alvo, {}, kind) - defesaAntes + janela.defesaBonus };
+  }
   const w = ctx.weapon;
   const dmgNotation = resolveWeaponDamage(w, ctx.situation.twoHanded) ?? '1d4';
   const baseDice = parseDamage(dmgNotation);
@@ -531,6 +563,7 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
   }
   if (jammed) notes.push(`🔧 ${w.name} EMPERROU (d20 ${natural} ≤ margem ${margemEmperrar(w, pistoleiroOn)}) — ação comum para desemperrar.`);
 
+  if (!hit && ctx.targetId && !ctx.ignorarReacoes) await abrirJanelaReacaoAtiva({ gatilho: 'quando_ataque_errar', origemId: ctx.attacker.id, protegidoId: ctx.targetId });
   return {
     d20: natural, attackRolls, rollMode, natural, attackTotal, hit, critical, criticalFail,
     emperrou: jammed,
@@ -636,6 +669,9 @@ export function shouldRecoverLuckOnEnemyNat20(c: Character): boolean {
 // ===== Construtor de contexto ==============================================
 
 export function buildAttackContext(opts: {
+  targetId?: string;
+  alcanceM?: number;
+  ignorarReacoes?: boolean;
   attacker: Character;
   weapon: Weapon;
   targetDefense: number;
@@ -650,6 +686,7 @@ export function buildAttackContext(opts: {
     (opts.trainedGroups?.includes(opts.weapon.group) ?? false) ||
     (opts.trainedRanges?.includes(opts.weapon.range) ?? false);
   return {
+    targetId: opts.targetId, alcanceM: opts.alcanceM, ignorarReacoes: opts.ignorarReacoes,
     attacker: opts.attacker,
     weapon: opts.weapon,
     abilityMod,

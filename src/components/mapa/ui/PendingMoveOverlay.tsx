@@ -1,3 +1,5 @@
+import { useRef, useState } from 'react';
+import { abrirJanelaReacaoAtiva, ofertasReacaoAtiva } from '@/lib/omni/reacoesAtivas';
 /**
  * PendingMoveOverlay — Confirma/cancela movimento em combate.
  *
@@ -18,6 +20,8 @@ import { isFreeformFor } from '@/lib/freeformMode';
 
 
 export function PendingMoveOverlay() {
+  const locked = useRef(false);
+  const [busy, setBusy] = useState(false);
   const pending = useMapStore((s) => s.pendingMove);
   const entities = useMapStore((s) => s.entities);
   const camera = useMapStore((s) => s.camera);
@@ -42,7 +46,20 @@ export function PendingMoveOverlay() {
   const total = isFreeform ? Infinity : (combatMoveBudget(character, isActiveTurn) ?? 0);
   const remaining = isFreeform ? Infinity : Math.max(0, total - used - pending.distM);
 
-  const confirm = () => {
+  const confirm = async () => {
+    if (locked.current) return;
+    locked.current = true; setBusy(true);
+    try {
+      const movimento = { de: { x: pending.startX, y: pending.startY }, para: { x: ent.x, y: ent.y } };
+      for (const gatilho of ['quando_inimigo_sair_alcance', 'quando_inimigo_entrar_alcance'] as const) {
+        const evento = { gatilho, origemId: pending.charId, movimento };
+        const r = ofertasReacaoAtiva(evento).length ? await abrirJanelaReacaoAtiva(evento) : { cancelado: false };
+        const atual = useMapStore.getState().entities[pending.entityId];
+        const ficha = useCharacterStore.getState().characters.find(c => c.id === pending.charId);
+        if (useMapStore.getState().pendingMove !== pending) return;
+        if (!atual || atual.x !== ent.x || atual.y !== ent.y) { setPendingMove(null); return; }
+        if (r.cancelado || (ficha?.hpCurrent ?? 1) <= 0) { cancel(); return; }
+      }
     addMovementUsed(pending.charId, pending.distM);
     // ─── Ataque de Oportunidade ──────────────────────────────────────────
     try {
@@ -74,6 +91,7 @@ export function PendingMoveOverlay() {
     // ─── Zona de Risco (Especialista em Combate) ─────────────────────────
     try { detectarZonaRisco(pending.charId); } catch { /* ignore */ }
     setPendingMove(null);
+    } finally { locked.current = false; setBusy(false); }
   };
   const cancel = () => {
     const patch = { x: pending.startX, y: pending.startY };
@@ -113,6 +131,7 @@ export function PendingMoveOverlay() {
         </div>
         <div className="flex items-center gap-1 rounded-full border border-border bg-card/95 backdrop-blur px-1 py-1 shadow-xl">
           <button
+            disabled={busy}
             onClick={confirm}
             title="Confirmar movimento"
             className="h-7 w-7 flex items-center justify-center rounded-full bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-200"
@@ -120,6 +139,7 @@ export function PendingMoveOverlay() {
             <Check className="h-3.5 w-3.5" />
           </button>
           <button
+            disabled={busy}
             onClick={cancel}
             title="Cancelar movimento"
             className="h-7 w-7 flex items-center justify-center rounded-full bg-rose-500/20 hover:bg-rose-500/40 text-rose-200"

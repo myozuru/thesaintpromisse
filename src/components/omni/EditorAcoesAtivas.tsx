@@ -1,3 +1,4 @@
+import { EditorReacoesAtivas } from './EditorReacoesAtivas';
 import { EditorCustosAtivos } from './EditorCustosAtivos';
 import { EditorCondicionaisAtivos } from './EditorCondicionaisAtivos';
 /** Editor no-code das ações ativas genéricas de uma entidade OMNI. */
@@ -107,6 +108,7 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
           )}
           <EditorCustosAtivos acao={a} onChange={p => set(i, p)} />
           {a.teste === 'ataque' && <label className="text-xs">Modificador de acerto<Input aria-label="Modificador de acerto" type="number" value={a.mod_acerto ?? 0} onChange={e => set(i, { mod_acerto: Number(e.target.value) })} /></label>}
+          <EditorReacoesAtivas acao={a} onChange={p => set(i, p)} />
           <EditorCondicionaisAtivos blocos={a.condicionais ?? []} onChange={condicionais => set(i, { condicionais })} />
           <div className="space-y-1">
             <Label className="text-xs">Efeitos (se o TR falhar / o ataque acertar)</Label>

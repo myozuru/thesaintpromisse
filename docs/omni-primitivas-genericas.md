@@ -8,7 +8,7 @@ Este ciclo sucede a auditoria das keys. Cada categoria é uma entrega independen
 | 2 | Condicionais dinâmicas | Implementada: checagens de usuário/alvo, idade de condição, crítico, dano extra, vantagem e TR |
 | 3 | Movimento | Implementada: puxar, empurrar, avançar, teleportar e trocar; fórmulas, obstáculos e destinos válidos |
 | 4 | Custos flexíveis | Implementada: intensificação com teto, consumo parcial/total, PV, tipo de ação e manutenção de condições por turno |
-| 5 | Reações interrompíveis | Há infraestrutura de eventos e prompts; falta unificar os gatilhos propostos e sua janela de interrupção |
+| 5 | Reações interrompíveis | Implementada: cinco gatilhos, janela aguardada, defesa local, cancelamento e integração com ataques/conjurações/movimento |
 | 6 | Graus de TR | Sucesso/falha e metade já existem; pendem falha crítica e desfechos configuráveis |
 
 ## Contrato da etapa 1
@@ -165,4 +165,60 @@ Exemplos do bloco de custos:
 { "pe_base": "0", "custo_pv": "5" }
 { "gastar_cargas": { "nome": "foco", "quantidade": "1" } }
 { "tipo_acao": "sustentada", "pe_por_turno": "1" }
+```
+
+
+## Contrato da etapa 5
+
+Uma ação ativa pode ter o bloco opcional `reacao`. O construtor oferece os cinco gatilhos e muda o custo de ação inicial para reação ao habilitar o bloco. Depois, o Mestre pode configurar outro custo, inclusive livre com PE, sem códigos por habilidade.
+
+| Campo de `reacao` | Semântica |
+| --- | --- |
+| `gatilho` | Um dos cinco eventos abaixo |
+| `alcance_m` | Número positivo em metros; exige peças identificadas no mapa |
+| `protegido` | `usuario`, `aliados` (inclui usuário), `todos`; usado nos eventos de ataque |
+| `alvo` | `origem` (quem provocou), `protegido` (alvo do ataque) ou `usuario` |
+| `defesa_bonus` | Bônus não negativo somado somente à Defesa do ataque pendente |
+| `cancelar_evento` | Encerra a resolução pendente quando a reação passa por seu teste: ataque acerta, TR do alvo falha ou ação sem teste |
+
+| Gatilho | Janela |
+| --- | --- |
+| `quando_alvo_declarar_ataque` | Antes do d20 de ataques com alvo identificado; também antes da fase de ataque dos feitiços da ficha |
+| `quando_ataque_errar` | Após o resultado de erro de arma, antes de devolver a resolução ao chamador; nos feitiços, ao confirmar os resultados antes de aplicar o dano |
+| `quando_inimigo_conjurar` | Antes de cobrar/aplicar feitiços da ficha ou ações de uma entidade OMNI da categoria `feitico` |
+| `quando_inimigo_entrar_alcance` | Na confirmação do movimento comum, quando a posição inicial está fora e a final dentro do alcance |
+| `quando_inimigo_sair_alcance` | Na confirmação do movimento comum, quando a posição inicial está dentro e a final fora; respeita Desengajar |
+
+A origem deve ser inimiga do reagente, usando os mesmos lados da iniciativa/filtros das ações OMNI. Nos eventos de ataque, o alcance da oferta é medido até o protegido, permitindo interceptar ataques contra aliados. Nos demais eventos, é medido até a origem. A execução da reação ainda valida o alcance e o filtro da própria ação; nas saídas/entradas, vale a fronteira de alcance do evento para o alvo que se move.
+
+### Resolução e custos
+
+A janela global funciona tanto na ficha quanto no mapa e aguarda uma escolha explícita: executar uma oferta ou passar. Cada oferta é usada no máximo uma vez por janela. Ao aceitar, recursos, item, configuração, personagem e alcance são revalidados. Falhas de validação não cobram recursos e mostram a razão, permitindo continuar. Cliques duplicados são bloqueados durante a execução. Ofertas restantes são revalidadas depois de uma reação.
+
+PE, PV, cargas e orçamento vêm da etapa 4; uma reação paga seus custos uma vez, mesmo se seu ataque errar ou o alvo passar no TR. Se usar orçamento de reação, também marca o controle compartilhado de reações da rodada. Defesa local e cancelamento só se aplicam quando o teste da reação permite seus efeitos. Cancelar não desfaz dano/erro já resolvido; `cancelar_evento` é útil nas janelas de declaração e movimento.
+
+Ataques de arma interrompidos retornam `cancelled: true`, sem d20 nem dano. Custos que o atacante já havia pago não são devolvidos. Após a janela, o motor atualiza a ficha do atacante e a Defesa do alvo; se a reação mudou posições, revalida o alcance. Feitiços interrompidos na declaração não pagam PE nem ação. A defesa extra não fica registrada na ficha e não beneficia ataques futuros. Repetições de dados de um mesmo ataque não criam uma nova declaração.
+
+A confirmação de movimento mantém a prévia visível enquanto aguarda; o orçamento só é consumido ao confirmar a continuação. Interromper reverte a prévia pelo mesmo caminho de patches já usado por Cancelar. Se a reação reposicionar a peça, preserva o novo posicionamento e encerra a confirmação antiga. São comparadas as posições inicial e final: esta etapa não detecta passagens intermediárias de um trajeto cujas duas pontas estejam fora do alcance. Teleporte e movimento forçado das ações OMNI não abrem estas janelas.
+
+### Escopo operacional
+
+A oferta automática executa uma ação de alvo único/próprio, sem intensificação opcional; área e múltiplos alvos continuam disponíveis para uso manual. Reações não abrem outras janelas, evitando ciclos de contra-ataques. Encerrar o combate cancela as janelas pendentes. As janelas são locais à tela que iniciou a resolução; a escolha não é encaminhada a outra sessão do jogador. Alterações de fichas e mapa seguem a sincronização existente.
+
+O sistema específico de Zona de Risco continua disponível. O novo gatilho de entrada exige cruzar de fora para dentro; a habilidade antiga também reage a movimento que termina dentro de alcance mesmo se começou dentro, e mantém seu limite próprio por rodada. Estes comportamentos não foram fundidos.
+
+Exemplo de defesa de um aliado (bloco da ação):
+
+```json
+{
+  "acao": "reacao",
+  "teste": "nenhum",
+  "reacao": {
+    "gatilho": "quando_alvo_declarar_ataque",
+    "alcance_m": 6,
+    "protegido": "aliados",
+    "alvo": "usuario",
+    "defesa_bonus": 3
+  }
+}
 ```

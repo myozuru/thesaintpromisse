@@ -123,7 +123,7 @@ export function custoPEDe(cfg: AcaoAtivaConfig, u: Character, intensificacoes = 
 
 // ─── Validação + execução ────────────────────────────────────────────
 
-export type ResultadoAtiva = { ok: false; reason: string } | { ok: true; dano: number; detalhe: string };
+export type ResultadoAtiva = { ok: false; reason: string } | { ok: true; dano: number; detalhe: string; efeitoAplicado?: boolean };
 
 export function podeUsarAtiva(u: Character, alvo: Character | undefined, cfg: AcaoAtivaConfig, intensificacoes = 0): { ok: true } | { ok: false; reason: string } {
   if (!alvo) return { ok: false, reason: 'Escolha um alvo.' };
@@ -177,7 +177,7 @@ export async function executarAcaoAtiva(
   cfg: AcaoAtivaConfig,
   selecao: SelecaoAtiva,
   ent?: EntidadeOmni,
-  opcoes: OpcoesMovimentoAtivo & { intensificacoes?: number } = {},
+  opcoes: OpcoesMovimentoAtivo & { intensificacoes?: number; ignorarReacoes?: boolean } = {},
 ): Promise<ResultadoAtiva> {
   const escolhidos = await selecionarAlvosAtivos(usuarioId, cfg, selecao);
   if (!escolhidos.ok) return escolhidos;
@@ -202,6 +202,15 @@ export async function executarAcaoAtiva(
   alvos = escolhidos.ids.map(id => store.characters.find(c => c.id === id)!);
   for (const alvo of alvos) { const chk = podeUsarAtiva(u, alvo, cfg, opcoes.intensificacoes ?? 0); if (!chk.ok) return chk; }
 
+  if (!opcoes.ignorarReacoes && ent?.categoria === 'feitico') {
+    const { abrirJanelaReacaoAtiva } = await import('./reacoesAtivas');
+    const janela = await abrirJanelaReacaoAtiva({ gatilho: 'quando_inimigo_conjurar', origemId: usuarioId });
+    if (janela.cancelado) return { ok: false, reason: 'Conjuração interrompida.' };
+    store = useCharacterStore.getState();
+    u = store.characters.find(c => c.id === usuarioId);
+    if (!u || (u.hpCurrent ?? 1) <= 0) return { ok: false, reason: 'Conjurador indisponível.' };
+    for (const alvo of alvos) { const chk = podeUsarAtiva(u, store.characters.find(c => c.id === alvo.id), cfg, opcoes.intensificacoes ?? 0); if (!chk.ok) return chk; }
+  }
   // Snapshot por alvo antes do consumo: cargas e PV são os da declaração.
   const condicionais = new Map(alvos.map(t => [t.id, {
     mods: avaliarCondicionaisAtivos(cfg.condicionais ?? [], u, t),
@@ -220,6 +229,7 @@ export async function executarAcaoAtiva(
   const extraIntensificacao = planejarDano(undefined, cfg.custo_recursos?.dano_por_intensificacao, p.intensificacoes, false);
 
   let danoTotal = 0;
+  let efeitoAplicado = false;
   const detalhes: string[] = [];
   for (const selecionado of alvos) {
     const t = useCharacterStore.getState().characters.find(c => c.id === selecionado.id);
@@ -247,7 +257,7 @@ export async function executarAcaoAtiva(
     } else if (cfg.teste === 'ataque') {
       const def = computeTotalDefense(t, {}, arma!.range === 'melee' ? 'melee' : 'ranged');
       const ctx = buildAttackContext({
-        attacker: u, weapon: arma!, targetDefense: def,
+        attacker: u, weapon: arma!, targetDefense: def, targetId: t.id, alcanceM: cfg.alcanceM, ignorarReacoes: opcoes.ignorarReacoes,
         situation: { hitBonusExtra: cfg.mod_acerto, critBonusExtra: critExtra || undefined, advantageExtra: mods.vantagemAcerto, critMultiplierExtra: mods.multiplicador },
         trainedRanges: [
           ...(u.meleeTrained ? (['melee'] as const) : []),
@@ -260,6 +270,7 @@ export async function executarAcaoAtiva(
       aplicaEfeitos = r.hit;
       armaDano = cfg.incluirArma ? r.damageTotal : 0;
       cabecalho = `ataque ${r.attackTotal} vs Defesa ${def} → ${r.critical ? 'CRÍTICO' : r.hit ? 'ACERTOU' : 'ERROU'}${critExtra ? ` (margem −${critExtra})` : ''}`;
+      if (r.cancelled) { log(`⛔ ${cfg.nome}: ataque interrompido.`); continue; }
       if (!r.hit) {
         const msg = `⚔️ ${u.name} usa ${cfg.nome} (${pago}) em ${t.name}: ${cabecalho}.`;
         log(msg);
@@ -284,6 +295,7 @@ export async function executarAcaoAtiva(
         isMelee: metadadosAtaque ? metadadosAtaque.kind === 'melee' : undefined,
       });
     }
+    efeitoAplicado ||= aplicaEfeitos;
     const notas = aplicaEfeitos ? aplicarEfeitos(u, t, cfg.efeitos ?? [], fonte, movimentos.planos.get(t.id), sustentadas) : [];
     const partes = [
       cabecalho,
@@ -300,7 +312,7 @@ export async function executarAcaoAtiva(
     const atual = useCharacterStore.getState().characters.find(c => c.id === usuarioId);
     if (atual) useCharacterStore.getState().updateCharacter(usuarioId, { omniSustentacoes: [...(atual.omniSustentacoes ?? []), { id: crypto.randomUUID(), nome: cfg.nome, pePorTurno: p.pePorTurno, condicoes: sustentadas }] });
   }
-  return { ok: true, dano: danoTotal, detalhe: detalhes.join("\n") };
+  return { ok: true, dano: danoTotal, efeitoAplicado, detalhe: detalhes.join("\n") };
 }
 
 /** Ações ativas disponíveis ao personagem (itens do inventário dele). */
