@@ -20,7 +20,7 @@ const hero: Character = {
   name: 'Hero',
   level: 5,
   trainingBonus: 3,
-  hpCurrent: 30, hpMax: 40, tempHp: 2,
+  hpCurrent: 30, hpMax: 40, escCurrent: 2, escMax: 5,
   peCurrent: 8, peMax: 12, tempPE: 1,
   ca: 14, movement: 9,
   category: 'PLAYER',
@@ -60,6 +60,7 @@ const falhas: Falha[] = [];
 
 // Apenas grupos introduzidos pelos PRs 1–9 (novas keys).
 const GRUPOS_NOVOS = new Set<string>([
+  '🩺 Pools',
   '👁️ Visão & Iluminação',
   '⚡ AdO & Reações',
   '🗺️ Mapa & Distância',

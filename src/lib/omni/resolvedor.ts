@@ -158,12 +158,14 @@ export function montarVariaveisDoPersonagem(
   try { auras = aggregateAuraEffects(c); } catch { auras = null; }
 
   const tempPE = c.tempPE ?? 0;
-  const tempVida = (c as unknown as { tempHp?: number }).tempHp ?? 0;
+  const tempVida = c.escCurrent ?? 0;
+  const tempVidaMax = c.escMax ?? 0;
   const sorteAtual = c.luckCurrent ?? 0;
   const sorteMax = c.luckMax ?? 0;
   const dadoVidaAtual = c.hitDiceCurrent ?? 0;
   const dadoVidaMax = c.hitDiceMax ?? 0;
   const reservaPE = c.economiaPEReserve ?? 0;
+  const peFaltante = Math.max(0, ea.max - ea.atual);
   const exaustao = c.exhaustionLevel ?? 0;
   const fome = c.hunger ?? 0;
   const morto = (vida.atual <= 0 && c.exhaustionLevel === 6) ? 1 : 0;
@@ -224,11 +226,15 @@ export function montarVariaveisDoPersonagem(
 
     // ─── 🩺 RECURSOS & POOLS ────────────────────────────────────────────
     VIDA_TEMP: tempVida,
-    VIDA_TEMP_MAX: tempVida,
+    VIDA_TEMP_MAX: tempVidaMax,
+    VIDA_TEMP_PCT: tempVidaMax > 0 ? Math.round((tempVida / tempVidaMax) * 100) : 0,
+    VIDA_TOTAL: vida.atual + tempVida,
     VIDA_PCT: vida.max > 0 ? Math.round((vida.atual / vida.max) * 100) : 0,
     ENERGIA_PCT: ea.max > 0 ? Math.round((ea.atual / ea.max) * 100) : 0,
     PE_PCT: ea.max > 0 ? Math.round((ea.atual / ea.max) * 100) : 0,
     PE_TEMP: tempPE,
+    PE_FALTANTE: peFaltante,
+    PE_FALTANTE_PCT: ea.max > 0 ? Math.round((peFaltante / ea.max) * 100) : 0,
     SORTE: sorteAtual,
     SORTE_ATUAL: sorteAtual,
     SORTE_MAX: sorteMax,
@@ -237,7 +243,11 @@ export function montarVariaveisDoPersonagem(
     DADO_VIDA_MAX: dadoVidaMax,
     RESERVA_PE: reservaPE,
     RESERVA_PE_ATUAL: reservaPE,
-    RESERVA_PE_MAX: reservaPE,
+    // Compatibilidade: a reserva não tem teto fixo no schema/motor.
+    // Zero significa "teto não definido", nunca o saldo atual da reserva.
+    RESERVA_PE_MAX: 0,
+    RESERVA_PE_DISPONIVEL: reservaPE > 0 ? 1 : 0,
+    RESERVA_PE_RECUPERAVEL: Math.min(Math.max(0, reservaPE), peFaltante),
 
     // ─── 🍖 SOBREVIVÊNCIA ───────────────────────────────────────────────
     EXAUSTAO_NIVEL: exaustao,

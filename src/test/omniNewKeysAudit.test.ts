@@ -84,7 +84,7 @@ const get = (k: string) => avaliarFormula(`@USUARIO.${k}`, vars).valor;
 // ────────────────────────────────────────────────────────────────────
 describe('🩺 Recursos & Pools', () => {
   const casos: Array<[string, number]> = [
-    ['vida_temp', 0],         // tempHp não definido → 0
+    ['vida_temp', 0],         // PVTs não definidos → 0
     ['vida_pct', 82],         // 41/50 = 82%
     ['energia_pct', 70],      // 21/30 = 70%
     ['pe_pct', 70],
@@ -97,7 +97,7 @@ describe('🩺 Recursos & Pools', () => {
     ['dado_vida_max', 5],
     ['reserva_pe', 12],
     ['reserva_pe_atual', 12],
-    ['reserva_pe_max', 12],
+    ['reserva_pe_max', 0],    // Não há teto fixo armazenado para a reserva.
   ];
   it.each(casos)('@USUARIO.%s → %i', (k, v) => expect(get(k)).toBe(v));
 });
