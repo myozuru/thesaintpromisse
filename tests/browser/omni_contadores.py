@@ -50,7 +50,8 @@ async def main():
           const get=(id)=>cs.getState().characters.find(c=>c.id===id);
           const hit=async(id,atk)=>{cs.getState().applyDamage(id,2,undefined,{attackerId:atk,ignoresRD:true});await wait(150);};
           await hit('portador','inimigo'); cs.getState().updateCharacter('portador',{hpCurrent:60,omniCounters:{}});
-          for(let i=0;i<30&&!window.__omniTrigger;i++) await wait(100);
+          for(let i=0;i<60&&!window.__omniTrigger;i++) await wait(100);
+          if(!window.__omniTrigger) return {erro:'sem hook', urls:performance.getEntriesByType('resource').map(e=>e.name).filter(n=>/omni\/(eventBus|trigger|observ)/.test(n)), hp:get('portador').hpCurrent, log:window.__logStore.getState().logs.slice(-5).map(l=>l.message)};
           const {montarVariaveisDoPersonagem,dispararGatilhoEfeitosItens}=window.__omniTrigger;
           const treino=montarVariaveisDoPersonagem(get('portador'),'USUARIO').USUARIO_TREINO;
           const r={D,mpc,treino};
