@@ -226,6 +226,13 @@ export const GATILHOS_EVENTOS = {
   AO_VENDAR: 'aoVendar',
   AO_DESCOBRIR: 'aoDescobrir',
   AO_ATUALIZAR_CONTADOR: 'aoAtualizarContador',
+  // Observação espacial — toda ficha observa; filtre com @CENA.distancia.
+  AO_ALIADO_SOFRER_DANO: 'aoAliadoSofrerDano',
+  AO_INIMIGO_SOFRER_DANO: 'aoInimigoSofrerDano',
+  AO_ALIADO_CAUSAR_DANO: 'aoAliadoCausarDano',
+  AO_INIMIGO_CAUSAR_DANO: 'aoInimigoCausarDano',
+  AO_ALIADO_MORRER: 'aoAliadoMorrer',
+  AO_INIMIGO_MORRER: 'aoInimigoMorrer',
 } as const;
 
 export type GatilhoId = (typeof GATILHOS_EVENTOS)[keyof typeof GATILHOS_EVENTOS];
@@ -259,6 +266,12 @@ export const ROTULOS_GATILHOS: Record<GatilhoId, string> = {
   aoVendar: 'Ao vendar (slot Venda equipado)',
   aoDescobrir: 'Ao descobrir (slot Venda removido)',
   aoAtualizarContador: 'Ao atualizar contador',
+  aoAliadoSofrerDano: 'Quando um aliado sofrer dano (use @CENA.distancia)',
+  aoInimigoSofrerDano: 'Quando um inimigo sofrer dano (use @CENA.distancia)',
+  aoAliadoCausarDano: 'Quando um aliado causar dano',
+  aoInimigoCausarDano: 'Quando um inimigo causar dano',
+  aoAliadoMorrer: 'Quando um aliado cair (PV 0)',
+  aoInimigoMorrer: 'Quando um inimigo cair (PV 0)',
 };
 
 // 6. Operadores Lógicos Visuais --------------------------------------------
@@ -308,6 +321,7 @@ export const ACOES_EFEITO = {
   INCREMENTAR_CONTADOR:    { ui: 'Incrementar Contador',         math: 'addCounter' },
   ZERAR_CONTADOR:          { ui: 'Zerar Contador',               math: 'resetCounter' },
   DEFINIR_CONTADOR:        { ui: 'Definir Contador',             math: 'setCounter' },
+  CONSUMIR_CONTADOR:       { ui: 'Consumir Contador (valor ou tudo) → @CENA.consumido', math: 'consumeCounter' },
   // ── Custo de recurso com piso mínimo ─────────────────────────────────
   REDUZIR_CUSTO:           { ui: 'Reduzir Custo de Recurso',     math: 'reduceCost' },
   LIMPAR_REDUTOR_CUSTO:    { ui: 'Limpar Redutor de Custo',      math: 'clearCostReduction' },
@@ -568,7 +582,14 @@ const GLOBAIS_OMNI: ChaveOmniOpcao[] = [
 const CENA_OMNI: ChaveOmniOpcao[] = [
   { id: 'CENA.rodada',   label: '@CENA.rodada',         hint: 'Rodada atual do combate' },
   { id: 'CENA.dt',       label: '@CENA.dt',             hint: 'DC / Dificuldade definida pelo Mestre' },
-  { id: 'CENA.distancia',label: '@CENA.distancia',      hint: 'Distância (m) entre Usuário e Alvo' },
+  { id: 'CENA.distancia',label: '@CENA.distancia',      hint: 'Distância (m) entre Usuário e Alvo (999 se fora do mapa)' },
+  { id: 'CENA.no_mapa',  label: '@CENA.no_mapa',        hint: 'Eventos observados: 1 se ambos têm peça no mapa.' },
+  { id: 'CENA.sujeito_eh_aliado', label: '@CENA.sujeito_eh_aliado', hint: 'Eventos observados: 1 se a criatura envolvida é aliada.' },
+  { id: 'CENA.outro_eh_inimigo',  label: '@CENA.outro_eh_inimigo',  hint: 'Eventos observados: 1 se a outra parte (ex.: quem bateu) é inimiga.' },
+  { id: 'CENA.outro_eh_aliado',   label: '@CENA.outro_eh_aliado',   hint: 'Eventos observados: 1 se a outra parte é aliada.' },
+  { id: 'CENA.outro_eh_voce',     label: '@CENA.outro_eh_voce',     hint: 'Eventos observados: 1 se a outra parte é você.' },
+  { id: 'CENA.consumido',         label: '@CENA.consumido',         hint: 'Quanto o último CONSUMIR_CONTADOR do bloco gastou (use (@CENA.consumido)d8).' },
+  { id: 'CENA.dano',              label: '@CENA.dano',              hint: 'Dano do evento atual.' },
 ];
 
 /**
@@ -759,6 +780,7 @@ const IDENTIDADE_OMNI: ChaveOmniOpcao[] = [
 // ── PR-3: Condições ─────────────────────────────────────────────────────
 const CONDICOES_OMNI: ChaveOmniOpcao[] = [
   { id: 'tem_condicao_<id>',   label: 'tem_condicao_<id>',  hint: 'Predicate: 1 se possui a condição (ex.: tem_condicao_atordoado).' },
+  { id: 'condicao_rodadas_<id>', label: 'condicao_rodadas_<id>', hint: 'Rodadas restantes da condição (999 = indefinida, 0 = não tem).' },
   { id: 'qtd_condicoes',       label: 'Qtd. Condições',     hint: 'Total de condições ativas.' },
   { id: 'qtd_condicoes_fisica',       label: 'Condições Físicas',         hint: 'Quantas condições da categoria FÍSICA.' },
   { id: 'qtd_condicoes_incapacitacao',label: 'Condições Incapacitação',   hint: 'Quantas condições da categoria INCAPACITAÇÃO.' },
@@ -799,6 +821,9 @@ const TALENTOS_DERIVADOS_OMNI: ChaveOmniOpcao[] = [
 ];
 
 const CONTADORES_OMNI: ChaveOmniOpcao[] = [
+  { id: '<nome_do_contador>',      label: '<nome_do_contador>',           hint: 'Qualquer contador livre (rancor, brasas, almas…). Total somado de todas as fontes.' },
+  { id: 'contador_<nome>',         label: 'contador_<nome>',              hint: 'Alias do total do contador.' },
+  { id: '<nome>__fonte__<id>',     label: '<nome>__fonte__<id>',          hint: 'Parcela vinda de uma ficha específica (teto por fonte).' },
   { id: 'qtd_talentos',            label: 'Qtd. Talentos',                hint: 'Total de talentos escolhidos.' },
   { id: 'qtd_aptidoes',            label: 'Qtd. Aptidões',                hint: 'Total de aptidões adquiridas.' },
   { id: 'qtd_habilidades',         label: 'Qtd. Habilidades Spec',        hint: 'Total de habilidades de especialização.' },

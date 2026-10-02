@@ -872,11 +872,17 @@ export function montarVariaveisDoPersonagem(
   }
 
   // PR-3: Predicate tem_condicao_<id> — 1 por condição ativa.
-  for (const a of (c.activeConditions ?? []) as Array<{ conditionId?: string }>) {
+  // + condicao_rodadas_<id> — rodadas restantes (maior entre turnos/rodadas;
+  //   -1 indefinido vira 999 para comparações "mais de X rodadas").
+  for (const a of (c.activeConditions ?? []) as Array<{ conditionId?: string; remainingRounds?: number; remainingTurns?: number }>) {
     if (!a.conditionId) continue;
     const norm = a.conditionId.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9_]/g, '_');
     base[`TEM_CONDICAO_${norm}`] = 1;
+    const r = Math.max(a.remainingRounds ?? -1, a.remainingTurns ?? -1);
+    const rod = (a.remainingRounds === -1 && a.remainingTurns === -1) ? 999 : Math.max(0, r);
+    base[`CONDICAO_RODADAS_${norm}`] = Math.max(base[`CONDICAO_RODADAS_${norm}`] ?? 0, rod);
   }
+
 
   // PR-3: Predicates de identidade (origem / especialização).
   const originId = (c as unknown as { origin?: { id?: string } }).origin?.id;

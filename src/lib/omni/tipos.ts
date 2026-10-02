@@ -59,6 +59,17 @@ export interface AcaoLogica {
    * legado (1 rodada, ou o que a entidade-fonte definir).
    */
   duracao?: DuracaoEntidade;
+  /**
+   * Contadores (INCREMENTAR_CONTADOR): teto opcional. Fórmula livre
+   * (ex.: `@USUARIO.treino`). Ausente = sem teto.
+   */
+  teto?: ValorDinamico;
+  /**
+   * 'global' (padrão): teto vale para o total. 'porFonte': cada criatura de
+   * origem (o ALVO do evento — ex.: o aliado ferido) tem seu próprio teto,
+   * e o total é a soma de todas as fontes.
+   */
+  escopoTeto?: 'global' | 'porFonte';
 }
 
 /** Um bloco Se/Então completo. */
@@ -267,6 +278,10 @@ export interface CombatEffect {
    *  - MODIFICADOR → buff/debuff (sinal define cor).
    */
   type: 'SUBTRAIR' | 'ADICIONAR' | 'MODIFICADOR';
+  /** Contadores (`contador_<nome>`): teto em fórmula (`... ate @USUARIO.treino`). */
+  counterCap?: string;
+  /** Contadores: teto vale por ficha de origem (`... por_fonte`). */
+  counterPerSource?: boolean;
   /** Quem recebe ESTE efeito. */
   target: 'ALVO' | 'USUARIO' | 'AREA';
   /** Tipo de dano / cura / efeito (ver DAMAGE_TYPES). Opcional. */

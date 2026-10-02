@@ -443,7 +443,8 @@ function parsearComando(
   }
 
   // Forma padrão: aceita prefixos no recurso (`usuario.X`, `@alvo.Y`).
-  const m = txt.match(/^(somar|subtrair|reduzir|definir)\s+(.+?)\s+em\s+(@?[A-Za-zÀ-ÿ_][\w.]*)\s*$/i);
+  // Sufixos opcionais de contador: `ate <teto>` e `por_fonte`.
+  const m = txt.match(/^(somar|subtrair|reduzir|definir)\s+(.+?)\s+em\s+(@?[A-Za-zÀ-ÿ_][\w.]*)(?:\s+at[eé]\s+(.+?))?(\s+por_fonte)?\s*$/i);
   if (!m) {
     return {
       erro: {
@@ -464,7 +465,7 @@ function parsearComando(
   if (VERBOS_ABSOLUTOS.has(cmd)) {
     return { erro: { posicao, trecho: raw, mensagem: `${cmd} usa a forma curta: ${cmd} <recurso>.` } };
   }
-  const formulaFinal = autoArrobaExpressao(normalizarConjuncaoComoSoma(expr));
+  const formulaFinal = /^tudo$/i.test(expr) ? '0' : autoArrobaExpressao(normalizarConjuncaoComoSoma(expr));
   const { target, recurso } = extrairAlvoDoRecurso(recursoBruto, opts.defaultTarget ?? 'ALVO');
   return {
     efeito: {
@@ -473,6 +474,8 @@ function parsearComando(
       type: tipo,
       target,
       resourcePath: traduzirRecurso(recurso),
+      ...(m[4] ? { counterCap: autoArrobaExpressao(m[4].trim()) } : {}),
+      ...(m[5] ? { counterPerSource: true } : {}),
     },
   };
 }
@@ -802,7 +805,9 @@ export function efeitosParaScript(
       : '';
     if (e.absoluteVerb) return `${e.absoluteVerb} ${prefixo}${recursoBase}`;
     const formula = (e.formula || '0').replace(/@USUARIO\./gi, '');
-    return `${inverso[e.type]} ${formula} em ${prefixo}${recursoBase}`;
+    const cap = e.counterCap ? ` ate ${e.counterCap.replace(/@USUARIO\./gi, '')}` : '';
+    const pf = e.counterPerSource ? ' por_fonte' : '';
+    return `${inverso[e.type]} ${formula} em ${prefixo}${recursoBase}${cap}${pf}`;
   };
 
   // Reemite o cabeçalho do segmento (gatilho dinâmico, trigger nomeado e condição).

@@ -348,6 +348,13 @@ function preprocessar(expressao: string, ctx: ContextoAvaliacao): string {
     return '0';
   });
 
+  // 3b) Dados com quantidade dinâmica: `(@USUARIO.rancor)d4` → `(3)d4` → rola.
+  //     Também cobre `@CENA.consumido d8` escrito como `(@CENA.consumido)d8`.
+  out = out.replace(/\(\s*(\d+)\s*\)\s*d(\d+)/gi, (_m, n: string, f: string) =>
+    String(Number(n) > 0 ? rolarNotacao(`${n}d${f}`, ctx) : 0)
+  );
+
+
   // 4) Açúcar sintático de arredondamento sufixo:
   //    EXPR<  →  floor(EXPR)     EXPR>  →  ceil(EXPR)
   //
@@ -368,7 +375,8 @@ function preprocessar(expressao: string, ctx: ContextoAvaliacao): string {
 function aplicarArredondamentoSufixo(s: string): string {
   // Regex: encontra um `<` ou `>` que NÃO é seguido por letra/dígito/`=`/`.`
   // (ou seja, está em posição pós-fixa, não comparativo).
-  const re = /([<>])(?![A-Za-zÀ-ÿ0-9_=.])/;
+  // Espaços seguidos de operando (`4 > 3`, `x < (y)`) também são comparação.
+  const re = /([<>])(?!\s*[A-Za-zÀ-ÿ0-9_=.(@])/;
   let out = s;
   // Loop até não haver mais sufixos a converter (processa do mais à esquerda).
   for (let guarda = 0; guarda < 50; guarda++) {

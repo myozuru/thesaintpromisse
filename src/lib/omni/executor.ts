@@ -35,6 +35,7 @@ import { useLogStore } from '@/stores/useLogStore';
 import { useOmniRuntimeStore } from '@/stores/useOmniRuntimeStore';
 import { grantAdvantage, clearAllAdvantage, type AdvScope } from './rollAdvantage';
 import { adicionarImunidade, removerImunidade, formatarImunidade } from './immunity';
+import { calcularContador } from './contadores';
 
 const PROFUNDIDADE_MAX = 8;
 
@@ -79,7 +80,10 @@ function variaveisCompletas(ctx: ContextoRuntime): Record<string, number> {
   const vars: Record<string, number> = {};
   if (ctx.usuario) Object.assign(vars, montarVariaveisDoPersonagem(ctx.usuario, 'USUARIO'));
   if (ctx.alvo) Object.assign(vars, montarVariaveisDoPersonagem(ctx.alvo, 'ALVO'));
-  if (ctx.cena) for (const [k, v] of Object.entries(ctx.cena)) vars[`CENA_${k}`] = v;
+  if (ctx.cena) for (const [k, v] of Object.entries(ctx.cena)) {
+    vars[`CENA_${k}`] = v;
+    vars[`CENA_${k.toUpperCase()}`] = v;
+  }
   return vars;
 }
 
@@ -494,23 +498,32 @@ function executarAcao(a: AcaoLogica, ctx: ContextoRuntime, log: (m: string) => v
     // ── Contadores nomeados ─────────────────────────────────────────────
     case 'INCREMENTAR_CONTADOR':
     case 'ZERAR_CONTADOR':
-    case 'DEFINIR_CONTADOR': {
+    case 'DEFINIR_CONTADOR':
+    case 'CONSUMIR_CONTADOR': {
       if (!alvoChar || !a.caminhoAlvo) break;
+      const fresh = useCharacterStore.getState().characters.find((x) => x.id === alvoChar.id) ?? alvoChar;
       const key = a.caminhoAlvo.trim().toLowerCase();
-      const counters = { ...(alvoChar.omniCounters ?? {}) };
-      const atual = counters[key] ?? 0;
-      let prox: number;
-      if (a.acao === 'INCREMENTAR_CONTADOR') prox = atual + (valor || 1);
-      else if (a.acao === 'ZERAR_CONTADOR') prox = 0;
-      else prox = valor;
-      counters[key] = Math.max(0, Math.round(prox));
+      const res = calcularContador(fresh.omniCounters ?? {}, key, a.acao, {
+        valor,
+        teto: a.teto ? resolverValorDinamico(a.teto, ctx) : undefined,
+        escopoTeto: a.escopoTeto,
+        fonteId: ctx.alvo?.id && ctx.alvo.id !== fresh.id ? ctx.alvo.id : undefined,
+      });
+      const counters = res.counters;
+      const atual = res.anterior;
       useCharacterStore.getState().updateCharacter(alvoChar.id, { omniCounters: counters });
-      log(`${nomeOrigem}: ${nomeAlvo}.contador.${key} = ${counters[key]}`);
+      if (a.acao === 'CONSUMIR_CONTADOR') {
+        // Disponível para as próximas ações do mesmo bloco: @CENA.consumido
+        ctx.cena = { ...(ctx.cena ?? {}), consumido: res.consumido };
+        log(`${nomeOrigem}: ${nomeAlvo} consumiu ${res.consumido} de ${key} (restam ${counters[key] ?? 0})`);
+      } else {
+        log(`${nomeOrigem}: ${nomeAlvo}.contador.${key} = ${counters[key]}`);
+      }
       // Dispara gatilho de atualização de contador no próprio personagem.
       import('./eventBus').then(({ emitirEvento }) => {
         emitirEvento('aoAtualizarContador', {
           usuarioId: alvoChar.id,
-          cena: { contador_valor: counters[key], contador_anterior: atual },
+          cena: { contador_valor: counters[key] ?? 0, contador_anterior: atual },
           origemNome: `Contador: ${key}`,
           incluirPassivas: true,
         });

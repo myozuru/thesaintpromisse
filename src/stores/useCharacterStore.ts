@@ -2449,6 +2449,15 @@ export const useCharacterStore = create<CharacterStore>()(
               incluirPassivas: true,
             });
           }
+          // Observação espacial: todas as outras fichas "veem" o dano.
+          if (rawDamage > 0) {
+            void import('@/lib/omni/observadores').then(async (m) => {
+              await m.emitirObservadores('sofrerDano', { sujeitoId: id, outroId: opts?.attackerId, dano: rawDamage });
+              if (opts?.attackerId) {
+                await m.emitirObservadores('causarDano', { sujeitoId: opts.attackerId, outroId: id, dano: rawDamage });
+              }
+            }).catch(() => {});
+          }
           // Morte: HP cruzou para ≤ 0 nesta aplicação de dano.
           const afterChar = get().characters.find((c) => c.id === id);
           if (
@@ -2503,6 +2512,9 @@ export const useCharacterStore = create<CharacterStore>()(
                 origemNome: 'Morte',
                 incluirPassivas: true,
               });
+              void import('@/lib/omni/observadores')
+                .then((m) => m.emitirObservadores('morrer', { sujeitoId: id, outroId: opts?.attackerId, dano: rawDamage }))
+                .catch(() => {});
               // 2) Só DEPOIS libera todos os agarres bilateralmente.
               get().releaseAllGrapplesOf(id);
               // Artes do Combate: eliminar um inimigo recupera 1 Ponto de Preparo.

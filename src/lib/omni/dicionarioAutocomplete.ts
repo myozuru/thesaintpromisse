@@ -40,6 +40,10 @@ const VERBOS: SugestaoAutocomplete[] = [
   { valor: 'de',        categoria: 'Conector' },
   { valor: 'a',         categoria: 'Conector' },
   { valor: 'e',         categoria: 'Operador', hint: 'soma na fórmula (+)' },
+  { valor: 'contador_', categoria: 'Contador', hint: '🔢 contador livre: somar 1 em contador_rancor' },
+  { valor: 'ate',       categoria: 'Contador', hint: '🔢 teto: … em contador_x ate @USUARIO.treino' },
+  { valor: 'por_fonte', categoria: 'Contador', hint: '🔢 teto separado para cada ficha de origem' },
+  { valor: 'tudo',      categoria: 'Contador', hint: '🔢 subtrair tudo em contador_x (gasta tudo → @CENA.consumido)' },
 ];
 
 /** Coleta todos os IDs/aliases relevantes do sistema. */
