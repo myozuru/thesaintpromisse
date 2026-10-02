@@ -164,7 +164,14 @@ export function dispararGatilhoEfeitosItens(
       };
       if (alvoAtual) Object.assign(vars, montarVariaveisDoPersonagem(alvoAtual, 'ALVO'));
       if (opts.cena) {
-        for (const [k, v] of Object.entries(opts.cena)) vars[`CENA_${k}`] = v;
+        for (const [k, v] of Object.entries(opts.cena)) {
+          vars[`CENA_${k}`] = v;
+          vars[`CENA_${k.toUpperCase()}`] = v;
+        }
+      }
+      for (const [k, v] of Object.entries(cenaLocal)) {
+        vars[`CENA_${k}`] = v;
+        vars[`CENA_${k.toUpperCase()}`] = v;
       }
       return vars;
     };
@@ -176,6 +183,7 @@ export function dispararGatilhoEfeitosItens(
     };
 
     let consumiuUso = false;
+    const cenaLocal: Record<string, number> = {};
     for (const eff of candidatos) {
       const variaveis = montarVariaveisAtuais();
       // Avalia condição (se houver). String boolean → 1/0.
@@ -222,7 +230,13 @@ export function dispararGatilhoEfeitosItens(
         peSpellReduction: eff.peSpellReduction,
         immunityGrant: eff.immunityGrant,
         sourceName: fresco.nome,
+        contador: {
+          teto: eff.counterCap ? avaliarFormula(eff.counterCap, variaveis, undefined, { item: itemBag }).valor : undefined,
+          porFonte: eff.counterPerSource,
+          fonteId: opts.alvoId && opts.alvoId !== usuario.id ? opts.alvoId : undefined,
+        },
       });
+      if (typeof res.consumido === 'number') cenaLocal.consumido = res.consumido;
       console.log(
         `    ↳ ✓ aplicado: ${eff.type} ${valor} em ${eff.resourcePath} (target=${eff.target} → ${targetId.slice(0, 8)})`,
         res,

@@ -7,6 +7,7 @@
  * Reuso: chamado pelo CharacterCard (handleAttackWithItem) e por qualquer
  * outro consumidor do Omni-Engine que precise materializar um efeito.
  */
+import { calcularContador } from './contadores';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import type { CombatEffect } from './tipos';
 import { canonicalizarChave } from './keyAliases';
@@ -45,8 +46,10 @@ export function aplicarEfeitoNoPersonagem(
     immunityGrant?: { escopo: string; mode: 'grant' | 'revoke' };
     /** Nome amigável da origem (item/feitiço/talento) — usado no id do redutor. */
     sourceName?: string;
+    /** Contadores: teto já avaliado, escopo e ficha de origem. */
+    contador?: { teto?: number; porFonte?: boolean; fonteId?: string };
   },
-): { aplicado: number; absorvidoPorBloqueio?: boolean } {
+): { aplicado: number; absorvidoPorBloqueio?: boolean; consumido?: number } {
   // 🪄 Caminho especial: redutor de custo de PE de feitiços. NÃO mexe em
   // recursos numéricos — apenas adiciona/atualiza entrada em
   // `omniSpellCostReduction[]` com o valor calculado da fórmula.
@@ -84,6 +87,26 @@ export function aplicarEfeitoNoPersonagem(
   const store = useCharacterStore.getState();
   const c = store.characters.find((x) => x.id === charId);
   if (!c) return { aplicado: 0 };
+
+  // ─── 🔢 Contadores livres: contador_<nome> ───────────────────────────
+  // somar → acumula (com teto global ou por fonte); subtrair → consome
+  // (valor ≤ 0 = tudo); definir → fixa. Ver contadores.ts.
+  {
+    const bruto = (resourcePath ?? '').trim().toLowerCase().replace(/^(usuario|alvo|area)\./, '');
+    const mC = bruto.match(/^contador[._]([a-z0-9_]+)$/);
+    if (mC) {
+      const nome = mC[1];
+      const acao = tipo === 'ADICIONAR' ? 'INCREMENTAR_CONTADOR' : tipo === 'SUBTRAIR' ? 'CONSUMIR_CONTADOR' : 'DEFINIR_CONTADOR';
+      const res = calcularContador(c.omniCounters ?? {}, nome, acao, {
+        valor,
+        teto: extras?.contador?.teto,
+        escopoTeto: extras?.contador?.porFonte ? 'porFonte' : 'global',
+        fonteId: extras?.contador?.fonteId,
+      });
+      store.updateCharacter(charId, { omniCounters: res.counters });
+      return { aplicado: res.counters[nome] ?? 0, consumido: res.consumido };
+    }
+  }
 
   // ─── Flags Omni (omniFlags genérico) ────────────────────────────────
   // Qualquer chave começando com "flag_" ou conhecida como flag genérica

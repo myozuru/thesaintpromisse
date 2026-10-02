@@ -278,6 +278,10 @@ export interface CombatEffect {
    *  - MODIFICADOR → buff/debuff (sinal define cor).
    */
   type: 'SUBTRAIR' | 'ADICIONAR' | 'MODIFICADOR';
+  /** Contadores (`contador_<nome>`): teto em fórmula (`... ate @USUARIO.treino`). */
+  counterCap?: string;
+  /** Contadores: teto vale por ficha de origem (`... por_fonte`). */
+  counterPerSource?: boolean;
   /** Quem recebe ESTE efeito. */
   target: 'ALVO' | 'USUARIO' | 'AREA';
   /** Tipo de dano / cura / efeito (ver DAMAGE_TYPES). Opcional. */
