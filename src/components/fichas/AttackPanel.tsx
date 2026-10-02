@@ -593,6 +593,7 @@ export function AttackPanel({ character: cProp }: Props) {
     const devB = devastacaoBonus(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, target?.id);
     devRdRef.current = devB.rd;
     const ctx = buildAttackContext({
+      targetId: target?.id,
       attacker: c,
       weapon: mainWeapon,
       targetDefense: targetDef,
@@ -685,7 +686,7 @@ export function AttackPanel({ character: cProp }: Props) {
           const alvo2 = g.amploTarget;
           const def2 = computeTotalDefense(alvo2, { items, omniInventory: omniInventoryList, omniEntidadesMap, omniRuntimeEffects: omniRuntimeEffectsList }, attackKind);
           const ctx2 = buildAttackContext({
-            attacker: c, weapon: mainWeapon, targetDefense: def2,
+            attacker: c, weapon: mainWeapon, targetDefense: def2, targetId: alvo2.id,
             situation: { ...ctx.situation, targetUnaware: false, arteExecucao: false, devastacaoHit: 0 },
             trainedRanges: [
               ...(c.meleeTrained ? (['melee'] as const) : []),
@@ -698,7 +699,7 @@ export function AttackPanel({ character: cProp }: Props) {
           if (r2.hit && g.sel.penetrante) addLog('combat', `   ↳ Penetrante: ignora ${penetranteRD(c)} de RD.`);
           if (r2.hit && r2.damageTotal > 0) {
             applyDamage(alvo2.id, r2.damageTotal, (r2.damageType ?? undefined) as never, {
-              attackerId: c.id, isMelee: mainWeapon.range === 'melee', rdIgnore: rdIgnoradaAtaque(!!g.sel.penetrante),
+              contexto: r2.contexto, attackerId: c.id, isMelee: mainWeapon.range === 'melee', rdIgnore: rdIgnoradaAtaque(!!g.sel.penetrante),
             });
           }
           if (r2.hit && r2.critical) checarRenovacaoCritico(true, alvo2.name);
@@ -901,7 +902,7 @@ export function AttackPanel({ character: cProp }: Props) {
     }
     if (target && result.damageTotal > 0) {
       applyDamage(target.id, result.damageTotal, (result.damageType ?? undefined) as never, {
-        attackerId: c.id, isMelee: mainWeapon.range === 'melee', rdIgnore: rdIgn,
+        contexto: result.contexto, attackerId: c.id, isMelee: mainWeapon.range === 'melee', rdIgnore: rdIgn,
       });
     }
     if (g?.sel.impactante && g.target) void empurrarImpactante(g.target, result.damageTotal);
@@ -916,7 +917,7 @@ export function AttackPanel({ character: cProp }: Props) {
     const ids = new Set((alvo.activeConditions ?? []).map((x) => (x as { conditionId?: string }).conditionId));
     const unaware = ids.has('desprevenido') || ids.has('agarrado') || ids.has('atordoado') || escondidoDe(eu, alvo.id);
     const ctx = buildAttackContext({
-      attacker: eu, weapon: arma, targetDefense: def,
+      attacker: eu, weapon: arma, targetDefense: def, targetId: alvo.id,
       situation: {
         previousAttacksThisTurn: eu.attacksThisTurn ?? 0, previousMissed: eu.lastAttackHit === false,
         targetUnaware: unaware, targetProne: ids.has('caido'), preferredAbility: pickAttackAbility(eu, arma),
@@ -934,7 +935,7 @@ export function AttackPanel({ character: cProp }: Props) {
     addLog('combat', `🗡️ ${c.name} ataca ${alvo.name} com ${arma.name}: d20 ${r.natural} · total ${r.attackTotal} vs Def ${def} → ${verdict}${r.hit ? ` · dano ${r.damageTotal} (${r.damageDice})` : ''}`);
     if (r.hit && r.damageTotal > 0) {
       applyDamage(alvo.id, r.damageTotal, (r.damageType ?? undefined) as never, {
-        attackerId: c.id, isMelee: arma.range === 'melee', rdIgnore: arremessosRdIgnorada(eu, arma, turnInfo),
+        contexto: r.contexto, attackerId: c.id, isMelee: arma.range === 'melee', rdIgnore: arremessosRdIgnorada(eu, arma, turnInfo),
       });
     }
     if (r.hit && r.critical) checarRenovacaoCritico(true, alvo.name);
@@ -1074,7 +1075,7 @@ export function AttackPanel({ character: cProp }: Props) {
       'ranged',
     );
     const ctx2 = buildAttackContext({
-      attacker: c, weapon: arma, targetDefense: def2,
+      attacker: c, weapon: arma, targetDefense: def2, targetId: alvo2.id,
       situation: { preferredAbility: ability2, attackerIsGrappled },
       trainedRanges: [
         ...(c.meleeTrained ? (['melee'] as const) : []),
@@ -1089,7 +1090,7 @@ export function AttackPanel({ character: cProp }: Props) {
     recordAttackResult(c.id, r.hit);
     if (r.hit && r.damageTotal > 0) {
       const ign = arremessosRdIgnorada(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, arma, turnInfo);
-      applyDamage(alvo2.id, r.damageTotal, (r.damageType ?? undefined) as never, { attackerId: c.id, isMelee: false, rdIgnore: ign });
+      applyDamage(alvo2.id, r.damageTotal, (r.damageType ?? undefined) as never, { contexto: r.contexto, attackerId: c.id, isMelee: false, rdIgnore: ign });
     }
     if (r.hit && r.critical) checarRenovacaoCritico(true, alvo2.name);
     registrarDevastacao(alvo2.id, r.hit);
@@ -1124,8 +1125,8 @@ export function AttackPanel({ character: cProp }: Props) {
     try {
       for (const arma of [mainWeapon, offWeapon]) {
         const ctxT = buildAttackContext({
-          attacker: c, weapon: arma, targetDefense: targetDef,
-          situation: { ...base, preferredAbility: pickAttackAbility(c, arma) },
+          attacker: c, weapon: arma, targetDefense: targetDef, targetId: target.id,
+          situation: { ...base, preferredAbility: pickAttackAbility(c, arma), isOffHand: arma === offWeapon },
           trainedRanges: trained,
         });
         const r = await rollAttack(ctxT);
@@ -1150,7 +1151,7 @@ export function AttackPanel({ character: cProp }: Props) {
     const tipo = tiros[0].r.damageType ?? undefined;
     addLog('combat', `   💥 Dano combinado: ${total} (${tiros.map((t) => `${t.arma.name} ${t.r.damageTotal}`).join(' + ')}) — RD e resistências aplicadas uma única vez.`);
     const rdIgn = rdIgnoradaAtaque(false);
-    applyDamage(target.id, total, tipo as never, { attackerId: c.id, isMelee: false, rdIgnore: rdIgn });
+    applyDamage(target.id, total, tipo as never, { contexto: { acao: tiros[0].r.contexto?.acao, dano: { foi_critico: tiros.some((t) => t.r.critical) ? 1 : 0 } }, attackerId: c.id, isMelee: false, rdIgnore: rdIgn });
     if (tiros.some((t) => t.r.critical)) checarRenovacaoCritico(true, target.name);
     void tempestadeGolpe(target);
     void explosaoDragao(target, total, tipo);
@@ -1184,7 +1185,7 @@ export function AttackPanel({ character: cProp }: Props) {
       // O dano original já foi aplicado: aplica só a diferença (sem RD de novo).
       if (target) {
         applyDamage(target.id, r2.damageTotal - lastResult.damageTotal, (lastResult.damageType ?? undefined) as never, {
-          attackerId: c.id, isMelee: mainWeapon.range === 'melee', ignoresRD: true,
+          contexto: lastResult.contexto, attackerId: c.id, isMelee: mainWeapon.range === 'melee', ignoresRD: true,
         });
       }
     } else {

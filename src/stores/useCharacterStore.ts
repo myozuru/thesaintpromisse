@@ -1,3 +1,7 @@
+import { useMapStore } from '@/stores/useMapStore';
+import { distanceBetweenChars } from '@/lib/weaponRange';
+import { contextoDano, type ContextosOmni } from '@/lib/omni/contextoEvento';
+import { emitirEvento } from '@/lib/omni/eventBus';
 import { markCharacterDeleted } from "@/lib/charSyncStamps";
 import { luaReducao, quebraPostura } from '@/lib/posturas';
 import { arsenalTrocaLivreDisponivel, arsenalBonusAoTrocar } from '@/lib/arsenalCiclico';
@@ -740,7 +744,7 @@ interface CharacterStore {
    * onde X = AU. Acumulam. Retorna o roll para log.
    */
   triggerAuraDrenadora: (charId: string) => Promise<{ ok: boolean; reason?: string; rolls?: number[]; conMod?: number; total?: number }>;
-  applyDamage: (id: string, rawDamage: number, damageType?: DamageType, opts?: { ignoresRD?: boolean; ignoresResistance?: boolean; attackerId?: string; isMelee?: boolean; tags?: string[]; rdIgnore?: number }) => void;
+  applyDamage: (id: string, rawDamage: number, damageType?: DamageType, opts?: { ignoresRD?: boolean; ignoresResistance?: boolean; attackerId?: string; isMelee?: boolean; tags?: string[]; rdIgnore?: number; contexto?: ContextosOmni }) => void;
   /**
    * Aplica cura. `source` controla o redutor FAH:
    * - 'cursed_energy_external' → cura de Energia Reversa vinda de TERCEIROS
@@ -2104,6 +2108,31 @@ export const useCharacterStore = create<CharacterStore>()(
         // Fase 9 — captura "antes/depois" para detectar gatilho de Absorção Elemental.
         const NON_ELEMENTAL = new Set<DamageType>(['DCO', 'DP', 'DI', 'DPS', 'DAL']);
         const beforeChar = get().characters.find((cc) => cc.id === id);
+        const inicialOmni = opts?.contexto?.dano?.valor_inicial ?? totalDamage;
+        const mapaOmni = useMapStore.getState();
+        const alcanceOmni = opts?.attackerId
+          ? distanceBetweenChars(opts.attackerId, id, mapaOmni.entities, mapaOmni.gridConfig) ?? undefined
+          : undefined;
+        const criarContextoDano = (final?: number) => contextoDano(inicialOmni, final, {
+          tipo: damageType, atacanteId: opts?.attackerId, alvoId: id,
+          isMelee: opts?.isMelee, tags: opts?.tags, contexto: opts?.contexto, alcance: alcanceOmni,
+        });
+        const notificarDanoOmni = (final: number) => {
+          if (!beforeChar) return;
+          const contexto = criarContextoDano(final);
+          // Snapshot local: efeitos disparados não mudam o dano deste evento.
+          const cena = { dano: rawDamage, dano_final: final };
+          emitirEvento('depoisDeSofrerDano', { usuarioId: id, alvoId: opts?.attackerId, cena, contexto });
+          emitirEvento('aoSofrerDano', {
+            usuarioId: id, alvoId: opts?.attackerId, cena, contexto,
+            origemNome: 'Dano Sofrido', incluirPassivas: true, incluirScriptsItens: false,
+          });
+          if (opts?.attackerId) emitirEvento('aoCausarDano', {
+            usuarioId: opts.attackerId, alvoId: id, cena, contexto,
+            origemNome: 'Dano Causado', incluirPassivas: true,
+          });
+        };
+
 
         // ─── Especialista — Estilo do Interceptador (redução armada) ─────────
         if (beforeChar?.interceptGuard && totalDamage > 0 && !opts?.tags?.includes('__interceptado')) {
@@ -2111,8 +2140,8 @@ export const useCharacterStore = create<CharacterStore>()(
           const reduced = Math.max(0, totalDamage - g.amount);
           set((s) => ({ characters: s.characters.map((cc) => cc.id === id ? { ...cc, interceptGuard: null } : cc) }));
           try { useLogStore.getState().addLog('combat', `🗡️ ${g.byName} intercepta: dano em ${beforeChar.name} ${totalDamage} → ${reduced} (−${Math.min(g.amount, totalDamage)}).`); } catch { /* noop */ }
-          if (reduced <= 0) return;
-          get().applyDamage(id, reduced, damageType, { ...opts, tags: [...(opts?.tags ?? []), '__interceptado'] });
+          if (reduced <= 0) { notificarDanoOmni(0); return; }
+          get().applyDamage(id, reduced, damageType, { ...opts, contexto: criarContextoDano(), tags: [...(opts?.tags ?? []), '__interceptado'] });
           return;
         }
 
@@ -2196,10 +2225,13 @@ export const useCharacterStore = create<CharacterStore>()(
           get().updateCharacter(id, { omniFlags: flagsSeed });
         }
         try {
+          emitirEvento('antesDeSofrerDano', { usuarioId: id, alvoId: opts?.attackerId,
+            cena: { dano: rawDamage, dano_pendente: rawDamage }, contexto: criarContextoDano() });
           dispararGatilhoEfeitosItens('aoSofrerDano', {
             usuarioId: id,
             alvoId: opts?.attackerId,
             cena: { dano: rawDamage, dano_pendente: rawDamage, dano_recebido: rawDamage },
+            contexto: criarContextoDano(),
           });
         } catch (err) {
           console.warn('[applyDamage] erro no disparador:', err);
@@ -2214,6 +2246,7 @@ export const useCharacterStore = create<CharacterStore>()(
         if (charAposTrigger && (charAposTrigger.omniFlags?.bloqueio_total ?? 0) >= 1) {
           const flags = { ...(charAposTrigger.omniFlags ?? {}), bloqueio_total: 0, dano_pendente: 0 };
           get().updateCharacter(id, { omniFlags: flags });
+          notificarDanoOmni(0);
           console.log('🛡️ DANO ABSORVIDO por bloqueio_total — abortando applyDamage');
           console.groupEnd();
           try {
@@ -2231,6 +2264,7 @@ export const useCharacterStore = create<CharacterStore>()(
             const flags = { ...(charAposTrigger.omniFlags ?? {}), dano_pendente: 0 };
             get().updateCharacter(id, { omniFlags: flags });
             if (pend <= 0) {
+              notificarDanoOmni(0);
               console.log('🛡️ DANO ANULADO via dano_pendente=0 — abortando applyDamage');
               console.groupEnd();
               try {
@@ -2430,31 +2464,13 @@ export const useCharacterStore = create<CharacterStore>()(
 
         // ─── Omni-Engine: emite gatilhos de dano ─────────────────────────────
         import('@/lib/omni/eventBus').then(({ emitirEvento }) => {
-          emitirEvento('aoSofrerDano', {
-            usuarioId: id,
-            alvoId: opts?.attackerId,
-            cena: { dano: rawDamage },
-            origemNome: 'Dano Sofrido',
-            incluirPassivas: true,
-            // O pre-hook (linha ~1996) já chamou dispararGatilhoEfeitosItens
-            // para este mesmo evento — evita disparo duplo nos scripts de item.
-            incluirScriptsItens: false,
-          });
-          if (opts?.attackerId) {
-            emitirEvento('aoCausarDano', {
-              usuarioId: opts.attackerId,
-              alvoId: id,
-              cena: { dano: rawDamage },
-              origemNome: 'Dano Causado',
-              incluirPassivas: true,
-            });
-          }
+          notificarDanoOmni(finalDamage);
           // Observação espacial: todas as outras fichas "veem" o dano.
           if (rawDamage > 0) {
             void import('@/lib/omni/observadores').then(async (m) => {
-              await m.emitirObservadores('sofrerDano', { sujeitoId: id, outroId: opts?.attackerId, dano: rawDamage });
+              await m.emitirObservadores('sofrerDano', { sujeitoId: id, outroId: opts?.attackerId, dano: rawDamage, contexto: criarContextoDano(finalDamage) });
               if (opts?.attackerId) {
-                await m.emitirObservadores('causarDano', { sujeitoId: opts.attackerId, outroId: id, dano: rawDamage });
+                await m.emitirObservadores('causarDano', { sujeitoId: opts.attackerId, outroId: id, dano: rawDamage, contexto: criarContextoDano(finalDamage) });
               }
             }).catch(() => {});
           }
@@ -2513,7 +2529,7 @@ export const useCharacterStore = create<CharacterStore>()(
                 incluirPassivas: true,
               });
               void import('@/lib/omni/observadores')
-                .then((m) => m.emitirObservadores('morrer', { sujeitoId: id, outroId: opts?.attackerId, dano: rawDamage }))
+                .then((m) => m.emitirObservadores('morrer', { sujeitoId: id, outroId: opts?.attackerId, dano: rawDamage, contexto: criarContextoDano(finalDamage) }))
                 .catch(() => {});
               // 2) Só DEPOIS libera todos os agarres bilateralmente.
               get().releaseAllGrapplesOf(id);

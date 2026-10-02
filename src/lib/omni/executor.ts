@@ -1,3 +1,4 @@
+import { variaveisContexto, type ContextosOmni } from './contextoEvento';
 /**
  * Omni-Engine Runtime Executor (Fatia 3 — Pilar 1+2+4 ao vivo).
  *
@@ -55,6 +56,7 @@ export interface ContextoRuntime {
   usuario?: Character;
   alvo?: Character;
   cena?: Record<string, number>;
+  contexto?: ContextosOmni;
   /** Para macros: profundidade atual de encadeamento. */
   profundidade?: number;
   /** Origem do disparo (para log). */
@@ -84,6 +86,7 @@ function variaveisCompletas(ctx: ContextoRuntime): Record<string, number> {
     vars[`CENA_${k}`] = v;
     vars[`CENA_${k.toUpperCase()}`] = v;
   }
+  Object.assign(vars, variaveisContexto(ctx.contexto));
   return vars;
 }
 
@@ -209,14 +212,7 @@ function executarAcao(a: AcaoLogica, ctx: ContextoRuntime, log: (m: string) => v
   switch (a.acao) {
     case 'DANO': {
       if (alvoChar) {
-        // 🛡️ Bloqueio Total absorve dano em vida_atual.
-        if ((alvoChar.omniFlags?.bloqueio_total ?? 0) >= 1 && Math.abs(valor) > 0) {
-          const flags = { ...(alvoChar.omniFlags ?? {}), bloqueio_total: 0 };
-          useCharacterStore.getState().updateCharacter(alvoChar.id, { omniFlags: flags });
-          log(`${nomeOrigem}: 🛡️ ${nomeAlvo} absorveu o dano com Bloqueio Total`);
-          break;
-        }
-        aplicarPatchNumerico(alvoChar.id, 'status.vida.atual', -Math.abs(valor), 'somar');
+        useCharacterStore.getState().applyDamage(alvoChar.id, Math.abs(valor), undefined, { attackerId: ctx.usuario?.id });
         log(`${nomeOrigem}: ${nomeAlvo} sofreu ${Math.abs(valor)} de dano`);
       }
       break;

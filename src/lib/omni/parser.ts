@@ -8,7 +8,7 @@
  * - Suporta sobrescrita inteligente de buffs homônimos (maior vence).
  */
 import { Parser } from 'expr-eval';
-import { ALIASES_FORMULA } from './constantesDoSistema';
+import { DICIONARIO_CHAVES_OMNI, ALIASES_FORMULA } from './constantesDoSistema';
 
 export interface ContextoAvaliacao {
   /** Variáveis simples resolvidas (ex: TREINO=3, FOR=4). */
@@ -254,7 +254,7 @@ export function rolarNotacao(notacao: string, ctx: ContextoAvaliacao): number {
   const keepHighMatch = mods.match(/kh(\d+)/i);
   const keepLowMatch = mods.match(/kl(\d+)/i);
 
-  let rolls: number[] = [];
+  const rolls: number[] = [];
   for (let i = 0; i < count; i++) {
     let r = roll(rng, sides);
     if (rerollMatch) {
@@ -319,11 +319,11 @@ function preprocessar(expressao: string, ctx: ContextoAvaliacao): string {
 
   // 2) Substitui @PREFIXO.subchave (ex: @USUARIO.vida, @ALVO.forca, @CENA.x, @ITEM.usos_restantes).
   out = out.replace(
-    /@(USUARIO|ALVO|CENA|ITEM)\.([A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_]*)/gi,
+    /@(USUARIO|ALVO|CENA|ITEM|DANO|ACAO|TESTE|EFEITO)\.([A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_]*)/gi,
     (_m, prefixo: string, sub: string) => {
       const px = prefixo.toUpperCase();
       // ITEM tem chaves cruas (usos_restantes, usos_totais) — sem alias pt-BR.
-      const chave = px === 'ITEM' ? sub.toUpperCase() : resolverChavePtBr(sub);
+      const chave = ['USUARIO', 'ALVO', 'CENA'].includes(px) ? resolverChavePtBr(sub) : sub.toUpperCase();
       const namespaced = `${px}_${chave}`;
       const v = ctx.variaveis[namespaced];
       if (typeof v === 'number') return String(v);
@@ -407,7 +407,7 @@ function acharInicioOperandoEsquerda(s: string, idxOp: number): number {
   // pula espaços imediatamente antes do operador
   while (i >= 0 && s[i] === ' ') i--;
   let depth = 0;
-  let limite = i + 1; // posição final (exclusiva) do operando
+  const limite = i + 1; // posição final (exclusiva) do operando
   while (i >= 0) {
     const c = s[i];
     if (c === ')') { depth++; i--; continue; }
@@ -444,6 +444,38 @@ function acharInicioOperandoEsquerda(s: string, idxOp: number): number {
 // Avaliação principal
 // ============================================================================
 
+export interface AvisoKeyOmni {
+  key: string;
+  tipo: 'desconhecida' | 'sem_contexto';
+  mensagem: string;
+}
+
+/** Valida referências explícitas, preservando contadores/flags livres existentes. */
+export function diagnosticarKeysFormula(expressao: string, variaveis?: Record<string, number>): AvisoKeyOmni[] {
+  const avisos: AvisoKeyOmni[] = [];
+  const vistos = new Set<string>();
+  const oficiais = DICIONARIO_CHAVES_OMNI.flatMap((c) => c.itens.map((i) => i.id.toLowerCase()));
+  for (const match of expressao.matchAll(/@([A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_]*(?:\.[A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_]*)?)/g)) {
+    const key = match[1];
+    if (vistos.has(key.toLowerCase())) continue;
+    vistos.add(key.toLowerCase());
+    const parts = key.split('.');
+    const px = parts.length === 2 ? parts[0].toUpperCase() : 'USUARIO';
+    const sub = parts.at(-1)!;
+    const ficha = px === 'USUARIO' || px === 'ALVO';
+    const canon = ['USUARIO', 'ALVO', 'CENA'].includes(px) ? resolverChavePtBr(sub) : sub.toUpperCase();
+    const bagKey = `${px}_${canon}`;
+    const presente = typeof variaveis?.[bagKey] === 'number' || (px === 'USUARIO' && typeof variaveis?.[canon] === 'number');
+    const oficial = oficiais.includes((ficha ? sub : key).toLowerCase()) ||
+      (ficha && (sub.toUpperCase() in ALIASES_FORMULA || sub.toLowerCase() in ATALHOS_PT_BR)) ||
+      (ficha && /^(contador_|tem_(talento|aptidao|habilidade|condicao|item|feitico|buff)_|condicao_rodadas_|origem_id_|especializacao_id_|arma_grupo_|saldo_|tem_moeda_|cooldown_|usos_habilidade_|efeito_pilhas_|efeito_duracao_)/i.test(sub)) ||
+      /^RESULTADO_\d+$/i.test(sub);
+    if (!presente && !oficial) avisos.push({ key: `@${key}`, tipo: 'desconhecida', mensagem: `Key desconhecida: @${key}. Para contadores livres, use contador_<nome>.` });
+    else if (variaveis && !presente && !ficha && !/^RESULTADO_\d+$/i.test(sub)) avisos.push({ key: `@${key}`, tipo: 'sem_contexto', mensagem: `@${key} não está disponível neste evento ou nesta prévia.` });
+  }
+  return avisos;
+}
+
 export function avaliarFormula(
   expressao: string,
   variaveis: Record<string, number> = {},
@@ -460,7 +492,7 @@ export function avaliarFormula(
      */
     resultados?: number[];
   }
-): { valor: number; rolagens: ResultadoRolagem[]; expressaoResolvida: string } {
+): { valor: number; rolagens: ResultadoRolagem[]; expressaoResolvida: string; avisos: AvisoKeyOmni[] } {
   const bag: Record<string, number> = { ...variaveis };
   if (extras?.alvo) {
     for (const [k, v] of Object.entries(extras.alvo)) bag[`ALVO_${k}`] = v;
@@ -476,6 +508,7 @@ export function avaliarFormula(
       bag[`RESULTADO_${i + 1}`] = v;
     });
   }
+  const avisos = diagnosticarKeysFormula(expressao, bag);
   const ctx: ContextoAvaliacao = { variaveis: bag, rolagens: [], rng };
   const resolvida = preprocessar(expressao, ctx);
   try {
@@ -489,9 +522,9 @@ export function avaliarFormula(
     const num = typeof valor === 'boolean'
       ? (valor ? 1 : 0)
       : typeof valor === 'number' && Number.isFinite(valor) ? valor : 0;
-    return { valor: num, rolagens: ctx.rolagens, expressaoResolvida: resolvida };
+    return { valor: num, rolagens: ctx.rolagens, expressaoResolvida: resolvida, avisos };
   } catch {
-    return { valor: 0, rolagens: ctx.rolagens, expressaoResolvida: resolvida };
+    return { valor: 0, rolagens: ctx.rolagens, expressaoResolvida: resolvida, avisos };
   }
 }
 

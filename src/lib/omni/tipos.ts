@@ -217,6 +217,8 @@ export type EfeitoSecundarioAtivo =
 
 /** Ação ativa genérica montada pelo Mestre (ver acaoAtiva.ts). */
 export interface AcaoAtivaConfig {
+  /** Intervalo até poder usar novamente, em turnos do portador; 0 = nenhum. */
+  cooldownTurnos?: number;
   id: string;
   nome: string;
   acao: 'comum' | 'bonus' | 'reacao' | 'livre';

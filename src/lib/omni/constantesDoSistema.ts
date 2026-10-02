@@ -200,8 +200,11 @@ export const GATILHOS_EVENTOS = {
   PASSIVO: 'aoEquipar',
   INICIO_TURNO: 'noInicioDoTurno',
   FIM_TURNO: 'noFimDoTurno',
+  AO_RESOLVER_TESTE: 'aoResolverTeste',
   AO_ACERTAR: 'aoAcertarAtaque',
   AO_ERRAR: 'aoErrarAtaque',
+  ANTES_SOFRER_DANO: 'antesDeSofrerDano',
+  DEPOIS_SOFRER_DANO: 'depoisDeSofrerDano',
   AO_SOFRER_DANO: 'aoSofrerDano',
   AO_CAUSAR_DANO: 'aoCausarDano',
   AO_CONJURAR: 'aoConjurarFeitico',
@@ -241,9 +244,12 @@ export const ROTULOS_GATILHOS: Record<GatilhoId, string> = {
   aoEquipar: 'Passivo (ao equipar)',
   noInicioDoTurno: 'No início do turno',
   noFimDoTurno: 'No fim do turno',
+  aoResolverTeste: 'Ao resolver teste (resultado e margem disponíveis)',
   aoAcertarAtaque: 'Ao acertar ataque',
   aoErrarAtaque: 'Ao errar ataque',
-  aoSofrerDano: 'Ao sofrer dano',
+  antesDeSofrerDano: 'Antes de sofrer dano (pode bloquear/reduzir)',
+  depoisDeSofrerDano: 'Depois de resolver dano (inclui bloqueado/imune)',
+  aoSofrerDano: 'Ao sofrer dano (legado)',
   aoCausarDano: 'Ao causar dano',
   aoConjurarFeitico: 'Ao conjurar feitiço',
   aoMover: 'Ao se mover',
@@ -544,6 +550,7 @@ const FLAGS_OMNI: ChaveOmniOpcao[] = [
 /** Variáveis do próprio item Omni. Resolvidas pela instância em uso. */
 const ITEM_OMNI: ChaveOmniOpcao[] = [
   { id: 'ITEM.usos_restantes', label: '@ITEM.usos_restantes', hint: 'Cargas restantes desta cópia do item.' },
+  { id: 'ITEM.cooldown_restante', label: '@ITEM.cooldown_restante', hint: 'Maior cooldown das ações deste item, em turnos do portador. Compartilhado por ação/ficha.' },
   { id: 'ITEM.usos_totais',    label: '@ITEM.usos_totais',    hint: 'Total de cargas por ciclo de recarga.' },
 ];
 
@@ -655,6 +662,8 @@ const COMBATE_AVANCADO_OMNI: ChaveOmniOpcao[] = [
 
 const ESTADO_OMNI: ChaveOmniOpcao[] = [
   { id: 'tamanho',         label: 'Tamanho',               hint: '1=Pequeno, 2=Médio, 3=Grande.' },
+  { id: 'falhas_morte', label: 'Falhas de Morte', hint: 'Falhas atuais da Porta da Morte (0–3).' },
+  { id: 'limite_falhas_morte', label: 'Limite de Falhas de Morte', hint: '3, conforme o tracker atual.' },
   { id: 'morrendo',        label: 'Está Morrendo',         hint: '1 se em estado de morrendo.' },
   { id: 'esta_morrendo',   label: 'Está Morrendo',         hint: 'Alias de morrendo.' },
   { id: 'morto',           label: 'Morto',                 hint: '1 se morto.' },
@@ -681,9 +690,10 @@ const CENA_AVANCADA_OMNI: ChaveOmniOpcao[] = [
 ];
 
 const DANO_CTX_OMNI: ChaveOmniOpcao[] = [
+  { id: 'DANO.resolvido', label: '@DANO.resolvido', hint: '0 antes de aplicar; 1 depois. valor_final/absorvido só existem depois.' },
 
-  { id: 'DANO.tipo',               label: '@DANO.tipo',               hint: 'Tipo do dano corrente.' },
-  { id: 'DANO.fonte',              label: '@DANO.fonte',              hint: 'Fonte do dano corrente.' },
+  { id: 'DANO.tipo',               label: '@DANO.tipo',               hint: 'Código numérico: 1 DCO, 2 DP, 3 DI, 4 DA, 5 DCG, 6 DCC, 7 DQ, 8 DS, 9 DAL, 10 DNR, 11 DE, 12 DPS, 13 DR, 14 DN, 15 DV; 0 desconhecido.' },
+  { id: 'DANO.fonte',              label: '@DANO.fonte',              hint: '1 se há atacante identificado; 0 se ambiental/sem origem.' },
   { id: 'DANO.foi_critico',        label: '@DANO.foi_critico',        hint: '1 se foi crítico.' },
   { id: 'DANO.foi_falha_critica',  label: '@DANO.foi_falha_critica',  hint: '1 se foi falha crítica.' },
   // ── PR-1: Contexto de dano expandido ─────────────────────────────────
@@ -1002,6 +1012,38 @@ const META_NARRATIVA_OMNI: ChaveOmniOpcao[] = [
 
 
 
+const ACAO_CTX_OMNI: ChaveOmniOpcao[] = [
+  { id: 'ACAO.eh_ataque', label: '@ACAO.eh_ataque', hint: '1 se a ação atual faz um ataque.' },
+  { id: 'ACAO.eh_feitico', label: '@ACAO.eh_feitico', hint: '1 se a ação atual é um feitiço.' },
+  { id: 'ACAO.eh_cac', label: '@ACAO.eh_cac', hint: '1 se a arma realmente usada é corpo a corpo.' },
+  { id: 'ACAO.eh_distancia', label: '@ACAO.eh_distancia', hint: '1 se a arma usada é de distância/arremesso.' },
+  { id: 'ACAO.eh_segunda_arma', label: '@ACAO.eh_segunda_arma', hint: '1 se este golpe usa a segunda arma.' },
+];
+const TESTE_CTX_OMNI: ChaveOmniOpcao[] = [
+  { id: 'TESTE.valor_natural', label: '@TESTE.valor_natural', hint: 'Resultado do d20 escolhido, sem bônus.' },
+  { id: 'TESTE.total', label: '@TESTE.total', hint: 'Resultado após bônus.' },
+  { id: 'TESTE.dt', label: '@TESTE.dt', hint: 'Dificuldade/Defesa comparada.' },
+  { id: 'TESTE.sucesso', label: '@TESTE.sucesso', hint: '1 sucesso/acerto; 0 falha/erro. Inclui regras de crítico.' },
+  { id: 'TESTE.margem', label: '@TESTE.margem', hint: 'total − dt; negativo se ficou abaixo.' },
+  { id: 'TESTE.eh_tr', label: '@TESTE.eh_tr', hint: '1 se é Teste de Resistência; 0 se ataque.' },
+];
+
+const EFEITO_CTX_OMNI: ChaveOmniOpcao[] = [
+  { id: 'EFEITO.pilhas', label: '@EFEITO.pilhas', hint: 'Instâncias ativas desta entidade no portador do evento (ou no alvo, se não há no portador).' },
+  { id: 'EFEITO.pilhas_do_usuario', label: '@EFEITO.pilhas_do_usuario', hint: 'Quantas dessas instâncias foram aplicadas pelo USUARIO.' },
+  { id: 'EFEITO.aplicado_por_usuario', label: '@EFEITO.aplicado_por_usuario', hint: '1 se pelo menos uma instância foi aplicada pelo USUARIO.' },
+  { id: 'EFEITO.duracao_restante', label: '@EFEITO.duracao_restante', hint: 'Maior duração restante em segundos; -1 se alguma instância é permanente.' },
+  { id: 'EFEITO.permanente', label: '@EFEITO.permanente', hint: '1 se alguma instância é permanente/até dissipar.' },
+];
+const DISPONIBILIDADE_OMNI: ChaveOmniOpcao[] = [
+  { id: 'cooldown_<id>', label: 'cooldown_<id>', hint: 'Turnos restantes do feitiço/ação Omni; 0 disponível. Troque hífens do ID por underscores.' },
+  { id: 'usos_habilidade_<id>', label: 'usos_habilidade_<id>', hint: 'Usos restantes de habilidade de especialização adquirida e com limite.' },
+  { id: 'usos_habilidade_max_<id>', label: 'usos_habilidade_max_<id>', hint: 'Limite efetivo de usos da habilidade adquirida.' },
+  { id: 'qtd_efeitos_ativos', label: 'Efeitos Omni Ativos', hint: 'Instâncias não expiradas que afetam esta ficha.' },
+  { id: 'efeito_pilhas_<id>', label: 'efeito_pilhas_<id>', hint: 'Instâncias Omni ativas desta entidade que afetam esta ficha.' },
+  { id: 'efeito_duracao_<id>', label: 'efeito_duracao_<id>', hint: 'Maior duração em segundos; -1 permanente, 0 ausente.' },
+];
+
 export const DICIONARIO_CHAVES_OMNI: CategoriaChavesOmni[] = [
   { grupo: 'Atributos',  escopos: ['USUARIO', 'ALVO'], itens: ATRIBUTOS_OMNI },
   { grupo: 'Recursos',   escopos: ['USUARIO', 'ALVO'], itens: RECURSOS_OMNI },
@@ -1017,6 +1059,10 @@ export const DICIONARIO_CHAVES_OMNI: CategoriaChavesOmni[] = [
   { grupo: '🥋 Perícias', escopos: ['USUARIO', 'ALVO'], itens: PERICIAS_OMNI },
   { grupo: '🛡️ Testes de Resistência', escopos: ['USUARIO', 'ALVO'], itens: TR_OMNI },
   { grupo: '🧪 Item',     escopos: ['NENHUM'],          itens: ITEM_OMNI },
+  { grupo: 'Efeito atual', escopos: ['NENHUM'], itens: EFEITO_CTX_OMNI },
+  { grupo: 'Disponibilidade e efeitos', escopos: ['USUARIO', 'ALVO'], itens: DISPONIBILIDADE_OMNI },
+  { grupo: 'Ação atual', escopos: ['NENHUM'], itens: ACAO_CTX_OMNI },
+  { grupo: 'Teste atual', escopos: ['NENHUM'], itens: TESTE_CTX_OMNI },
   { grupo: 'Globais',    escopos: ['NENHUM'],          itens: GLOBAIS_OMNI },
   { grupo: 'Cena',       escopos: ['NENHUM'],          itens: [...CENA_OMNI, ...CENA_AVANCADA_OMNI] },
   { grupo: '💥 Dano (contexto)', escopos: ['NENHUM'],   itens: DANO_CTX_OMNI },

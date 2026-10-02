@@ -1,3 +1,7 @@
+import { getSpecAbilityById, resolveUsageMax } from '@/lib/specAbilities';
+import { useOmniRuntimeStore } from '@/stores/useOmniRuntimeStore';
+import { toTimelineSeconds } from './tempo';
+import { normalizarIdKey, consultarEfeito } from './consultasRuntime';
 /**
  * Resolvedor de Caminhos (ponte Omni ↔ sistema existente).
  *
@@ -763,6 +767,8 @@ export function montarVariaveisDoPersonagem(
 
     // ─── 🧍 ESTADO FÍSICO ───────────────────────────────────────────────
     TAMANHO: tamanho,
+    FALHAS_MORTE: c.deathFails ?? 0,
+    LIMITE_FALHAS_MORTE: 3,
     MORRENDO: morrendo,
     ESTA_MORRENDO: morrendo,
     MORTO: morto,
@@ -907,6 +913,28 @@ export function montarVariaveisDoPersonagem(
     }
   } catch { /* */ }
 
+
+  // Cooldowns reais de feitiços e ações Omni; IDs seguem a normalização das demais keys.
+  for (const [id, turnos] of Object.entries(c.cooldowns ?? {})) {
+    base[`COOLDOWN_${normalizarIdKey(id.replace(/^omni:/, ''))}`] = Math.max(0, turnos);
+  }
+  for (const chosen of c.chosenSpecAbilities ?? []) {
+    const ability = getSpecAbilityById(chosen.abilityId);
+    if (!ability?.usage || ability.usage.scope === 'none') continue;
+    const max = resolveUsageMax(ability.usage, { level: c.level ?? 1, trainingBonus: getTrainingBonusByLevel(c.level ?? 1) });
+    const key = normalizarIdKey(chosen.abilityId);
+    base[`USOS_HABILIDADE_${key}`] = Math.max(0, max - (c.specAbilityUsage?.[chosen.abilityId] ?? 0));
+    base[`USOS_HABILIDADE_MAX_${key}`] = max;
+  }
+  const agora = toTimelineSeconds(useChronosStore.getState());
+  const efeitos = Object.values(useOmniRuntimeStore.getState().efeitos)
+    .filter((e) => e.targetCharId === c.id && (e.expiraEm === null || e.expiraEm > agora));
+  base.QTD_EFEITOS_ATIVOS = efeitos.length;
+  for (const id of new Set(efeitos.map((e) => e.entidadeId))) {
+    const consulta = consultarEfeito(efeitos.filter((e) => e.entidadeId === id), agora, c.id)!;
+    base[`EFEITO_PILHAS_${normalizarIdKey(id)}`] = consulta.pilhas;
+    base[`EFEITO_DURACAO_${normalizarIdKey(id)}`] = consulta.duracao_restante;
+  }
 
   // Mesmo bag também disponível sob o prefixo de escopo (USUARIO_FOR, ALVO_VIDA, ...).
   const prefixado: Record<string, number> = {};

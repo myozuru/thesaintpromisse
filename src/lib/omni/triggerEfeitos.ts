@@ -1,3 +1,5 @@
+import { cooldownDoItem } from './consultasRuntime';
+import { variaveisContexto, type ContextosOmni } from './contextoEvento';
 /**
  * 🎯 Disparador de gatilhos sobre efeitos de itens equipados.
  *
@@ -50,6 +52,7 @@ export interface DispararOpts {
   alvoId?: string;
   /** Variáveis extras de cena (ex.: { dano: 12 }). */
   cena?: Record<string, number>;
+  contexto?: ContextosOmni;
 }
 
 /**
@@ -173,6 +176,7 @@ export function dispararGatilhoEfeitosItens(
         vars[`CENA_${k}`] = v;
         vars[`CENA_${k.toUpperCase()}`] = v;
       }
+      Object.assign(vars, variaveisContexto(opts.contexto));
       return vars;
     };
     // ITEM.* (usos, etc.) — ainda exposto para retro-compatibilidade com
@@ -180,6 +184,7 @@ export function dispararGatilhoEfeitosItens(
     const itemBag: Record<string, number> = {
       usos_restantes: inst.usosRestantes ?? 0,
       usos_totais: inst.usosTotais ?? 0,
+      cooldown_restante: cooldownDoItem(fresco.acoesAtivas, useCharacterStore.getState().characters.find((c) => c.id === usuario.id)?.cooldowns),
     };
 
     let consumiuUso = false;
@@ -230,6 +235,7 @@ export function dispararGatilhoEfeitosItens(
         peSpellReduction: eff.peSpellReduction,
         immunityGrant: eff.immunityGrant,
         sourceName: fresco.nome,
+        sourceCharId: usuario.id,
         contador: {
           teto: eff.counterCap ? avaliarFormula(eff.counterCap, variaveis, undefined, { item: itemBag }).valor : undefined,
           porFonte: eff.counterPerSource,

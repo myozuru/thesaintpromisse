@@ -1,3 +1,6 @@
+import { cooldownAcaoKey } from './consultasRuntime';
+import { contextoTeste, type ContextosOmni } from './contextoEvento';
+import { emitirEvento } from './eventBus';
 /**
  * Ações ativas genéricas do OMNI.
  *
@@ -120,6 +123,8 @@ export function custoPEDe(cfg: AcaoAtivaConfig, u: Character): number {
 export type ResultadoAtiva = { ok: false; reason: string } | { ok: true; dano: number; detalhe: string };
 
 export function podeUsarAtiva(u: Character, alvo: Character | undefined, cfg: AcaoAtivaConfig): { ok: true } | { ok: false; reason: string } {
+  const cooldown = u.cooldowns?.[cooldownAcaoKey(cfg.id)] ?? 0;
+  if (cooldown > 0) return { ok: false, reason: `Em cooldown (${cooldown} turno(s) restantes).` };
   if (!alvo) return { ok: false, reason: 'Escolha um alvo.' };
   if (alvo.id === u.id) return { ok: false, reason: 'O alvo deve ser outra criatura.' };
   if (cfg.acao === 'comum' && (u.actionsCurrent ?? 1) <= 0) return { ok: false, reason: 'Sem Ação Comum disponível.' };
@@ -213,10 +218,13 @@ export async function executarAcaoAtiva(
     cargas = r.consumido;
     patch.omniCounters = r.counters;
   }
+  const cooldown = Math.max(0, Math.floor(cfg.cooldownTurnos ?? 0));
+  if (cooldown > 0) patch.cooldowns = { ...(u.cooldowns ?? {}), [cooldownAcaoKey(cfg.id)]: cooldown };
   store.updateCharacter(u.id, patch);
   const fonte = ent?.nome ?? cfg.nome;
   const pago = `${custo} PE${cargas ? ` + ${cargas} carga(s) de ${cfg.consumirContador!.nome}` : ''}`;
 
+  let contexto: ContextosOmni = { acao: { eh_ataque: cfg.teste === 'ataque' ? 1 : 0, eh_feitico: ent?.categoria === 'feitico' ? 1 : 0, eh_cac: 0, eh_distancia: 0, eh_segunda_arma: 0 } };
   let critico = false;
   let aplicaEfeitos = true;
   let passouTR = false;
@@ -230,18 +238,21 @@ export async function executarAcaoAtiva(
     const d20 = await rollD20Com(t.id, undefined, { label: `TR ${TR_ROTULO[tr]}` });
     passouTR = d20 + mod >= cd;
     aplicaEfeitos = !passouTR;
+    contexto.teste = contextoTeste(d20, d20 + mod, cd, passouTR, true);
+    emitirEvento('aoResolverTeste', { usuarioId: t.id, alvoId: u.id, contexto });
     cabecalho = `TR ${TR_ROTULO[tr]} d20 ${d20}${mod >= 0 ? '+' : ''}${mod} = ${d20 + mod} vs CD ${cd} → ${passouTR ? 'SUCESSO' : 'FALHA'}`;
   } else if (cfg.teste === 'ataque') {
     const def = computeTotalDefense(t, {}, arma!.range === 'melee' ? 'melee' : 'ranged');
     const ctx = buildAttackContext({
-      attacker: u, weapon: arma!, targetDefense: def,
-      situation: { critBonusExtra: critExtra || undefined },
+      attacker: u, weapon: arma!, targetDefense: def, targetId: t.id,
+      situation: { critBonusExtra: critExtra || undefined, isSpell: ent?.categoria === 'feitico' },
       trainedRanges: [
         ...(u.meleeTrained ? (['melee'] as const) : []),
         ...(u.rangedTrained ? (['ranged', 'thrown'] as const) : []),
       ],
     });
     const r = await rollAttack(ctx);
+    contexto = { ...r.contexto, acao: { ...r.contexto?.acao, eh_feitico: ent?.categoria === 'feitico' ? 1 : 0 } };
     critico = r.critical;
     aplicaEfeitos = r.hit;
     armaDano = cfg.incluirArma ? r.damageTotal : 0;
@@ -264,7 +275,7 @@ export async function executarAcaoAtiva(
   }
   const dano = cfg.teste === 'tr' ? danoAposTR(bruto, passouTR, !!cfg.metadeNoSucesso) : bruto;
   if (dano > 0) {
-    useCharacterStore.getState().applyDamage(t.id, dano, (cfg.tipoDano || undefined) as never, { attackerId: u.id });
+    useCharacterStore.getState().applyDamage(t.id, dano, (cfg.tipoDano || undefined) as never, { attackerId: u.id, isMelee: arma ? arma.range === 'melee' : undefined, contexto });
   }
   const notas = aplicaEfeitos ? aplicarEfeitos(u, t, cfg.efeitos ?? [], fonte) : [];
   const partes = [
