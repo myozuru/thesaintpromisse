@@ -465,7 +465,7 @@ function parsearComando(
   if (VERBOS_ABSOLUTOS.has(cmd)) {
     return { erro: { posicao, trecho: raw, mensagem: `${cmd} usa a forma curta: ${cmd} <recurso>.` } };
   }
-  const formulaFinal = autoArrobaExpressao(normalizarConjuncaoComoSoma(expr));
+  const formulaFinal = /^tudo$/i.test(expr) ? '0' : autoArrobaExpressao(normalizarConjuncaoComoSoma(expr));
   const { target, recurso } = extrairAlvoDoRecurso(recursoBruto, opts.defaultTarget ?? 'ALVO');
   return {
     efeito: {
