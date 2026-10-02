@@ -1,3 +1,4 @@
+import { idadeCondicao } from './condicionaisAtivos';
 /**
  * Resolvedor de Caminhos (ponte Omni ↔ sistema existente).
  *
@@ -915,13 +916,24 @@ export function montarVariaveisDoPersonagem(
     }
   }
 
+  // Idade registrada: -1 indica ausência ou histórico desconhecido.
+  for (const def of ALL_CONDITIONS) {
+    const norm = def.id.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9_]/g, '_');
+    const idade = idadeCondicao(c, def.id);
+    base[`CONDICAO_IDADE_RODADAS_${norm}`] = idade ?? -1;
+    base[`CONDICAO_IDADE_CONHECIDA_${norm}`] = idade === undefined ? 0 : 1;
+  }
+
   // PR-3: Predicate tem_condicao_<id> — 1 por condição ativa.
   // + condicao_rodadas_<id> — rodadas restantes (maior entre turnos/rodadas;
   //   -1 indefinido vira 999 para comparações "mais de X rodadas").
-  for (const a of (c.activeConditions ?? []) as Array<{ conditionId?: string; remainingRounds?: number; remainingTurns?: number }>) {
+  for (const a of (c.activeConditions ?? []) as Array<{ conditionId?: string; remainingRounds?: number; remainingTurns?: number; elapsedRounds?: number }>) {
     if (!a.conditionId) continue;
     const norm = a.conditionId.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9_]/g, '_');
     base[`TEM_CONDICAO_${norm}`] = 1;
+    const idade = idadeCondicao(c, a.conditionId);
+    base[`CONDICAO_IDADE_RODADAS_${norm}`] = idade ?? -1;
+    base[`CONDICAO_IDADE_CONHECIDA_${norm}`] = idade === undefined ? 0 : 1;
     const r = Math.max(a.remainingRounds ?? -1, a.remainingTurns ?? -1);
     const rod = (a.remainingRounds === -1 && a.remainingTurns === -1) ? 999 : Math.max(0, r);
     base[`CONDICAO_RODADAS_${norm}`] = Math.max(base[`CONDICAO_RODADAS_${norm}`] ?? 0, rod);

@@ -56,6 +56,39 @@ const GatilhoSchema = z.object({
   blocos: z.array(BlocoLogicoSchema),
 });
 
+const OperadorEstadoSchema = z.enum(['<', '<=', '==', '!=', '>=', '>']);
+const comparacao = { operador: OperadorEstadoSchema, valor: z.number().finite() };
+const PredicadoEstadoSchema = z.discriminatedUnion('tipo', [
+  z.object({ tipo: z.literal('tem_condicao'), nome: z.string().min(1) }),
+  z.object({ tipo: z.literal('rodadas_condicao'), nome: z.string().min(1), ...comparacao }),
+  z.object({ tipo: z.literal('cargas'), nome: z.string().min(1), ...comparacao }),
+  z.object({ tipo: z.literal('distancia'), ...comparacao }),
+  z.object({ tipo: z.literal('pv_percentual'), ...comparacao }),
+]);
+const CondicionalAtivoSchema = z.object({
+  id: z.string(), se_alvo: z.array(PredicadoEstadoSchema).optional(), se_usuario: z.array(PredicadoEstadoSchema).optional(),
+  margem_critico_mod: z.number().finite().optional(), multiplicador_critico_mod: z.number().finite().optional(),
+  dano_extra: z.string().optional(), mod_tr_alvo: z.number().finite().optional(),
+  desvantagem_tr_alvo: z.boolean().optional(), vantagem_acerto: z.boolean().optional(),
+});
+const AcaoAtivaSchema = z.object({
+  id: z.string(), nome: z.string(), acao: z.enum(['comum', 'bonus', 'reacao', 'livre']),
+  custoPE: z.string(), alcanceM: z.number().finite().nonnegative(), teste: z.enum(['tr', 'ataque', 'nenhum']),
+  tipo_alvo: z.enum(['unico', 'multiplo', 'area', 'proprio']).optional(),
+  filtro_alvo: z.enum(['inimigos', 'aliados', 'todos', 'todos_exceto_si']).optional(), max_alvos: z.string().optional(),
+  area: z.object({ forma: z.enum(['cone', 'linha', 'raio_em_si', 'raio_no_ponto']), tamanho_m: z.number().finite().positive(), largura_m: z.number().finite().positive().optional() }).optional(),
+  tr: z.enum(['astucia', 'fortitude', 'integridade', 'reflexos', 'vontade']).optional(), cd: z.string().optional(),
+  metadeNoSucesso: z.boolean().optional(), dano: z.string().optional(), dadosPorCarga: z.string().optional(),
+  tipoDano: z.string().optional(), incluirArma: z.boolean().optional(),
+  consumirContador: z.object({ nome: z.string(), minimo: z.number().finite() }).optional(),
+  margemCritico: z.object({ condicao: z.string(), reducao: z.number().finite() }).optional(),
+  efeitos: z.array(z.union([
+    z.object({ tipo: z.literal('condicao'), condicao: z.string(), rodadas: z.number().finite() }),
+    z.object({ tipo: z.enum(['puxar', 'empurrar']), metros: z.number().finite() }),
+  ])).optional(),
+  condicionais: z.array(CondicionalAtivoSchema).optional(),
+});
+
 const EntidadeSchema = z.object({
   id: z.string(),
   versao: z.literal(1),
@@ -75,6 +108,7 @@ const EntidadeSchema = z.object({
   alcance: ValorDinamicoSchema.optional(),
   areaRaio: ValorDinamicoSchema.optional(),
   gatilhos: z.array(GatilhoSchema),
+  acoesAtivas: z.array(AcaoAtivaSchema).optional(),
   comercio: z
     .object({
       basePrice: z.number(),

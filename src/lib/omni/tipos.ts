@@ -217,6 +217,27 @@ export type EfeitoSecundarioAtivo =
   | { tipo: 'condicao'; condicao: string; rodadas: number }
   | { tipo: 'puxar' | 'empurrar'; metros: number };
 
+export type OperadorEstado = '<' | '<=' | '==' | '!=' | '>=' | '>';
+export type PredicadoEstado =
+  | { tipo: 'tem_condicao'; nome: string }
+  | { tipo: 'rodadas_condicao' | 'cargas'; nome: string; operador: OperadorEstado; valor: number }
+  | { tipo: 'distancia' | 'pv_percentual'; operador: OperadorEstado; valor: number };
+
+/** Cada bloco exige todas as checagens e soma seus modificadores aos outros blocos ativos. */
+export interface ModificadorCondicionalAtivo {
+  id: string;
+  se_alvo?: PredicadoEstado[];
+  se_usuario?: PredicadoEstado[];
+  /** Delta na margem: -2 torna o crítico mais fácil. */
+  margem_critico_mod?: number;
+  /** Delta sobre x2: +1 resulta em x3. Afeta dados, não valores fixos. */
+  multiplicador_critico_mod?: number;
+  dano_extra?: string;
+  mod_tr_alvo?: number;
+  desvantagem_tr_alvo?: boolean;
+  vantagem_acerto?: boolean;
+}
+
 /** Ação ativa genérica montada pelo Mestre (ver acaoAtiva.ts). */
 export interface AcaoAtivaConfig {
   id: string;
@@ -249,6 +270,7 @@ export interface AcaoAtivaConfig {
   /** Reduz a margem de crítico quando a fórmula for verdadeira. */
   margemCritico?: { condicao: string; reducao: number };
   efeitos?: EfeitoSecundarioAtivo[];
+  condicionais?: ModificadorCondicionalAtivo[];
 }
 
 /** Metadados comerciais de uma entidade. */

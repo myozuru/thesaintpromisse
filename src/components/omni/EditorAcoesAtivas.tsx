@@ -1,3 +1,4 @@
+import { EditorCondicionaisAtivos } from './EditorCondicionaisAtivos';
 /** Editor no-code das ações ativas genéricas de uma entidade OMNI. */
 import type { AcaoAtivaConfig, EfeitoSecundarioAtivo, EntidadeOmni, TrNome } from '@/lib/omni/tipos';
 import { novaAcaoAtiva } from '@/lib/omni/acaoAtiva';
@@ -98,11 +99,12 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
           {a.teste === 'ataque' && (
             <div className="grid grid-cols-2 gap-2">
               <div><Label className="text-xs">Margem de crítico: condição</Label>
-                <Input value={a.margemCritico?.condicao ?? ''} placeholder="@ALVO.condicao_rodadas_condenado > 3" onChange={(e) => set(i, { margemCritico: e.target.value ? { condicao: e.target.value, reducao: a.margemCritico?.reducao ?? 2 } : undefined })} /></div>
+                <Input value={a.margemCritico?.condicao ?? ''} placeholder="@ALVO.condicao_idade_rodadas_condenado >= 3" onChange={(e) => set(i, { margemCritico: e.target.value ? { condicao: e.target.value, reducao: a.margemCritico?.reducao ?? 2 } : undefined })} /></div>
               <div><Label className="text-xs">Reduz a margem em</Label>
                 <Input type="number" min={0} disabled={!a.margemCritico} value={a.margemCritico?.reducao ?? 2} onChange={(e) => a.margemCritico && set(i, { margemCritico: { ...a.margemCritico, reducao: Math.max(0, parseInt(e.target.value, 10) || 0) } })} /></div>
             </div>
           )}
+          <EditorCondicionaisAtivos blocos={a.condicionais ?? []} onChange={condicionais => set(i, { condicionais })} />
           <div className="space-y-1">
             <Label className="text-xs">Efeitos (se o TR falhar / o ataque acertar)</Label>
             {(a.efeitos ?? []).map((ef, k) => {

@@ -191,14 +191,13 @@ function matchesScope(m: AdvModifier, ctx: RollContext): boolean {
 }
 
 /** Consulta + consumo. Use em qualquer ponto onde uma rolagem ocorre. */
-export function consumeAdvantageFor(charId: string, ctx: RollContext): ResolveResult {
+export function consumeAdvantageFor(charId: string, ctx: RollContext, extra: { advantage?: boolean; disadvantage?: boolean } = {}): ResolveResult {
   const c = useCharacterStore.getState().characters.find(x => x.id === charId);
   if (!c) return { net: 'normal', consumedIds: [], notes: [] };
   const mods = readMods(c);
   const matches: AdvModifier[] = Object.values(mods).filter(m => matchesScope(m, ctx) && m.bonus == null);
-  if (matches.length === 0) return { net: 'normal', consumedIds: [], notes: [] };
-  const advCount = matches.filter(m => m.kind === 'advantage').length;
-  const disCount = matches.filter(m => m.kind === 'disadvantage').length;
+  const advCount = matches.filter(m => m.kind === 'advantage').length + (extra.advantage ? 1 : 0);
+  const disCount = matches.filter(m => m.kind === 'disadvantage').length + (extra.disadvantage ? 1 : 0);
   let net: ResolveResult['net'] = 'normal';
   if (advCount > 0 && disCount === 0) net = 'advantage';
   else if (disCount > 0 && advCount === 0) net = 'disadvantage';

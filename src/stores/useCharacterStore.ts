@@ -4225,7 +4225,7 @@ export const useCharacterStore = create<CharacterStore>()(
           }
         }
         set((state) => ({
-          characters: state.characters.map((c) => c.id === charId ? { ...c, activeConditions: [...(c.activeConditions || []), condition] } : c),
+          characters: state.characters.map((c) => c.id === charId ? { ...c, activeConditions: [...(c.activeConditions || []), { ...condition, elapsedRounds: 0 }] } : c),
         }));
         // ─── Omni-Engine: gatilho de condição recebida ─────────────────────
         import('@/lib/omni/eventBus').then(({ emitirEvento }) => {
@@ -4312,7 +4312,8 @@ export const useCharacterStore = create<CharacterStore>()(
         characters: state.characters.map((c) => ({
           ...c,
           activeConditions: (c.activeConditions || [])
-            .map((cd) => ({ ...cd, remainingRounds: cd.remainingRounds === -1 ? -1 : cd.remainingRounds - 1 }))
+            .map((cd) => ({ ...cd, remainingRounds: cd.remainingRounds === -1 ? -1 : cd.remainingRounds - 1,
+              ...(typeof cd.elapsedRounds === 'number' && Number.isFinite(cd.elapsedRounds) && cd.elapsedRounds >= 0 ? { elapsedRounds: cd.elapsedRounds + 1 } : {}) }))
             .filter((cd) => cd.remainingRounds === -1 || cd.remainingRounds > 0),
         })),
       })),

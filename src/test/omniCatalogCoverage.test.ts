@@ -60,20 +60,21 @@ describe('Catálogo completo: keys estáticas avaliadas em seus escopos reais', 
 });
 
 describe('Contexto de cena e identidade: valores reais e compatibilidade', () => {
-  it('os 18 templates têm exemplos concretos em USUARIO e ALVO, sem fallback', () => {
+  it('todos os templates têm exemplos concretos em USUARIO e ALVO, sem fallback', () => {
     const ent = { ...novaEntidade('item', 'Catálogo'), id: 'item_audit' };
     useInventoryStore.setState({ items: { i: { instanceId: 'i', ownerId: usuario.id, entity: ent, acquiredAt: 0, isEquipped: true } } });
     useMoneyStore.setState({ wallets: [{ id: 'w', members: [usuario.id], balances: { yen: 15 }, isPersonal: true }] } as never);
     const c = { ...usuario, origin: 'Inato', specialization: 'Suporte', mainHandWeaponName: 'Espada Curta',
       omniCounters: { rancor: 5, rancor__fonte__alvo: 2 },
       chosenTalents: [{ id: 'tal_audit' }], chosenAuraAptitudes: ['apt_audit'], chosenSpecAbilities: [{ abilityId: 'hab_audit' }],
-      activeConditions: [{ conditionId: 'atordoado', remainingRounds: 2, remainingTurns: 3 }],
+      activeConditions: [{ conditionId: 'atordoado', remainingRounds: 2, remainingTurns: 3, elapsedRounds: 4 }],
       spells: [{ id: 'feitico_audit', name: 'Teste', spellType: 'damage', damageType: 'Fogo', costPE: 1 }],
       activeBuffs: [{ spellName: 'buff_audit' }],
     } as unknown as Character;
     const exemplos: Record<string, [string, number]> = {
       'arma_grupo_<grupo>': ['arma_grupo_espada', 1], 'origem_id_<id>': ['origem_id_inato', 1],
       'especializacao_id_<id>': ['especializacao_id_suporte', 1],
+      'condicao_idade_rodadas_<id>': ['condicao_idade_rodadas_atordoado', 4], 'condicao_idade_conhecida_<id>': ['condicao_idade_conhecida_atordoado', 1],
       'tem_condicao_<id>': ['tem_condicao_atordoado', 1], 'condicao_rodadas_<id>': ['condicao_rodadas_atordoado', 3],
       '<nome_do_contador>': ['rancor', 5], 'contador_<nome>': ['contador_rancor', 5], '<nome>__fonte__<id>': ['rancor__fonte__alvo', 2],
       'tem_talento_<id>': ['tem_talento_tal_audit', 1], 'tem_aptidao_<id>': ['tem_aptidao_apt_audit', 1], 'tem_habilidade_<id>': ['tem_habilidade_hab_audit', 1],

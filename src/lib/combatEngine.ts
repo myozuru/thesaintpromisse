@@ -59,6 +59,9 @@ export interface AttackSituation {
   preferredAbility?: 'FOR' | 'DES';
   /** Redução extra da margem de crítico (ações ativas do OMNI). */
   critBonusExtra?: number;
+  /** Modificadores genéricos locais; não concedem flags persistentes. */
+  advantageExtra?: boolean;
+  critMultiplierExtra?: number;
   /** Alvo está com `aura_embacada` ativa → atacante tem desvantagem (cancela vantagem). */
   targetHasAuraEmbacada?: boolean;
   /** Carga de "Concentrar Aura" do atacante. Soma +au como dano flat se acertar. */
@@ -362,7 +365,7 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
     'ranged';
   // Import estático seguro: rollAdvantage só depende de useCharacterStore.
   // (Nada importa combatEngine de dentro de rollAdvantage.)
-  const omniAdv = consumeAdvantageFor(ctx.attacker.id, { kind: 'attack', subtype: attackSubtype, weaponGroup: w.group, weaponName: w.name });
+  const omniAdv = consumeAdvantageFor(ctx.attacker.id, { kind: 'attack', subtype: attackSubtype, weaponGroup: w.group, weaponName: w.name }, { advantage: ctx.situation.advantageExtra });
   if (omniAdv.net === 'advantage') ctxBonus.advantage = true;
   if (omniAdv.net === 'disadvantage') ctxBonus.disadvantage = true;
   for (const n of omniAdv.notes) ctxBonus.notes.push(`Omni: ${n}`);
@@ -480,8 +483,8 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
       const big = finalDice.reduce((m, d) => (d.sides > m.sides ? d : m), finalDice[0]);
       if (big.sides < fatal.die) big.sides = fatal.die;
     }
-    // dobra dados
-    finalDice = finalDice.map(d => ({ ...d, count: d.count * 2 }));
+    // Multiplicador genérico de crítico, x2 na ausência de modificador.
+    finalDice = finalDice.map(d => ({ ...d, count: d.count * Math.max(1, 2 + Math.trunc(ctx.situation.critMultiplierExtra ?? 0)) }));
     const mortal = getProperty(w, 'mortal');
     if (mortal?.die) {
       finalDice.push({ count: 1, sides: mortal.die });

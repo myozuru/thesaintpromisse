@@ -787,6 +787,8 @@ const IDENTIDADE_OMNI: ChaveOmniOpcao[] = [
 // ── PR-3: Condições ─────────────────────────────────────────────────────
 const CONDICOES_OMNI: ChaveOmniOpcao[] = [
   { id: 'tem_condicao_<id>',   label: 'tem_condicao_<id>',  hint: 'Predicate: 1 se possui a condição (ex.: tem_condicao_atordoado).' },
+  { id: 'condicao_idade_rodadas_<id>', label: 'Idade da condição', hint: 'Rodadas completas decorridas; -1 = ausente ou histórico desconhecido.' },
+  { id: 'condicao_idade_conhecida_<id>', label: 'Idade conhecida', hint: '1 quando a condição tem idade registrada; 0 caso contrário.' },
   { id: 'condicao_rodadas_<id>', label: 'condicao_rodadas_<id>', hint: 'Rodadas restantes da condição (999 = indefinida, 0 = não tem).' },
   { id: 'qtd_condicoes',       label: 'Qtd. Condições',     hint: 'Total de condições ativas.' },
   { id: 'qtd_condicoes_fisica',       label: 'Condições Físicas',         hint: 'Quantas condições da categoria FÍSICA.' },

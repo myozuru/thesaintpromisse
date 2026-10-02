@@ -1,3 +1,5 @@
+import { avaliarCondicionaisAtivos } from './condicionaisAtivos';
+import { applyAdvantageToD20, consumeAdvantageFor, consumeFlatBonusFor } from './rollAdvantage';
 import { aceitaAlvoAtivo, selecionarAlvosAtivos, type SelecaoAtiva } from './alvosAtivos';
 import { resolverTipoDano, type MetadadosAtaqueDano } from './contextoDano';
 /**
@@ -52,12 +54,12 @@ export function parseDados(expr: string | undefined): DadosPlano {
 }
 
 /** Junta dano fixo + dados por carga; crítico dobra só os dados. */
-export function planejarDano(dano: string | undefined, porCarga: string | undefined, cargas: number, critico: boolean): DadosPlano {
+export function planejarDano(dano: string | undefined, porCarga: string | undefined, cargas: number, critico: boolean, multiplicador = 2): DadosPlano {
   const base = parseDados(dano);
   const pc = parseDados(porCarga);
   const grupos = [...base.grupos];
   for (const g of pc.grupos) grupos.push({ count: g.count * cargas, sides: g.sides });
-  const mult = critico ? 2 : 1;
+  const mult = critico ? Math.max(1, Math.trunc(multiplicador)) : 1;
   return {
     grupos: grupos.filter((g) => g.count > 0).map((g) => ({ ...g, count: g.count * mult })),
     fixo: base.fixo + pc.fixo * cargas,
@@ -201,6 +203,12 @@ export async function executarAcaoAtiva(
   const arma = cfg.teste === 'ataque' ? armaDaAcao(u, ent) : undefined;
   if (cfg.teste === 'ataque' && !arma) return { ok: false, reason: 'Nenhuma arma empunhada para o ataque.' };
 
+  // Snapshot por alvo antes do consumo: cargas e PV são os da declaração.
+  const condicionais = new Map(alvos.map(t => [t.id, {
+    mods: avaliarCondicionaisAtivos(cfg.condicionais ?? [], u, t),
+    critLegado: cfg.margemCritico?.condicao && avaliarFormula(cfg.margemCritico.condicao, vars(u, t)).valor ? cfg.margemCritico.reducao : 0,
+  }]));
+
   // ── Paga tudo antes de rolar ──
   const custo = custoPEDe(cfg, u);
   const fromTemp = Math.min(u.tempPE ?? 0, custo);
@@ -223,8 +231,8 @@ export async function executarAcaoAtiva(
   for (const selecionado of alvos) {
     const t = useCharacterStore.getState().characters.find(c => c.id === selecionado.id);
     if (!t) continue;
-    let critExtra = 0;
-    if (cfg.margemCritico?.condicao && avaliarFormula(cfg.margemCritico.condicao, vars(u, t)).valor) critExtra = cfg.margemCritico.reducao;
+    const { mods, critLegado } = condicionais.get(t.id)!;
+    const critExtra = critLegado - mods.margem;
     let metadadosAtaque: MetadadosAtaqueDano | undefined;
     let critico = false;
     let aplicaEfeitos = true;
@@ -235,16 +243,19 @@ export async function executarAcaoAtiva(
     if (cfg.teste === 'tr') {
       const tr = cfg.tr ?? 'fortitude';
       const cd = cfg.cd?.trim() ? Math.round(avaliarFormula(cfg.cd, vars(u, t)).valor) : specDCFor(u);
-      const mod = modTR(t, tr);
-      const d20 = await rollD20Com(t.id, undefined, { label: `TR ${TR_ROTULO[tr]}` });
+      const adv = consumeAdvantageFor(t.id, { kind: 'save', name: TR_ROTULO[tr] }, { disadvantage: mods.desvantagemTR });
+      const flat = consumeFlatBonusFor(t.id, { kind: 'save', name: TR_ROTULO[tr] });
+      const mod = modTR(t, tr) + mods.tr + flat.bonus;
+      const rolled = await applyAdvantageToD20(adv.net, () => rollD20Com(t.id, undefined, { label: `TR ${TR_ROTULO[tr]}` }));
+      const d20 = rolled.d20;
       passouTR = d20 + mod >= cd;
       aplicaEfeitos = !passouTR;
-      cabecalho = `TR ${TR_ROTULO[tr]} d20 ${d20}${mod >= 0 ? '+' : ''}${mod} = ${d20 + mod} vs CD ${cd} → ${passouTR ? 'SUCESSO' : 'FALHA'}`;
+      cabecalho = `TR ${TR_ROTULO[tr]}${rolled.modeLabel} d20 ${d20}${mod >= 0 ? '+' : ''}${mod} = ${d20 + mod} vs CD ${cd} → ${passouTR ? 'SUCESSO' : 'FALHA'}`;
     } else if (cfg.teste === 'ataque') {
       const def = computeTotalDefense(t, {}, arma!.range === 'melee' ? 'melee' : 'ranged');
       const ctx = buildAttackContext({
         attacker: u, weapon: arma!, targetDefense: def,
-        situation: { critBonusExtra: critExtra || undefined },
+        situation: { critBonusExtra: critExtra || undefined, advantageExtra: mods.vantagemAcerto, critMultiplierExtra: mods.multiplicador },
         trainedRanges: [
           ...(u.meleeTrained ? (['melee'] as const) : []),
           ...(u.rangedTrained ? (['ranged', 'thrown'] as const) : []),
@@ -265,7 +276,7 @@ export async function executarAcaoAtiva(
     }
 
     // ── Dano ──
-    const plano = planejarDano(cfg.dano, cfg.dadosPorCarga, cargas, critico);
+    const plano = planejarDano([cfg.dano, ...mods.danos].filter(Boolean).join('+'), cfg.dadosPorCarga, cargas, critico, 2 + mods.multiplicador);
     let bruto = armaDano + plano.fixo;
     let dadosTxt = '';
     if (plano.grupos.length) {
@@ -283,6 +294,7 @@ export async function executarAcaoAtiva(
     const notas = aplicaEfeitos ? aplicarEfeitos(u, t, cfg.efeitos ?? [], fonte) : [];
     const partes = [
       cabecalho,
+      mods.ativos.length ? `${mods.ativos.length} bloco(s) condicional(is) ativo(s)` : '',
       `dano ${dano}${armaDano ? ` (arma ${armaDano}` + (dadosTxt ? ` + ${dadosTxt}` : '') + ')' : dadosTxt ? ` (${dadosTxt})` : ''}${passouTR && cfg.metadeNoSucesso ? ' — metade' : ''}`,
       ...notas,
     ].filter(Boolean);

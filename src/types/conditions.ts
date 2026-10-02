@@ -70,6 +70,8 @@ export interface ActiveCondition {
   icon: string;
   remainingTurns: number; // -1 = indefinido
   remainingRounds: number; // -1 = indefinido, decrementa a cada rodada completa
+  /** Rodadas completas decorridas desde a aplicação; ausente = histórico desconhecido. */
+  elapsedRounds?: number;
   sourceCharName?: string;
   // === Sistema de duração estruturada (opcional para compat com fichas antigas) ===
   durationMode?: ConditionDurationMode;
