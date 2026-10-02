@@ -26,6 +26,7 @@ import { useLogStore } from '@/stores/useLogStore';
 import { useItemStore } from '@/stores/useItemStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { ReplicasSection } from './ReplicasSection';
+import { AcoesAtivasSection } from './AcoesAtivasSection';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useOmniRuntimeStore } from '@/stores/useOmniRuntimeStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
@@ -1382,6 +1383,7 @@ export function AttackPanel({ character: cProp }: Props) {
           </div>
 
           <ReplicasSection charId={c.id} />
+          <AcoesAtivasSection charId={c.id} />
           {inventoryWeapons.length === 0 ? (
             <div className="text-[11px] text-muted-foreground italic">
               Nenhuma arma do catálogo no inventário deste personagem. Adicione armas pelo módulo Itens (vincule ao personagem).

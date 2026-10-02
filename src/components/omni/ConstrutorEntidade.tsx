@@ -4,6 +4,7 @@
  * Inclui Simulador Preview lateral.
  */
 import { PORTES_REPLICA, custosDoPorte, replicaPadrao } from '@/lib/replicas';
+import { EditorAcoesAtivas } from './EditorAcoesAtivas';
 import type { ReplicaPorte } from '@/lib/omni/tipos';
 import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -195,6 +196,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                 <TabsTrigger value="gatilhos">Gatilhos & Efeitos</TabsTrigger>
                 <TabsTrigger value="combate">Efeitos e Combate</TabsTrigger>
                 <TabsTrigger value="comercio">Comércio</TabsTrigger>
+                <TabsTrigger value="ativas">Ações Ativas</TabsTrigger>
               </TabsList>
 
               {/* GERAL */}
@@ -1387,6 +1389,9 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
               </TabsContent>
 
               {/* COMÉRCIO (visível só para Mestre — este construtor já é restrito) */}
+              <TabsContent value="ativas" className="space-y-3 pt-3">
+                <EditorAcoesAtivas ent={ent} setEnt={setEnt} />
+              </TabsContent>
               <TabsContent value="comercio" className="space-y-3 pt-3">
                 <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
                   ⚠ Esta camada é <span className="text-primary font-semibold">privada do Mestre</span>.
