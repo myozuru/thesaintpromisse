@@ -208,6 +208,41 @@ export interface EntidadeOmni {
   atualizadoEm: number;
 }
 
+export type TrNome = 'astucia' | 'fortitude' | 'integridade' | 'reflexos' | 'vontade';
+
+/** Efeito aplicado quando a ação "pega" (TR falho ou ataque acertado). */
+export type EfeitoSecundarioAtivo =
+  | { tipo: 'condicao'; condicao: string; rodadas: number }
+  | { tipo: 'puxar' | 'empurrar'; metros: number };
+
+/** Ação ativa genérica montada pelo Mestre (ver acaoAtiva.ts). */
+export interface AcaoAtivaConfig {
+  id: string;
+  nome: string;
+  acao: 'comum' | 'bonus' | 'reacao' | 'livre';
+  /** Fórmula do custo em PE. */
+  custoPE: string;
+  /** 0 = sem limite. */
+  alcanceM: number;
+  teste: 'tr' | 'ataque' | 'nenhum';
+  tr?: TrNome;
+  /** Fórmula da CD; vazio = CD da Especialização. */
+  cd?: string;
+  metadeNoSucesso?: boolean;
+  /** Ex.: "6d8" ou "2d8+3". */
+  dano?: string;
+  /** Dados extras por carga consumida. Ex.: "1d8". */
+  dadosPorCarga?: string;
+  tipoDano?: string;
+  /** Soma o dano da arma (teste = ataque). */
+  incluirArma?: boolean;
+  /** Consome TODO o contador (exige um mínimo). */
+  consumirContador?: { nome: string; minimo: number };
+  /** Reduz a margem de crítico quando a fórmula for verdadeira. */
+  margemCritico?: { condicao: string; reducao: number };
+  efeitos?: EfeitoSecundarioAtivo[];
+}
+
 /** Metadados comerciais de uma entidade. */
 export interface ComercioEntidade {
   /** Valor base em moedas (na moeda padrão do sistema). */
