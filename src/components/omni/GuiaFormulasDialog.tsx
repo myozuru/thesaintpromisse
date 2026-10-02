@@ -1,3 +1,4 @@
+import { DICIONARIO_CHAVES_OMNI } from '@/lib/omni/constantesDoSistema';
 /**
  * 📖 Bíblia de Fórmulas Omni-Engine
  * Guia visual para o Mestre entender o sistema de fórmulas escaláveis,
@@ -401,6 +402,21 @@ export function GuiaFormulasDialog({ aberto, onClose, modo = 'dialog', onAplicar
 
         {/* GUIA COMPLETO ------------------------------------------------ */}
         <TabsContent value="guia" className="pt-3">
+          <section className="space-y-2 mb-4">
+            <h3 className="text-xs font-semibold text-primary">Contexto de eventos e disponibilidade</h3>
+            <p className="text-xs text-muted-foreground">DANO, ACAO, TESTE e EFEITO só existem no evento correspondente. Antes do dano use @antes_sofrer_dano; depois use @depois_sofrer_dano. @resolver_teste expõe o resultado. Keys indisponíveis mostram um aviso na prévia.</p>
+            {DICIONARIO_CHAVES_OMNI.filter((cat) => ['Efeito atual', 'Disponibilidade e efeitos', 'Ação atual', 'Teste atual', '💥 Dano (contexto)'].includes(cat.grupo)).map((cat) => (
+              <div key={cat.grupo} className="space-y-1">
+                <h4 className="text-xs font-semibold">{cat.grupo}</h4>
+                {cat.itens.map((item) => {
+                  const key = item.id.includes('.') ? `@${item.id}` : `@USUARIO.${item.id}`;
+                  return <button type="button" key={item.id} onClick={() => inserir(key)} className="block text-left text-xs rounded border border-border/50 px-2 py-1 w-full hover:bg-muted">
+                    <code className="text-primary">{key}</code><span className="text-muted-foreground"> — {item.hint}</span>
+                  </button>;
+                })}
+              </div>
+            ))}
+          </section>
           <div className="space-y-5 text-sm">
             {/* 🎮 PLAYGROUND DO TAB AUTOCOMPLETE ------------------- */}
             <TabAutocompletePlayground onInserir={inserir} />

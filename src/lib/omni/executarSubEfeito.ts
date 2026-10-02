@@ -99,6 +99,7 @@ export function executarCombatEffect(
     peSpellReduction: eff.peSpellReduction,
     immunityGrant: eff.immunityGrant,
     sourceName: ctx.sourceName,
+    sourceCharId: ctx.usuarioId,
   });
   return { aplicado: r.aplicado, absorvidoPorBloqueio: r.absorvidoPorBloqueio };
 }

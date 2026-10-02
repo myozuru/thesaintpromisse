@@ -82,9 +82,13 @@ const EntidadeSchema = z.object({
       isBought: z.boolean(),
     })
     .optional(),
+  acoesAtivas: z.array(z.object({
+    id: z.string(), nome: z.string(),
+    cooldownTurnos: z.number().int().nonnegative().optional(),
+  }).passthrough()).optional(),
   criadoEm: z.number(),
   atualizadoEm: z.number(),
-});
+}).passthrough();
 
 export const PacoteOmniSchema = z.object({
   formato: z.literal('omni-engine.v1'),

@@ -1,3 +1,7 @@
+import { consultarEfeito } from './consultasRuntime';
+import { toTimelineSeconds } from './tempo';
+import { useChronosStore } from '@/stores/useChronosStore';
+import { type ContextosOmni } from './contextoEvento';
 /**
  * Omni-Engine Event Bus (Fatia 3).
  *
@@ -21,6 +25,7 @@ export interface EmitirOpts {
   usuarioId?: string;
   alvoId?: string;
   cena?: Record<string, number>;
+  contexto?: ContextosOmni;
   origemNome?: string;
   /** Se true, considera entidades passivas globais (aoEquipar) também. */
   incluirPassivas?: boolean;
@@ -45,12 +50,14 @@ export function emitirEvento(evento: GatilhoId, opts: EmitirOpts = {}): number {
     usuario,
     alvo,
     cena: opts.cena,
+    contexto: opts.contexto,
     origemNome: opts.origemNome,
     profundidade: 0,
   };
 
   const entidades = useOmniEntidadesStore.getState().entidades;
-  const efeitos = Object.values(useOmniRuntimeStore.getState().efeitos);
+  const agora = toTimelineSeconds(useChronosStore.getState());
+  const efeitos = Object.values(useOmniRuntimeStore.getState().efeitos).filter((e) => e.expiraEm === null || e.expiraEm > agora);
 
   // Quais entidades estão "ativas no contexto"?
   const idsAtivos = new Set<string>();
@@ -85,7 +92,12 @@ export function emitirEvento(evento: GatilhoId, opts: EmitirOpts = {}): number {
   let total = 0;
   for (const id of idsAtivos) {
     const ent = entidades[id];
-    if (ent) total += executarGatilho(ent, evento, ctx);
+    if (ent) {
+      const deste = efeitos.filter((e) => e.entidadeId === id);
+      const alvoEfeito = deste.some((e) => e.targetCharId === opts.usuarioId) ? opts.usuarioId : opts.alvoId;
+      const efeito = consultarEfeito(deste.filter((e) => e.targetCharId === alvoEfeito), agora, opts.usuarioId);
+      total += executarGatilho(ent, evento, { ...ctx, contexto: { ...ctx.contexto, ...(efeito ? { efeito } : {}) } });
+    }
   }
 
   if (opts.incluirPassivas) {
@@ -106,6 +118,7 @@ export function emitirEvento(evento: GatilhoId, opts: EmitirOpts = {}): number {
         usuarioId: opts.usuarioId,
         alvoId: opts.alvoId,
         cena: opts.cena,
+        contexto: opts.contexto,
       });
     } catch (err) {
       console.warn('[emitirEvento] erro disparando scripts de itens:', err);

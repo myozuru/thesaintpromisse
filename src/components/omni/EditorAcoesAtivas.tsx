@@ -54,6 +54,7 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
               </label>
             )}
           </div>
+          <div><Label className="text-xs">Cooldown (turnos, 0 = nenhum)</Label><Input type="number" min={0} value={a.cooldownTurnos ?? 0} onChange={(e) => set(i, { cooldownTurnos: Math.max(0, parseInt(e.target.value, 10) || 0) })} /></div>
           {a.teste === 'tr' && (
             <label className="flex items-center gap-2 text-xs">
               <input type="checkbox" checked={!!a.metadeNoSucesso} onChange={(e) => set(i, { metadeNoSucesso: e.target.checked })} /> Metade do dano no sucesso (senão, nada)

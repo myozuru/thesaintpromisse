@@ -15,7 +15,7 @@ import {
   humanizarWatcher,
   type OmniToken,
 } from '@/lib/omni/omniScript';
-import { avaliarFormula } from '@/lib/omni/parser';
+import { avaliarFormula, diagnosticarKeysFormula } from '@/lib/omni/parser';
 import { montarVariaveisDoPersonagem } from '@/lib/omni/resolvedor';
 import {
   extrairPrefixoNoCaret,
@@ -66,6 +66,14 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
     } catch {
       return compilado.efeitos.map(() => undefined);
     }
+  }, [compilado.efeitos, personagemPreview]);
+
+  const avisosKeys = useMemo(() => {
+    const vars = personagemPreview ? montarVariaveisDoPersonagem(personagemPreview, 'USUARIO') : undefined;
+    const avisos = compilado.efeitos.flatMap((eff) =>
+      [eff.formula, eff.condition, eff.counterCap].filter(Boolean).flatMap((f) => diagnosticarKeysFormula(f!, vars)),
+    );
+    return [...new Map(avisos.map((a) => [a.key, a])).values()];
   }, [compilado.efeitos, personagemPreview]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -320,6 +328,12 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
         </div>
       )}
 
+      {avisosKeys.length > 0 && (
+        <div className="rounded-md border border-amber-400/40 bg-amber-400/10 p-2 space-y-1" role="status">
+          <div className="text-[10px] uppercase tracking-wider text-amber-300">Avisos de keys</div>
+          {avisosKeys.map((a) => <div key={a.key} className="text-[11px] text-amber-200">{a.mensagem}</div>)}
+        </div>
+      )}
       {compilado.erros.length > 0 && (
         <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 space-y-1">
           <div className="text-[10px] uppercase tracking-wider text-destructive">

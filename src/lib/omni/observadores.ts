@@ -1,3 +1,4 @@
+import type { ContextosOmni } from './contextoEvento';
 /**
  * Gatilhos de observação espacial do OMNI.
  *
@@ -44,6 +45,7 @@ export interface OpcoesObservar {
   /** A outra parte (atacante do ferido, alvo do atacante). */
   outroId?: string;
   dano?: number;
+  contexto?: ContextosOmni;
 }
 
 export async function emitirObservadores(tipo: TipoObservado, op: OpcoesObservar): Promise<number> {
@@ -82,6 +84,7 @@ export async function emitirObservadores(tipo: TipoObservado, op: OpcoesObservar
       usuarioId: obs.id,
       alvoId: sujeito.id,
       cena,
+      contexto: op.contexto,
       origemNome: tipo === 'sofrerDano' ? 'Dano Observado' : tipo === 'causarDano' ? 'Ataque Observado' : 'Queda Observada',
       incluirPassivas: false,
     });

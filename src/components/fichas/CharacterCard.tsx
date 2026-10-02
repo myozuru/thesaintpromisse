@@ -1,3 +1,4 @@
+import { cooldownDoItem } from '@/lib/omni/consultasRuntime';
 import { consumeCritNegated } from '@/lib/suporteNegacao';
 import { implementoMarcialBonus } from '@/lib/golpeEspecial';
 import { InspiradoButton } from './SuporteNivel4Sections';
@@ -600,8 +601,9 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
       ? {
           usos_restantes: instance.usosRestantes ?? 0,
           usos_totais: instance.usosTotais ?? 0,
+          cooldown_restante: cooldownDoItem(instance.entity.acoesAtivas, c.cooldowns),
         }
-      : {};
+      : { cooldown_restante: cooldownDoItem(instance?.entity.acoesAtivas, c.cooldowns) };
     const d20 = await rollD20Com(c.id);
     const isCrit = d20 >= (cd.critRange ?? 20);
     const mult = isCrit ? (cd.critMultiplier ?? 2) : 1;

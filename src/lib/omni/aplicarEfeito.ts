@@ -46,6 +46,7 @@ export function aplicarEfeitoNoPersonagem(
     immunityGrant?: { escopo: string; mode: 'grant' | 'revoke' };
     /** Nome amigável da origem (item/feitiço/talento) — usado no id do redutor. */
     sourceName?: string;
+    sourceCharId?: string;
     /** Contadores: teto já avaliado, escopo e ficha de origem. */
     contador?: { teto?: number; porFonte?: boolean; fonteId?: string };
   },
@@ -165,13 +166,9 @@ export function aplicarEfeitoNoPersonagem(
   if (path === 'vida') {
     if (tipo === 'SUBTRAIR') {
       const dano = Math.max(0, Math.round(valor));
-      // ─── 🛡️ Bloqueio Total ────────────────────────────────────────
-      if ((c.omniFlags?.bloqueio_total ?? 0) >= 1 && dano > 0) {
-        const flags = { ...(c.omniFlags ?? {}), bloqueio_total: 0 };
-        store.updateCharacter(charId, { omniFlags: flags });
-        return { aplicado: 0, absorvidoPorBloqueio: true };
-      }
-      store.applyDamage(charId, dano);
+      const bloqueado = (c.omniFlags?.bloqueio_total ?? 0) >= 1 && dano > 0;
+      store.applyDamage(charId, dano, undefined, { attackerId: extras?.sourceCharId });
+      if (bloqueado) return { aplicado: 0, absorvidoPorBloqueio: true };
       return { aplicado: dano };
     }
     if (tipo === 'ADICIONAR') {

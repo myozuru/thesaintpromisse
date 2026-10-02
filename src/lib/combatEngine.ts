@@ -1,3 +1,4 @@
+import { contextoTeste, type ContextosOmni } from '@/lib/omni/contextoEvento';
 import { duelistaApplies, getDuelistaBonus, distanteApplies, getDistanteBonus, arremessadorApplies, getArremessadorDamage, duploApplies, getDuploDamage, massivoApplies, getMassivoDamage } from './combateEstilos';
 import { posturaAtaque } from '@/lib/posturas';
 import { execucaoSilenciosaDice } from './artesCombate';
@@ -45,6 +46,8 @@ import { consumeAdvantageFor, consumeFlatBonusFor } from '@/lib/omni/rollAdvanta
 // ===== Tipos públicos =======================================================
 
 export interface AttackSituation {
+  isOffHand?: boolean;
+  isSpell?: boolean;
   /** O alvo está [Desprevenido] em relação ao atacante (apunhaladora, furtividade…). */
   targetUnaware?: boolean;
   /** O alvo está [Caído]. */
@@ -87,6 +90,7 @@ export interface AttackSituation {
 
 
 export interface AttackContext {
+  targetId?: string;
   attacker: Character;
   weapon: Weapon;
   /** Modificador de atributo já calculado (FOR ou DES). */
@@ -101,6 +105,7 @@ export interface AttackContext {
 }
 
 export interface AttackResult {
+  contexto?: ContextosOmni;
   d20: number;
   /** Todos os d20 rolados no ataque. Em vantagem/desvantagem contém 2 valores. */
   attackRolls: number[];
@@ -526,7 +531,19 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
   }
   if (jammed) notes.push(`🔧 ${w.name} EMPERROU (d20 ${natural} ≤ margem ${margemEmperrar(w, pistoleiroOn)}) — ação comum para desemperrar.`);
 
+  const contexto: ContextosOmni = {
+    acao: { eh_ataque: 1, eh_feitico: ctx.situation.isSpell ? 1 : 0, eh_cac: w.range === 'melee' ? 1 : 0,
+      eh_distancia: w.range === 'melee' ? 0 : 1, eh_segunda_arma: ctx.situation.isOffHand ? 1 : 0 },
+    teste: contextoTeste(natural, attackTotal, ctx.targetDefense, hit, false),
+    dano: { foi_critico: critical ? 1 : 0, foi_falha_critica: criticalFail ? 1 : 0 },
+  };
+  if (ctx.targetId) {
+    const { emitirEvento } = await import('@/lib/omni/eventBus');
+    emitirEvento('aoResolverTeste', { usuarioId: ctx.attacker.id, alvoId: ctx.targetId, contexto });
+    emitirEvento(hit ? 'aoAcertarAtaque' : 'aoErrarAtaque', { usuarioId: ctx.attacker.id, alvoId: ctx.targetId, contexto });
+  }
   return {
+    contexto,
     d20: natural, attackRolls, rollMode, natural, attackTotal, hit, critical, criticalFail,
     emperrou: jammed,
 
@@ -631,6 +648,7 @@ export function shouldRecoverLuckOnEnemyNat20(c: Character): boolean {
 // ===== Construtor de contexto ==============================================
 
 export function buildAttackContext(opts: {
+  targetId?: string;
   attacker: Character;
   weapon: Weapon;
   targetDefense: number;
@@ -645,6 +663,7 @@ export function buildAttackContext(opts: {
     (opts.trainedGroups?.includes(opts.weapon.group) ?? false) ||
     (opts.trainedRanges?.includes(opts.weapon.range) ?? false);
   return {
+    targetId: opts.targetId,
     attacker: opts.attacker,
     weapon: opts.weapon,
     abilityMod,
