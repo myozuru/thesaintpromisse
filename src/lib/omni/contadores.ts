@@ -50,7 +50,7 @@ export function calcularContador(
   let consumido = 0;
 
   if (acao === 'INCREMENTAR_CONTADOR') {
-    const qtd = Math.round(op.valor || 1);
+    const qtd = Math.round(op.valor);
     if (op.escopoTeto === 'porFonte') {
       const fk = `${prefixoFonte(nome)}${op.fonteId ?? 'geral'}`;
       const parcela = c[fk] ?? 0;

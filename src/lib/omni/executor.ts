@@ -55,6 +55,8 @@ export interface ContextoRuntime {
   usuario?: Character;
   alvo?: Character;
   cena?: Record<string, number>;
+  /** Snapshot numérico do golpe; valores finais existem somente após resolução. */
+  dano?: Readonly<Record<string, number>>;
   /** Para macros: profundidade atual de encadeamento. */
   profundidade?: number;
   /** Origem do disparo (para log). */
@@ -83,6 +85,9 @@ function variaveisCompletas(ctx: ContextoRuntime): Record<string, number> {
   if (ctx.cena) for (const [k, v] of Object.entries(ctx.cena)) {
     vars[`CENA_${k}`] = v;
     vars[`CENA_${k.toUpperCase()}`] = v;
+  }
+  if (ctx.dano) for (const [k, v] of Object.entries(ctx.dano)) {
+    vars[`DANO_${k.toUpperCase()}`] = v;
   }
   return vars;
 }
@@ -504,7 +509,7 @@ function executarAcao(a: AcaoLogica, ctx: ContextoRuntime, log: (m: string) => v
       const fresh = useCharacterStore.getState().characters.find((x) => x.id === alvoChar.id) ?? alvoChar;
       const key = a.caminhoAlvo.trim().toLowerCase();
       const res = calcularContador(fresh.omniCounters ?? {}, key, a.acao, {
-        valor,
+        valor: a.acao === 'INCREMENTAR_CONTADOR' && !a.valor ? 1 : valor,
         teto: a.teto ? resolverValorDinamico(a.teto, ctx) : undefined,
         escopoTeto: a.escopoTeto,
         fonteId: ctx.alvo?.id && ctx.alvo.id !== fresh.id ? ctx.alvo.id : undefined,

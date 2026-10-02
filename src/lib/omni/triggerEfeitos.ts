@@ -50,6 +50,8 @@ export interface DispararOpts {
   alvoId?: string;
   /** Variáveis extras de cena (ex.: { dano: 12 }). */
   cena?: Record<string, number>;
+  /** Snapshot numérico do golpe; valores finais existem somente após resolução. */
+  dano?: Readonly<Record<string, number>>;
 }
 
 /**
@@ -168,6 +170,9 @@ export function dispararGatilhoEfeitosItens(
           vars[`CENA_${k}`] = v;
           vars[`CENA_${k.toUpperCase()}`] = v;
         }
+      }
+      if (opts.dano) for (const [k, v] of Object.entries(opts.dano)) {
+        vars[`DANO_${k.toUpperCase()}`] = v;
       }
       for (const [k, v] of Object.entries(cenaLocal)) {
         vars[`CENA_${k}`] = v;
