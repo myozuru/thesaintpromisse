@@ -21,6 +21,8 @@ export interface EmitirOpts {
   usuarioId?: string;
   alvoId?: string;
   cena?: Record<string, number>;
+  /** Snapshot numérico do golpe; valores finais existem somente após resolução. */
+  dano?: Readonly<Record<string, number>>;
   origemNome?: string;
   /** Se true, considera entidades passivas globais (aoEquipar) também. */
   incluirPassivas?: boolean;
@@ -45,6 +47,7 @@ export function emitirEvento(evento: GatilhoId, opts: EmitirOpts = {}): number {
     usuario,
     alvo,
     cena: opts.cena,
+    dano: opts.dano,
     origemNome: opts.origemNome,
     profundidade: 0,
   };
@@ -106,6 +109,7 @@ export function emitirEvento(evento: GatilhoId, opts: EmitirOpts = {}): number {
         usuarioId: opts.usuarioId,
         alvoId: opts.alvoId,
         cena: opts.cena,
+        dano: opts.dano,
       });
     } catch (err) {
       console.warn('[emitirEvento] erro disparando scripts de itens:', err);

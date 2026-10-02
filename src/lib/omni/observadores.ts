@@ -44,6 +44,8 @@ export interface OpcoesObservar {
   /** A outra parte (atacante do ferido, alvo do atacante). */
   outroId?: string;
   dano?: number;
+  /** Mesmo golpe observado, independente de USUARIO/ALVO do observador. */
+  contextoDano?: Readonly<Record<string, number>>;
 }
 
 export async function emitirObservadores(tipo: TipoObservado, op: OpcoesObservar): Promise<number> {
@@ -82,6 +84,7 @@ export async function emitirObservadores(tipo: TipoObservado, op: OpcoesObservar
       usuarioId: obs.id,
       alvoId: sujeito.id,
       cena,
+      dano: op.contextoDano,
       origemNome: tipo === 'sofrerDano' ? 'Dano Observado' : tipo === 'causarDano' ? 'Ataque Observado' : 'Queda Observada',
       incluirPassivas: false,
     });

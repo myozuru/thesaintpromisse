@@ -2189,6 +2189,12 @@ export const useCharacterStore = create<CharacterStore>()(
         // dano_pendente) ou `reduzir 5 em dano_recebido` consigam mexer
         // diretamente no dano deste hit. Após o disparo dos triggers,
         // relemos o valor: 0 → absorção total; N < raw → dano reduzido.
+        // Snapshot desta resolução: o pre-hook ainda não conhece dano final.
+        const contextoDanoInicial = Object.freeze({
+          valor_inicial: totalDamage,
+          id_origem: opts?.attackerId ? 1 : 0,
+          id_alvo: beforeChar ? 1 : 0,
+        });
         console.group(`[applyDamage] ${beforeChar?.name ?? id} ← ${rawDamage} ${damageType ?? ''}`);
         console.log('flagsAntes', beforeChar?.omniFlags);
         if (beforeChar) {
@@ -2200,6 +2206,7 @@ export const useCharacterStore = create<CharacterStore>()(
             usuarioId: id,
             alvoId: opts?.attackerId,
             cena: { dano: rawDamage, dano_pendente: rawDamage, dano_recebido: rawDamage },
+            dano: contextoDanoInicial,
           });
         } catch (err) {
           console.warn('[applyDamage] erro no disparador:', err);
@@ -2429,11 +2436,18 @@ export const useCharacterStore = create<CharacterStore>()(
         }
 
         // ─── Omni-Engine: emite gatilhos de dano ─────────────────────────────
+        const contextoDano = Object.freeze({
+          ...contextoDanoInicial,
+          valor_final: finalDamage,
+          // Vulnerabilidade pode elevar o dano final acima do inicial.
+          absorvido: Math.max(0, totalDamage - finalDamage),
+        });
         import('@/lib/omni/eventBus').then(({ emitirEvento }) => {
           emitirEvento('aoSofrerDano', {
             usuarioId: id,
             alvoId: opts?.attackerId,
             cena: { dano: rawDamage },
+            dano: contextoDano,
             origemNome: 'Dano Sofrido',
             incluirPassivas: true,
             // O pre-hook (linha ~1996) já chamou dispararGatilhoEfeitosItens
@@ -2445,6 +2459,7 @@ export const useCharacterStore = create<CharacterStore>()(
               usuarioId: opts.attackerId,
               alvoId: id,
               cena: { dano: rawDamage },
+              dano: contextoDano,
               origemNome: 'Dano Causado',
               incluirPassivas: true,
             });
@@ -2452,9 +2467,9 @@ export const useCharacterStore = create<CharacterStore>()(
           // Observação espacial: todas as outras fichas "veem" o dano.
           if (rawDamage > 0) {
             void import('@/lib/omni/observadores').then(async (m) => {
-              await m.emitirObservadores('sofrerDano', { sujeitoId: id, outroId: opts?.attackerId, dano: rawDamage });
+              await m.emitirObservadores('sofrerDano', { sujeitoId: id, outroId: opts?.attackerId, dano: rawDamage, contextoDano });
               if (opts?.attackerId) {
-                await m.emitirObservadores('causarDano', { sujeitoId: opts.attackerId, outroId: id, dano: rawDamage });
+                await m.emitirObservadores('causarDano', { sujeitoId: opts.attackerId, outroId: id, dano: rawDamage, contextoDano });
               }
             }).catch(() => {});
           }
@@ -2509,11 +2524,12 @@ export const useCharacterStore = create<CharacterStore>()(
                 usuarioId: id,
                 alvoId: opts?.attackerId,
                 cena: { dano: rawDamage },
+                dano: contextoDano,
                 origemNome: 'Morte',
                 incluirPassivas: true,
               });
               void import('@/lib/omni/observadores')
-                .then((m) => m.emitirObservadores('morrer', { sujeitoId: id, outroId: opts?.attackerId, dano: rawDamage }))
+                .then((m) => m.emitirObservadores('morrer', { sujeitoId: id, outroId: opts?.attackerId, dano: rawDamage, contextoDano }))
                 .catch(() => {});
               // 2) Só DEPOIS libera todos os agarres bilateralmente.
               get().releaseAllGrapplesOf(id);
