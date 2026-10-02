@@ -88,7 +88,7 @@ describe('Lote 4 — 🎯 Cena Tática (15)', () => {
       ],
     } as never);
     useMapStore.setState({
-      grid: { metersPerCell: 1 },
+      gridConfig: { ...useMapStore.getState().gridConfig, dpi: 1, metersPerCell: 1 },
       entities: {
         t1: mkToken('t1', 0, 0,  'hero'),
         t2: mkToken('t2', 1, 0,  'amigo'),
@@ -113,7 +113,7 @@ describe('Lote 4 — 🎯 Cena Tática (15)', () => {
       ],
     } as never);
     useMapStore.setState({
-      grid: { metersPerCell: 1 },
+      gridConfig: { ...useMapStore.getState().gridConfig, dpi: 1, metersPerCell: 1 },
       entities: {
         t1: mkToken('t1', 0, 0, 'hero'),
         t2: mkToken('t2', 1, 0, 'amigo'),  // adjacente
@@ -140,7 +140,7 @@ describe('Lote 4 — 🎯 Cena Tática (15)', () => {
       ],
     } as never);
     useMapStore.setState({
-      grid: { metersPerCell: 1 },
+      gridConfig: { ...useMapStore.getState().gridConfig, dpi: 1, metersPerCell: 1 },
       entities: {
         t1: mkToken('t1', 0, 0, 'hero'),
         t2: mkToken('t2', 5, 0, 'orc'),
@@ -159,7 +159,7 @@ describe('Lote 4 — 🎯 Cena Tática (15)', () => {
       characters: [makeChar({ id: 'hero', category: 'PLAYER' } as Partial<Character>)],
     } as never);
     useMapStore.setState({
-      grid: { metersPerCell: 1 },
+      gridConfig: { ...useMapStore.getState().gridConfig, dpi: 1, metersPerCell: 1 },
       entities: { t1: mkToken('t1', 3, 4, 'hero') },
     } as never);
     const c = useCharacterStore.getState().characters[0];

@@ -189,7 +189,7 @@ function setupRich() {
     },
   } as never);
   useMapStore.setState({
-    grid: { metersPerCell: 1 },
+    gridConfig: { ...useMapStore.getState().gridConfig, dpi: 1, metersPerCell: 1 },
     entities: {
       t1: { id: 't1', x: 0, y: 0, w: 1, h: 1, characterId: 'hero-rich', layer: 'tokens' },
       t2: { id: 't2', x: 1, y: 0, w: 1, h: 1, characterId: 'ally', layer: 'tokens' },

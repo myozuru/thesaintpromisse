@@ -23,6 +23,7 @@ import { useCharacterStore } from '@/stores/useCharacterStore';
 import { findWeaponByName } from '@/lib/weapons';
 import { ALL_CONDITIONS } from '@/types/conditions';
 import { canonicalizarChave, expandirParaCaminhoLegado } from './keyAliases';
+import { effectiveMovement } from '@/lib/movementBudget';
 
 
 
@@ -105,7 +106,14 @@ export function projetarPersonagemParaOmni(c: Character): Record<string, unknown
     const key = chavePericia(s.name || s.id || '');
     if (key) tr[key] = somaAtr(s, level);
   }
-  return { atributos, status, pericias, tr };
+  // Valores configurados na ficha. O acerto genérico corresponde ao
+  // bônus customizado; ataques CaC/distância/amaldiçoados têm cálculos próprios.
+  const stats = {
+    modificadorAtaque: c.customHitBonus ?? 0,
+    esquiva: c.escCurrent ?? 0,
+    resistenciaAmaldicoada: c.rd ?? 0,
+  };
+  return { atributos, status, pericias, tr, stats };
 }
 
 /** Lê um caminho Omni diretamente do Character. */
@@ -139,6 +147,7 @@ export function montarVariaveisDoPersonagem(
   const proj = projetarPersonagemParaOmni(c);
   const atributos = proj.atributos as Record<string, number>;
   const status = proj.status as Record<string, unknown>;
+  const stats = proj.stats as Record<string, number>;
   const vida = status.vida as { atual: number; max: number };
   const ea = status.energiaAmaldicoada as { atual: number; max: number };
 
@@ -166,6 +175,12 @@ export function montarVariaveisDoPersonagem(
   const categoriaMap: Record<string, number> = { 'PLAYER': 1, 'NPC': 2, 'INIMIGO': 3 };
   const categoria = categoriaMap[c.category as unknown as string] ?? 0;
   const round = (() => { try { return useCombatStore.getState().round ?? 0; } catch { return 0; } })();
+  const movimentoRestante = (() => {
+    const total = effectiveMovement(c);
+    const combate = useCombatStore.getState();
+    const usado = combate.inCombat ? Math.max(0, combate.movementUsedByChar[c.id] ?? 0) : 0;
+    return Math.max(0, total - usado);
+  })();
 
   // Contadores por tipo (talentos/aptidões/habilidades)
   const qtdTalentosCombate = (c.chosenTalents ?? []).filter((t) => /combate|arma|ataque|defes/i.test(t.id)).length;
@@ -198,10 +213,11 @@ export function montarVariaveisDoPersonagem(
     DEFESA: (status.defesa as number) ?? 0,
     DESLOCAMENTO: (status.deslocamento as number) ?? 0,
     EXAUSTAO: exaustao,
-    // Métricas de combate (resolvidas a 0 quando não calculadas no Character).
-    ACERTO: ((status as Record<string, number>).modificadorAtaque) ?? 0,
-    ESQUIVA: ((status as Record<string, number>).esquiva) ?? 0,
-    RESISTENCIA: ((status as Record<string, number>).resistenciaAmaldicoada) ?? 0,
+    // Mesma fonte para fórmulas, referências curtas e caminhos legados.
+    ACERTO: stats.modificadorAtaque,
+    ESQUIVA: stats.esquiva,
+    RESISTENCIA: stats.resistenciaAmaldicoada,
+    RD_CURSE: stats.resistenciaAmaldicoada,
     // Flags Omni genéricas (omniFlags).
     BLOQUEIO_TOTAL: c.omniFlags?.bloqueio_total ?? 0,
     FADIGA: c.omniCounters?.fadiga ?? 0,
@@ -243,7 +259,7 @@ export function montarVariaveisDoPersonagem(
     ADO_MAX: c.opportunityMax ?? 0,
     ADO_RESTANTES: c.opportunityCurrent ?? 0,
     REACAO_DISPONIVEL: (c.reactionsCurrent ?? 0) > 0 ? 1 : 0,
-    MOVIMENTO_RESTANTE: c.movement ?? 0,
+    MOVIMENTO_RESTANTE: movimentoRestante,
 
     // ─── ⚡ PR-1: AdO & Reações ─────────────────────────────────────────
     REACOES_MAX: c.reactionsMax ?? 1,
@@ -497,8 +513,9 @@ export function montarVariaveisDoPersonagem(
       };
       try {
         const map = useMapStore.getState();
-        const grid = (map as unknown as { grid?: { metersPerCell?: number } }).grid;
-        const mpc = grid?.metersPerCell ?? 1;
+        // As entidades usam pixels de mundo; dpi define pixels por célula.
+        const { dpi, metersPerCell } = map.gridConfig;
+        const metrosPorPixel = (metersPerCell > 0 ? metersPerCell : 1) / (dpi > 0 ? dpi : 70);
         const entitiesObj = (map as unknown as { entities?: Record<string, { id: string; x: number; y: number; w: number; h: number; characterId?: string; layer?: string; hidden?: boolean }> }).entities ?? {};
         const entities = Object.values(entitiesObj).filter((e) => !e.hidden && e.layer !== 'gm');
         const chars = useCharacterStore.getState().characters;
@@ -511,17 +528,17 @@ export function montarVariaveisDoPersonagem(
         out.ESTA_NO_MAPA = 1;
         const mx = meuToken.x + meuToken.w / 2;
         const my = meuToken.y + meuToken.h / 2;
-        out.CENA_TOKEN_X = Math.round(mx * mpc * 100) / 100;
-        out.CENA_TOKEN_Y = Math.round(my * mpc * 100) / 100;
+        out.CENA_TOKEN_X = Math.round(mx * metrosPorPixel * 100) / 100;
+        out.CENA_TOKEN_Y = Math.round(my * metrosPorPixel * 100) / 100;
         const minhaCategoria = c.category;
         let alAdj = 0, alPx = 0, inAdj = 0, inPx = 0;
         for (const e of entities) {
           if (e.id === meuToken.id || !e.characterId || e.characterId === c.id) continue;
           const ex = e.x + e.w / 2;
           const ey = e.y + e.h / 2;
-          // distância em metros entre centros, considerando "borda" das células.
-          const distCells = Math.max(0, Math.hypot(ex - mx, ey - my) - (Math.max(meuToken.w, meuToken.h) + Math.max(e.w, e.h)) / 4);
-          const distM = distCells * mpc;
+          // Mantém o desconto de tamanho dos tokens antes de converter para metros.
+          const distPx = Math.max(0, Math.hypot(ex - mx, ey - my) - (Math.max(meuToken.w, meuToken.h) + Math.max(e.w, e.h)) / 4);
+          const distM = distPx * metrosPorPixel;
           const cat = catById.get(e.characterId);
           // PLAYER & NPC = aliados de PLAYER; INIMIGO oposto. NPC neutro p/ INIMIGO.
           const ehAliado = minhaCategoria === 'INIMIGO'
@@ -578,7 +595,7 @@ export function montarVariaveisDoPersonagem(
         VIDA_PERDIDA_NESTA_RODADA: danoRodada,
         ACAO_DISPONIVEL: (c.actionsCurrent ?? 0) > 0 ? 1 : 0,
         BONUS_ACAO_DISPONIVEL: (c.bonusActionsCurrent ?? 0) > 0 ? 1 : 0,
-        MOVIMENTO_DISPONIVEL: (c.movement ?? 0) > 0 ? 1 : 0,
+        MOVIMENTO_DISPONIVEL: movimentoRestante > 0 ? 1 : 0,
         SLOTS_DESCANSO_CURTO: hdAtual,
         SLOTS_DESCANSO_CURTO_MAX: hdMax,
         SLOTS_DESCANSO_CURTO_PCT: hdMax > 0 ? Math.round((hdAtual / hdMax) * 100) : 0,

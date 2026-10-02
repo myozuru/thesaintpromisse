@@ -567,9 +567,9 @@ const PROGRESSAO_OMNI: ChaveOmniOpcao[] = [
 /** Defesas e métricas de combate. */
 const COMBATE_OMNI: ChaveOmniOpcao[] = [
   { id: 'defesa',        label: 'Defesa (CA)',          hint: 'Classe de armadura passiva' },
-  { id: 'esquiva',       label: 'Esquiva',              hint: 'Esquiva ativa' },
-  { id: 'resistencia',   label: 'Resistência (RD)',     hint: 'Redução de dano fixa' },
-  { id: 'acerto',        label: 'Acerto',               hint: 'Modificador total de ataque' },
+  { id: 'esquiva',       label: 'Esquiva',              hint: 'Recurso legado de esquiva; corresponde aos PVTs da ficha.' },
+  { id: 'resistencia',   label: 'Resistência (RD)',     hint: 'Redução de dano configurada na ficha, sem bônus contextuais.' },
+  { id: 'acerto',        label: 'Acerto',               hint: 'Bônus configurado para acerto personalizado. Ataques CaC, à distância e amaldiçoados têm cálculos próprios.' },
   { id: 'deslocamento',  label: 'Deslocamento',         hint: 'Deslocamento base em metros.' },
 ];
 
