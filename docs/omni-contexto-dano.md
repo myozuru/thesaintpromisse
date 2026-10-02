@@ -38,7 +38,43 @@ Uma reação que reaplica dano por outra chamada de `applyDamage` inicia sua
 própria resolução; `valor_inicial` descreve essa chamada, não uma rolagem
 original que o motor não tenha preservado.
 
-Ainda pendentes de integração com os produtores de ataques: `tipo`, `fonte`,
-`foi_critico`, `foi_falha_critica`, `alcance`, `foi_ataque_oportunidade`,
-`foi_furtivo` e `tipo_ataque`. Esta etapa não fornece valores inventados
-para esses metadados.
+## Metadados de ataques
+
+`applyDamage` aceita `opts.attack` com campos opcionais `critical`,
+`criticalFail`, `isSneak`, `isOpportunity` e `kind` (`melee`, `ranged`,
+`cursed`). Somente os campos informados viram keys: desconhecido continua
+ausente, enquanto `false` informado vira zero válido.
+
+| Chave | Valor |
+| --- | --- |
+| `@DANO.foi_critico` | 1/0 do resultado crítico informado pelo produtor. |
+| `@DANO.foi_falha_critica` | 1/0 do resultado de falha crítica informado. Um ataque que erra não cria evento de dano. |
+| `@DANO.foi_furtivo` | 1/0 da informação de furtividade preservada pelo produtor. |
+| `@DANO.foi_ataque_oportunidade` | 1/0 da marcação do golpe como AdO. Ter uma concessão na store não implica ter executado AdO. |
+| `@DANO.tipo_ataque` | 1=CaC, 2=distância, 3=amaldiçoado. `attack.kind` prevalece sobre `isMelee`; sem ambos, fica ausente. |
+| `@DANO.alcance` | Distância real entre as peças no início da resolução, em metros, seguindo a mesma regra de alcance do motor. Sem peças, fica ausente. |
+
+O painel principal preserva `escondidoDe` antes de revelar o atacante e
+preserva a marcação **Ataque de oportunidade** antes de rolar. A marcação
+vale para uma tentativa e é desativada ao iniciar a rolagem; não concede
+nem consome permissões/reação. A resolução das AdOs continua manual, como
+no fluxo existente. Furtividade aqui significa a ocultação relativa do
+sistema `escondidoDe`, não qualquer condição Desprevenido.
+
+Crítico/falha crítica vêm do resultado efetivo do motor, incluindo o
+crítico automático. Golpe Amplo, ataques extras, Arremesso Ágil, Disparos
+Sincronizados e a diferença do reroll de dano também informam o resultado.
+No dano combinado de Disparos Sincronizados, crítico significa que ao menos
+um tiro foi crítico; isso não altera os cálculos do dano combinado.
+
+Esses metadados chegam tanto ao pre-hook quanto aos eventos posteriores e
+aos observadores, usando a mesma propagação da etapa de valores de dano.
+O alcance não é recalculado depois do pre-hook ou nos callbacks assíncronos.
+Chamadas antigas sem metadados continuam funcionando; não ganham flags
+fictícias. Reações que repassam `opts` preservam os metadados; caminhos que
+reconstroem opções ainda podem perdê-los.
+
+Ainda pendentes: definir a representação numérica de `tipo` e `fonte` e
+integrar produtores de feitiços/ações Omni e caminhos que não informam
+metadados de ataque. O campo `kind: cursed` é aceito, mas a classificação
+automática dos produtores de feitiços fica para a próxima etapa.

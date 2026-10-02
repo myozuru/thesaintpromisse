@@ -690,18 +690,18 @@ const DANO_CTX_OMNI: ChaveOmniOpcao[] = [
 
   { id: 'DANO.tipo',               label: '@DANO.tipo',               hint: 'Tipo do dano corrente.' },
   { id: 'DANO.fonte',              label: '@DANO.fonte',              hint: 'Fonte do dano corrente.' },
-  { id: 'DANO.foi_critico',        label: '@DANO.foi_critico',        hint: '1 se foi crítico.' },
-  { id: 'DANO.foi_falha_critica',  label: '@DANO.foi_falha_critica',  hint: '1 se foi falha crítica.' },
+  { id: 'DANO.foi_critico',        label: '@DANO.foi_critico',        hint: '1/0 conforme o resultado informado pelo ataque. Ausente quando desconhecido.' },
+  { id: 'DANO.foi_falha_critica',  label: '@DANO.foi_falha_critica',  hint: '1/0 conforme o resultado informado pelo ataque. Erros não criam eventos de dano.' },
   // ── PR-1: Contexto de dano expandido ─────────────────────────────────
   { id: 'DANO.valor_inicial',      label: '@DANO.valor_inicial',      hint: 'Dano recebido por applyDamage antes do pre-hook e da mitigação desta resolução.' },
   { id: 'DANO.valor_final',        label: '@DANO.valor_final',        hint: 'Dano resolvido após RD/imunidade/vulnerabilidade, incluindo PVT. Disponível após resolução.' },
   { id: 'DANO.absorvido',          label: '@DANO.absorvido',          hint: 'max(0, inicial - final). Disponível após resolução; não representa a RD isolada.' },
   { id: 'DANO.id_origem',          label: '@DANO.id_origem',          hint: '1 se o golpe informa atacante; 0 sem atacante. Indicador, não o ID textual.' },
   { id: 'DANO.id_alvo',            label: '@DANO.id_alvo',            hint: '1 se a ficha alvo existe; 0 caso contrário. Indicador, não o ID textual.' },
-  { id: 'DANO.alcance',            label: '@DANO.alcance',            hint: 'Distância (m) no momento do golpe.' },
-  { id: 'DANO.foi_ataque_oportunidade', label: '@DANO.foi_ataque_oportunidade', hint: '1 se foi AdO.' },
-  { id: 'DANO.foi_furtivo',        label: '@DANO.foi_furtivo',        hint: '1 se foi ataque furtivo.' },
-  { id: 'DANO.tipo_ataque',        label: '@DANO.tipo_ataque',        hint: '1=CaC, 2=Distância, 3=Amaldiçoado.' },
+  { id: 'DANO.alcance',            label: '@DANO.alcance',            hint: 'Distância real (m) entre as peças no início da resolução. Ausente sem peças.' },
+  { id: 'DANO.foi_ataque_oportunidade', label: '@DANO.foi_ataque_oportunidade', hint: '1/0 conforme a marcação do ataque. No painel, marque Ataque de oportunidade antes de rolar.' },
+  { id: 'DANO.foi_furtivo',        label: '@DANO.foi_furtivo',        hint: '1/0 informado pelo ataque; no painel principal, preserva escondidoDe antes de revelar o atacante.' },
+  { id: 'DANO.tipo_ataque',        label: '@DANO.tipo_ataque',        hint: '1=CaC, 2=Distância, 3=Amaldiçoado. Classificação explícita; ausente se desconhecida.' },
 ];
 
 // ── PR-1: Visão / Iluminação (flags lidas de omniFlags) ────────────────
