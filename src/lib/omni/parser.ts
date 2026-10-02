@@ -376,7 +376,7 @@ function aplicarArredondamentoSufixo(s: string): string {
   // Regex: encontra um `<` ou `>` que NÃO é seguido por letra/dígito/`=`/`.`
   // (ou seja, está em posição pós-fixa, não comparativo).
   // Espaços seguidos de operando (`4 > 3`, `x < (y)`) também são comparação.
-  const re = /([<>])(?!\s*[A-Za-zÀ-ÿ0-9_=.(@-])/;
+  const re = /([<>])(?!\s*[A-Za-zÀ-ÿ0-9_=.(@])/;
   let out = s;
   // Loop até não haver mais sufixos a converter (processa do mais à esquerda).
   for (let guarda = 0; guarda < 50; guarda++) {
