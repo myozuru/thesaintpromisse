@@ -25,7 +25,7 @@ async def main():
         await pg.goto("http://localhost:8080"); await pg.wait_for_timeout(6000)
         await pg.mouse.click(640, 400); await pg.wait_for_timeout(3000)
         out = await pg.evaluate("""async ()=>{
-          const cs=window.__charStore, ms=window.__mapStore, os=window.__omniEntStore, cb=window.__combatStore;
+          const cs=window.__charStore, ms=window.__mapStore, os=window.__omniEntStore||(await import('/src/stores/useOmniEntidadesStore.ts')).useOmniEntidadesStore, cb=window.__combatStore;
           const D=(ms.getState().gridConfig.dpi||50), mpc=ms.getState().gridConfig.metersPerCell||1.5;
           const src=cs.getState().characters[0]||{};
           const base={...src,temporary:false,escCurrent:0,escMax:0,activeConditions:[],conditions:[],rd:0,isDead:false,dead:false,chosenSpecAbilities:[],omniCounters:{}};
