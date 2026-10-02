@@ -106,6 +106,8 @@ export function ReactionPromptOverlay() {
           }}
           onAlmaMaldita={(useIt) => {
             const raw = p.payload?.pendingSoulDamage ?? 0;
+            const opts = p.payload?.soulDamageOpts;
+            const opcoesResolvidas = { ...opts, tags: [...(opts?.tags ?? []), '__alma_maldita_resolved'] };
             if (useIt) {
               if (!canReact(p.charId, p.kind)) return;
               const r = useAlmaMaldita(p.charId, raw);
@@ -114,15 +116,15 @@ export function ReactionPromptOverlay() {
                 consumeReaction(p.charId);
                 addLog('combat', `🩸 ${p.charName}: Alma Maldita — dano à Alma reduzido de ${raw} → ${r.reducedTo}. Restantes: ${r.usesLeft}.`);
                 if ((r.reducedTo ?? 0) > 0) {
-                  applyDamage(p.charId, r.reducedTo!, 'DAL', { tags: ['__alma_maldita_resolved'] });
+                  applyDamage(p.charId, r.reducedTo!, 'DAL', opcoesResolvidas);
                 }
               } else {
                 playErrorSound();
                 addLog('system', `${p.charName}: ${r.reason ?? 'falha Alma Maldita'} — aplicando dano cheio.`);
-                applyDamage(p.charId, raw, 'DAL', { tags: ['__alma_maldita_resolved'] });
+                applyDamage(p.charId, raw, 'DAL', opcoesResolvidas);
               }
             } else {
-              applyDamage(p.charId, raw, 'DAL', { tags: ['__alma_maldita_resolved'] });
+              applyDamage(p.charId, raw, 'DAL', opcoesResolvidas);
               addLog('combat', `${p.charName}: optou por NÃO usar Alma Maldita — sofreu ${raw} de dano à Alma.`);
             }
             dismiss(p.id);

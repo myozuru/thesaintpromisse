@@ -2157,7 +2157,7 @@ export const useCharacterStore = create<CharacterStore>()(
                 charName: beforeChar.name,
                 kind: 'fah_alma_maldita_offer',
                 message: `${beforeChar.name} sofrerá ${rawDamage} de dano à Alma — Alma Maldita disponível (${beforeChar.almaMalditaUses}/${beforeChar.almaMalditaMax}).`,
-                payload: { soulDamageRaw: rawDamage, pendingSoulDamage: rawDamage },
+                payload: { soulDamageRaw: rawDamage, pendingSoulDamage: rawDamage, soulDamageOpts: { ...opts, attack: opts?.attack ? { ...opts.attack } : undefined, tags: opts?.tags ? [...opts.tags] : undefined } },
               });
             });
           }, 0);

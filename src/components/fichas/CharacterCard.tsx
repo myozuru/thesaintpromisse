@@ -662,6 +662,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
           peSpellReduction: eff.peSpellReduction,
           immunityGrant: eff.immunityGrant,
           sourceName: nome,
+          damageType: eff.damageType,
         });
         if (r?.absorvidoPorBloqueio) absorvidoPorBloqueio = true;
       }

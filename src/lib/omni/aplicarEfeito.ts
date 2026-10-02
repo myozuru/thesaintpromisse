@@ -1,3 +1,4 @@
+import { resolverTipoDano } from './contextoDano';
 /**
  * 🎯 Ponte Omni-Engine → Character Store.
  *
@@ -46,6 +47,8 @@ export function aplicarEfeitoNoPersonagem(
     immunityGrant?: { escopo: string; mode: 'grant' | 'revoke' };
     /** Nome amigável da origem (item/feitiço/talento) — usado no id do redutor. */
     sourceName?: string;
+    /** Tipo declarado pelo efeito; não herda o tipo do golpe que o disparou. */
+    damageType?: string;
     /** Contadores: teto já avaliado, escopo e ficha de origem. */
     contador?: { teto?: number; porFonte?: boolean; fonteId?: string };
   },
@@ -171,7 +174,7 @@ export function aplicarEfeitoNoPersonagem(
         store.updateCharacter(charId, { omniFlags: flags });
         return { aplicado: 0, absorvidoPorBloqueio: true };
       }
-      store.applyDamage(charId, dano, undefined, { source: 'omni' });
+      store.applyDamage(charId, dano, resolverTipoDano(extras?.damageType), { source: 'omni' });
       return { aplicado: dano };
     }
     if (tipo === 'ADICIONAR') {

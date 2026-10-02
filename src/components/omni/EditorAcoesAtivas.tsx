@@ -1,7 +1,8 @@
 /** Editor no-code das ações ativas genéricas de uma entidade OMNI. */
 import type { AcaoAtivaConfig, EfeitoSecundarioAtivo, EntidadeOmni, TrNome } from '@/lib/omni/tipos';
 import { novaAcaoAtiva } from '@/lib/omni/acaoAtiva';
-import { DAMAGE_TYPES } from '@/lib/omni/constantesDoSistema';
+import { DAMAGE_TYPES, DAMAGE_TYPE_LABELS } from '@/types';
+import { resolverTipoDano } from '@/lib/omni/contextoDano';
 import { ALL_CONDITIONS } from '@/types/conditions';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -61,10 +62,13 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
           )}
           <div className="grid grid-cols-3 gap-2">
             <div><Label className="text-xs">Dano (ex.: 6d8)</Label><Input value={a.dano ?? ''} onChange={(e) => set(i, { dano: e.target.value })} /></div>
-            <div><Label className="text-xs">Tipo de dano</Label>
-              <select className={sel} value={a.tipoDano ?? ''} onChange={(e) => set(i, { tipoDano: e.target.value })}>
-                <option value="">—</option>{DAMAGE_TYPES.map((d) => <option key={d} value={d}>{d}</option>)}
-              </select></div>
+            <div><Label className="text-xs" htmlFor={`tipo-dano-${a.id}`}>Tipo de dano</Label>
+              <select id={`tipo-dano-${a.id}`} className={sel} value={resolverTipoDano(a.tipoDano) ?? a.tipoDano ?? ''} onChange={(e) => set(i, { tipoDano: e.target.value })}>
+                <option value="">—</option>{DAMAGE_TYPES.map((d) => <option key={d} value={d}>{DAMAGE_TYPE_LABELS[d]}</option>)}
+                {a.tipoDano && !resolverTipoDano(a.tipoDano) && <option value={a.tipoDano}>{a.tipoDano} (sem equivalência)</option>}
+              </select>
+              {a.tipoDano && !resolverTipoDano(a.tipoDano) && <p className="text-xs text-amber-600">Escolha um tipo reconhecido para aplicar resistências e imunidades específicas.</p>}
+            </div>
             <div><Label className="text-xs">Dados por carga</Label><Input value={a.dadosPorCarga ?? ''} onChange={(e) => set(i, { dadosPorCarga: e.target.value })} placeholder="1d8" /></div>
           </div>
           <div className="grid grid-cols-2 gap-2">

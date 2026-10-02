@@ -187,6 +187,7 @@ function processarPersonagem(c: Character) {
         peSpellReduction: eff.peSpellReduction,
         immunityGrant: eff.immunityGrant,
         sourceName: fresco.nome,
+        damageType: eff.damageType,
       });
       consumiuUso = true;
       useLogStore.getState().addLog(

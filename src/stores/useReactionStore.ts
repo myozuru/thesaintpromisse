@@ -1,3 +1,4 @@
+import type { OpcoesDano } from '@/lib/omni/contextoDano';
 /**
  * Fila global de prompts de REAÇÃO.
  *
@@ -43,6 +44,8 @@ export interface ReactionPrompt {
     soulDamageRaw?: number;
     /** FAH: pendência de aplicar o dano à alma (consumido pelo handler). */
     pendingSoulDamage?: number;
+    /** Opções do golpe original, preservadas ao resolver Alma Maldita. */
+    soulDamageOpts?: OpcoesDano;
     /** FAH: dano original do crítico/furtivo a mitigar. */
     critDamageRaw?: number;
     critDamageType?: DamageType;

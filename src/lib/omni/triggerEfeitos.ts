@@ -214,6 +214,7 @@ export function dispararGatilhoEfeitosItens(
           alvoVars: montarVariaveisAtuais(),
           itemVars: itemBag,
           sourceName: fresco.nome,
+          dano: opts.dano,
         });
         console.log(`    ↳ ✓ key especial → ${r.detalhe ?? '(sem detalhe)'}`);
         aplicados++;
@@ -235,6 +236,7 @@ export function dispararGatilhoEfeitosItens(
         peSpellReduction: eff.peSpellReduction,
         immunityGrant: eff.immunityGrant,
         sourceName: fresco.nome,
+        damageType: eff.damageType,
         contador: {
           teto: eff.counterCap ? avaliarFormula(eff.counterCap, variaveis, undefined, { item: itemBag }).valor : undefined,
           porFonte: eff.counterPerSource,

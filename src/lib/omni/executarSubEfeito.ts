@@ -44,6 +44,8 @@ export interface ExecucaoContexto {
   resultados?: number[];
   /** Nome amigável da entidade-fonte (item/feitiço/talento). */
   sourceName?: string;
+  /** Snapshot do evento recebido, herdado por branches e subefeitos. */
+  dano?: Readonly<Record<string, number>>;
 }
 
 /**
@@ -64,6 +66,7 @@ export function avaliarFormulaEfeito(eff: CombatEffect, ctx: ExecucaoContexto) {
     alvo: ctx.alvoVars ?? ctx.usuarioVars,
     item: ctx.itemVars,
     resultados: ctx.resultados,
+    dano: ctx.dano ? { ...ctx.dano } : undefined,
   });
 }
 
@@ -99,6 +102,7 @@ export function executarCombatEffect(
     peSpellReduction: eff.peSpellReduction,
     immunityGrant: eff.immunityGrant,
     sourceName: ctx.sourceName,
+    damageType: eff.damageType,
   });
   return { aplicado: r.aplicado, absorvidoPorBloqueio: r.absorvidoPorBloqueio };
 }
@@ -108,7 +112,10 @@ export function executarCombatEffect(
 function executarDiceSwitch(eff: CombatEffect, ctx: ExecucaoContexto): ExecucaoResultado {
   const ds = eff.diceSwitch!;
   // Rola o dado e escolhe a branch.
-  const out = avaliarFormula(ds.dice, ctx.usuarioVars);
+  const out = avaliarFormula(ds.dice, ctx.usuarioVars, undefined, {
+    alvo: ctx.alvoVars ?? ctx.usuarioVars, item: ctx.itemVars, resultados: ctx.resultados,
+    dano: ctx.dano ? { ...ctx.dano } : undefined,
+  });
   const valor = Math.round(out.valor);
   const branch = ds.branches.find((b) => b.values.includes(valor));
   if (!branch || branch.effects.length === 0) {

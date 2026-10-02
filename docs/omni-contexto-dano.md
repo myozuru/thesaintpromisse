@@ -121,8 +121,11 @@ Ações ativas Omni usam a mesma conversão.
 Não se inventa equivalência para `Amaldiçoado`, `Força`, `Verdadeiro` ou
 `Cura`, oferecidos pelo catálogo Omni mas sem tipo correspondente definido
 no motor. Esses nomes continuam com tipo desconhecido e o dano segue o
-caminho sem tipo específico (RD geral ainda se aplica). A harmonização do
-editor e a definição desses conceitos ficam para a próxima etapa.
+caminho sem tipo específico (RD geral ainda se aplica). O editor de ações
+ativas agora oferece os 15 tipos do motor com rótulos em português.
+Configurações antigas sem equivalência continuam visíveis com um aviso;
+somente uma escolha explícita substitui o valor salvo. Aliases reconhecidos
+são exibidos pelo tipo equivalente sem migração automática da configuração.
 
 O painel de ataques informa `source: arma`. O diálogo de feitiços informa
 `source: feitico` e `attackerId` do conjurador nos três caminhos: ataque,
@@ -140,8 +143,18 @@ quando a chamada não os fornece.
 Exemplo: `@causar_dano -> se @DANO.fonte == 2 entao somar @DANO.valor_final em contador_dano_magico`.
 Para identificar fogo, compare `@DANO.tipo == 7`.
 
-Ainda pendentes: harmonizar o catálogo/editor de tipos, preservar origem
-nos caminhos de reação que reconstroem opções, e passar atacante/tipo
-pelos efeitos Omni encadeados e blocos lógicos de dano. Esta etapa não
-altera o caminho de HP direto do executor lógico nem afirma cobertura de
-todos os produtores de dano.
+Alma Maldita preserva as opções do golpe pendente ao reduzir ou aceitar o
+dano, inclusive quando o uso falha: atacante, fonte, metadados de ataque,
+tags e opções de mitigação. Prompts antigos sem essas opções continuam
+compatíveis. A anulação total permanece sem reaplicar dano.
+
+`diceSwitch` e seus subefeitos recebem o snapshot `@DANO` do evento e mantêm
+`@ITEM`, `@ALVO` e `@RESULTADO_N` na seleção das branches. O dano produzido
+por um efeito numérico usa seu próprio `damageType`, inclusive nos
+subefeitos, para resistências, imunidades e o contexto do novo dano; não
+herda o tipo do golpe recebido nem do efeito-pai.
+
+Ainda pendentes: passar atacante pelos efeitos Omni encadeados, integrar
+os blocos lógicos de dano ao motor e validar a segurança de ciclos de
+eventos. Esta etapa não altera o caminho de HP direto do executor lógico
+nem afirma cobertura de todos os produtores de dano.
