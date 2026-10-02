@@ -39,7 +39,7 @@ function addEnt(id: string, x: number, y: number, characterId?: string) {
 
 describe('PR-5 — Cena Tática', () => {
   beforeEach(() => {
-    useMapStore.setState({ entities: {} });
+    useMapStore.setState({ entities: {}, gridConfig: { ...useMapStore.getState().gridConfig, dpi: 1, metersPerCell: 1 } });
     useCharacterStore.setState({ characters: [
       hero,
       { id: 'ally', name: 'Ally', category: 'PLAYER' } as unknown as Character,
@@ -55,7 +55,7 @@ describe('PR-5 — Cena Tática', () => {
   });
 
   it('com aliado adjacente e inimigo a 5m → cálculos corretos', () => {
-    // metersPerCell default = 1.
+    // A grade deste teste usa 1 pixel por célula e 1 metro por célula.
     addEnt('t-hero', 0, 0, 'hero-pr5');
     addEnt('t-ally', 1, 0, 'ally');     // adjacente
     addEnt('t-enemy', 5, 0, 'enemy1');  // próximo (~5m)
