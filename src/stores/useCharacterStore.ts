@@ -1,4 +1,4 @@
-import { montarMetadadosDano, type OpcoesDano } from '@/lib/omni/contextoDano';
+import { montarMetadadosDano, resolverTipoDano, type OpcoesDano } from '@/lib/omni/contextoDano';
 import { useMapStore } from '@/stores/useMapStore';
 import { distanceBetweenChars } from '@/lib/weaponRange';
 import { markCharacterDeleted } from "@/lib/charSyncStamps";
@@ -2100,6 +2100,7 @@ export const useCharacterStore = create<CharacterStore>()(
       })),
       // applyLevelDown removido: progressão de nível é irreversível para evitar farm de bônus.
       applyDamage: (id, rawDamage, damageType, opts) => {
+        damageType = resolverTipoDano(damageType);
         const totalDamage = Math.max(0, rawDamage);
         let rdApplied = 0;
         let finalDamage = 0;
@@ -2201,7 +2202,7 @@ export const useCharacterStore = create<CharacterStore>()(
             })
           : null;
         const contextoDanoInicial = Object.freeze({
-          ...montarMetadadosDano(opts, distanciaDano),
+          ...montarMetadadosDano(opts, distanciaDano, damageType),
           valor_inicial: totalDamage,
           id_origem: opts?.attackerId ? 1 : 0,
           id_alvo: beforeChar ? 1 : 0,

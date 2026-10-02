@@ -1,3 +1,4 @@
+import { resolverTipoDano, type MetadadosAtaqueDano } from './contextoDano';
 /**
  * Ações ativas genéricas do OMNI.
  *
@@ -217,6 +218,7 @@ export async function executarAcaoAtiva(
   const fonte = ent?.nome ?? cfg.nome;
   const pago = `${custo} PE${cargas ? ` + ${cargas} carga(s) de ${cfg.consumirContador!.nome}` : ''}`;
 
+  let metadadosAtaque: MetadadosAtaqueDano | undefined;
   let critico = false;
   let aplicaEfeitos = true;
   let passouTR = false;
@@ -242,6 +244,7 @@ export async function executarAcaoAtiva(
       ],
     });
     const r = await rollAttack(ctx);
+    metadadosAtaque = { critical: r.critical, criticalFail: r.criticalFail, kind: arma!.range === 'melee' ? 'melee' : 'ranged' };
     critico = r.critical;
     aplicaEfeitos = r.hit;
     armaDano = cfg.incluirArma ? r.damageTotal : 0;
@@ -264,7 +267,10 @@ export async function executarAcaoAtiva(
   }
   const dano = cfg.teste === 'tr' ? danoAposTR(bruto, passouTR, !!cfg.metadeNoSucesso) : bruto;
   if (dano > 0) {
-    useCharacterStore.getState().applyDamage(t.id, dano, (cfg.tipoDano || undefined) as never, { attackerId: u.id });
+    useCharacterStore.getState().applyDamage(t.id, dano, resolverTipoDano(cfg.tipoDano), {
+      attackerId: u.id, source: 'omni', attack: metadadosAtaque,
+      isMelee: metadadosAtaque ? metadadosAtaque.kind === 'melee' : undefined,
+    });
   }
   const notas = aplicaEfeitos ? aplicarEfeitos(u, t, cfg.efeitos ?? [], fonte) : [];
   const partes = [

@@ -74,7 +74,74 @@ Chamadas antigas sem metadados continuam funcionando; não ganham flags
 fictícias. Reações que repassam `opts` preservam os metadados; caminhos que
 reconstroem opções ainda podem perdê-los.
 
-Ainda pendentes: definir a representação numérica de `tipo` e `fonte` e
-integrar produtores de feitiços/ações Omni e caminhos que não informam
-metadados de ataque. O campo `kind: cursed` é aceito, mas a classificação
-automática dos produtores de feitiços fica para a próxima etapa.
+## Tipo e fonte numéricos
+
+O motor de fórmulas é numérico. `@DANO.tipo` identifica o tipo efetivo do
+dano; `@DANO.fonte` identifica a categoria do produtor, não um ID de ficha
+ou o nome do item. Os códigos são explícitos e estáveis: adicionar novos
+tipos não deve alterar os códigos existentes.
+
+| Tipo do motor | Código de `@DANO.tipo` |
+| --- | --- |
+| DCO — Cortante | 1 |
+| DP — Perfurante | 2 |
+| DI — Impactante | 3 |
+| DA — Ácido | 4 |
+| DCG — Congelante | 5 |
+| DCC — Chocante | 6 |
+| DQ — Queimante | 7 |
+| DS — Sônico | 8 |
+| DAL — na Alma | 9 |
+| DNR — Energia Reversa | 10 |
+| DE — Energético | 11 |
+| DPS — Psíquico | 12 |
+| DR — Radiante | 13 |
+| DN — Necrótico | 14 |
+| DV — Venenoso | 15 |
+
+| Categoria em `opts.source` | Código de `@DANO.fonte` |
+| --- | --- |
+| `arma` | 1 |
+| `feitico` | 2 |
+| `omni` | 3 |
+| `ambiente` | 4 |
+
+As chamadas antigas sem tipo ou sem `source` mantêm esses campos ausentes.
+Não se presume que qualquer dano sem atacante seja ambiental. O código 4
+é aceito explicitamente pela API; os produtores ambientais ainda precisam
+informá-lo.
+
+`applyDamage` normaliza os códigos do motor, os rótulos de
+`DAMAGE_TYPE_LABELS`, as abreviações das armas (`Ct`, `Pf`, `Im`) e nomes
+Omni equivalentes (`Impacto`, `Fogo`, `Frio`, `Elétrico`, `Mental`, `Veneno`).
+A normalização ocorre **antes** de aplicar imunidade, RD por tipo e
+vulnerabilidade, para que o contexto e a mitigação usem o mesmo tipo.
+Ações ativas Omni usam a mesma conversão.
+
+Não se inventa equivalência para `Amaldiçoado`, `Força`, `Verdadeiro` ou
+`Cura`, oferecidos pelo catálogo Omni mas sem tipo correspondente definido
+no motor. Esses nomes continuam com tipo desconhecido e o dano segue o
+caminho sem tipo específico (RD geral ainda se aplica). A harmonização do
+editor e a definição desses conceitos ficam para a próxima etapa.
+
+O painel de ataques informa `source: arma`. O diálogo de feitiços informa
+`source: feitico` e `attackerId` do conjurador nos três caminhos: ataque,
+TR e aplicação direta. Isso permite disparar `aoCausarDano` no conjurador
+e preserva a origem nos eventos de observação. O ataque de feitiço usa seu
+`attackType` e resultado crítico; sem tipo de ataque informado, usa
+`cursed`. TR e aplicação direta usam `cursed`, sem simular flags de crítico
+de ataque a partir do TR do alvo.
+
+Ações ativas informam `source: omni` e preservam resultado/tipo da arma
+quando usam teste de ataque. A ponte numérica `aplicarEfeitoNoPersonagem`
+informa a categoria Omni, mas continua sem inventar atacante ou tipo
+quando a chamada não os fornece.
+
+Exemplo: `@causar_dano -> se @DANO.fonte == 2 entao somar @DANO.valor_final em contador_dano_magico`.
+Para identificar fogo, compare `@DANO.tipo == 7`.
+
+Ainda pendentes: harmonizar o catálogo/editor de tipos, preservar origem
+nos caminhos de reação que reconstroem opções, e passar atacante/tipo
+pelos efeitos Omni encadeados e blocos lógicos de dano. Esta etapa não
+altera o caminho de HP direto do executor lógico nem afirma cobertura de
+todos os produtores de dano.

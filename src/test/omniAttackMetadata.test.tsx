@@ -78,7 +78,7 @@ describe('Painel real → motor → dano → Omni', () => {
     fireEvent.click(screen.getByRole('button', { name: /Rolar Dano/ }));
     await waitFor(() => expect(spy.mock.calls.some(([e]) => e === 'aoCausarDano')).toBe(true));
     const ctx = spy.mock.calls.find(([e]) => e === 'aoCausarDano')![1]!.dano!;
-    expect(ctx).toMatchObject({ foi_critico: critical, foi_falha_critica: 0, foi_furtivo: hidden ? 1 : 0, foi_ataque_oportunidade: opportunity ? 1 : 0, tipo_ataque: kind, alcance: 1.5 });
+    expect(ctx).toMatchObject({ foi_critico: critical, foi_falha_critica: 0, foi_furtivo: hidden ? 1 : 0, foi_ataque_oportunidade: opportunity ? 1 : 0, tipo_ataque: kind, alcance: 1.5, fonte: 1, tipo: weapon === 'Espada Longa' ? 1 : 2 });
     expect(ctx.valor_final).toBeGreaterThan(0);
     expect(pegarFicha('bruno').hpCurrent).toBe(100 - ctx.valor_final);
     const preCtx = pre.mock.calls.find(([e]) => e === 'aoSofrerDano')![1].dano!;

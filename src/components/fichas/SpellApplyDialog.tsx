@@ -888,7 +888,11 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
       if (dmg > 0 && kokusenArmed) dmg = Math.floor(dmg * 1.5);
 
       if (dmg > 0 || (spell.spellType === 'condition' && applyConditions)) {
-        if (dmg > 0) applyDamage(ta.id, dmg, spell.damageType, kokusenArmed ? { ignoresRD: true } : undefined);
+        if (dmg > 0) applyDamage(ta.id, dmg, spell.damageType, {
+          attackerId: source.id, source: 'feitico', ignoresRD: kokusenArmed,
+          isMelee: spell.attackType === undefined ? undefined : spell.attackType === 'melee',
+          attack: { kind: spell.attackType ?? 'cursed', critical: isCrit, criticalFail: false },
+        });
         if (kokusenArmed) updateCharacter(source.id, { kokusenArmedDamage: false });
         
         // Apply buffs/conditions
@@ -1044,7 +1048,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
         if (source.category === 'PLAYER' && target.category === 'PLAYER') {
           dmg = Math.floor(dmg * 0.34);
         }
-        if (dmg > 0) applyDamage(ts.id, dmg, spell.damageType);
+        if (dmg > 0) applyDamage(ts.id, dmg, spell.damageType, { attackerId: source.id, source: 'feitico', attack: { kind: 'cursed' } });
         const pvpNote = (source.category === 'PLAYER' && target.category === 'PLAYER') ? ' (PvP -66%)' : '';
         
         results.push({ name: target.name, rawDmg: baseTotal, finalDmg: dmg, multiplier: dmgMultiplier, saveLabel, conditions: [], diceRolls: rolls, diceSides: baseRoll.sides, flatBonus: spell.damageBonus + dmgBonusFromBuffs + extraDicePreCrit + conjuracaoBonus + destBonusSav });
@@ -1180,7 +1184,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
         if (source.category === 'PLAYER' && target.category === 'PLAYER') {
           dmg = Math.floor(dmg * 0.34);
         }
-        applyDamage(id, dmg, spell.damageType);
+        applyDamage(id, dmg, spell.damageType, { attackerId: source.id, source: 'feitico', attack: { kind: 'cursed' } });
         const pvpNote = (source.category === 'PLAYER' && target.category === 'PLAYER') ? ' (PvP -66%)' : '';
         const breakdown = buildDamageBreakdown(rolls, baseRoll.sides, total, [
           { label: 'feitiço', value: spell.damageBonus },
