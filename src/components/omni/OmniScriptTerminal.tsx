@@ -51,14 +51,14 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
   const compilado = useMemo(() => parseOmniScript(valor || '', { defaultTarget }), [valor, defaultTarget]);
 
   // Calcula valores mock dos efeitos quando há um personagem selecionado.
-  const valoresMock = useMemo<(number | undefined)[]>(() => {
+  const avaliacoesMock = useMemo<(ReturnType<typeof avaliarFormula> | undefined)[]>(() => {
     if (!personagemPreview) return compilado.efeitos.map(() => undefined);
     try {
       const vars = montarVariaveisDoPersonagem(personagemPreview, 'USUARIO');
       return compilado.efeitos.map((eff) => {
         try {
           const r = avaliarFormula(eff.formula || '0', vars, () => 0.5);
-          return Math.round(r.valor);
+          return r;
         } catch {
           return undefined;
         }
@@ -67,6 +67,7 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
       return compilado.efeitos.map(() => undefined);
     }
   }, [compilado.efeitos, personagemPreview]);
+  const valoresMock = avaliacoesMock.map(r => r && r.diagnosticos.length === 0 ? Math.round(r.valor) : undefined);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -314,6 +315,11 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
                     ✅ {frasePlanoExecucao(eff, valoresMock[i])}
                   </span>
                 </div>
+                {avaliacoesMock[i]?.diagnosticos.map((d, j) => (
+                  <div key={j} role="status" className="text-[12px] text-amber-300">
+                    Prévia incompleta: {d.mensagem}
+                  </div>
+                ))}
               </div>
             );
           })}

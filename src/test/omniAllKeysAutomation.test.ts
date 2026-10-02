@@ -1,6 +1,7 @@
 /**
- * Auditoria global: garante que TODAS as chaves declaradas em
- * DICIONARIO_CHAVES_OMNI estão de fato automatizadas — ou seja, presentes
+ * Auditoria dos grupos listados em GRUPOS_NOVOS: garante que suas keys
+ * estáticas estão presentes no contexto e não usam fallback silencioso,
+ * além de verificar presença
  * na bag de variáveis produzida por `montarVariaveisDoPersonagem` (para
  * escopos USUARIO/ALVO) ou avaliáveis sem erro pelo parser (escopo NENHUM).
  *
@@ -9,7 +10,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { DICIONARIO_CHAVES_OMNI } from '@/lib/omni/constantesDoSistema';
-import { avaliarFormula } from '@/lib/omni/parser';
+import { avaliarFormula, resolverChavePtBr } from '@/lib/omni/parser';
 import { montarVariaveisDoPersonagem } from '@/lib/omni/resolvedor';
 import { useCombatStore } from '@/stores/useCombatStore';
 import type { Character } from '@/types';
@@ -41,10 +42,6 @@ const hero: Character = {
   spells: [],
 } as unknown as Character;
 
-// Aliases mapeados (parser injeta lower-case via expr.evaluate).
-const SCOPED_PREFIX = (escopo: 'USUARIO' | 'ALVO', k: string) =>
-  `${escopo}_${k.toUpperCase()}`;
-
 // Garante que useCombatStore tem estado mínimo para acionar PR-9.
 useCombatStore.setState({
   inCombat: false, round: 1, currentTurnIndex: 0,
@@ -54,6 +51,7 @@ useCombatStore.setState({
 } as never);
 
 const bagUsuario = montarVariaveisDoPersonagem(hero, 'USUARIO');
+const bags = { USUARIO: bagUsuario, ALVO: montarVariaveisDoPersonagem(hero, 'ALVO') };
 
 interface Falha { grupo: string; id: string; escopo: string; motivo: string; }
 const falhas: Falha[] = [];
@@ -82,32 +80,34 @@ const GRUPOS_NOVOS = new Set<string>([
 for (const cat of DICIONARIO_CHAVES_OMNI.filter(c => GRUPOS_NOVOS.has(c.grupo))) {
   for (const item of cat.itens) {
     if (item.id.includes('<')) continue; // template dinâmico
-    const keyUpper = item.id.toUpperCase();
+    const keyUpper = resolverChavePtBr(item.id);
 
     for (const escopo of cat.escopos) {
       if (escopo === 'NENHUM') {
-        // Globais/Cena/Item: precisam ao menos avaliar sem lançar.
-        const r = avaliarFormula(`@${keyUpper}`, bagUsuario);
-        if (!Number.isFinite(r.valor)) {
-          falhas.push({ grupo: cat.grupo, id: item.id, escopo, motivo: 'avaliação não-finita' });
+        const r = avaliarFormula(`@${item.id}`, bagUsuario);
+        if (r.diagnosticos.length > 0) {
+          falhas.push({ grupo: cat.grupo, id: item.id, escopo, motivo: r.diagnosticos.map(d => d.mensagem).join('; ') });
         }
         // Não exigimos presença na bag pessoal (são externos).
         continue;
       }
 
-      // USUARIO/ALVO: a chave precisa existir na bag (com ou sem prefixo).
-      const presente =
-        keyUpper in bagUsuario ||
-        SCOPED_PREFIX(escopo as 'USUARIO' | 'ALVO', item.id) in bagUsuario;
+      // Cada escopo é verificado contra sua própria bag e contra o parser.
+      const bag = bags[escopo];
+      const presente = `${escopo}_${keyUpper}` in bag;
       if (!presente) {
         falhas.push({ grupo: cat.grupo, id: item.id, escopo, motivo: 'chave ausente na bag' });
+      }
+      const r = avaliarFormula(`@${escopo}.${item.id}`, bag);
+      if (r.diagnosticos.length > 0) {
+        falhas.push({ grupo: cat.grupo, id: item.id, escopo, motivo: r.diagnosticos.map(d => d.mensagem).join('; ') });
       }
     }
   }
 }
 
-describe('Auditoria Global — todas as chaves Omni declaradas estão automatizadas', () => {
-  it('toda chave estática do dicionário tem implementação correspondente', () => {
+describe('Auditoria Global — keys estáticas dos grupos auditados', () => {
+  it('toda key estática dos grupos auditados tem implementação correspondente', () => {
     if (falhas.length > 0) {
       // Mostra agrupado por grupo para facilitar correção.
       const byGroup = falhas.reduce<Record<string, Falha[]>>((acc, f) => {
@@ -122,7 +122,7 @@ describe('Auditoria Global — todas as chaves Omni declaradas estão automatiza
     expect(falhas).toHaveLength(0);
   });
 
-  it('parser avalia todas as chaves estáticas sem produzir NaN/Infinity', () => {
+  it('parser avalia as chaves estáticas dos grupos auditados sem fallback silencioso', () => {
     const naoFinitas: string[] = [];
     for (const cat of DICIONARIO_CHAVES_OMNI.filter(c => GRUPOS_NOVOS.has(c.grupo))) {
       for (const item of cat.itens) {
@@ -131,8 +131,8 @@ describe('Auditoria Global — todas as chaves Omni declaradas estão automatiza
         const expr = escopo === 'NENHUM'
           ? `@${item.id.toUpperCase()}`
           : `@${escopo}.${item.id}`;
-        const r = avaliarFormula(expr, bagUsuario);
-        if (!Number.isFinite(r.valor)) naoFinitas.push(`${cat.grupo}::${item.id}`);
+        const r = avaliarFormula(expr, escopo === 'NENHUM' ? bagUsuario : bags[escopo]);
+        if (!Number.isFinite(r.valor) || r.diagnosticos.length > 0) naoFinitas.push(`${cat.grupo}::${item.id}`);
       }
     }
     expect(naoFinitas).toEqual([]);
