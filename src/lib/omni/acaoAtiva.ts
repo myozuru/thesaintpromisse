@@ -1,3 +1,4 @@
+import { prepararMovimentosAtivos, aplicarMovimentoAtivo, type PlanoMovimentoAtivo, type OpcoesMovimentoAtivo } from './movimentosAtivos';
 import { avaliarCondicionaisAtivos } from './condicionaisAtivos';
 import { applyAdvantageToD20, consumeAdvantageFor, consumeFlatBonusFor } from './rollAdvantage';
 import { aceitaAlvoAtivo, selecionarAlvosAtivos, type SelecaoAtiva } from './alvosAtivos';
@@ -28,7 +29,6 @@ import { useInventoryStore } from '@/stores/useInventoryStore';
 import { ALL_CONDITIONS, type ActiveCondition } from '@/types/conditions';
 import { findCharEntity, touchDistanceMeters, type TouchGrid } from '@/lib/touchRange';
 import { penalidadeTRFlanqueado } from '@/lib/flanqueadorSuperior';
-import { imuneMovimentoForcado } from '@/lib/posturas';
 import { specDCFor } from '@/lib/golpeEspecial';
 import { rollD20Com, rollDiceGroups } from '@/lib/dice';
 import { findWeaponByName } from '@/lib/weapons';
@@ -148,10 +148,10 @@ export function podeUsarAtiva(u: Character, alvo: Character | undefined, cfg: Ac
   return { ok: true };
 }
 
-function aplicarEfeitos(u: Character, alvo: Character, efeitos: EfeitoSecundarioAtivo[], fonte: string): string[] {
+function aplicarEfeitos(u: Character, alvo: Character, efeitos: EfeitoSecundarioAtivo[], fonte: string, planos: PlanoMovimentoAtivo[] = []): string[] {
   const notas: string[] = [];
   const store = useCharacterStore.getState();
-  for (const ef of efeitos) {
+  for (const [indice, ef] of efeitos.entries()) {
     if (ef.tipo === 'condicao') {
       const def = ALL_CONDITIONS.find((c) => c.id === ef.condicao);
       if (!def) continue;
@@ -162,16 +162,8 @@ function aplicarEfeitos(u: Character, alvo: Character, efeitos: EfeitoSecundario
       store.addCondition(alvo.id, ac);
       notas.push(`${def.icon} ${def.name}${ef.rodadas > 0 ? ` (${ef.rodadas} rod.)` : ''}`);
     } else {
-      const vivo = useCharacterStore.getState().characters.find((x) => x.id === alvo.id) ?? alvo;
-      if (imuneMovimentoForcado(vivo)) { notas.push('imune a movimento forçado'); continue; }
-      const ms = useMapStore.getState();
-      const a = findCharEntity(ms.entities as never, u.id) as { x: number; y: number } | null;
-      const b = findCharEntity(ms.entities as never, alvo.id) as { id: string; x: number; y: number } | null;
-      if (!a || !b) continue;
-      const r = moverForcado(a, b, ef.metros, ef.tipo, ms.gridConfig as TouchGrid);
-      if (r.casas > 0) ms.updateEntity(b.id, { x: r.x, y: r.y });
-      const m = (r.casas * ((ms.gridConfig as TouchGrid)?.metersPerCell || 1.5)).toFixed(1).replace('.', ',');
-      notas.push(`${ef.tipo === 'puxar' ? 'puxado' : 'empurrado'} ${m} m`);
+      const plano = planos.find(p => p.indice === indice);
+      if (plano) notas.push(aplicarMovimentoAtivo(u.id, alvo.id, plano));
     }
   }
   return notas;
@@ -188,20 +180,30 @@ export async function executarAcaoAtiva(
   cfg: AcaoAtivaConfig,
   selecao: SelecaoAtiva,
   ent?: EntidadeOmni,
+  opcoes: OpcoesMovimentoAtivo = {},
 ): Promise<ResultadoAtiva> {
   const escolhidos = await selecionarAlvosAtivos(usuarioId, cfg, selecao);
   if (!escolhidos.ok) return escolhidos;
-  const store = useCharacterStore.getState();
+  let store = useCharacterStore.getState();
   const log = (m: string) => useLogStore.getState().addLog('combat', m);
-  const u = store.characters.find((x) => x.id === usuarioId);
+  let u = store.characters.find((x) => x.id === usuarioId);
   if (!u) return { ok: false, reason: 'Personagem não encontrado.' };
-  const alvos = escolhidos.ids.map(id => store.characters.find(c => c.id === id)!);
+  let alvos = escolhidos.ids.map(id => store.characters.find(c => c.id === id)!);
   for (const alvo of alvos) {
     const chk = podeUsarAtiva(u, alvo, cfg);
     if (!chk.ok) return chk;
   }
   const arma = cfg.teste === 'ataque' ? armaDaAcao(u, ent) : undefined;
   if (cfg.teste === 'ataque' && !arma) return { ok: false, reason: 'Nenhuma arma empunhada para o ataque.' };
+
+  const movimentos = await prepararMovimentosAtivos(u.id, alvos, cfg.efeitos ?? [], opcoes);
+  if (!movimentos.ok) return movimentos;
+  // Destino pode exigir interação: revalidar recursos e fichas após o await.
+  store = useCharacterStore.getState();
+  u = store.characters.find(c => c.id === usuarioId);
+  if (!u) return { ok: false, reason: 'Personagem removido durante a seleção.' };
+  alvos = escolhidos.ids.map(id => store.characters.find(c => c.id === id)!);
+  for (const alvo of alvos) { const chk = podeUsarAtiva(u, alvo, cfg); if (!chk.ok) return chk; }
 
   // Snapshot por alvo antes do consumo: cargas e PV são os da declaração.
   const condicionais = new Map(alvos.map(t => [t.id, {
@@ -291,7 +293,7 @@ export async function executarAcaoAtiva(
         isMelee: metadadosAtaque ? metadadosAtaque.kind === 'melee' : undefined,
       });
     }
-    const notas = aplicaEfeitos ? aplicarEfeitos(u, t, cfg.efeitos ?? [], fonte) : [];
+    const notas = aplicaEfeitos ? aplicarEfeitos(u, t, cfg.efeitos ?? [], fonte, movimentos.planos.get(t.id)) : [];
     const partes = [
       cabecalho,
       mods.ativos.length ? `${mods.ativos.length} bloco(s) condicional(is) ativo(s)` : '',

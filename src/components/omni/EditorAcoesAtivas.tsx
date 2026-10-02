@@ -111,19 +111,22 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
               const setEf = (n: EfeitoSecundarioAtivo) => { const e2 = [...(a.efeitos ?? [])]; e2[k] = n; set(i, { efeitos: e2 }); };
               return (
                 <div key={k} className="flex gap-2 items-center">
-                  <select className={sel + ' w-32'} value={ef.tipo} onChange={(e) => {
+                  <select aria-label={`Efeito ${i + 1} ${k + 1}`} className={sel + ' w-32'} value={ef.tipo === 'movimento' ? ef.movimento_tipo : ef.tipo} onChange={(e) => {
                     const t = e.target.value;
-                    setEf(t === 'condicao' ? { tipo: 'condicao', condicao: ALL_CONDITIONS[0]?.id ?? '', rodadas: 1 } : { tipo: t as 'puxar' | 'empurrar', metros: 1.5 });
+                    setEf(t === 'condicao' ? { tipo: 'condicao', condicao: ALL_CONDITIONS[0]?.id ?? '', rodadas: 1 } : { tipo: 'movimento', movimento_tipo: t as import('@/lib/omni/tipos').TipoMovimentoAtivo, movimento_distancia: '3', movimento_alvo: 'usuario' });
                   }}>
-                    <option value="condicao">Condição</option><option value="puxar">Puxar</option><option value="empurrar">Empurrar</option>
+                    <option value="condicao">Condição</option><option value="puxar">Puxar</option><option value="empurrar">Empurrar</option><option value="avancar_ate">Avançar até</option><option value="teleporte">Teleporte</option><option value="trocar_posicao">Trocar posição</option>
                   </select>
                   {ef.tipo === 'condicao' ? <>
                     <select className={sel} value={ef.condicao} onChange={(e) => setEf({ ...ef, condicao: e.target.value })}>
                       {ALL_CONDITIONS.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                     <Input className="w-24" type="number" min={0} value={ef.rodadas} title="Rodadas (0 = até remover)" onChange={(e) => setEf({ ...ef, rodadas: Math.max(0, parseInt(e.target.value, 10) || 0) })} />
+                  </> : ef.tipo === 'movimento' ? <>
+                    <Input className="w-40" aria-label={`Distância do movimento ${i + 1} ${k + 1}`} value={ef.movimento_distancia} placeholder="3 * @USUARIO.foco" onChange={e => setEf({ ...ef, movimento_distancia: e.target.value })} />
+                    {ef.movimento_tipo === 'teleporte' && <select className={sel} aria-label={`Quem teleporta ${i + 1} ${k + 1}`} value={ef.movimento_alvo ?? 'usuario'} onChange={e => setEf({ ...ef, movimento_alvo: e.target.value as 'usuario' | 'alvo' })}><option value="usuario">Usuário</option><option value="alvo">Alvo</option></select>}
                   </> : (
-                    <Input className="w-28" type="number" step={1.5} value={ef.metros} title="Metros" onChange={(e) => setEf({ ...ef, metros: Math.max(0, parseFloat(e.target.value) || 0) })} />
+                    <Input className="w-40" aria-label={`Distância do movimento ${i + 1} ${k + 1}`} value={String(ef.metros)} title="Metros ou fórmula" onChange={e => setEf({ tipo: 'movimento', movimento_tipo: ef.tipo, movimento_distancia: e.target.value })} />
                   )}
                   <Button size="sm" variant="ghost" onClick={() => set(i, { efeitos: (a.efeitos ?? []).filter((_, j) => j !== k) })}><Trash2 className="h-4 w-4" /></Button>
                 </div>

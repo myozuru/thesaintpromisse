@@ -6,7 +6,7 @@ Este ciclo sucede a auditoria das keys. Cada categoria é uma entrega independen
 | --- | --- | --- |
 | 1 | Alvos e áreas | Implementada nas ações ativas, editor e painel de uso |
 | 2 | Condicionais dinâmicas | Implementada: checagens de usuário/alvo, idade de condição, crítico, dano extra, vantagem e TR |
-| 3 | Movimento | Puxar/empurrar já existem; pendem obstáculos, avanço, teleporte, troca e distância por fórmula |
+| 3 | Movimento | Implementada: puxar, empurrar, avançar, teleportar e trocar; fórmulas, obstáculos e destinos válidos |
 | 4 | Custos flexíveis | Fórmula de PE e consumo total já existem; pendem intensificação, consumo parcial, PV e sustentação |
 | 5 | Reações interrompíveis | Há infraestrutura de eventos e prompts; falta unificar os gatilhos propostos e sua janela de interrupção |
 | 6 | Graus de TR | Sucesso/falha e metade já existem; pendem falha crítica e desfechos configuráveis |
@@ -87,4 +87,44 @@ Exemplo: margem −2 se o alvo está Condenado há três rodadas:
   "se_alvo": [{ "tipo": "rodadas_condicao", "nome": "Condenado", "operador": ">=", "valor": 3 }],
   "margem_critico_mod": -2
 }
+```
+
+## Contrato da etapa 3
+
+O novo efeito secundário `tipo: "movimento"` usa os campos abaixo. Efeitos legados `{tipo: "puxar" | "empurrar", metros: N}` continuam funcionando e são preservados no JSON; editar sua distância no construtor converte explicitamente para o formato genérico.
+
+| Campo | Significado |
+| --- | --- |
+| `movimento_tipo` | `puxar`, `empurrar`, `avancar_ate`, `teleporte`, `trocar_posicao` |
+| `movimento_distancia` | Metros como string numérica ou fórmula, por exemplo `4.5` ou `3 * @USUARIO.foco`; não usar sufixo textual `m`; dados aleatórios, negativos, infinito e keys sem valor são rejeitados |
+| `movimento_alvo` | Para teleporte: `usuario` (padrão) ou `alvo`. Puxar/empurrar sempre movem o alvo; avanço sempre move o usuário; troca envolve os dois |
+
+As fórmulas usam USUARIO/ALVO e são avaliadas antes de consumir cargas e PE. Distâncias seguem a grade Chebyshev (diagonal conta como uma casa). Puxar, empurrar e avanço usam casas completas, arredondando a distância máxima para baixo; o contato com obstáculos e a adjacência podem gerar deslocamento parcial. Nenhum modo consome o orçamento de movimento comum.
+
+| Modo | Comportamento |
+| --- | --- |
+| `puxar` | Linha reta em direção ao usuário, até a adjacência (considera tamanho das duas peças) ou o primeiro obstáculo |
+| `empurrar` | Linha reta para longe do usuário, até o limite ou primeiro obstáculo |
+| `avancar_ate` | Usuário aproxima-se do alvo até uma posição adjacente; se o limite ou obstáculo impedir, o avanço é parcial |
+| `teleporte` | Jogador escolhe um ponto no mapa antes dos custos. Valida alcance a partir da peça movida e o espaço ocupado pelo token e sua carga; atravessa o trajeto instantaneamente sem AdO |
+| `trocar_posicao` | Troca os centros das duas peças em um único `updateEntities`, desde que ambas caibam nos destinos e a separação seja menor ou igual ao limite; ignora obstáculos entre os pontos, como um reposicionamento instantâneo sem AdO |
+
+### Colisão e aplicação
+
+A geometria usada anteriormente dentro de `MapaModule` foi extraída para `src/lib/mapCollision.ts`, mantendo as funções existentes do arraste. O executor OMNI reutiliza as mesmas footprints retangulares/elípticas, com rotação e tamanho, e os mesmos segmentos de parede/fog. As regras existentes de segmentos se mantêm: portas abertas deixam passar (inclusive aberturas em paredes), portas fechadas bloqueiam; janelas não bloqueiam, terreno segue o bloqueio de visão usado pelo arraste. Peças da camada tokens também bloqueiam o reposicionamento, inclusive ocultas. Contato de bordas entre peças é permitido; sobreposição não. O teste de ocupação de elipses usa o contorno poligonal de 24 segmentos do motor do mapa.
+
+Movimentos forçados param no primeiro contato, sem deslizar ao longo da parede. Teleporte e troca validam apenas os destinos, não o trajeto. A posição é validada antes de cobrar os custos e novamente na aplicação após as rolagens. Se outra ação ocupar o ponto durante a rolagem, o movimento é recusado e registrado no log; o restante da ação já resolvida e seus custos permanecem.
+
+A imunidade existente a movimento forçado bloqueia puxar, empurrar, teleporte do alvo e troca involuntária. Não elimina o dano nem a condição do mesmo golpe. Avanço e teleporte do próprio usuário são voluntários. Os movimentos continuam sendo efeitos secundários: aplicados em acerto de ataque, falha de TR ou ação sem teste; não acontecem no sucesso do TR nem em ataque que erra.
+
+Peças carregadas acompanham o portador pelas APIs existentes do mapa e têm seu espaço validado junto a ele. Uma peça que está sendo carregada deve ser solta antes de ser reposicionada independentemente. As atualizações usam `updateEntity`/`updateEntities`, preservando o caminho existente de sincronização por patches. Não iniciam o fluxo de movimento comum nem criam prompts de AdO; zonas e auras podem continuar reagindo à posição final segundo suas regras existentes.
+
+Para integrações e testes, o quinto argumento de `executarAcaoAtiva` aceita `destinosMovimento`, com chave `"alvoId:índiceDoEfeito"` e valor `{x,y}` em coordenadas-mundo. Sem esse argumento, o jogador escolhe cada destino no seletor de mapa. Em múltiplos alvos, cada efeito é resolvido na ordem da lista por alvo; o usuário pode ser movido repetidas vezes se o efeito estiver configurado para isso.
+
+Exemplos:
+
+```json
+{ "tipo": "movimento", "movimento_tipo": "empurrar", "movimento_distancia": "3" }
+{ "tipo": "movimento", "movimento_tipo": "avancar_ate", "movimento_distancia": "6" }
+{ "tipo": "movimento", "movimento_tipo": "teleporte", "movimento_distancia": "3 * @USUARIO.foco", "movimento_alvo": "usuario" }
 ```

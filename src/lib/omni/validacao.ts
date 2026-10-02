@@ -85,6 +85,7 @@ const AcaoAtivaSchema = z.object({
   efeitos: z.array(z.union([
     z.object({ tipo: z.literal('condicao'), condicao: z.string(), rodadas: z.number().finite() }),
     z.object({ tipo: z.enum(['puxar', 'empurrar']), metros: z.number().finite() }),
+    z.object({ tipo: z.literal('movimento'), movimento_tipo: z.enum(['puxar', 'empurrar', 'avancar_ate', 'teleporte', 'trocar_posicao']), movimento_distancia: z.string(), movimento_alvo: z.enum(['usuario', 'alvo']).optional() }),
   ])).optional(),
   condicionais: z.array(CondicionalAtivoSchema).optional(),
 });

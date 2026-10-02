@@ -213,9 +213,17 @@ export interface EntidadeOmni {
 export type TrNome = 'astucia' | 'fortitude' | 'integridade' | 'reflexos' | 'vontade';
 
 /** Efeito aplicado quando a ação "pega" (TR falho ou ataque acertado). */
+export type TipoMovimentoAtivo = 'puxar' | 'empurrar' | 'avancar_ate' | 'teleporte' | 'trocar_posicao';
+export type EfeitoMovimentoAtivo = {
+  tipo: 'movimento'; movimento_tipo: TipoMovimentoAtivo;
+  /** Metros ou fórmula; sem unidade textual. Ex.: 3 * @USUARIO.foco. */
+  movimento_distancia: string; movimento_alvo?: 'usuario' | 'alvo';
+};
+
 export type EfeitoSecundarioAtivo =
   | { tipo: 'condicao'; condicao: string; rodadas: number }
-  | { tipo: 'puxar' | 'empurrar'; metros: number };
+  | { tipo: 'puxar' | 'empurrar'; metros: number }
+  | EfeitoMovimentoAtivo;
 
 export type OperadorEstado = '<' | '<=' | '==' | '!=' | '>=' | '>';
 export type PredicadoEstado =
