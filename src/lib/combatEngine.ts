@@ -57,6 +57,8 @@ export interface AttackSituation {
   twoHanded?: boolean;
   /** Modificador escolhido (FOR ou DES) para o ataque. Se ausente, o engine escolhe por fineza. */
   preferredAbility?: 'FOR' | 'DES';
+  /** Redução extra da margem de crítico (ações ativas do OMNI). */
+  critBonusExtra?: number;
   /** Alvo está com `aura_embacada` ativa → atacante tem desvantagem (cancela vantagem). */
   targetHasAuraEmbacada?: boolean;
   /** Carga de "Concentrar Aura" do atacante. Soma +au como dano flat se acertar. */
@@ -344,6 +346,10 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
   if (globals.weaponCriticalGroups.includes(w.group)) {
     ctxBonus.critRangeBonus += 1;
     ctxBonus.notes.push(`Mestre das Armas (${w.group}): margem crítica -1`);
+  }
+  if (ctx.situation.critBonusExtra) {
+    ctxBonus.critRangeBonus += ctx.situation.critBonusExtra;
+    ctxBonus.notes.push(`Margem de crítico −${ctx.situation.critBonusExtra}`);
   }
 
   // Vantagem/Desvantagem concedida via ações Omni (consome modifiers

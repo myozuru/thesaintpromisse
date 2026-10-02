@@ -196,6 +196,8 @@ export interface EntidadeOmni {
    * `peInvocacao` e sustenta pagando `peSustentacao` no começo de cada turno.
    */
   replica?: ReplicaConfig;
+  /** Ações ativas genéricas (TR ramificado, ataque, cargas, puxão…). Ver acaoAtiva.ts. */
+  acoesAtivas?: AcaoAtivaConfig[];
   /**
    * Camada de Comércio (visível apenas para o Mestre no construtor).
    * Aplicável principalmente a categoria 'item', mas o schema permite
