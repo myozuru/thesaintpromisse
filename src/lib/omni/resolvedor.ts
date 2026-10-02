@@ -815,6 +815,15 @@ export function montarVariaveisDoPersonagem(
     // ─── 🌍 CENA TÁTICA ─────────────────────────────────────────────────
     RODADA: round,
     RODADAS_EM_COMBATE: round,
+    // Contexto global de combate: mesmo valor em USUARIO e ALVO.
+    CENA_RODADA: round,
+    CENA_RODADAS_EM_COMBATE: useCombatStore.getState().inCombat ? round : 0,
+    ...(() => {
+      const cs = useCombatStore.getState();
+      const idx = cs.currentTurnIndex;
+      const indice = cs.inCombat && cs.initiativeOrder[idx] ? idx : -1;
+      return { CENA_TURNO_INDICE: indice, CENA_TURNO_DE: indice };
+    })(),
 
     // ─── 🌟 KEYS DERIVADAS DE TALENTOS ─────────────────────────────────
     ESCUDO_PROFICIENTE: talentos?.shieldProficient ? 1 : 0,
@@ -919,17 +928,18 @@ export function montarVariaveisDoPersonagem(
   }
 
 
-  // PR-3: Predicates de identidade (origem / especialização).
-  const originId = (c as unknown as { origin?: { id?: string } }).origin?.id;
-  if (originId) {
-    const norm = originId.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9_]/g, '_');
-    base[`ORIGEM_ID_${norm}`] = 1;
-  }
-  const specId = (c as unknown as { specialization?: { id?: string } }).specialization?.id;
-  if (specId) {
-    const norm = specId.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9_]/g, '_');
-    base[`ESPECIALIZACAO_ID_${norm}`] = 1;
-  }
+  // A ficha atual usa nomes textuais; dados legados podem usar { id }.
+  const exporIdentidade = (prefixo: string, valor: unknown) => {
+    const id = typeof valor === 'string' ? valor
+      : valor && typeof valor === 'object' ? (valor as { id?: string }).id : undefined;
+    if (!id) return;
+    const legado = id.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9_]/g, '_');
+    const canonico = legado.replace(/_+/g, '_').replace(/^_+|_+$/g, '');
+    base[`${prefixo}_${legado}`] = 1;
+    base[`${prefixo}_${canonico}`] = 1;
+  };
+  exporIdentidade('ORIGEM_ID', c.origin);
+  exporIdentidade('ESPECIALIZACAO_ID', c.specialization);
   // PR-4: Predicate tem_item_<entityId> — 1 por item no inventário.
   try {
     const inv = useInventoryStore.getState();

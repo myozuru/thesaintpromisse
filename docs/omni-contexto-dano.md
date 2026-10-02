@@ -175,6 +175,13 @@ passo é interrompido e o console registra um aviso uma vez por cadeia.
 Os efeitos já aplicados permanecem; uma nova ação independente recebe
 seu próprio orçamento. O limite de macros do executor permanece em 8.
 
-Resta a auditoria final de cobertura e compatibilidade das keys. A
-proteção descrita cobre esses caminhos do Omni e não afirma que todos
-os produtores de eventos do jogo já propagam o contexto interno.
+A auditoria final de cobertura e compatibilidade está registrada em
+[omni-auditoria-final.md](./omni-auditoria-final.md). A proteção descrita
+cobre esses caminhos do Omni e não afirma que todos os produtores de
+eventos do jogo já propagam o contexto interno.
+
+O terminal aceita tipo explícito: `subtrair 1d8 em alvo.vida tipo DQ`.
+A reconstrução dos scripts preserva os tipos de cada efeito/subefeito,
+os comandos agrupados sob o mesmo gatilho e as keys especiais. Scripts
+antigos sem tipo continuam sem tipo. Valores legados entre aspas são
+preservados; isso não inventa equivalência para um tipo desconhecido.

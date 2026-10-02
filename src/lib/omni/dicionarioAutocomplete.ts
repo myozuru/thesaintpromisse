@@ -13,6 +13,7 @@ import {
 } from './constantesDoSistema';
 import { listarAliasesParaAutocomplete } from './gatilhoAliases';
 import { ALL_CONDITIONS, CONDITION_CATEGORIES } from '@/types/conditions';
+import { DAMAGE_TYPES, DAMAGE_TYPE_LABELS } from '@/types';
 
 export interface SugestaoAutocomplete {
   /** Texto que será inserido. */
@@ -31,6 +32,9 @@ const VERBOS: SugestaoAutocomplete[] = [
   { valor: 'imune',     categoria: 'Verbo', hint: '🛡 imune <condição|categoria:X|todas>' },
   { valor: 'desimune',  categoria: 'Verbo', hint: '🛡 remove imunidade (mesmo formato)' },
   { valor: 'todas',     categoria: 'Escopo', hint: '🛡 todas as condições' },
+  { valor: 'tipo', categoria: 'Dano', hint: 'Tipo do golpe: subtrair 1d8 em vida tipo DQ (fogo).' },
+  { valor: 'turnos', categoria: 'Duração', hint: 'aplicar cego turnos 2.' },
+  { valor: 'rodadas', categoria: 'Duração', hint: 'aplicar cego rodadas 2.' },
   { valor: 'em',        categoria: 'Conector', hint: 'liga valor ao recurso' },
   { valor: 'quando',    categoria: 'Gatilho', hint: 'inicia bloco condicional' },
   { valor: 'se',        categoria: 'Condição', hint: 'condição lógica' },
@@ -63,6 +67,10 @@ function compilarDicionario(): SugestaoAutocomplete[] {
         lista.push({ valor: base, categoria: cat.grupo, hint: item.hint || item.label });
       }
     }
+  }
+
+  for (const codigo of DAMAGE_TYPES) {
+    lista.push({ valor: codigo, categoria: 'Tipo de dano', hint: DAMAGE_TYPE_LABELS[codigo] });
   }
 
   // Aliases de fórmula (TREINO, VIDA, PE, FOR…) — em minúsculas para o usuário.

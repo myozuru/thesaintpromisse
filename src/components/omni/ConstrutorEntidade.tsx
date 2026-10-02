@@ -27,7 +27,7 @@ import { novoBloco, novoEfeitoCombate, normalizarCombatData, ehCategoriaSempreAt
 import { descreverAcaoEfeito, descreverImpactoEfeito } from '@/lib/omni/aplicarEfeito';
 import {
   ACOES_EFEITO, ALVOS_REFERENCIA, DICIONARIO_CONDICOES, GATILHOS_EVENTOS,
-  ROTULOS_GATILHOS, TIPOS_DURACAO, DAMAGE_TYPES, SYSTEM_ACTIONS, RANGE_TYPES,
+  ROTULOS_GATILHOS, TIPOS_DURACAO, SYSTEM_ACTIONS, RANGE_TYPES,
   AOE_SHAPES, listarCaminhosNumericos, ALIASES_FORMULA,
   DICIONARIO_CHAVES_OMNI, ESCOPOS_VANTAGEM,
   ROTULOS_TR, ORDEM_TR, ROTULOS_PERICIAS, ORDEM_PERICIAS,
@@ -1246,7 +1246,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                         />
                         <div className="rounded-md border border-border/40 bg-background/40 p-2 text-[10px] text-muted-foreground leading-relaxed">
                           💡 <strong className="text-violet-300">Dica:</strong>{' '}
-                          <code className="mx-1 text-foreground/80">subtrair 1d8 + forca em alvo.vida_atual</code>{' '}
+                          <code className="mx-1 text-foreground/80">subtrair 1d8 + forca em alvo.vida_atual tipo DQ</code>{' '}
                           ou <code className="text-foreground/80">somar 2d4 em vida_atual</code> para curar o usuário.
                         </div>
 
@@ -1744,14 +1744,18 @@ function EffectCard({
             <div>
               <Label className="text-[11px]">Tipo de Dano</Label>
               <Select
-                value={efeito.damageType ?? 'Cortante'}
-                onValueChange={(v) => onChange({ damageType: v })}
+                value={resolverTipoDano(efeito.damageType) ?? efeito.damageType ?? 'sem_tipo'}
+                onValueChange={(v) => onChange({ damageType: v === 'sem_tipo' ? undefined : v })}
               >
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {DAMAGE_TYPES.map((d) => (
-                    <SelectItem key={d} value={d}>{d}</SelectItem>
+                  <SelectItem value="sem_tipo">Sem tipo específico</SelectItem>
+                  {TIPOS_DANO_MOTOR.map((d) => (
+                    <SelectItem key={d} value={d}>{DAMAGE_TYPE_LABELS[d]}</SelectItem>
                   ))}
+                  {efeito.damageType && !resolverTipoDano(efeito.damageType) && (
+                    <SelectItem value={efeito.damageType}>{efeito.damageType} (sem equivalência)</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>

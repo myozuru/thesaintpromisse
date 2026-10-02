@@ -25,6 +25,7 @@
  *    forca, vida_atual, etc.) é automaticamente prefixada com `@USUARIO.`
  *    para o parser, removendo a necessidade de digitar `@`.
  */
+import { resolverTipoDano } from './contextoDano';
 import type { CombatEffect } from './tipos';
 import { DICIONARIO_CHAVES_OMNI, ALIASES_FORMULA } from './constantesDoSistema';
 import { recursoBonito } from './aplicarEfeito';
@@ -126,25 +127,33 @@ export interface OmniScriptResultado {
  * sintaxes como `rolar 1d4 entao ( 1: aplicar morte, 2: aplicar cego )`
  * onde a lista de branches é separada por vírgulas internamente.
  */
-function dividirPorVirgula(script: string): string[] {
+/** Separa só na superfície, respeitando branches, funções e textos entre aspas. */
+function dividirNoNivelSuperior(script: string, separador: RegExp): string[] {
   const partes: string[] = [];
-  let buf = '';
-  let depth = 0;
+  let inicio = 0, depth = 0, aspas = '';
   for (let i = 0; i < script.length; i++) {
     const ch = script[i];
-    if (ch === '(') { depth++; buf += ch; continue; }
-    if (ch === ')') { depth = Math.max(0, depth - 1); buf += ch; continue; }
-    if (ch === ',' && depth === 0) {
-      const t = buf.trim();
-      if (t) partes.push(t);
-      buf = '';
+    if (aspas) {
+      if (ch === '\\') { i++; continue; }
+      if (ch === aspas) aspas = '';
       continue;
     }
-    buf += ch;
+    if (ch === '"' || ch === '“') { aspas = ch === '“' ? '”' : '"'; continue; }
+    if (ch === '(') { depth++; continue; }
+    if (ch === ')') { depth = Math.max(0, depth - 1); continue; }
+    const match = depth === 0 ? script.slice(i).match(separador) : null;
+    if (match) {
+      partes.push(script.slice(inicio, i).trim());
+      i += match[0].length - 1;
+      inicio = i + 1;
+    }
   }
-  const last = buf.trim();
-  if (last) partes.push(last);
-  return partes;
+  partes.push(script.slice(inicio).trim());
+  return partes.filter(Boolean);
+}
+
+function dividirPorVirgula(script: string): string[] {
+  return dividirNoNivelSuperior(script, /^,/);
 }
 
 /**
@@ -213,7 +222,13 @@ function parsearComando(
   posicao: number,
   opts: OmniScriptParseOpts = {},
 ): { efeito?: CombatEffect; erro?: OmniScriptIssue } {
-  const txt = raw.trim();
+  let txt = raw.trim();
+  // Alvo explícito dos comandos especiais (condição, botão, imunidade, rolagem).
+  const alvoEspecial = txt.match(/\s+em\s+@?(usuario|alvo|area)\s*$/i);
+  if (alvoEspecial) {
+    opts = { ...opts, defaultTarget: alvoEspecial[1].toUpperCase() as CombatEffect['target'] };
+    txt = txt.slice(0, alvoEspecial.index).trim();
+  }
   if (!txt) return { erro: { posicao, trecho: raw, mensagem: 'Comando vazio.' } };
 
   // 🪄 Forma especial: redutor de PE de feitiços.
@@ -294,16 +309,11 @@ function parsearComando(
   // 🩸 aplicar / remover <condicao> [em <alvo>]
   // Aceita id direto (`aplicar morto`, `aplicar cego`) ou nome amigável
   // (`aplicar Cego`). Default target: ALVO. Use `em usuario` p/ self-buff.
-  const mCond = txt.match(/^(aplicar|remover)\s+([A-Za-zÀ-ÿ_][\w-]*)(?:\s+em\s+(@?(?:usuario|alvo|area)))?\s*$/i);
+  const mCond = txt.match(/^(aplicar|remover)\s+([A-Za-zÀ-ÿ_][\w-]*)(?:\s+turnos\s+(-?\d+))?(?:\s+rodadas\s+(-?\d+))?\s*$/i);
   if (mCond) {
     const verbo = mCond[1].toLowerCase();
     const nomeRaw = mCond[2].trim();
-    const tgtRaw = (mCond[3] || '').toLowerCase().replace(/^@/, '');
-    const target: CombatEffect['target'] =
-      tgtRaw === 'usuario' ? 'USUARIO' :
-      tgtRaw === 'area' ? 'AREA' :
-      tgtRaw === 'alvo' ? 'ALVO' :
-      (opts.defaultTarget ?? 'ALVO');
+    const target = opts.defaultTarget ?? 'ALVO';
     // Resolve nome → id da condição.
     const norm = nomeRaw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const def =
@@ -328,15 +338,18 @@ function parsearComando(
         type: 'MODIFICADOR',
         target,
         resourcePath: verbo === 'aplicar' ? 'condition_apply' : 'condition_remove',
-        conditionApply: { id: condicaoId, mode: verbo === 'aplicar' ? 'apply' : 'remove' },
+        conditionApply: { id: condicaoId, mode: verbo === 'aplicar' ? 'apply' : 'remove', ...(mCond[3] ? { durationTurns: Number(mCond[3]) } : {}), ...(mCond[4] ? { durationRounds: Number(mCond[4]) } : {}) },
       },
     };
   }
 
   // 🔘 botao "<rótulo>" — efeito no-op que existe só para o item virar
   // botão clicável (mesmo que não tenha nenhuma outra ação atribuída).
-  const mBtn = txt.match(/^bot[aã]o(?:\s+["“]([^"”]*)["”])?\s*$/i);
+  const mBtn = txt.match(/^bot[aã]o(?:\s+(?:"((?:\\.|[^"\\])*)"|“([^”]*)”))?\s*$/i);
   if (mBtn) {
+    let label: string | undefined;
+    try { label = mBtn[1] !== undefined ? JSON.parse(`"${mBtn[1]}"`) : mBtn[2]; }
+    catch { return { erro: { posicao, trecho: raw, mensagem: 'Texto do botão entre aspas inválido.' } }; }
     return {
       efeito: {
         id: crypto.randomUUID(),
@@ -344,7 +357,7 @@ function parsearComando(
         type: 'MODIFICADOR',
         target: opts.defaultTarget ?? 'USUARIO',
         resourcePath: 'button_only',
-        buttonOnly: { label: (mBtn[1] || '').trim() || undefined },
+        buttonOnly: { label: label || undefined },
       },
     };
   }
@@ -357,14 +370,14 @@ function parsearComando(
   // Comandos suportados na branch: qualquer verbo OmniScript válido
   // (aplicar/remover/somar/subtrair/definir/anular/imune/...) e até
   // diceSwitch aninhado.
-  const mRoll = txt.match(/^rolar\s+(\d+d\d+(?:!|kh\d+|kl\d+)?)\s+ent[aã]o\s*\(\s*([\s\S]+?)\s*\)\s*$/i);
+  const mRoll = txt.match(/^rolar\s+(.+?)\s+ent[aã]o\s*\(\s*([\s\S]*?)\s*\)\s*$/i);
   if (mRoll) {
-    const dice = mRoll[1].trim();
+    const dice = autoArrobaExpressao(mRoll[1].trim());
     const corpo = mRoll[2].trim();
     const branchesTxt = dividirPorVirgula(corpo);
     const branches: NonNullable<CombatEffect['diceSwitch']>['branches'] = [];
     for (const bt of branchesTxt) {
-      const mBranch = bt.match(/^([0-9|\-\s]+):\s*([\s\S]+)$/);
+      const mBranch = bt.match(/^([0-9|\-\s]+):\s*([\s\S]*)$/);
       if (!mBranch) {
         return {
           erro: { posicao, trecho: raw, mensagem: `Branch inválida em rolar: "${bt}". Use "<n>: <comando>".` },
@@ -387,10 +400,7 @@ function parsearComando(
         }
       }
       // Cada branch pode ter múltiplos sub-comandos ligados por " e ".
-      const subCmds = cmdTxt
-        .split(/\s+e\s+(?=(?:somar|subtrair|reduzir|definir|anular|ignorar|aplicar|remover|rolar|bot[aã]o|imune|desimune)\b)/i)
-        .map((s) => s.trim())
-        .filter(Boolean);
+      const subCmds = dividirNoNivelSuperior(cmdTxt, /^\s+e\s+(?=(?:somar|subtrair|reduzir|definir|anular|ignorar|aplicar|remover|rolar|bot[aã]o|imune|desimune)\b)/i);
       const subEfeitos: CombatEffect[] = [];
       for (const sc of subCmds) {
         const sub = parsearComando(sc, posicao, opts);
@@ -444,6 +454,16 @@ function parsearComando(
 
   // Forma padrão: aceita prefixos no recurso (`usuario.X`, `@alvo.Y`).
   // Sufixos opcionais de contador: `ate <teto>` e `por_fonte`.
+  // Tipo do novo golpe. Aspas preservam também valores legados sem equivalência.
+  let damageType: string | undefined;
+  const mTipo = txt.match(/\s+tipo\s+("(?:\\.|[^"\\])*"|[A-Za-zÀ-ÿ_][\w-]*)\s*$/i);
+  if (mTipo) {
+    const quoted = mTipo[1].startsWith('"');
+    try { damageType = quoted ? JSON.parse(mTipo[1]) : mTipo[1]; }
+    catch { return { erro: { posicao, trecho: raw, mensagem: 'Tipo de dano entre aspas inválido.' } }; }
+    if (!quoted && !resolverTipoDano(damageType)) return { erro: { posicao, trecho: raw, mensagem: `Tipo de dano desconhecido: ${damageType}. Use um código do motor (ex.: DQ).` } };
+    txt = txt.slice(0, mTipo.index).trim();
+  }
   const m = txt.match(/^(somar|subtrair|reduzir|definir)\s+(.+?)\s+em\s+(@?[A-Za-zÀ-ÿ_][\w.]*)(?:\s+at[eé]\s+(.+?))?(\s+por_fonte)?\s*$/i);
   if (!m) {
     return {
@@ -474,6 +494,7 @@ function parsearComando(
       type: tipo,
       target,
       resourcePath: traduzirRecurso(recurso),
+      ...(damageType ? { damageType } : {}),
       ...(m[4] ? { counterCap: autoArrobaExpressao(m[4].trim()) } : {}),
       ...(m[5] ? { counterPerSource: true } : {}),
     },
@@ -578,10 +599,10 @@ export function desconstruirScript(script: string): DesconstrucaoOmniScript {
   let watcher: NonNullable<CombatEffect['watcher']> | undefined;
 
   // Passo 1 — Gatilho (->). Pode ser dinâmico (quando…) ou legado nomeado.
-  const idxSeta = txt.indexOf('->');
-  if (idxSeta !== -1) {
-    const left = txt.slice(0, idxSeta).trim();
-    const right = txt.slice(idxSeta + 2).trim();
+  const partesSeta = dividirNoNivelSuperior(txt, /^->/);
+  if (partesSeta.length > 1) {
+    const left = partesSeta[0];
+    const right = partesSeta.slice(1).join('->').trim();
     if (left) {
       const w = parsearWatcherQuando(left);
       if (w) {
@@ -626,8 +647,15 @@ export function desconstruirScript(script: string): DesconstrucaoOmniScript {
   while (txt.startsWith('(') && txt.endsWith(')')) {
     let depth = 0;
     let envolveTudo = true;
+    let aspas = '';
     for (let i = 0; i < txt.length; i++) {
       const ch = txt[i];
+      if (aspas) {
+        if (ch === '\\') { i++; continue; }
+        if (ch === aspas) aspas = '';
+        continue;
+      }
+      if (ch === '"' || ch === '“') { aspas = ch === '“' ? '”' : '"'; continue; }
       if (ch === '(') depth++;
       else if (ch === ')') {
         depth--;
@@ -649,8 +677,7 @@ export function desconstruirScript(script: string): DesconstrucaoOmniScript {
 function dividirPorNovoGatilho(script: string): string[] {
   // Lookahead: `,` (com espaços opcionais) seguido por (a) um identificador
   // (com `@` opcional) + ->, ou (b) a palavra `quando` (gatilho dinâmico).
-  const re = /\s*,\s*(?=(?:@?[A-Za-zÀ-ÿ_][\w.]*\s*->|quando\s+))/gi;
-  return script.split(re).map((s) => s.trim()).filter(Boolean);
+  return dividirNoNivelSuperior(script, /^,\s*(?=(?:@?[A-Za-zÀ-ÿ_][\w.]*\s*->|quando\s+))/i);
 }
 
 /** Compila um script completo em uma lista de CombatEffects. */
@@ -663,8 +690,7 @@ export function parseOmniScript(
   // se o usuário tivesse criado vários scripts separados. Isso permite
   // misturar passivas contínuas e gatilhos no mesmo terminal sem que a
   // vírgula de um interfira no outro.
-  const linhas = (script || '')
-    .split(/[\n;]+/)
+  const linhas = dividirNoNivelSuperior(script || '', /^[\n;]+/)
     .map((s) => s.trim())
     .filter(Boolean);
   const segmentos = linhas.flatMap((l) => dividirPorNovoGatilho(l));
@@ -728,10 +754,7 @@ export function parseOmniScript(
       // ter ou não condição inline. O lookahead garante que `e` usado como
       // soma dentro de fórmula ("somar nivel e treinamento em X") não seja
       // confundido com separador, pois exige verbo de comando à direita.
-      const subComandos = restante
-        .split(/\s+e\s+(?=(?:somar|subtrair|reduzir|definir|anular|ignorar|aplicar|remover|rolar|bot[aã]o|se|imune|desimune)\b)/i)
-        .map((s) => s.trim())
-        .filter(Boolean);
+      const subComandos = dividirNoNivelSuperior(restante, /^\s+e\s+(?=(?:somar|subtrair|reduzir|definir|anular|ignorar|aplicar|remover|rolar|bot[aã]o|se|imune|desimune)\b)/i);
 
       // 🛡 Açúcar especial: "imune A e B e C" → vira ["imune A", "imune B", "imune C"].
       // Aplica APÓS o split de condição inline, então também funciona dentro
@@ -798,16 +821,34 @@ export function efeitosParaScript(
   const def = opts.defaultTarget ?? 'ALVO';
 
   // Serializa um único efeito como `<verbo> <formula> em <recurso>` (ou forma absoluta).
-  const renderEfeito = (e: CombatEffect): string => {
+  const renderEfeito = (e: CombatEffect, defaultTarget = def): string => {
+    const alvoEspecial = e.target !== defaultTarget ? ` em ${e.target.toLowerCase()}` : '';
+    if (e.buttonOnly) return `botao${e.buttonOnly.label ? ` ${JSON.stringify(e.buttonOnly.label)}` : ''}${alvoEspecial}`;
+    if (e.diceSwitch) {
+      const branches = e.diceSwitch.branches.map(b => `${b.values.join('|')}: ${b.effects.map(sub => renderEfeito(sub, e.target)).join(' e ')}`);
+      return `rolar ${e.diceSwitch.dice} entao ( ${branches.join(', ')} )${alvoEspecial}`;
+    }
+    if (e.conditionApply) {
+      const ca = e.conditionApply;
+      const turnos = ca.durationTurns !== undefined ? ` turnos ${ca.durationTurns}` : '';
+      const rodadas = ca.durationRounds !== undefined ? ` rodadas ${ca.durationRounds}` : '';
+      return `${ca.mode === 'apply' ? 'aplicar' : 'remover'} ${ca.id}${turnos}${rodadas}${alvoEspecial}`;
+    }
+    if (e.immunityGrant) return `${e.immunityGrant.mode === 'grant' ? 'imune' : 'desimune'} ${e.immunityGrant.escopo}${alvoEspecial}`;
+    if (e.peSpellReduction) {
+      const filtro = e.peSpellReduction.filtro === 'todos' ? '' : e.peSpellReduction.filtro.replace(/&/g, ' ');
+      return `reduzir custo pe de feitico ${filtro} em ${e.formula || '0'} min ${e.peSpellReduction.min}${alvoEspecial}`;
+    }
     const recursoBase = (e.resourcePath || 'vida_atual').toLowerCase();
-    const prefixo = e.target !== def
+    const prefixo = e.target !== defaultTarget
       ? (e.target === 'USUARIO' ? 'usuario.' : e.target === 'ALVO' ? 'alvo.' : 'area.')
       : '';
     if (e.absoluteVerb) return `${e.absoluteVerb} ${prefixo}${recursoBase}`;
     const formula = (e.formula || '0').replace(/@USUARIO\./gi, '');
     const cap = e.counterCap ? ` ate ${e.counterCap.replace(/@USUARIO\./gi, '')}` : '';
     const pf = e.counterPerSource ? ' por_fonte' : '';
-    return `${inverso[e.type]} ${formula} em ${prefixo}${recursoBase}${cap}${pf}`;
+    const tipo = e.damageType ? ` tipo ${JSON.stringify(e.damageType)}` : '';
+    return `${inverso[e.type]} ${formula} em ${prefixo}${recursoBase}${cap}${pf}${tipo}`;
   };
 
   // Reemite o cabeçalho do segmento (gatilho dinâmico, trigger nomeado e condição).
@@ -841,21 +882,20 @@ export function efeitosParaScript(
 
   const segmentos: string[] = [];
   let bufferKey: string | null = null;
-  let bufferTexto = '';
-  efeitos.forEach((e) => {
-    const k = chaveSegmento(e);
-    if (k === bufferKey && bufferTexto) {
-      bufferTexto += `, ${renderEfeito(e)}`;
-    } else {
-      if (bufferTexto) segmentos.push(bufferTexto);
-      const cab = renderCabecalho(e);
-      bufferTexto = cab ? `${cab} ${renderEfeito(e)}` : renderEfeito(e);
-      bufferKey = k;
-    }
-  });
-  if (bufferTexto) segmentos.push(bufferTexto);
-
-  return segmentos.join(', ');
+  let buffer: CombatEffect[] = [];
+  const finalizar = () => {
+    if (!buffer.length) return;
+    const cab = renderCabecalho(buffer[0]);
+    const texto = buffer.map(e => renderEfeito(e)).join(', ');
+    segmentos.push(cab ? `${cab} (${texto})` : texto);
+  };
+  for (const e of efeitos) {
+    const key = chaveSegmento(e);
+    if (key !== bufferKey) { finalizar(); buffer = []; bufferKey = key; }
+    buffer.push(e);
+  }
+  finalizar();
+  return segmentos.join(';\n');
 }
 
 /** Tokeniza para syntax highlighting: retorna uma lista de spans. */

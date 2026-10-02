@@ -11,7 +11,7 @@ import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/re
 import { AttackPanel } from '@/components/fichas/AttackPanel';
 import { useLogStore } from '@/stores/useLogStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
-import { ficha, montarMesa, limparMesa, comoTela, pegarFicha, forcarDados } from './helpers/mesaReal';
+import { ficha, montarMesa, limparMesa, comoTela, pegarFicha, forcarDados, esperar } from './helpers/mesaReal';
 
 const esp = (extra: Record<string, unknown> = {}) =>
   ficha('ana', {
@@ -37,7 +37,13 @@ async function montar(c: ReturnType<typeof esp>, extras: Record<string, Record<s
 }
 
 beforeEach(() => { comoTela({ profileId: 'p-ana', role: 'PLAYER' }); });
-afterEach(() => { cleanup(); limparMesa(); vi.restoreAllMocks(); });
+afterEach(async () => {
+  // applyDamage agenda eventos por imports: deixe os callbacks terminarem
+  // antes de encerrar o worker, inclusive nos testes com asserts síncronos.
+  await Promise.all([import('@/lib/omni/eventBus'), import('@/lib/omni/observadores')]);
+  await esperar();
+  cleanup(); limparMesa(); vi.restoreAllMocks();
+});
 
 describe('Renovação pelo Sangue em combate', () => {
   it('crítico (d20=20) recupera 1 PE e registra no log', async () => {

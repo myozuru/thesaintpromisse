@@ -405,7 +405,7 @@ export const TIPOS_DURACAO = {
 export type DuracaoTipo = (typeof TIPOS_DURACAO)[keyof typeof TIPOS_DURACAO];
 
 // 9b. Tipos de Dano de Combate ---------------------------------------------
-/** Lista canônica de tipos de dano (Pilar de Dano). */
+/** Vocabulário legado de tipos Omni; o editor usa os códigos de @/types. */
 export const DAMAGE_TYPES = [
   // Físicos
   'Cortante', 'Perfurante', 'Impacto',
@@ -682,8 +682,9 @@ const ESTADO_OMNI: ChaveOmniOpcao[] = [
 ];
 
 const CENA_AVANCADA_OMNI: ChaveOmniOpcao[] = [
-  { id: 'CENA.rodadas_em_combate', label: '@CENA.rodadas_em_combate', hint: 'Rodadas decorridas no combate.' },
-  { id: 'CENA.turno_de',           label: '@CENA.turno_de',           hint: 'ID do personagem no turno atual.' },
+  { id: 'CENA.turno_indice', label: '@CENA.turno_indice', hint: 'Índice do turno atual na iniciativa (começa em 0); -1 quando não há turno válido.' },
+  { id: 'CENA.rodadas_em_combate', label: '@CENA.rodadas_em_combate', hint: 'Rodada atual enquanto em combate; 0 fora de combate.' },
+  { id: 'CENA.turno_de',           label: '@CENA.turno_de',           hint: 'Alias legado de CENA.turno_indice. Não é ID textual da ficha.' },
 ];
 
 const DANO_CTX_OMNI: ChaveOmniOpcao[] = [
