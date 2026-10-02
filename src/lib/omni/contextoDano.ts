@@ -1,3 +1,5 @@
+import { DAMAGE_TYPE_LABELS, type DamageType } from '@/types';
+
 /** Metadados fornecidos pelo produtor do golpe; ausência significa desconhecido. */
 export interface MetadadosAtaqueDano {
   critical?: boolean;
@@ -5,6 +7,32 @@ export interface MetadadosAtaqueDano {
   isSneak?: boolean;
   isOpportunity?: boolean;
   kind?: 'melee' | 'ranged' | 'cursed';
+}
+
+/** Códigos públicos estáveis; não derivar da ordem de arrays de UI. */
+export const CODIGOS_TIPO_DANO = Object.freeze({
+  DCO: 1, DP: 2, DI: 3, DA: 4, DCG: 5, DCC: 6, DQ: 7, DS: 8,
+  DAL: 9, DNR: 10, DE: 11, DPS: 12, DR: 13, DN: 14, DV: 15,
+} satisfies Record<DamageType, number>);
+
+/** Categoria do produtor do dano, independente da ficha atacante. */
+export const CODIGOS_FONTE_DANO = Object.freeze({ arma: 1, feitico: 2, omni: 3, ambiente: 4 });
+export type FonteDano = keyof typeof CODIGOS_FONTE_DANO;
+
+const normalizarNome = (valor: string) => valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+const NOMES_TIPO_DANO: Record<string, DamageType> = {
+  ...Object.fromEntries(Object.entries(DAMAGE_TYPE_LABELS).map(([id, label]) => [normalizarNome(label), id as DamageType])),
+  ct: 'DCO', pf: 'DP', im: 'DI',
+  impacto: 'DI', fogo: 'DQ', frio: 'DCG', eletrico: 'DCC', mental: 'DPS', veneno: 'DV',
+};
+
+/** Nomes equivalentes legados; conceitos sem correspondência ficam desconhecidos. */
+export function resolverTipoDano(valor?: string): DamageType | undefined {
+  if (!valor) return undefined;
+  const codigo = valor.trim().toUpperCase();
+  if (Object.hasOwn(CODIGOS_TIPO_DANO, codigo)) return codigo as DamageType;
+  const nome = normalizarNome(valor);
+  return Object.hasOwn(NOMES_TIPO_DANO, nome) ? NOMES_TIPO_DANO[nome] : undefined;
 }
 
 export interface OpcoesDano {
@@ -15,11 +43,15 @@ export interface OpcoesDano {
   tags?: string[];
   rdIgnore?: number;
   attack?: MetadadosAtaqueDano;
+  source?: FonteDano;
 }
 
 /** Converte somente informações conhecidas para o namespace numérico DANO. */
-export function montarMetadadosDano(opts?: OpcoesDano, distancia?: number | null): Record<string, number> {
+export function montarMetadadosDano(opts?: OpcoesDano, distancia?: number | null, tipoDano?: string): Record<string, number> {
   const bag: Record<string, number> = {};
+  const tipo = resolverTipoDano(tipoDano);
+  if (tipo) bag.tipo = CODIGOS_TIPO_DANO[tipo];
+  if (opts?.source && Object.hasOwn(CODIGOS_FONTE_DANO, opts.source)) bag.fonte = CODIGOS_FONTE_DANO[opts.source];
   const attack = opts?.attack;
   for (const [key, value] of [
     ['foi_critico', attack?.critical],

@@ -711,7 +711,7 @@ export function AttackPanel({ character: cProp }: Props) {
           if (r2.hit && g.sel.penetrante) addLog('combat', `   ↳ Penetrante: ignora ${penetranteRD(c)} de RD.`);
           if (r2.hit && r2.damageTotal > 0) {
             applyDamage(alvo2.id, r2.damageTotal, (r2.damageType ?? undefined) as never, {
-              attackerId: c.id, isMelee: mainWeapon.range === 'melee', rdIgnore: rdIgnoradaAtaque(!!g.sel.penetrante),
+              attackerId: c.id, source: 'arma', isMelee: mainWeapon.range === 'melee', rdIgnore: rdIgnoradaAtaque(!!g.sel.penetrante),
               attack: { critical: r2.critical, criticalFail: r2.criticalFail, isSneak: false, isOpportunity: false },
             });
           }
@@ -824,7 +824,7 @@ export function AttackPanel({ character: cProp }: Props) {
         `   💥 Dano: ${damageTotal} (${mainWeapon.damage}${abMod ? (abMod > 0 ? '+' : '') + abMod : ''} = ${rolls.join('+')}${abMod ? (abMod > 0 ? '+' : '') + abMod : ''})`,
       );
       for (const target of hitChars) {
-        applyDamage(target.id, damageTotal, dmgType, { attackerId: c.id, isMelee: mainWeapon.range === 'melee' });
+        applyDamage(target.id, damageTotal, dmgType, { attackerId: c.id, source: 'arma', isMelee: mainWeapon.range === 'melee' });
       }
       setPhase('done');
     } catch (err) {
@@ -915,7 +915,7 @@ export function AttackPanel({ character: cProp }: Props) {
     }
     if (target && result.damageTotal > 0) {
       applyDamage(target.id, result.damageTotal, (result.damageType ?? undefined) as never, {
-        attackerId: c.id, isMelee: mainWeapon.range === 'melee', rdIgnore: rdIgn,
+        attackerId: c.id, source: 'arma', isMelee: mainWeapon.range === 'melee', rdIgnore: rdIgn,
         attack: { ...metadadosAtaqueRef.current, critical: result.critical, criticalFail: result.criticalFail },
       });
     }
@@ -950,7 +950,7 @@ export function AttackPanel({ character: cProp }: Props) {
     addLog('combat', `🗡️ ${c.name} ataca ${alvo.name} com ${arma.name}: d20 ${r.natural} · total ${r.attackTotal} vs Def ${def} → ${verdict}${r.hit ? ` · dano ${r.damageTotal} (${r.damageDice})` : ''}`);
     if (r.hit && r.damageTotal > 0) {
       applyDamage(alvo.id, r.damageTotal, (r.damageType ?? undefined) as never, {
-        attackerId: c.id, isMelee: arma.range === 'melee', rdIgnore: arremessosRdIgnorada(eu, arma, turnInfo),
+        attackerId: c.id, source: 'arma', isMelee: arma.range === 'melee', rdIgnore: arremessosRdIgnorada(eu, arma, turnInfo),
         attack: { critical: r.critical, criticalFail: r.criticalFail, isSneak: furtivo, isOpportunity: false },
       });
     }
@@ -1024,7 +1024,7 @@ export function AttackPanel({ character: cProp }: Props) {
       const mod = trFortitude(ch);
       const passou = d20 + mod >= cd;
       addLog('combat', `🐉 Postura do Dragão: ${ch.name} Fortitude d20 ${d20}${mod >= 0 ? '+' : ''}${mod} vs CD ${cd} → ${passou ? 'passou' : `falhou — sofre ${meio} de dano`}.`);
-      if (!passou) applyDamage(ch.id, meio, tipo as never, { attackerId: c.id, tags: ['__dragao'] });
+      if (!passou) applyDamage(ch.id, meio, tipo as never, { attackerId: c.id, source: 'arma', tags: ['__dragao'] });
     }
   };
 
@@ -1106,7 +1106,7 @@ export function AttackPanel({ character: cProp }: Props) {
     recordAttackResult(c.id, r.hit);
     if (r.hit && r.damageTotal > 0) {
       const ign = arremessosRdIgnorada(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, arma, turnInfo);
-      applyDamage(alvo2.id, r.damageTotal, (r.damageType ?? undefined) as never, { attackerId: c.id, isMelee: false, rdIgnore: ign, attack: { critical: r.critical, criticalFail: r.criticalFail, isOpportunity: false } });
+      applyDamage(alvo2.id, r.damageTotal, (r.damageType ?? undefined) as never, { attackerId: c.id, source: 'arma', isMelee: false, rdIgnore: ign, attack: { critical: r.critical, criticalFail: r.criticalFail, isOpportunity: false } });
     }
     if (r.hit && r.critical) checarRenovacaoCritico(true, alvo2.name);
     registrarDevastacao(alvo2.id, r.hit);
@@ -1167,7 +1167,7 @@ export function AttackPanel({ character: cProp }: Props) {
     const tipo = tiros[0].r.damageType ?? undefined;
     addLog('combat', `   💥 Dano combinado: ${total} (${tiros.map((t) => `${t.arma.name} ${t.r.damageTotal}`).join(' + ')}) — RD e resistências aplicadas uma única vez.`);
     const rdIgn = rdIgnoradaAtaque(false);
-    applyDamage(target.id, total, tipo as never, { attackerId: c.id, isMelee: false, rdIgnore: rdIgn, attack: { critical: tiros.some((t) => t.r.critical), criticalFail: false, isSneak: escondidoDe(c, target.id), isOpportunity: false } });
+    applyDamage(target.id, total, tipo as never, { attackerId: c.id, source: 'arma', isMelee: false, rdIgnore: rdIgn, attack: { critical: tiros.some((t) => t.r.critical), criticalFail: false, isSneak: escondidoDe(c, target.id), isOpportunity: false } });
     if (tiros.some((t) => t.r.critical)) checarRenovacaoCritico(true, target.name);
     void tempestadeGolpe(target);
     void explosaoDragao(target, total, tipo);
@@ -1201,7 +1201,7 @@ export function AttackPanel({ character: cProp }: Props) {
       // O dano original já foi aplicado: aplica só a diferença (sem RD de novo).
       if (target) {
         applyDamage(target.id, r2.damageTotal - lastResult.damageTotal, (lastResult.damageType ?? undefined) as never, {
-          attackerId: c.id, isMelee: mainWeapon.range === 'melee', ignoresRD: true,
+          attackerId: c.id, source: 'arma', isMelee: mainWeapon.range === 'melee', ignoresRD: true,
           attack: { ...metadadosAtaqueRef.current, critical: lastResult.critical, criticalFail: lastResult.criticalFail },
         });
       }

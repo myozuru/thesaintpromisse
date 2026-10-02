@@ -688,8 +688,8 @@ const CENA_AVANCADA_OMNI: ChaveOmniOpcao[] = [
 
 const DANO_CTX_OMNI: ChaveOmniOpcao[] = [
 
-  { id: 'DANO.tipo',               label: '@DANO.tipo',               hint: 'Tipo do dano corrente.' },
-  { id: 'DANO.fonte',              label: '@DANO.fonte',              hint: 'Fonte do dano corrente.' },
+  { id: 'DANO.tipo',               label: '@DANO.tipo',               hint: 'Código do tipo resolvido: DCO=1, DP=2, DI=3, DA=4, DCG=5, DCC=6, DQ=7, DS=8, DAL=9, DNR=10, DE=11, DPS=12, DR=13, DN=14, DV=15. Ausente se desconhecido.' },
+  { id: 'DANO.fonte',              label: '@DANO.fonte',              hint: 'Categoria do produtor: 1=arma, 2=feitiço, 3=Omni, 4=ambiente. Não é ID ou nome da ficha. Ausente sem origem informada.' },
   { id: 'DANO.foi_critico',        label: '@DANO.foi_critico',        hint: '1/0 conforme o resultado informado pelo ataque. Ausente quando desconhecido.' },
   { id: 'DANO.foi_falha_critica',  label: '@DANO.foi_falha_critica',  hint: '1/0 conforme o resultado informado pelo ataque. Erros não criam eventos de dano.' },
   // ── PR-1: Contexto de dano expandido ─────────────────────────────────

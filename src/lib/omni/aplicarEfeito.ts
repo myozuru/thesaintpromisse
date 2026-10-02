@@ -171,7 +171,7 @@ export function aplicarEfeitoNoPersonagem(
         store.updateCharacter(charId, { omniFlags: flags });
         return { aplicado: 0, absorvidoPorBloqueio: true };
       }
-      store.applyDamage(charId, dano);
+      store.applyDamage(charId, dano, undefined, { source: 'omni' });
       return { aplicado: dano };
     }
     if (tipo === 'ADICIONAR') {

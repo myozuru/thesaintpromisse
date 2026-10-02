@@ -73,7 +73,7 @@ describe('Contexto DANO do combate real', () => {
     await waitFor(() => expect(contadores('atacante')?.eventos).toBe(1));
     expect(contadores('atacante')).toMatchObject({ inicial: 20, final: 7, absorvido: 13 });
     const preCtx = spy.mock.calls.find(([evento]) => evento === 'aoSofrerDano')![1].dano!;
-    expect(preCtx).toEqual({ valor_inicial: 20, id_origem: 1, id_alvo: 1 });
+    expect(preCtx).toEqual({ tipo: 1, valor_inicial: 20, id_origem: 1, id_alvo: 1 });
     expect(avaliarFormula('@DANO.valor_final', {}, undefined, { dano: { ...preCtx } }).diagnosticos).toHaveLength(1);
     expect(pegarFicha('alvo').hpCurrent).toBe(93);
   });
@@ -109,7 +109,7 @@ describe('Contexto DANO do combate real', () => {
     const spy = vi.spyOn(eventBus, 'emitirEvento');
     useCharacterStore.getState().applyDamage('alvo', 10, 'DCO', { attackerId: 'atacante' });
     await waitFor(() => expect(spy.mock.calls.some(([e]) => e === 'aoMorrer')).toBe(true));
-    expect(spy.mock.calls.find(([e]) => e === 'aoMorrer')![1]?.dano).toEqual({ valor_inicial: 10, valor_final: 8, absorvido: 2, id_origem: 1, id_alvo: 1 });
+    expect(spy.mock.calls.find(([e]) => e === 'aoMorrer')![1]?.dano).toEqual({ tipo: 1, valor_inicial: 10, valor_final: 8, absorvido: 2, id_origem: 1, id_alvo: 1 });
   });
 
   it('dois golpes consecutivos mantêm snapshots separados', async () => {
