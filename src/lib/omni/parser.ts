@@ -8,7 +8,13 @@
  * - Suporta sobrescrita inteligente de buffs homônimos (maior vence).
  */
 import { Parser } from 'expr-eval';
-import { ALIASES_FORMULA } from './constantesDoSistema';
+import { canonicalizarChave } from './keyAliases';
+
+export interface DiagnosticoFormula {
+  tipo: 'chave_ausente' | 'valor_nao_finito' | 'expressao_invalida' | 'resultado_nao_finito';
+  referencia?: string;
+  mensagem: string;
+}
 
 export interface ContextoAvaliacao {
   /** Variáveis simples resolvidas (ex: TREINO=3, FOR=4). */
@@ -17,6 +23,8 @@ export interface ContextoAvaliacao {
   rolagens: ResultadoRolagem[];
   /** Sementes opcionais para testes determinísticos. */
   rng?: () => number;
+  /** Informações da avaliação, sem alterar o fallback numérico legado. */
+  diagnosticos?: DiagnosticoFormula[];
 }
 
 export interface ResultadoRolagem {
@@ -310,6 +318,26 @@ export function rolarNotacao(notacao: string, ctx: ContextoAvaliacao): number {
  * - `@CENA.X`    → lê `CENA_<X>`.
  * - `@X` sem prefixo → atalho: assume `@USUARIO.X`.
  */
+function registrarDiagnostico(ctx: ContextoAvaliacao, diagnostico: DiagnosticoFormula): void {
+  const lista = ctx.diagnosticos ??= [];
+  if (!lista.some(d => d.tipo === diagnostico.tipo && d.referencia?.toUpperCase() === diagnostico.referencia?.toUpperCase())) {
+    lista.push(diagnostico);
+  }
+}
+
+function valorDaReferencia(ctx: ContextoAvaliacao, referencia: string, chave: string, fallback?: string): string {
+  const v = ctx.variaveis[chave] ?? (fallback ? ctx.variaveis[fallback] : undefined);
+  if (typeof v === 'number' && Number.isFinite(v)) return String(v);
+  registrarDiagnostico(ctx, {
+    tipo: v === undefined ? 'chave_ausente' : 'valor_nao_finito',
+    referencia,
+    mensagem: v === undefined
+      ? `Referência sem valor no contexto atual: ${referencia}`
+      : `Referência sem valor numérico finito: ${referencia}`,
+  });
+  return '0';
+}
+
 function preprocessar(expressao: string, ctx: ContextoAvaliacao): string {
   let out = normalizarFormulaHumana(expressao);
 
@@ -320,33 +348,23 @@ function preprocessar(expressao: string, ctx: ContextoAvaliacao): string {
 
   // 2) Substitui @PREFIXO.subchave (ex: @USUARIO.vida, @ALVO.forca, @CENA.x, @ITEM.usos_restantes).
   out = out.replace(
-    /@(USUARIO|ALVO|CENA|ITEM)\.([A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_]*)/gi,
-    (_m, prefixo: string, sub: string) => {
+    /@(USUARIO|ALVO|CENA|ITEM|DANO)\.([A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_]*(?:\.[A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_]*)*)/gi,
+    (referencia, prefixo: string, sub: string) => {
       const px = prefixo.toUpperCase();
-      // ITEM tem chaves cruas (usos_restantes, usos_totais) — sem alias pt-BR.
-      const chave = px === 'ITEM' ? sub.toUpperCase() : resolverChavePtBr(sub);
+      // ITEM/DANO têm campos próprios. Personagens aceitam caminhos legados.
+      const chave = px === 'ITEM' || px === 'DANO' ? sub.toUpperCase()
+        : resolverChavePtBr(px === 'USUARIO' || px === 'ALVO' ? canonicalizarChave(sub) : sub);
       const namespaced = `${px}_${chave}`;
-      const v = ctx.variaveis[namespaced];
-      if (typeof v === 'number') return String(v);
-      // Fallback: se não houver bag namespaced (ex: avaliação só com USUARIO),
-      // tentamos a chave nua quando o prefixo é USUARIO.
-      if (px === 'USUARIO') {
-        const v2 = ctx.variaveis[chave];
-        if (typeof v2 === 'number') return String(v2);
-      }
-      return '0';
+      return valorDaReferencia(ctx, referencia, namespaced, px === 'USUARIO' ? chave : undefined);
     }
   );
 
   // 3) Substitui @ALIAS sem prefixo (atalho → @USUARIO.X).
-  out = out.replace(/@([A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_]*)/gi, (_match, key: string) => {
-    const chave = resolverChavePtBr(key);
-    const v = ctx.variaveis[chave];
-    if (typeof v === 'number') return String(v);
-    const v2 = ctx.variaveis[`USUARIO_${chave}`];
-    if (typeof v2 === 'number') return String(v2);
-    if (chave in ALIASES_FORMULA) return '0';
-    return '0';
+  out = out.replace(/@([A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_]*(?:\.[A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_]*)*)/gi, (referencia, key: string) => {
+    const chave = resolverChavePtBr(canonicalizarChave(key));
+    // Bags combinadas podem conter uma chave nua sobrescrita pelo ALVO.
+    // O atalho sem escopo sempre pertence ao USUARIO quando ele está presente.
+    return valorDaReferencia(ctx, referencia, `USUARIO_${chave}`, chave);
   });
 
   // 3b) Dados com quantidade dinâmica: `(@USUARIO.rancor)d4` → `(3)d4` → rola.
@@ -454,6 +472,8 @@ export function avaliarFormula(
     cena?: Record<string, number>;
     /** Bag de variáveis do item ativo. Acessíveis via `@ITEM.X`. */
     item?: Record<string, number>;
+    /** Campos numéricos de um evento de dano, acessíveis via @DANO.X. */
+    dano?: Record<string, number>;
     /**
      * Resultados de efeitos anteriores em uma cadeia (1-indexado).
      * Expostos como `RESULTADO_1`, `RESULTADO_2`, … na bag de variáveis,
@@ -461,23 +481,24 @@ export function avaliarFormula(
      */
     resultados?: number[];
   }
-): { valor: number; rolagens: ResultadoRolagem[]; expressaoResolvida: string } {
+): { valor: number; rolagens: ResultadoRolagem[]; expressaoResolvida: string; diagnosticos: DiagnosticoFormula[] } {
+  // Mantém nomes originais para variáveis nuas em fórmulas legadas.
   const bag: Record<string, number> = { ...variaveis };
-  if (extras?.alvo) {
-    for (const [k, v] of Object.entries(extras.alvo)) bag[`ALVO_${k}`] = v;
-  }
-  if (extras?.cena) {
-    for (const [k, v] of Object.entries(extras.cena)) bag[`CENA_${k}`] = v;
-  }
-  if (extras?.item) {
-    for (const [k, v] of Object.entries(extras.item)) bag[`ITEM_${k.toUpperCase()}`] = v;
+  for (const [k, v] of Object.entries(variaveis)) bag[k.toUpperCase()] = v;
+  for (const [prefixo, campos] of Object.entries({ ALVO: extras?.alvo, CENA: extras?.cena, ITEM: extras?.item, DANO: extras?.dano })) {
+    for (const [k, v] of Object.entries(campos ?? {})) {
+      const semPrefixo = k.replace(new RegExp(`^${prefixo}_`, 'i'), '');
+      const chave = prefixo === 'ALVO' ? resolverChavePtBr(canonicalizarChave(semPrefixo))
+        : prefixo === 'CENA' ? resolverChavePtBr(semPrefixo) : semPrefixo.toUpperCase();
+      bag[`${prefixo}_${chave}`] = v;
+    }
   }
   if (extras?.resultados) {
     extras.resultados.forEach((v, i) => {
       bag[`RESULTADO_${i + 1}`] = v;
     });
   }
-  const ctx: ContextoAvaliacao = { variaveis: bag, rolagens: [], rng };
+  const ctx: ContextoAvaliacao = { variaveis: bag, rolagens: [], rng, diagnosticos: [] };
   const resolvida = preprocessar(expressao, ctx);
   try {
     const expr = parser.parse(resolvida);
@@ -490,9 +511,13 @@ export function avaliarFormula(
     const num = typeof valor === 'boolean'
       ? (valor ? 1 : 0)
       : typeof valor === 'number' && Number.isFinite(valor) ? valor : 0;
-    return { valor: num, rolagens: ctx.rolagens, expressaoResolvida: resolvida };
+    if (typeof valor !== 'boolean' && (typeof valor !== 'number' || !Number.isFinite(valor))) {
+      registrarDiagnostico(ctx, { tipo: 'resultado_nao_finito', mensagem: 'A fórmula não produziu um número finito.' });
+    }
+    return { valor: num, rolagens: ctx.rolagens, expressaoResolvida: resolvida, diagnosticos: ctx.diagnosticos! };
   } catch {
-    return { valor: 0, rolagens: ctx.rolagens, expressaoResolvida: resolvida };
+    registrarDiagnostico(ctx, { tipo: 'expressao_invalida', mensagem: 'Não foi possível avaliar a expressão.' });
+    return { valor: 0, rolagens: ctx.rolagens, expressaoResolvida: resolvida, diagnosticos: ctx.diagnosticos! };
   }
 }
 
