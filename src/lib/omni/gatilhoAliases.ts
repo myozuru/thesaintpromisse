@@ -48,6 +48,12 @@ export const ALIASES_POR_EVENTO: Record<GatilhoId, string[]> = {
   aoVendar:                 ['vendar',          'ao_vendar',         'aovendar'],
   aoDescobrir:              ['descobrir',       'ao_descobrir',      'aodescobrir'],
   aoAtualizarContador:      ['atualizar_contador','ao_atualizar_contador','aoatualizarcontador'],
+  aoAliadoSofrerDano:       ['aliado_sofrer_dano','aliado_ferido',  'ao_aliado_sofrer_dano','aoaliadosofrerdano'],
+  aoInimigoSofrerDano:      ['inimigo_sofrer_dano','inimigo_ferido','ao_inimigo_sofrer_dano','aoinimigosofrerdano'],
+  aoAliadoCausarDano:       ['aliado_causar_dano','aliado_atacar',  'ao_aliado_causar_dano','aoaliadocausardano'],
+  aoInimigoCausarDano:      ['inimigo_causar_dano','inimigo_atacar','ao_inimigo_causar_dano','aoinimigocausardano'],
+  aoAliadoMorrer:           ['aliado_cair',      'aliado_morrer',   'ao_aliado_morrer',     'aoaliadomorrer'],
+  aoInimigoMorrer:          ['inimigo_cair',     'inimigo_morrer',  'ao_inimigo_morrer',    'aoinimigomorrer'],
 };
 
 /** Reverse lookup: alias minúsculo → GatilhoId canônico. */
