@@ -13,11 +13,12 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
   useInventoryStore((s) => s.items);
   const chars = useCharacterStore((s) => s.characters);
   const [alvo, setAlvo] = useState('');
+  const [multiplos, setMultiplos] = useState<Record<string, string[]>>({});
   const [busy, setBusy] = useState(false);
   const u = chars.find((c) => c.id === charId);
   const lista = acoesAtivasDe(charId);
   if (!u || lista.length === 0) return null;
-  const alvos = chars.filter((c) => c.id !== charId);
+  const alvos = chars;
   return (
     <div className="rounded-md border border-primary/40 bg-primary/5 p-2 space-y-1.5" data-testid="acoes-ativas-section">
       <div className="flex items-center gap-2">
@@ -39,16 +40,21 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
             <span className="text-muted-foreground">
               {' '}· {ent.nome} · {ACAO_ROT[cfg.acao]} · {custoPEDe(cfg, u)} PE
               {cfg.consumirContador ? ` + cargas de ${cfg.consumirContador.nome} (${u.omniCounters?.[cfg.consumirContador.nome.trim().toLowerCase()] ?? 0})` : ''}
+              {cfg.tipo_alvo === 'proprio' ? ' · próprio' : cfg.tipo_alvo === 'area' ? ` · área: ${cfg.area?.forma ?? 'configurar'}` : ''}
               {cfg.alcanceM > 0 ? ` · ${String(cfg.alcanceM).replace('.', ',')} m` : ''}
             </span>
           </div>
+          {cfg.tipo_alvo === 'multiplo' && <select multiple aria-label={`Alvos de ${cfg.nome}`} className="rounded border border-input bg-background" value={multiplos[instanceId + cfg.id] ?? []}
+            onChange={e => setMultiplos({ ...multiplos, [instanceId + cfg.id]: Array.from(e.target.selectedOptions, o => o.value) })}>
+            {chars.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </select>}
           <button
             disabled={busy}
             className="px-2 py-0.5 rounded bg-primary/20 border border-primary/50 font-bold hover:bg-primary/30 disabled:opacity-40"
             onClick={async () => {
               setBusy(true);
               try {
-                const r = await executarAcaoAtiva(charId, cfg, alvo, ent);
+                const r = await executarAcaoAtiva(charId, cfg, cfg.tipo_alvo === 'multiplo' ? (multiplos[instanceId + cfg.id] ?? []) : alvo, ent);
                 if (!r.ok) useLogStore.getState().addLog('combat', `❌ ${cfg.nome}: ${r.reason}`);
               } finally { setBusy(false); }
             }}

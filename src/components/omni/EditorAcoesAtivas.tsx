@@ -37,6 +37,24 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
             <div><Label className="text-xs">Custo PE (fórmula)</Label><Input value={a.custoPE} onChange={(e) => set(i, { custoPE: e.target.value })} /></div>
             <div><Label className="text-xs">Alcance (m, 0 = livre)</Label><Input type="number" step={1.5} value={a.alcanceM} onChange={(e) => set(i, { alcanceM: Math.max(0, parseFloat(e.target.value) || 0) })} /></div>
           </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label className="text-xs">Tipo de alvo</Label>
+              <select aria-label="Tipo de alvo" className={sel} value={a.tipo_alvo ?? 'unico'} onChange={e => set(i, { tipo_alvo: e.target.value as AcaoAtivaConfig['tipo_alvo'], ...(e.target.value === 'area' && !a.area ? { area: { forma: 'cone' as const, tamanho_m: 6 } } : {}) })}>
+                <option value="unico">Único</option><option value="multiplo">Múltiplo</option><option value="area">Área</option><option value="proprio">Próprio</option>
+              </select></div>
+            <div><Label className="text-xs">Filtro de alvos</Label>
+              <select aria-label="Filtro de alvos" className={sel} value={a.filtro_alvo ?? (a.tipo_alvo === 'proprio' ? 'todos' : 'todos_exceto_si')} onChange={e => set(i, { filtro_alvo: e.target.value as AcaoAtivaConfig['filtro_alvo'] })}>
+                <option value="inimigos">Inimigos</option><option value="aliados">Aliados</option><option value="todos">Todos</option><option value="todos_exceto_si">Todos exceto si</option>
+              </select></div>
+          </div>
+          {a.tipo_alvo === 'multiplo' && <div><Label className="text-xs">Máximo de alvos (fórmula)</Label><Input aria-label="Máximo de alvos" value={a.max_alvos ?? '1'} placeholder="@USUARIO.treino" onChange={e => set(i, { max_alvos: e.target.value })} /></div>}
+          {a.tipo_alvo === 'area' && <div className="grid grid-cols-3 gap-2">
+            <div><Label className="text-xs">Forma da área</Label><select aria-label="Forma da área" className={sel} value={a.area?.forma ?? 'cone'} onChange={e => set(i, { area: { tamanho_m: a.area?.tamanho_m ?? 6, ...a.area, forma: e.target.value as NonNullable<AcaoAtivaConfig['area']>['forma'] } })}>
+              <option value="cone">Cone</option><option value="linha">Linha</option><option value="raio_em_si">Raio em si</option><option value="raio_no_ponto">Raio no ponto</option>
+            </select></div>
+            <div><Label className="text-xs">Raio / comprimento (m)</Label><Input aria-label="Tamanho da área" type="number" min={0.1} step={1.5} value={a.area?.tamanho_m ?? 6} onChange={e => set(i, { area: { forma: 'cone', ...a.area, tamanho_m: Number(e.target.value) } })} /></div>
+            {(a.area?.forma === 'linha') && <div><Label className="text-xs">Largura (m)</Label><Input aria-label="Largura da linha" type="number" min={0.1} step={1.5} value={a.area?.largura_m ?? 1.5} onChange={e => set(i, { area: { forma: 'linha', tamanho_m: 6, ...a.area, largura_m: Number(e.target.value) } })} /></div>}
+          </div>}
           <div className="grid grid-cols-3 gap-2">
             <div><Label className="text-xs">Teste</Label>
               <select className={sel} value={a.teste} onChange={(e) => set(i, { teste: e.target.value as AcaoAtivaConfig['teste'] })}>

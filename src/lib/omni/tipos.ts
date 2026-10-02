@@ -226,6 +226,12 @@ export interface AcaoAtivaConfig {
   custoPE: string;
   /** 0 = sem limite. */
   alcanceM: number;
+  /** Ausente mantém o comportamento legado (alvo único, exceto si). */
+  tipo_alvo?: 'unico' | 'multiplo' | 'area' | 'proprio';
+  filtro_alvo?: 'inimigos' | 'aliados' | 'todos' | 'todos_exceto_si';
+  /** Fórmula inteira, por exemplo "3" ou "@USUARIO.treino". */
+  max_alvos?: string;
+  area?: { forma: 'cone' | 'linha' | 'raio_em_si' | 'raio_no_ponto'; tamanho_m: number; largura_m?: number };
   teste: 'tr' | 'ataque' | 'nenhum';
   tr?: TrNome;
   /** Fórmula da CD; vazio = CD da Especialização. */

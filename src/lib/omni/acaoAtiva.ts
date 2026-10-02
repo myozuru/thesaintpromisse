@@ -1,8 +1,10 @@
+import { aceitaAlvoAtivo, selecionarAlvosAtivos, type SelecaoAtiva } from './alvosAtivos';
 import { resolverTipoDano, type MetadadosAtaqueDano } from './contextoDano';
 /**
  * Ações ativas genéricas do OMNI.
  *
  * Blocos reutilizáveis (nenhuma habilidade específica vive aqui):
+ *  - alvos únicos, múltiplos, próprio e áreas com filtro;
  *  - custo em PE + tipo de ação + alcance em metros;
  *  - teste: TR do alvo contra CD (falha = dano cheio + efeitos; sucesso =
  *    metade ou nada, sem efeitos), ataque contra Defesa (acerto = efeitos)
@@ -122,7 +124,8 @@ export type ResultadoAtiva = { ok: false; reason: string } | { ok: true; dano: n
 
 export function podeUsarAtiva(u: Character, alvo: Character | undefined, cfg: AcaoAtivaConfig): { ok: true } | { ok: false; reason: string } {
   if (!alvo) return { ok: false, reason: 'Escolha um alvo.' };
-  if (alvo.id === u.id) return { ok: false, reason: 'O alvo deve ser outra criatura.' };
+  if (!cfg.tipo_alvo && alvo.id === u.id) return { ok: false, reason: 'O alvo deve ser outra criatura.' };
+  if (!aceitaAlvoAtivo(u, alvo, cfg)) return { ok: false, reason: 'O alvo não atende ao filtro.' };
   if (cfg.acao === 'comum' && (u.actionsCurrent ?? 1) <= 0) return { ok: false, reason: 'Sem Ação Comum disponível.' };
   if (cfg.acao === 'bonus' && (u.bonusActionsCurrent ?? 1) <= 0) return { ok: false, reason: 'Sem Ação Bônus disponível.' };
   if (cfg.acao === 'reacao' && (u.reactionsCurrent ?? 1) <= 0) return { ok: false, reason: 'Sem Reação disponível.' };
@@ -132,7 +135,7 @@ export function podeUsarAtiva(u: Character, alvo: Character | undefined, cfg: Ac
     const tem = u.omniCounters?.[cfg.consumirContador.nome.trim().toLowerCase()] ?? 0;
     if (tem < Math.max(1, cfg.consumirContador.minimo)) return { ok: false, reason: `Precisa de ao menos ${Math.max(1, cfg.consumirContador.minimo)} carga(s) de ${cfg.consumirContador.nome} (tem ${tem}).` };
   }
-  if (cfg.alcanceM > 0) {
+  if (cfg.alcanceM > 0 && cfg.tipo_alvo !== 'area' && cfg.tipo_alvo !== 'proprio') {
     const ms = useMapStore.getState();
     const a = findCharEntity(ms.entities as never, u.id), b = findCharEntity(ms.entities as never, alvo.id);
     if (a && b) {
@@ -181,25 +184,22 @@ function armaDaAcao(u: Character, ent?: EntidadeOmni) {
 export async function executarAcaoAtiva(
   usuarioId: string,
   cfg: AcaoAtivaConfig,
-  alvoId: string,
+  selecao: SelecaoAtiva,
   ent?: EntidadeOmni,
 ): Promise<ResultadoAtiva> {
+  const escolhidos = await selecionarAlvosAtivos(usuarioId, cfg, selecao);
+  if (!escolhidos.ok) return escolhidos;
   const store = useCharacterStore.getState();
   const log = (m: string) => useLogStore.getState().addLog('combat', m);
   const u = store.characters.find((x) => x.id === usuarioId);
-  const alvo = store.characters.find((x) => x.id === alvoId);
   if (!u) return { ok: false, reason: 'Personagem não encontrado.' };
-  const chk = podeUsarAtiva(u, alvo, cfg);
-  if (!chk.ok) return chk;
-  const t = alvo!;
+  const alvos = escolhidos.ids.map(id => store.characters.find(c => c.id === id)!);
+  for (const alvo of alvos) {
+    const chk = podeUsarAtiva(u, alvo, cfg);
+    if (!chk.ok) return chk;
+  }
   const arma = cfg.teste === 'ataque' ? armaDaAcao(u, ent) : undefined;
   if (cfg.teste === 'ataque' && !arma) return { ok: false, reason: 'Nenhuma arma empunhada para o ataque.' };
-
-  // Margem de crítico condicional (avaliada antes de gastar nada).
-  let critExtra = 0;
-  if (cfg.margemCritico?.condicao) {
-    if (avaliarFormula(cfg.margemCritico.condicao, vars(u, t)).valor) critExtra = cfg.margemCritico.reducao;
-  }
 
   // ── Paga tudo antes de rolar ──
   const custo = custoPEDe(cfg, u);
@@ -218,69 +218,80 @@ export async function executarAcaoAtiva(
   const fonte = ent?.nome ?? cfg.nome;
   const pago = `${custo} PE${cargas ? ` + ${cargas} carga(s) de ${cfg.consumirContador!.nome}` : ''}`;
 
-  let metadadosAtaque: MetadadosAtaqueDano | undefined;
-  let critico = false;
-  let aplicaEfeitos = true;
-  let passouTR = false;
-  let armaDano = 0;
-  let cabecalho = '';
+  let danoTotal = 0;
+  const detalhes: string[] = [];
+  for (const selecionado of alvos) {
+    const t = useCharacterStore.getState().characters.find(c => c.id === selecionado.id);
+    if (!t) continue;
+    let critExtra = 0;
+    if (cfg.margemCritico?.condicao && avaliarFormula(cfg.margemCritico.condicao, vars(u, t)).valor) critExtra = cfg.margemCritico.reducao;
+    let metadadosAtaque: MetadadosAtaqueDano | undefined;
+    let critico = false;
+    let aplicaEfeitos = true;
+    let passouTR = false;
+    let armaDano = 0;
+    let cabecalho = '';
 
-  if (cfg.teste === 'tr') {
-    const tr = cfg.tr ?? 'fortitude';
-    const cd = cfg.cd?.trim() ? Math.round(avaliarFormula(cfg.cd, vars(u, t)).valor) : specDCFor(u);
-    const mod = modTR(t, tr);
-    const d20 = await rollD20Com(t.id, undefined, { label: `TR ${TR_ROTULO[tr]}` });
-    passouTR = d20 + mod >= cd;
-    aplicaEfeitos = !passouTR;
-    cabecalho = `TR ${TR_ROTULO[tr]} d20 ${d20}${mod >= 0 ? '+' : ''}${mod} = ${d20 + mod} vs CD ${cd} → ${passouTR ? 'SUCESSO' : 'FALHA'}`;
-  } else if (cfg.teste === 'ataque') {
-    const def = computeTotalDefense(t, {}, arma!.range === 'melee' ? 'melee' : 'ranged');
-    const ctx = buildAttackContext({
-      attacker: u, weapon: arma!, targetDefense: def,
-      situation: { critBonusExtra: critExtra || undefined },
-      trainedRanges: [
-        ...(u.meleeTrained ? (['melee'] as const) : []),
-        ...(u.rangedTrained ? (['ranged', 'thrown'] as const) : []),
-      ],
-    });
-    const r = await rollAttack(ctx);
-    metadadosAtaque = { critical: r.critical, criticalFail: r.criticalFail, kind: arma!.range === 'melee' ? 'melee' : 'ranged' };
-    critico = r.critical;
-    aplicaEfeitos = r.hit;
-    armaDano = cfg.incluirArma ? r.damageTotal : 0;
-    cabecalho = `ataque ${r.attackTotal} vs Defesa ${def} → ${r.critical ? 'CRÍTICO' : r.hit ? 'ACERTOU' : 'ERROU'}${critExtra ? ` (margem −${critExtra})` : ''}`;
-    if (!r.hit) {
-      const msg = `⚔️ ${u.name} usa ${cfg.nome} (${pago}) em ${t.name}: ${cabecalho}.`;
-      log(msg);
-      return { ok: true, dano: 0, detalhe: msg };
+    if (cfg.teste === 'tr') {
+      const tr = cfg.tr ?? 'fortitude';
+      const cd = cfg.cd?.trim() ? Math.round(avaliarFormula(cfg.cd, vars(u, t)).valor) : specDCFor(u);
+      const mod = modTR(t, tr);
+      const d20 = await rollD20Com(t.id, undefined, { label: `TR ${TR_ROTULO[tr]}` });
+      passouTR = d20 + mod >= cd;
+      aplicaEfeitos = !passouTR;
+      cabecalho = `TR ${TR_ROTULO[tr]} d20 ${d20}${mod >= 0 ? '+' : ''}${mod} = ${d20 + mod} vs CD ${cd} → ${passouTR ? 'SUCESSO' : 'FALHA'}`;
+    } else if (cfg.teste === 'ataque') {
+      const def = computeTotalDefense(t, {}, arma!.range === 'melee' ? 'melee' : 'ranged');
+      const ctx = buildAttackContext({
+        attacker: u, weapon: arma!, targetDefense: def,
+        situation: { critBonusExtra: critExtra || undefined },
+        trainedRanges: [
+          ...(u.meleeTrained ? (['melee'] as const) : []),
+          ...(u.rangedTrained ? (['ranged', 'thrown'] as const) : []),
+        ],
+      });
+      const r = await rollAttack(ctx);
+      metadadosAtaque = { critical: r.critical, criticalFail: r.criticalFail, kind: arma!.range === 'melee' ? 'melee' : 'ranged' };
+      critico = r.critical;
+      aplicaEfeitos = r.hit;
+      armaDano = cfg.incluirArma ? r.damageTotal : 0;
+      cabecalho = `ataque ${r.attackTotal} vs Defesa ${def} → ${r.critical ? 'CRÍTICO' : r.hit ? 'ACERTOU' : 'ERROU'}${critExtra ? ` (margem −${critExtra})` : ''}`;
+      if (!r.hit) {
+        const msg = `⚔️ ${u.name} usa ${cfg.nome} (${pago}) em ${t.name}: ${cabecalho}.`;
+        log(msg);
+        detalhes.push(msg);
+        continue;
+      }
     }
-  }
 
-  // ── Dano ──
-  const plano = planejarDano(cfg.dano, cfg.dadosPorCarga, cargas, critico);
-  let bruto = armaDano + plano.fixo;
-  let dadosTxt = '';
-  if (plano.grupos.length) {
-    const r = await rollDiceGroups(plano.grupos, { label: cfg.nome });
-    bruto += r.total;
-    dadosTxt = r.groups.map((g) => `${g.count}d${g.sides}[${g.rolls.join(',')}]`).join('+');
+    // ── Dano ──
+    const plano = planejarDano(cfg.dano, cfg.dadosPorCarga, cargas, critico);
+    let bruto = armaDano + plano.fixo;
+    let dadosTxt = '';
+    if (plano.grupos.length) {
+      const r = await rollDiceGroups(plano.grupos, { label: cfg.nome });
+      bruto += r.total;
+      dadosTxt = r.groups.map((g) => `${g.count}d${g.sides}[${g.rolls.join(',')}]`).join('+');
+    }
+    const dano = cfg.teste === 'tr' ? danoAposTR(bruto, passouTR, !!cfg.metadeNoSucesso) : bruto;
+    if (dano > 0) {
+      useCharacterStore.getState().applyDamage(t.id, dano, resolverTipoDano(cfg.tipoDano), {
+        attackerId: u.id, source: 'omni', attack: metadadosAtaque,
+        isMelee: metadadosAtaque ? metadadosAtaque.kind === 'melee' : undefined,
+      });
+    }
+    const notas = aplicaEfeitos ? aplicarEfeitos(u, t, cfg.efeitos ?? [], fonte) : [];
+    const partes = [
+      cabecalho,
+      `dano ${dano}${armaDano ? ` (arma ${armaDano}` + (dadosTxt ? ` + ${dadosTxt}` : '') + ')' : dadosTxt ? ` (${dadosTxt})` : ''}${passouTR && cfg.metadeNoSucesso ? ' — metade' : ''}`,
+      ...notas,
+    ].filter(Boolean);
+    const msg = `⚔️ ${u.name} usa ${cfg.nome} (${pago}) em ${t.name}: ${partes.join(' · ')}.`;
+    log(msg);
+    danoTotal += dano;
+    detalhes.push(msg);
   }
-  const dano = cfg.teste === 'tr' ? danoAposTR(bruto, passouTR, !!cfg.metadeNoSucesso) : bruto;
-  if (dano > 0) {
-    useCharacterStore.getState().applyDamage(t.id, dano, resolverTipoDano(cfg.tipoDano), {
-      attackerId: u.id, source: 'omni', attack: metadadosAtaque,
-      isMelee: metadadosAtaque ? metadadosAtaque.kind === 'melee' : undefined,
-    });
-  }
-  const notas = aplicaEfeitos ? aplicarEfeitos(u, t, cfg.efeitos ?? [], fonte) : [];
-  const partes = [
-    cabecalho,
-    `dano ${dano}${armaDano ? ` (arma ${armaDano}` + (dadosTxt ? ` + ${dadosTxt}` : '') + ')' : dadosTxt ? ` (${dadosTxt})` : ''}${passouTR && cfg.metadeNoSucesso ? ' — metade' : ''}`,
-    ...notas,
-  ].filter(Boolean);
-  const msg = `⚔️ ${u.name} usa ${cfg.nome} (${pago}) em ${t.name}: ${partes.join(' · ')}.`;
-  log(msg);
-  return { ok: true, dano, detalhe: msg };
+  return { ok: true, dano: danoTotal, detalhe: detalhes.join("\n") };
 }
 
 /** Ações ativas disponíveis ao personagem (itens do inventário dele). */

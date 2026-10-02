@@ -2,12 +2,13 @@
 /** Ações ativas genéricas do OMNI em combate real em memória. */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 vi.mock('@/integrations/supabase/client', async () => ({ supabase: (await import('./helpers/mesaReal')).nuvemFalsa }));
+vi.mock('@/lib/sounds', async (original) => Object.fromEntries(Object.keys(await original<Record<string, unknown>>()).map(k => [k, () => {}])));
 vi.mock('@/lib/socket', () => ({ getSocket: () => null }));
 vi.mock('@/integrations/supabase/safeClient', async () => ({ hasWorkspaceCloud: false, supabase: (await import('./helpers/mesaReal')).nuvemFalsa }));
 import { useMapStore } from '@/stores/useMapStore';
 import { executarAcaoAtiva, planejarDano, danoAposTR, moverForcado, parseDados } from '@/lib/omni/acaoAtiva';
 import type { AcaoAtivaConfig } from '@/lib/omni/tipos';
-import { ficha, montarMesa, limparMesa, comoTela, pegarFicha, forcarDados, CASA } from './helpers/mesaReal';
+import { ficha, montarMesa, limparMesa, comoTela, pegarFicha, forcarDados, CASA, esperar } from './helpers/mesaReal';
 
 const vinganca: AcaoAtivaConfig = {
   id: 'v', nome: 'Vingança Agulhada', acao: 'comum', custoPE: '4', alcanceM: 6,
@@ -21,7 +22,12 @@ const montar = (inimigoX: number) => montarMesa([
 const posAlvo = () => (useMapStore.getState().entities as Record<string, { x: number }>)['e-alvo'].x / CASA;
 
 beforeEach(() => comoTela({ profileId: null, role: 'MASTER' }));
-afterEach(() => limparMesa());
+afterEach(async () => {
+  await import('@/lib/omni/eventBus');
+  await import('@/lib/omni/observadores');
+  await esperar();
+  limparMesa();
+});
 
 describe('regras puras', () => {
   it('dados, cargas e crítico', () => {
@@ -84,5 +90,97 @@ describe('consumo de cargas', () => {
     expect(r.ok && r.dano).toBe(5);
     expect(pegarFicha('heroi').omniCounters?.rancor ?? 0).toBe(0);
     expect(pegarFicha('heroi').peCurrent).toBe(10);
+  });
+});
+
+describe('escopo espacial genérico', () => {
+  const cfg: AcaoAtivaConfig = { id: 'espacial', nome: 'Ação espacial', acao: 'comum', custoPE: '2', alcanceM: 6, teste: 'nenhum', dano: '4', tipoDano: 'Impacto' };
+  const mesa = () => {
+    montarMesa([
+      ficha('heroi', { peCurrent: 20, trainingBonus: 2, actionsCurrent: 1, omniCounters: { foco: 3 } }),
+      ficha('aliado', { hpCurrent: 100, hpMax: 100, escCurrent: 0 }),
+      ficha('a', { category: 'INIMIGO', hpCurrent: 100, hpMax: 100, escCurrent: 0 }),
+      ficha('b', { category: 'INIMIGO', hpCurrent: 100, hpMax: 100, escCurrent: 0 }),
+      ficha('neutro', { category: 'NPC', hpCurrent: 100, hpMax: 100, escCurrent: 0 }),
+    ], { heroi: [0, 0], aliado: [0, 1], a: [2, 0], b: [3, 0], neutro: [0, 2] });
+    useMapStore.setState({ initiative: { entries: [], turnIndex: -1, round: 0 } });
+  };
+  it('múltiplos: deduplica e paga ação, PE e contador uma vez', async () => {
+    mesa();
+    const r = await executarAcaoAtiva('heroi', { ...cfg, tipo_alvo: 'multiplo', filtro_alvo: 'inimigos', max_alvos: '@USUARIO.treino', consumirContador: { nome: 'foco', minimo: 1 }, dadosPorCarga: '1' }, ['a', 'a', 'b']);
+    expect(r.ok && r.dano).toBe(14);
+    expect(pegarFicha('heroi').peCurrent).toBe(18);
+    expect(pegarFicha('heroi').actionsCurrent).toBe(0);
+    expect(pegarFicha('heroi').omniCounters?.foco).toBe(0);
+    expect(pegarFicha('a').hpCurrent).toBe(93);
+    expect(pegarFicha('b').hpCurrent).toBe(93);
+  });
+  it('não gasta nem atinge o primeiro alvo se outro violar limite, filtro ou alcance', async () => {
+    for (const [max, ids] of [['1', ['a', 'b']], ['3', ['a', 'aliado']], ['3', ['a', 'b']]] as const) {
+      mesa();
+      if (max === '3' && ids[1] === 'b') useMapStore.getState().updateEntity('e-b', { x: 70 * 20 });
+      const r = await executarAcaoAtiva('heroi', { ...cfg, tipo_alvo: 'multiplo', filtro_alvo: 'inimigos', max_alvos: max }, [...ids]);
+      expect(r.ok).toBe(false);
+      expect(pegarFicha('heroi').peCurrent).toBe(20);
+      expect(pegarFicha('heroi').actionsCurrent).toBe(1);
+      expect(pegarFicha('a').hpCurrent).toBe(100);
+    }
+  });
+  it('próprio funciona sem escolher alvo; legado continua recusando si', async () => {
+    mesa();
+    expect((await executarAcaoAtiva('heroi', cfg, 'heroi')).ok).toBe(false);
+    const r = await executarAcaoAtiva('heroi', { ...cfg, tipo_alvo: 'proprio', dano: undefined, efeitos: [{ tipo: 'condicao', condicao: 'exposto', rodadas: 1 }] }, '');
+    expect(r.ok).toBe(true);
+    expect(pegarFicha('heroi').activeConditions?.some(c => c.conditionId === 'exposto')).toBe(true);
+  });
+  it('raio em si resolve aliados e inclui si quando solicitado, sem popup', async () => {
+    mesa();
+    const placement = vi.spyOn(useMapStore.getState(), 'requestAoEPlacement');
+    const r = await executarAcaoAtiva('heroi', { ...cfg, tipo_alvo: 'area', filtro_alvo: 'aliados', dano: undefined, area: { forma: 'raio_em_si', tamanho_m: 4.5 }, efeitos: [{ tipo: 'condicao', condicao: 'exposto', rodadas: 1 }] }, '');
+    expect(r.ok).toBe(true);
+    expect(placement).not.toHaveBeenCalled();
+    for (const id of ['heroi', 'aliado']) expect(pegarFicha(id).activeConditions?.some(c => c.conditionId === 'exposto')).toBe(true);
+    for (const id of ['a', 'b', 'neutro']) expect(pegarFicha(id).activeConditions ?? []).toHaveLength(0);
+  });
+  it.each(['cone', 'linha'] as const)('%s usa a geometria do mapa e a direção escolhida', async forma => {
+    mesa();
+    const r = await executarAcaoAtiva('heroi', { ...cfg, tipo_alvo: 'area', filtro_alvo: 'inimigos', area: { forma, tamanho_m: 6 } }, { ponto: { x: 9000, y: 9000 }, rotacao: 0 });
+    expect(r.ok && r.dano).toBe(8);
+    expect(pegarFicha('aliado').hpCurrent).toBe(100);
+    expect(pegarFicha('a').hpCurrent).toBe(96);
+    expect(pegarFicha('b').hpCurrent).toBe(96);
+  });
+  it('raio no ponto mede alcance até o centro, não até cada criatura', async () => {
+    mesa();
+    useMapStore.getState().updateEntity('e-b', { x: 70 * 5 });
+    const r = await executarAcaoAtiva('heroi', { ...cfg, alcanceM: 3, tipo_alvo: 'area', filtro_alvo: 'inimigos', area: { forma: 'raio_no_ponto', tamanho_m: 4.5 } }, { ponto: { x: 140, y: 0 } });
+    expect(r.ok && r.dano).toBe(8);
+    expect(pegarFicha('b').hpCurrent).toBe(96);
+  });
+  it('área cancelada, vazia, inválida ou fora de alcance não cobra custos', async () => {
+    for (const modo of ['cancelar', 'vazia', 'invalida', 'distante']) {
+      mesa();
+      const c: AcaoAtivaConfig = { ...cfg, tipo_alvo: 'area', filtro_alvo: 'inimigos', area: { forma: 'raio_no_ponto', tamanho_m: modo === 'invalida' ? -1 : 0.1 } };
+      vi.spyOn(useMapStore.getState(), 'requestAoEPlacement').mockResolvedValue(null);
+      const r = await executarAcaoAtiva('heroi', c, modo === 'cancelar' ? '' : { ponto: { x: modo === 'distante' ? 9000 : 0, y: 0 } });
+      expect(r.ok).toBe(false);
+      expect(pegarFicha('heroi').peCurrent).toBe(20);
+      expect(pegarFicha('heroi').actionsCurrent).toBe(1);
+    }
+  });
+  it('lados explícitos permitem NPC aliado e evitam assumir NPC neutro como inimigo', async () => {
+    mesa();
+    expect((await executarAcaoAtiva('heroi', { ...cfg, tipo_alvo: 'unico', filtro_alvo: 'inimigos' }, 'neutro')).ok).toBe(false);
+    useMapStore.setState({ initiative: { entries: [{ id: 'n', name: 'NPC aliado', init: 1, entityId: 'e-neutro', side: 'ally' }], turnIndex: 0, round: 1 } });
+    expect((await executarAcaoAtiva('heroi', { ...cfg, tipo_alvo: 'unico', filtro_alvo: 'aliados' }, 'neutro')).ok).toBe(true);
+  });
+  it('área avalia cada TR independentemente e só aplica efeitos na falha', async () => {
+    mesa();
+    forcarDados(1, 20);
+    const r = await executarAcaoAtiva('heroi', { ...cfg, tipo_alvo: 'area', filtro_alvo: 'inimigos', area: { forma: 'linha', tamanho_m: 6 }, teste: 'tr', cd: '15', metadeNoSucesso: true, efeitos: [{ tipo: 'condicao', condicao: 'exposto', rodadas: 1 }] }, { ponto: { x: 0, y: 0 }, rotacao: 0 });
+    expect(r.ok && r.dano).toBe(6);
+    expect(pegarFicha('a').activeConditions?.some(c => c.conditionId === 'exposto')).toBe(true);
+    expect(pegarFicha('b').activeConditions ?? []).toHaveLength(0);
+    expect(pegarFicha('heroi').peCurrent).toBe(18);
   });
 });
