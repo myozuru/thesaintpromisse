@@ -35,6 +35,7 @@ import { useLogStore } from '@/stores/useLogStore';
 import { useOmniRuntimeStore } from '@/stores/useOmniRuntimeStore';
 import { grantAdvantage, clearAllAdvantage, type AdvScope } from './rollAdvantage';
 import { adicionarImunidade, removerImunidade, formatarImunidade } from './immunity';
+import { calcularContador } from './contadores';
 
 const PROFUNDIDADE_MAX = 8;
 
@@ -79,7 +80,10 @@ function variaveisCompletas(ctx: ContextoRuntime): Record<string, number> {
   const vars: Record<string, number> = {};
   if (ctx.usuario) Object.assign(vars, montarVariaveisDoPersonagem(ctx.usuario, 'USUARIO'));
   if (ctx.alvo) Object.assign(vars, montarVariaveisDoPersonagem(ctx.alvo, 'ALVO'));
-  if (ctx.cena) for (const [k, v] of Object.entries(ctx.cena)) vars[`CENA_${k}`] = v;
+  if (ctx.cena) for (const [k, v] of Object.entries(ctx.cena)) {
+    vars[`CENA_${k}`] = v;
+    vars[`CENA_${k.toUpperCase()}`] = v;
+  }
   return vars;
 }
 

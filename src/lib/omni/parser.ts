@@ -348,6 +348,13 @@ function preprocessar(expressao: string, ctx: ContextoAvaliacao): string {
     return '0';
   });
 
+  // 3b) Dados com quantidade dinâmica: `(@USUARIO.rancor)d4` → `(3)d4` → rola.
+  //     Também cobre `@CENA.consumido d8` escrito como `(@CENA.consumido)d8`.
+  out = out.replace(/\(\s*(\d+)\s*\)\s*d(\d+)/gi, (_m, n: string, f: string) =>
+    String(Number(n) > 0 ? rolarNotacao(`${n}d${f}`, ctx) : 0)
+  );
+
+
   // 4) Açúcar sintático de arredondamento sufixo:
   //    EXPR<  →  floor(EXPR)     EXPR>  →  ceil(EXPR)
   //
