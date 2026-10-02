@@ -1,3 +1,4 @@
+import { EditorCustosAtivos } from './EditorCustosAtivos';
 import { EditorCondicionaisAtivos } from './EditorCondicionaisAtivos';
 /** Editor no-code das ações ativas genéricas de uma entidade OMNI. */
 import type { AcaoAtivaConfig, EfeitoSecundarioAtivo, EntidadeOmni, TrNome } from '@/lib/omni/tipos';
@@ -104,6 +105,8 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
                 <Input type="number" min={0} disabled={!a.margemCritico} value={a.margemCritico?.reducao ?? 2} onChange={(e) => a.margemCritico && set(i, { margemCritico: { ...a.margemCritico, reducao: Math.max(0, parseInt(e.target.value, 10) || 0) } })} /></div>
             </div>
           )}
+          <EditorCustosAtivos acao={a} onChange={p => set(i, p)} />
+          {a.teste === 'ataque' && <label className="text-xs">Modificador de acerto<Input aria-label="Modificador de acerto" type="number" value={a.mod_acerto ?? 0} onChange={e => set(i, { mod_acerto: Number(e.target.value) })} /></label>}
           <EditorCondicionaisAtivos blocos={a.condicionais ?? []} onChange={condicionais => set(i, { condicionais })} />
           <div className="space-y-1">
             <Label className="text-xs">Efeitos (se o TR falhar / o ataque acertar)</Label>

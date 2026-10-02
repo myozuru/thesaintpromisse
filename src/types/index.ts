@@ -1003,6 +1003,8 @@ export interface Character {
    * pelo gatilho `aoAtualizarContador` (limiar disparável via predicado).
    */
   omniCounters?: Record<string, number>;
+  /** Custos de manutenção e condições exclusivamente criadas por ações OMNI. */
+  omniSustentacoes?: { id: string; nome: string; pePorTurno: number; condicoes: { charId: string; id: string }[] }[];
   /**
    * Redutores de custo de recurso por chave canônica (ex.: `pe`, `vida`).
    * Aplicados em `gastarPE`/`spellCastPipeline`/`CONSUMIR_RECURSO`,

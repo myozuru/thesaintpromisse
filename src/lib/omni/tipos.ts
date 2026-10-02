@@ -247,7 +247,21 @@ export interface ModificadorCondicionalAtivo {
 }
 
 /** Ação ativa genérica montada pelo Mestre (ver acaoAtiva.ts). */
+export interface CustoRecursosAtivo {
+  pe_base?: string;
+  pe_por_intensificacao?: string;
+  max_intensificacoes?: string;
+  limite_pe?: string;
+  dano_por_intensificacao?: string;
+  gastar_cargas?: { nome: string; quantidade: 'todas' | string; minimo?: number };
+  custo_pv?: string;
+  tipo_acao?: 'comum' | 'bonus' | 'reacao' | 'livre' | 'sustentada';
+  pe_por_turno?: string;
+}
+
 export interface AcaoAtivaConfig {
+  custo_recursos?: CustoRecursosAtivo;
+  mod_acerto?: number;
   id: string;
   nome: string;
   acao: 'comum' | 'bonus' | 'reacao' | 'livre';

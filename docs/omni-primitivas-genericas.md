@@ -7,7 +7,7 @@ Este ciclo sucede a auditoria das keys. Cada categoria é uma entrega independen
 | 1 | Alvos e áreas | Implementada nas ações ativas, editor e painel de uso |
 | 2 | Condicionais dinâmicas | Implementada: checagens de usuário/alvo, idade de condição, crítico, dano extra, vantagem e TR |
 | 3 | Movimento | Implementada: puxar, empurrar, avançar, teleportar e trocar; fórmulas, obstáculos e destinos válidos |
-| 4 | Custos flexíveis | Fórmula de PE e consumo total já existem; pendem intensificação, consumo parcial, PV e sustentação |
+| 4 | Custos flexíveis | Implementada: intensificação com teto, consumo parcial/total, PV, tipo de ação e manutenção de condições por turno |
 | 5 | Reações interrompíveis | Há infraestrutura de eventos e prompts; falta unificar os gatilhos propostos e sua janela de interrupção |
 | 6 | Graus de TR | Sucesso/falha e metade já existem; pendem falha crítica e desfechos configuráveis |
 
@@ -127,4 +127,42 @@ Exemplos:
 { "tipo": "movimento", "movimento_tipo": "empurrar", "movimento_distancia": "3" }
 { "tipo": "movimento", "movimento_tipo": "avancar_ate", "movimento_distancia": "6" }
 { "tipo": "movimento", "movimento_tipo": "teleporte", "movimento_distancia": "3 * @USUARIO.foco", "movimento_alvo": "usuario" }
+```
+
+
+## Contrato da etapa 4
+
+`custo_recursos` é opcional. Ações sem o bloco continuam usando `custoPE`, `acao` e `consumirContador`. Não há migração automática nem regra por nome de habilidade.
+
+| Campo de `custo_recursos` | Semântica |
+| --- | --- |
+| `pe_base` | Fórmula; substitui `custoPE` quando presente |
+| `pe_por_intensificacao` | PE por incremento; padrão 0 |
+| `max_intensificacoes` | Teto de incrementos, fórmula como `4` ou `@USUARIO.treino`; padrão 0 |
+| `limite_pe` | Teto opcional do PE total, como `@USUARIO.treino`; o limite de treinamento precisa ser configurado explicitamente |
+| `dano_por_intensificacao` | Dados e/ou inteiros por incremento, como `1d6+2`; dados também recebem o multiplicador de crítico, fixos não |
+| `gastar_cargas` | `{nome, quantidade: "todas" ou fórmula, minimo?: N}`; substitui o contador legado quando presente, preservando os saldos por fonte |
+| `custo_pv` | PV reais sacrificados, sem mitigação ou absorção por escudo; deve deixar ao menos 1 PV |
+| `tipo_acao` | `comum`, `bonus`, `reacao`, `livre` ou `sustentada`; padrão `acao` legado |
+| `pe_por_turno` | Fórmula de manutenção para `sustentada`; exige custo positivo |
+
+As novas fórmulas usam USUARIO antes dos pagamentos, rejeitam keys desconhecidas, valores negativos/não finitos e dados aleatórios. Valores fracionários arredondam para cima. A intensificação escolhida pelo jogador é inteira, entre zero e o teto. O painel mostra o total antes de usar e permite alterar a intensidade por ação/instância. Integrações podem passar `{intensificacoes: N}` no quinto argumento de `executarAcaoAtiva`, junto das opções de movimento.
+
+PE temporários são gastos primeiro. PE, PV, cargas e orçamento de ação são validados antes de qualquer pagamento e revalidados depois da seleção de destinos. Custos são pagos uma vez para a ação inteira, mesmo com vários alvos; erros e sucessos em TR não devolvem recursos. `dadosPorCarga` usa exatamente a quantidade consumida. Quantidade específica zero nunca significa consumir todas: é rejeitada.
+
+`mod_acerto` é um modificador numérico opcional da ação, somado pelo motor de ataque apenas naquela execução. Permite gastar uma carga por ataque para obter +2 no acerto sem deixar um bônus na ficha para ataques futuros.
+
+### Sustentação
+
+O modo `sustentada` mantém **condições aplicadas pela própria ação**. A ação inicial usa o campo `acao` e seus custos normais; cada início subsequente de turno cobra o PE de manutenção registrado na ativação. As condições ficam com duração indefinida até o encerramento. É obrigatório configurar ao menos um efeito de condição; ataque que erra, TR bem-sucedido ou imunidade não geram manutenção vazia.
+
+O jogador pode encerrar no painel, inclusive depois de remover o item do inventário. Sem PE para a próxima manutenção, o efeito termina sem cobrança parcial nem saldo negativo. Apenas os IDs das condições criadas por aquela ativação são removidos; outras fontes da mesma condição permanecem. Dano e movimento são instantâneos e não são repetidos na manutenção. Esse contrato não substitui os sistemas existentes de buffs sustentados e réplicas.
+
+Exemplos do bloco de custos:
+
+```json
+{ "pe_base": "2", "pe_por_intensificacao": "1", "max_intensificacoes": "4", "dano_por_intensificacao": "1d6" }
+{ "pe_base": "0", "custo_pv": "5" }
+{ "gastar_cargas": { "nome": "foco", "quantidade": "1" } }
+{ "tipo_acao": "sustentada", "pe_por_turno": "1" }
 ```

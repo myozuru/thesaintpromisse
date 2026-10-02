@@ -1,3 +1,4 @@
+import { planejarCustosAtivos, validarRecursosAtivos, patchCustosAtivos } from './custosAtivos';
 import { prepararMovimentosAtivos, aplicarMovimentoAtivo, type PlanoMovimentoAtivo, type OpcoesMovimentoAtivo } from './movimentosAtivos';
 import { avaliarCondicionaisAtivos } from './condicionaisAtivos';
 import { applyAdvantageToD20, consumeAdvantageFor, consumeFlatBonusFor } from './rollAdvantage';
@@ -12,7 +13,7 @@ import { resolverTipoDano, type MetadadosAtaqueDano } from './contextoDano';
  *  - teste: TR do alvo contra CD (falha = dano cheio + efeitos; sucesso =
  *    metade ou nada, sem efeitos), ataque contra Defesa (acerto = efeitos)
  *    ou nenhum;
- *  - consumo de TODO um contador (com mínimo) + dados extras por carga;
+ *  - custos flexíveis de PE/PV, intensificação e consumo parcial ou total de cargas;
  *  - margem de crítico reduzida por condição em fórmula;
  *  - efeitos secundários: puxar/empurrar (para ao lado do atacante) e condição.
  * Custos, ação e cargas são pagos ANTES da rolagem (gastos mesmo errando).
@@ -21,7 +22,6 @@ import type { Character } from '@/types';
 import type { AcaoAtivaConfig, EfeitoSecundarioAtivo, EntidadeOmni, TrNome } from './tipos';
 import { avaliarFormula } from './parser';
 import { lerCaminhoOmni, montarVariaveisDoPersonagem } from './resolvedor';
-import { calcularContador } from './contadores';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { useLogStore } from '@/stores/useLogStore';
@@ -116,27 +116,23 @@ function vars(u: Character, a?: Character) {
   return { ...montarVariaveisDoPersonagem(u, 'USUARIO'), ...(a ? montarVariaveisDoPersonagem(a, 'ALVO') : {}) };
 }
 
-export function custoPEDe(cfg: AcaoAtivaConfig, u: Character): number {
-  return Math.max(0, Math.round(avaliarFormula(cfg.custoPE || '0', vars(u)).valor));
+export function custoPEDe(cfg: AcaoAtivaConfig, u: Character, intensificacoes = 0): number {
+  const r = planejarCustosAtivos(cfg, u, intensificacoes);
+  return r.ok ? r.plano.pe : Math.max(0, Math.round(avaliarFormula(cfg.custo_recursos?.pe_base ?? cfg.custoPE ?? '0', vars(u)).valor));
 }
 
 // ─── Validação + execução ────────────────────────────────────────────
 
 export type ResultadoAtiva = { ok: false; reason: string } | { ok: true; dano: number; detalhe: string };
 
-export function podeUsarAtiva(u: Character, alvo: Character | undefined, cfg: AcaoAtivaConfig): { ok: true } | { ok: false; reason: string } {
+export function podeUsarAtiva(u: Character, alvo: Character | undefined, cfg: AcaoAtivaConfig, intensificacoes = 0): { ok: true } | { ok: false; reason: string } {
   if (!alvo) return { ok: false, reason: 'Escolha um alvo.' };
   if (!cfg.tipo_alvo && alvo.id === u.id) return { ok: false, reason: 'O alvo deve ser outra criatura.' };
   if (!aceitaAlvoAtivo(u, alvo, cfg)) return { ok: false, reason: 'O alvo não atende ao filtro.' };
-  if (cfg.acao === 'comum' && (u.actionsCurrent ?? 1) <= 0) return { ok: false, reason: 'Sem Ação Comum disponível.' };
-  if (cfg.acao === 'bonus' && (u.bonusActionsCurrent ?? 1) <= 0) return { ok: false, reason: 'Sem Ação Bônus disponível.' };
-  if (cfg.acao === 'reacao' && (u.reactionsCurrent ?? 1) <= 0) return { ok: false, reason: 'Sem Reação disponível.' };
-  const custo = custoPEDe(cfg, u);
-  if ((u.peCurrent ?? 0) + (u.tempPE ?? 0) < custo) return { ok: false, reason: `PE insuficiente (precisa de ${custo}).` };
-  if (cfg.consumirContador) {
-    const tem = u.omniCounters?.[cfg.consumirContador.nome.trim().toLowerCase()] ?? 0;
-    if (tem < Math.max(1, cfg.consumirContador.minimo)) return { ok: false, reason: `Precisa de ao menos ${Math.max(1, cfg.consumirContador.minimo)} carga(s) de ${cfg.consumirContador.nome} (tem ${tem}).` };
-  }
+  const custos = planejarCustosAtivos(cfg, u, intensificacoes);
+  if (!custos.ok) return custos;
+  const recursos = validarRecursosAtivos(u, custos.plano);
+  if (!recursos.ok) return recursos;
   if (cfg.alcanceM > 0 && cfg.tipo_alvo !== 'area' && cfg.tipo_alvo !== 'proprio') {
     const ms = useMapStore.getState();
     const a = findCharEntity(ms.entities as never, u.id), b = findCharEntity(ms.entities as never, alvo.id);
@@ -148,7 +144,7 @@ export function podeUsarAtiva(u: Character, alvo: Character | undefined, cfg: Ac
   return { ok: true };
 }
 
-function aplicarEfeitos(u: Character, alvo: Character, efeitos: EfeitoSecundarioAtivo[], fonte: string, planos: PlanoMovimentoAtivo[] = []): string[] {
+function aplicarEfeitos(u: Character, alvo: Character, efeitos: EfeitoSecundarioAtivo[], fonte: string, planos: PlanoMovimentoAtivo[] = [], sustentadas?: { charId: string; id: string }[]): string[] {
   const notas: string[] = [];
   const store = useCharacterStore.getState();
   for (const [indice, ef] of efeitos.entries()) {
@@ -157,10 +153,11 @@ function aplicarEfeitos(u: Character, alvo: Character, efeitos: EfeitoSecundario
       if (!def) continue;
       const ac: ActiveCondition = {
         id: crypto.randomUUID(), conditionId: def.id, name: def.name, icon: def.icon,
-        remainingTurns: -1, remainingRounds: ef.rodadas > 0 ? ef.rodadas : -1, sourceCharName: fonte,
+        remainingTurns: -1, remainingRounds: sustentadas ? -1 : ef.rodadas > 0 ? ef.rodadas : -1, sourceCharName: fonte,
       };
       store.addCondition(alvo.id, ac);
-      notas.push(`${def.icon} ${def.name}${ef.rodadas > 0 ? ` (${ef.rodadas} rod.)` : ''}`);
+      if (sustentadas && useCharacterStore.getState().characters.find(c => c.id === alvo.id)?.activeConditions.some(c => c.id === ac.id)) sustentadas.push({ charId: alvo.id, id: ac.id });
+      notas.push(`${def.icon} ${def.name}${sustentadas ? ' (sustentada)' : ef.rodadas > 0 ? ` (${ef.rodadas} rod.)` : ''}`);
     } else {
       const plano = planos.find(p => p.indice === indice);
       if (plano) notas.push(aplicarMovimentoAtivo(u.id, alvo.id, plano));
@@ -180,7 +177,7 @@ export async function executarAcaoAtiva(
   cfg: AcaoAtivaConfig,
   selecao: SelecaoAtiva,
   ent?: EntidadeOmni,
-  opcoes: OpcoesMovimentoAtivo = {},
+  opcoes: OpcoesMovimentoAtivo & { intensificacoes?: number } = {},
 ): Promise<ResultadoAtiva> {
   const escolhidos = await selecionarAlvosAtivos(usuarioId, cfg, selecao);
   if (!escolhidos.ok) return escolhidos;
@@ -190,7 +187,7 @@ export async function executarAcaoAtiva(
   if (!u) return { ok: false, reason: 'Personagem não encontrado.' };
   let alvos = escolhidos.ids.map(id => store.characters.find(c => c.id === id)!);
   for (const alvo of alvos) {
-    const chk = podeUsarAtiva(u, alvo, cfg);
+    const chk = podeUsarAtiva(u, alvo, cfg, opcoes.intensificacoes ?? 0);
     if (!chk.ok) return chk;
   }
   const arma = cfg.teste === 'ataque' ? armaDaAcao(u, ent) : undefined;
@@ -203,7 +200,7 @@ export async function executarAcaoAtiva(
   u = store.characters.find(c => c.id === usuarioId);
   if (!u) return { ok: false, reason: 'Personagem removido durante a seleção.' };
   alvos = escolhidos.ids.map(id => store.characters.find(c => c.id === id)!);
-  for (const alvo of alvos) { const chk = podeUsarAtiva(u, alvo, cfg); if (!chk.ok) return chk; }
+  for (const alvo of alvos) { const chk = podeUsarAtiva(u, alvo, cfg, opcoes.intensificacoes ?? 0); if (!chk.ok) return chk; }
 
   // Snapshot por alvo antes do consumo: cargas e PV são os da declaração.
   const condicionais = new Map(alvos.map(t => [t.id, {
@@ -212,21 +209,15 @@ export async function executarAcaoAtiva(
   }]));
 
   // ── Paga tudo antes de rolar ──
-  const custo = custoPEDe(cfg, u);
-  const fromTemp = Math.min(u.tempPE ?? 0, custo);
-  const patch: Partial<Character> = { tempPE: (u.tempPE ?? 0) - fromTemp, peCurrent: (u.peCurrent ?? 0) - (custo - fromTemp) };
-  if (cfg.acao === 'comum') patch.actionsCurrent = Math.max(0, (u.actionsCurrent ?? 1) - 1);
-  if (cfg.acao === 'bonus') patch.bonusActionsCurrent = Math.max(0, (u.bonusActionsCurrent ?? 1) - 1);
-  if (cfg.acao === 'reacao') patch.reactionsCurrent = Math.max(0, (u.reactionsCurrent ?? 1) - 1);
-  let cargas = 0;
-  if (cfg.consumirContador) {
-    const r = calcularContador(u.omniCounters ?? {}, cfg.consumirContador.nome, 'CONSUMIR_CONTADOR', { valor: 0 });
-    cargas = r.consumido;
-    patch.omniCounters = r.counters;
-  }
-  store.updateCharacter(u.id, patch);
+  const custos = planejarCustosAtivos(cfg, u, opcoes.intensificacoes ?? 0);
+  if (!custos.ok) return custos;
+  const p = custos.plano;
+  const cargas = p.cargas;
+  store.updateCharacter(u.id, patchCustosAtivos(u, p));
   const fonte = ent?.nome ?? cfg.nome;
-  const pago = `${custo} PE${cargas ? ` + ${cargas} carga(s) de ${cfg.consumirContador!.nome}` : ''}`;
+  const pago = `${p.pe} PE${p.pv ? ` + ${p.pv} PV` : ''}${cargas ? ` + ${cargas} carga(s) de ${p.contador}` : ''}${p.intensificacoes ? ` · intensificação ${p.intensificacoes}` : ''}`;
+  const sustentadas = p.pePorTurno > 0 ? [] as { charId: string; id: string }[] : undefined;
+  const extraIntensificacao = planejarDano(undefined, cfg.custo_recursos?.dano_por_intensificacao, p.intensificacoes, false);
 
   let danoTotal = 0;
   const detalhes: string[] = [];
@@ -257,7 +248,7 @@ export async function executarAcaoAtiva(
       const def = computeTotalDefense(t, {}, arma!.range === 'melee' ? 'melee' : 'ranged');
       const ctx = buildAttackContext({
         attacker: u, weapon: arma!, targetDefense: def,
-        situation: { critBonusExtra: critExtra || undefined, advantageExtra: mods.vantagemAcerto, critMultiplierExtra: mods.multiplicador },
+        situation: { hitBonusExtra: cfg.mod_acerto, critBonusExtra: critExtra || undefined, advantageExtra: mods.vantagemAcerto, critMultiplierExtra: mods.multiplicador },
         trainedRanges: [
           ...(u.meleeTrained ? (['melee'] as const) : []),
           ...(u.rangedTrained ? (['ranged', 'thrown'] as const) : []),
@@ -278,7 +269,7 @@ export async function executarAcaoAtiva(
     }
 
     // ── Dano ──
-    const plano = planejarDano([cfg.dano, ...mods.danos].filter(Boolean).join('+'), cfg.dadosPorCarga, cargas, critico, 2 + mods.multiplicador);
+    const plano = planejarDano([cfg.dano, ...mods.danos, ...extraIntensificacao.grupos.map(g => `${g.count}d${g.sides}`), extraIntensificacao.fixo ? String(extraIntensificacao.fixo) : ''].filter(Boolean).join('+'), cfg.dadosPorCarga, cargas, critico, 2 + mods.multiplicador);
     let bruto = armaDano + plano.fixo;
     let dadosTxt = '';
     if (plano.grupos.length) {
@@ -293,7 +284,7 @@ export async function executarAcaoAtiva(
         isMelee: metadadosAtaque ? metadadosAtaque.kind === 'melee' : undefined,
       });
     }
-    const notas = aplicaEfeitos ? aplicarEfeitos(u, t, cfg.efeitos ?? [], fonte, movimentos.planos.get(t.id)) : [];
+    const notas = aplicaEfeitos ? aplicarEfeitos(u, t, cfg.efeitos ?? [], fonte, movimentos.planos.get(t.id), sustentadas) : [];
     const partes = [
       cabecalho,
       mods.ativos.length ? `${mods.ativos.length} bloco(s) condicional(is) ativo(s)` : '',
@@ -304,6 +295,10 @@ export async function executarAcaoAtiva(
     log(msg);
     danoTotal += dano;
     detalhes.push(msg);
+  }
+  if (sustentadas?.length) {
+    const atual = useCharacterStore.getState().characters.find(c => c.id === usuarioId);
+    if (atual) useCharacterStore.getState().updateCharacter(usuarioId, { omniSustentacoes: [...(atual.omniSustentacoes ?? []), { id: crypto.randomUUID(), nome: cfg.nome, pePorTurno: p.pePorTurno, condicoes: sustentadas }] });
   }
   return { ok: true, dano: danoTotal, detalhe: detalhes.join("\n") };
 }

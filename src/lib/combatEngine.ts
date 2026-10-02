@@ -61,6 +61,7 @@ export interface AttackSituation {
   critBonusExtra?: number;
   /** Modificadores genéricos locais; não concedem flags persistentes. */
   advantageExtra?: boolean;
+  hitBonusExtra?: number;
   critMultiplierExtra?: number;
   /** Alvo está com `aura_embacada` ativa → atacante tem desvantagem (cancela vantagem). */
   targetHasAuraEmbacada?: boolean;
@@ -370,6 +371,7 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
   if (omniAdv.net === 'disadvantage') ctxBonus.disadvantage = true;
   for (const n of omniAdv.notes) ctxBonus.notes.push(`Omni: ${n}`);
   // Bônus fixos de rolagem (Comando Motivador, etc.) somam no acerto.
+  if (ctx.situation.hitBonusExtra) ctxBonus.hit += ctx.situation.hitBonusExtra;
   const flatAtk = consumeFlatBonusFor(ctx.attacker.id, { kind: 'attack', subtype: attackSubtype, weaponGroup: w.group, weaponName: w.name });
   if (flatAtk.bonus) { ctxBonus.hit = (ctxBonus.hit ?? 0) + flatAtk.bonus; for (const n of flatAtk.notes) ctxBonus.notes.push(n); }
 

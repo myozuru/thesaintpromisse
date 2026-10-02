@@ -484,6 +484,7 @@ export const useCombatStore = create<CombatStore>()(
             }
             inicioTurnoPostura(firstEntry.charId);
             import('@/lib/replicas').then(({ inicioTurnoReplicas }) => inicioTurnoReplicas(firstEntry.charId));
+            import('@/lib/omni/custosAtivos').then(({ inicioTurnoSustentacoesAtivas }) => inicioTurnoSustentacoesAtivas(firstEntry.charId));
             // Preparo Imediato: a ação preparada expira no começo do próprio turno.
             import('@/lib/preparoImediato').then(({ expirarPreparoNoTurno }) => expirarPreparoNoTurno(firstEntry.charId));
 
@@ -559,6 +560,7 @@ export const useCombatStore = create<CombatStore>()(
           useCharacterStore.getState().applyTurnStartSpecHooks(nextEntry.charId);
           inicioTurnoPostura(nextEntry.charId);
           import('@/lib/replicas').then(({ inicioTurnoReplicas }) => inicioTurnoReplicas(nextEntry.charId));
+          import('@/lib/omni/custosAtivos').then(({ inicioTurnoSustentacoesAtivas }) => inicioTurnoSustentacoesAtivas(nextEntry.charId));
           // Preparo Imediato: a ação preparada expira no começo do próprio turno.
           import('@/lib/preparoImediato').then(({ expirarPreparoNoTurno }) => expirarPreparoNoTurno(nextEntry.charId));
 
