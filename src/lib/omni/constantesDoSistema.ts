@@ -614,11 +614,15 @@ const TR_OMNI: ChaveOmniOpcao[] = ORDEM_TR.map((k) => {
 // ─── Novas categorias (Recursos & Pools, Combate Avançado, Estado, Cena) ──
 const POOLS_OMNI: ChaveOmniOpcao[] = [
   { id: 'vida_temp',       label: 'Vida Temporária',       hint: 'Pontos de vida temporários (consumidos antes da vida).' },
-  { id: 'vida_temp_max',   label: 'Vida Temporária (máx)', hint: 'Limite de vida temporária.' },
+  { id: 'vida_temp_max',   label: 'Vida Temporária (máx)', hint: 'Máximo de PVTs configurado na ficha, sem bônus de equipamento/passivas.' },
+  { id: 'vida_temp_pct',   label: 'Vida Temporária (%)', hint: 'PVTs atuais em relação ao máximo configurado; 0 quando o máximo é zero.' },
+  { id: 'vida_total',      label: 'Vida + PVTs', hint: 'Soma da vida atual com os pontos de vida temporários atuais.' },
   { id: 'vida_pct',        label: 'Vida (%)',              hint: 'Porcentagem da vida atual em relação ao máximo.' },
   { id: 'energia_pct',     label: 'Energia (%)',           hint: 'Porcentagem da energia atual em relação ao máximo.' },
   { id: 'pe_pct',          label: 'PE (%)',                hint: 'Alias de energia_pct.' },
   { id: 'pe_temp',         label: 'PE Temporário',         hint: 'Energia temporária (consumida antes do PE normal).' },
+  { id: 'pe_faltante',     label: 'PE Faltante', hint: 'Quanto falta para alcançar o PE máximo configurado, mínimo 0.' },
+  { id: 'pe_faltante_pct', label: 'PE Faltante (%)', hint: 'Percentual que falta para o PE máximo configurado; 0 quando o máximo é zero.' },
   { id: 'sorte',           label: 'Sorte (atual)',         hint: 'Usos atuais de Sorte.' },
   { id: 'sorte_atual',     label: 'Sorte (atual)',         hint: 'Alias de sorte.' },
   { id: 'sorte_max',       label: 'Sorte (máx)',           hint: 'Usos máximos de Sorte por dia.' },
@@ -627,7 +631,9 @@ const POOLS_OMNI: ChaveOmniOpcao[] = [
   { id: 'dado_vida_max',   label: 'Dado de Vida (máx)',    hint: 'Total de dados de vida = nível.' },
   { id: 'reserva_pe',      label: 'Reserva de PE',         hint: 'Energia armazenada por Economia de Energia.' },
   { id: 'reserva_pe_atual',label: 'Reserva de PE (atual)', hint: 'Alias de reserva_pe.' },
-  { id: 'reserva_pe_max',  label: 'Reserva de PE (máx)',   hint: 'Limite da reserva de PE.' },
+  { id: 'reserva_pe_max',  label: 'Reserva de PE (máx — legado)', hint: 'Key legada: retorna 0 (teto não definido). A reserva é gerada por descanso, sem limite fixo armazenado.' },
+  { id: 'reserva_pe_disponivel', label: 'Tem Reserva de PE', hint: '1 se há PE armazenado na reserva; 0 se vazia.' },
+  { id: 'reserva_pe_recuperavel', label: 'PE Recuperável da Reserva', hint: 'Quanto da reserva cabe no estoque atual até o PE máximo configurado.' },
 ];
 
 const SOBREVIVENCIA_OMNI: ChaveOmniOpcao[] = [

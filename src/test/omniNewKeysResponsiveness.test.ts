@@ -67,7 +67,7 @@ const rich: Character = {
   id: 'hero-rich',
   name: 'Rich',
   level: 5, trainingBonus: 3,
-  hpCurrent: 5, hpMax: 40, tempHp: 3,        // ~12% (bloodied + critico)
+  hpCurrent: 5, hpMax: 40, escCurrent: 3, escMax: 6, // ~12% (bloodied + critico)
   peCurrent: 1, peMax: 10, tempPE: 2,        // ≤25%
   ca: 16, movement: 9,
   category: 'INIMIGO',                       // flip eh_player/eh_npc/eh_inimigo
