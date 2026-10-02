@@ -308,6 +308,7 @@ export const ACOES_EFEITO = {
   INCREMENTAR_CONTADOR:    { ui: 'Incrementar Contador',         math: 'addCounter' },
   ZERAR_CONTADOR:          { ui: 'Zerar Contador',               math: 'resetCounter' },
   DEFINIR_CONTADOR:        { ui: 'Definir Contador',             math: 'setCounter' },
+  CONSUMIR_CONTADOR:       { ui: 'Consumir Contador (valor ou tudo) → @CENA.consumido', math: 'consumeCounter' },
   // ── Custo de recurso com piso mínimo ─────────────────────────────────
   REDUZIR_CUSTO:           { ui: 'Reduzir Custo de Recurso',     math: 'reduceCost' },
   LIMPAR_REDUTOR_CUSTO:    { ui: 'Limpar Redutor de Custo',      math: 'clearCostReduction' },
