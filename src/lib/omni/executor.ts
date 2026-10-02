@@ -1,3 +1,5 @@
+import { capturarCadeiaOmni } from './cadeiaEventos';
+import { resolverTipoDano } from './contextoDano';
 /**
  * Omni-Engine Runtime Executor (Fatia 3 — Pilar 1+2+4 ao vivo).
  *
@@ -5,7 +7,7 @@
  * AcaoLogica produzindo mutações reais no useCharacterStore + log.
  *
  * Sem side-effects fora de:
- *   - useCharacterStore.updateCharacter (DANO/CURAR/SOMAR/DEFINIR/CONSUMIR_RECURSO)
+ *   - useCharacterStore.applyDamage (DANO) e updateCharacter (demais mutações)
  *   - useLogStore.addLog
  *   - useOmniRuntimeStore (para condições aplicadas como efeitos efêmeros)
  *
@@ -214,15 +216,8 @@ function executarAcao(a: AcaoLogica, ctx: ContextoRuntime, log: (m: string) => v
   switch (a.acao) {
     case 'DANO': {
       if (alvoChar) {
-        // 🛡️ Bloqueio Total absorve dano em vida_atual.
-        if ((alvoChar.omniFlags?.bloqueio_total ?? 0) >= 1 && Math.abs(valor) > 0) {
-          const flags = { ...(alvoChar.omniFlags ?? {}), bloqueio_total: 0 };
-          useCharacterStore.getState().updateCharacter(alvoChar.id, { omniFlags: flags });
-          log(`${nomeOrigem}: 🛡️ ${nomeAlvo} absorveu o dano com Bloqueio Total`);
-          break;
-        }
-        aplicarPatchNumerico(alvoChar.id, 'status.vida.atual', -Math.abs(valor), 'somar');
-        log(`${nomeOrigem}: ${nomeAlvo} sofreu ${Math.abs(valor)} de dano`);
+        useCharacterStore.getState().applyDamage(alvoChar.id, Math.abs(valor), resolverTipoDano(a.tipoDano), { source: 'omni', attackerId: ctx.usuario?.id });
+        log(`${nomeOrigem}: ${nomeAlvo} recebeu um golpe de ${Math.abs(valor)} de dano`);
       }
       break;
     }
@@ -525,8 +520,10 @@ function executarAcao(a: AcaoLogica, ctx: ContextoRuntime, log: (m: string) => v
         log(`${nomeOrigem}: ${nomeAlvo}.contador.${key} = ${counters[key]}`);
       }
       // Dispara gatilho de atualização de contador no próprio personagem.
+      const cadeia = capturarCadeiaOmni();
       import('./eventBus').then(({ emitirEvento }) => {
         emitirEvento('aoAtualizarContador', {
+          cadeia,
           usuarioId: alvoChar.id,
           cena: { contador_valor: counters[key] ?? 0, contador_anterior: atual },
           origemNome: `Contador: ${key}`,

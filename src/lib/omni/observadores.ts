@@ -1,3 +1,4 @@
+import { capturarCadeiaOmni, type CadeiaOmni } from './cadeiaEventos';
 /**
  * Gatilhos de observação espacial do OMNI.
  *
@@ -39,6 +40,7 @@ export function eventoObservado(
 }
 
 export interface OpcoesObservar {
+  cadeia?: CadeiaOmni;
   /** A criatura envolvida (ferido / atacante / caído). */
   sujeitoId: string;
   /** A outra parte (atacante do ferido, alvo do atacante). */
@@ -49,6 +51,7 @@ export interface OpcoesObservar {
 }
 
 export async function emitirObservadores(tipo: TipoObservado, op: OpcoesObservar): Promise<number> {
+  const cadeia = op.cadeia ?? capturarCadeiaOmni();
   const [{ useCharacterStore }, { useMapStore }, { distanceBetweenChars }, { emitirEvento }] = await Promise.all([
     import('@/stores/useCharacterStore'),
     import('@/stores/useMapStore'),
@@ -81,6 +84,7 @@ export async function emitirObservadores(tipo: TipoObservado, op: OpcoesObservar
       outro_eh_voce: outro && outro.id === obs.id ? 1 : 0,
     };
     total += emitirEvento(eventoObservado(tipo, obs, sujeito), {
+      cadeia,
       usuarioId: obs.id,
       alvoId: sujeito.id,
       cena,

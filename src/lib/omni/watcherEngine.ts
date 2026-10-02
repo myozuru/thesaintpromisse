@@ -1,3 +1,4 @@
+import { capturarCadeiaOmni, executarNaCadeiaOmni } from './cadeiaEventos';
 /**
  * 🔭 Watcher Engine — State Listener para gatilhos dinâmicos.
  *
@@ -188,6 +189,7 @@ function processarPersonagem(c: Character) {
         immunityGrant: eff.immunityGrant,
         sourceName: fresco.nome,
         damageType: eff.damageType,
+        attackerId: c.id,
       });
       consumiuUso = true;
       useLogStore.getState().addLog(
@@ -231,10 +233,15 @@ export function iniciarWatcherEngine() {
   useCharacterStore.subscribe(() => {
     if (pendente) return;
     pendente = true;
+    const cadeia = capturarCadeiaOmni();
     setTimeout(() => {
       pendente = false;
       try {
-        for (const c of useCharacterStore.getState().characters) processarPersonagem(c);
+        const processar = () => {
+          for (const c of useCharacterStore.getState().characters) processarPersonagem(c);
+        };
+        if (cadeia) executarNaCadeiaOmni(cadeia, processar);
+        else processar();
       } catch (err) {
         console.warn('[watcherEngine] erro no loop:', err);
       }

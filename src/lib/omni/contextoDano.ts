@@ -1,4 +1,5 @@
 import { DAMAGE_TYPE_LABELS, type DamageType } from '@/types';
+import type { CadeiaOmni } from './cadeiaEventos';
 
 /** Metadados fornecidos pelo produtor do golpe; ausência significa desconhecido. */
 export interface MetadadosAtaqueDano {
@@ -36,6 +37,8 @@ export function resolverTipoDano(valor?: string): DamageType | undefined {
 }
 
 export interface OpcoesDano {
+  /** Contexto interno de encadeamento; não faz parte das keys numéricas. */
+  cadeia?: CadeiaOmni;
   ignoresRD?: boolean;
   ignoresResistance?: boolean;
   attackerId?: string;

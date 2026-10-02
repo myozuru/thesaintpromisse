@@ -1,3 +1,4 @@
+import { reservarPassoOmni, executarNaCadeiaOmni, capturarCadeiaOmni } from '@/lib/omni/cadeiaEventos';
 import { montarMetadadosDano, resolverTipoDano, type OpcoesDano } from '@/lib/omni/contextoDano';
 import { useMapStore } from '@/stores/useMapStore';
 import { distanceBetweenChars } from '@/lib/weaponRange';
@@ -2100,6 +2101,10 @@ export const useCharacterStore = create<CharacterStore>()(
       })),
       // applyLevelDown removido: progressão de nível é irreversível para evitar farm de bônus.
       applyDamage: (id, rawDamage, damageType, opts) => {
+        const cadeia = reservarPassoOmni(opts?.cadeia);
+        if (!cadeia) return;
+        opts = { ...opts, cadeia };
+        return executarNaCadeiaOmni(cadeia, () => {
         damageType = resolverTipoDano(damageType);
         const totalDamage = Math.max(0, rawDamage);
         let rdApplied = 0;
@@ -2456,6 +2461,7 @@ export const useCharacterStore = create<CharacterStore>()(
         });
         import('@/lib/omni/eventBus').then(({ emitirEvento }) => {
           emitirEvento('aoSofrerDano', {
+            cadeia,
             usuarioId: id,
             alvoId: opts?.attackerId,
             cena: { dano: rawDamage },
@@ -2468,6 +2474,7 @@ export const useCharacterStore = create<CharacterStore>()(
           });
           if (opts?.attackerId) {
             emitirEvento('aoCausarDano', {
+              cadeia,
               usuarioId: opts.attackerId,
               alvoId: id,
               cena: { dano: rawDamage },
@@ -2479,9 +2486,9 @@ export const useCharacterStore = create<CharacterStore>()(
           // Observação espacial: todas as outras fichas "veem" o dano.
           if (rawDamage > 0) {
             void import('@/lib/omni/observadores').then(async (m) => {
-              await m.emitirObservadores('sofrerDano', { sujeitoId: id, outroId: opts?.attackerId, dano: rawDamage, contextoDano });
+              await m.emitirObservadores('sofrerDano', { sujeitoId: id, outroId: opts?.attackerId, dano: rawDamage, contextoDano, cadeia });
               if (opts?.attackerId) {
-                await m.emitirObservadores('causarDano', { sujeitoId: opts.attackerId, outroId: id, dano: rawDamage, contextoDano });
+                await m.emitirObservadores('causarDano', { sujeitoId: opts.attackerId, outroId: id, dano: rawDamage, contextoDano, cadeia });
               }
             }).catch(() => {});
           }
@@ -2533,6 +2540,7 @@ export const useCharacterStore = create<CharacterStore>()(
               }
               // 1) Emite aoMorrer COM o estado de grapple ainda íntegro.
               emitirEvento('aoMorrer', {
+                cadeia,
                 usuarioId: id,
                 alvoId: opts?.attackerId,
                 cena: { dano: rawDamage },
@@ -2541,7 +2549,7 @@ export const useCharacterStore = create<CharacterStore>()(
                 incluirPassivas: true,
               });
               void import('@/lib/omni/observadores')
-                .then((m) => m.emitirObservadores('morrer', { sujeitoId: id, outroId: opts?.attackerId, dano: rawDamage, contextoDano }))
+                .then((m) => m.emitirObservadores('morrer', { sujeitoId: id, outroId: opts?.attackerId, dano: rawDamage, contextoDano, cadeia }))
                 .catch(() => {});
               // 2) Só DEPOIS libera todos os agarres bilateralmente.
               get().releaseAllGrapplesOf(id);
@@ -2566,7 +2574,7 @@ export const useCharacterStore = create<CharacterStore>()(
           const attackerId = opts.attackerId;
           const ret = calcSangueToxicoReturn(beforeChar);
           setTimeout(() => {
-            get().applyDamage(attackerId, ret, 'DPS', { ignoresRD: false, tags: ['__sangue_toxico_return'] });
+            get().applyDamage(attackerId, ret, 'DPS', { ignoresRD: false, tags: ['__sangue_toxico_return'], cadeia });
           }, 0);
         }
 
@@ -2590,8 +2598,10 @@ export const useCharacterStore = create<CharacterStore>()(
             });
           }, 0);
         }
+        });
       },
       applyHealing: (id, amount, source = 'other') => {
+        const cadeia = capturarCadeiaOmni();
         let healedAmount = 0;
         set((state) => ({
           characters: state.characters.map((c) => {
@@ -2616,6 +2626,7 @@ export const useCharacterStore = create<CharacterStore>()(
         if (healedAmount > 0) {
           import('@/lib/omni/eventBus').then(({ emitirEvento }) => {
             emitirEvento('aoReceberCura', {
+              cadeia,
               usuarioId: id,
               cena: { cura: healedAmount },
               origemNome: 'Cura Recebida',
@@ -4192,6 +4203,7 @@ export const useCharacterStore = create<CharacterStore>()(
         })),
       })),
       addCondition: (charId, condition) => {
+        const cadeia = capturarCadeiaOmni();
         const target = get().characters.find((c) => c.id === charId);
         // Talento "Atenção Infalível" / outros: bloqueia condições listadas em immunities.
         if (target) {
@@ -4218,6 +4230,7 @@ export const useCharacterStore = create<CharacterStore>()(
         // ─── Omni-Engine: gatilho de condição recebida ─────────────────────
         import('@/lib/omni/eventBus').then(({ emitirEvento }) => {
           emitirEvento('aoReceberCondicao', {
+            cadeia,
             usuarioId: charId,
             cena: {},
             origemNome: `Condição: ${condition.name}`,

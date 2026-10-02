@@ -103,6 +103,7 @@ export function executarCombatEffect(
     immunityGrant: eff.immunityGrant,
     sourceName: ctx.sourceName,
     damageType: eff.damageType,
+    attackerId: ctx.usuarioId,
   });
   return { aplicado: r.aplicado, absorvidoPorBloqueio: r.absorvidoPorBloqueio };
 }

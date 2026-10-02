@@ -237,6 +237,7 @@ export function dispararGatilhoEfeitosItens(
         immunityGrant: eff.immunityGrant,
         sourceName: fresco.nome,
         damageType: eff.damageType,
+        attackerId: usuario.id,
         contador: {
           teto: eff.counterCap ? avaliarFormula(eff.counterCap, variaveis, undefined, { item: itemBag }).valor : undefined,
           porFonte: eff.counterPerSource,

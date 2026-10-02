@@ -663,6 +663,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
           immunityGrant: eff.immunityGrant,
           sourceName: nome,
           damageType: eff.damageType,
+          attackerId: c.id,
         });
         if (r?.absorvidoPorBloqueio) absorvidoPorBloqueio = true;
       }

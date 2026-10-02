@@ -9,6 +9,7 @@
  *
  * Não há listeners externos: a varredura é determinística sobre os stores.
  */
+import { reservarPassoOmni, executarNaCadeiaOmni, type CadeiaOmni } from './cadeiaEventos';
 import type { GatilhoId } from './constantesDoSistema';
 import type { EntidadeOmni } from './tipos';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
@@ -18,6 +19,8 @@ import { executarGatilho, type ContextoRuntime } from './executor';
 import { dispararGatilhoEfeitosItens } from './triggerEfeitos';
 
 export interface EmitirOpts {
+  /** Contexto interno da cadeia que originou este evento. */
+  cadeia?: CadeiaOmni;
   usuarioId?: string;
   alvoId?: string;
   cena?: Record<string, number>;
@@ -41,6 +44,12 @@ function pegarChar(id?: string) {
 }
 
 export function emitirEvento(evento: GatilhoId, opts: EmitirOpts = {}): number {
+  const cadeia = reservarPassoOmni(opts.cadeia);
+  if (!cadeia) return 0;
+  return executarNaCadeiaOmni(cadeia, () => emitirEventoNaCadeia(evento, opts));
+}
+
+function emitirEventoNaCadeia(evento: GatilhoId, opts: EmitirOpts): number {
   const usuario = pegarChar(opts.usuarioId);
   const alvo = pegarChar(opts.alvoId);
   const ctx: ContextoRuntime = {

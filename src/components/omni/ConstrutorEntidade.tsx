@@ -1,3 +1,5 @@
+import { DAMAGE_TYPES as TIPOS_DANO_MOTOR, DAMAGE_TYPE_LABELS } from '@/types';
+import { resolverTipoDano } from '@/lib/omni/contextoDano';
 /**
  * Modal No-Code para criar/editar uma EntidadeOmni.
  * Abas: Geral | Efeitos | Custos | Gatilhos.
@@ -734,6 +736,17 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                                   ))}
                                 </SelectContent>
                               </Select>
+                              {a.acao === 'DANO' && (
+                                <label className="flex items-center gap-1.5 text-xs">
+                                  Tipo de dano
+                                  <select className="h-8 rounded-md border border-input bg-background px-2" value={resolverTipoDano(a.tipoDano) ?? a.tipoDano ?? ''}
+                                    onChange={(e) => atualizarBloco(g.id, { ...b, acoes: b.acoes.map((x) => x.id === a.id ? { ...x, tipoDano: e.target.value || undefined } : x) })}>
+                                    <option value="">Sem tipo específico</option>
+                                    {TIPOS_DANO_MOTOR.map((tipo) => <option key={tipo} value={tipo}>{DAMAGE_TYPE_LABELS[tipo]}</option>)}
+                                    {a.tipoDano && !resolverTipoDano(a.tipoDano) && <option value={a.tipoDano}>{a.tipoDano} (sem equivalência)</option>}
+                                  </select>
+                                </label>
+                              )}
                               {(a.acao === 'APLICAR_CONDICAO' || a.acao === 'REMOVER_CONDICAO') ? (
                                 <Select value={a.condicao ?? DICIONARIO_CONDICOES[0]} onValueChange={(v) => atualizarBloco(g.id, {
                                   ...b, acoes: b.acoes.map((x) => x.id === a.id ? { ...x, condicao: v as typeof a.condicao } : x),

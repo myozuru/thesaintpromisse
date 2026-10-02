@@ -45,6 +45,8 @@ export interface AcaoLogica {
   acao: AcaoEfeitoId;
   alvoAplicacao: AlvoRefId;
   caminhoAlvo?: string; // para SOMAR/DEFINIR: caminho a alterar
+  /** DANO: tipo próprio do novo golpe; ausente mantém dano sem tipo. */
+  tipoDano?: string;
   valor?: ValorDinamico;
   condicao?: CondicaoId; // para APLICAR/REMOVER_CONDICAO
   /**

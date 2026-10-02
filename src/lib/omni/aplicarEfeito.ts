@@ -49,6 +49,8 @@ export function aplicarEfeitoNoPersonagem(
     sourceName?: string;
     /** Tipo declarado pelo efeito; não herda o tipo do golpe que o disparou. */
     damageType?: string;
+    /** Dono do efeito que produziu este dano, inclusive autoaplicações. */
+    attackerId?: string;
     /** Contadores: teto já avaliado, escopo e ficha de origem. */
     contador?: { teto?: number; porFonte?: boolean; fonteId?: string };
   },
@@ -174,7 +176,7 @@ export function aplicarEfeitoNoPersonagem(
         store.updateCharacter(charId, { omniFlags: flags });
         return { aplicado: 0, absorvidoPorBloqueio: true };
       }
-      store.applyDamage(charId, dano, resolverTipoDano(extras?.damageType), { source: 'omni' });
+      store.applyDamage(charId, dano, resolverTipoDano(extras?.damageType), { source: 'omni', attackerId: extras?.attackerId });
       return { aplicado: dano };
     }
     if (tipo === 'ADICIONAR') {

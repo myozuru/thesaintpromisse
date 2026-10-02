@@ -137,8 +137,9 @@ de ataque a partir do TR do alvo.
 
 Ações ativas informam `source: omni` e preservam resultado/tipo da arma
 quando usam teste de ataque. A ponte numérica `aplicarEfeitoNoPersonagem`
-informa a categoria Omni, mas continua sem inventar atacante ou tipo
-quando a chamada não os fornece.
+informa a categoria Omni e recebe o portador como atacante nos caminhos
+de itens, watchers, gatilhos e subefeitos. Chamadas antigas que não
+fornecem atacante continuam sem inventar uma ficha de origem.
 
 Exemplo: `@causar_dano -> se @DANO.fonte == 2 entao somar @DANO.valor_final em contador_dano_magico`.
 Para identificar fogo, compare `@DANO.tipo == 7`.
@@ -154,7 +155,26 @@ por um efeito numérico usa seu próprio `damageType`, inclusive nos
 subefeitos, para resistências, imunidades e o contexto do novo dano; não
 herda o tipo do golpe recebido nem do efeito-pai.
 
-Ainda pendentes: passar atacante pelos efeitos Omni encadeados, integrar
-os blocos lógicos de dano ao motor e validar a segurança de ciclos de
-eventos. Esta etapa não altera o caminho de HP direto do executor lógico
-nem afirma cobertura de todos os produtores de dano.
+O novo golpe pertence ao usuário que executou o efeito, inclusive em
+autoaplicações. Em uma retaliação, a origem é o defensor que retaliou;
+não é o atacante do golpe recebido. Tipo, fonte e flags do evento
+recebido não são copiados para o novo golpe.
+
+A ação lógica `DANO` agora passa por `applyDamage`: usa RD geral e por
+tipo, imunidades, vulnerabilidades, PVTs, bloqueios, reações e eventos.
+O campo opcional `AcaoLogica.tipoDano`, disponível no construtor visual,
+declara o tipo do novo golpe. Ausente ou sem equivalência, mantém dano
+sem tipo específico. A origem é `ctx.usuario` e a fonte é Omni.
+
+As cadeias de dano/eventos carregam um contexto interno pelos imports,
+timers de watchers, observadores, contadores e prompts de dano pendente.
+Esse contexto não é uma key de fórmula. Cada dano ou evento reserva um
+passo; a cadeia admite no máximo 16 níveis e compartilha um orçamento
+de 256 passos entre suas ramificações. Ao exceder um limite, o próximo
+passo é interrompido e o console registra um aviso uma vez por cadeia.
+Os efeitos já aplicados permanecem; uma nova ação independente recebe
+seu próprio orçamento. O limite de macros do executor permanece em 8.
+
+Resta a auditoria final de cobertura e compatibilidade das keys. A
+proteção descrita cobre esses caminhos do Omni e não afirma que todos
+os produtores de eventos do jogo já propagam o contexto interno.
