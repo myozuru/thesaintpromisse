@@ -1,3 +1,4 @@
+import type { MetadadosAtaqueDano } from '@/lib/omni/contextoDano';
 /**
  * AttackPanel — UI de combate ancorada no `combatEngine`.
  *
@@ -280,6 +281,8 @@ export function AttackPanel({ character: cProp }: Props) {
 
   // ─── Situação ──────────────────────────────────────────────────────────────
   const [twoHanded, setTwoHanded] = useState<boolean>(false);
+  const [ataqueOportunidade, setAtaqueOportunidade] = useState(false);
+  const metadadosAtaqueRef = useRef<MetadadosAtaqueDano>({});
   // Desprevenido/caído são lidos exclusivamente das condições ativas na ficha do alvo.
   // Não há mais override manual: se for preciso aplicar o efeito, registre a condição no alvo.
   const targetUnaware = autoUnaware || escondidoDe(c, target?.id);
@@ -620,6 +623,13 @@ export function AttackPanel({ character: cProp }: Props) {
         ...(c.rangedTrained ? (['ranged', 'thrown'] as const) : []),
       ],
     });
+    if (!isReroll) {
+      metadadosAtaqueRef.current = {
+        isSneak: escondidoDe(c, target?.id),
+        isOpportunity: ataqueOportunidade,
+      };
+      setAtaqueOportunidade(false);
+    }
     let result: AttackResult;
     try {
       result = await rollAttack(ctx);
@@ -650,6 +660,9 @@ export function AttackPanel({ character: cProp }: Props) {
         notes: [...result.notes, `🎯 Auto-acerto crítico: alvo ${auto.reason}`],
       };
     }
+    metadadosAtaqueRef.current = {
+      ...metadadosAtaqueRef.current, critical: result.critical, criticalFail: result.criticalFail,
+    };
     // Memória de turno: contabiliza apenas no PRIMEIRO disparo (reroll não conta como novo ataque).
     if (!isReroll) {
       recordAttackResult(c.id, result.hit);
@@ -699,6 +712,7 @@ export function AttackPanel({ character: cProp }: Props) {
           if (r2.hit && r2.damageTotal > 0) {
             applyDamage(alvo2.id, r2.damageTotal, (r2.damageType ?? undefined) as never, {
               attackerId: c.id, isMelee: mainWeapon.range === 'melee', rdIgnore: rdIgnoradaAtaque(!!g.sel.penetrante),
+              attack: { critical: r2.critical, criticalFail: r2.criticalFail, isSneak: false, isOpportunity: false },
             });
           }
           if (r2.hit && r2.critical) checarRenovacaoCritico(true, alvo2.name);
@@ -902,6 +916,7 @@ export function AttackPanel({ character: cProp }: Props) {
     if (target && result.damageTotal > 0) {
       applyDamage(target.id, result.damageTotal, (result.damageType ?? undefined) as never, {
         attackerId: c.id, isMelee: mainWeapon.range === 'melee', rdIgnore: rdIgn,
+        attack: { ...metadadosAtaqueRef.current, critical: result.critical, criticalFail: result.criticalFail },
       });
     }
     if (g?.sel.impactante && g.target) void empurrarImpactante(g.target, result.damageTotal);
@@ -914,6 +929,7 @@ export function AttackPanel({ character: cProp }: Props) {
     const kind: AttackKind = arma.range === 'melee' ? 'melee' : 'ranged';
     const def = computeTotalDefense(alvo, { items, omniInventory: omniInventoryList, omniEntidadesMap, omniRuntimeEffects: omniRuntimeEffectsList }, kind);
     const ids = new Set((alvo.activeConditions ?? []).map((x) => (x as { conditionId?: string }).conditionId));
+    const furtivo = escondidoDe(eu, alvo.id);
     const unaware = ids.has('desprevenido') || ids.has('agarrado') || ids.has('atordoado') || escondidoDe(eu, alvo.id);
     const ctx = buildAttackContext({
       attacker: eu, weapon: arma, targetDefense: def,
@@ -935,6 +951,7 @@ export function AttackPanel({ character: cProp }: Props) {
     if (r.hit && r.damageTotal > 0) {
       applyDamage(alvo.id, r.damageTotal, (r.damageType ?? undefined) as never, {
         attackerId: c.id, isMelee: arma.range === 'melee', rdIgnore: arremessosRdIgnorada(eu, arma, turnInfo),
+        attack: { critical: r.critical, criticalFail: r.criticalFail, isSneak: furtivo, isOpportunity: false },
       });
     }
     if (r.hit && r.critical) checarRenovacaoCritico(true, alvo.name);
@@ -1089,7 +1106,7 @@ export function AttackPanel({ character: cProp }: Props) {
     recordAttackResult(c.id, r.hit);
     if (r.hit && r.damageTotal > 0) {
       const ign = arremessosRdIgnorada(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, arma, turnInfo);
-      applyDamage(alvo2.id, r.damageTotal, (r.damageType ?? undefined) as never, { attackerId: c.id, isMelee: false, rdIgnore: ign });
+      applyDamage(alvo2.id, r.damageTotal, (r.damageType ?? undefined) as never, { attackerId: c.id, isMelee: false, rdIgnore: ign, attack: { critical: r.critical, criticalFail: r.criticalFail, isOpportunity: false } });
     }
     if (r.hit && r.critical) checarRenovacaoCritico(true, alvo2.name);
     registrarDevastacao(alvo2.id, r.hit);
@@ -1150,7 +1167,7 @@ export function AttackPanel({ character: cProp }: Props) {
     const tipo = tiros[0].r.damageType ?? undefined;
     addLog('combat', `   💥 Dano combinado: ${total} (${tiros.map((t) => `${t.arma.name} ${t.r.damageTotal}`).join(' + ')}) — RD e resistências aplicadas uma única vez.`);
     const rdIgn = rdIgnoradaAtaque(false);
-    applyDamage(target.id, total, tipo as never, { attackerId: c.id, isMelee: false, rdIgnore: rdIgn });
+    applyDamage(target.id, total, tipo as never, { attackerId: c.id, isMelee: false, rdIgnore: rdIgn, attack: { critical: tiros.some((t) => t.r.critical), criticalFail: false, isSneak: escondidoDe(c, target.id), isOpportunity: false } });
     if (tiros.some((t) => t.r.critical)) checarRenovacaoCritico(true, target.name);
     void tempestadeGolpe(target);
     void explosaoDragao(target, total, tipo);
@@ -1185,6 +1202,7 @@ export function AttackPanel({ character: cProp }: Props) {
       if (target) {
         applyDamage(target.id, r2.damageTotal - lastResult.damageTotal, (lastResult.damageType ?? undefined) as never, {
           attackerId: c.id, isMelee: mainWeapon.range === 'melee', ignoresRD: true,
+          attack: { ...metadadosAtaqueRef.current, critical: lastResult.critical, criticalFail: lastResult.criticalFail },
         });
       }
     } else {
@@ -1506,6 +1524,7 @@ export function AttackPanel({ character: cProp }: Props) {
 
         {/* ─── Situação (auto-lida do alvo + override manual) ─────────────── */}
         <div className="flex flex-wrap gap-2 text-[11px]">
+          <ToggleChip on={ataqueOportunidade} onChange={setAtaqueOportunidade} label="Ataque de oportunidade" disabled={phase !== 'idle' && phase !== 'done'} />
           {mainWeapon && (hasProperty(mainWeapon, 'versatil') || hasProperty(mainWeapon, 'duas_maos')) && (
             <ToggleChip on={twoHanded || usingTwoHanded} onChange={setTwoHanded} label="Duas mãos" disabled={usingTwoHanded} />
           )}
@@ -2078,6 +2097,7 @@ function ToggleChip({
     <button
       type="button"
       disabled={disabled}
+      aria-pressed={on}
       onClick={() => !disabled && onChange(!on)}
       className={cn(
         'rounded-full border px-2 py-0.5 transition',

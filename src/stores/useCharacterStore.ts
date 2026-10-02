@@ -1,3 +1,6 @@
+import { montarMetadadosDano, type OpcoesDano } from '@/lib/omni/contextoDano';
+import { useMapStore } from '@/stores/useMapStore';
+import { distanceBetweenChars } from '@/lib/weaponRange';
 import { markCharacterDeleted } from "@/lib/charSyncStamps";
 import { luaReducao, quebraPostura } from '@/lib/posturas';
 import { arsenalTrocaLivreDisponivel, arsenalBonusAoTrocar } from '@/lib/arsenalCiclico';
@@ -740,7 +743,7 @@ interface CharacterStore {
    * onde X = AU. Acumulam. Retorna o roll para log.
    */
   triggerAuraDrenadora: (charId: string) => Promise<{ ok: boolean; reason?: string; rolls?: number[]; conMod?: number; total?: number }>;
-  applyDamage: (id: string, rawDamage: number, damageType?: DamageType, opts?: { ignoresRD?: boolean; ignoresResistance?: boolean; attackerId?: string; isMelee?: boolean; tags?: string[]; rdIgnore?: number }) => void;
+  applyDamage: (id: string, rawDamage: number, damageType?: DamageType, opts?: OpcoesDano) => void;
   /**
    * Aplica cura. `source` controla o redutor FAH:
    * - 'cursed_energy_external' → cura de Energia Reversa vinda de TERCEIROS
@@ -2190,7 +2193,15 @@ export const useCharacterStore = create<CharacterStore>()(
         // diretamente no dano deste hit. Após o disparo dos triggers,
         // relemos o valor: 0 → absorção total; N < raw → dano reduzido.
         // Snapshot desta resolução: o pre-hook ainda não conhece dano final.
+        const atacanteDano = opts?.attackerId ? get().characters.find((cc) => cc.id === opts.attackerId) : undefined;
+        const mapaDano = useMapStore.getState();
+        const distanciaDano = opts?.attackerId && beforeChar
+          ? distanceBetweenChars(opts.attackerId, id, mapaDano.entities, mapaDano.gridConfig, {
+              casterProfileId: atacanteDano?.profileId, targetProfileId: beforeChar.profileId,
+            })
+          : null;
         const contextoDanoInicial = Object.freeze({
+          ...montarMetadadosDano(opts, distanciaDano),
           valor_inicial: totalDamage,
           id_origem: opts?.attackerId ? 1 : 0,
           id_alvo: beforeChar ? 1 : 0,
