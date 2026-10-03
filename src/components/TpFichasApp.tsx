@@ -18,6 +18,7 @@ import { useDailyOmniRecharge } from "@/hooks/useDailyOmniRecharge";
 import { installSafeLocalStorage } from "@/lib/safeLocalStorage";
 import { installOmniItemBankSync } from "@/lib/omni/syncItemBank";
 import { iniciarWatcherEngine } from "@/lib/omni/watcherEngine";
+import { iniciarEngineZonasTerreno } from "@/lib/mapa/engineZonasTerreno";
 import { validateCursedAptitudeCatalog } from "@/lib/auraAptitudes";
 import { hasWorkspaceCloud } from "@/integrations/supabase/safeClient";
 import Index from "@/pages/Index";
@@ -43,6 +44,12 @@ function RuntimeSetup() {
       iniciarWatcherEngine();
     } catch (error) {
       console.warn("[boot] Não foi possível iniciar o motor de gatilhos:", error);
+    }
+
+    try {
+      iniciarEngineZonasTerreno();
+    } catch (error) {
+      console.warn("[boot] Não foi possível iniciar o motor de zonas de terreno:", error);
     }
 
     try {
