@@ -67,7 +67,7 @@ describe('Estrutura independente das composições OMNI', () => {
     const circular: Record<string, unknown> = { tipo: 'filtro', componente: 'leve' };
     circular.entrada = circular;
     expect(validarComposicao({ formato: 'omni.composicao.v1', contexto: 'USUARIO', consulta: circular }).some(e => e.mensagem.includes('circular'))).toBe(true);
-    let consulta = arma;
+    let consulta: NoComposicao = arma;
     for (let n = 0; n < 66; n++) consulta = { tipo: 'filtro', componente: 'leve', entrada: consulta };
     expect(() => criarComposicao('USUARIO', consulta)).toThrow('64 níveis');
   });

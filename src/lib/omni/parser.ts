@@ -9,6 +9,10 @@
  */
 import { Parser } from 'expr-eval';
 import { canonicalizarChave } from './keyAliases';
+import { localizarComposicoes } from './componentes/expressoes';
+import { avaliarComposicao, type DadosComposicao } from './componentes/avaliar';
+import type { ContextoComposicao } from './componentes/composicao';
+import { extrairDadosCompostos } from './componentes/contexto';
 
 export interface DiagnosticoFormula {
   tipo: 'chave_ausente' | 'valor_nao_finito' | 'expressao_invalida' | 'resultado_nao_finito';
@@ -27,6 +31,7 @@ export interface ContextoAvaliacao {
   rng?: () => number;
   /** Informações da avaliação, sem alterar o fallback numérico legado. */
   diagnosticos?: DiagnosticoFormula[];
+  composicoes?: Partial<Record<ContextoComposicao, DadosComposicao>>;
 }
 
 export interface ResultadoRolagem {
@@ -408,7 +413,15 @@ function valorDaReferencia(ctx: ContextoAvaliacao, referencia: string, chave: st
 }
 
 function preprocessar(expressao: string, ctx: ContextoAvaliacao): string {
-  let out = normalizarFormulaHumana(expressao);
+  let out = expressao;
+  // Resolve antes de dados e normalizações: IDs e conectores pertencem à referência.
+  for (const trecho of localizarComposicoes(expressao).reverse()) {
+    const dados = ctx.composicoes?.[trecho.referencia.contexto];
+    const resultado = dados ? avaliarComposicao(trecho.referencia, dados) : { ok: false as const, mensagem: 'Dados compostos indisponíveis neste contexto.' };
+    if (!resultado.ok) registrarDiagnostico(ctx, { tipo: 'chave_ausente', referencia: trecho.texto, mensagem: resultado.mensagem });
+    out = out.slice(0, trecho.inicio) + String(resultado.ok ? resultado.valor : 0) + out.slice(trecho.fim);
+  }
+  out = normalizarFormulaHumana(out);
 
   // Expande a notação declarativa da arma antes de rolar os grupos de dados.
   out = out.replace(/@ARMA\.DANO\b/gi, (referencia) => {
@@ -559,6 +572,8 @@ export function avaliarFormula(
      * acessíveis na fórmula via `@RESULTADO_1`.
      */
     resultados?: number[];
+    /** Dados por domínio: operações são aplicadas aos registros, não a aliases de frases. */
+    composicoes?: Partial<Record<ContextoComposicao, DadosComposicao>>;
   }
 ): { valor: number; rolagens: ResultadoRolagem[]; expressaoResolvida: string; diagnosticos: DiagnosticoFormula[] } {
   // Mantém nomes originais para variáveis nuas em fórmulas legadas.
@@ -569,7 +584,8 @@ export function avaliarFormula(
       if (prefixo === 'ARMA' && k.toUpperCase() === 'DANO') continue;
       const semPrefixo = k.replace(new RegExp(`^${prefixo}_`, 'i'), '');
       const chave = prefixo === 'ALVO' ? resolverChavePtBr(canonicalizarChave(semPrefixo))
-        : prefixo === 'CENA' ? resolverChavePtBr(semPrefixo) : semPrefixo.toUpperCase();
+        : prefixo === 'CENA' ? resolverChavePtBr(semPrefixo)
+        : prefixo === 'DANO' ? (ALIASES_DANO[normalizarChavePt(semPrefixo)] ?? semPrefixo.toUpperCase()) : semPrefixo.toUpperCase();
       if (typeof v !== 'number' || !Number.isFinite(v)) continue;
       bag[`${prefixo}_${chave}`] = v;
     }
@@ -579,7 +595,8 @@ export function avaliarFormula(
       bag[`RESULTADO_${i + 1}`] = v;
     });
   }
-  const ctx: ContextoAvaliacao = { variaveis: bag, armaDano: extras?.arma?.dano, rolagens: [], rng, diagnosticos: [] };
+  const composicoes = { ...extrairDadosCompostos(variaveis), ...extrairDadosCompostos(extras?.alvo ?? {}), ...extrairDadosCompostos(extras?.cena ?? {}), ...extras?.composicoes };
+  const ctx: ContextoAvaliacao = { variaveis: bag, armaDano: extras?.arma?.dano, rolagens: [], rng, diagnosticos: [], composicoes };
   const resolvida = preprocessar(expressao, ctx);
   try {
     const expr = parser.parse(resolvida);

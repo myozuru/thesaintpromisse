@@ -31,6 +31,8 @@ import { DICIONARIO_CHAVES_OMNI, ALIASES_FORMULA } from './constantesDoSistema';
 import { recursoBonito } from './aplicarEfeito';
 import { resolverGatilho, aliasPreferido } from './gatilhoAliases';
 import { ALL_CONDITIONS } from '@/types/conditions';
+import { transformarForaDasComposicoes } from './componentes/expressoes';
+import { interpretarComposicao } from './componentes/interpretar';
 
 /** Palavras reservadas da OmniScript. */
 export const OMNI_SCRIPT_KEYWORDS = [
@@ -97,14 +99,14 @@ export function autoArrobaExpressao(expr: string, chaves: Set<string> = listarCh
   // Captura também o caractere imediatamente anterior (se houver) para evitar
   // duplo-prefixo em casos como `@USUARIO.con` (a palavra `con` está precedida
   // por `.`, indicando que já é um sub-acesso de algo).
-  return expr.replace(/(^|[^A-Za-zÀ-ÿ0-9_@.])(@?[A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_]*)/g, (_full, sep: string, token: string) => {
+  return transformarForaDasComposicoes(expr, trecho => trecho.replace(/(^|[^A-Za-zÀ-ÿ0-9_@.])(@?[A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_]*)/g, (_full, sep: string, token: string) => {
     if (token.startsWith('@')) return sep + token;
     const lower = token.toLowerCase();
     // Mantém funções matemáticas e palavras-chave do parser.
     if (['floor','ceil','round','min','max','abs','if'].includes(lower)) return sep + token;
     if (chaves.has(lower)) return `${sep}@USUARIO.${lower}`;
     return sep + token;
-  });
+  }));
 }
 
 export interface OmniScriptIssue {
@@ -162,7 +164,7 @@ function dividirPorVirgula(script: string): string[] {
  * identificadores como `energia`, `defesa` ou `entao` permaneçam intactos.
  */
 export function normalizarConjuncaoComoSoma(expr: string): string {
-  return expr.replace(/\be\b/gi, '+');
+  return transformarForaDasComposicoes(expr, trecho => trecho.replace(/\be\b/gi, '+'));
 }
 
 /**
@@ -175,13 +177,13 @@ export function normalizarConjuncaoComoSoma(expr: string): string {
  * `e` significa conjunção lógica, não soma aritmética.
  */
 export function normalizarConjuncaoLogica(expr: string): string {
-  return expr
+  return transformarForaDasComposicoes(expr, trecho => trecho
     .replace(/\be\b/gi, '&&')
     .replace(/\bou\b/gi, '||')
     // Booleanos amigáveis: "on"/"off" → 1/0. Também aceita
     // sim/nao/ligado/desligado/verdadeiro/falso para flexibilidade.
     .replace(/\b(on|sim|ligado|verdadeiro|true)\b/gi, '1')
-    .replace(/\b(off|nao|não|desligado|falso|false)\b/gi, '0');
+    .replace(/\b(off|nao|não|desligado|falso|false)\b/gi, '0'));
 }
 
 /** Opções de parse: permitem forçar o alvo padrão para itens passivos. */
@@ -552,9 +554,15 @@ function parsearWatcherQuando(esquerda: string): NonNullable<CombatEffect['watch
   txt = txt.replace(/\s+/g, ' ').trim();
 
   // Forma final esperada: <recurso> <op> <numero[%]> [de <recurso_base>]
-  const re = /^(@?[A-Za-zÀ-ÿ_][\w.]*)\s*(<=|>=|==|!=|<|>)\s*(-?\d+(?:[.,]\d+)?)(%?)(?:\s+de\s+(@?[A-Za-zÀ-ÿ_][\w.]*))?$/i;
+  const re = /^(.+?)\s*(<=|>=|==|!=|<|>)\s*(-?\d+(?:[.,]\d+)?)(%?)(?:\s+de\s+(.+?))?$/i;
   const m = txt.match(re);
   if (!m) return undefined;
+  for (const recurso of [m[1], m[5]].filter(Boolean)) {
+    if (!/^@?[A-Za-zÀ-ÿ_][\w.]*$/.test(recurso.trim())) {
+      const p = interpretarComposicao(recurso.trim());
+      if (!p.referencia || p.erro || p.consumido !== recurso.trim().length) return undefined;
+    }
+  }
   const recurso = m[1].replace(/^@?(usuario|alvo|cena)\./i, '').toLowerCase();
   const op = m[2] as NonNullable<CombatEffect['watcher']>['op'];
   const numero = Number(m[3].replace(',', '.'));
@@ -569,7 +577,7 @@ function parsearWatcherQuando(esquerda: string): NonNullable<CombatEffect['watch
     energia: 'energia_max',
     pe_atual: 'pe_max',
   };
-  const baseImplicita = MAX_PADRAO[recurso] ?? `${recurso}_max`;
+  const baseImplicita = MAX_PADRAO[recurso] ?? (/\s/.test(recurso) ? `maximo ${recurso}` : `${recurso}_max`);
   return {
     resource: recurso,
     op,

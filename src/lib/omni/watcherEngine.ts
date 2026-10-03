@@ -69,6 +69,7 @@ function normalizarRecursoWatcher(recurso: string): string {
 
 /** Lê o valor numérico atual de um recurso de um personagem. 0 se desconhecido. */
 function lerRecurso(c: Character, recurso: string): number {
+  if (/\s/.test(recurso)) return avaliarFormula(recurso, montarVariaveisDoPersonagem(c)).valor;
   const campo = RECURSO_PARA_CAMPO[normalizarRecursoWatcher(recurso)];
   if (!campo) return 0;
   const v = c[campo] as unknown;
