@@ -255,6 +255,9 @@ const ALIASES_DANO: Record<string, string> = {
 
 function resolverTemplateAmigavel(n: string): string | undefined {
   const templates: Array<[RegExp, string]> = [
+    // Primeiro, preserva os templates antigos que já carregam `_id_`.
+    [/^origem_id_(.+)$/, 'ORIGEM_ID_'],
+    [/^especializacao_id_(.+)$/, 'ESPECIALIZACAO_ID_'],
     [/^origem_(.+)$/, 'ORIGEM_ID_'],
     [/^especializacao_(.+)$/, 'ESPECIALIZACAO_ID_'],
     [/^condicao_rodadas_desde_(.+)$/, 'CONDICAO_IDADE_RODADAS_'],
