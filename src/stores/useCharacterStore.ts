@@ -1,6 +1,8 @@
 import { reservarPassoOmni, executarNaCadeiaOmni, capturarCadeiaOmni } from '@/lib/omni/cadeiaEventos';
 import { ajustarProtecoesOmni, consumirProtecoesOmni, expirarProtecoesOmni } from '@/lib/omni/protecoesAtivas';
 import { montarMetadadosDano, resolverTipoDano, type OpcoesDano } from '@/lib/omni/contextoDano';
+import { registrarHistorico } from '@/lib/omni/componentes/eventos';
+import { useCombatStore } from '@/stores/useCombatStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { distanceBetweenChars } from '@/lib/weaponRange';
 import { markCharacterDeleted } from "@/lib/charSyncStamps";
@@ -2307,7 +2309,8 @@ export const useCharacterStore = create<CharacterStore>()(
               const soulPatch = applySoulDamagePure(c, rawDamage);
               finalDamage = rawDamage;
               damageResolved = true;
-              return { ...c, ...soulPatch };
+              const perdaVida = Math.max(0, Math.max(0, c.hpCurrent) - Math.max(0, soulPatch.hpCurrent ?? c.hpCurrent));
+              return { ...c, ...soulPatch, omniCounters: registrarHistorico(c.omniCounters, 'dano', perdaVida, useCombatStore.getState().round) };
             }
             const activeBuffs = c.activeBuffs || [];
             const buffRD = activeBuffs.filter(b => b.type === 'rd').reduce((s, b) => s + b.value, 0);
@@ -2350,14 +2353,17 @@ export const useCharacterStore = create<CharacterStore>()(
             if (damageFinal <= newEsc) { newEsc -= damageFinal; }
             else { const overflow = damageFinal - newEsc; newEsc = 0; newHp -= overflow; }
             const protecoesOmni = consumirProtecoesOmni(ajustarProtecoesOmni(c), Math.max(0, c.escCurrent - newEsc));
+            const danoTemporario = Math.max(0, (c.escCurrent ?? 0) - newEsc);
+            const perdaVida = Math.max(0, Math.max(0, c.hpCurrent) - Math.max(0, newHp));
+            const omniCounters = registrarHistorico(c.omniCounters, 'dano', perdaVida + danoTemporario, useCombatStore.getState().round, danoTemporario);
             // CAM: sincroniza HP do snapshot do núcleo ativo.
             if (isCamActive(c) && c.activeCoreId) {
               const newCores = (c.cores || []).map(co =>
                 co.id === c.activeCoreId ? { ...co, hpCurrent: newHp } : co,
               );
-              return { ...c, escCurrent: newEsc, protecoesOmni, hpCurrent: newHp, cores: newCores };
+              return { ...c, escCurrent: newEsc, protecoesOmni, hpCurrent: newHp, omniCounters, cores: newCores };
             }
-            return { ...c, escCurrent: newEsc, protecoesOmni, hpCurrent: newHp };
+            return { ...c, escCurrent: newEsc, protecoesOmni, hpCurrent: newHp, omniCounters };
           }),
         }));
 
@@ -2629,13 +2635,14 @@ export const useCharacterStore = create<CharacterStore>()(
             const effective = halve ? Math.floor(amount / 2) : amount;
             const newHp = Math.max(c.hpCurrent, Math.min(getEffectiveHpMaxForHealing(c), c.hpCurrent + Math.max(0, effective)));
             healedAmount = newHp - c.hpCurrent;
+            const omniCounters = registrarHistorico(c.omniCounters, 'cura', healedAmount, useCombatStore.getState().round);
             if (isCamActive(c) && c.activeCoreId) {
               const newCores = (c.cores || []).map(co =>
                 co.id === c.activeCoreId ? { ...co, hpCurrent: newHp } : co,
               );
-              return { ...c, hpCurrent: newHp, cores: newCores };
+              return { ...c, hpCurrent: newHp, omniCounters, cores: newCores };
             }
-            return { ...c, hpCurrent: newHp };
+            return { ...c, hpCurrent: newHp, omniCounters };
           }),
         }));
         // ─── Omni-Engine: emite gatilho de cura recebida ───────────────────

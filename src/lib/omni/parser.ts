@@ -14,6 +14,7 @@ import { avaliarComposicao, type DadosComposicao } from './componentes/avaliar';
 import type { ContextoComposicao } from './componentes/composicao';
 import { extrairDadosCompostos } from './componentes/contexto';
 import { dadosCena } from './componentes/cena';
+import { dadosEventoDano } from './componentes/eventos';
 
 export interface DiagnosticoFormula {
   tipo: 'chave_ausente' | 'valor_nao_finito' | 'expressao_invalida' | 'resultado_nao_finito';
@@ -598,6 +599,7 @@ export function avaliarFormula(
   }
   const composicoes = { ...extrairDadosCompostos(variaveis), ...extrairDadosCompostos(extras?.alvo ?? {}), ...extrairDadosCompostos(extras?.cena ?? {}), ...extras?.composicoes };
   if (extras?.cena && !extras.composicoes?.CENA) composicoes.CENA = dadosCena(bag);
+  if (extras?.dano && !extras.composicoes?.DANO) composicoes.DANO = dadosEventoDano(bag);
   const ctx: ContextoAvaliacao = { variaveis: bag, armaDano: extras?.arma?.dano, rolagens: [], rng, diagnosticos: [], composicoes };
   const resolvida = preprocessar(expressao, ctx);
   try {

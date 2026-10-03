@@ -48,7 +48,7 @@ describe('Editor de tipos compatíveis com o motor', () => {
     const { select, save } = editor('Fogo');
     expect(select.value).toBe('DQ');
     expect(save).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByPlaceholderText('Nome'), { target: { value: 'Novo nome' } });
+    fireEvent.change(screen.getByLabelText('Nome da ação'), { target: { value: 'Novo nome' } });
     expect(save.mock.lastCall![0].acoesAtivas[0].tipoDano).toBe('Fogo');
     fireEvent.change(select, { target: { value: 'DP' } });
     expect(save.mock.lastCall![0].acoesAtivas[0].tipoDano).toBe('DP');
