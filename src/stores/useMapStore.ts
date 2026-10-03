@@ -11,6 +11,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { rollD20 } from '@/lib/dice';
 import { useProfileStore } from './useProfileStore';
+import type { CombatEffect } from '@/lib/omni/tipos';
 
 
 export type GridType = 'SQUARE' | 'HEX_VERTICAL' | 'HEX_HORIZONTAL' | 'ISOMETRIC';
@@ -63,6 +64,16 @@ export interface TokenCrop {
   border?: import('@/lib/mapa/tokenBorders').TokenBorderStyle;
 }
 
+export type GatilhoZonaTerreno = 'entrada' | 'fim_turno';
+
+export interface ZonaTerreno {
+  /** null mantém a zona até ser removida pelo Mestre. */
+  duracaoRodadas: number | null;
+  rodadasRestantes: number | null;
+  gatilhos: GatilhoZonaTerreno[];
+  efeitos: CombatEffect[];
+}
+
 export interface Entity {
   id: string;
   shape: EntityShape;
@@ -107,6 +118,8 @@ export interface Entity {
   avatarProfileId?: string;
   /** ID da ficha (Character) vinculada a esta imagem/token. */
   characterId?: string;
+  /** Configuração de efeito persistente aplicada quando personagens entram ou terminam o turno na zona. */
+  terrainZone?: ZonaTerreno;
   /** ID de um Baú (useChestStore) vinculado a este token — transforma o token em um baú interativo. */
   chestId?: string;
   /** ID de outra Entity que está carregando este token (ex.: corpo desmaiado/morto). */
