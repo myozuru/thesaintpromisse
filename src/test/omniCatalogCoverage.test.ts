@@ -72,15 +72,15 @@ describe('Contexto de cena e identidade: valores reais e compatibilidade', () =>
       activeBuffs: [{ spellName: 'buff_audit' }],
     } as unknown as Character;
     const exemplos: Record<string, [string, number]> = {
-      'arma_grupo_<grupo>': ['arma_grupo_espada', 1], 'origem_id_<id>': ['origem_id_inato', 1],
-      'especializacao_id_<id>': ['especializacao_id_suporte', 1],
-      'condicao_idade_rodadas_<id>': ['condicao_idade_rodadas_atordoado', 4], 'condicao_idade_conhecida_<id>': ['condicao_idade_conhecida_atordoado', 1],
-      'tem_condicao_<id>': ['tem_condicao_atordoado', 1], 'condicao_rodadas_<id>': ['condicao_rodadas_atordoado', 3],
+      'arma_grupo_<grupo>': ['arma_grupo_espada', 1], 'origem_<id>': ['origem_inato', 1],
+      'especializacao_<id>': ['especializacao_suporte', 1],
+      'condicao_rodadas_desde_<id>': ['condicao_rodadas_desde_atordoado', 4], 'condicao_tem_idade_<id>': ['condicao_tem_idade_atordoado', 1],
+      'tem_condicao_<id>': ['tem_condicao_atordoado', 1], 'condicao_rodadas_restantes_<id>': ['condicao_rodadas_restantes_atordoado', 3],
       '<nome_do_contador>': ['rancor', 5], 'contador_<nome>': ['contador_rancor', 5], '<nome>__fonte__<id>': ['rancor__fonte__alvo', 2],
       'tem_talento_<id>': ['tem_talento_tal_audit', 1], 'tem_aptidao_<id>': ['tem_aptidao_apt_audit', 1], 'tem_habilidade_<id>': ['tem_habilidade_hab_audit', 1],
       'saldo_<moeda>': ['saldo_yen', 15], 'tem_moeda_<moeda>': ['tem_moeda_yen', 1],
       'tem_item_<id>': ['tem_item_item_audit', 1], 'equipado_<id>': ['equipado_item_audit', 1],
-      'tem_feitico_<id>': ['tem_feitico_feitico_audit', 1], 'tem_buff_<spellName>': ['tem_buff_buff_audit', 1], 'qtd_feiticos_elemento_<tipo>': ['qtd_feiticos_elemento_fogo', 1],
+      'tem_feitico_<id>': ['tem_feitico_feitico_audit', 1], 'tem_buff_<nome>': ['tem_buff_buff_audit', 1], 'qtd_feiticos_tipo_<tipo>': ['qtd_feiticos_tipo_fogo', 1],
     };
     const templates = DICIONARIO_CHAVES_OMNI.flatMap(g => g.itens.filter(i => i.id.includes('<')));
     expect(templates.map(i => i.id).sort()).toEqual(Object.keys(exemplos).sort());
@@ -110,21 +110,21 @@ describe('Contexto de cena e identidade: valores reais e compatibilidade', () =>
     expect(avaliarFormula('@CENA.turno_indice', vars).valor).toBe(-1);
   });
   it.each(ORIGINS)('origem textual %s gera predicate utilizável', origin => {
-    const r = avaliarFormula(`@USUARIO.origem_id_${slug(origin)}`, montarVariaveisDoPersonagem({ ...usuario, origin }));
+    const r = avaliarFormula(`@USUARIO.origem_${slug(origin)}`, montarVariaveisDoPersonagem({ ...usuario, origin }));
     expect(r.valor).toBe(1);
     expect(r.diagnosticos).toEqual([]);
   });
   it.each(SPECIALIZATIONS)('especialização textual %s gera predicate utilizável', specialization => {
-    const r = avaliarFormula(`@ALVO.especializacao_id_${slug(specialization)}`, montarVariaveisDoPersonagem({ ...alvo, specialization }, 'ALVO'));
+    const r = avaliarFormula(`@ALVO.especializacao_${slug(specialization)}`, montarVariaveisDoPersonagem({ ...alvo, specialization }, 'ALVO'));
     expect(r.valor).toBe(1);
     expect(r.diagnosticos).toEqual([]);
   });
   it('mantém identidade legada com { id } e normalização antiga', () => {
     const c = { ...usuario, origin: { id: 'origem--antiga' }, specialization: { id: 'spec-antiga' } } as unknown as Character;
     const vars = montarVariaveisDoPersonagem(c);
-    expect(avaliarFormula('@USUARIO.origem_id_origem__antiga', vars).valor).toBe(1);
-    expect(avaliarFormula('@USUARIO.origem_id_origem_antiga', vars).valor).toBe(1);
-    expect(avaliarFormula('@USUARIO.especializacao_id_spec_antiga', vars).valor).toBe(1);
+    expect(avaliarFormula('@USUARIO.origem_origem__antiga', vars).valor).toBe(1);
+    expect(avaliarFormula('@USUARIO.origem_origem_antiga', vars).valor).toBe(1);
+    expect(avaliarFormula('@USUARIO.especializacao_spec_antiga', vars).valor).toBe(1);
   });
   it('contextos do evento continuam ausentes quando não são fornecidos', () => {
     const vars = montarVariaveisDoPersonagem(usuario);
