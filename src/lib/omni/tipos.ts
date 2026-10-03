@@ -155,6 +155,8 @@ export interface EntidadeOmni {
     rd?: number;
     esc?: number;
     slots?: number;
+    /** Modificador de deslocamento em metros enquanto equipado. */
+    deslocamento?: number;
     /** Bônus fixo por nome canônico ou rótulo da perícia (ex.: atletismo). */
     pericias?: Record<string, number>;
     /** Bônus fixo para cada Teste de Resistência. */
