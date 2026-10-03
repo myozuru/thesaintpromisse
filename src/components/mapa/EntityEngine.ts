@@ -307,9 +307,10 @@ export function drawEntity(ctx: CanvasRenderingContext2D, e: Entity, scale: numb
       drawTokenBorder(ctx, hw, hh, e.tokenCrop.border, scale);
     }
   } else {
-    ctx.fillStyle = withAlpha(e.color, 0.5);
+    ctx.fillStyle = withAlpha(e.color, e.terrainZone ? 0.18 : 0.5);
     ctx.strokeStyle = withAlpha(e.color, 1);
     ctx.lineWidth = 2 / scale;
+    ctx.setLineDash(e.terrainZone ? [8 / scale, 5 / scale] : []);
     if (e.shape === 'ELLIPSE') {
       ctx.beginPath();
       ctx.ellipse(0, 0, hw, hh, 0, 0, Math.PI * 2);
@@ -321,6 +322,7 @@ export function drawEntity(ctx: CanvasRenderingContext2D, e: Entity, scale: numb
       ctx.fill();
       ctx.stroke();
     }
+    ctx.setLineDash([]);
 
     if (e.label) {
       ctx.fillStyle = 'rgba(255,255,255,0.95)';
