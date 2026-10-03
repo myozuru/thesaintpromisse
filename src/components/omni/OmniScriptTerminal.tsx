@@ -61,9 +61,12 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
   const analiseRef = useRef(analise);
   const atualizar = (novo: string) => {
     rascunhoRef.current = novo;
+    versaoRef.current++;
     if (adiarEdicao) setRascunho(novo);
     else onChangeRef.current(novo);
   };
+  const workerRef = useRef<Worker | null>(null);
+  const versaoRef = useRef(0);
   const concluirEdicao = useCallback(() => {
     if (!adiarEdicao) return;
     clearTimeout(timerRef.current);
@@ -88,7 +91,13 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
   }, [valor]);
   useEffect(() => {
     if (!adiarEdicao) return;
-    timerRef.current = setTimeout(concluirEdicao, 250);
+    timerRef.current = setTimeout(() => {
+      const worker = workerRef.current;
+      if (worker) {
+        try { worker.postMessage({ id: ++versaoRef.current, texto: rascunhoRef.current, alvo: defaultTarget }); }
+        catch { worker.terminate(); workerRef.current = null; concluirEdicao(); }
+      } else concluirEdicao();
+    }, 250);
     return () => clearTimeout(timerRef.current);
   }, [rascunho, concluirEdicao, adiarEdicao]);
   const opcoesRef = useRef({ adiarEdicao, defaultTarget });
@@ -103,6 +112,28 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
     enviadoRef.current = novo;
     onChangeRef.current(novo, compilado);
   }, []);
+  useEffect(() => {
+    if (!adiarEdicao || typeof Worker === 'undefined') return;
+    let worker: Worker;
+    try { worker = new Worker(new URL('../../lib/omni/editorWorker.ts', import.meta.url), { type: 'module' }); }
+    catch { return; }
+    workerRef.current = worker;
+    worker.onmessage = (evento) => {
+      const dados = evento.data;
+      if (dados.id !== versaoRef.current) return;
+      if (dados.erro) { worker.terminate(); workerRef.current = null; concluirEdicao(); return; }
+      if (dados.texto !== rascunhoRef.current || dados.alvo !== defaultTarget) return;
+      const a = { texto: dados.texto, alvo: dados.alvo, compilado: dados.compilado, tokens: dados.tokens };
+      analiseRef.current = a;
+      setAnalise(a);
+      if (enviadoRef.current !== a.texto) {
+        enviadoRef.current = a.texto;
+        onChangeRef.current(a.texto, a.compilado);
+      }
+    };
+    worker.onerror = () => { worker.terminate(); workerRef.current = null; concluirEdicao(); };
+    return () => { worker.terminate(); if (workerRef.current === worker) workerRef.current = null; };
+  }, [adiarEdicao, defaultTarget, concluirEdicao]);
   const tokens = useMemo(() => adiarEdicao || analise.texto === valor ? analise.tokens : tokenizarOmniScript(valor || ''), [adiarEdicao, analise, valor]);
   const compilado = useMemo(() => adiarEdicao || analise.texto === valor && analise.alvo === defaultTarget ? analise.compilado : parseOmniScript(valor || '', { defaultTarget }), [adiarEdicao, analise, valor, defaultTarget]);
   const pendente = adiarEdicao && texto !== analise.texto;
@@ -126,7 +157,7 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
       return compilado.efeitos.map(() => undefined);
     }
   }, [compilado.efeitos, variaveisPreview]);
-  const valoresMock = avaliacoesMock.map(r => r && r.diagnosticos.length === 0 ? Math.round(r.valor) : undefined);
+  const valoresMock = useMemo(() => avaliacoesMock.map(r => r && r.diagnosticos.length === 0 ? Math.round(r.valor) : undefined), [avaliacoesMock]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -240,6 +271,76 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
     return () => ta.removeEventListener('blur', onBlur);
   }, []);
 
+  const painelAnalise = useMemo(() => <>
+      {/* Pré-visualização compilada */}
+      {compilado.efeitos.length > 0 && (
+        <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 space-y-1.5">
+          <div className="flex items-center justify-between">
+            <div className="text-[10px] uppercase tracking-wider text-emerald-300/80">
+              Plano de Execução
+            </div>
+            {personagemPreview && (
+              <div className="text-[10px] text-emerald-300/60">
+                Preview: {personagemPreview.name}
+              </div>
+            )}
+          </div>
+          {compilado.efeitos.map((eff, i) => {
+            const prev = i > 0 ? compilado.efeitos[i - 1] : undefined;
+            // Comparação por JSON do watcher para detectar mudança entre efeitos.
+            const watcherKey = eff.watcher ? JSON.stringify(eff.watcher) : '';
+            const prevWatcherKey = prev?.watcher ? JSON.stringify(prev.watcher) : '';
+            const mostrarWatcher = !!eff.watcher && watcherKey !== prevWatcherKey;
+            const mostrarTrigger = !!eff.trigger && eff.trigger !== prev?.trigger;
+            const mostrarCondicao = !!eff.condition && eff.condition !== prev?.condition;
+            return (
+              <div key={eff.id} className="space-y-0.5">
+                {mostrarWatcher && (
+                  <div className="text-[12px] text-amber-300 font-mono">
+                    ⚡ Gatilho: <span className="text-amber-200">{humanizarWatcher(eff.watcher!)}</span>
+                  </div>
+                )}
+                {mostrarTrigger && (
+                  <div className="text-[12px] text-amber-300 font-mono">
+                    ⚡ Gatilho: <span className="text-amber-200">{eff.trigger}</span>
+                  </div>
+                )}
+                {mostrarCondicao && (
+                  <div className="text-[12px] text-sky-300 font-mono">
+                    ❓ Condição: <span className="text-sky-200">{eff.condition!.replace(/@USUARIO\./gi, '')}</span>
+                  </div>
+                )}
+                <div className="flex items-baseline gap-2 text-[12px] text-foreground/95">
+                  <span className="text-emerald-400/70 font-mono shrink-0">#{i + 1}</span>
+                  <span className="text-emerald-200">
+                    ✅ {frasePlanoExecucao(eff, valoresMock[i])}
+                  </span>
+                </div>
+                {avaliacoesMock[i]?.diagnosticos.map((d, j) => (
+                  <div key={j} role="status" className="text-[12px] text-amber-300">
+                    Prévia incompleta: {d.mensagem}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {compilado.erros.length > 0 && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 space-y-1">
+          <div className="text-[10px] uppercase tracking-wider text-destructive">
+            ⚠ Erros de Sintaxe
+          </div>
+          {compilado.erros.map((er, i) => (
+            <div key={i} className="text-[11px] font-mono text-destructive/90">
+              <span className="opacity-70">"{er.trecho}"</span> — {er.mensagem}
+            </div>
+          ))}
+        </div>
+      )}
+  </>, [compilado, personagemPreview, avaliacoesMock, valoresMock]);
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -331,73 +432,7 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
         <span><span className="text-violet-400 font-bold font-mono">Tab</span> → autocompletar / ciclar</span>
       </div>
 
-      {/* Pré-visualização compilada */}
-      {compilado.efeitos.length > 0 && (
-        <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 space-y-1.5">
-          <div className="flex items-center justify-between">
-            <div className="text-[10px] uppercase tracking-wider text-emerald-300/80">
-              Plano de Execução
-            </div>
-            {personagemPreview && (
-              <div className="text-[10px] text-emerald-300/60">
-                Preview: {personagemPreview.name}
-              </div>
-            )}
-          </div>
-          {compilado.efeitos.map((eff, i) => {
-            const prev = i > 0 ? compilado.efeitos[i - 1] : undefined;
-            // Comparação por JSON do watcher para detectar mudança entre efeitos.
-            const watcherKey = eff.watcher ? JSON.stringify(eff.watcher) : '';
-            const prevWatcherKey = prev?.watcher ? JSON.stringify(prev.watcher) : '';
-            const mostrarWatcher = !!eff.watcher && watcherKey !== prevWatcherKey;
-            const mostrarTrigger = !!eff.trigger && eff.trigger !== prev?.trigger;
-            const mostrarCondicao = !!eff.condition && eff.condition !== prev?.condition;
-            return (
-              <div key={eff.id} className="space-y-0.5">
-                {mostrarWatcher && (
-                  <div className="text-[12px] text-amber-300 font-mono">
-                    ⚡ Gatilho: <span className="text-amber-200">{humanizarWatcher(eff.watcher!)}</span>
-                  </div>
-                )}
-                {mostrarTrigger && (
-                  <div className="text-[12px] text-amber-300 font-mono">
-                    ⚡ Gatilho: <span className="text-amber-200">{eff.trigger}</span>
-                  </div>
-                )}
-                {mostrarCondicao && (
-                  <div className="text-[12px] text-sky-300 font-mono">
-                    ❓ Condição: <span className="text-sky-200">{eff.condition!.replace(/@USUARIO\./gi, '')}</span>
-                  </div>
-                )}
-                <div className="flex items-baseline gap-2 text-[12px] text-foreground/95">
-                  <span className="text-emerald-400/70 font-mono shrink-0">#{i + 1}</span>
-                  <span className="text-emerald-200">
-                    ✅ {frasePlanoExecucao(eff, valoresMock[i])}
-                  </span>
-                </div>
-                {avaliacoesMock[i]?.diagnosticos.map((d, j) => (
-                  <div key={j} role="status" className="text-[12px] text-amber-300">
-                    Prévia incompleta: {d.mensagem}
-                  </div>
-                ))}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {compilado.erros.length > 0 && (
-        <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 space-y-1">
-          <div className="text-[10px] uppercase tracking-wider text-destructive">
-            ⚠ Erros de Sintaxe
-          </div>
-          {compilado.erros.map((er, i) => (
-            <div key={i} className="text-[11px] font-mono text-destructive/90">
-              <span className="opacity-70">"{er.trecho}"</span> — {er.mensagem}
-            </div>
-          ))}
-        </div>
-      )}
+      {painelAnalise}
     </div>
   );
 }

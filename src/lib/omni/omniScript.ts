@@ -28,7 +28,7 @@
 import { resolverTipoDano } from './contextoDano';
 import type { CombatEffect } from './tipos';
 import { DICIONARIO_CHAVES_OMNI, ALIASES_FORMULA } from './constantesDoSistema';
-import { recursoBonito } from './aplicarEfeito';
+import { recursoBonito } from './rotulosRecurso';
 import { resolverGatilho, aliasPreferido } from './gatilhoAliases';
 import { ALL_CONDITIONS } from '@/types/conditions';
 import { transformarForaDasComposicoes } from './componentes/expressoes';

@@ -1,5 +1,5 @@
 import { criarComposicao, type ArgumentoComposicao, type ContextoComposicao, type NoComposicao, type ReferenciaComposta } from './composicao';
-import { tokenizarComposicao, type TokenComposicao } from './lexer';
+import { tokenizarComposicao, type ResultadoLexico, type TokenComposicao } from './lexer';
 import type { ComponenteOmni } from './ids';
 
 const operacoes = new Set<ComponenteOmni>(['quantidade','tem','max','maximo','maximos','minimo','percentual','porcentagem','bonus','margem_critico','reducao','restante','restantes','livre','idade','custo','velocidade','duração','rolagem','posicao','indice','total','recuperavel']);
@@ -14,13 +14,17 @@ export interface InterpretacaoComposicao {
 
 /** Constrói uma árvore por papéis; não procura frases completas no catálogo. */
 export function interpretarComposicao(texto: string, contextoPadrao: ContextoComposicao = 'USUARIO'): InterpretacaoComposicao {
-  const lexico = tokenizarComposicao(texto);
+  return interpretarTokensComposicao(texto, tokenizarComposicao(texto), 0, 0, contextoPadrao);
+}
+
+/** Reutiliza os tokens de uma expressão; posições continuam referindo-se ao texto original. */
+export function interpretarTokensComposicao(texto: string, lexico: ResultadoLexico, inicioToken: number, inicioTexto: number, contextoPadrao: ContextoComposicao = 'USUARIO'): InterpretacaoComposicao {
   const ts = lexico.tokens;
-  let i = 0;
+  let i = inicioToken;
   let contexto = contextoPadrao;
   if (ts[i]?.tipo === 'contexto') contexto = ts[i++].valor as ContextoComposicao;
   else if (ts[i]?.tipo === 'pontuacao' && ts[i].valor === '@') i++;
-  let ultimo = ts[i - 1]?.fim ?? 0;
+  let ultimo = ts[i - 1]?.fim ?? inicioTexto;
   const usar = () => { const t = ts[i++]; ultimo = t.fim; return t; };
   const key = (t?: TokenComposicao): ComponenteOmni | undefined => t?.tipo === 'componente' ? t.valor : undefined;
   function argumento(tipo: ArgumentoComposicao['tipo']): ArgumentoComposicao {
@@ -80,8 +84,8 @@ export function interpretarComposicao(texto: string, contextoPadrao: ContextoCom
     for (const c of sufixos) no = { tipo: 'operacao', componente: c, entrada: no };
     for (const c of prefixos.reverse()) no = { tipo: 'operacao', componente: c, entrada: no };
     if ((raiz === 'distancia' || raiz === 'rodada') && ts[i]?.tipo === 'numero') throw new Error('Informe o comparador explicitamente, por exemplo <= 3 ou >= 3.');
-    const erroLexico = lexico.erros.find(e => e.inicio <= ultimo);
+    const erroLexico = lexico.erros.find(e => e.inicio >= inicioTexto && e.inicio <= ultimo);
     if (erroLexico) throw new Error(erroLexico.mensagem);
-    return { referencia: criarComposicao(contexto, no), consumido: ultimo };
-  } catch (e) { return { consumido: ultimo, erro: e instanceof Error ? e.message : String(e) }; }
+    return { referencia: criarComposicao(contexto, no), consumido: ultimo - inicioTexto };
+  } catch (e) { return { consumido: ultimo - inicioTexto, erro: e instanceof Error ? e.message : String(e) }; }
 }

@@ -1,4 +1,5 @@
-import { interpretarComposicao } from './interpretar';
+import { interpretarTokensComposicao } from './interpretar';
+import { tokenizarComposicao } from './lexer';
 import type { ReferenciaComposta } from './composicao';
 
 export interface TrechoComposto { inicio: number; fim: number; texto: string; referencia: ReferenciaComposta }
@@ -6,7 +7,8 @@ export interface TrechoComposto { inicio: number; fim: number; texto: string; re
 /** Detecta referências sem interpretar funções, strings ou nomes legados pontuados. */
 export function localizarComposicoes(texto: string, incluirSimples = false): TrechoComposto[] {
   const trechos: TrechoComposto[] = [];
-  let i = 0;
+  let i = 0, indiceToken = 0;
+  const lexico = tokenizarComposicao(texto);
   while (i < texto.length) {
     if (['"', "'", '“'].includes(texto[i])) {
       const fecha = texto[i] === '“' ? '”' : texto[i];
@@ -17,7 +19,9 @@ export function localizarComposicoes(texto: string, incluirSimples = false): Tre
     const palavra = /^@?(?:[\p{L}_][\p{L}\p{N}_]*\.)?[\p{L}_][\p{L}\p{N}_]*/u.exec(texto.slice(i));
     if (!palavra) { i++; continue; }
     if (['e', 'ou'].includes(palavra[0].toLowerCase())) { i += palavra[0].length; continue; }
-    const p = interpretarComposicao(texto.slice(i));
+    while (lexico.tokens[indiceToken] && lexico.tokens[indiceToken].inicio < i) indiceToken++;
+    if (lexico.tokens[indiceToken]?.inicio !== i) { i += palavra[0].length; continue; }
+    const p = interpretarTokensComposicao(texto, lexico, indiceToken, i);
     const fim = i + p.consumido;
     if (p.referencia && !p.erro && !/[\p{L}\p{N}_.]/u.test(texto[fim] ?? '') && !/^\s*\(/.test(texto.slice(fim))) {
       const trecho = texto.slice(i, fim);

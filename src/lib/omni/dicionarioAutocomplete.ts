@@ -209,8 +209,23 @@ export function filtrarSugestoes(prefixo: string, limite = 12): SugestaoAutocomp
 /** Completa uma parte, preservando as anteriores e evitando tratar argumentos como keys. */
 export function sugerirNoCaret(texto: string, caret: number, limite = 12): SugestaoAutocomplete[] {
   const p = extrairPrefixoNoCaret(texto, caret);
-  const tokens = tokenizarComposicao(texto.slice(0, p.inicio)).tokens;
-  const ultimo = tokens.at(-1);
+  const antes = texto.slice(0, p.inicio);
+  // Aspas abertas indicam um argumento em edição, não uma nova key.
+  if (/["'“]/.test(antes)) {
+    let aspas = '';
+    for (let i = 0; i < antes.length; i++) {
+      const c = antes[i];
+      if (aspas && c === '\\') { i++; continue; }
+      if (aspas && c === aspas) aspas = '';
+      else if (!aspas && ['"', "'", '“'].includes(c)) aspas = c === '“' ? '”' : c;
+    }
+    if (aspas) return [];
+  }
+  let fim = antes.length;
+  while (fim > 0 && /\s/u.test(antes[fim - 1])) fim--;
+  let inicio = fim;
+  while (inicio > 0 && /[\p{L}\p{N}_]/u.test(antes[inicio - 1])) inicio--;
+  const ultimo = inicio < fim ? tokenizarComposicao(antes.slice(inicio, fim)).tokens.at(-1) : undefined;
   if (ultimo?.tipo === 'componente' && ['contador','buff','item','feitico','talento','habilidade','origem','especializacao','fonte','grupo','moeda','saldo'].includes(ultimo.valor)) return [];
   if (ultimo?.tipo === 'componente' && ultimo.valor === 'condicao') return ALL_CONDITIONS
     .filter(c => c.id.toLowerCase().startsWith(p.prefixo.toLowerCase())).slice(0, limite)
