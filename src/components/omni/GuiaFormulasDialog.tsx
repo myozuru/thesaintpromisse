@@ -321,6 +321,7 @@ function PainelLateral({
   const panelRef = useRef<HTMLDivElement | null>(null);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const [posicao, setPosicao] = useState({ x: 0, y: 80 });
+  const [maximizado, setMaximizado] = useState(false);
 
   useEffect(() => {
     if (!mounted || typeof window === 'undefined') return;
@@ -340,7 +341,7 @@ function PainelLateral({
   }, []);
 
   const iniciarArraste = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || maximizado) return;
     const rect = panelRef.current?.getBoundingClientRect();
     if (!rect) return;
 
@@ -361,7 +362,7 @@ function PainelLateral({
     window.addEventListener('pointermove', onMove, true);
     window.addEventListener('pointerup', onUp, true);
     window.addEventListener('pointercancel', onUp, true);
-  }, [moverPainel]);
+  }, [moverPainel, maximizado]);
 
   if (!mounted || !aberto || typeof document === 'undefined') return null;
 
@@ -373,35 +374,42 @@ function PainelLateral({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.96 }}
       transition={{ duration: 0.18, ease: 'easeOut' }}
-      className="fixed w-[420px] max-w-[92vw] h-[80vh] max-h-[720px] flex flex-col rounded-lg border border-primary/30 bg-background/95 backdrop-blur-md shadow-2xl shadow-primary/20"
-      style={{ zIndex: 10000, left: posicao.x, top: posicao.y, pointerEvents: 'auto' }}
+      className="fixed flex flex-col overflow-hidden rounded-lg border border-primary/30 bg-background/95 shadow-2xl shadow-primary/20 backdrop-blur-md"
+      style={{
+        zIndex: 10000,
+        left: maximizado ? 0 : posicao.x,
+        top: maximizado ? 0 : posicao.y,
+        width: maximizado ? '100vw' : 'min(860px, 96vw)',
+        height: maximizado ? '100vh' : '80vh',
+        minWidth: 'min(500px, 92vw)',
+        minHeight: 'min(500px, 90vh)',
+        maxWidth: maximizado ? '100vw' : '96vw',
+        maxHeight: maximizado ? '100vh' : '96vh',
+        resize: maximizado ? 'none' : 'both',
+        pointerEvents: 'auto',
+      }}
     >
-      <DragHandleBar onClose={onClose} onStartDrag={iniciarArraste} />
+      <DragHandleBar onClose={onClose} onStartDrag={iniciarArraste} maximizado={maximizado} onToggleMaximizado={() => setMaximizado((value) => !value)} />
       <div className="flex-1 min-h-0 flex flex-col p-4 pt-2">{children}</div>
     </motion.div>,
     document.body,
   );
 }
 
-function DragHandleBar({ onClose, onStartDrag }: { onClose: () => void; onStartDrag: (e: React.PointerEvent) => void }) {
+function DragHandleBar({ onClose, onStartDrag, maximizado, onToggleMaximizado }: { onClose: () => void; onStartDrag: (e: React.PointerEvent) => void; maximizado: boolean; onToggleMaximizado: () => void }) {
   return (
     <div
       onPointerDown={onStartDrag}
-      className="flex items-center justify-between gap-2 px-3 py-2 border-b border-primary/20 bg-primary/5 rounded-t-lg cursor-grab active:cursor-grabbing select-none"
+      className="flex shrink-0 items-center justify-between gap-2 border-b border-primary/20 bg-primary/5 px-3 py-2 select-none"
+      style={{ cursor: maximizado ? 'default' : 'grab' }}
     >
-      <div className="flex items-center gap-2 text-primary text-sm font-semibold">
-        <GripHorizontal className="h-4 w-4 opacity-70" />
-        📖 Omni-Helper
+      <div className="flex items-center gap-2 text-sm font-semibold text-primary"><GripHorizontal className="h-4 w-4 opacity-70" />📖 Omni-Helper</div>
+      <div className="flex items-center gap-1">
+        <button type="button" onPointerDown={(e) => e.stopPropagation()} onClick={onToggleMaximizado} className="rounded p-1.5 text-muted-foreground hover:bg-background/60 hover:text-foreground" aria-label={maximizado ? 'Restaurar tamanho do guia' : 'Maximizar guia'}>
+          {maximizado ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+        </button>
+        <button type="button" onPointerDown={(e) => e.stopPropagation()} onClick={onClose} className="rounded p-1.5 text-muted-foreground hover:bg-background/60 hover:text-foreground" aria-label="Fechar Omni-Helper"><X className="h-4 w-4" /></button>
       </div>
-      <button
-        type="button"
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={onClose}
-        className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-background/60 transition-colors"
-        aria-label="Fechar Omni-Helper"
-      >
-        <X className="h-4 w-4" />
-      </button>
     </div>
   );
 }
