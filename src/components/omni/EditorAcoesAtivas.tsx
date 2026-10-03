@@ -1,3 +1,4 @@
+import { EditorDesfechosTR } from './EditorDesfechosTR';
 import { EditorReacoesAtivas } from './EditorReacoesAtivas';
 import { EditorCustosAtivos } from './EditorCustosAtivos';
 import { EditorCondicionaisAtivos } from './EditorCondicionaisAtivos';
@@ -76,9 +77,10 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
               </label>
             )}
           </div>
+          {a.teste === 'tr' && <EditorDesfechosTR acao={a} onChange={p => set(i, p)} />}
           {a.teste === 'tr' && (
             <label className="flex items-center gap-2 text-xs">
-              <input type="checkbox" checked={!!a.metadeNoSucesso} onChange={(e) => set(i, { metadeNoSucesso: e.target.checked })} /> Metade do dano no sucesso (senão, nada)
+              <input type="checkbox" checked={!!a.metadeNoSucesso} onChange={(e) => set(i, { metadeNoSucesso: e.target.checked })} /> Metade do dano no sucesso por padrão legado (senão, nada)
             </label>
           )}
           <div className="grid grid-cols-3 gap-2">
@@ -111,7 +113,7 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
           <EditorReacoesAtivas acao={a} onChange={p => set(i, p)} />
           <EditorCondicionaisAtivos blocos={a.condicionais ?? []} onChange={condicionais => set(i, { condicionais })} />
           <div className="space-y-1">
-            <Label className="text-xs">Efeitos (se o TR falhar / o ataque acertar)</Label>
+            <Label className="text-xs">Efeitos padrão (falha do TR ou acerto; graus do TR podem substituir)</Label>
             {(a.efeitos ?? []).map((ef, k) => {
               const setEf = (n: EfeitoSecundarioAtivo) => { const e2 = [...(a.efeitos ?? [])]; e2[k] = n; set(i, { efeitos: e2 }); };
               return (

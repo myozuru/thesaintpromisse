@@ -71,7 +71,18 @@ const CondicionalAtivoSchema = z.object({
   dano_extra: z.string().optional(), mod_tr_alvo: z.number().finite().optional(),
   desvantagem_tr_alvo: z.boolean().optional(), vantagem_acerto: z.boolean().optional(),
 });
+const EfeitoSecundarioSchema = z.union([
+  z.object({ tipo: z.literal('condicao'), condicao: z.string(), rodadas: z.number().finite() }),
+  z.object({ tipo: z.enum(['puxar', 'empurrar']), metros: z.number().finite() }),
+  z.object({ tipo: z.literal('movimento'), movimento_tipo: z.enum(['puxar', 'empurrar', 'avancar_ate', 'teleporte', 'trocar_posicao']), movimento_distancia: z.string(), movimento_alvo: z.enum(['usuario', 'alvo']).optional() }),
+]);
+const DesfechoTRSchema = z.object({
+  dano: z.enum(['total', 'metade', 'nenhum']).optional(), dano_extra: z.string().optional(),
+  dano_maximizado: z.boolean().optional(), multiplicador_duracao: z.number().finite().positive().optional(),
+  efeitos: z.array(EfeitoSecundarioSchema).optional(),
+});
 const AcaoAtivaSchema = z.object({
+  desfechosTR: z.object({ falha: DesfechoTRSchema.optional(), sucesso: DesfechoTRSchema.optional(), falha_critica: DesfechoTRSchema.optional() }).optional(),
   reacao: z.object({
     gatilho: z.enum(['quando_inimigo_entrar_alcance', 'quando_inimigo_sair_alcance', 'quando_alvo_declarar_ataque', 'quando_ataque_errar', 'quando_inimigo_conjurar']),
     alcance_m: z.number().finite().positive(), protegido: z.enum(['usuario', 'aliados', 'todos']),
@@ -95,11 +106,7 @@ const AcaoAtivaSchema = z.object({
   tipoDano: z.string().optional(), incluirArma: z.boolean().optional(),
   consumirContador: z.object({ nome: z.string(), minimo: z.number().finite() }).optional(),
   margemCritico: z.object({ condicao: z.string(), reducao: z.number().finite() }).optional(),
-  efeitos: z.array(z.union([
-    z.object({ tipo: z.literal('condicao'), condicao: z.string(), rodadas: z.number().finite() }),
-    z.object({ tipo: z.enum(['puxar', 'empurrar']), metros: z.number().finite() }),
-    z.object({ tipo: z.literal('movimento'), movimento_tipo: z.enum(['puxar', 'empurrar', 'avancar_ate', 'teleporte', 'trocar_posicao']), movimento_distancia: z.string(), movimento_alvo: z.enum(['usuario', 'alvo']).optional() }),
-  ])).optional(),
+  efeitos: z.array(EfeitoSecundarioSchema).optional(),
   condicionais: z.array(CondicionalAtivoSchema).optional(),
 });
 

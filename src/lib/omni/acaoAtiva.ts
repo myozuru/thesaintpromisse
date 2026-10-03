@@ -19,7 +19,7 @@ import { resolverTipoDano, type MetadadosAtaqueDano } from './contextoDano';
  * Custos, ação e cargas são pagos ANTES da rolagem (gastos mesmo errando).
  */
 import type { Character } from '@/types';
-import type { AcaoAtivaConfig, EfeitoSecundarioAtivo, EntidadeOmni, TrNome } from './tipos';
+import type { AcaoAtivaConfig, DesfechoTRAtivo, EfeitoSecundarioAtivo, EntidadeOmni, TrNome } from './tipos';
 import { avaliarFormula } from './parser';
 import { lerCaminhoOmni, montarVariaveisDoPersonagem } from './resolvedor';
 import { useCharacterStore } from '@/stores/useCharacterStore';
@@ -70,6 +70,18 @@ export function planejarDano(dano: string | undefined, porCarga: string | undefi
 export function danoAposTR(total: number, passou: boolean, metadeNoSucesso: boolean): number {
   if (!passou) return total;
   return metadeNoSucesso ? Math.floor(total / 2) : 0;
+}
+
+export type GrauSucessoTR = 'falha_critica' | 'falha' | 'sucesso';
+export function classificarGrauTR(d20: number, total: number, cd: number): GrauSucessoTR {
+  if (d20 === 1 || total <= cd - 5) return 'falha_critica';
+  return total >= cd ? 'sucesso' : 'falha';
+}
+
+export function danoDoGrauTR(total: number, grau: GrauSucessoTR, desfecho: DesfechoTRAtivo | undefined, metadeLegada: boolean): number {
+  const modo = desfecho?.dano ?? (grau === 'sucesso' ? metadeLegada ? 'metade' : 'nenhum' : 'total');
+  if (modo === 'nenhum') return 0;
+  return modo === 'metade' ? Math.floor(total / 2) : total;
 }
 
 /**
@@ -193,7 +205,14 @@ export async function executarAcaoAtiva(
   const arma = cfg.teste === 'ataque' ? armaDaAcao(u, ent) : undefined;
   if (cfg.teste === 'ataque' && !arma) return { ok: false, reason: 'Nenhuma arma empunhada para o ataque.' };
 
-  const movimentos = await prepararMovimentosAtivos(u.id, alvos, cfg.efeitos ?? [], opcoes);
+  const efeitosBase = cfg.efeitos ?? [];
+  const indicesDesfecho: Partial<Record<GrauSucessoTR, number>> = {};
+  const efeitosPossiveis = [...efeitosBase];
+  for (const grau of ['falha_critica', 'falha', 'sucesso'] as const) {
+    const efeitos = cfg.desfechosTR?.[grau]?.efeitos;
+    if (efeitos) { indicesDesfecho[grau] = efeitosPossiveis.length; efeitosPossiveis.push(...efeitos); }
+  }
+  const movimentos = await prepararMovimentosAtivos(u.id, alvos, efeitosPossiveis, opcoes);
   if (!movimentos.ok) return movimentos;
   // Destino pode exigir interação: revalidar recursos e fichas após o await.
   store = useCharacterStore.getState();
@@ -240,6 +259,9 @@ export async function executarAcaoAtiva(
     let critico = false;
     let aplicaEfeitos = true;
     let passouTR = false;
+    let grauTR: GrauSucessoTR | undefined;
+    let desfechoTR: DesfechoTRAtivo | undefined;
+    let efeitosTR: EfeitoSecundarioAtivo[] = cfg.efeitos ?? [];
     let armaDano = 0;
     let cabecalho = '';
 
@@ -251,9 +273,17 @@ export async function executarAcaoAtiva(
       const mod = modTR(t, tr) + mods.tr + flat.bonus;
       const rolled = await applyAdvantageToD20(adv.net, () => rollD20Com(t.id, undefined, { label: `TR ${TR_ROTULO[tr]}` }));
       const d20 = rolled.d20;
-      passouTR = d20 + mod >= cd;
-      aplicaEfeitos = !passouTR;
-      cabecalho = `TR ${TR_ROTULO[tr]}${rolled.modeLabel} d20 ${d20}${mod >= 0 ? '+' : ''}${mod} = ${d20 + mod} vs CD ${cd} → ${passouTR ? 'SUCESSO' : 'FALHA'}`;
+      const totalTR = d20 + mod;
+      passouTR = totalTR >= cd;
+      grauTR = classificarGrauTR(d20, totalTR, cd);
+      const ramo = cfg.desfechosTR?.[grauTR];
+      desfechoTR = ramo;
+      efeitosTR = ramo?.efeitos ?? (grauTR === 'sucesso' ? [] : cfg.efeitos ?? []);
+      if (grauTR === 'sucesso' && ramo?.dano === undefined && ramo?.dano_extra === undefined && !ramo?.dano_maximizado && !ramo?.efeitos?.length) efeitosTR = [];
+      if (grauTR !== 'sucesso' && ramo?.efeitos === undefined && (cfg.efeitos?.length ?? 0) > 0) efeitosTR = cfg.efeitos!;
+      aplicaEfeitos = grauTR !== 'sucesso' || efeitosTR.length > 0 || !!ramo?.dano_extra || !!ramo?.dano_maximizado || !!ramo?.dano && ramo.dano !== 'nenhum';
+      const grauLabel = grauTR === 'falha_critica' ? 'FALHA CRÍTICA' : grauTR.toUpperCase();
+      cabecalho = `TR ${TR_ROTULO[tr]}${rolled.modeLabel} d20 ${d20}${mod >= 0 ? '+' : ''}${mod} = ${totalTR} vs CD ${cd} → ${grauLabel}`;
     } else if (cfg.teste === 'ataque') {
       const def = computeTotalDefense(t, {}, arma!.range === 'melee' ? 'melee' : 'ranged');
       const ctx = buildAttackContext({
@@ -280,15 +310,22 @@ export async function executarAcaoAtiva(
     }
 
     // ── Dano ──
-    const plano = planejarDano([cfg.dano, ...mods.danos, ...extraIntensificacao.grupos.map(g => `${g.count}d${g.sides}`), extraIntensificacao.fixo ? String(extraIntensificacao.fixo) : ''].filter(Boolean).join('+'), cfg.dadosPorCarga, cargas, critico, 2 + mods.multiplicador);
-    let bruto = armaDano + plano.fixo;
+    const plano = planejarDano([cfg.dano, ...mods.danos, ...extraIntensificacao.grupos.map(g => `${g.count}d${g.sides}`), extraIntensificacao.fixo ? String(extraIntensificacao.fixo) : '', desfechoTR?.dano_extra].filter(Boolean).join('+'), cfg.dadosPorCarga, cargas, critico, 2 + mods.multiplicador);
+    const modoDanoTR = desfechoTR?.dano ?? (passouTR ? cfg.metadeNoSucesso ? 'metade' : 'nenhum' : 'total');
+    const danoSuprimido = cfg.teste === 'tr' && modoDanoTR === 'nenhum';
+    let bruto = danoSuprimido ? 0 : armaDano + plano.fixo;
     let dadosTxt = '';
-    if (plano.grupos.length) {
-      const r = await rollDiceGroups(plano.grupos, { label: cfg.nome });
-      bruto += r.total;
-      dadosTxt = r.groups.map((g) => `${g.count}d${g.sides}[${g.rolls.join(',')}]`).join('+');
+    if (!danoSuprimido && plano.grupos.length) {
+      if (desfechoTR?.dano_maximizado) {
+        bruto += plano.grupos.reduce((soma, g) => soma + g.count * g.sides, 0);
+        dadosTxt = plano.grupos.map(g => `${g.count}d${g.sides}[max]`).join('+');
+      } else {
+        const r = await rollDiceGroups(plano.grupos, { label: cfg.nome });
+        bruto += r.total;
+        dadosTxt = r.groups.map((g) => `${g.count}d${g.sides}[${g.rolls.join(',')}]`).join('+');
+      }
     }
-    const dano = cfg.teste === 'tr' ? danoAposTR(bruto, passouTR, !!cfg.metadeNoSucesso) : bruto;
+    const dano = cfg.teste === 'tr' && grauTR ? danoDoGrauTR(bruto, grauTR, desfechoTR, !!cfg.metadeNoSucesso) : bruto;
     if (dano > 0) {
       useCharacterStore.getState().applyDamage(t.id, dano, resolverTipoDano(cfg.tipoDano), {
         attackerId: u.id, source: 'omni', attack: metadadosAtaque,
@@ -296,11 +333,17 @@ export async function executarAcaoAtiva(
       });
     }
     efeitoAplicado ||= aplicaEfeitos;
-    const notas = aplicaEfeitos ? aplicarEfeitos(u, t, cfg.efeitos ?? [], fonte, movimentos.planos.get(t.id), sustentadas) : [];
+    const fatorRaw = desfechoTR?.multiplicador_duracao ?? 1;
+    const fatorDuracao = Number.isFinite(fatorRaw) && fatorRaw > 0 ? fatorRaw : 1;
+    const efeitosAplicados = efeitosTR.map(ef => ef.tipo === 'condicao' && fatorDuracao > 1 && ef.rodadas > 0 ? { ...ef, rodadas: Math.ceil(ef.rodadas * fatorDuracao) } : ef);
+    const inicioPlanos = grauTR && indicesDesfecho[grauTR] !== undefined ? indicesDesfecho[grauTR]! : 0;
+    const todosPlanos = movimentos.planos.get(t.id) ?? [];
+    const planosResultado = efeitosAplicados.map((_, i) => { const plano = todosPlanos.find(p => p.indice === inicioPlanos + i); return plano ? { ...plano, indice: i } : undefined; }).filter((p): p is PlanoMovimentoAtivo => !!p);
+    const notas = aplicaEfeitos ? aplicarEfeitos(u, t, efeitosAplicados, fonte, planosResultado, sustentadas) : [];
     const partes = [
       cabecalho,
       mods.ativos.length ? `${mods.ativos.length} bloco(s) condicional(is) ativo(s)` : '',
-      `dano ${dano}${armaDano ? ` (arma ${armaDano}` + (dadosTxt ? ` + ${dadosTxt}` : '') + ')' : dadosTxt ? ` (${dadosTxt})` : ''}${passouTR && cfg.metadeNoSucesso ? ' — metade' : ''}`,
+      `dano ${dano}${armaDano ? ` (arma ${armaDano}` + (dadosTxt ? ` + ${dadosTxt}` : '') + ')' : dadosTxt ? ` (${dadosTxt})` : ''}${grauTR ? ` — ${grauTR}` : passouTR && cfg.metadeNoSucesso ? ' — metade' : ''}`,
       ...notas,
     ].filter(Boolean);
     const msg = `⚔️ ${u.name} usa ${cfg.nome} (${pago}) em ${t.name}: ${partes.join(' · ')}.`;

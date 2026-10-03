@@ -246,6 +246,14 @@ export interface ModificadorCondicionalAtivo {
   vantagem_acerto?: boolean;
 }
 
+export interface DesfechoTRAtivo {
+  dano?: 'total' | 'metade' | 'nenhum';
+  dano_extra?: string;
+  dano_maximizado?: boolean;
+  multiplicador_duracao?: number;
+  efeitos?: EfeitoSecundarioAtivo[];
+}
+
 /** Ação ativa genérica montada pelo Mestre (ver acaoAtiva.ts). */
 export interface CustoRecursosAtivo {
   pe_base?: string;
@@ -273,6 +281,7 @@ export interface AcaoAtivaConfig {
   reacao?: ReacaoAtivaConfig;
   custo_recursos?: CustoRecursosAtivo;
   mod_acerto?: number;
+  desfechosTR?: { falha?: DesfechoTRAtivo; sucesso?: DesfechoTRAtivo; falha_critica?: DesfechoTRAtivo };
   id: string;
   nome: string;
   acao: 'comum' | 'bonus' | 'reacao' | 'livre';

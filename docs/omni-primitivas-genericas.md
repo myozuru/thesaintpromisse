@@ -9,7 +9,7 @@ Este ciclo sucede a auditoria das keys. Cada categoria é uma entrega independen
 | 3 | Movimento | Implementada: puxar, empurrar, avançar, teleportar e trocar; fórmulas, obstáculos e destinos válidos |
 | 4 | Custos flexíveis | Implementada: intensificação com teto, consumo parcial/total, PV, tipo de ação e manutenção de condições por turno |
 | 5 | Reações interrompíveis | Implementada: cinco gatilhos, janela aguardada, defesa local, cancelamento e integração com ataques/conjurações/movimento |
-| 6 | Graus de TR | Sucesso/falha e metade já existem; pendem falha crítica e desfechos configuráveis |
+| 6 | Graus de TR | Implementada: falha crítica, dano total/metade/nenhum, dano maximizado ou extra, duração e efeitos por grau |
 
 ## Contrato da etapa 1
 
@@ -219,6 +219,42 @@ Exemplo de defesa de um aliado (bloco da ação):
     "protegido": "aliados",
     "alvo": "usuario",
     "defesa_bonus": 3
+  }
+}
+```
+
+
+## Contrato da etapa 6
+
+O bloco opcional `desfechosTR` existe somente nas ações com `teste: "tr"`. Ele permite definir independentemente `falha`, `sucesso` e `falha_critica`; cada ramo aceita:
+
+| Campo | Semântica |
+| --- | --- |
+| `dano` | `total`, `metade` ou `nenhum` |
+| `dano_extra` | Dados e/ou valores fixos somados ao dano configurado |
+| `dano_maximizado` | Substitui a rolagem dos dados daquele ramo pelos valores máximos; valores fixos permanecem uma vez |
+| `multiplicador_duracao` | Multiplica arredondando para cima as rodadas das condições aplicadas nesse ramo; condições indefinidas continuam indefinidas |
+| `efeitos` | Lista de condições e movimentos exclusiva do ramo; uma lista vazia suprime os efeitos herdados |
+
+A classificação usa o d20 escolhido depois de vantagem/desvantagem e o total do TR: natural 1 ou total pelo menos 5 abaixo da CD resulta em falha crítica; senão, atingir a CD resulta em sucesso; os demais resultados são falha. A regra do total 5 abaixo prevalece até quando o d20 é natural 20 com modificador negativo. Falhas por 5+, natural 1 e falhas comuns usam o ramo correspondente.
+
+Configurações parciais usam a regra antiga do grau não configurado: falha completa mais efeitos legados, sucesso com metade ou nenhum conforme `metadeNoSucesso`, e nenhuma condição crítica inventada. Quando um ramo existe, campos omitidos herdam o dano/efeitos padrão desse grau; para desligar os efeitos de falha, defina `efeitos: []`. Sucesso sem efeitos configurados não herda os efeitos de falha.
+
+O dano extra participa do dano antes da metade/metade de sucesso, resistências e aplicação de dano. Dano maximizado não solicita dados aleatórios para o dano daquele ramo. Um ramo sem dano ainda pode aplicar seus efeitos. Movimentos de qualquer ramo configurado são pré-validados antes de pagar a ação e só o movimento do resultado alcançado é aplicado. Escolher destino para esses efeitos acontece antes do TR, seguindo a mesma janela de preparação das ações ativas.
+
+Exemplo:
+
+```json
+{
+  "desfechosTR": {
+    "falha": { "dano": "metade", "efeitos": [] },
+    "sucesso": { "dano": "nenhum", "efeitos": [{ "tipo": "condicao", "condicao": "exposto", "rodadas": 1 }] },
+    "falha_critica": {
+      "dano_extra": "2d6",
+      "dano_maximizado": true,
+      "multiplicador_duracao": 2,
+      "efeitos": [{ "tipo": "condicao", "condicao": "caido", "rodadas": 1 }]
+    }
   }
 }
 ```
