@@ -18,9 +18,10 @@ import { RECEITAS_OMNI, type ReceitaOmni } from '@/lib/omni/receitas';
 import { CHAVES_GUIA_OMNI, GATILHOS_GUIA_OMNI, ACOES_GUIA_OMNI, escoposDaChaveGuia, referenciaDaChaveGuia, referenciaDoAliasGuia, type CategoriaGuiaId, type ChaveGuia, type EscopoGuia } from '@/lib/omni/guiaDados';
 import { FUNCOES_MATEMATICAS_OMNI } from '@/lib/omni/constantesDoSistema';
 import type { CombatEffect } from '@/lib/omni/tipos';
+import { GuiaComponentes } from './GuiaComponentes';
 import {
   extrairPrefixoNoCaret,
-  filtrarSugestoes,
+  sugerirNoCaret,
   type SugestaoAutocomplete,
 } from '@/lib/omni/dicionarioAutocomplete';
 
@@ -64,8 +65,9 @@ export function GuiaFormulasDialog({ aberto, onClose, modo = 'dialog', onAplicar
 
   const Conteudo = (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <Tabs defaultValue={onAplicarReceita ? 'receitas' : 'recursos'} className="flex min-h-0 flex-1 flex-col">
+      <Tabs defaultValue={onAplicarReceita ? 'receitas' : 'componentes'} className="flex min-h-0 flex-1 flex-col">
         <TabsList className="grid h-auto w-full shrink-0 grid-cols-2 gap-1 sm:grid-cols-4">
+          <TabsTrigger value="componentes" className="min-h-10 whitespace-normal text-xs leading-relaxed">🧩 Componentes</TabsTrigger>
           <TabsTrigger value="sintaxe" className="min-h-10 whitespace-normal text-xs leading-relaxed">⌨ Sintaxe</TabsTrigger>
           <TabsTrigger value="recursos" className="min-h-10 whitespace-normal text-xs leading-relaxed">🩺 Recursos</TabsTrigger>
           <TabsTrigger value="combate" className="min-h-10 whitespace-normal text-xs leading-relaxed">⚔ Combate</TabsTrigger>
@@ -75,6 +77,7 @@ export function GuiaFormulasDialog({ aberto, onClose, modo = 'dialog', onAplicar
           <TabsTrigger value="acoes" className="min-h-10 whitespace-normal text-xs leading-relaxed">🎯 Ações</TabsTrigger>
           <TabsTrigger value="receitas" className="min-h-10 whitespace-normal text-xs leading-relaxed">✦ Receitas</TabsTrigger>
         </TabsList>
+        <TabsContent value="componentes" className="min-h-0 flex-1 overflow-y-auto pt-3 pr-2"><GuiaComponentes inserir={inserir} /></TabsContent>
 
         <TabsContent value="sintaxe" className="min-h-0 flex-1 space-y-5 overflow-y-auto pt-3 pr-2">
           <section className="space-y-2">
@@ -911,7 +914,7 @@ function TabAutocompletePlayground({ onInserir }: { onInserir: (s: string) => vo
     if (pf.length < 2) {
       setSugestoes([]); setPrefixo(''); setIndice(0); return;
     }
-    setSugestoes(filtrarSugestoes(pf));
+    setSugestoes(sugerirNoCaret(val, caret));
     setPrefixo(pf);
     setIndice(0);
   };
@@ -960,7 +963,7 @@ function TabAutocompletePlayground({ onInserir }: { onInserir: (s: string) => vo
       if (!ciclandoRef.current || lista.length === 0) {
         const { prefixo: pf } = extrairPrefixoNoCaret(texto, caret);
         if (pf.length === 0) return;
-        lista = filtrarSugestoes(pf);
+        lista = sugerirNoCaret(texto, caret);
         if (lista.length === 0) return;
         setSugestoes(lista); setPrefixo(pf);
       }

@@ -13,7 +13,7 @@ afterEach(limparMesa);
 describe('destinos compostos graváveis', () => {
   it('consome e repõe dados de vida com teto', () => {
     montarMesa([ficha('write', { hitDiceCurrent: 2, hitDiceMax: 3 })], {});
-    aplicarEfeitoNoPersonagem('write', 'ADICIONAR', 'curto', 10);
+    aplicarEfeitoNoPersonagem('write', 'ADICIONAR', 'dado_vida', 10);
     expect(pegarFicha('write').hitDiceCurrent).toBe(3);
     aplicarEfeitoNoPersonagem('write', 'SUBTRAIR', 'dado_vida restante', 1);
     // O próprio recurso pode ser usado sem qualificador; `restante` também é um destino válido.

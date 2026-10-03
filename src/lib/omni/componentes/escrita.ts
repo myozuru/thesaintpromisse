@@ -25,7 +25,6 @@ export function destinoComposto(texto: string): DestinoComposto | undefined {
   if (['restante','restantes'].includes(partes.at(-1) ?? '')) partes.pop();
   if (raiz.componente === 'pericia' && partes.length === 1 && !maximo) return { caminho: `pericia_${partes[0]}` };
   let caminho = String(raiz.componente);
-  if (caminho === 'curto') caminho = 'dado_vida';
   if (caminho === 'bloqueio' && partes.join(' ') === 'total' && !maximo) return { caminho: 'bloqueio_total' };
   if (caminho === 'acao' && partes.length === 1 && ['comum','bonus'].includes(partes[0])) return { caminho: partes[0] === 'comum' ? 'ataques_restantes' : 'acao_bonus' };
   if (['reacoes','reacao','ataques','oportunidade'].includes(caminho) && (!partes.length || (partes.length === 1 && ['restante','restantes'].includes(partes[0])))) {

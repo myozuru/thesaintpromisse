@@ -35,7 +35,7 @@ describe('compatibilidade e persistência de composições', () => {
     expect(avaliarFormula('quantidade buffs sustentados', {}, undefined, { composicoes: { USUARIO: d } }).valor).toBe(1);
   });
   it('resolve o novo seletor simples e a identidade informada pelo evento', () => {
-    expect(avaliarFormula('curto', {}, undefined, { composicoes: { USUARIO: { selecoes: { curto: 2 } } } }).valor).toBe(2);
+    expect(avaliarFormula('vida', {}, undefined, { composicoes: { USUARIO: { selecoes: { vida: 12 } } } }).valor).toBe(12);
     expect(avaliarFormula('@CENA.outro e voce', {}, undefined, { cena: { outro_eh_voce: 1 } }).valor).toBe(1);
   });
 });

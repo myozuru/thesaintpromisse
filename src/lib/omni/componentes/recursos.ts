@@ -18,7 +18,6 @@ export function dadosRecursos(bag: Record<string, number>): DadosComposicao {
     pe: recursoComposto(pe, maxPE, { temporario: n('PE_TEMP'), temporaria: n('PE_TEMP') }),
     sorte: recursoComposto(n('SORTE'), n('SORTE_MAX')),
     dado_vida: recursoComposto(n('DADO_VIDA'), n('DADO_VIDA_MAX')),
-    curto: recursoComposto(n('DADO_VIDA'), n('DADO_VIDA_MAX')),
     reserva: { campos: { pe: recursoComposto(n('RESERVA_PE'), n('RESERVA_PE_MAX'), { recuperavel: n('RESERVA_PE_RECUPERAVEL') }) } },
     vigor_maldito: recursoComposto(n('VIGOR_MALDITO_USOS'), n('VIGOR_MALDITO_MAX'), { usos: n('VIGOR_MALDITO_USOS') }),
     slots: { campos: { descanso: { campos: { curto: recursoComposto(n('SLOTS_DESCANSO_CURTO'), n('SLOTS_DESCANSO_CURTO_MAX')) } } } },
