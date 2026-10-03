@@ -320,21 +320,33 @@ export function selectOmniModifiers(
         out.origins[k].push({ source: `◇ ${ent.nome}`, delta: total });
       }
     }
-    const deslocamento = Number(fixos.deslocamento) || 0;
+    const deslocamento = (Number(fixos.deslocamento) || 0) + avaliarFormulaNaFicha(character, formulas.deslocamento);
     if (deslocamento !== 0) {
       out.deslocamento += deslocamento;
       out.deslocamentoOrigins.push({ source: `◇ ${ent.nome}`, delta: deslocamento });
     }
-    for (const [rawKey, rawValue] of Object.entries(fixos.pericias ?? {})) {
+    const chavesPericia = new Set([
+      ...Object.keys(fixos.pericias ?? {}),
+      ...Object.keys(formulas.pericias ?? {}),
+    ]);
+    for (const rawKey of chavesPericia) {
       const key = normalizarChaveOmni(rawKey).replace(/^pericia(s)?_/, '');
-      const value = Number(rawValue) || 0;
+      const fixo = Number(fixos.pericias?.[rawKey]) || 0;
+      const formula = avaliarFormulaNaFicha(character, formulas.pericias?.[rawKey]);
+      const value = fixo + formula;
       if (!key || value === 0) continue;
       out.pericias[key] = (out.pericias[key] ?? 0) + value;
       (out.periciaOrigins[key] ??= []).push({ source: `◇ ${ent.nome}`, delta: value });
     }
-    for (const [rawKey, rawValue] of Object.entries(fixos.trs ?? {})) {
+    const chavesTR = new Set([
+      ...Object.keys(fixos.trs ?? {}),
+      ...Object.keys(formulas.trs ?? {}),
+    ]);
+    for (const rawKey of chavesTR) {
       const key = normalizarChaveOmni(rawKey) as OmniRollBonusKey;
-      const value = Number(rawValue) || 0;
+      const fixo = Number(fixos.trs?.[rawKey as keyof NonNullable<typeof fixos.trs>]) || 0;
+      const formula = avaliarFormulaNaFicha(character, formulas.trs?.[rawKey as keyof NonNullable<typeof formulas.trs>]);
+      const value = fixo + formula;
       if (!CHAVES_ROLAGEM_PASSIVA.includes(key) || value === 0) continue;
       out.trs[key] = (out.trs[key] ?? 0) + value;
       (out.trOrigins[key] ??= []).push({ source: `◇ ${ent.nome}`, delta: value });
