@@ -819,7 +819,7 @@ const CONTADORES_OMNI: ChaveOmniOpcao[] = [
   { id: '<nome>__fonte__<id>',     label: '<nome>__fonte__<id>',          hint: 'Parcela vinda de uma ficha específica (teto por fonte).' },
   { id: 'qtd_talentos',            label: 'Qtd. Talentos',                hint: 'Total de talentos escolhidos.' },
   { id: 'qtd_aptidoes',            label: 'Qtd. Aptidões',                hint: 'Total de aptidões adquiridas.' },
-  { id: 'qtd_habilidades',         label: 'Qtd. Habilidades Spec',        hint: 'Total de habilidades de especialização.' },
+  { id: 'qtd_habilidades_especializacao', label: 'Qtd. Habilidades de Especialização', hint: 'Total de habilidades de especialização escolhidas.' },
   { id: 'qtd_talentos_combate',    label: 'Qtd. Talentos de Combate',     hint: 'Talentos de combate escolhidos.' },
   { id: 'qtd_aptidoes_aura',       label: 'Qtd. Aptidões de Aura',        hint: 'Aptidões da família Aura escolhidas.' },
   { id: 'tem_talento_<id>',        label: 'tem_talento_<id>',             hint: 'Predicate: 1 se possui o talento de id <id>.' },
