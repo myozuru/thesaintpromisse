@@ -300,6 +300,41 @@ function KeyCatalog({ categoria, onInsert, onSelecionarRecurso, extrairChaveRecu
   );
 }
 
+const EXEMPLOS_CONTEXTUAIS_CHAVES: Record<string, { formula: string; explicacao: string }> = {
+  ado_concedida: {
+    formula: 'se @USUARIO.ado_concedida > 0 entao subtrair 1d8 + @USUARIO.forca em @ALVO.vida',
+    explicacao: 'Quando o Mestre concede um ataque de oportunidade, a condição fica verdadeira e o comando causa 1d8 + Força de dano ao alvo. Sem a concessão, não executa o ataque.',
+  },
+  ado_consumida: {
+    formula: 'se @USUARIO.ado_concedida > 0 e @USUARIO.ado_consumida = 0 entao subtrair 1d8 + @USUARIO.forca em @ALVO.vida',
+    explicacao: 'Confere duas coisas antes de atacar: a AdO foi concedida e ainda não foi consumida. A conjunção “e” exige que as duas condições sejam verdadeiras.',
+  },
+  reacoes_restantes: {
+    formula: 'se @USUARIO.reacoes_restantes > 0 entao subtrair 1d8 + @USUARIO.forca em @ALVO.vida',
+    explicacao: 'Só executa o ataque se ainda houver pelo menos uma reação disponível. A quantidade pode ser maior que 1 quando a ficha ou uma habilidade concede reações extras.',
+  },
+  'CENA.distancia_m': {
+    formula: 'quando @CENA.distancia_m <= 1.5 -> subtrair 1d8 em @ALVO.vida',
+    explicacao: 'Cria um gatilho de distância: quando usuário e alvo ficam a 1,5 m ou menos, aplica 1d8 de dano. A medida está em metros.',
+  },
+  'DANO.foi_critico': {
+    formula: 'se @DANO.foi_critico > 0 entao subtrair 2d6 em @ALVO.vida',
+    explicacao: 'Durante a resolução de dano, verifica a marca de crítico do ataque. Se ela valer 1, acrescenta 2d6 de dano; caso contrário, não aplica esse efeito extra.',
+  },
+  vida_pct_abaixo_25: {
+    formula: 'se @ALVO.vida_pct_abaixo_25 > 0 entao subtrair 2d8 em @ALVO.vida',
+    explicacao: 'A key vale 1 quando a vida do alvo está em 25% ou menos. Nesse caso, o golpe recebe um efeito adicional de 2d8.',
+  },
+  qtd_inimigos_adjacentes: {
+    formula: 'subtrair @USUARIO.qtd_inimigos_adjacentes * 1d6 em @ALVO.vida',
+    explicacao: 'Multiplica 1d6 pela quantidade de inimigos adjacentes ao usuário. Com 3 inimigos adjacentes, por exemplo, a fórmula rola 3d6 de dano.',
+  },
+  'tem_condicao_<id>': {
+    formula: 'se @ALVO.tem_condicao_atordoado > 0 entao subtrair 2d6 em @ALVO.vida',
+    explicacao: 'Troca <id> pelo identificador da condição. Aqui, testa se o alvo está Atordoado; se estiver, aplica 2d6 de dano adicional.',
+  },
+};
+
 function KeyCard({ chave, onInsert, onSelecionarRecurso, extrairChaveRecurso }: {
   chave: ChaveGuia;
   onInsert: (formula: string) => void;
@@ -309,7 +344,7 @@ function KeyCard({ chave, onInsert, onSelecionarRecurso, extrairChaveRecurso }: 
   const escopos = escoposDaChaveGuia(chave);
   const escopoExemplo = escopos[0];
   const referenciaExemplo = referenciaDaChaveGuia(chave, escopoExemplo);
-  const exemplo = 'if(' + referenciaExemplo + ' > 0, ' + referenciaExemplo + ', 0)';
+  const exemplo = EXEMPLOS_CONTEXTUAIS_CHAVES[chave.id];
   const recurso = extrairChaveRecurso(referenciaExemplo);
   return (
     <article className="min-w-0 rounded-md border border-border/70 bg-background/50 p-3 hover:border-primary/50">
@@ -334,7 +369,13 @@ function KeyCard({ chave, onInsert, onSelecionarRecurso, extrairChaveRecurso }: 
           </div>
         </div>
       )}
-      <button type="button" onClick={() => onInsert(exemplo)} className="mt-3 block max-w-full break-all rounded bg-muted px-2 py-1.5 text-left font-mono text-xs leading-relaxed text-foreground hover:bg-primary/10">Exemplo: {exemplo}</button>
+      {exemplo && (
+        <div className="mt-3 rounded-md border border-primary/20 bg-primary/5 p-2.5">
+          <div className="text-xs font-semibold uppercase tracking-wide text-primary">Exemplo prático</div>
+          <button type="button" onClick={() => onInsert(exemplo.formula)} className="mt-1 block w-full break-words rounded bg-background/70 px-2 py-1.5 text-left font-mono text-xs leading-relaxed text-foreground hover:bg-primary/10">{exemplo.formula}</button>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{exemplo.explicacao}</p>
+        </div>
+      )}
     </article>
   );
 }
