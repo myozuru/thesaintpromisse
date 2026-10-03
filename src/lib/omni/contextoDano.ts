@@ -24,7 +24,10 @@ const normalizarNome = (valor: string) => valor.normalize('NFD').replace(/[\u030
 const NOMES_TIPO_DANO: Record<string, DamageType> = {
   ...Object.fromEntries(Object.entries(DAMAGE_TYPE_LABELS).map(([id, label]) => [normalizarNome(label), id as DamageType])),
   ct: 'DCO', pf: 'DP', im: 'DI',
-  impacto: 'DI', fogo: 'DQ', frio: 'DCG', eletrico: 'DCC', mental: 'DPS', veneno: 'DV',
+  corte: 'DCO', perfuracao: 'DP',
+  impacto: 'DI', fogo: 'DQ', chamas: 'DQ', frio: 'DCG', gelo: 'DCG', congelamento: 'DCG',
+  eletrico: 'DCC', eletricidade: 'DCC', choque: 'DCC', som: 'DS', sonico: 'DS',
+  mental: 'DPS', psiquico: 'DPS', necro: 'DN', veneno: 'DV',
 };
 
 /** Nomes equivalentes legados; conceitos sem correspondência ficam desconhecidos. */
