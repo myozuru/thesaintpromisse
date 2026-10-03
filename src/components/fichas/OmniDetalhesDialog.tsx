@@ -178,6 +178,7 @@ export function OmniDetalhesDialog({ open, onOpenChange, entidade }: Props) {
                   })}
                   {Object.entries(entidade.bonusEquipado.pericias ?? {}).map(([key, value]) => value ? <Badge key={`p-${key}`} variant="outline">{key.replace(/_/g, ' ')}: {value > 0 ? '+' : ''}{value}</Badge> : null)}
                   {Object.entries(entidade.bonusEquipado.trs ?? {}).map(([key, value]) => value ? <Badge key={`tr-${key}`} variant="outline">TR {key}: {value > 0 ? '+' : ''}{value}</Badge> : null)}
+                  {entidade.bonusEquipado.deslocamento ? <Badge variant="outline">Deslocamento: {entidade.bonusEquipado.deslocamento > 0 ? '+' : ''}{entidade.bonusEquipado.deslocamento} m</Badge> : null}
                 </div>
               </section>
             )}
