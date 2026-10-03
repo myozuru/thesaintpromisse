@@ -32,6 +32,16 @@ describe('dados do guia OMNI', () => {
     }
   });
 
+  it('mostra os aliases antigos dos templates dinâmicos', () => {
+    const porId = new Map(CHAVES_GUIA_OMNI.map((c) => [c.id, c]));
+    expect(porId.get('origem_<id>')?.aliases).toContain('origem_id_<id>');
+    expect(porId.get('especializacao_<id>')?.aliases).toContain('especializacao_id_<id>');
+    expect(porId.get('condicao_rodadas_desde_<id>')?.aliases).toContain('condicao_idade_rodadas_<id>');
+    expect(porId.get('condicao_tem_idade_<id>')?.aliases).toContain('condicao_idade_conhecida_<id>');
+    expect(porId.get('condicao_rodadas_restantes_<id>')?.aliases).toContain('condicao_rodadas_<id>');
+    expect(porId.get('qtd_feiticos_tipo_<tipo>')?.aliases).toContain('qtd_feiticos_elemento_<tipo>');
+  });
+
   it('gera referências de cada escopo sem ocultar prefixos globais', () => {
     const usuarioVida = CHAVES_GUIA_OMNI.find((c) => c.id === 'vida')!;
     expect(referenciaDaChaveGuia(usuarioVida, 'USUARIO')).toBe('@USUARIO.vida');
