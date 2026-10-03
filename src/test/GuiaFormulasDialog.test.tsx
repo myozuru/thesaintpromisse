@@ -23,7 +23,9 @@ describe('GuiaFormulasDialog', () => {
   it('mostra gatilhos e as aliases para inserir no campo em foco', () => {
     const onInserirFormula = vi.fn();
     render(<GuiaFormulasDialog aberto onClose={() => {}} onInserirFormula={onInserirFormula} />);
-    fireEvent.click(screen.getByRole('tab', { name: /Eventos/ }));
+    const eventos = screen.getByRole('tab', { name: /Eventos/ });
+    fireEvent.mouseDown(eventos, { button: 0 });
+    fireEvent.click(eventos);
 
     fireEvent.click(screen.getByRole('button', { name: 'fim_turno' }));
     expect(onInserirFormula).toHaveBeenLastCalledWith('@fim_turno -> ');
