@@ -281,13 +281,13 @@ describe('Fórmulas de bônus equipado para perícias, TRs e deslocamento', () =
     };
     item.bonusEquipadoFormula = {
       deslocamento: '@USUARIO.treino',
-      pericias: { furtividade: '@USUARIO.treino / 2' },
+      pericias: { furtividade: '@USUARIO.treino - 2' },
       trs: { reflexos: '@USUARIO.treino - 1' },
     };
 
     const bag = selectOmniModifiers(c, [{ instanceId: 'formula-1', equippedSlot: 'anel:0', entity: item }]);
     expect(bag.deslocamento).toBe(4);
-    expect(bag.pericias.furtividade).toBe(2.5);
+    expect(bag.pericias.furtividade).toBe(2);
     expect(bag.trs.reflexos).toBe(3);
     expect(bag.periciaOrigins.furtividade.map((origin) => origin.source)).toEqual([expect.stringContaining(item.nome)]);
     expect(bag.trOrigins.reflexos.map((origin) => origin.source)).toEqual([expect.stringContaining(item.nome)]);
