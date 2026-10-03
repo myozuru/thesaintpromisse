@@ -1,3 +1,4 @@
+import { selecionarAlvoNoMapaUI } from './helpers/alvoMapaUI';
 // @vitest-environment jsdom
 /**
  * Renovação pelo Sangue (Especialista nv 6) no combate real em memória:
@@ -22,21 +23,19 @@ const esp = (extra: Record<string, unknown> = {}) =>
 const inimigo = (id: string, extra: Record<string, unknown> = {}) => ficha(id, { category: 'INIMIGO', hpCurrent: 30, hpMax: 30, escCurrent: 0, ...extra } as never);
 
 const textoLog = () => useLogStore.getState().logs.map((l) => l.message).join('\n');
-function selecionarAlvo(id: string) {
-  const sel = screen.getAllByRole('combobox').find((s) =>
-    Array.from((s as HTMLSelectElement).options).some((o) => o.value === id)) as HTMLSelectElement;
-  fireEvent.change(sel, { target: { value: id } });
+async function selecionarAlvo(id: string) {
+  await selecionarAlvoNoMapaUI(id);
 }
 
 async function montar(c: ReturnType<typeof esp>, extras: Record<string, Record<string, unknown>> = {}) {
   useLogStore.getState().clearLogs();
   montarMesa([c, inimigo('bruno', extras.bruno)], { ana: [0, 0], bruno: [1, 0] });
   render(<AttackPanel character={c} />);
-  selecionarAlvo('bruno');
+  await selecionarAlvo('bruno');
   return screen.getByRole('button', { name: /Rolar Ataque/ }) as HTMLButtonElement;
 }
 
-beforeEach(() => { comoTela({ profileId: 'p-ana', role: 'PLAYER' }); });
+beforeEach(async () => { comoTela({ profileId: 'p-ana', role: 'PLAYER' }); });
 afterEach(async () => {
   // applyDamage agenda eventos por imports: deixe os callbacks terminarem
   // antes de encerrar o worker, inclusive nos testes com asserts síncronos.

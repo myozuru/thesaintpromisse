@@ -1,3 +1,6 @@
+import { ItemNoChaoOverlay } from './ui/ItemNoChaoOverlay';
+import { AlvoMapaOverlay } from './ui/AlvoMapaOverlay';
+import { useAlvoMapaStore, tokenDaFicha, clicarAlvoMapa, terminarAlvoMapa, alvosNoAlcance } from '@/stores/useAlvoMapaStore';
 import { prepareCollisionCache, resolveCollisionMove, type MapCollisionSegment, type MapCollisionToken, type MapCollisionCache } from '@/lib/mapCollision';
 /**
  * MapaModule — Etapas 1+2+3.
@@ -961,8 +964,18 @@ export function MapaModule() {
       // de feitiço (dano, buff, cura, condição etc.) enquanto estiver
       // armado e ainda sem alvo confirmado.
       {
-        const aim = state.singleTargetAim;
-        const mw = mouseWorldRef.current;
+        const pedido = useAlvoMapaStore.getState().pending;
+        const usuario = pedido && useCharacterStore.getState().characters.find(c => c.id === pedido.usuarioId);
+        const token = usuario && tokenDaFicha(usuario);
+        const mw = mouseWorldRef.current ?? (token ? { x: token.x, y: token.y } : null);
+        const aim = pedido && token ? { ...pedido, originWorld: { x: token.x, y: token.y }, color: '#f59e0b' } : state.singleTargetAim;
+        if (pedido) {
+          for (const alvo of alvosNoAlcance(pedido)) {
+            const t = tokenDaFicha(alvo); if (!t) continue;
+            tkCtx.save(); tkCtx.strokeStyle = '#f59e0b'; tkCtx.lineWidth = 3 / camera.scale;
+            tkCtx.beginPath(); tkCtx.arc(t.x, t.y, Math.max(t.w, t.h) / 2 + 5, 0, Math.PI * 2); tkCtx.stroke(); tkCtx.restore();
+          }
+        }
         if (aim && mw && drag.kind === 'none' && !state.pendingAoEPlacement) {
           const dpi = state.gridConfig.dpi || 70;
           const mpc = state.gridConfig.metersPerCell || 1;
@@ -970,7 +983,7 @@ export function MapaModule() {
           const dxPx = mw.x - origin.x;
           const dyPx = mw.y - origin.y;
           const distPx = Math.hypot(dxPx, dyPx);
-          const distM = (distPx / dpi) * mpc;
+          const distM = pedido ? Math.max(Math.abs(dxPx), Math.abs(dyPx)) / dpi * mpc : (distPx / dpi) * mpc;
           const maxM = aim.maxRangeMeters;
           const outOfRange = maxM != null && distM > maxM;
           const color = aim.color || '#a78bfa';
@@ -988,7 +1001,8 @@ export function MapaModule() {
             tkCtx.lineWidth = 1.25 / camera.scale;
             tkCtx.strokeStyle = outOfRange ? '#ef4444aa' : `${color}66`;
             tkCtx.beginPath();
-            tkCtx.arc(origin.x, origin.y, maxPx, 0, Math.PI * 2);
+            if (pedido) tkCtx.rect(origin.x - maxPx, origin.y - maxPx, maxPx * 2, maxPx * 2);
+            else tkCtx.arc(origin.x, origin.y, maxPx, 0, Math.PI * 2);
             tkCtx.stroke();
           }
           const labelText = maxM != null
@@ -1252,6 +1266,7 @@ export function MapaModule() {
     const store = useMapStore;
 
     const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && useAlvoMapaStore.getState().pending) { terminarAlvoMapa(null); e.preventDefault(); return; }
       if (e.code === 'Space') {
         // Evita que Space "re-clique" o último botão focado e impede o scroll
         // padrão da página. Mantém o Space funcionando dentro de inputs/textareas.
@@ -1528,6 +1543,7 @@ export function MapaModule() {
       if (!isMapSurface(e.target)) return;
       // pan?
       const isMiddle = e.button === 1;
+      if (e.button === 2 && useAlvoMapaStore.getState().pending) { terminarAlvoMapa(null); e.preventDefault(); return; }
       const isSpacePan = e.button === 0 && spaceDownRef.current && !store.getState().pendingAoEPlacement;
       if (isMiddle || isSpacePan) {
         e.preventDefault();
@@ -1576,6 +1592,13 @@ export function MapaModule() {
       const { x: wx, y: wy } = worldFromEvent(e);
       const state = store.getState();
       const cam = state.camera;
+
+      if (useAlvoMapaStore.getState().pending) {
+        e.preventDefault();
+        const hit = pickEntityAt(wx, wy);
+        if (hit) clicarAlvoMapa(hit.id);
+        return;
+      }
 
       // ── AoE pending placement (intercepta antes de qualquer ferramenta) ──
       const aoe = state.pendingAoEPlacement;
@@ -3008,7 +3031,9 @@ export function MapaModule() {
           <PreparoImediatoPrompt />
           <ReplicaSustentacaoPrompt />
 
+          <AlvoMapaOverlay />
           <PendingAoEOverlay />
+          <ItemNoChaoOverlay />
           <LootOverlay />
           <ChestOverlay />
 
@@ -3444,4 +3469,5 @@ function withAlpha(color: string, alpha: number): string {
 }
 
 export default MapaModule;
+
 

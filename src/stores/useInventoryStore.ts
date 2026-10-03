@@ -45,7 +45,7 @@ interface InventoryState {
   deleted: Record<string, number>;
   items: Record<string, InventoryItem>;
   /** Adiciona um item ao inventário do personagem (clonando a entidade). */
-  add: (ownerId: string, entity: EntidadeOmni, opts?: { markBought?: boolean }) => InventoryItem;
+  add: (ownerId: string, entity: EntidadeOmni, opts?: { markBought?: boolean; instanceId?: string }) => InventoryItem;
   /** Remove uma instância. */
   remove: (instanceId: string) => void;
   /** Lista os itens de um personagem. */
@@ -103,7 +103,7 @@ export const useInventoryStore = create<InventoryState>()(
       add: (ownerId, entity, opts) => {
         const total = entity.usos?.total;
         const inst: InventoryItem = {
-          instanceId: uid(),
+          instanceId: opts?.instanceId ?? uid(),
           ownerId,
           entity: {
             ...entity,

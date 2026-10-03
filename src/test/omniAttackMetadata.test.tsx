@@ -1,3 +1,4 @@
+import { selecionarAlvoNoMapaUI } from './helpers/alvoMapaUI';
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 vi.mock('@/integrations/supabase/client', async () => ({ supabase: (await import('./helpers/mesaReal')).nuvemFalsa }));
@@ -21,7 +22,7 @@ import { montarMetadadosDano } from '@/lib/omni/contextoDano';
 import { avaliarFormula } from '@/lib/omni/parser';
 import { ficha, montarMesa, limparMesa, comoTela, pegarFicha } from './helpers/mesaReal';
 
-beforeEach(() => {
+beforeEach(async () => {
   comoTela({ profileId: 'p-ana', role: 'PLAYER' });
   vi.mocked(rollD20Com).mockResolvedValue(20);
   for (const method of ['log', 'group', 'groupEnd'] as const) vi.spyOn(console, method).mockImplementation(() => {});
@@ -34,13 +35,12 @@ function mesa(weapon = 'Espada Longa', hidden = false) {
   useCombatStore.setState({ combatId: 'combate-teste' });
   return ana;
 }
-function selecionarAlvo() {
-  const sel = screen.getAllByRole('combobox').find((s) => Array.from((s as HTMLSelectElement).options).some((o) => o.value === 'bruno'))!;
-  fireEvent.change(sel, { target: { value: 'bruno' } });
+async function selecionarAlvo() {
+  await selecionarAlvoNoMapaUI('bruno');
 }
 
 describe('Metadados conhecidos e ausentes', () => {
-  it('não inventa flags nem alcance para dano sem contexto de ataque', () => {
+  it('não inventa flags nem alcance para dano sem contexto de ataque', async () => {
     const bag = montarMetadadosDano();
     expect(bag).toEqual({});
     expect(avaliarFormula('@DANO.foi_critico', {}, undefined, { dano: bag }).diagnosticos).toHaveLength(1);
@@ -50,7 +50,7 @@ describe('Metadados conhecidos e ausentes', () => {
   ])('preserva tipo de ataque explícito %j', (opts, expected) => {
     expect(montarMetadadosDano(opts).tipo_ataque).toBe(expected);
   });
-  it('zero conhecido e distância zero não são campos ausentes', () => {
+  it('zero conhecido e distância zero não são campos ausentes', async () => {
     const bag = montarMetadadosDano({ attack: { critical: false, criticalFail: false, isSneak: false, isOpportunity: false } }, 0);
     expect(avaliarFormula('@DANO.foi_critico + @DANO.foi_furtivo + @DANO.foi_ataque_oportunidade + @DANO.alcance', {}, undefined, { dano: bag })).toMatchObject({ valor: 0, diagnosticos: [] });
   });
@@ -70,7 +70,7 @@ describe('Painel real → motor → dano → Omni', () => {
     const spy = vi.spyOn(eventBus, 'emitirEvento');
     const pre = vi.spyOn(triggers, 'dispararGatilhoEfeitosItens');
     render(<AttackPanel character={ana} />);
-    selecionarAlvo();
+    await selecionarAlvo();
     if (opportunity) fireEvent.click(screen.getByRole('button', { name: 'Ataque de oportunidade' }));
     fireEvent.click(screen.getByRole('button', { name: /Rolar Ataque/ }));
     await waitFor(() => expect(screen.getByRole('button', { name: /Rolar Dano/ })).toBeTruthy());
@@ -91,7 +91,7 @@ describe('Painel real → motor → dano → Omni', () => {
     const ana = mesa();
     const spy = vi.spyOn(eventBus, 'emitirEvento');
     render(<AttackPanel character={ana} />);
-    selecionarAlvo();
+    await selecionarAlvo();
     fireEvent.click(screen.getByRole('button', { name: 'Ataque de oportunidade' }));
     for (let i = 1; i <= 2; i++) {
       fireEvent.click(screen.getByRole('button', { name: /Rolar Ataque/ }));
@@ -109,7 +109,7 @@ describe('Painel real → motor → dano → Omni', () => {
     useCharacterStore.getState().updateCharacter('bruno', { activeConditions: [{ id: 'cond', conditionId: 'paralisado', name: 'Paralisado', icon: '', remainingTurns: -1, remainingRounds: -1 }] });
     const spy = vi.spyOn(eventBus, 'emitirEvento');
     render(<AttackPanel character={ana} />);
-    selecionarAlvo();
+    await selecionarAlvo();
     fireEvent.click(screen.getByRole('button', { name: /Rolar Ataque/ }));
     await waitFor(() => expect(screen.getByRole('button', { name: /Rolar Dano/ })).toBeTruthy());
     fireEvent.click(screen.getByRole('button', { name: /Rolar Dano/ }));
@@ -122,7 +122,7 @@ describe('Painel real → motor → dano → Omni', () => {
     const ana = mesa();
     const spy = vi.spyOn(eventBus, 'emitirEvento');
     render(<AttackPanel character={ana} />);
-    selecionarAlvo();
+    await selecionarAlvo();
     fireEvent.click(screen.getByRole('button', { name: /Rolar Ataque/ }));
     await waitFor(() => expect(screen.getAllByText(/Falha crítica/i).length).toBeGreaterThan(0));
     expect(spy.mock.calls.some(([e]) => e === 'aoCausarDano')).toBe(false);

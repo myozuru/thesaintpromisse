@@ -1,3 +1,4 @@
+import { selecionarAlvoNoMapaUI } from './helpers/alvoMapaUI';
 // @vitest-environment jsdom
 /**
  * Estilo do Duelista no combate real (mesa em memória): peças no mapa,
@@ -19,22 +20,20 @@ const duelista = (extra: Record<string, unknown> = {}) => ficha('ana', {
 } as never);
 const alvo = () => ficha('bruno', { category: 'INIMIGO' } as never);
 
-function selecionarAlvo(id: string) {
-  const sel = screen.getAllByRole('combobox').find((s) =>
-    Array.from((s as HTMLSelectElement).options).some((o) => o.value === id)) as HTMLSelectElement;
-  fireEvent.change(sel, { target: { value: id } });
+async function selecionarAlvo(id: string) {
+  await selecionarAlvoNoMapaUI(id);
 }
 const textoLog = () => JSON.stringify(useLogStore.getState());
 
 async function atacar(c: ReturnType<typeof duelista>, pos: Record<string, [number, number]>) {
   montarMesa([c, alvo()], pos);
   render(<AttackPanel character={c} />);
-  selecionarAlvo('bruno');
+  await selecionarAlvo('bruno');
   const btn = screen.getByRole('button', { name: /Rolar Ataque/ }) as HTMLButtonElement;
   return btn;
 }
 
-beforeEach(() => comoTela({ profileId: 'p-ana', role: 'PLAYER' }));
+beforeEach(async () => comoTela({ profileId: 'p-ana', role: 'PLAYER' }));
 afterEach(() => { cleanup(); limparMesa(); vi.restoreAllMocks(); });
 
 describe('Duelista em combate', () => {
@@ -52,7 +51,6 @@ describe('Duelista em combate', () => {
   });
 
   it('fora do alcance (4,5 m): botão bloqueado, sem ataque', async () => {
-    const btn = await atacar(duelista(), { ana: [0, 0], bruno: [3, 0] });
-    expect(btn.disabled).toBe(true);
+    await expect(atacar(duelista(), { ana: [0, 0], bruno: [3, 0] })).rejects.toThrow('Alvo fora do alcance');
   });
 });

@@ -1,3 +1,4 @@
+import { selecionarAlvoNoMapaUI } from './helpers/alvoMapaUI';
 // @vitest-environment jsdom
 /**
  * Arsenal Cíclico (Especialista em Combate, nv 2) em combate real:
@@ -35,9 +36,7 @@ async function atacar() {
   cleanup();
   useLogStore.getState().clearLogs();
   render(<AttackPanel character={pegarFicha('ana')} />);
-  const sel = screen.getAllByRole('combobox').find((s) =>
-    Array.from((s as HTMLSelectElement).options).some((o) => o.value === 'bruno')) as HTMLSelectElement;
-  fireEvent.change(sel, { target: { value: 'bruno' } });
+  await selecionarAlvoNoMapaUI('bruno');
   forcarDados(18, 3, 3, 3, 3, 3);
   fireEvent.click(screen.getByRole('button', { name: /Rolar Ataque/ }));
   fireEvent.click(await screen.findByRole('button', { name: /Rolar Dano/ }, { timeout: 8000 }));
@@ -45,7 +44,7 @@ async function atacar() {
   return /💥 Dano: \d+ \(([^)]*)\)/.exec(textoLog())?.[1] ?? '';
 }
 
-beforeEach(() => comoTela({ profileId: 'p-ana', role: 'PLAYER' }));
+beforeEach(async () => comoTela({ profileId: 'p-ana', role: 'PLAYER' }));
 afterEach(() => { cleanup(); limparMesa(); useCombatStore.setState({ inCombat: false, initiativeOrder: [] } as never); });
 
 describe('Arsenal Cíclico', () => {
@@ -70,7 +69,7 @@ describe('Arsenal Cíclico', () => {
     expect(await atacar()).not.toContain('Arsenal');
   });
 
-  it('sem atacar antes: troca não dá bônus', () => {
+  it('sem atacar antes: troca não dá bônus', async () => {
     mesa(esp('Espada Curta'));
     expect(trocar('Machado').arsenalBonus).toBe(false);
   });
@@ -94,7 +93,7 @@ describe('Arsenal Cíclico', () => {
     expect(await atacar()).toMatch(/^1d/);
   });
 
-  it('troca livre extra: só uma vez por rodada (a próxima gasta Ação Bônus)', () => {
+  it('troca livre extra: só uma vez por rodada (a próxima gasta Ação Bônus)', async () => {
     mesa(esp('Espada Curta'));
     expect(trocar('Machado').actionUsed).toBe('free');       // troca livre normal
     expect(trocar('Espada Curta').actionUsed).toBe('arsenal'); // Arsenal Cíclico

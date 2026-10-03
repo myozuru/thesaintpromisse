@@ -1,71 +1,39 @@
 // @vitest-environment jsdom
-/**
- * Painel de Ataque com alcance real no mapa (mesa real em memória):
- * a distância é medida pelas peças no mapa e o botão de rolar bloqueia
- * quando o alvo está fora do alcance da arma.
- */
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@/integrations/supabase/client', async () => ({ supabase: (await import('./helpers/mesaReal')).nuvemFalsa }));
-vi.mock('@/lib/socket', () => ({ getSocket: () => null }));
 vi.mock('@/integrations/supabase/safeClient', async () => ({ hasWorkspaceCloud: false, supabase: (await import('./helpers/mesaReal')).nuvemFalsa }));
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+vi.mock('@/lib/socket', () => ({ getSocket: () => null }));
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { AttackPanel } from '@/components/fichas/AttackPanel';
 import { ficha, montarMesa, limparMesa, comoTela } from './helpers/mesaReal';
-
-const atacante = (arma: string) =>
-  ficha('ana', { profileId: 'p-ana', mainHandWeaponName: arma } as never);
-const alvo = () => ficha('bruno', { category: 'INIMIGO' } as never);
-
-function selecionarAlvo(id: string) {
-  const selects = screen.getAllByRole('combobox');
-  const sel = selects.find((s) =>
-    Array.from((s as HTMLSelectElement).options).some((o) => o.value === id),
-  ) as HTMLSelectElement | undefined;
-  expect(sel, 'select de alvo com o personagem').toBeTruthy();
-  fireEvent.change(sel!, { target: { value: id } });
-}
-
+import { selecionarAlvoNoMapaUI } from './helpers/alvoMapaUI';
+import { alvosNoAlcance, clicarAlvoMapa, terminarAlvoMapa, useAlvoMapaStore } from '@/stores/useAlvoMapaStore';
+import { useCharacterStore } from '@/stores/useCharacterStore';
+import { useMapStore } from '@/stores/useMapStore';
+const atacante = (arma: string) => ficha('ana', { profileId: 'p-ana', mainHandWeaponName: arma });
+const alvo = () => ficha('bruno', { category: 'INIMIGO' });
 beforeEach(() => comoTela({ profileId: 'p-ana', role: 'PLAYER' }));
-afterEach(() => { cleanup(); limparMesa(); });
+afterEach(() => { cleanup(); terminarAlvoMapa(null); limparMesa(); });
 
-describe('Painel de Ataque — alcance no mapa', () => {
-  it('alvo adjacente (1,5 m): mostra distância e libera o botão de rolar', () => {
-    montarMesa([atacante('Espada Longa'), alvo()], { ana: [0, 0], bruno: [1, 0] });
-    render(<AttackPanel character={atacante('Espada Longa')} />);
-    selecionarAlvo('bruno');
-    expect(screen.getByText(/Distância:/).textContent).toContain('1,5 m');
-    expect(screen.queryByText(/fora de alcance/i)).toBeNull();
-    expect((screen.getByRole('button', { name: /Rolar Ataque/ }) as HTMLButtonElement).disabled).toBe(false);
+describe('alcance real antes da seleção', () => {
+  it.each([['Espada Longa', 1, 1.5], ['Alabarda', 2, 3], ['Arco Curto', 30, 48]] as const)('%s permite escolher somente os tokens no seu alcance', async (arma, casas, alcance) => {
+    montarMesa([atacante(arma), alvo()], { ana: [0, 0], bruno: [casas, 0] });
+    render(<AttackPanel character={atacante(arma)} />);
+    expect(screen.queryByLabelText('Alvo')).toBeNull();
+    await selecionarAlvoNoMapaUI('bruno');
+    expect(screen.getByText('Alvo: bruno')).toBeTruthy();
+    expect(screen.getByText(/Distância:/).textContent).toContain(String(alcance).replace('.', ','));
   });
-
-  it('alvo a 4,5 m com espada comum: mostra aviso e BLOQUEIA o botão', () => {
-    montarMesa([atacante('Espada Longa'), alvo()], { ana: [0, 0], bruno: [3, 0] });
-    render(<AttackPanel character={atacante('Espada Longa')} />);
-    selecionarAlvo('bruno');
-    expect(screen.getByText(/fora de alcance/i)).toBeTruthy();
-    expect((screen.getByRole('button', { name: /Rolar Ataque/ }) as HTMLButtonElement).disabled).toBe(true);
-  });
-
-  it('alvo a 3 m com Alabarda (Estendida): dentro do alcance', () => {
-    montarMesa([atacante('Alabarda'), alvo()], { ana: [0, 0], bruno: [2, 0] });
-    render(<AttackPanel character={atacante('Alabarda')} />);
-    selecionarAlvo('bruno');
-    expect(screen.getByText(/Distância:/).textContent).toContain('3,0 m');
-    expect(screen.queryByText(/fora de alcance/i)).toBeNull();
-    expect((screen.getByRole('button', { name: /Rolar Ataque/ }) as HTMLButtonElement).disabled).toBe(false);
-  });
-
-  it('alvo a 45 m com Arco Curto (máx. 48 m): permitido; a 60 m: bloqueado', () => {
-    montarMesa([atacante('Arco Curto'), alvo()], { ana: [0, 0], bruno: [30, 0] });
-    const { unmount } = render(<AttackPanel character={atacante('Arco Curto')} />);
-    selecionarAlvo('bruno');
-    expect(screen.queryByText(/fora de alcance/i)).toBeNull();
-    unmount();
-
-    montarMesa([atacante('Arco Curto'), alvo()], { ana: [0, 0], bruno: [40, 0] });
-    render(<AttackPanel character={atacante('Arco Curto')} />);
-    selecionarAlvo('bruno');
-    expect(screen.getByText(/fora de alcance/i)).toBeTruthy();
-    expect((screen.getByRole('button', { name: /Rolar Ataque/ }) as HTMLButtonElement).disabled).toBe(true);
+  it.each([['Espada Longa', 3], ['Arco Curto', 40]] as const)('%s impede escolher um token distante, sem gastar recursos', async (arma, casas) => {
+    montarMesa([atacante(arma), alvo()], { ana: [0, 0], bruno: [casas, 0] });
+    render(<AttackPanel character={atacante(arma)} />);
+    const antes = useCharacterStore.getState().characters[0];
+    fireEvent.click(screen.getByRole('button', { name: /Rolar Ataque/ }));
+    const pedido = useAlvoMapaStore.getState().pending!;
+    expect(alvosNoAlcance(pedido)).toHaveLength(0);
+    act(() => clicarAlvoMapa(Object.values(useMapStore.getState().entities).find(e => e.characterId === 'bruno')!.id));
+    expect(useAlvoMapaStore.getState().pending).not.toBeNull();
+    await act(async () => { terminarAlvoMapa(null); await Promise.resolve(); });
+    expect(useCharacterStore.getState().characters[0]).toEqual(antes);
   });
 });

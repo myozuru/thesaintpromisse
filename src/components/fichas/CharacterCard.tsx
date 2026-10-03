@@ -1,3 +1,5 @@
+import { EmpunharArmaButton } from './EmpunharArmaButton';
+import { SoltarItemButton } from './SoltarItemButton';
 import { ContadoresEquipamento } from '@/components/omni/ContadoresEquipamento';
 import { consumeCritNegated } from '@/lib/suporteNegacao';
 import { implementoMarcialBonus } from '@/lib/golpeEspecial';
@@ -3038,7 +3040,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                       <span className="text-muted-foreground text-xs">
                         ({item.slots} slot{item.slots === 1 ? '' : 's'}) x{item.quantity || 1}
                       </span>
-                      {omniByName.has(item.name.trim().toLowerCase()) && (
+                      {omniByName.has(item.name.trim().toLowerCase()) && omniByName.get(item.name.trim().toLowerCase())?.categoria !== 'arma' && (
                         <div className="ml-auto flex items-center gap-1.5">
                           <ActionCostBadge actionId={omniByName.get(item.name.trim().toLowerCase())?.combatData?.actionCost} />
                           {(() => {
@@ -3088,6 +3090,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                           🍴 Consumir
                         </button>
                       )}
+                      <SoltarItemButton charId={c.id} itemId={item.id} legado />
                       {!isPlayer && editMode && (
                         <button
                           onClick={(e) => {
@@ -3305,6 +3308,8 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                               </button>
                             )}
                           </div>
+                        ) : categoriaOmni === 'arma' ? (
+                          <EmpunharArmaButton charId={c.id} nome={inv.entity.nome} />
                         ) : isEquippable ? (
                           <div className="ml-auto flex items-center gap-1.5">
                             {(() => {
@@ -3376,6 +3381,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                           </div>
                         )}
 
+                        {!isVinculavel && <SoltarItemButton charId={c.id} itemId={inv.instanceId} />}
                         {!isPlayer && editMode && (
                           <button
                             onClick={(e) => {
@@ -4611,7 +4617,8 @@ function AccessorySlotsSection({
               <span className="text-foreground font-medium text-sm">
                 ◇ {omniEquipped.entity.nome}
               </span>
-              <ContadoresEquipamento charId={character.id} entidade={resolverEntidadeOmniAtual(omniEquipped)} />
+              <SoltarItemButton charId={character.id} itemId={omniEquipped.instanceId} />
+                  <ContadoresEquipamento charId={character.id} entidade={resolverEntidadeOmniAtual(omniEquipped)} />
               {omniEquipped.usosTotais !== undefined && (
                 <button
                   onClick={(e) => {

@@ -1,7 +1,8 @@
+import { clicarAlvoMapa, terminarAlvoMapa, useAlvoMapaStore } from '@/stores/useAlvoMapaStore';
 // @vitest-environment jsdom
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 vi.mock('@/integrations/supabase/client', async () => ({ supabase: (await import('./helpers/mesaReal')).nuvemFalsa }));
 vi.mock('@/integrations/supabase/safeClient', async () => ({ hasWorkspaceCloud: false, supabase: (await import('./helpers/mesaReal')).nuvemFalsa }));
 vi.mock('@/lib/socket', () => ({ getSocket: () => null }));
@@ -71,11 +72,9 @@ describe('editor e execução por cliques reais', () => {
     });
   });
   it('seleciona dois alvos e executa uma única ação', async () => {
-    painel({ tipo_alvo: 'multiplo', filtro_alvo: 'inimigos', max_alvos: '2' });
-    const select = screen.getByLabelText('Alvos de Teste') as HTMLSelectElement;
-    for (const option of select.options) option.selected = ['a', 'b'].includes(option.value);
-    fireEvent.change(select);
+    painel({ tipo_alvo: 'multiplo', filtro_alvo: 'inimigos', max_alvos: '2', alcanceM: 4.5 });
     fireEvent.click(screen.getByRole('button', { name: 'Usar' }));
+    await act(async () => { clicarAlvoMapa('e-a'); clicarAlvoMapa('e-b'); terminarAlvoMapa(useAlvoMapaStore.getState().selecionados); await Promise.resolve(); });
     await waitFor(() => expect(pegarFicha('b').hpCurrent).toBe(96));
     expect(pegarFicha('a').hpCurrent).toBe(96);
     expect(pegarFicha('heroi').peCurrent).toBe(18);

@@ -1,3 +1,4 @@
+import { selecionarAlvoNoMapaUI } from './helpers/alvoMapaUI';
 // @vitest-environment jsdom
 /** Estilo do Arremessador em combate real (mesa em memória, peças no mapa, clique real). */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -19,40 +20,38 @@ const esp = (arma: string | null, extra: Record<string, unknown> = {}) => ficha(
 const alvo = () => ficha('bruno', { category: 'INIMIGO' } as never);
 const log = () => JSON.stringify(useLogStore.getState());
 
-function preparar(c: ReturnType<typeof esp>, pos: Record<string, [number, number]>) {
+async function preparar(c: ReturnType<typeof esp>, pos: Record<string, [number, number]>) {
   useLogStore.setState({ ...(useLogStore.getState() as object), logs: [] } as never);
   montarMesa([c, alvo()], pos);
   render(<AttackPanel character={c} />);
-  const sel = screen.getAllByRole('combobox').find((s) =>
-    Array.from((s as HTMLSelectElement).options).some((o) => o.value === 'bruno')) as HTMLSelectElement;
-  fireEvent.change(sel, { target: { value: 'bruno' } });
+  await selecionarAlvoNoMapaUI('bruno');
   return screen.getByRole('button', { name: /Rolar Ataque/ }) as HTMLButtonElement;
 }
 
-beforeEach(() => comoTela({ profileId: 'p-ana', role: 'PLAYER' }));
+beforeEach(async () => comoTela({ profileId: 'p-ana', role: 'PLAYER' }));
 afterEach(() => { cleanup(); limparMesa(); });
 
 describe('Estilo do Arremessador em combate', () => {
-  it('escala de dano', () => {
+  it('escala de dano', async () => {
     expect(getArremessadorDamage(1)).toBe(2);
     expect(getArremessadorDamage(16)).toBe(6);
   });
   it('Dardo a 9 m (dentro): rola com +2 dano', async () => {
-    const btn = preparar(esp('Dardo'), { ana: [0, 0], bruno: [6, 0] });
+    const btn = await preparar(esp('Dardo'), { ana: [0, 0], bruno: [6, 0] });
     expect(btn.disabled).toBe(false);
     fireEvent.click(btn);
     await waitFor(() => expect(log()).toContain('Estilo do Arremessador: +2 dano'), { timeout: 8000 });
   });
-  it('Dardo muito longe (60 m): bloqueado', () => {
-    expect(preparar(esp('Dardo'), { ana: [0, 0], bruno: [40, 0] }).disabled).toBe(true);
+  it('Dardo muito longe (60 m): bloqueado', async () => {
+    await expect(preparar(esp('Dardo'), { ana: [0, 0], bruno: [40, 0] })).rejects.toThrow('Alvo fora do alcance');
   });
   it('espada adjacente: sem bônus do Arremessador', async () => {
-    const btn = preparar(esp('Espada Longa'), { ana: [0, 0], bruno: [1, 0] });
+    const btn = await preparar(esp('Espada Longa'), { ana: [0, 0], bruno: [1, 0] });
     fireEvent.click(btn);
     await waitFor(() => expect(log()).toContain('atacou com'), { timeout: 8000 });
     expect(log()).not.toContain('Arremessador');
   });
-  it('sacar dardos várias vezes no turno não gasta troca nem Ação Bônus', () => {
+  it('sacar dardos várias vezes no turno não gasta troca nem Ação Bônus', async () => {
     montarMesa([esp(null, { weaponSwapsThisTurn: 1 })], { ana: [0, 0] });
     const eq = useCharacterStore.getState().equipWeapons;
     expect(eq('ana', { mainHandName: 'Dardo', offHandName: null }).actionUsed).toBe('arremessador');
@@ -60,7 +59,7 @@ describe('Estilo do Arremessador em combate', () => {
     expect(pegarFicha('ana').bonusActionsCurrent).toBe(1);
     expect(pegarFicha('ana').weaponSwapsThisTurn).toBe(1);
   });
-  it('sem o estilo, a 2ª troca gasta Ação Bônus', () => {
+  it('sem o estilo, a 2ª troca gasta Ação Bônus', async () => {
     montarMesa([esp(null, { combatStyles: [], weaponSwapsThisTurn: 1 })], { ana: [0, 0] });
     expect(useCharacterStore.getState().equipWeapons('ana', { mainHandName: 'Dardo', offHandName: null }).actionUsed).toBe('bonus');
     expect(pegarFicha('ana').bonusActionsCurrent).toBe(0);

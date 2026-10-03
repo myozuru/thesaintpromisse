@@ -75,6 +75,8 @@ export interface ZonaTerreno {
 }
 
 export interface Entity {
+  /** Equipamento solto na cena, preservando o exemplar e os usos restantes. */
+  groundItem?: import('@/lib/omni/itensNoChao').ItemNoChao;
   id: string;
   shape: EntityShape;
   x: number;
@@ -1583,3 +1585,4 @@ export const useMapStore = create<MapState>()(
 if (import.meta.env.DEV && typeof window !== 'undefined') {
   (window as unknown as Record<string, unknown>).__mapStore = useMapStore;
 }
+

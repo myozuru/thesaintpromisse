@@ -1,3 +1,4 @@
+import { selecionarAlvoNoMapaUI } from './helpers/alvoMapaUI';
 // @vitest-environment jsdom
 /**
  * Especialista em Combate (nv 2) em combate real: Pistoleiro Iniciado,
@@ -56,13 +57,11 @@ function mesa(c: Character, outros: Character[], posicoes: Record<string, [numbe
   } as never);
 }
 
-function abrirPainel(id = 'ana', alvo: string | null = 'bruno') {
+async function abrirPainel(id = 'ana', alvo: string | null = 'bruno') {
   cleanup();
   render(<AttackPanel character={pegarFicha(id)} />);
   if (!alvo) return;
-  const sel = screen.getAllByRole('combobox').find((s) =>
-    Array.from((s as HTMLSelectElement).options).some((o) => o.value === alvo)) as HTMLSelectElement;
-  fireEvent.change(sel, { target: { value: alvo } });
+  await selecionarAlvoNoMapaUI(alvo);
 }
 
 /** Rola ataque e, se houver dano, rola o dano. */
@@ -81,7 +80,7 @@ async function atacar(...dados: number[]) {
 class RO { observe() {} unobserve() {} disconnect() {} }
 (globalThis as { ResizeObserver?: unknown }).ResizeObserver ??= RO;
 
-beforeEach(() => comoTela({ profileId: 'p-ana', role: 'PLAYER' }));
+beforeEach(async () => comoTela({ profileId: 'p-ana', role: 'PLAYER' }));
 afterEach(() => {
   cleanup(); limparMesa();
   useCombatStore.setState({ inCombat: false, initiativeOrder: [] } as never);
@@ -90,7 +89,7 @@ afterEach(() => {
 describe('Pistoleiro Iniciado', () => {
   it('sem declarar: d20 2 com pistola NÃO emperra', async () => {
     mesa(esp({ chosenSpecAbilities: PIST }), [inimigo()], { ana: [0, 0], bruno: [4, 0] });
-    abrirPainel();
+    await abrirPainel();
     await atacar(2, 4, 4, 4);
     expect(textoLog()).not.toMatch(/EMPERROU/);
     expect(pegarFicha('ana').armaEmperrada ?? null).toBeNull();
@@ -98,7 +97,7 @@ describe('Pistoleiro Iniciado', () => {
 
   it('1 natural emperra a arma de fogo mesmo sem declarar (regra base)', async () => {
     mesa(esp({ chosenSpecAbilities: PIST }), [inimigo()], { ana: [0, 0], bruno: [4, 0] });
-    abrirPainel();
+    await abrirPainel();
     await atacar(1, 4, 4, 4);
     expect(textoLog()).toMatch(/EMPERROU|emperrou/);
     expect(pegarFicha('ana').armaEmperrada).toBe('Pistola');
@@ -106,7 +105,7 @@ describe('Pistoleiro Iniciado', () => {
 
   it('declarado: d20 3 emperra, o ataque falha e a arma trava até desemperrar', async () => {
     mesa(esp({ chosenSpecAbilities: PIST }), [inimigo()], { ana: [0, 0], bruno: [4, 0] });
-    abrirPainel();
+    await abrirPainel();
     fireEvent.click(screen.getByTestId('pistoleiro-iniciado').querySelector('button')!);
     await atacar(3, 4, 4, 4);
     const t = textoLog();
@@ -115,7 +114,7 @@ describe('Pistoleiro Iniciado', () => {
     expect(pegarFicha('ana').armaEmperrada).toBe('Pistola');
 
     // Nova tentativa é bloqueada enquanto a arma estiver emperrada.
-    abrirPainel();
+    await abrirPainel();
     useLogStore.getState().clearLogs();
     forcarDados(18, 4, 4, 4);
     fireEvent.click(screen.getByRole('button', { name: /Rolar Ataque/ }));
@@ -129,7 +128,7 @@ describe('Pistoleiro Iniciado', () => {
 
   it('declarado e acertando: +1 dado de dano', async () => {
     mesa(esp({ chosenSpecAbilities: PIST }), [inimigo()], { ana: [0, 0], bruno: [4, 0] });
-    abrirPainel();
+    await abrirPainel();
     fireEvent.click(screen.getByTestId('pistoleiro-iniciado').querySelector('button')!);
     await atacar(18, 5, 5, 5, 5);
     expect(textoLog()).toMatch(/Pistoleiro Iniciado: \+1 dado de dano/);
@@ -137,13 +136,13 @@ describe('Pistoleiro Iniciado', () => {
 
   it('sem a habilidade, o painel não aparece', async () => {
     mesa(esp(), [inimigo()], { ana: [0, 0], bruno: [4, 0] });
-    abrirPainel();
+    await abrirPainel();
     expect(screen.queryByTestId('pistoleiro-iniciado')).toBeNull();
   });
 });
 
 describe('Precisão Definitiva', () => {
-  it('máximo de PE cresce a cada 4 níveis', () => {
+  it('máximo de PE cresce a cada 4 níveis', async () => {
     expect(precisaoPeMax(esp({ chosenSpecAbilities: PREC, level: 1 }))).toBe(1);
     expect(precisaoPeMax(esp({ chosenSpecAbilities: PREC, level: 4 }))).toBe(2);
     expect(precisaoPeMax(esp({ chosenSpecAbilities: PREC, level: 8 }))).toBe(3);
@@ -154,7 +153,7 @@ describe('Precisão Definitiva', () => {
 
   it('2 PE no acerto: gasta os PE e soma +4 na jogada', async () => {
     mesa(esp({ chosenSpecAbilities: PREC }), [inimigo()], { ana: [0, 0], bruno: [4, 0] });
-    abrirPainel();
+    await abrirPainel();
     fireEvent.change(screen.getByTestId('precisao-pe'), { target: { value: '2' } });
     await atacar(10, 4, 4, 4);
     const t = textoLog();
@@ -164,7 +163,7 @@ describe('Precisão Definitiva', () => {
 
   it('modo dano: 1 PE vira +4 no dano', async () => {
     mesa(esp({ chosenSpecAbilities: PREC }), [inimigo()], { ana: [0, 0], bruno: [4, 0] });
-    abrirPainel();
+    await abrirPainel();
     fireEvent.change(screen.getByTestId('precisao-pe'), { target: { value: '1' } });
     fireEvent.change(screen.getByTestId('precisao-modo'), { target: { value: 'dano' } });
     await atacar(18, 4, 4, 4);
@@ -174,7 +173,7 @@ describe('Precisão Definitiva', () => {
 
   it('sem PE suficiente, o ataque é barrado e nada é gasto', async () => {
     mesa(esp({ chosenSpecAbilities: PREC, peCurrent: 0 }), [inimigo()], { ana: [0, 0], bruno: [4, 0] });
-    abrirPainel();
+    await abrirPainel();
     fireEvent.change(screen.getByTestId('precisao-pe'), { target: { value: '2' } });
     useLogStore.getState().clearLogs();
     forcarDados(18, 4, 4, 4);
@@ -193,25 +192,25 @@ describe('Posicionamento Ameaçador', () => {
     grid() as never,
   );
 
-  it('com arma de fogo no 1º alcance e aliado adjacente: alvo recebe −2 em TR', () => {
+  it('com arma de fogo no 1º alcance e aliado adjacente: alvo recebe −2 em TR', async () => {
     mesa(esp({ chosenSpecAbilities: [...POS, ...FLANQ] }), [inimigo(), aliado()],
       { ana: [0, 0], bruno: [4, 0], caio: [5, 0] });
     expect(pen()).toBe(-2);
   });
 
-  it('sem Posicionamento Ameaçador, atirar de longe não flanqueia', () => {
+  it('sem Posicionamento Ameaçador, atirar de longe não flanqueia', async () => {
     mesa(esp({ chosenSpecAbilities: FLANQ }), [inimigo(), aliado()],
       { ana: [0, 0], bruno: [4, 0], caio: [5, 0] });
     expect(pen()).toBe(0);
   });
 
-  it('sem aliado adjacente ao alvo, não há flanco', () => {
+  it('sem aliado adjacente ao alvo, não há flanco', async () => {
     mesa(esp({ chosenSpecAbilities: [...POS, ...FLANQ] }), [inimigo(), aliado()],
       { ana: [0, 0], bruno: [4, 0], caio: [0, 1] });
     expect(pen()).toBe(0);
   });
 
-  it('furtivo (peça escondida) perde o flanco', () => {
+  it('furtivo (peça escondida) perde o flanco', async () => {
     mesa(esp({ chosenSpecAbilities: [...POS, ...FLANQ] }), [inimigo(), aliado()],
       { ana: [0, 0], bruno: [4, 0], caio: [5, 0] });
     expect(pen()).toBe(-2);
@@ -221,7 +220,7 @@ describe('Posicionamento Ameaçador', () => {
     expect(pen()).toBe(0);
   });
 
-  it('arma corpo a corpo longe do alvo não concede flanco', () => {
+  it('arma corpo a corpo longe do alvo não concede flanco', async () => {
     mesa(esp({ chosenSpecAbilities: [...POS, ...FLANQ], mainHandWeaponName: 'Espada Curta' }),
       [inimigo(), aliado()], { ana: [0, 0], bruno: [4, 0], caio: [5, 0] });
     expect(pen()).toBe(0);

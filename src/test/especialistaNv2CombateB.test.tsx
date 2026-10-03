@@ -1,3 +1,4 @@
+import { selecionarAlvoNoMapaUI } from './helpers/alvoMapaUI';
 // @vitest-environment jsdom
 /**
  * Especialista em Combate (nv 2) em combate real: Golpe Falso,
@@ -59,13 +60,11 @@ function mesa(c: Character, outros: Character[], posicoes: Record<string, [numbe
   } as never);
 }
 
-function abrirPainel(id = 'ana', alvo: string | null = 'bruno') {
+async function abrirPainel(id = 'ana', alvo: string | null = 'bruno') {
   cleanup();
   render(<AttackPanel character={pegarFicha(id)} />);
   if (!alvo) return;
-  const sel = screen.getAllByRole('combobox').find((s) =>
-    Array.from((s as HTMLSelectElement).options).some((o) => o.value === alvo)) as HTMLSelectElement;
-  fireEvent.change(sel, { target: { value: alvo } });
+  await selecionarAlvoNoMapaUI(alvo);
 }
 
 async function atacar(...dados: number[]) {
@@ -80,7 +79,7 @@ async function atacar(...dados: number[]) {
 class RO { observe() {} unobserve() {} disconnect() {} }
 (globalThis as { ResizeObserver?: unknown }).ResizeObserver ??= RO;
 
-beforeEach(() => comoTela({ profileId: 'p-ana', role: 'PLAYER' }));
+beforeEach(async () => comoTela({ profileId: 'p-ana', role: 'PLAYER' }));
 afterEach(() => {
   cleanup(); limparMesa();
   useCombatStore.setState({ inCombat: false, initiativeOrder: [] } as never);
@@ -89,14 +88,14 @@ afterEach(() => {
 describe('Golpes Potentes', () => {
   it('arma treinada: +1 nível de dano e +2 no dano', async () => {
     mesa(esp({ chosenSpecAbilities: GP }), [inimigo()], { ana: [0, 0], bruno: [1, 0] });
-    abrirPainel();
+    await abrirPainel();
     await atacar();
     expect(textoLog()).toMatch(/Golpes Potentes: \+1 nível de dano, \+2 dano/);
   }, 20000);
 
   it('sem a habilidade, nada muda', async () => {
     mesa(esp(), [inimigo()], { ana: [0, 0], bruno: [1, 0] });
-    abrirPainel();
+    await abrirPainel();
     await atacar();
     expect(textoLog()).not.toMatch(/Golpes Potentes/);
   }, 20000);
@@ -107,7 +106,7 @@ describe('Golpes Potentes', () => {
       [inimigo()],
       { ana: [0, 0], bruno: [2, 0] },
     );
-    abrirPainel();
+    await abrirPainel();
     await atacar();
     const t = textoLog();
     expect(t).toMatch(/Golpes Potentes/);
@@ -118,7 +117,7 @@ describe('Golpes Potentes', () => {
 describe('Golpe Falso', () => {
   it('inimigo ao alcance falha no TR: aliado ganha vantagem e a reação é gasta', async () => {
     mesa(esp({ chosenSpecAbilities: GF }), [inimigo(), aliado()], { ana: [0, 0], bruno: [1, 0], caio: [0, 1] });
-    abrirPainel();
+    await abrirPainel();
     useLogStore.getState().clearLogs();
     forcarDados(1); // TR de Astúcia do inimigo: falha certa
     fireEvent.change(screen.getByLabelText('Aliado que vai atacar'), { target: { value: 'caio' } });
@@ -132,7 +131,7 @@ describe('Golpe Falso', () => {
   it('inimigo passa no TR: reação gasta, mas sem vantagem', async () => {
     mesa(esp({ chosenSpecAbilities: GF }), [inimigo({ attributes: [{ name: 'INT', value: 20 }] }), aliado()],
       { ana: [0, 0], bruno: [1, 0], caio: [0, 1] });
-    abrirPainel();
+    await abrirPainel();
     useLogStore.getState().clearLogs();
     forcarDados(20);
     fireEvent.change(screen.getByLabelText('Aliado que vai atacar'), { target: { value: 'caio' } });
@@ -143,7 +142,7 @@ describe('Golpe Falso', () => {
     expect(peekAdvantageFor('caio', { kind: 'attack', subtype: 'melee' })).toBe('normal');
   }, 20000);
 
-  it('inimigo fora do alcance da arma empunhada não pode ser alvo', () => {
+  it('inimigo fora do alcance da arma empunhada não pode ser alvo', async () => {
     mesa(esp({ chosenSpecAbilities: GF }), [inimigo(), aliado()], { ana: [0, 0], bruno: [4, 0], caio: [0, 1] });
     expect(golpeFalsoAlcanceM(pegarFicha('ana'))).toBe(1.5);
     const r = golpeFalsoPodeUsar('ana', 'caio', 'bruno');
@@ -151,21 +150,21 @@ describe('Golpe Falso', () => {
     expect(r.reason).toMatch(/fora do alcance/);
   });
 
-  it('sem reação disponível não dá para usar', () => {
+  it('sem reação disponível não dá para usar', async () => {
     mesa(esp({ chosenSpecAbilities: GF, reactionsCurrent: 0 }), [inimigo(), aliado()],
       { ana: [0, 0], bruno: [1, 0], caio: [0, 1] });
     expect(golpeFalsoPodeUsar('ana', 'caio', 'bruno').reason).toMatch(/Sem reação/);
   });
 
-  it('sem a habilidade, a seção não aparece', () => {
+  it('sem a habilidade, a seção não aparece', async () => {
     mesa(esp(), [inimigo(), aliado()], { ana: [0, 0], bruno: [1, 0], caio: [0, 1] });
-    abrirPainel();
+    await abrirPainel();
     expect(screen.queryByTestId('golpe-falso-secao')).toBeNull();
   });
 });
 
 describe('Indomável', () => {
-  it('usos = metade do nível (mínimo 1) e exige 1 PE', () => {
+  it('usos = metade do nível (mínimo 1) e exige 1 PE', async () => {
     mesa(esp({ chosenSpecAbilities: IND, level: 7 }), [inimigo()], { ana: [0, 0], bruno: [1, 0] });
     const c = pegarFicha('ana');
     expect(hasIndomavel(c)).toBe(true);
@@ -183,12 +182,12 @@ describe('Indomável', () => {
     expect(indomavelElegivel(pegarFicha('ana'))).toBe(false);
   });
 
-  it('nível 1 ainda tem 1 uso', () => {
+  it('nível 1 ainda tem 1 uso', async () => {
     mesa(esp({ chosenSpecAbilities: IND, level: 1 }), [inimigo()], { ana: [0, 0], bruno: [1, 0] });
     expect(indomavelUsosMax(pegarFicha('ana'))).toBe(1);
   });
 
-  it('sem a habilidade não fica elegível', () => {
+  it('sem a habilidade não fica elegível', async () => {
     mesa(esp(), [inimigo()], { ana: [0, 0], bruno: [1, 0] });
     expect(indomavelElegivel(pegarFicha('ana'))).toBe(false);
   });

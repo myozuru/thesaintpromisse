@@ -1,7 +1,8 @@
+import { clicarAlvoMapa, useAlvoMapaStore } from '@/stores/useAlvoMapaStore';
 // @vitest-environment jsdom
 import { useState } from 'react';
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 vi.mock('@/integrations/supabase/client', async () => ({ supabase: (await import('./helpers/mesaReal')).nuvemFalsa }));
 vi.mock('@/integrations/supabase/safeClient', async () => ({ hasWorkspaceCloud: false, supabase: (await import('./helpers/mesaReal')).nuvemFalsa }));
 vi.mock('@/lib/socket', () => ({ getSocket: () => null }));
@@ -148,11 +149,13 @@ describe('sustentação e interface reais', () => {
   it('jogador escolhe intensificação e usa a ação pelo painel', async () => {
     const c = cfg({ dano: '1', custo_recursos: { pe_por_intensificacao: '1', max_intensificacoes: '4', dano_por_intensificacao: '2', custo_pv: '5' } });
     useInventoryStore.getState().add('u', { ...novaEntidade('item'), acoesAtivas: [c] }); render(<AcoesAtivasSection charId="u" />);
-    fireEvent.change(screen.getByTestId('acao-ativa-alvo'), { target: { value: 'a' } }); fireEvent.change(screen.getByLabelText('Intensificação de Escalar'), { target: { value: '2' } });
+     fireEvent.change(screen.getByLabelText('Intensificação de Escalar'), { target: { value: '2' } });
     expect(screen.getByTestId('acao-ativa-Escalar').textContent).toContain('4 PE + 5 PV'); fireEvent.click(screen.getByText('Usar'));
+    await act(async () => { clicarAlvoMapa('e-a'); await Promise.resolve(); });
     await waitFor(() => expect(pegarFicha('u').peCurrent).toBe(16)); expect(pegarFicha('u').hpCurrent).toBe(25); expect(pegarFicha('a').hpCurrent).toBe(95);
   });
   it('painel permite encerrar mesmo sem o item no inventário', async () => {
     await executarAcaoAtiva('u', sustentada(), 'a'); render(<AcoesAtivasSection charId="u" />); fireEvent.click(screen.getByLabelText('Encerrar Escalar')); expect(pegarFicha('a').activeConditions).toEqual([]);
   });
 });
+

@@ -1,3 +1,4 @@
+import { armaDoPersonagem } from '@/lib/omni/armaDoPersonagem';
 import { reservarPassoOmni, executarNaCadeiaOmni, capturarCadeiaOmni } from '@/lib/omni/cadeiaEventos';
 import { ajustarProtecoesOmni, consumirProtecoesOmni, expirarProtecoesOmni } from '@/lib/omni/protecoesAtivas';
 import { montarMetadadosDano, resolverTipoDano, type OpcoesDano } from '@/lib/omni/contextoDano';
@@ -4920,8 +4921,8 @@ export const useCharacterStore = create<CharacterStore>()(
 
         const mainName = (payload.mainHandName ?? '').trim() || null;
         const offName = (payload.offHandName ?? '').trim() || null;
-        const mainW = mainName ? findWeaponByName(mainName) : null;
-        const offW = offName ? findWeaponByName(offName) : null;
+        const mainW = mainName ? armaDoPersonagem(charId, mainName) : null;
+        const offW = offName ? armaDoPersonagem(charId, offName) : null;
 
         if (mainName && !mainW) return { ok: false, reason: `Arma "${mainName}" não encontrada no catálogo.` };
         if (offName && !offW) return { ok: false, reason: `Arma "${offName}" não encontrada no catálogo.` };
@@ -4931,7 +4932,9 @@ export const useCharacterStore = create<CharacterStore>()(
         let finalOff: string | null = null;
         let weaponsCount = 0;
 
-        if (mainW && offW) {
+        if (mainW && offW && mainW.name === offW.name && requiresTwoHands(mainW)) {
+          finalMain = mainW.name; finalOff = mainW.name; weaponsCount = 1;
+        } else if (mainW && offW) {
           // 2 armas distintas
           if (requiresTwoHands(mainW) || requiresTwoHands(offW)) {
             return { ok: false, reason: 'Arma de duas-mãos ocupa AMBOS os slots — não pode coexistir com outra.' };
@@ -4976,7 +4979,7 @@ export const useCharacterStore = create<CharacterStore>()(
 
         if (arremessadorDraw) {
           actionUsed = 'arremessador';
-        } else if (!noChange) {
+        } else if (!noChange && weaponsCount > 0) {
           const swapsSoFar = c.weaponSwapsThisTurn ?? 0;
           if (swapsSoFar >= 1 && arsRound !== null && arsenalTrocaLivreDisponivel(c, arsRound)) {
             actionUsed = 'arsenal';

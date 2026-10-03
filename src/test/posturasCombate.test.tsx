@@ -1,3 +1,4 @@
+import { selecionarAlvoNoMapaUI } from './helpers/alvoMapaUI';
 // @vitest-environment jsdom
 /**
  * Assumir Postura (parte 1: Sol, Lua, Terra, Dragão) em combate real:
@@ -39,9 +40,7 @@ function mesa(c = esp(), extra: Record<string, [number, number]> = {}) {
 }
 const clicar = (re: RegExp) => fireEvent.click(screen.getByRole('button', { name: re }));
 async function atacar(...dados: number[]) {
-  const sel = screen.getAllByRole('combobox').find((s) =>
-    Array.from((s as HTMLSelectElement).options).some((o) => o.value === 'bruno')) as HTMLSelectElement;
-  fireEvent.change(sel, { target: { value: 'bruno' } });
+  await selecionarAlvoNoMapaUI('bruno');
   useLogStore.getState().clearLogs();
   forcarDados(...dados);
   clicar(/Rolar Ataque/);
@@ -49,11 +48,11 @@ async function atacar(...dados: number[]) {
   await waitFor(() => expect(log()).toMatch(/💥 Dano:/), { timeout: 8000 });
 }
 
-beforeEach(() => comoTela({ profileId: 'p-ana', role: 'PLAYER' }));
+beforeEach(async () => comoTela({ profileId: 'p-ana', role: 'PLAYER' }));
 afterEach(() => { cleanup(); limparMesa(); useCombatStore.setState({ inCombat: false, initiativeOrder: [] } as never); });
 
 describe('Assumir Postura — base', () => {
-  it('aprende 1 postura (limite 1 no nv 4; 2 no 8; 3 no 16); Devastação exige nv 6', () => {
+  it('aprende 1 postura (limite 1 no nv 4; 2 no 8; 3 no 16); Devastação exige nv 6', async () => {
     expect([posturasLimite(4), posturasLimite(8), posturasLimite(16)]).toEqual([1, 2, 3]);
     mesa();
     clicar(/Aprender Sol/);
@@ -63,7 +62,7 @@ describe('Assumir Postura — base', () => {
     expect(podeAprender(esp({ level: 8, posturasAprendidas: ['sol'] }), 'lua').ok).toBe(true);
   });
 
-  it('entrar gasta Ação Bônus e 1 uso; sem AB bloqueia; usos acabam', () => {
+  it('entrar gasta Ação Bônus e 1 uso; sem AB bloqueia; usos acabam', async () => {
     mesa(esp({ posturasAprendidas: ['sol'] }));
     clicar(/Entrar: Sol/);
     const a = pegarFicha('ana');
@@ -150,7 +149,7 @@ describe('Posturas em combate', () => {
     expect(pegarFicha('ana').hpCurrent).toBe(35);
   });
 
-  it('Terra: PV temporários = nível no começo do turno, +treinamento em Fortitude, imune a empurrão', () => {
+  it('Terra: PV temporários = nível no começo do turno, +treinamento em Fortitude, imune a empurrão', async () => {
     mesa(esp({ posturasAprendidas: ['terra'] }));
     clicar(/Entrar: Terra/);
     expect(posturaFortitude(pegarFicha('ana'))).toBe(2);

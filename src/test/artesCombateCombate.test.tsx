@@ -1,3 +1,4 @@
+import { selecionarAlvoNoMapaUI } from './helpers/alvoMapaUI';
 // @vitest-environment jsdom
 /**
  * Artes do Combate no combate real (mesa em memória): peças no mapa, clique
@@ -23,10 +24,8 @@ const esp = (extra: Record<string, unknown> = {}) =>
 const alvo = (extra: Record<string, unknown> = {}) =>
   ficha('bruno', { category: 'INIMIGO', ...extra } as never);
 
-function selecionarAlvo(id: string) {
-  const sel = screen.getAllByRole('combobox').find((s) =>
-    Array.from((s as HTMLSelectElement).options).some((o) => o.value === id)) as HTMLSelectElement;
-  fireEvent.change(sel, { target: { value: id } });
+async function selecionarAlvo(id: string) {
+  await selecionarAlvoNoMapaUI(id);
 }
 const textoLog = () => useLogStore.getState().logs.map((l) => l.message).join('\n');
 const toggle = (nome: RegExp) => {
@@ -39,11 +38,11 @@ async function montar(c: ReturnType<typeof esp>, alvoExtra: Record<string, unkno
   useLogStore.getState().clearLogs();
   montarMesa([c, alvo(alvoExtra)], pos);
   render(<AttackPanel character={c} />);
-  selecionarAlvo('bruno');
+  await selecionarAlvo('bruno');
   return screen.getByRole('button', { name: /Rolar Ataque/ }) as HTMLButtonElement;
 }
 
-beforeEach(() => comoTela({ profileId: 'p-ana', role: 'PLAYER' }));
+beforeEach(async () => comoTela({ profileId: 'p-ana', role: 'PLAYER' }));
 afterEach(() => { cleanup(); limparMesa(); vi.restoreAllMocks(); });
 
 describe('Artes do Combate em combate', () => {
@@ -106,9 +105,10 @@ describe('Artes do Combate em combate', () => {
   it('Investida Imediata: aproxima a peça até o alcance e ataca (6 m de SAB)', async () => {
     forcarDados(20, 6, 6);
     // Alvo a 6 m (4 casas): investida cobre até 6 m, chega ao alcance de 1,5 m.
-    const btn = await montar(esp(), {}, { ana: [0, 0], bruno: [4, 0] });
-    expect(btn.disabled).toBe(true); // fora do alcance normal (1,5 m)
+    await expect(montar(esp(), {}, { ana: [0, 0], bruno: [4, 0] })).rejects.toThrow('Alvo fora do alcance');
     toggle(/Investida Imediata/);
+    await selecionarAlvo('bruno');
+    const btn = screen.getByRole('button', { name: /Rolar Ataque/ }) as HTMLButtonElement;
     await waitFor(() => expect(btn.disabled).toBe(false), { timeout: 4000 });
     fireEvent.click(btn);
     await waitFor(() => expect(textoLog()).toContain('Investida Imediata'), { timeout: 8000 });
@@ -117,10 +117,9 @@ describe('Artes do Combate em combate', () => {
   });
 
   it('Investida Imediata além do limite (9 m > 6 m): ataque continua bloqueado e nada é gasto', async () => {
-    const btn = await montar(esp(), {}, { ana: [0, 0], bruno: [6, 0] });
+    await expect(montar(esp(), {}, { ana: [0, 0], bruno: [6, 0] })).rejects.toThrow('Alvo fora do alcance');
     toggle(/Investida Imediata/);
-    await esperar0();
-    expect(btn.disabled).toBe(true); // 9 m − 6 m = 3 m > 1,5 m de alcance
+    await expect(selecionarAlvo('bruno')).rejects.toThrow('Alvo fora do alcance'); // 9 m − 6 m = 3 m > 1,5 m de alcance
     expect(pegarFicha('ana').preparoCurrent).toBe(8);
   });
 

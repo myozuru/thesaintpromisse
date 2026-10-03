@@ -1,3 +1,4 @@
+import { selecionarAlvoNoMapaUI } from './helpers/alvoMapaUI';
 // @vitest-environment jsdom
 /**
  * Especialista em Combate — habilidades de 4º nível em combate real:
@@ -48,7 +49,7 @@ function mesa(chars: Character[], round = 1) {
 
 class RO { observe() {} unobserve() {} disconnect() {} }
 (globalThis as { ResizeObserver?: unknown }).ResizeObserver ??= RO;
-beforeEach(() => comoTela({ profileId: 'p-ana', role: 'PLAYER' }));
+beforeEach(async () => comoTela({ profileId: 'p-ana', role: 'PLAYER' }));
 afterEach(() => { cleanup(); limparMesa(); useCombatStore.setState({ inCombat: false, initiativeOrder: [] } as never); });
 
 describe('Aprender Postura', () => {
@@ -57,17 +58,17 @@ describe('Aprender Postura', () => {
     ...extra,
   });
 
-  it('aumenta o limite de posturas em +1, e +1 a mais no nível 10', () => {
+  it('aumenta o limite de posturas em +1, e +1 a mais no nível 10', async () => {
     expect(posturasLimiteChar(comPostura() as never)).toBe(2);
     expect(posturasLimiteChar(comPostura({ level: 10 }) as never)).toBe(4); // 1 base + 1 (nv8) + 2 (Aprender nv4 e nv10)
     expect(posturasLimiteChar(comPostura({ level: 16 }) as never)).toBe(5);
   });
 
-  it('sem a habilidade o limite continua 1 no nível 4', () => {
+  it('sem a habilidade o limite continua 1 no nível 4', async () => {
     expect(posturasLimiteChar(esp({ chosenSpecAbilities: [{ abilityId: 'ec-assumir-postura', chosenAtLevel: 2 }] }) as never)).toBe(1);
   });
 
-  it('a vaga extra permite aprender uma segunda postura, mas respeita o nível mínimo', () => {
+  it('a vaga extra permite aprender uma segunda postura, mas respeita o nível mínimo', async () => {
     const c = comPostura({ posturasAprendidas: ['sol'] }) as unknown as Character;
     expect(podeAprender(c, 'lua').ok).toBe(true);
     expect(podeAprender(c, 'tempestade').ok).toBe(false); // requer nível 10
@@ -83,14 +84,14 @@ describe('Armas Escolhidas', () => {
     ...extra,
   });
 
-  it('dá +3 níveis de dano só para o grupo escolhido', () => {
+  it('dá +3 níveis de dano só para o grupo escolhido', async () => {
     const c = comGrupo('Faca') as unknown as Character;
     expect(armasEscolhidasGrupo(c)).toBe('Faca');
     expect(armasEscolhidasStep(c, findWeaponByName('Faca de Arremesso'))).toBe(3);
     expect(armasEscolhidasStep(c, findWeaponByName('Azagaia'))).toBe(0);
   });
 
-  it('sem a habilidade ou sem escolha feita, não altera o dano', () => {
+  it('sem a habilidade ou sem escolha feita, não altera o dano', async () => {
     expect(armasEscolhidasStep(esp() as unknown as Character, findWeaponByName('Faca de Arremesso'))).toBe(0);
     const semEscolha = esp({ chosenSpecAbilities: [{ abilityId: 'ec-armas-escolhidas', chosenAtLevel: 4 }] }) as unknown as Character;
     expect(armasEscolhidasStep(semEscolha, findWeaponByName('Faca de Arremesso'))).toBe(0);
@@ -99,7 +100,7 @@ describe('Armas Escolhidas', () => {
   it('em combate real o log registra o aumento de dano da arma do grupo', async () => {
     mesa([comGrupo('Faca') as unknown as Character, inimigo()]);
     render(<AttackPanel character={pegarFicha('ana')} />);
-    fireEvent.change(screen.getByLabelText(/Alvo/i), { target: { value: 'bruno' } });
+    await selecionarAlvoNoMapaUI('bruno');
     forcarDados(19, 4, 4, 4, 4, 4, 4);
     fireEvent.click(screen.getByRole('button', { name: /Rolar Ataque/ }));
     await waitFor(() => expect(textoLog()).toMatch(/🗡️/), { timeout: 15000 });
@@ -118,7 +119,7 @@ describe('Arremesso Rápido', () => {
     attacksThisTurn: 1, ...extra,
   });
 
-  it('gasta 1 PE e a Ação Bônus e libera o ataque extra contra o alvo', () => {
+  it('gasta 1 PE e a Ação Bônus e libera o ataque extra contra o alvo', async () => {
     mesa([comArr(), inimigo()]);
     render(<AttackPanel character={pegarFicha('ana')} />);
     fireEvent.change(screen.getByTestId('arremesso-rapido-alvo'), { target: { value: 'bruno' } });
@@ -129,7 +130,7 @@ describe('Arremesso Rápido', () => {
     expect(textoLog()).toMatch(/Arremesso Rápido/);
   });
 
-  it('só uma vez por rodada; volta na rodada seguinte', () => {
+  it('só uma vez por rodada; volta na rodada seguinte', async () => {
     mesa([comArr(), inimigo()]);
     render(<AttackPanel character={pegarFicha('ana')} />);
     fireEvent.change(screen.getByTestId('arremesso-rapido-alvo'), { target: { value: 'bruno' } });
@@ -137,7 +138,7 @@ describe('Arremesso Rápido', () => {
     expect((screen.getByTestId('arremesso-rapido-usar') as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('não aparece sem arma de arremesso, sem ataque prévio, sem PE ou sem ação bônus', () => {
+  it('não aparece sem arma de arremesso, sem ataque prévio, sem PE ou sem ação bônus', async () => {
     const casos: [Record<string, unknown>, RegExp][] = [
       [{ mainHandWeaponName: 'Espada Longa' }, /arma de arremesso/i],
       [{ attacksThisTurn: 0 }, /primeiro um ataque/i],

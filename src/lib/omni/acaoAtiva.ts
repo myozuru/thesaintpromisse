@@ -1,3 +1,4 @@
+import { armaDoPersonagem, armaEstaEmpunhada } from './armaDoPersonagem';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { planejarCustosAtivos, validarRecursosAtivos, patchCustosAtivos, consumirUsosItemAtivo, type ContextoCustosAtivos } from './custosAtivos';
 import { prepararMovimentosAtivos, aplicarMovimentoAtivo, type PlanoMovimentoAtivo, type OpcoesMovimentoAtivo } from './movimentosAtivos';
@@ -298,8 +299,8 @@ function aplicarEfeitos(u: Character, alvo: Character, efeitos: EfeitoSecundario
 
 /** Arma usada pela ação: a própria entidade (se for arma do catálogo) ou a da mão principal. */
 export function armaDaAcao(u: Character, ent?: EntidadeOmni) {
-  const nome = (ent && replicaWeaponName(ent)) || u.mainHandWeaponName || '';
-  return nome ? findWeaponByName(nome) : undefined;
+  const nome = (ent?.categoria === 'arma' && !ent.replica ? ent.nome : ent && replicaWeaponName(ent)) || u.mainHandWeaponName || '';
+  return nome ? armaDoPersonagem(u.id, nome) : undefined;
 }
 
 export async function executarAcaoAtiva(
@@ -533,9 +534,11 @@ export async function executarAcaoAtiva(
 /** Ações ativas disponíveis ao personagem (itens do inventário dele). */
 export function acoesAtivasDe(charId: string): { instanceId: string; ent: EntidadeOmni; cfg: AcaoAtivaConfig }[] {
   const out: { instanceId: string; ent: EntidadeOmni; cfg: AcaoAtivaConfig }[] = [];
+  const char = useCharacterStore.getState().characters.find(c => c.id === charId);
   for (const i of Object.values(useInventoryStore.getState().items)) {
     if (i.ownerId !== charId) continue;
     const ent = useOmniEntidadesStore.getState().entidades[i.entity.id] ?? i.entity;
+    if (ent.categoria === 'arma' && (!char || !armaEstaEmpunhada(char, ent.nome) || ent.replica && !i.materializada)) continue;
     for (const cfg of ent.acoesAtivas ?? []) out.push({ instanceId: i.instanceId, ent, cfg });
   }
   return out;

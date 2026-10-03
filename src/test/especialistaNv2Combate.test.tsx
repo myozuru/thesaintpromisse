@@ -1,3 +1,4 @@
+import { selecionarAlvoNoMapaUI } from './helpers/alvoMapaUI';
 // @vitest-environment jsdom
 /**
  * Especialista em Combate (nv 2) em combate real: Extensão do Corpo,
@@ -50,16 +51,14 @@ function mesa(c: Character, outros: Character[], posicoes: Record<string, [numbe
   } as never);
 }
 
-function abrirPainel() {
+async function abrirPainel() {
   cleanup();
   render(<AttackPanel character={pegarFicha('ana')} />);
-  const sel = screen.getAllByRole('combobox').find((s) =>
-    Array.from((s as HTMLSelectElement).options).some((o) => o.value === 'bruno')) as HTMLSelectElement;
-  fireEvent.change(sel, { target: { value: 'bruno' } });
+  await selecionarAlvoNoMapaUI('bruno');
 }
 
 async function atacar(...dados: number[]) {
-  abrirPainel();
+  await abrirPainel();
   useLogStore.getState().clearLogs();
   forcarDados(...(dados.length ? dados : [18, 4, 4, 4, 4, 4]));
   fireEvent.click(screen.getByRole('button', { name: /Rolar Ataque/ }));
@@ -67,7 +66,7 @@ async function atacar(...dados: number[]) {
   if (btn.length) fireEvent.click(btn[0]);
 }
 
-beforeEach(() => comoTela({ profileId: 'p-ana', role: 'PLAYER' }));
+beforeEach(async () => comoTela({ profileId: 'p-ana', role: 'PLAYER' }));
 afterEach(() => {
   cleanup(); limparMesa();
   useCombatStore.setState({ inCombat: false, initiativeOrder: [] } as never);
@@ -77,8 +76,7 @@ describe('Extensão do Corpo', () => {
   it('alcança um alvo a 3 m com arma corpo a corpo (sem a habilidade, não alcança)', async () => {
     // Sem a habilidade: Espada Curta alcança 1,5 m; alvo a 2 casas = 3 m.
     mesa(esp(), [inimigo()], { ana: [0, 0], bruno: [2, 0] });
-    abrirPainel();
-    expect(screen.getByRole('button', { name: /Rolar Ataque/ }).hasAttribute('disabled')).toBe(true);
+    await expect(abrirPainel()).rejects.toThrow('Alvo fora do alcance');
 
     // Com a habilidade: +1,5 m → alcança.
     mesa(esp({ chosenSpecAbilities: EXT }), [inimigo()], { ana: [0, 0], bruno: [2, 0] });
@@ -101,8 +99,7 @@ describe('Extensão do Corpo', () => {
 
   it('ainda respeita o limite: alvo a 6 m continua fora de alcance', async () => {
     mesa(esp({ chosenSpecAbilities: EXT }), [inimigo()], { ana: [0, 0], bruno: [4, 0] });
-    abrirPainel();
-    expect(screen.getByRole('button', { name: /Rolar Ataque/ }).hasAttribute('disabled')).toBe(true);
+    await expect(abrirPainel()).rejects.toThrow('Alvo fora do alcance');
   }, 20000);
 });
 
@@ -113,7 +110,7 @@ describe('Disparos Sincronizados', () => {
 
   it('os dois tiros acertam: dano vira uma instância só, com RD aplicada uma vez', async () => {
     mesa(atirador(), [inimigo({ rd: 5 })], { ana: [0, 0], bruno: [2, 0] });
-    abrirPainel();
+    await abrirPainel();
     useLogStore.getState().clearLogs();
     const antes = hp('bruno');
     forcarDados(19, 6, 19, 6); // ataque1, dano1, ataque2, dano2
@@ -126,7 +123,7 @@ describe('Disparos Sincronizados', () => {
 
   it('se um tiro errar, nenhum dano é causado (tudo ou nada)', async () => {
     mesa(atirador(), [inimigo()], { ana: [0, 0], bruno: [2, 0] });
-    abrirPainel();
+    await abrirPainel();
     useLogStore.getState().clearLogs();
     const antes = hp('bruno');
     forcarDados(19, 6, 1, 6); // segundo tiro erra
@@ -136,15 +133,15 @@ describe('Disparos Sincronizados', () => {
     expect(textoLog()).not.toMatch(/Dano combinado/);
   }, 20000);
 
-  it('com arma corpo a corpo na mão principal, o botão fica bloqueado', () => {
+  it('com arma corpo a corpo na mão principal, o botão fica bloqueado', async () => {
     mesa(atirador({ mainHandWeaponName: 'Espada Curta' }), [inimigo()], { ana: [0, 0], bruno: [1, 0] });
-    abrirPainel();
+    await abrirPainel();
     expect(screen.getByTestId('disparos-sincronizados').hasAttribute('disabled')).toBe(true);
   });
 
-  it('sem a habilidade o botão nem aparece', () => {
+  it('sem a habilidade o botão nem aparece', async () => {
     mesa(esp({ mainHandWeaponName: 'Pistola', offHandWeaponName: 'Arco Curto' }), [inimigo()], { ana: [0, 0], bruno: [2, 0] });
-    abrirPainel();
+    await abrirPainel();
     expect(screen.queryByTestId('disparos-sincronizados')).toBeNull();
   });
 });
@@ -153,7 +150,7 @@ describe('Flanqueador Superior', () => {
   it('alvo flanqueado sofre −2 no TR de Fortitude do Golpe Impactante', async () => {
     // Sem flanco: aliado longe.
     mesa(esp({ chosenSpecAbilities: FLA }), [inimigo(), aliado()], { ana: [0, 0], bruno: [1, 0], caio: [6, 6] });
-    abrirPainel();
+    await abrirPainel();
     useLogStore.getState().clearLogs();
     forcarDados(18, 6, 6, 10);
     fireEvent.click(screen.getByRole('button', { name: /Golpe Impactante/ }));
@@ -165,7 +162,7 @@ describe('Flanqueador Superior', () => {
 
     // Com flanco: aliado adjacente ao mesmo alvo.
     mesa(esp({ chosenSpecAbilities: FLA }), [inimigo(), aliado()], { ana: [0, 0], bruno: [1, 0], caio: [2, 0] });
-    abrirPainel();
+    await abrirPainel();
     useLogStore.getState().clearLogs();
     forcarDados(18, 6, 6, 10);
     fireEvent.click(screen.getByRole('button', { name: /Golpe Impactante/ }));
@@ -176,7 +173,7 @@ describe('Flanqueador Superior', () => {
     expect(comFlanco).toBe('-2');
   }, 30000);
 
-  it('só conta como flanco com aliado adjacente ao mesmo alvo', () => {
+  it('só conta como flanco com aliado adjacente ao mesmo alvo', async () => {
     mesa(esp({ chosenSpecAbilities: FLA }), [inimigo(), aliado()], { ana: [0, 0], bruno: [1, 0], caio: [6, 6] });
     const ms = useMapStore.getState();
     const chars = useCharacterStore.getState().characters;
@@ -190,7 +187,7 @@ describe('Flanqueador Superior', () => {
     expect(penalidadeTRFlanqueado(pegarFicha('bruno'), chars2, ms2.entities as never, ms2.gridConfig as never)).toBe(-2);
   });
 
-  it('sem a habilidade, o flanco não penaliza o TR', () => {
+  it('sem a habilidade, o flanco não penaliza o TR', async () => {
     mesa(esp(), [inimigo(), aliado()], { ana: [0, 0], bruno: [1, 0], caio: [2, 0] });
     const ms = useMapStore.getState();
     const chars = useCharacterStore.getState().characters;

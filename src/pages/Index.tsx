@@ -136,6 +136,15 @@ export default function Index() {
     }, 320);
   };
 
+  useEffect(() => {
+    const navegar = (event: Event) => {
+      const tab = (event as CustomEvent<TabId>).detail;
+      if (role && getTabsForRole(role).includes(tab)) handleTabChange(tab);
+    };
+    window.addEventListener('app:navigate', navegar);
+    return () => window.removeEventListener('app:navigate', navegar);
+  }, [activeTab, role]);
+
   if (showSplash) {
     return (
       <div

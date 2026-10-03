@@ -1,3 +1,4 @@
+import { selecionarAlvoNoMapaUI } from './helpers/alvoMapaUI';
 // @vitest-environment jsdom
 /**
  * Golpe Especial (Especialista nv 4) no combate real em memória: peças no mapa,
@@ -24,11 +25,8 @@ const esp = (extra: Record<string, unknown> = {}) =>
 const inimigo = (id: string, extra: Record<string, unknown> = {}) => ficha(id, { category: 'INIMIGO', ...extra } as never);
 
 const textoLog = () => useLogStore.getState().logs.map((l) => l.message).join('\n');
-function selecionarAlvo(id: string) {
-  const sel = screen.getAllByRole('combobox').find((s) =>
-    s.getAttribute('aria-label') !== 'Alvo extra do Golpe Amplo' &&
-    Array.from((s as HTMLSelectElement).options).some((o) => o.value === id)) as HTMLSelectElement;
-  fireEvent.change(sel, { target: { value: id } });
+async function selecionarAlvo(id: string) {
+  await selecionarAlvoNoMapaUI(id);
 }
 const golpe = (nome: string) => fireEvent.click(screen.getByRole('button', { name: `Golpe ${nome}` }));
 
@@ -36,11 +34,11 @@ async function montar(c: ReturnType<typeof esp>, pos: Record<string, [number, nu
   useLogStore.getState().clearLogs();
   montarMesa([c, inimigo('bruno', extras.bruno), inimigo('caio', extras.caio)], pos);
   render(<AttackPanel character={c} />);
-  selecionarAlvo('bruno');
+  await selecionarAlvo('bruno');
   return screen.getByRole('button', { name: /Rolar Ataque/ }) as HTMLButtonElement;
 }
 
-beforeEach(() => { comoTela({ profileId: 'p-ana', role: 'PLAYER' }); resetPrecisoUses(); });
+beforeEach(async () => { comoTela({ profileId: 'p-ana', role: 'PLAYER' }); resetPrecisoUses(); });
 afterEach(() => { cleanup(); limparMesa(); vi.restoreAllMocks(); });
 
 describe('Golpe Especial em combate', () => {
@@ -85,10 +83,12 @@ describe('Golpe Especial em combate', () => {
   });
 
   it('PE insuficiente: bloqueia sem gastar nem mover peças (com Investida)', async () => {
-    const btn = await montar(esp({ peCurrent: 1 }), { ana: [0, 0], bruno: [3, 0], caio: [0, 1] });
+    await expect(montar(esp({ peCurrent: 1 }), { ana: [0, 0], bruno: [3, 0], caio: [0, 1] })).rejects.toThrow('Alvo fora do alcance');
+    const btn = screen.getByRole('button', { name: /Rolar Ataque/ });
     const antes = { ...Object.values(useMapStore.getState().entities).find((e) => e?.characterId === 'ana')! };
     fireEvent.click(screen.getAllByRole('button').find((b) => /Investida Imediata/.test(b.textContent ?? ''))!);
     golpe('Letal');
+    await selecionarAlvo('bruno');
     fireEvent.click(btn);
     await waitFor(() => expect(textoLog()).toMatch(/PE insuficiente/));
     const depois = Object.values(useMapStore.getState().entities).find((e) => e?.characterId === 'ana')!;
@@ -98,9 +98,10 @@ describe('Golpe Especial em combate', () => {
   });
 
   it('Longo libera alvo a 3 m com espada; sem Longo continua bloqueado', async () => {
-    const btn = await montar(esp(), { ana: [0, 0], bruno: [2, 0], caio: [0, 1] });
-    expect(btn.disabled).toBe(true);
+    await expect(montar(esp(), { ana: [0, 0], bruno: [2, 0], caio: [0, 1] })).rejects.toThrow('Alvo fora do alcance');
     golpe('Longo');
+    await selecionarAlvo('bruno');
+    const btn = screen.getByRole('button', { name: /Rolar Ataque/ }) as HTMLButtonElement;
     expect(btn.disabled).toBe(false);
     forcarDados(15, 4, 4);
     fireEvent.click(btn);

@@ -1,3 +1,6 @@
+import { SoltarItemButton } from './SoltarItemButton';
+import { pedirAlvoMapa } from '@/stores/useAlvoMapaStore';
+import { armaDoPersonagem } from '@/lib/omni/armaDoPersonagem';
 import { ContadoresEquipamento } from '@/components/omni/ContadoresEquipamento';
 import type { MetadadosAtaqueDano } from '@/lib/omni/contextoDano';
 /**
@@ -15,7 +18,7 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { ALL_CONDITIONS } from '@/types/conditions';
 import type { Character } from '@/types';
 import {
-  findWeaponByName, hasProperty, requiresTwoHands, type Weapon,
+  findWeaponByName, hasProperty, requiresTwoHands, isVersatile, type Weapon,
 } from '@/lib/weapons';
 import {
   buildAttackContext, rollAttack, pickAttackAbility, getAbilityMod, type AttackResult,
@@ -159,7 +162,7 @@ export function AttackPanel({ character: cProp }: Props) {
       if (inv.ownerId !== c.id) continue;
       // Réplicas só aparecem nas mãos enquanto materializadas.
       if (inv.entity.replica && !inv.materializada) continue;
-      const w = inv.entity.replica ? (inv.replicaArma ? findWeaponByName(inv.replicaArma) : undefined) : findWeaponByName(inv.entity.nome);
+      const w = inv.entity.replica ? (inv.replicaArma ? findWeaponByName(inv.replicaArma) : undefined) : armaDoPersonagem(c.id, inv.entity.nome);
       if (w && !seenNames.has(w.name)) {
         out.push({ item: { id: inv.entity.id, name: inv.entity.nome }, weapon: w });
         seenNames.add(w.name);
@@ -167,12 +170,12 @@ export function AttackPanel({ character: cProp }: Props) {
     }
 
     return out;
-  }, [items, c.id, omniInventoryList]);
+  }, [items, c.id, omniInventoryList, omniEntidadesMap]);
 
-  const mainWeapon = c.mainHandWeaponName ? findWeaponByName(c.mainHandWeaponName) : null;
+  const mainWeapon = c.mainHandWeaponName ? armaDoPersonagem(c.id, c.mainHandWeaponName) : null;
   const offWeapon =
     c.offHandWeaponName && c.offHandWeaponName !== c.mainHandWeaponName
-      ? findWeaponByName(c.offHandWeaponName)
+      ? armaDoPersonagem(c.id, c.offHandWeaponName)
       : null;
   const usingTwoHanded = !!mainWeapon && requiresTwoHands(mainWeapon);
 
@@ -205,6 +208,8 @@ export function AttackPanel({ character: cProp }: Props) {
     }
     return characters.filter(ch => ch.id !== c.id && (ch.category === 'INIMIGO' || ch.category === 'NPC'));
   }, [inCombat, initiativeOrder, characters, c.id]);
+  const [mirando, setMirando] = useState(false);
+  const ataqueAposMira = useRef(false);
   const [targetId, setTargetId] = useState<string>('');
   const [defenseOverride, setDefenseOverride] = useState<number | null>(null);
   const target = useMemo(() => characters.find(x => x.id === targetId) ?? null, [characters, targetId]);
@@ -410,6 +415,8 @@ export function AttackPanel({ character: cProp }: Props) {
   useEffect(() => {
     if (usingTwoHanded) setTwoHanded(true);
   }, [usingTwoHanded]);
+
+  useEffect(() => { if (offWeapon) setTwoHanded(false); }, [c.offHandWeaponName]);
 
   const reactions = useMemo(() => {
     const chosen = c.chosenTalents ?? [];
@@ -1367,12 +1374,34 @@ export function AttackPanel({ character: cProp }: Props) {
   const ability = mainWeapon ? pickAttackAbility(c, mainWeapon) : null;
   const abilityMod = ability ? getAbilityMod(c, ability) : 0;
 
+  const selecionarAlvoNoMapa = async (atacar = false) => {
+    if (!mainWeapon) return;
+    setMirando(true); setTargetId('');
+    try {
+      const ids = await pedirAlvoMapa({ usuarioId: c.id, label: mainWeapon.name,
+        maxRangeMeters: (weaponRangeM ?? 0) + longoM + (temArtes && arteInvestida ? investidaMoveMeters(c) : 0),
+        aceita: alvo => alvo.id !== c.id });
+      if (ids) {
+        const atual = useCharacterStore.getState().characters.find(ch => ch.id === c.id);
+        if (atual?.mainHandWeaponName !== c.mainHandWeaponName) { addLog('combat', 'A arma mudou durante a seleção. Selecione o ataque novamente.'); return; }
+        ataqueAposMira.current = atacar; setTargetId(ids[0]);
+      }
+      window.dispatchEvent(new CustomEvent('app:navigate', { detail: 'fichas' }));
+    } catch (e) { addLog('combat', `❌ ${e instanceof Error ? e.message : 'Não foi possível selecionar o alvo.'}`); }
+    finally { setMirando(false); }
+  };
+  useEffect(() => {
+    if (!mirando && targetId && ataqueAposMira.current) {
+      ataqueAposMira.current = false; void handleRoll();
+    }
+  }, [mirando, targetId]);
+
   const contadoresArma = (nome: string | null | undefined) => {
     if (!nome) return null;
     const candidatas = omniInventoryList.filter(inv => inv.ownerId === c.id && inv.entity.nome === nome);
     const instancia = candidatas.find(inv => inv.isEquipped) ?? candidatas[0];
-    if (!instancia) return null;
-    return <ContadoresEquipamento charId={c.id} entidade={omniEntidadesMap[instancia.entity.id] ?? instancia.entity} />;
+    if (!instancia) { const legado = items.find(i => i.name === nome && i.assignedTo.includes(c.id)); return legado ? <SoltarItemButton charId={c.id} itemId={legado.id} legado /> : null; }
+    return <><ContadoresEquipamento charId={c.id} entidade={omniEntidadesMap[instancia.entity.id] ?? instancia.entity} /><SoltarItemButton charId={c.id} itemId={instancia.instanceId} /></>;
   };
 
   return (
@@ -1420,6 +1449,7 @@ export function AttackPanel({ character: cProp }: Props) {
             <div className="grid grid-cols-2 gap-2">
               <HandSlot
                 label="Mão Principal"
+                ocupacaoDuasMaos={usingTwoHanded || (twoHanded && !!mainWeapon && isVersatile(mainWeapon))}
                 rodape={contadoresArma(c.mainHandWeaponName)}
                 currentName={c.mainHandWeaponName ?? null}
                 inventory={inventoryWeapons}
@@ -1431,11 +1461,11 @@ export function AttackPanel({ character: cProp }: Props) {
                 rodape={usingTwoHanded ? null : contadoresArma(c.offHandWeaponName)}
                 currentName={
                   // se duas-mãos, mostra a mesma arma "ocupando" mas sem permitir alterar
-                  usingTwoHanded ? c.mainHandWeaponName ?? null : (offWeapon?.name ?? null)
+                  usingTwoHanded || (twoHanded && !!mainWeapon && isVersatile(mainWeapon)) ? c.mainHandWeaponName ?? null : (offWeapon?.name ?? null)
                 }
                 inventory={inventoryWeapons}
                 disabledForOther={c.mainHandWeaponName ?? null}
-                lockedReason={usingTwoHanded ? 'Arma de duas-mãos ocupa ambos os slots' : null}
+                lockedReason={usingTwoHanded || (twoHanded && !!mainWeapon && isVersatile(mainWeapon)) ? 'Arma de duas-mãos ocupa ambos os slots' : null}
                 onChange={(name) => handleEquip('off', name)}
               />
             </div>
@@ -1467,22 +1497,10 @@ export function AttackPanel({ character: cProp }: Props) {
             <button onClick={() => useZonaRiscoStore.getState().setAtaque(null)} className="text-muted-foreground hover:text-foreground">✕</button>
           </div>
         )}
-        {/* ─── ALVO ─────────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          <label className="flex flex-col gap-0.5">
-            <span className="text-muted-foreground uppercase tracking-wider text-[10px]">Alvo</span>
-            <select
-              value={targetId}
-              onChange={(e) => setTargetId(e.target.value)}
-              className="rounded border border-border bg-background px-2 py-1"
-            >
-              <option value="">— manual —</option>
-              {possibleTargets.map(t => (
-                <option key={t.id} value={t.id}>{t.name} ({t.category})</option>
-              ))}
-            </select>
-          </label>
-          {/* Defesa do alvo é oculta para preservar a dinâmica — apenas o resultado (acerto/erro) é revelado. */}
+        <div className="flex items-center gap-2 text-xs">
+          <span>{target ? `Alvo: ${target.name}` : 'Selecione o alvo no mapa ao atacar.'}</span>
+          <button type="button" disabled={!mainWeapon || mirando} onClick={() => void selecionarAlvoNoMapa()}
+            className="rounded border border-border px-2 py-1">Selecionar alvo no mapa</button>
         </div>
 
         {/* ─── Alcance (medido no mapa, borda a borda) ────────────────────── */}
@@ -1540,7 +1558,7 @@ export function AttackPanel({ character: cProp }: Props) {
         <div className="flex flex-wrap gap-2 text-[11px]">
           <ToggleChip on={ataqueOportunidade} onChange={setAtaqueOportunidade} label="Ataque de oportunidade" disabled={phase !== 'idle' && phase !== 'done'} />
           {mainWeapon && (hasProperty(mainWeapon, 'versatil') || hasProperty(mainWeapon, 'duas_maos')) && (
-            <ToggleChip on={twoHanded || usingTwoHanded} onChange={setTwoHanded} label="Duas mãos" disabled={usingTwoHanded} />
+            <ToggleChip on={twoHanded || usingTwoHanded} onChange={setTwoHanded} label="Duas mãos" disabled={usingTwoHanded || !!offWeapon} />
           )}
           {targetUnaware && (
             <span
@@ -1610,7 +1628,7 @@ export function AttackPanel({ character: cProp }: Props) {
               <ToggleChip on={arteDistracao} onChange={setArteDistracao} label={`Distração Letal (1 PP) · −${metadeSab(c)} Def do alvo`} disabled={preparoAtual < 1} />
               <ToggleChip on={arteExecucao} onChange={setArteExecucao} label={`Execução Silenciosa (1 PP) · +${execucaoSilenciosaDice(c)}d6`} disabled={preparoAtual < 1 || !targetUnaware} />
               <ToggleChip on={arteGolpe} onChange={setArteGolpe} label={`Golpe Descendente (1 PP) · +${metadeSab(c)} Def sua`} disabled={preparoAtual < 1 || mainWeapon?.range !== 'melee'} />
-              <ToggleChip on={arteInvestida} onChange={setArteInvestida} label={`Investida Imediata (2 PP) · ${investidaMoveMeters(c).toLocaleString('pt-BR')} m`} disabled={preparoAtual < 2 || !target} />
+              <ToggleChip on={arteInvestida} onChange={setArteInvestida} label={`Investida Imediata (2 PP) · ${investidaMoveMeters(c).toLocaleString('pt-BR')} m`} disabled={preparoAtual < 2 || !mainWeapon} />
             </div>
           </div>
         )}
@@ -1772,8 +1790,8 @@ export function AttackPanel({ character: cProp }: Props) {
         <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
-            onClick={() => handleRoll()}
-            disabled={!mainWeapon || !rangeOk || phase === 'rolling-hit' || phase === 'await-second-d20' || phase === 'rolling-second-d20' || phase === 'await-dmg' || phase === 'rolling-dmg'}
+            onClick={() => target ? void handleRoll() : void selecionarAlvoNoMapa(true)}
+            disabled={mirando || !mainWeapon || !rangeOk || phase === 'rolling-hit' || phase === 'await-second-d20' || phase === 'rolling-second-d20' || phase === 'await-dmg' || phase === 'rolling-dmg'}
             title={!rangeOk ? rangeBlockReason ?? undefined : investidaCobreDistancia ? 'Investida Imediata cobre a distância' : longoCobre ? 'Golpe Longo cobre a distância' : undefined}
             className={cn(
               'inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-bold transition',
@@ -1783,7 +1801,7 @@ export function AttackPanel({ character: cProp }: Props) {
             )}
           >
             <Dice5 className={cn('h-3.5 w-3.5', phase === 'rolling-hit' && 'animate-spin')} />
-            {phase === 'rolling-hit' ? 'Rolando ataque…' : 'Rolar Ataque'}
+            {mirando ? 'Selecione no mapa…' : phase === 'rolling-hit' ? 'Rolando ataque…' : 'Rolar Ataque'}
           </button>
           {temDisparos && (
             <button
@@ -2051,7 +2069,7 @@ export function AttackPanel({ character: cProp }: Props) {
 }
 
 function HandSlot({
-  label, currentName, inventory, onChange, disabledForOther, lockedReason, rodape,
+  label, currentName, inventory, onChange, disabledForOther, lockedReason, rodape, ocupacaoDuasMaos,
 }: {
   label: string;
   currentName: string | null;
@@ -2061,6 +2079,7 @@ function HandSlot({
   disabledForOther: string | null;
   lockedReason?: string | null;
   rodape?: ReactNode;
+  ocupacaoDuasMaos?: boolean;
 }) {
   const locked = !!lockedReason;
   return (
@@ -2078,7 +2097,7 @@ function HandSlot({
           </button>
         )}
       </div>
-      <select
+      {locked ? <div className="rounded border border-primary/40 bg-primary/10 px-2 py-1 text-sm text-foreground">🤲 {currentName} · duas mãos</div> : <select
         value={currentName ?? ''}
         disabled={locked}
         onChange={(e) => onChange(e.target.value || null)}
@@ -2099,7 +2118,8 @@ function HandSlot({
             </option>
           );
         })}
-      </select>
+      </select>}
+      {ocupacaoDuasMaos && <div className="text-xs text-primary">🤲 {currentName} · duas mãos</div>}
       {rodape}
       {locked && <div className="text-[10px] text-muted-foreground italic">{lockedReason}</div>}
     </div>

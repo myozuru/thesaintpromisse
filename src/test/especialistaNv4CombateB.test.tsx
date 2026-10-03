@@ -1,3 +1,4 @@
+import { selecionarAlvoNoMapaUI } from './helpers/alvoMapaUI';
 // @vitest-environment jsdom
 /**
  * Especialista nv 4 (parte B) em combate na mesa em memória: Técnicas de
@@ -39,7 +40,7 @@ async function clicarNoMapa(cx: number, cy: number) {
 }
 const pos = (id: string) => useMapStore.getState().entities[`e-${id}`];
 
-beforeEach(() => { comoTela({ profileId: 'p-ana', role: 'PLAYER' }); useLogStore.getState().clearLogs(); });
+beforeEach(async () => { comoTela({ profileId: 'p-ana', role: 'PLAYER' }); useLogStore.getState().clearLogs(); });
 afterEach(() => { cleanup(); limparMesa(); useCombatStore.setState({ inCombat: false, combatId: null, initiativeOrder: [] } as never); vi.restoreAllMocks(); });
 
 describe('Buscar Oportunidade', () => {
@@ -88,8 +89,7 @@ describe('Compensar Erro', () => {
     montarMesa([c, inimigo('bruno')], { ana: [0, 0], bruno: [1, 0] });
     combate(['ana', 'bruno']);
     render(<AttackPanel character={c} />);
-    const sel = screen.getAllByRole('combobox').find((s) => Array.from((s as HTMLSelectElement).options).some((o) => o.value === 'bruno'))!;
-    fireEvent.change(sel, { target: { value: 'bruno' } });
+    await selecionarAlvoNoMapaUI('bruno');
     forcarDados(1, 5, 5);
     fireEvent.click(screen.getByRole('button', { name: /Rolar Ataque/ }));
     await waitFor(() => expect(screen.getByTestId('compensar-erro')).toBeTruthy(), { timeout: 8000 });
@@ -108,8 +108,7 @@ describe('Compensar Erro', () => {
     montarMesa([c, inimigo('bruno')], { ana: [0, 0], bruno: [1, 0] });
     combate(['ana', 'bruno']);
     render(<AttackPanel character={c} />);
-    const sel = screen.getAllByRole('combobox').find((s) => Array.from((s as HTMLSelectElement).options).some((o) => o.value === 'bruno'))!;
-    fireEvent.change(sel, { target: { value: 'bruno' } });
+    await selecionarAlvoNoMapaUI('bruno');
     forcarDados(20, 6, 6);
     fireEvent.click(screen.getByRole('button', { name: /Rolar Ataque/ }));
     await waitFor(() => expect(log()).toMatch(/✅ Acerto|💥 Crítico/), { timeout: 8000 });

@@ -1,3 +1,4 @@
+import { selecionarAlvoNoMapaUI } from './helpers/alvoMapaUI';
 // @vitest-environment jsdom
 /**
  * Assumir Postura (parte 2: Fortuna, Devastação, Tempestade, Céu) em combate real:
@@ -44,9 +45,7 @@ function mesa(c = esp(), extra: Record<string, [number, number]> = {}) {
 }
 const clicar = (re: RegExp) => fireEvent.click(screen.getByRole('button', { name: re }));
 async function atacar(...dados: number[]) {
-  const sel = screen.getAllByRole('combobox').find((s) =>
-    Array.from((s as HTMLSelectElement).options).some((o) => o.value === 'bruno')) as HTMLSelectElement;
-  fireEvent.change(sel, { target: { value: 'bruno' } });
+  await selecionarAlvoNoMapaUI('bruno');
   useLogStore.getState().clearLogs();
   forcarDados(...dados);
   clicar(/Rolar Ataque/);
@@ -54,19 +53,17 @@ async function atacar(...dados: number[]) {
   await waitFor(() => expect(log()).toMatch(/💥 Dano:/), { timeout: 8000 });
 }
 
-beforeEach(() => comoTela({ profileId: 'p-ana', role: 'PLAYER' }));
+beforeEach(async () => comoTela({ profileId: 'p-ana', role: 'PLAYER' }));
 afterEach(() => { cleanup(); limparMesa(); useCombatStore.setState({ inCombat: false, initiativeOrder: [] } as never); });
 
 
-const alvo = (id: string) => {
-  const sel = screen.getAllByRole('combobox').find((s) =>
-    Array.from((s as HTMLSelectElement).options).some((o) => o.value === id)) as HTMLSelectElement;
-  fireEvent.change(sel, { target: { value: id } });
+const alvo = async (id: string) => {
+  await selecionarAlvoNoMapaUI(id);
 };
 async function atacarAlvo(id: string, ...dados: number[]) {
   useCharacterStore.getState().updateCharacter('ana', { attacksThisTurn: 0, actionsCurrent: 1 } as never);
-  await waitFor(() => expect(screen.getAllByRole('combobox').length).toBeGreaterThan(0));
-  alvo(id);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Selecionar alvo no mapa' })).toBeTruthy());
+  await alvo(id);
   useLogStore.getState().clearLogs();
   forcarDados(...dados);
   clicar(/Rolar Ataque/);
@@ -82,7 +79,7 @@ describe('Posturas — parte 2', { timeout: 20000 }, () => {
     expect(fortunaUsosMax(esp({ level: 4 }))).toBe(Math.max(1, Math.floor(bt / 2)));
     mesa(esp({ posturasAprendidas: ['fortuna'] }));
     clicar(/Entrar: Fortuna/);
-    alvo('bruno');
+    await alvo('bruno');
     useLogStore.getState().clearLogs();
     forcarDados(1, 19, 4, 4, 4);
     clicar(/Rolar Ataque/);
@@ -133,7 +130,7 @@ describe('Posturas — parte 2', { timeout: 20000 }, () => {
   it('Devastação: rerrolar o ataque ajusta o acúmulo pelo resultado final', { timeout: 20000 }, async () => {
     mesa(esp({ level: 6, posturasAprendidas: ['devastacao'] }));
     clicar(/Entrar: Devastação/);
-    alvo('bruno');
+    await alvo('bruno');
     // 1º ataque erra (d20 2); a rerrolagem acerta (d20 18) → acumula 1.
     forcarDados(2, 18, 4, 4, 4);
     clicar(/Rolar Ataque/);
@@ -144,7 +141,7 @@ describe('Posturas — parte 2', { timeout: 20000 }, () => {
     expect(log()).toContain('a rerrolagem acertou');
     // 2º ataque acerta (acúmulo 1→2); a rerrolagem erra → perde só o acerto da rerrolagem (volta a 1).
     useCharacterStore.getState().updateCharacter('ana', { attacksThisTurn: 0, actionsCurrent: 1 } as never);
-    alvo('bruno');
+    await alvo('bruno');
     forcarDados(18, 2);
     clicar(/Rolar Ataque/);
     await waitFor(() => expect(pegarFicha('ana').devastacao?.acertos).toBe(2), { timeout: 8000 });
@@ -176,7 +173,7 @@ describe('Posturas — parte 2', { timeout: 20000 }, () => {
     expect(log()).not.toContain('davi Fortitude');
   });
 
-  it('Céu: alcance dobrado, +2 em perícias, 2 preparo temporários por turno que não acumulam', () => {
+  it('Céu: alcance dobrado, +2 em perícias, 2 preparo temporários por turno que não acumulam', async () => {
     mesa(esp({ level: 12, posturasAprendidas: ['ceu'], preparoCurrent: 5 }));
     expect(posturaAlcanceMult(pegarFicha('ana'))).toBe(1);
     clicar(/Entrar: Céu/);
@@ -195,11 +192,11 @@ describe('Posturas — parte 2', { timeout: 20000 }, () => {
     expect(posturaPericia(esp())).toBe(0);
   });
 
-  it('Céu: ataque alcança o dobro da distância no mapa', () => {
+  it('Céu: ataque alcança o dobro da distância no mapa', async () => {
     mesa(esp({ level: 12, posturasAprendidas: ['ceu'] }), { bruno: [2, 0] });
-    alvo('bruno');
-    expect(screen.getByText(/fora de alcance/)).toBeTruthy();
+    await expect(alvo('bruno')).rejects.toThrow('Alvo fora do alcance');
     clicar(/Entrar: Céu/);
-    expect(screen.queryByText(/fora de alcance/)).toBeNull();
+    await alvo('bruno');
+    expect(screen.getByText('Alvo: bruno')).toBeTruthy();
   });
 });

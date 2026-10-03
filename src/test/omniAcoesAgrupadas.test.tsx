@@ -19,7 +19,7 @@ beforeEach(() => {
   useInventoryStore.setState({ items: {}, deleted: {} });
   useOmniEntidadesStore.setState({ entidades: {} });
   useCombatStore.setState({ inCombat: false });
-  montarMesa([ficha('u', { hpCurrent: 20, hpMax: 20 })], {});
+  montarMesa([ficha('u', { hpCurrent: 20, hpMax: 20, mainHandWeaponName: 'Katana' })], {});
 });
 afterEach(cleanup);
 
