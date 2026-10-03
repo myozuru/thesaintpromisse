@@ -78,7 +78,7 @@ describe('Regras puras', () => {
     expect(resolverGatilho('@aliado_sofrer_dano')).toBe('aoAliadoSofrerDano');
     expect(resolverGatilho('inimigo_cair')).toBe('aoInimigoMorrer');
     const ids = DICIONARIO_CHAVES_OMNI.flatMap((c) => c.itens.map((i) => i.id));
-    for (const k of ['CENA.consumido', 'CENA.outro_eh_inimigo', 'condicao_rodadas_<id>', '<nome>__fonte__<id>']) expect(ids).toContain(k);
+    for (const k of ['CENA.consumido', 'CENA.outro_inimigo', 'condicao_rodadas_desde_<id>', '<nome>__fonte__<id>']) expect(ids).toContain(k);
   });
   it('script reabre igual (ate / por_fonte)', () => {
     const r = parseOmniScript('@aliado_sofrer_dano -> somar 1 em contador_rancor ate @USUARIO.treino por_fonte', { defaultTarget: 'USUARIO' });

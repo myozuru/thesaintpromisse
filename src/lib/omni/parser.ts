@@ -609,7 +609,7 @@ export function avaliarFormula(
     const campos = Object.fromEntries(Object.entries(extras.cena).map(([k, v]) => [`CENA_${resolverChavePtBr(k.replace(/^CENA_/i, ''))}`, v]));
     composicoes.CENA = mesclarDados(composicoes.CENA ?? projetarDadosLegados(bag, 'CENA', resolverChavePtBr), dadosCena(campos));
   }
-  if (extras?.dano && !extras.composicoes?.DANO) composicoes.DANO = mesclarDados(projetarDadosLegados(bag, 'DANO', resolverChavePtBr), dadosEventoDano(bag));
+  if ((extras?.dano || Object.keys(bag).some(k => k.startsWith('DANO_'))) && !composicoes.DANO) composicoes.DANO = mesclarDados(projetarDadosLegados(bag, 'DANO', resolverChavePtBr), dadosEventoDano(bag));
   const ctx: ContextoAvaliacao = { variaveis: bag, armaDano: extras?.arma?.dano, rolagens: [], rng, diagnosticos: [], composicoes };
   const resolvida = preprocessar(expressao, ctx);
   try {

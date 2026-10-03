@@ -6,11 +6,15 @@ import { GuiaFormulasDialog } from '@/components/omni/GuiaFormulasDialog';
 afterEach(cleanup);
 
 describe('GuiaFormulasDialog', () => {
-  it('organiza o guia em oito abas e permite inserir uma key e seu alias', () => {
+  it('organiza o guia em nove abas e permite inserir uma key e seu alias', () => {
     const onInserirFormula = vi.fn();
     render(<GuiaFormulasDialog aberto onClose={() => {}} onInserirFormula={onInserirFormula} />);
 
-    expect(screen.getAllByRole('tab')).toHaveLength(8);
+    expect(screen.getAllByRole('tab')).toHaveLength(9);
+    expect(screen.getByRole('button', { name: '303 componentes' })).toBeTruthy();
+    const recursos = screen.getByRole('tab', { name: /Recursos/ });
+    fireEvent.mouseDown(recursos, { button: 0 });
+    fireEvent.click(recursos);
     expect(screen.getByRole('heading', { name: 'vida' })).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: '@USUARIO.vida' }));

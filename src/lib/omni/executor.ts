@@ -40,7 +40,10 @@ import { adicionarImunidade, removerImunidade, formatarImunidade } from './immun
 import { calcularContador } from './contadores';
 import { aplicarEfeitoNoPersonagem } from './aplicarEfeito';
 import { avaliarComposicao } from './componentes/avaliar';
-import { extrairDadosCompostos } from './componentes/contexto';
+import { dadosCena } from './componentes/cena';
+import { dadosEventoDano } from './componentes/eventos';
+import { mesclarDados } from './componentes/legado';
+import { anexarDadosCompostos, extrairDadosCompostos } from './componentes/contexto';
 
 const PROFUNDIDADE_MAX = 8;
 
@@ -94,6 +97,8 @@ function variaveisCompletas(ctx: ContextoRuntime): Record<string, number> {
   if (ctx.dano) for (const [k, v] of Object.entries(ctx.dano)) {
     vars[`DANO_${k.toUpperCase()}`] = v;
   }
+  if (ctx.cena) anexarDadosCompostos(vars, 'CENA', mesclarDados(extrairDadosCompostos(vars).CENA ?? { selecoes: {} }, dadosCena(vars)));
+  if (ctx.dano) anexarDadosCompostos(vars, 'DANO', dadosEventoDano(vars));
   return vars;
 }
 

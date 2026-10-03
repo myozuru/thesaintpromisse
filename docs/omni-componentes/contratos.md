@@ -1,4 +1,4 @@
-# OMNI: contratos dos componentes — etapa 1 de 15
+# OMNI: contratos dos componentes — implementação em 15 etapas
 
 Fonte de nomenclatura: `Analise_Keys_OMNI_Componentes(1).txt`, versão 3.0.
 Código conferido: `main`, commit `a69aa2eb4ca734f7102832407ead362997a8813e`.
@@ -11,9 +11,11 @@ históricos. As correspondências referenciam componentes pelo ID; não contêm
 funções exclusivas para cada frase. Os IDs K são referências de documentação,
 não sintaxe que o usuário precisa escrever.
 
-Esta etapa estabelece os contratos e as decisões para a implementação.
-O catálogo ainda não habilita a nova escrita no motor. A representação
-executável será implementada na etapa 2 e a composição na etapa 4.
+Os contratos foram estabelecidos na etapa 1. A representação executável,
+a interpretação por componentes e as integrações foram implementadas nas
+etapas 2–14. A etapa 15 verifica catálogo, regressão, TypeScript e build.
+A permissão de escrita continua específica do recurso; composições de leitura
+não ganham setters automaticamente. Consulte `validacao.md` para a cobertura.
 
 ## Contrato de componentes
 

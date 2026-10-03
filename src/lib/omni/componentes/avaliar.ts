@@ -1,3 +1,4 @@
+import { resolverTipoDano } from '../contextoDano';
 import { validarComposicao, type NoComposicao, type ReferenciaComposta } from './composicao';
 
 export interface RegistroComposto {
@@ -25,10 +26,12 @@ function campo(d: DadoComposto, key: string): DadoComposto {
   if (registro(d) && d.propriedades && ['leve','pesada','versatil','fineza','corpo_a_corpo','distancia','critico_ampliado'].includes(key)) return d.propriedades.includes(key);
   throw new Error(`Componente ${key} não se aplica à seleção atual.`);
 }
-function comArgumentos(d: DadoComposto, args?: Readonly<Record<string, { valor: number | string }>>): DadoComposto {
+function comArgumentos(d: DadoComposto, args?: Readonly<Record<string, { valor: number | string; tipo?: string }>>): DadoComposto {
   if (!args || !Object.keys(args).length) return d;
-  const arg = Object.values(args)[0].valor;
-  if (registro(d) && d.registros) return Object.hasOwn(d.registros, String(arg)) ? d.registros[String(arg)] : d.padrao;
+  const parametro = Object.values(args)[0];
+  const original = parametro.valor;
+  const arg = parametro.tipo === 'tipo_dano' && typeof original === 'string' ? resolverTipoDano(original) ?? original : original;
+  if (registro(d) && d.registros) return Object.hasOwn(d.registros, String(arg)) ? d.registros[String(arg)] : Object.hasOwn(d.registros, String(original)) ? d.registros[String(original)] : d.padrao;
   if (Array.isArray(d)) return d.filter(x => registro(x) && (x.id === String(arg) || x.valor === arg));
   return escalar(d === arg);
 }

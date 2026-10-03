@@ -1,7 +1,7 @@
 {
   "formato": "omni-componentes.contratos.v1",
-  "etapa": 1,
-  "estado": "contratos_de_planejamento_sem_avaliador",
+  "etapa": 15,
+  "estado": "implementacao_validada",
   "fonte": "Analise_Keys_OMNI_Componentes(1).txt",
   "fonteSha256": "6a76f732640e80b4a9f613c17e9132ac134c3c565134e3ec285ebb33350f3956",
   "commitAuditado": "a69aa2eb4ca734f7102832407ead362997a8813e",
