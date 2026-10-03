@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { amostrarTrajetoria, segmentoCruzaAlcance } from '@/lib/omni/geometriaReacao';
 
 const pecaFixa = { x: 0, y: 0, w: 70, h: 70 };
-const pecaMovel = { w: 70, h: 70 };
+const pecaMovel = { x: 0, y: 0, w: 70, h: 70 };
 const grade = { dpi: 70, metersPerCell: 1.5 };
 
 describe('trajetória de reações OMNI', () => {
@@ -15,7 +15,7 @@ describe('trajetória de reações OMNI', () => {
   });
 
   it('considera a largura e altura das peças no alcance borda a borda', () => {
-    expect(segmentoCruzaAlcance({ x: -300, y: 0 }, { x: 300, y: 0 }, pecaFixa, { w: 210, h: 70 }, grade, 0)).toBe(true);
+    expect(segmentoCruzaAlcance({ x: -300, y: 0 }, { x: 300, y: 0 }, pecaFixa, { x: 0, y: 0, w: 210, h: 70 }, grade, 0)).toBe(true);
   });
 
   it('amostra os trechos intermediários em ordem e mantém os extremos no evento', () => {

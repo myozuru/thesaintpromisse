@@ -211,14 +211,19 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 overflow-hidden">
           <div className="overflow-y-auto pr-2">
             <Tabs value={abaAtiva} onValueChange={setAbaAtiva}>
-              <TabsList className="grid w-full grid-cols-6">
-                <TabsTrigger value="geral">Geral</TabsTrigger>
-                <TabsTrigger value="custos">Custos</TabsTrigger>
-                <TabsTrigger value="duracao">Duração & Alcance</TabsTrigger>
-                <TabsTrigger value="gatilhos">Gatilhos & Efeitos</TabsTrigger>
-                <TabsTrigger value="combate">Efeitos e Combate</TabsTrigger>
-                <TabsTrigger value="comercio">Comércio</TabsTrigger>
-                <TabsTrigger value="ativas">Ações Ativas</TabsTrigger>
+              <TabsList className="flex h-auto w-full flex-wrap gap-1 p-1">
+                <TabsTrigger className="flex-1 min-w-[110px]" value="geral">Geral</TabsTrigger>
+                <TabsTrigger className="flex-1 min-w-[110px]" value="custos">Custos</TabsTrigger>
+                <TabsTrigger className="flex-1 min-w-[110px]" value="duracao">Duração & Alcance</TabsTrigger>
+                <TabsTrigger className="flex-1 min-w-[110px]" value="gatilhos">Gatilhos & Efeitos</TabsTrigger>
+                <TabsTrigger className="flex-1 min-w-[110px]" value="combate">Efeitos e Combate</TabsTrigger>
+                <TabsTrigger className="flex-1 min-w-[110px]" value="ativas" data-testid="aba-acoes-ativas">
+                  <span className="font-bold text-primary">⚡ Ações Ativas</span>
+                  {(ent.acoesAtivas?.length ?? 0) > 0 && (
+                    <span className="ml-1 rounded-full bg-primary/20 px-1.5 text-[10px] text-primary">{ent.acoesAtivas!.length}</span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger className="flex-1 min-w-[110px]" value="comercio">Comércio</TabsTrigger>
               </TabsList>
 
               {/* GERAL */}
@@ -1181,6 +1186,14 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
 
               {/* COMBATE — Dano nativo (Pilar de Dano) */}
               <TabsContent value="combate" className="space-y-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setAbaAtiva('ativas')}
+                  className="w-full rounded-md border border-primary/50 bg-primary/10 p-3 text-left text-sm hover:bg-primary/20"
+                >
+                  <b className="text-primary">⚡ Quer criar um golpe com nome, custo de PE, teste (TR/ataque) e dano?</b>
+                  <span className="block text-xs text-muted-foreground">Clique aqui para abrir a aba Ações Ativas. Esta aba é só para scripts passivos/ativos em texto.</span>
+                </button>
                 {/* Toolbar: modo + Omni-Helper -------------------------- */}
                 <div className="flex flex-wrap items-center gap-2 justify-end">
                   <Button

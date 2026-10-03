@@ -199,7 +199,7 @@ export function OmniDetalhesDialog({ open, onOpenChange, entidade }: Props) {
                 <h4 className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Bônus dinâmicos (fórmula)</h4>
                 <ul className="space-y-1 text-xs">
                   {Object.entries(entidade.bonusEquipadoFormula).map(([k, v]) =>
-                    v ? <li key={k}><span className="text-sky-300">{k.toUpperCase()}</span>: <code className="text-muted-foreground">{v}</code></li> : null
+                    v ? <li key={k}><span className="text-sky-300">{k.toUpperCase()}</span>: <code className="text-muted-foreground">{typeof v === "string" ? v : JSON.stringify(v)}</code></li> : null
                   )}
                 </ul>
               </section>

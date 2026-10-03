@@ -153,6 +153,6 @@ describe('sustentação e interface reais', () => {
     await waitFor(() => expect(pegarFicha('u').peCurrent).toBe(16)); expect(pegarFicha('u').hpCurrent).toBe(25); expect(pegarFicha('a').hpCurrent).toBe(95);
   });
   it('painel permite encerrar mesmo sem o item no inventário', async () => {
-    await executarAcaoAtiva('u', sustentada(), 'a'); render(<AcoesAtivasSection charId="u" />); fireEvent.click(screen.getByText('Encerrar Escalar')); expect(pegarFicha('a').activeConditions).toEqual([]);
+    await executarAcaoAtiva('u', sustentada(), 'a'); render(<AcoesAtivasSection charId="u" />); fireEvent.click(screen.getByLabelText('Encerrar Escalar')); expect(pegarFicha('a').activeConditions).toEqual([]);
   });
 });
