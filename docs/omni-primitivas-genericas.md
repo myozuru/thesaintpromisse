@@ -316,7 +316,7 @@ O campo de dano do construtor indica os tokens disponíveis; eles também aparec
 | 6 | Bônus passivos de perícias e TR em equipamentos | Implementada |
 | 7 | Resistências, vulnerabilidades e imunidades passivas de dano | Implementada |
 | 8 | Modificador passivo de deslocamento | Implementada |
-| 9 | Zonas persistentes de terreno | Pendente |
+| 9 | Zonas persistentes de terreno | Implementada |
 | 10 | Trajetória intermediária para reações e duplicação/presets de ações | Pendente |
 
 ## Contrato da etapa complementar 7 — mitigação passiva de dano
@@ -328,3 +328,8 @@ Itens e armas equipáveis podem declarar listas de `resistencias`, `vulnerabilid
 - Resistência e vulnerabilidade do mesmo tipo se anulam. Imunidade prevalece.
 
 O construtor no-code expõe seletores de tipos de dano, os painéis de detalhes listam as propriedades e a importação de pacote valida os tipos contra `DAMAGE_TYPES`.
+
+
+## Contrato da etapa complementar 9 — zonas persistentes de terreno
+
+Formas de mapa retangulares ou elípticas podem ser configuradas como zonas. A configuração guarda efeitos `CombatEffect[]`, gatilhos `entrada` e `fim_turno`, duração em rodadas ou duração permanente. O Mestre edita a zona na barra da entidade selecionada. Personagens com ficha vinculada disparam os efeitos ao entrar pela trajetória e ao encerrar o turno dentro da área; variáveis `USUARIO` e `ALVO` apontam para o personagem afetado. O Mestre executa os efeitos como autoridade da sessão, e a zona é removida quando a duração termina.
