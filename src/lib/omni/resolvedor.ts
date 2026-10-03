@@ -1,4 +1,6 @@
 import { idadeCondicao } from './condicionaisAtivos';
+import { anexarDadosCompostos } from './componentes/contexto';
+import { dadosRecursos } from './componentes/recursos';
 /**
  * Resolvedor de Caminhos (ponte Omni ↔ sistema existente).
  *
@@ -970,5 +972,5 @@ export function montarVariaveisDoPersonagem(
   for (const [k, v] of Object.entries(base)) {
     prefixado[`${escopo}_${k}`] = v;
   }
-  return { ...base, ...prefixado };
+  return anexarDadosCompostos({ ...base, ...prefixado }, escopo, dadosRecursos(base));
 }
