@@ -217,6 +217,8 @@ export interface OmniModifierBag {
   periciaOrigins: Record<string, OmniModifierContribution[]>;
   trs: Partial<Record<OmniRollBonusKey, number>>;
   trOrigins: Partial<Record<OmniRollBonusKey, OmniModifierContribution[]>>;
+  deslocamento: number;
+  deslocamentoOrigins: OmniModifierContribution[];
 }
 
 export interface OmniPassiveBonusBag extends OmniModifierBag {
@@ -232,6 +234,7 @@ function vazio(): OmniModifierBag {
     totals: { hp: 0, pe: 0, ca: 0, rd: 0, esc: 0, slots: 0 },
     origins: { hp: [], pe: [], ca: [], rd: [], esc: [], slots: [] },
     pericias: {}, periciaOrigins: {}, trs: {}, trOrigins: {},
+    deslocamento: 0, deslocamentoOrigins: [],
   };
 }
 
@@ -316,6 +319,11 @@ export function selectOmniModifiers(
         out.totals[k] += total;
         out.origins[k].push({ source: `◇ ${ent.nome}`, delta: total });
       }
+    }
+    const deslocamento = Number(fixos.deslocamento) || 0;
+    if (deslocamento !== 0) {
+      out.deslocamento += deslocamento;
+      out.deslocamentoOrigins.push({ source: `◇ ${ent.nome}`, delta: deslocamento });
     }
     for (const [rawKey, rawValue] of Object.entries(fixos.pericias ?? {})) {
       const key = normalizarChaveOmni(rawKey).replace(/^pericia(s)?_/, '');
