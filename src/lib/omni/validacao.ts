@@ -35,7 +35,10 @@ const AcaoLogicaSchema = z.object({
   acao: z.string(),
   alvoAplicacao: z.enum(['USUARIO', 'ALVO', 'CENA']),
   caminhoAlvo: z.string().optional(),
+  tipoDano: z.string().optional(),
   valor: ValorDinamicoSchema.optional(),
+  teto: ValorDinamicoSchema.optional(),
+  escopoTeto: z.enum(['global', 'porFonte']).optional(),
   condicao: z.string().optional(),
   duracao: z
     .object({
@@ -56,6 +59,54 @@ const GatilhoSchema = z.object({
   id: z.string(),
   evento: z.string(),
   blocos: z.array(BlocoLogicoSchema),
+});
+
+const CombatEffectSchema: z.ZodTypeAny = z.lazy(() => z.object({
+  id: z.string(),
+  formula: z.string(),
+  type: z.enum(['SUBTRAIR', 'ADICIONAR', 'MODIFICADOR']),
+  counterCap: z.string().optional(),
+  counterPerSource: z.boolean().optional(),
+  target: z.enum(['ALVO', 'USUARIO', 'AREA']),
+  damageType: z.string().optional(),
+  resourcePath: z.string().optional(),
+  trigger: z.string().optional(),
+  condition: z.string().optional(),
+  absoluteVerb: z.enum(['anular', 'ignorar']).optional(),
+  watcher: z.object({
+    resource: z.string(),
+    op: z.enum(['<=', '>=', '<', '>', '==', '!=']),
+    threshold: z.number(),
+    percent: z.boolean().optional(),
+    percentBase: z.string().optional(),
+  }).optional(),
+  peSpellReduction: z.object({ filtro: z.string(), min: z.number() }).optional(),
+  immunityGrant: z.object({ escopo: z.string(), mode: z.enum(['grant', 'revoke']) }).optional(),
+  conditionApply: z.object({
+    id: z.string(), mode: z.enum(['apply', 'remove']),
+    durationRounds: z.number().optional(), durationTurns: z.number().optional(),
+  }).optional(),
+  diceSwitch: z.object({
+    dice: z.string(),
+    branches: z.array(z.object({
+      values: z.array(z.number()),
+      effects: z.array(CombatEffectSchema),
+    })),
+  }).optional(),
+  buttonOnly: z.object({ label: z.string().optional() }).optional(),
+}));
+
+const CombatDataSchema = z.object({
+  isActive: z.boolean().optional(),
+  effects: z.array(CombatEffectSchema),
+  effectsPassive: z.array(CombatEffectSchema).optional(),
+  effectsActive: z.array(CombatEffectSchema).optional(),
+  critRange: z.number(),
+  critMultiplier: z.number(),
+  actionCost: z.string().optional(),
+  rangeType: z.string().optional(),
+  aoeShape: z.string().optional(),
+  aoeSize: z.number().optional(),
 });
 
 const OperadorEstadoSchema = z.enum(['<', '<=', '==', '!=', '>=', '>']);
@@ -147,6 +198,16 @@ const EntidadeSchema = z.object({
   }).optional(),
   bonusEquipadoFormula: z.object({
     hp: z.string().optional(), pe: z.string().optional(), ca: z.string().optional(), rd: z.string().optional(), esc: z.string().optional(), slots: z.string().optional(),
+  }).optional(),
+  combatData: CombatDataSchema.optional(),
+  usos: z.object({
+    total: z.number().int().nonnegative(),
+    recarga: z.enum(['diaria', 'porCena', 'descansoCurto', 'manual']),
+  }).optional(),
+  replica: z.object({
+    porte: z.enum(['minusculo', 'pequeno', 'medio', 'grande', 'enorme', 'colossal']),
+    peInvocacao: z.number(), peSustentacao: z.number(),
+    desintegrarAoSoltar: z.boolean(), cobrarPorRodada: z.boolean(),
   }).optional(),
   resistencias: z.array(DamageTypeSchema).optional(),
   vulnerabilidades: z.array(DamageTypeSchema).optional(),
