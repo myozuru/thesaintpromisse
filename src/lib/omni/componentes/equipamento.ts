@@ -18,7 +18,8 @@ export function dadosEquipamento(c: Character, bag: Record<string, number>): Dad
   }
   const selecoes: Record<string, DadoComposto> = {
     arma_principal: arma(c.mainHandWeaponName),
-    escudo: { campos: { equipado: Boolean(c.equippedShieldId), proficiente: n('ESCUDO_PROFICIENTE'),
+    escudo: { registros: c.equippedShieldId ? { [c.equippedShieldId]: { campos: { equipado: true, proficiente: n('ESCUDO_PROFICIENTE') } } } : {},
+      padrao: { campos: { equipado: false, proficiente: false } }, campos: { equipado: Boolean(c.equippedShieldId), proficiente: n('ESCUDO_PROFICIENTE'),
       id: { registros: c.equippedShieldId ? { [c.equippedShieldId]: true } : {} } } },
     inventario: { campos: { slots: recursoComposto(c.slotsCurrent ?? 0, c.slotsMax ?? 0) } },
     desarmado: !c.mainHandWeaponName && !c.offHandWeaponName,

@@ -39,6 +39,8 @@ import { grantAdvantage, clearAllAdvantage, type AdvScope } from './rollAdvantag
 import { adicionarImunidade, removerImunidade, formatarImunidade } from './immunity';
 import { calcularContador } from './contadores';
 import { aplicarEfeitoNoPersonagem } from './aplicarEfeito';
+import { avaliarComposicao } from './componentes/avaliar';
+import { extrairDadosCompostos } from './componentes/contexto';
 
 const PROFUNDIDADE_MAX = 8;
 
@@ -106,6 +108,11 @@ function resolverOperando(op: Operando, ctx: ContextoRuntime): number | string {
   if (op.tipo === 'condicao') return op.condicao;
   if (op.tipo === 'formula') return avaliarFormula(op.expressao, variaveisCompletas(ctx)).valor;
   // ref
+  if (op.ref.composicao) {
+    const dados = extrairDadosCompostos(variaveisCompletas(ctx))[op.ref.composicao.contexto];
+    const r = dados ? avaliarComposicao(op.ref.composicao, dados) : undefined;
+    return r?.ok ? r.valor : 0;
+  }
   const alvo = personagemDoEscopo(ctx, op.ref.alvo);
   if (!alvo) return 0;
   return lerCaminhoOmni(alvo, op.ref.caminho);

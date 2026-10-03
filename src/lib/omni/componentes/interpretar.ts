@@ -49,6 +49,7 @@ export function interpretarComposicao(texto: string, contextoPadrao: ContextoCom
     usar();
     const args: Record<string, ArgumentoComposicao> = {};
     const tipoArg = argumentosSelecao[raiz];
+    if (raiz === 'escudo' && ts[i] && !['equipado','proficiente'].includes(String(ts[i].valor))) args.id = argumento('id');
     if (tipoArg && !opcoesSemArgumento[raiz]?.includes(String(ts[i]?.valor))) args[tipoArg] = argumento(tipoArg);
     if (raiz === 'saldo' && ts[i] && !['padrao','pessoal','total'].includes(String(ts[i].valor))) args.moeda = argumento('moeda');
     let no: NoComposicao = { tipo: 'selecao', componente: raiz, ...(Object.keys(args).length ? { argumentos: args } : {}) };

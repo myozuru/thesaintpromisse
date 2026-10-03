@@ -23,6 +23,7 @@ export type ValorDinamico =
 export interface ReferenciaEscalar {
   alvo: AlvoRefId; // USUARIO | ALVO | CENA
   caminho: string; // ex: "atributos.forca" ou "status.vida.atual"
+  composicao?: import('./componentes/composicao').ReferenciaComposta;
 }
 
 /** Operando pode ser referência a um caminho, fixo, ou fórmula. */

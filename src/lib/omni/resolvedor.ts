@@ -5,7 +5,8 @@ import { dadosEquipamento } from './componentes/equipamento';
 import { dadosCena, dadosTurnos } from './componentes/cena';
 import { dadosMagia } from './componentes/magia';
 import { dadosHistorico } from './componentes/eventos';
-import { avaliarFormula } from './parser';
+import { avaliarFormula, resolverChavePtBr } from './parser';
+import { mesclarDados, projetarDadosLegados } from './componentes/legado';
 /**
  * Resolvedor de Caminhos (ponte Omni ↔ sistema existente).
  *
@@ -978,11 +979,12 @@ export function montarVariaveisDoPersonagem(
   for (const [k, v] of Object.entries(base)) {
     prefixado[`${escopo}_${k}`] = v;
   }
-  const bag = anexarDadosCompostos({ ...base, ...prefixado }, escopo, { selecoes: {
+  const composto = mesclarDados(projetarDadosLegados(base, escopo, resolverChavePtBr), { selecoes: {
     ...dadosRecursos(base).selecoes, ...dadosEquipamento(c, base).selecoes,
     ...dadosTurnos(base).selecoes,
     ...dadosMagia(c, base).selecoes,
     ...dadosHistorico(c, round).selecoes,
   } });
-  return anexarDadosCompostos(bag, 'CENA', dadosCena(base));
+  const bag = anexarDadosCompostos({ ...base, ...prefixado }, escopo, composto);
+  return escopo === 'ALVO' ? bag : anexarDadosCompostos(bag, 'CENA', mesclarDados(projetarDadosLegados(base, 'CENA', resolverChavePtBr), dadosCena(base)));
 }

@@ -15,6 +15,7 @@ import type { ContextoComposicao } from './componentes/composicao';
 import { extrairDadosCompostos } from './componentes/contexto';
 import { dadosCena } from './componentes/cena';
 import { dadosEventoDano } from './componentes/eventos';
+import { mesclarDados, projetarDadosLegados } from './componentes/legado';
 
 export interface DiagnosticoFormula {
   tipo: 'chave_ausente' | 'valor_nao_finito' | 'expressao_invalida' | 'resultado_nao_finito';
@@ -417,8 +418,14 @@ function valorDaReferencia(ctx: ContextoAvaliacao, referencia: string, chave: st
 function preprocessar(expressao: string, ctx: ContextoAvaliacao): string {
   let out = expressao;
   // Resolve antes de dados e normalizações: IDs e conectores pertencem à referência.
-  for (const trecho of localizarComposicoes(expressao).reverse()) {
+  for (const trecho of localizarComposicoes(expressao, true).reverse()) {
     const dados = ctx.composicoes?.[trecho.referencia.contexto];
+    if (!/\s/.test(trecho.texto.trim())) {
+      const c = trecho.referencia.consulta;
+      if (c.tipo !== 'selecao' || !dados || !Object.hasOwn(dados.selecoes, c.componente)) continue;
+      const chave = resolverChavePtBr(canonicalizarChave(c.componente));
+      if (ctx.variaveis[`${trecho.referencia.contexto}_${chave}`] !== undefined || (trecho.referencia.contexto === 'USUARIO' && ctx.variaveis[chave] !== undefined)) continue;
+    }
     const resultado = dados ? avaliarComposicao(trecho.referencia, dados) : { ok: false as const, mensagem: 'Dados compostos indisponíveis neste contexto.' };
     if (!resultado.ok) registrarDiagnostico(ctx, { tipo: 'chave_ausente', referencia: trecho.texto, mensagem: resultado.mensagem });
     out = out.slice(0, trecho.inicio) + String(resultado.ok ? resultado.valor : 0) + out.slice(trecho.fim);
@@ -598,8 +605,11 @@ export function avaliarFormula(
     });
   }
   const composicoes = { ...extrairDadosCompostos(variaveis), ...extrairDadosCompostos(extras?.alvo ?? {}), ...extrairDadosCompostos(extras?.cena ?? {}), ...extras?.composicoes };
-  if (extras?.cena && !extras.composicoes?.CENA) composicoes.CENA = dadosCena(bag);
-  if (extras?.dano && !extras.composicoes?.DANO) composicoes.DANO = dadosEventoDano(bag);
+  if (extras?.cena && !extras.composicoes?.CENA) {
+    const campos = Object.fromEntries(Object.entries(extras.cena).map(([k, v]) => [`CENA_${resolverChavePtBr(k.replace(/^CENA_/i, ''))}`, v]));
+    composicoes.CENA = mesclarDados(composicoes.CENA ?? projetarDadosLegados(bag, 'CENA', resolverChavePtBr), dadosCena(campos));
+  }
+  if (extras?.dano && !extras.composicoes?.DANO) composicoes.DANO = mesclarDados(projetarDadosLegados(bag, 'DANO', resolverChavePtBr), dadosEventoDano(bag));
   const ctx: ContextoAvaliacao = { variaveis: bag, armaDano: extras?.arma?.dano, rolagens: [], rng, diagnosticos: [], composicoes };
   const resolvida = preprocessar(expressao, ctx);
   try {

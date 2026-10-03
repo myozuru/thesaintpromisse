@@ -8,6 +8,7 @@ export interface RegistroComposto {
   readonly quantidade?: number;
   readonly padrao?: DadoComposto;
   readonly id?: string;
+  readonly existe?: boolean;
 }
 export type DadoComposto = number | boolean | string | RegistroComposto | readonly DadoComposto[] | undefined;
 export interface DadosComposicao { readonly selecoes: Readonly<Record<string, DadoComposto>> }
@@ -27,7 +28,7 @@ function campo(d: DadoComposto, key: string): DadoComposto {
 function comArgumentos(d: DadoComposto, args?: Readonly<Record<string, { valor: number | string }>>): DadoComposto {
   if (!args || !Object.keys(args).length) return d;
   const arg = Object.values(args)[0].valor;
-  if (registro(d) && d.registros) return d.registros[String(arg)] ?? d.padrao;
+  if (registro(d) && d.registros) return Object.hasOwn(d.registros, String(arg)) ? d.registros[String(arg)] : d.padrao;
   if (Array.isArray(d)) return d.filter(x => registro(x) && (x.id === String(arg) || x.valor === arg));
   return escalar(d === arg);
 }
@@ -55,6 +56,10 @@ export function avaliarComposicao(ref: ReferenciaComposta, dados: DadosComposica
     if (n.tipo === 'vinculo') {
       const d = no(n.entrada);
       if (n.componentes.includes('e')) {
+        if (registro(d) && n.referencia.tipo === 'selecao') {
+          const identidade = d.campos?.identidade;
+          if (registro(identidade) && identidade.registros && Object.hasOwn(identidade.registros, n.referencia.componente)) return identidade.registros[n.referencia.componente];
+        }
         const target = no(n.referencia);
         if (!registro(d) || !registro(target) || d.id === undefined || target.id === undefined) throw new Error('Identidade dos participantes indisponível.');
         return d.id === target.id;
@@ -70,7 +75,7 @@ export function avaliarComposicao(ref: ReferenciaComposta, dados: DadosComposica
       });
       return comArgumentos(campo(d,c),n.argumentos);
     }
-    if (c === 'tem') return d === undefined ? false : Array.isArray(d) ? d.length > 0 : registro(d) ? true : typeof d === 'number' ? d > 0 : Boolean(d);
+    if (c === 'tem') return d === undefined ? false : Array.isArray(d) ? d.length > 0 : registro(d) ? d.existe ?? true : typeof d === 'number' ? d > 0 : Boolean(d);
     if (c === 'quantidade') {
       if (Array.isArray(d)) return d.length;
       if (registro(d) && d.quantidade !== undefined) return d.quantidade;

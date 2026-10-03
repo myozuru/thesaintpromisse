@@ -4,7 +4,7 @@ import type { ReferenciaComposta } from './composicao';
 export interface TrechoComposto { inicio: number; fim: number; texto: string; referencia: ReferenciaComposta }
 
 /** Detecta referências sem interpretar funções, strings ou nomes legados pontuados. */
-export function localizarComposicoes(texto: string): TrechoComposto[] {
+export function localizarComposicoes(texto: string, incluirSimples = false): TrechoComposto[] {
   const trechos: TrechoComposto[] = [];
   let i = 0;
   while (i < texto.length) {
@@ -22,7 +22,7 @@ export function localizarComposicoes(texto: string): TrechoComposto[] {
     if (p.referencia && !p.erro && !/[\p{L}\p{N}_.]/u.test(texto[fim] ?? '') && !/^\s*\(/.test(texto.slice(fim))) {
       const trecho = texto.slice(i, fim);
       // A integração composta só assume sequências; referências simples mantêm o caminho legado.
-      if (/\s/.test(trecho.trim())) { trechos.push({ inicio: i, fim, texto: trecho, referencia: p.referencia }); i = fim; continue; }
+      if (incluirSimples || /\s/.test(trecho.trim())) { trechos.push({ inicio: i, fim, texto: trecho, referencia: p.referencia }); i = fim; continue; }
     }
     i += palavra[0].length;
   }

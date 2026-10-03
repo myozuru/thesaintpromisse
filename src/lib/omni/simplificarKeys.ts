@@ -7,11 +7,12 @@
  */
 import type { EntidadeOmni, AcaoLogica, BlocoLogico, GatilhoEntidade, ValorDinamico, Operando, CondicaoLogica } from './tipos';
 import { canonicalizarChave } from './keyAliases';
+import { transformarForaDasComposicoes } from './componentes/expressoes';
 
 function canonExpr(expr: string): string {
   // Canonicaliza o caminho, preservando quem fornece o valor. CENA/ITEM
   // têm namespaces próprios e não usam os aliases de personagem.
-  return expr.replace(/@?[A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_]*(?:\.[A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_]*)+/g, (m) => {
+  return transformarForaDasComposicoes(expr, trecho => trecho.replace(/@?[A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_]*(?:\.[A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_]*)+/g, (m) => {
     const scoped = m.match(/^(@?)(USUARIO|ALVO|CENA|AREA|ITEM)\.(.+)$/i);
     if (scoped) {
       const [, at, escopo, caminho] = scoped;
@@ -21,7 +22,7 @@ function canonExpr(expr: string): string {
     const at = m.startsWith('@') ? '@' : '';
     const caminho = at ? m.slice(1) : m;
     return `${at}${canonicalizarChave(caminho) || caminho}`;
-  });
+  }));
 }
 
 function migrarValor(v?: ValorDinamico): ValorDinamico | undefined {

@@ -98,6 +98,8 @@ export function executarCombatEffect(
   // ─── ⚙️ Caminho clássico: avalia fórmula e aplica numericamente ──
   const out = avaliarFormulaEfeito(eff, ctx);
   const valor = Math.round(out.valor);
+  const teto = eff.counterCap ? avaliarFormulaEfeito({ ...eff, formula: eff.counterCap }, ctx) : undefined;
+  if (out.diagnosticos.length || teto?.diagnosticos.length) return { aplicado: 0, detalhe: 'Fórmula ou limite com referência inválida.' };
   const targetId = resolverTargetId(eff, ctx);
   if (eff.transferencia) {
     const store = useCharacterStore.getState();
@@ -113,6 +115,7 @@ export function executarCombatEffect(
     sourceName: ctx.sourceName,
     damageType: eff.damageType,
     attackerId: ctx.usuarioId,
+    contador: { teto: teto?.valor, porFonte: eff.counterPerSource, fonteId: ctx.alvoId ?? ctx.usuarioId },
   });
   return { aplicado: r.aplicado, absorvidoPorBloqueio: r.absorvidoPorBloqueio };
 }

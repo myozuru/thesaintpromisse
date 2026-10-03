@@ -6,7 +6,7 @@ vi.mock('@/lib/socket', () => ({ getSocket: () => null }));
 import { ficha, montarMesa, pegarFicha, limparMesa } from './helpers/mesaReal';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useCombatStore } from '@/stores/useCombatStore';
-afterEach(limparMesa);
+afterEach(async () => { await vi.dynamicImportSettled(); limparMesa(); });
 describe('produtores reais do histórico', () => {
   it('conta a cura efetiva e o dano após RD e proteção temporária', () => {
     montarMesa([ficha('hist-real', { hpCurrent: 7, hpMax: 10, escCurrent: 5, rd: 2 })], {});

@@ -26,10 +26,10 @@ export function dadosTurnos(b: Record<string, number>): DadosComposicao {
 }
 
 export function dadosCena(b: Record<string, number>): DadosComposicao {
-  const n = (k: string) => b[`CENA_${k}`] ?? 0;
+  const n = (k: string) => b[`CENA_${k}`];
   const selecoes: Record<string, DadoComposto> = {};
   for (const k of ['ano', 'mes', 'dia', 'hora', 'minuto', 'segundo', 'rodada', 'rodadas_em_combate', 'consumido', 'dificuldade', 'terreno']) selecoes[k] = n(k.toUpperCase());
-  selecoes.turno = { campos: { indice: b.CENA_TURNO_INDICE ?? -1 } };
+  selecoes.turno = { campos: { indice: b.CENA_TURNO_INDICE } };
   selecoes.periodo = { campos: Object.fromEntries(['amanhecer', 'anoitecer', 'dia', 'noite'].map(k => [k, n(`EH_${k.toUpperCase()}`)])) };
   selecoes.relogio = { campos: { ativo: n('RELOGIO_ATIVO'), velocidade: n('MULTIPLICADOR_TEMPO') } };
   selecoes.segundos = { campos: { dia: n('TIMESTAMP_SEGUNDOS') } };
@@ -41,5 +41,8 @@ export function dadosCena(b: Record<string, number>): DadosComposicao {
   selecoes.tokens = { quantidade: n('QTD_TOKENS') };
   selecoes.aliados = { quantidade: n('QTD_ALIADOS') };
   selecoes.inimigos = { quantidade: n('QTD_INIMIGOS') };
+  selecoes.outro = { campos: { aliado: n('OUTRO_EH_ALIADO'), inimigo: n('OUTRO_EH_INIMIGO'),
+    identidade: { registros: n('OUTRO_EH_VOCE') === undefined ? {} : { voce: Boolean(n('OUTRO_EH_VOCE')) } } } };
+  selecoes.sujeito = { campos: { aliado: n('SUJEITO_EH_ALIADO') } };
   return { selecoes };
 }

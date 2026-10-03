@@ -1,3 +1,4 @@
+import { interpretarComposicao } from './componentes/interpretar';
 /**
  * 🧭 Mapa central de aliases ↔ chaves canônicas curtas do Omni.
  *
@@ -134,6 +135,10 @@ function canonicalizarPericiaNatural(norm: string): string | undefined {
 export function canonicalizarChave(raw?: string): string {
   if (!raw) return '';
   const semPrefixo = raw.replace(/^@?(usuario|alvo|cena|area|item)\./i, '');
+  if (/\s/.test(semPrefixo)) {
+    const p = interpretarComposicao(semPrefixo.trim());
+    if (p.referencia && !p.erro && p.consumido === semPrefixo.trim().length) return semPrefixo.trim();
+  }
   const norm = normalizar(semPrefixo);
   if (LEGACY_TO_CANONICAL[norm]) return LEGACY_TO_CANONICAL[norm];
   const periciaNatural = canonicalizarPericiaNatural(norm);
