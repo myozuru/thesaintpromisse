@@ -529,11 +529,8 @@ const ATRIBUTOS_OMNI: ChaveOmniOpcao[] = [
   { id: 'destreza',      label: 'DES — Destreza',       hint: 'Agilidade e reflexos' },
   { id: 'constituicao',  label: 'CON — Constituição',   hint: 'Vigor e resistência' },
   { id: 'inteligencia',  label: 'INT — Inteligência',   hint: 'Raciocínio e estudo' },
-  { id: 'sab',           label: 'SAB — Sabedoria',      hint: 'Percepção e intuição (alias de AST)' },
   { id: 'sabedoria',     label: 'Sabedoria',            hint: 'Alias de SAB.' },
-  { id: 'pre',           label: 'PRE — Presença',       hint: 'Atributo social/carisma (sexto atributo da ficha)' },
   { id: 'presenca',      label: 'Presença',             hint: 'Alias de PRE.' },
-  { id: 'car',           label: 'CAR — Carisma',        hint: 'Alias de PRE/Presença.' },
 ];
 
 /** Flags Omni — estados táticos genéricos no `Character.omniFlags`. */
@@ -558,9 +555,6 @@ const RECURSOS_OMNI: ChaveOmniOpcao[] = [
 /** Atributos de progressão (escalonamento). */
 const PROGRESSAO_OMNI: ChaveOmniOpcao[] = [
   { id: 'treino',            label: 'Bônus de Treinamento', hint: 'Escala com o nível (½ nível)' },
-  { id: 'treinamento',       label: 'Bônus de Treinamento', hint: 'Alias de treino.' },
-  { id: 'bonus_treinamento', label: 'Bônus de Treinamento', hint: 'Alias de treino.' },
-  { id: 'bonusdetreinamento',label: 'Bônus de Treinamento', hint: 'Alias de treino.' },
   { id: 'nivel',             label: 'Nível',                hint: 'Nível total do personagem' },
 ];
 
@@ -581,13 +575,13 @@ const GLOBAIS_OMNI: ChaveOmniOpcao[] = [
 /** Variáveis de cena. */
 const CENA_OMNI: ChaveOmniOpcao[] = [
   { id: 'CENA.rodada',   label: '@CENA.rodada',         hint: 'Rodada atual do combate' },
-  { id: 'CENA.dt',       label: '@CENA.dt',             hint: 'DC / Dificuldade definida pelo Mestre' },
-  { id: 'CENA.distancia',label: '@CENA.distancia',      hint: 'Distância (m) entre Usuário e Alvo (999 se fora do mapa)' },
+  { id: 'CENA.dificuldade',       label: '@CENA.dificuldade',             hint: 'CD definida pelo Mestre.' },
+  { id: 'CENA.distancia_m',label: '@CENA.distancia_m',      hint: 'Distância entre usuário e alvo, em metros.' },
   { id: 'CENA.no_mapa',  label: '@CENA.no_mapa',        hint: 'Eventos observados: 1 se ambos têm peça no mapa.' },
-  { id: 'CENA.sujeito_eh_aliado', label: '@CENA.sujeito_eh_aliado', hint: 'Eventos observados: 1 se a criatura envolvida é aliada.' },
-  { id: 'CENA.outro_eh_inimigo',  label: '@CENA.outro_eh_inimigo',  hint: 'Eventos observados: 1 se a outra parte (ex.: quem bateu) é inimiga.' },
-  { id: 'CENA.outro_eh_aliado',   label: '@CENA.outro_eh_aliado',   hint: 'Eventos observados: 1 se a outra parte é aliada.' },
-  { id: 'CENA.outro_eh_voce',     label: '@CENA.outro_eh_voce',     hint: 'Eventos observados: 1 se a outra parte é você.' },
+  { id: 'CENA.sujeito_aliado', label: '@CENA.sujeito_aliado', hint: '1 se a criatura observada é aliada.' },
+  { id: 'CENA.outro_inimigo',  label: '@CENA.outro_inimigo',  hint: '1 se o outro envolvido é inimigo.' },
+  { id: 'CENA.outro_aliado',   label: '@CENA.outro_aliado',   hint: '1 se o outro envolvido é aliado.' },
+  { id: 'CENA.outro_e_voce',     label: '@CENA.outro_e_voce',     hint: '1 se o outro envolvido é você.' },
   { id: 'CENA.consumido',         label: '@CENA.consumido',         hint: 'Quanto o último CONSUMIR_CONTADOR do bloco gastou (use (@CENA.consumido)d8).' },
   { id: 'CENA.dano',              label: '@CENA.dano',              hint: 'Dano do evento atual.' },
 ];
@@ -624,14 +618,10 @@ const POOLS_OMNI: ChaveOmniOpcao[] = [
   { id: 'pe_faltante',     label: 'PE Faltante', hint: 'Quanto falta para alcançar o PE máximo configurado, mínimo 0.' },
   { id: 'pe_faltante_pct', label: 'PE Faltante (%)', hint: 'Percentual que falta para o PE máximo configurado; 0 quando o máximo é zero.' },
   { id: 'sorte',           label: 'Sorte (atual)',         hint: 'Usos atuais de Sorte.' },
-  { id: 'sorte_atual',     label: 'Sorte (atual)',         hint: 'Alias de sorte.' },
   { id: 'sorte_max',       label: 'Sorte (máx)',           hint: 'Usos máximos de Sorte por dia.' },
   { id: 'dado_vida',       label: 'Dado de Vida (atual)',  hint: 'Dados de vida disponíveis no descanso curto.' },
-  { id: 'dado_vida_atual', label: 'Dado de Vida (atual)',  hint: 'Alias de dado_vida.' },
   { id: 'dado_vida_max',   label: 'Dado de Vida (máx)',    hint: 'Total de dados de vida = nível.' },
   { id: 'reserva_pe',      label: 'Reserva de PE',         hint: 'Energia armazenada por Economia de Energia.' },
-  { id: 'reserva_pe_atual',label: 'Reserva de PE (atual)', hint: 'Alias de reserva_pe.' },
-  { id: 'reserva_pe_max',  label: 'Reserva de PE (máx — legado)', hint: 'Key legada: retorna 0 (teto não definido). A reserva é gerada por descanso, sem limite fixo armazenado.' },
   { id: 'reserva_pe_disponivel', label: 'Tem Reserva de PE', hint: '1 se há PE armazenado na reserva; 0 se vazia.' },
   { id: 'reserva_pe_recuperavel', label: 'PE Recuperável da Reserva', hint: 'Quanto da reserva cabe no estoque atual até o PE máximo configurado.' },
 ];
@@ -640,7 +630,6 @@ const SOBREVIVENCIA_OMNI: ChaveOmniOpcao[] = [
   { id: 'exaustao',        label: 'Exaustão',              hint: 'Alias de exaustao_nivel.' },
   { id: 'exaustao_nivel',  label: 'Nível de Exaustão',     hint: '0..6 — penalidades cumulativas.' },
   { id: 'fome',            label: 'Fome',                  hint: 'Barras de fome (24 = saciado).' },
-  { id: 'fome_nivel',      label: 'Fome (nível)',          hint: 'Alias de fome.' },
 ];
 
 const COMBATE_AVANCADO_OMNI: ChaveOmniOpcao[] = [
@@ -649,8 +638,6 @@ const COMBATE_AVANCADO_OMNI: ChaveOmniOpcao[] = [
   { id: 'iniciativa',      label: 'Iniciativa',            hint: 'Bônus de iniciativa.' },
   { id: 'atencao',         label: 'Atenção',               hint: 'Atenção passiva (percepção).' },
   { id: 'ataques_no_turno', label: 'Ataques no Turno',     hint: 'Quantos ataques pode fazer.' },
-  { id: 'ataques_restantes', label: 'Ataques Restantes',   hint: 'Ataques que ainda restam.' },
-  { id: 'acao_restante',   label: 'Ação Restante',         hint: 'Alias de ataques_restantes.' },
   { id: 'acoes_restantes', label: 'Ações Restantes',       hint: 'Alias de ataques_restantes.' },
   { id: 'acao_bonus',      label: 'Ação Bônus',            hint: 'Ações bônus disponíveis nesta rodada.' },
   { id: 'ado_max',         label: 'ADO Máx (oportunidade)',hint: 'Ataques de oportunidade máximos.' },
@@ -662,14 +649,12 @@ const COMBATE_AVANCADO_OMNI: ChaveOmniOpcao[] = [
 const ESTADO_OMNI: ChaveOmniOpcao[] = [
   { id: 'tamanho',         label: 'Tamanho',               hint: '1=Pequeno, 2=Médio, 3=Grande.' },
   { id: 'morrendo',        label: 'Está Morrendo',         hint: '1 se em estado de morrendo.' },
-  { id: 'esta_morrendo',   label: 'Está Morrendo',         hint: 'Alias de morrendo.' },
   { id: 'morto',           label: 'Morto',                 hint: '1 se morto.' },
   { id: 'inconsciente',    label: 'Inconsciente',          hint: '1 se inconsciente.' },
   { id: 'escudo_equipado', label: 'Escudo Equipado',       hint: '1 se proficiente/usando escudo.' },
   { id: 'categoria',       label: 'Categoria',             hint: '1=PLAYER, 2=NPC, 3=INIMIGO.' },
   { id: 'concentrando',    label: 'Concentrando',          hint: '1 se mantém feitiço sustentado.' },
   { id: 'empolgacao',      label: 'Empolgação (Lutador)',  hint: 'Nível de empolgação 1..5.' },
-  { id: 'empolgacao_nivel',label: 'Empolgação (nível)',    hint: 'Alias de empolgacao.' },
   { id: 'vendado',         label: 'Vendado',               hint: '1 se o slot de Venda está equipado.' },
   { id: 'descoberto',      label: 'Descoberto',            hint: '1 se o slot de Venda está vazio.' },
   { id: 'rodada',          label: 'Rodada (cena)',         hint: 'Rodada atual do combate.' },
@@ -684,7 +669,6 @@ const ESTADO_OMNI: ChaveOmniOpcao[] = [
 const CENA_AVANCADA_OMNI: ChaveOmniOpcao[] = [
   { id: 'CENA.turno_indice', label: '@CENA.turno_indice', hint: 'Índice do turno atual na iniciativa (começa em 0); -1 quando não há turno válido.' },
   { id: 'CENA.rodadas_em_combate', label: '@CENA.rodadas_em_combate', hint: 'Rodada atual enquanto em combate; 0 fora de combate.' },
-  { id: 'CENA.turno_de',           label: '@CENA.turno_de',           hint: 'Alias legado de CENA.turno_indice. Não é ID textual da ficha.' },
 ];
 
 const DANO_CTX_OMNI: ChaveOmniOpcao[] = [
@@ -697,8 +681,8 @@ const DANO_CTX_OMNI: ChaveOmniOpcao[] = [
   { id: 'DANO.valor_inicial',      label: '@DANO.valor_inicial',      hint: 'Dano recebido por applyDamage antes do pre-hook e da mitigação desta resolução.' },
   { id: 'DANO.valor_final',        label: '@DANO.valor_final',        hint: 'Dano resolvido após RD/imunidade/vulnerabilidade, incluindo PVT. Disponível após resolução.' },
   { id: 'DANO.absorvido',          label: '@DANO.absorvido',          hint: 'max(0, inicial - final). Disponível após resolução; não representa a RD isolada.' },
-  { id: 'DANO.id_origem',          label: '@DANO.id_origem',          hint: '1 se o golpe informa atacante; 0 sem atacante. Indicador, não o ID textual.' },
-  { id: 'DANO.id_alvo',            label: '@DANO.id_alvo',            hint: '1 se a ficha alvo existe; 0 caso contrário. Indicador, não o ID textual.' },
+  { id: 'DANO.tem_atacante',          label: '@DANO.tem_atacante',          hint: '1 se o golpe informa um atacante; 0 caso contrário.' },
+  { id: 'DANO.tem_alvo',            label: '@DANO.tem_alvo',            hint: '1 se a ficha do alvo existe; 0 caso contrário.' },
   { id: 'DANO.alcance',            label: '@DANO.alcance',            hint: 'Distância real (m) entre as peças no início da resolução. Ausente sem peças.' },
   { id: 'DANO.foi_ataque_oportunidade', label: '@DANO.foi_ataque_oportunidade', hint: '1/0 conforme a marcação do ataque. No painel, marque Ataque de oportunidade antes de rolar.' },
   { id: 'DANO.foi_furtivo',        label: '@DANO.foi_furtivo',        hint: '1/0 informado pelo ataque; no painel principal, preserva escondidoDe antes de revelar o atacante.' },
@@ -727,21 +711,21 @@ const ADO_OMNI: ChaveOmniOpcao[] = [
   { id: 'ado_restrita',              label: 'AdO Restrita a Alvo',    hint: '1 se a AdO só dispara contra um alvo específico.' },
   { id: 'reacoes_max',               label: 'Reações Máximas',        hint: 'Total de reações por rodada.' },
   { id: 'reacoes_restantes',         label: 'Reações Restantes',      hint: 'Reações ainda disponíveis na rodada.' },
-  { id: 'reacao_usada_nesta_rodada', label: 'Reação Usada na Rodada', hint: '1 se já gastou reação nesta rodada.' },
+  { id: 'reacao_usada', label: 'Reação usada', hint: '1 se já usou a reação nesta rodada.' },
 ];
 
 // ── PR-2: Mapa & Distância (lê CENA + flags + contadores) ──────────────
 const MAPA_OMNI: ChaveOmniOpcao[] = [
-  { id: 'CENA.distancia_xy',         label: '@CENA.distancia_xy',         hint: 'Distância (m) ignorando elevação.' },
-  { id: 'CENA.distancia_manhattan',  label: '@CENA.distancia_manhattan',  hint: 'Distância tipo grid (|dx|+|dy|).' },
-  { id: 'CENA.elevacao_diff',        label: '@CENA.elevacao_diff',        hint: 'Diferença de elevação em metros (alvo - usuário).' },
+  { id: 'CENA.distancia_plana',         label: '@CENA.distancia_plana',         hint: 'Distância em metros, sem considerar altura.' },
+  { id: 'CENA.distancia_grade',  label: '@CENA.distancia_grade',  hint: 'Distância em metros pelas casas da grade.' },
+  { id: 'CENA.diferenca_altura',        label: '@CENA.diferenca_altura',        hint: 'Altura do alvo menos a do usuário, em metros.' },
   { id: 'CENA.terreno',              label: '@CENA.terreno',              hint: '0=normal, 1=difícil, 2=intransponível.' },
   { id: 'em_terreno_dificil',        label: 'Em Terreno Difícil',         hint: '1 se o Mestre marcou terreno difícil.' },
   { id: 'voando',                    label: 'Voando',                     hint: '1 se está voando.' },
   { id: 'prono',                     label: 'Prono',                      hint: '1 se está caído/prono.' },
   { id: 'agachado',                  label: 'Agachado',                   hint: '1 se está agachado.' },
   { id: 'velocidade_atual',          label: 'Velocidade Atual',           hint: 'Movimento efetivo (m) considerando sobrecarga.' },
-  { id: 'metros_movidos_neste_turno',label: 'Metros Movidos no Turno',    hint: 'Distância já percorrida no turno atual.' },
+  { id: 'metros_movidos',label: 'Metros movidos',    hint: 'Distância percorrida neste turno.' },
   { id: 'usou_corrida',              label: 'Usou Corrida',               hint: '1 se gastou ação de corrida no turno.' },
   { id: 'sobrecarregado',            label: 'Sobrecarregado',             hint: '1 se slots ocupados > slots máximos.' },
 ];
@@ -760,9 +744,9 @@ const RECURSOS_DETALHADOS_OMNI: ChaveOmniOpcao[] = [
 const EMPUNHADURA_OMNI: ChaveOmniOpcao[] = [
   { id: 'desarmado',                  label: 'Desarmado',                  hint: '1 se nenhuma arma equipada.' },
   { id: 'duas_maos',                  label: 'Empunhando a Duas Mãos',     hint: '1 se main e off têm a mesma arma de duas-mãos.' },
-  { id: 'dual_wield',                 label: 'Empunhadura Dupla',          hint: '1 se main e off são armas distintas.' },
-  { id: 'arma_principal_eh_cac',      label: 'Principal é Corpo-a-Corpo',  hint: '1 se a arma principal é melee.' },
-  { id: 'arma_principal_eh_distancia',label: 'Principal é à Distância',    hint: '1 se a arma principal é ranged.' },
+  { id: 'duas_armas',                 label: 'Usa duas armas',          hint: '1 se está usando duas armas.' },
+  { id: 'arma_principal_corpo_a_corpo',      label: 'Arma principal corpo a corpo',  hint: '1 se a arma principal é corpo a corpo.' },
+  { id: 'arma_principal_a_distancia',label: 'Arma principal à distância',    hint: '1 se a arma principal é à distância.' },
   { id: 'arma_principal_leve',        label: 'Principal é Leve',           hint: '1 se a arma principal tem propriedade Leve.' },
   { id: 'arma_principal_versatil',    label: 'Principal é Versátil',       hint: '1 se a arma principal tem propriedade Versátil.' },
   { id: 'arma_principal_fineza',      label: 'Principal tem Fineza',       hint: '1 se a arma principal tem propriedade Fineza.' },
@@ -780,16 +764,16 @@ const IDENTIDADE_OMNI: ChaveOmniOpcao[] = [
   { id: 'eh_player',           label: 'É Player',           hint: '1 se categoria=PLAYER.' },
   { id: 'eh_npc',              label: 'É NPC',              hint: '1 se categoria=NPC.' },
   { id: 'eh_inimigo',          label: 'É Inimigo',          hint: '1 se categoria=INIMIGO.' },
-  { id: 'origem_id_<id>',      label: 'origem_id_<id>',     hint: 'Predicate: 1 se origem do personagem é <id>.' },
-  { id: 'especializacao_id_<id>', label: 'especializacao_id_<id>', hint: 'Predicate: 1 se especialização é <id>.' },
+  { id: 'origem_<id>',      label: 'Origem: <id>',     hint: '1 se o personagem tem essa origem.' },
+  { id: 'especializacao_<id>', label: 'Especialização: <id>', hint: '1 se o personagem tem essa especialização.' },
 ];
 
 // ── PR-3: Condições ─────────────────────────────────────────────────────
 const CONDICOES_OMNI: ChaveOmniOpcao[] = [
   { id: 'tem_condicao_<id>',   label: 'tem_condicao_<id>',  hint: 'Predicate: 1 se possui a condição (ex.: tem_condicao_atordoado).' },
-  { id: 'condicao_idade_rodadas_<id>', label: 'Idade da condição', hint: 'Rodadas completas decorridas; -1 = ausente ou histórico desconhecido.' },
-  { id: 'condicao_idade_conhecida_<id>', label: 'Idade conhecida', hint: '1 quando a condição tem idade registrada; 0 caso contrário.' },
-  { id: 'condicao_rodadas_<id>', label: 'condicao_rodadas_<id>', hint: 'Rodadas restantes da condição (999 = indefinida, 0 = não tem).' },
+  { id: 'condicao_rodadas_desde_<id>', label: 'Rodadas desde a condição', hint: 'Rodadas completas decorridas; -1 se ausente ou desconhecida.' },
+  { id: 'condicao_tem_idade_<id>', label: 'Idade da condição conhecida', hint: '1 se há idade registrada; 0 caso contrário.' },
+  { id: 'condicao_rodadas_restantes_<id>', label: 'Rodadas restantes da condição', hint: '999 significa duração indefinida.' },
   { id: 'qtd_condicoes',       label: 'Qtd. Condições',     hint: 'Total de condições ativas.' },
   { id: 'qtd_condicoes_fisica',       label: 'Condições Físicas',         hint: 'Quantas condições da categoria FÍSICA.' },
   { id: 'qtd_condicoes_incapacitacao',label: 'Condições Incapacitação',   hint: 'Quantas condições da categoria INCAPACITAÇÃO.' },
@@ -812,21 +796,21 @@ const TALENTOS_DERIVADOS_OMNI: ChaveOmniOpcao[] = [
   { id: 'escudo_proficiente',      label: 'Escudo Proficiente',           hint: '1 se possui talento de escudo.' },
 
   { id: 'grupos_critico_arma',     label: 'Grupos com Crítico Aprimorado',hint: 'Quantos grupos de arma têm crítico aprimorado.' },
-  { id: 'dual_wield_def',          label: 'Defesa por Empunhadura Dupla', hint: 'Bônus de Defesa com 2 armas.' },
-  { id: 'movimento_bonus_metros',  label: 'Bônus de Movimento (m)',       hint: 'Metros extras de movimento.' },
+  { id: 'defesa_duas_armas',          label: 'Defesa com duas armas', hint: 'Bônus de Defesa por empunhadura dupla.' },
+  { id: 'bonus_movimento',  label: 'Bônus de movimento',       hint: 'Metros extras de movimento por talentos.' },
   { id: 'vigor_maldito_bonus',     label: 'Vigor Maldito (cura+)',        hint: 'Bônus de cura no Vigor Maldito.' },
   { id: 'suporte_lv2_unlocked',    label: 'Suporte Lv2 Desbloqueado',     hint: '1 se Adepto de Medicina liberou.' },
-  { id: 'rd_alma',                 label: 'RD de Alma',                   hint: 'Redução contra dano de Alma.' },
+  { id: 'reducao_dano_alma',                 label: 'Redução de dano de Alma',                   hint: 'RD contra dano de Alma.' },
   { id: 'atencao_bonus',           label: 'Bônus de Atenção',             hint: 'Bônus em Atenção via talentos.' },
-  { id: 'tr_vs_debuff_defesa_bonus',label: 'TR vs Debuff de Defesa',      hint: 'Bônus em TR contra debuff de defesa.' },
-  { id: 'max_concentracao',        label: 'Máx. Concentração',            hint: 'Slots máximos de concentração.' },
-  { id: 'max_sustentados',         label: 'Máx. Sustentados',             hint: 'Slots máximos de feitiços sustentados.' },
-  { id: 'slots_liberacao_bonus',   label: 'Slots de Liberação Bônus',     hint: 'Slots universais de Variação.' },
+  { id: 'bonus_tr_defesa_reduzida',label: 'Bônus em TR contra defesa reduzida',      hint: 'Bônus de TR contra efeitos que reduzem Defesa.' },
+  { id: 'concentracao_maxima',        label: 'Concentração máxima',            hint: 'Limite de espaços de concentração.' },
+  { id: 'sustentados_maximos',         label: 'Feitiços sustentados máximos',             hint: 'Limite de feitiços sustentados.' },
+  { id: 'bonus_slots_liberacao',   label: 'Bônus de espaços de Liberação',     hint: 'Espaços universais extras de Variação.' },
   { id: 'pe_temp_por_rodada',      label: 'PE Temp por Rodada',           hint: 'PE temporário só para Aptidões.' },
-  { id: 'aura_ca_bonus',           label: 'Aura — CA Bônus',              hint: 'Bônus de CA via Aura Maciça.' },
-  { id: 'aura_rd_fisica',          label: 'Aura — RD Física',             hint: 'RD física via Aura Reforçada.' },
-  { id: 'aura_furtividade_bonus',  label: 'Aura — Furtividade',           hint: 'Bônus em Furtividade via Aura Controlada.' },
-  { id: 'aura_agarrar_bonus',      label: 'Aura — Agarrar',               hint: 'Bônus em Agarrar via Aura de Contenção.' },
+  { id: 'aura_bonus_defesa',           label: 'Bônus de Defesa da Aura',              hint: 'Bônus de Defesa concedido por aura.' },
+  { id: 'aura_reducao_dano_fisico',          label: 'RD física da Aura',             hint: 'Redução de dano físico concedida por aura.' },
+  { id: 'aura_bonus_furtividade',  label: 'Bônus de Furtividade da Aura',           hint: 'Bônus em Furtividade concedido por aura.' },
+  { id: 'aura_bonus_agarrar',      label: 'Bônus de Agarrar da Aura',               hint: 'Bônus em Agarrar concedido por aura.' },
 ];
 
 const CONTADORES_OMNI: ChaveOmniOpcao[] = [
@@ -838,7 +822,6 @@ const CONTADORES_OMNI: ChaveOmniOpcao[] = [
   { id: 'qtd_habilidades',         label: 'Qtd. Habilidades Spec',        hint: 'Total de habilidades de especialização.' },
   { id: 'qtd_talentos_combate',    label: 'Qtd. Talentos de Combate',     hint: 'Talentos de combate escolhidos.' },
   { id: 'qtd_aptidoes_aura',       label: 'Qtd. Aptidões de Aura',        hint: 'Aptidões da família Aura escolhidas.' },
-  { id: 'qtd_habilidades_spec',    label: 'Qtd. Habilidades Spec',        hint: 'Habilidades de especialização escolhidas.' },
   { id: 'tem_talento_<id>',        label: 'tem_talento_<id>',             hint: 'Predicate: 1 se possui o talento de id <id>.' },
   { id: 'tem_aptidao_<id>',        label: 'tem_aptidao_<id>',             hint: 'Predicate: 1 se possui a aptidão <id>.' },
   { id: 'tem_habilidade_<id>',     label: 'tem_habilidade_<id>',          hint: 'Predicate: 1 se possui a habilidade <id>.' },
@@ -946,9 +929,9 @@ const COMBATE_AVANCADO_PR7_OMNI: ChaveOmniOpcao[] = [
   { id: 'arma_principal_alcance',       label: 'Alcance Principal (m)',       hint: 'Alcance de corpo-a-corpo da arma principal (1,5m default).' },
   { id: 'arma_principal_alcance_curto', label: 'Alcance Curto (m)',           hint: 'rangeShort da arma principal (arremessável/distância).' },
   { id: 'arma_principal_alcance_longo', label: 'Alcance Longo (m)',           hint: 'rangeLong da arma principal.' },
-  { id: 'arma_principal_crit_range',    label: 'Crítico da Principal',        hint: 'Rolagem ≥ este valor é crítico (18/19/20).' },
+  { id: 'arma_margem_critico',    label: 'Margem de crítico da arma',        hint: 'Rolagem igual ou maior a este valor é crítico.' },
   { id: 'arma_principal_crit_ampliado', label: 'Crítico Ampliado',            hint: '1 se critRange < 20.' },
-  { id: 'reacoes_usadas_nesta_rodada',  label: 'Reações Usadas na Rodada',    hint: 'reacoes_max − reacoes_restantes.' },
+  { id: 'reacoes_usadas',  label: 'Reações usadas',    hint: 'Reações consumidas nesta rodada.' },
 ];
 
 // ── PR-8: Magia / Técnicas ─────────────────────────────────────────────
@@ -964,11 +947,11 @@ const MAGIA_TECNICAS_OMNI: ChaveOmniOpcao[] = [
   { id: 'pe_maximo_feitico',         label: 'PE Máximo (feitiço)',        hint: 'Maior costPE do grimório.' },
   { id: 'qtd_buffs_ativos',          label: 'Qtd. Buffs Ativos',          hint: 'Total de buffs em activeBuffs.' },
   { id: 'qtd_buffs_sustentados',     label: 'Qtd. Buffs Sustentados',     hint: 'isSustained=true.' },
-  { id: 'pe_por_rodada_sustentado',  label: 'PE/Rodada (Sustentados)',    hint: 'Soma de peCostPerRound dos buffs ativos.' },
+  { id: 'pe_sustentacao_por_rodada',  label: 'PE de sustentação por rodada',    hint: 'PE gasto por rodada para manter feitiços.' },
   { id: 'tem_ultimo_feitico',        label: 'Tem Último Feitiço',         hint: '1 se há lastSpellUsedId.' },
-  { id: 'spell_attack_bonus',        label: 'Bônus de Ataque Amaldiçoado', hint: 'spellAttackBonus.' },
-  { id: 'tecnica_amaldicoada_definida', label: 'Técnica Amaldiçoada Definida', hint: '1 se o personagem definiu uma técnica.' },
-  { id: 'qtd_fundamentos_tecnica',   label: 'Qtd. Fundamentos da Técnica', hint: 'tecnicaFundamentos.length.' },
+  { id: 'bonus_ataque_magia',        label: 'Bônus de ataque mágico', hint: 'Bônus de ataque de magia.' },
+  { id: 'tem_tecnica', label: 'Tem técnica amaldiçoada', hint: '1 se o personagem definiu uma técnica.' },
+  { id: 'qtd_fundamentos',   label: 'Fundamentos da técnica', hint: 'Quantidade de fundamentos da técnica.' },
   { id: 'foco_destruicao',           label: 'Foco: Destruição',           hint: '1 se tecnicaFoco=Destruição.' },
   { id: 'foco_economia',             label: 'Foco: Economia',             hint: '1 se tecnicaFoco=Economia.' },
   { id: 'foco_refino',               label: 'Foco: Refino',               hint: '1 se tecnicaFoco=Refino.' },
@@ -976,31 +959,31 @@ const MAGIA_TECNICAS_OMNI: ChaveOmniOpcao[] = [
   { id: 'absorcao_armada',           label: 'Absorção Elemental Armada',  hint: '1 se há absorção elemental pendente.' },
   { id: 'au_concentrada',            label: 'AU Concentrada',             hint: 'Valor de AU concentrado em aura.' },
   { id: 'tem_feitico_<id>',          label: 'tem_feitico_<id>',           hint: 'Predicate: 1 se possui o feitiço de id <id>.' },
-  { id: 'tem_buff_<spellName>',      label: 'tem_buff_<spellName>',       hint: 'Predicate: 1 se há buff ativo com esse nome de feitiço.' },
-  { id: 'qtd_feiticos_elemento_<tipo>', label: 'qtd_feiticos_elemento_<tipo>', hint: 'Predicate: quantos feitiços de damageType <tipo>.' },
+  { id: 'tem_buff_<nome>',      label: 'Tem buff <nome>',       hint: '1 se há um buff ativo com esse nome.' },
+  { id: 'qtd_feiticos_tipo_<tipo>', label: 'Feitiços por tipo de dano', hint: 'Quantidade de feitiços com o tipo de dano informado.' },
 ];
 
 // ── PR-9: Meta / Narrativa (combate, iniciativa, cronômetro) ──────────
 const META_NARRATIVA_OMNI: ChaveOmniOpcao[] = [
   { id: 'em_combate',                label: 'Em Combate',                hint: '1 se há combate ativo.' },
   { id: 'numero_da_rodada',          label: 'Número da Rodada',          hint: 'Round atual do combate.' },
-  { id: 'turno_atual_index',         label: 'Índice do Turno Atual',     hint: 'currentTurnIndex (0-based).' },
+  { id: 'indice_turno_atual',         label: 'Índice do turno atual',     hint: 'Posição zero-based na ordem do combate.' },
   { id: 'ordem_na_iniciativa',       label: 'Ordem na Iniciativa',       hint: 'Posição 1-based; 0 se fora do combate.' },
   { id: 'eh_meu_turno',              label: 'É Meu Turno',               hint: '1 se for o turno deste personagem.' },
   { id: 'iniciativa_total',          label: 'Iniciativa (total)',        hint: 'roll + bonus do entry.' },
   { id: 'iniciativa_bonus',          label: 'Iniciativa (bônus)',        hint: 'Bônus de iniciativa do entry.' },
   { id: 'iniciativa_rolagem',        label: 'Iniciativa (rolagem)',      hint: 'Valor do d20 da iniciativa.' },
   { id: 'qtd_participantes_combate', label: 'Qtd. Participantes',        hint: 'Tamanho da ordem de iniciativa.' },
-  { id: 'turnos_ate_meu',            label: 'Turnos até o Meu',          hint: 'Quantos turnos faltam (0 se for agora).' },
-  { id: 'proximo_no_turno',          label: 'Próximo no Turno',          hint: '1 se este personagem joga no próximo turno.' },
-  { id: 'ultimo_no_turno',           label: 'Último na Ordem',           hint: '1 se é o último na ordem de iniciativa.' },
+  { id: 'turnos_ate_meu_turno',            label: 'Turnos até meu turno',          hint: 'Quantos turnos até este personagem agir.' },
+  { id: 'sou_proximo_no_turno',          label: 'Sou o próximo no turno',          hint: '1 se este personagem age em seguida.' },
+  { id: 'sou_ultimo_no_turno',           label: 'Sou o último na ordem',           hint: '1 se este personagem é o último da rodada.' },
   { id: 'metros_movidos_combate',    label: 'Metros Movidos no Combate', hint: 'movementUsedByChar do combate atual.' },
   { id: 'turno_cronometro_ativo',    label: 'Cronômetro Ativo',          hint: '1 se o cronômetro de turno está ligado.' },
-  { id: 'turno_duracao_seg',         label: 'Duração do Turno (s)',      hint: 'Segundos configurados por turno.' },
-  { id: 'turno_segundos_restantes',  label: 'Segundos Restantes',        hint: 'Tempo restante do turno atual.' },
+  { id: 'duracao_turno_segundos',         label: 'Duração do turno em segundos',      hint: 'Tempo configurado para cada turno.' },
+  { id: 'segundos_restantes_turno',  label: 'Segundos restantes no turno',        hint: 'Tempo restante do turno atual.' },
   { id: 'turno_pausado',             label: 'Turno Pausado',             hint: '1 se o cronômetro está pausado.' },
-  { id: 'qtd_flags_omni',            label: 'Qtd. Flags Omni',           hint: 'Total de chaves em omniFlags.' },
-  { id: 'qtd_contadores_omni',       label: 'Qtd. Contadores Omni',      hint: 'Total de chaves em omniCounters.' },
+  { id: 'qtd_flags',            label: 'Quantidade de flags',           hint: 'Total de flags personalizadas na ficha.' },
+  { id: 'qtd_contadores',       label: 'Quantidade de contadores',      hint: 'Total de contadores personalizados na ficha.' },
 ];
 
 
