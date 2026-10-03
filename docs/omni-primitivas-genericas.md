@@ -199,7 +199,7 @@ PE, PV, cargas e orçamento vêm da etapa 4; uma reação paga seus custos uma v
 
 Ataques de arma interrompidos retornam `cancelled: true`, sem d20 nem dano. Custos que o atacante já havia pago não são devolvidos. Após a janela, o motor atualiza a ficha do atacante e a Defesa do alvo; se a reação mudou posições, revalida o alcance. Feitiços interrompidos na declaração não pagam PE nem ação. A defesa extra não fica registrada na ficha e não beneficia ataques futuros. Repetições de dados de um mesmo ataque não criam uma nova declaração.
 
-A confirmação de movimento mantém a prévia visível enquanto aguarda; o orçamento só é consumido ao confirmar a continuação. Interromper reverte a prévia pelo mesmo caminho de patches já usado por Cancelar. Se a reação reposicionar a peça, preserva o novo posicionamento e encerra a confirmação antiga. São comparadas as posições inicial e final: esta etapa não detecta passagens intermediárias de um trajeto cujas duas pontas estejam fora do alcance. Teleporte e movimento forçado das ações OMNI não abrem estas janelas.
+A confirmação de movimento mantém a prévia visível enquanto aguarda; o orçamento só é consumido ao confirmar a continuação. Interromper reverte a prévia pelo mesmo caminho de patches já usado por Cancelar. Se a reação reposicionar a peça, preserva o novo posicionamento e encerra a confirmação antiga. A verificação compara a posição inicial e cada trecho do trajeto amostrado. A interseção com o alcance usa a mesma distância Chebyshev entre bordas; assim, uma passagem pelo alcance é detectada mesmo quando os extremos estão fora. Teleporte e movimento forçado das ações OMNI não abrem estas janelas. Teleporte e movimento forçado das ações OMNI não abrem estas janelas.
 
 ### Escopo operacional
 
@@ -317,7 +317,7 @@ O campo de dano do construtor indica os tokens disponíveis; eles também aparec
 | 7 | Resistências, vulnerabilidades e imunidades passivas de dano | Implementada |
 | 8 | Modificador passivo de deslocamento | Implementada |
 | 9 | Zonas persistentes de terreno | Implementada |
-| 10 | Trajetória intermediária para reações e duplicação/presets de ações | Pendente |
+| 10 | Trajetória intermediária para reações e duplicação/presets de ações | Implementada |
 
 ## Contrato da etapa complementar 7 — mitigação passiva de dano
 
@@ -333,3 +333,10 @@ O construtor no-code expõe seletores de tipos de dano, os painéis de detalhes 
 ## Contrato da etapa complementar 9 — zonas persistentes de terreno
 
 Formas de mapa retangulares ou elípticas podem ser configuradas como zonas. A configuração guarda efeitos `CombatEffect[]`, gatilhos `entrada` e `fim_turno`, duração em rodadas ou duração permanente. O Mestre edita a zona na barra da entidade selecionada. Personagens com ficha vinculada disparam os efeitos ao entrar pela trajetória e ao encerrar o turno dentro da área; variáveis `USUARIO` e `ALVO` apontam para o personagem afetado. O Mestre executa os efeitos como autoridade da sessão, e a zona é removida quando a duração termina.
+
+
+## Contrato da etapa complementar 10 — trajetória, duplicação e biblioteca
+
+Ao confirmar um movimento arrastado, o mapa envia pontos intermediários amostrados a cada quarto de célula. As reações de entrada verificam se o caminho cruza o alcance, mesmo se começar e terminar fora dele. As reações de saída verificam se o caminho parte de dentro e sai do alcance. A interseção é calculada entre os segmentos do trajeto e a área de alcance, com distância Chebyshev entre bordas e dimensões reais das peças. Regras de Desengajar permanecem aplicadas às saídas. O gatilho legado de Zona de Risco segue independente.
+
+No Editor de Ações Ativas, cada ação pode ser duplicada com configuração completa e ID novo; a cópia é inserida logo após a original. O ícone de salvar armazena a ação como preset e permite definir seu nome no campo da biblioteca. Um preset escolhido pode ser adicionado a outra entidade como uma ação independente, também com ID novo. A biblioteca usa armazenamento local do navegador e não sincroniza entre dispositivos ou perfis. Configurações de ação, custos, alvos, efeitos, condições e reações são preservados integralmente.
