@@ -113,7 +113,10 @@ informá-lo.
 
 `applyDamage` normaliza os códigos do motor, os rótulos de
 `DAMAGE_TYPE_LABELS`, as abreviações das armas (`Ct`, `Pf`, `Im`) e nomes
-Omni equivalentes (`Impacto`, `Fogo`, `Frio`, `Elétrico`, `Mental`, `Veneno`).
+Omni equivalentes (`Corte`, `Perfuração`, `Impacto`, `Fogo`/`Chamas`,
+`Frio`/`Gelo`/`Congelamento`, `Elétrico`/`Eletricidade`/`Choque`,
+`Som`/`Sônico`, `Mental`/`Psíquico`, `Necrótico`/`Necro` e
+`Veneno`).
 A normalização ocorre **antes** de aplicar imunidade, RD por tipo e
 vulnerabilidade, para que o contexto e a mitigação usem o mesmo tipo.
 Ações ativas Omni usam a mesma conversão.
