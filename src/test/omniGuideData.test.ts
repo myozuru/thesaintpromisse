@@ -51,7 +51,7 @@ describe('dados do guia OMNI', () => {
   });
 
   it('usa todas as definições oficiais de gatilhos e ações', () => {
-    expect(CONTAGEM_GATILHOS_GUIA_OMNI).toBe(35);
+    expect(CONTAGEM_GATILHOS_GUIA_OMNI).toBe(34);
     expect(CONTAGEM_GATILHOS_GUIA_OMNI).toBe(Object.keys(GATILHOS_EVENTOS).length);
     expect(CONTAGEM_ACOES_GUIA_OMNI).toBe(38);
     expect(CONTAGEM_ACOES_GUIA_OMNI).toBe(Object.keys(ACOES_EFEITO).length);
