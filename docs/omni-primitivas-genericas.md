@@ -199,7 +199,7 @@ PE, PV, cargas e orçamento vêm da etapa 4; uma reação paga seus custos uma v
 
 Ataques de arma interrompidos retornam `cancelled: true`, sem d20 nem dano. Custos que o atacante já havia pago não são devolvidos. Após a janela, o motor atualiza a ficha do atacante e a Defesa do alvo; se a reação mudou posições, revalida o alcance. Feitiços interrompidos na declaração não pagam PE nem ação. A defesa extra não fica registrada na ficha e não beneficia ataques futuros. Repetições de dados de um mesmo ataque não criam uma nova declaração.
 
-A confirmação de movimento mantém a prévia visível enquanto aguarda; o orçamento só é consumido ao confirmar a continuação. Interromper reverte a prévia pelo mesmo caminho de patches já usado por Cancelar. Se a reação reposicionar a peça, preserva o novo posicionamento e encerra a confirmação antiga. A verificação compara a posição inicial e cada trecho do trajeto amostrado. A interseção com o alcance usa a mesma distância Chebyshev entre bordas; assim, uma passagem pelo alcance é detectada mesmo quando os extremos estão fora. Teleporte e movimento forçado das ações OMNI não abrem estas janelas. Teleporte e movimento forçado das ações OMNI não abrem estas janelas.
+A confirmação de movimento mantém a prévia visível enquanto aguarda; o orçamento só é consumido ao confirmar a continuação. Interromper reverte a prévia pelo mesmo caminho de patches já usado por Cancelar. Se a reação reposicionar a peça, preserva o novo posicionamento e encerra a confirmação antiga. A verificação compara a posição inicial e cada trecho do trajeto amostrado. A interseção com o alcance usa a mesma distância Chebyshev entre bordas; assim, uma passagem pelo alcance é detectada mesmo quando os extremos estão fora. Teleporte e movimento forçado das ações OMNI não abrem estas janelas.
 
 ### Escopo operacional
 
@@ -266,7 +266,7 @@ Para recuperação direta, configure `tipo_efeito: 'cura'`, `cura: '2d8 + @USUAR
 
 A recuperação exige `teste: 'nenhum'` e `tipo_alvo: 'proprio'` ou `filtro_alvo: 'aliados'`. Alvos únicos, múltiplos e áreas usam o seletor existente. Configurações inválidas são recusadas antes dos custos. O custo é pago uma vez por ação; a recuperação é calculada por alvo depois do pagamento. PV usa `applyHealing`, preservando limites especiais e eventos de cura; PE usa o máximo normal da ficha. Recuperação não reduz recursos que já excedem seu limite nem concede recursos temporários. Modificadores de dano e dados de intensificação de dano não aumentam a cura.
 
-As etapas restantes são: (4) testes opostos; (5) munição e usos; (6) bônus passivos de perícias/TR; (7) mitigação e deslocamento passivos; (8) zonas persistentes; (9) trajetória intermediária; (10) duplicação e biblioteca de ações.
+O plano original foi concluído: testes opostos, consumo de munição e usos, bônus e mitigadores passivos, zonas persistentes, trajetória intermediária e biblioteca de ações estão implementados conforme a tabela de etapas.
 
 ## Expansão de suporte — etapa 2 de 10
 
