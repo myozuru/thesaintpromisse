@@ -79,7 +79,7 @@ export async function prepararMovimentosAtivos(uId: string, alvos: Character[], 
   for (const a of alvos) {
     const lista: PlanoMovimentoAtivo[] = [];
     for (const [indice, ef] of efeitos.entries()) {
-      if (ef.tipo === 'condicao') continue;
+      if (ef.tipo !== 'movimento' && ef.tipo !== 'puxar' && ef.tipo !== 'empurrar') continue;
       const tipo = ef.tipo === 'movimento' ? ef.movimento_tipo : ef.tipo;
       if (!['puxar', 'empurrar', 'avancar_ate', 'teleporte', 'trocar_posicao'].includes(tipo)) return { ok: false, reason: 'Tipo de movimento inválido.' };
       const u = ficha(uId), alvo = ficha(a.id);

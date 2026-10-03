@@ -1,3 +1,4 @@
+import { EditorSuporteAtivo, ehSuporteAtivo, efeitoSuporteInicial } from './EditorSuporteAtivo';
 import { EditorDesfechosTR } from './EditorDesfechosTR';
 import { EditorReacoesAtivas } from './EditorReacoesAtivas';
 import { EditorCustosAtivos } from './EditorCustosAtivos';
@@ -127,11 +128,11 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
                 <div key={k} className="flex gap-2 items-center">
                   <select aria-label={`Efeito ${i + 1} ${k + 1}`} className={sel + ' w-32'} value={ef.tipo === 'movimento' ? ef.movimento_tipo : ef.tipo} onChange={(e) => {
                     const t = e.target.value;
-                    setEf(t === 'condicao' ? { tipo: 'condicao', condicao: ALL_CONDITIONS[0]?.id ?? '', rodadas: 1 } : { tipo: 'movimento', movimento_tipo: t as import('@/lib/omni/tipos').TipoMovimentoAtivo, movimento_distancia: '3', movimento_alvo: 'usuario' });
+                    setEf(efeitoSuporteInicial(t) ?? (t === 'condicao' ? { tipo: 'condicao', condicao: ALL_CONDITIONS[0]?.id ?? '', rodadas: 1 } : { tipo: 'movimento', movimento_tipo: t as import('@/lib/omni/tipos').TipoMovimentoAtivo, movimento_distancia: '3', movimento_alvo: 'usuario' }));
                   }}>
-                    <option value="condicao">Condição</option><option value="puxar">Puxar</option><option value="empurrar">Empurrar</option><option value="avancar_ate">Avançar até</option><option value="teleporte">Teleporte</option><option value="trocar_posicao">Trocar posição</option>
+                    <option value="condicao">Condição</option><option value="pv_temporarios">PV temporários</option><option value="escudo">Escudo</option><option value="remover_condicao">Remover condição</option><option value="puxar">Puxar</option><option value="empurrar">Empurrar</option><option value="avancar_ate">Avançar até</option><option value="teleporte">Teleporte</option><option value="trocar_posicao">Trocar posição</option>
                   </select>
-                  {ef.tipo === 'condicao' ? <>
+                  {ehSuporteAtivo(ef) ? <EditorSuporteAtivo efeito={ef} onChange={setEf} rotulo={`${i + 1} ${k + 1}`} /> : ef.tipo === 'condicao' ? <>
                     <select className={sel} value={ef.condicao} onChange={(e) => setEf({ ...ef, condicao: e.target.value })}>
                       {ALL_CONDITIONS.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>

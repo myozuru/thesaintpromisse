@@ -1,4 +1,5 @@
 import { planejarCustosAtivos, encerrarSustentacaoAtiva } from '@/lib/omni/custosAtivos';
+import { ajustarProtecoesOmni } from '@/lib/omni/protecoesAtivas';
 /**
  * Ações ativas OMNI (itens do inventário): escolher alvo e usar.
  */
@@ -19,7 +20,7 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
   const [busy, setBusy] = useState(false);
   const u = chars.find((c) => c.id === charId);
   const lista = acoesAtivasDe(charId);
-  if (!u || (lista.length === 0 && !u.omniSustentacoes?.length)) return null;
+  if (!u || (lista.length === 0 && !u.omniSustentacoes?.length && !u.protecoesOmni?.length)) return null;
   const alvos = chars;
   return (
     <div className="rounded-md border border-primary/40 bg-primary/5 p-2 space-y-1.5" data-testid="acoes-ativas-section">
@@ -36,6 +37,12 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
         </select>
       </div>
       {(u.omniSustentacoes ?? []).map(s => <div key={s.id} className="flex gap-2 text-xs"><span>{s.nome} · sustentada · {s.pePorTurno} PE/turno</span><button onClick={() => encerrarSustentacaoAtiva(charId, s.id)}>Encerrar {s.nome}</button></div>)}
+      {ajustarProtecoesOmni(u).map(p => <div key={p.id} className="flex gap-2 text-xs"><span>{p.fonte} · {p.restante} {p.tipo === 'escudo' ? 'escudo' : 'PV temporários'} · {p.rodadas ? `${p.rodadas} rod.` : 'até remover'}</span><button aria-label={`Remover proteção ${p.fonte}`} onClick={() => {
+        const atual = useCharacterStore.getState().characters.find(c => c.id === charId);
+        if (!atual) return;
+        const protecoes = ajustarProtecoesOmni(atual), remover = protecoes.find(x => x.id === p.id);
+        useCharacterStore.getState().updateCharacter(charId, { escCurrent: Math.max(0, (atual.escCurrent ?? 0) - (remover?.restante ?? 0)), protecoesOmni: protecoes.filter(x => x.id !== p.id) });
+      }}>Remover</button></div>)}
       {lista.map(({ instanceId, ent, cfg }) => {
         const key = instanceId + cfg.id, intensidade = intensificacoes[key] ?? 0;
         const custos = planejarCustosAtivos(cfg, u, intensidade);

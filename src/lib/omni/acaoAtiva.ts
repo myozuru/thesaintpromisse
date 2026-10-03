@@ -21,6 +21,7 @@ import { resolverTipoDano, type MetadadosAtaqueDano } from './contextoDano';
 import type { Character } from '@/types';
 import type { AcaoAtivaConfig, DesfechoTRAtivo, EfeitoSecundarioAtivo, EntidadeOmni, TrNome } from './tipos';
 import { avaliarFormula } from './parser';
+import { ajustarProtecoesOmni } from './protecoesAtivas';
 import { lerCaminhoOmni, montarVariaveisDoPersonagem } from './resolvedor';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useMapStore } from '@/stores/useMapStore';
@@ -139,6 +140,14 @@ export type ResultadoAtiva = { ok: false; reason: string } | { ok: true; dano: n
 
 export function podeUsarAtiva(u: Character, alvo: Character | undefined, cfg: AcaoAtivaConfig, intensificacoes = 0): { ok: true } | { ok: false; reason: string } {
   if (!alvo) return { ok: false, reason: 'Escolha um alvo.' };
+  const efeitos = [...(cfg.efeitos ?? []), ...Object.values(cfg.desfechosTR ?? {}).flatMap(d => d?.efeitos ?? [])];
+  for (const ef of efeitos) {
+    if (ef.tipo === 'pv_temporarios' || ef.tipo === 'escudo') {
+      const r = avaliarFormula(ef.valor, vars(u, alvo), () => 0.5);
+      if (!ef.valor.trim() || r.diagnosticos.length || !Number.isFinite(r.valor) || !Number.isInteger(ef.rodadas) || ef.rodadas < 0) return { ok: false, reason: 'Proteção exige fórmula válida e duração inteira não negativa.' };
+    }
+    if (ef.tipo === 'remover_condicao' && ef.condicao !== 'todas' && !ALL_CONDITIONS.some(c => c.id === ef.condicao || c.name.toLocaleLowerCase() === ef.condicao.toLocaleLowerCase())) return { ok: false, reason: 'Condição a remover não reconhecida.' };
+  }
   if (cfg.tipo_efeito === 'cura') {
     if (cfg.tipo_alvo !== 'proprio' && cfg.filtro_alvo !== 'aliados') return { ok: false, reason: 'Cura exige filtro de aliados ou alvo próprio.' };
     if (cfg.teste !== 'nenhum') return { ok: false, reason: 'Cura direta exige ação sem teste.' };
@@ -176,6 +185,23 @@ function aplicarEfeitos(u: Character, alvo: Character, efeitos: EfeitoSecundario
       store.addCondition(alvo.id, ac);
       if (sustentadas && useCharacterStore.getState().characters.find(c => c.id === alvo.id)?.activeConditions.some(c => c.id === ac.id)) sustentadas.push({ charId: alvo.id, id: ac.id });
       notas.push(`${def.icon} ${def.name}${sustentadas ? ' (sustentada)' : ef.rodadas > 0 ? ` (${ef.rodadas} rod.)` : ''}`);
+    } else if (ef.tipo === 'remover_condicao') {
+      const def = ALL_CONDITIONS.find(c => c.id === ef.condicao || c.name.toLocaleLowerCase() === ef.condicao.toLocaleLowerCase());
+      const atuais = useCharacterStore.getState().characters.find(c => c.id === alvo.id)?.activeConditions ?? [];
+      const removidas = atuais.filter(c => ef.condicao === 'todas' || c.conditionId === def?.id);
+      for (const c of removidas) store.removeCondition(alvo.id, c.id);
+      notas.push(`remove ${removidas.length} condição(ões)${def ? ': ' + def.name : ''}`);
+    } else if (ef.tipo === 'pv_temporarios' || ef.tipo === 'escudo') {
+      const r = avaliarFormula(ef.valor, vars(u, useCharacterStore.getState().characters.find(c => c.id === alvo.id)!));
+      if (r.diagnosticos.length || !Number.isFinite(r.valor)) { notas.push('fórmula de proteção inválida'); continue; }
+      const valor = Math.max(0, Math.floor(r.valor));
+      const atual = useCharacterStore.getState().characters.find(c => c.id === alvo.id)!;
+      if (valor > 0) store.updateCharacter(alvo.id, {
+        escCurrent: (atual.escCurrent ?? 0) + valor,
+        protecoesOmni: [...ajustarProtecoesOmni(atual), { id: crypto.randomUUID(), fonte, tipo: ef.tipo, restante: valor, rodadas: ef.rodadas }],
+      });
+      const dados = r.rolagens.map(d => `${d.notacao} [${d.rolls.join(', ')}] = ${d.total}`).join('; ');
+      notas.push(`+${valor} ${ef.tipo === 'escudo' ? 'escudo' : 'PV temporários'}${ef.rodadas ? ` (${ef.rodadas} rod.)` : ' (até remover)'}${dados ? ' · ' + dados : ''}`);
     } else {
       const plano = planos.find(p => p.indice === indice);
       if (plano) notas.push(aplicarMovimentoAtivo(u.id, alvo.id, plano));
@@ -333,6 +359,7 @@ export async function executarAcaoAtiva(
       curaTotal += recuperado;
       efeitoAplicado ||= recuperado > 0;
       const notas = aplicarEfeitos(u, depois, cfg.efeitos ?? [], fonte, movimentos.planos.get(t.id), sustentadas);
+      efeitoAplicado ||= notas.length > 0;
       const dados = r.rolagens.map(d => `${d.notacao} [${d.rolls.join(', ')}] = ${d.total}`).join('; ');
       const msg = `✨ ${u.name} usa ${cfg.nome} (${pago}) em ${t.name}: recupera ${recuperado} ${recurso.toUpperCase()} (valor ${valor}${dados ? '; ' + dados : ''})${notas.length ? ' · ' + notas.join(' · ') : ''}.`;
       log(msg); detalhes.push(msg);
@@ -365,7 +392,7 @@ export async function executarAcaoAtiva(
     efeitoAplicado ||= aplicaEfeitos;
     const fatorRaw = desfechoTR?.multiplicador_duracao ?? 1;
     const fatorDuracao = Number.isFinite(fatorRaw) && fatorRaw > 0 ? fatorRaw : 1;
-    const efeitosAplicados = efeitosTR.map(ef => ef.tipo === 'condicao' && fatorDuracao > 1 && ef.rodadas > 0 ? { ...ef, rodadas: Math.ceil(ef.rodadas * fatorDuracao) } : ef);
+    const efeitosAplicados = efeitosTR.map(ef => 'rodadas' in ef && fatorDuracao > 1 && ef.rodadas > 0 ? { ...ef, rodadas: Math.ceil(ef.rodadas * fatorDuracao) } : ef);
     const inicioPlanos = grauTR && indicesDesfecho[grauTR] !== undefined ? indicesDesfecho[grauTR]! : 0;
     const todosPlanos = movimentos.planos.get(t.id) ?? [];
     const planosResultado = efeitosAplicados.map((_, i) => { const plano = todosPlanos.find(p => p.indice === inicioPlanos + i); return plano ? { ...plano, indice: i } : undefined; }).filter((p): p is PlanoMovimentoAtivo => !!p);

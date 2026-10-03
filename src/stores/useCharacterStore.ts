@@ -1,4 +1,5 @@
 import { reservarPassoOmni, executarNaCadeiaOmni, capturarCadeiaOmni } from '@/lib/omni/cadeiaEventos';
+import { ajustarProtecoesOmni, consumirProtecoesOmni, expirarProtecoesOmni } from '@/lib/omni/protecoesAtivas';
 import { montarMetadadosDano, resolverTipoDano, type OpcoesDano } from '@/lib/omni/contextoDano';
 import { useMapStore } from '@/stores/useMapStore';
 import { distanceBetweenChars } from '@/lib/weaponRange';
@@ -1210,6 +1211,9 @@ export const useCharacterStore = create<CharacterStore>()(
             updates = rest as Partial<Character>;
           }
           let merged: Character = { ...c, ...updates };
+          if (typeof updates.escCurrent === 'number' && updates.protecoesOmni === undefined && c.protecoesOmni?.length) {
+            merged.protecoesOmni = consumirProtecoesOmni(ajustarProtecoesOmni(c), Math.max(0, (c.escCurrent ?? 0) - updates.escCurrent));
+          }
           // Assumir Postura: ficar Caído/incapacitado encerra a postura de vez.
           if (merged.posturaAtiva && quebraPostura(merged)) merged = { ...merged, posturaAtiva: null };
           const classChanged = updates.characterClass && updates.characterClass !== c.characterClass;
@@ -2334,14 +2338,15 @@ export const useCharacterStore = create<CharacterStore>()(
             let newHp = c.hpCurrent;
             if (damageFinal <= newEsc) { newEsc -= damageFinal; }
             else { const overflow = damageFinal - newEsc; newEsc = 0; newHp -= overflow; }
+            const protecoesOmni = consumirProtecoesOmni(ajustarProtecoesOmni(c), Math.max(0, c.escCurrent - newEsc));
             // CAM: sincroniza HP do snapshot do núcleo ativo.
             if (isCamActive(c) && c.activeCoreId) {
               const newCores = (c.cores || []).map(co =>
                 co.id === c.activeCoreId ? { ...co, hpCurrent: newHp } : co,
               );
-              return { ...c, escCurrent: newEsc, hpCurrent: newHp, cores: newCores };
+              return { ...c, escCurrent: newEsc, protecoesOmni, hpCurrent: newHp, cores: newCores };
             }
-            return { ...c, escCurrent: newEsc, hpCurrent: newHp };
+            return { ...c, escCurrent: newEsc, protecoesOmni, hpCurrent: newHp };
           }),
         }));
 
@@ -4311,6 +4316,7 @@ export const useCharacterStore = create<CharacterStore>()(
       tickRoundConditions: () => set((state) => ({
         characters: state.characters.map((c) => ({
           ...c,
+          ...expirarProtecoesOmni(c),
           activeConditions: (c.activeConditions || [])
             .map((cd) => ({ ...cd, remainingRounds: cd.remainingRounds === -1 ? -1 : cd.remainingRounds - 1,
               ...(typeof cd.elapsedRounds === 'number' && Number.isFinite(cd.elapsedRounds) && cd.elapsedRounds >= 0 ? { elapsedRounds: cd.elapsedRounds + 1 } : {}) }))
@@ -4558,6 +4564,7 @@ export const useCharacterStore = create<CharacterStore>()(
                 : c.preparoCurrent,
               tempPE: 0,
               escCurrent: 0,
+              protecoesOmni: [],
               posturaUsos: 0,
               posturaAtiva: null,
               hitDiceCurrent: newHd,
@@ -4720,6 +4727,7 @@ export const useCharacterStore = create<CharacterStore>()(
               kokusenArmedDamage: false,
               // PV temporários (escudo/buff de cena) zeram com a cena
               escCurrent: 0,
+              protecoesOmni: [],
               // Fase 2/4 — Estado vivo das Specs (cena)
               aptitudeOnlyTempPE: 0,
               lastSpellUsedId: undefined,

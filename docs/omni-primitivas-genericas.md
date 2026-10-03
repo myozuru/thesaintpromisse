@@ -260,10 +260,35 @@ Exemplo:
 ```
 # Expansão de suporte — etapa 1 de 10
 
-As ações ativas aceitam `tipo_efeito: 'dano' | 'cura' | 'buff'`. Sem esse campo, continuam ofensivas como antes. `buff` aplica os efeitos secundários sem dano primário; os novos escudos e a purificação ficam para a etapa 2.
+As ações ativas aceitam `tipo_efeito: 'dano' | 'cura' | 'buff'`. Sem esse campo, continuam ofensivas como antes. `buff` aplica os efeitos secundários sem dano primário.
 
 Para recuperação direta, configure `tipo_efeito: 'cura'`, `cura: '2d8 + @USUARIO.treino'` e `recurso_cura: 'pv' | 'pe'` (padrão: PV). A fórmula usa o parser OMNI, incluindo dados e contexto do usuário/alvo. O valor é arredondado para baixo, com mínimo zero; rolagens e recuperação efetiva ficam no histórico.
 
 A recuperação exige `teste: 'nenhum'` e `tipo_alvo: 'proprio'` ou `filtro_alvo: 'aliados'`. Alvos únicos, múltiplos e áreas usam o seletor existente. Configurações inválidas são recusadas antes dos custos. O custo é pago uma vez por ação; a recuperação é calculada por alvo depois do pagamento. PV usa `applyHealing`, preservando limites especiais e eventos de cura; PE usa o máximo normal da ficha. Recuperação não reduz recursos que já excedem seu limite nem concede recursos temporários. Modificadores de dano e dados de intensificação de dano não aumentam a cura.
 
-As próximas etapas são: (2) PV temporários, escudos e purificação; (3) contexto da arma; (4) testes opostos; (5) munição e usos; (6) bônus passivos de perícias/TR; (7) mitigação e deslocamento passivos; (8) zonas persistentes; (9) trajetória intermediária; (10) duplicação e biblioteca de ações.
+As etapas restantes são: (3) contexto da arma; (4) testes opostos; (5) munição e usos; (6) bônus passivos de perícias/TR; (7) mitigação e deslocamento passivos; (8) zonas persistentes; (9) trajetória intermediária; (10) duplicação e biblioteca de ações.
+
+## Expansão de suporte — etapa 2 de 10
+
+Os efeitos secundários aceitam três novos tipos, tanto em `efeitos` quanto nos ramos de `desfechosTR`:
+
+```json
+{
+  "tipo_efeito": "buff",
+  "teste": "nenhum",
+  "tipo_alvo": "multiplo",
+  "max_alvos": "3",
+  "filtro_alvo": "aliados",
+  "efeitos": [
+    { "tipo": "pv_temporarios", "valor": "2d8 + @USUARIO.treino", "rodadas": 3 },
+    { "tipo": "escudo", "valor": "5", "rodadas": 1 },
+    { "tipo": "remover_condicao", "condicao": "sangramento" }
+  ]
+}
+```
+
+`valor` usa o parser de fórmulas e dados OMNI, com mínimo zero e arredondamento para baixo. `rodadas` é um inteiro não negativo: zero permanece até remover ou encerrar a cena; valores positivos decrementam ao finalizar cada rodada completa de combate, no mesmo relógio das condições. O multiplicador de duração do desfecho de TR também afeta concessões de proteção com prazo positivo. Fórmulas e durações inválidas são recusadas antes do custo. A recuperação pode incluir esses efeitos secundários mesmo quando o alvo já está com PV/PE completos.
+
+PV temporários e escudo usam a reserva existente `escCurrent`, que absorve dano antes dos PV; as concessões somam, sem alterar `escMax`. `protecoesOmni` registra origem, tipo, prazo e saldo individual na ficha, preservados pela persistência e sincronização da ficha. O dano e reduções manuais consomem as concessões na ordem de criação antes da proteção de outras fontes; ao expirar, somente o saldo restante da concessão é retirado. Outras reservas ficam preservadas. Encerrar a cena ou descansar por longo período limpa a reserva e seus registros. O painel de ações mostra o saldo/prazo e permite remover cada concessão individualmente. Duração de proteção é independente da manutenção por PE das condições sustentadas existentes.
+
+`remover_condicao` aceita o identificador de uma condição do catálogo ou seu nome, sem distinguir maiúsculas/minúsculas. Remove todas as instâncias daquele tipo, preservando as demais. `condicao: 'todas'` remove todas as condições ativas, inclusive benéficas; não remove buffs de outros sistemas. O construtor oferece os tipos e campos nos efeitos padrão e nos graus de TR; exportação/importação preservam esses campos.

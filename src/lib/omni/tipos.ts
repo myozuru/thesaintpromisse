@@ -222,6 +222,8 @@ export type EfeitoMovimentoAtivo = {
 
 export type EfeitoSecundarioAtivo =
   | { tipo: 'condicao'; condicao: string; rodadas: number }
+  | { tipo: 'remover_condicao'; condicao: string }
+  | { tipo: 'pv_temporarios' | 'escudo'; valor: string; rodadas: number }
   | { tipo: 'puxar' | 'empurrar'; metros: number }
   | EfeitoMovimentoAtivo;
 

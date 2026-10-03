@@ -327,6 +327,8 @@ export interface Character {
   peCurrent: number;
   peMax: number;
   escCurrent: number;
+  /** Concessões OMNI ainda presentes na reserva de proteção, consumidas antes da reserva sem prazo. */
+  protecoesOmni?: { id: string; fonte: string; tipo: 'pv_temporarios' | 'escudo'; restante: number; rodadas: number }[];
   escMax: number;
   rd: number;
   rdByType: Record<DamageType, number>;

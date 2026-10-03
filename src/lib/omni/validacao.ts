@@ -72,6 +72,8 @@ const CondicionalAtivoSchema = z.object({
   desvantagem_tr_alvo: z.boolean().optional(), vantagem_acerto: z.boolean().optional(),
 });
 const EfeitoSecundarioSchema = z.union([
+  z.object({ tipo: z.literal('remover_condicao'), condicao: z.string().min(1) }),
+  z.object({ tipo: z.enum(['pv_temporarios', 'escudo']), valor: z.string().min(1), rodadas: z.number().finite().int().nonnegative() }),
   z.object({ tipo: z.literal('condicao'), condicao: z.string(), rodadas: z.number().finite() }),
   z.object({ tipo: z.enum(['puxar', 'empurrar']), metros: z.number().finite() }),
   z.object({ tipo: z.literal('movimento'), movimento_tipo: z.enum(['puxar', 'empurrar', 'avancar_ate', 'teleporte', 'trocar_posicao']), movimento_distancia: z.string(), movimento_alvo: z.enum(['usuario', 'alvo']).optional() }),
