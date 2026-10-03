@@ -59,7 +59,6 @@ const ALIASES_EXPLICITOS: Record<string, string[]> = {
   condicao_rodadas_restantes: ['condicao_rodadas'],
   origem: ['origem_id'],
   especializacao: ['especializacao_id'],
-  qtd_feiticos_tipo: ['qtd_feiticos_elemento'],
   tem_buff: ['tem_buff'],
   duas_armas: ['dual_wield'],
   defesa_duas_armas: ['dual_wield_def'],
@@ -111,7 +110,20 @@ function canonizarId(id: string): string {
   const exact = ALIAS_PARA_CANONICA.get(semArroba.toLowerCase());
   if (exact) return exact;
   const short = semArroba.replace(/^(USUARIO|ALVO)\./i, '');
-  return ALIAS_PARA_CANONICA.get(short.toLowerCase()) ?? short;
+  const direct = ALIAS_PARA_CANONICA.get(short.toLowerCase());
+  if (direct) return direct;
+  const dynamic: Array<[RegExp, string]> = [
+    [/^condicao_idade_rodadas_(.+)$/i, 'condicao_rodadas_desde_$1'],
+    [/^condicao_idade_conhecida_(.+)$/i, 'condicao_tem_idade_$1'],
+    [/^condicao_rodadas_(.+)$/i, 'condicao_rodadas_restantes_$1'],
+    [/^origem_id_(.+)$/i, 'origem_$1'],
+    [/^especializacao_id_(.+)$/i, 'especializacao_$1'],
+    [/^qtd_feiticos_elemento_(.+)$/i, 'qtd_feiticos_tipo_$1'],
+  ];
+  for (const [pattern, replacement] of dynamic) {
+    if (pattern.test(short)) return short.replace(pattern, replacement);
+  }
+  return short;
 }
 
 function categoriaDoGrupo(grupo: string): CategoriaGuiaId {
