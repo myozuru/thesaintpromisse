@@ -60,6 +60,7 @@ export type WorldSlice =
   | 'spellProposals'
   | 'establishments'
   | 'discounts'
+  | 'omniInventory'
   | 'omniEntidades'
   | 'omniRuntime'
   | 'omniSpatial'

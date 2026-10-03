@@ -1,3 +1,5 @@
+import { mergeInventory } from '@/lib/omni/inventorySync';
+import { useInventoryStore } from '@/stores/useInventoryStore';
 import { mergeIncomingCharacters, pickNewestPerCharacter, stampLocalChanges, withStamps } from '@/lib/charSyncStamps';
 import { useEffect } from 'react';
 import { getSocket, type WorldSlice } from '@/lib/socket';
@@ -396,6 +398,8 @@ function applyRemote(slice: WorldSlice, data: unknown) {
       useMenuStore.setState({ establishments: data as never });
     } else if (slice === 'discounts' && Array.isArray(data)) {
       useDiscountStore.setState({ discounts: data as never });
+    } else if (slice === 'omniInventory') {
+      useInventoryStore.setState(mergeInventory(useInventoryStore.getState(), data));
     } else if (slice === 'omniEntidades' && data && typeof data === 'object') {
       useOmniEntidadesStore.setState({ entidades: data as never });
     } else if (slice === 'omniRuntime' && data && typeof data === 'object') {
@@ -727,6 +731,13 @@ export function useMultiplayerSync() {
         const save = (payload: Json) => supabase.from('realtime_world').upsert({ slice, data: payload }).then(({ error }) => {
           if (error) console.warn(`[sync] falha ao salvar ${slice}:`, error.message);
         });
+        if (slice === 'omniInventory') {
+          void supabase.from('realtime_world').select('data').eq('slice', slice).maybeSingle().then(({ data: row }) => {
+            const current = useInventoryStore.getState();
+            void save(mergeInventory(current, row?.data) as unknown as Json);
+          });
+          return;
+        }
         if (slice !== 'characters' || !Array.isArray(json)) { void save(json); return; }
         // Fichas: junta com a cópia da nuvem antes de salvar, ficha a ficha pela
         // edição mais recente — uma tela com cópia antiga nunca apaga dados novos.
@@ -762,6 +773,10 @@ export function useMultiplayerSync() {
         if (row.slice === 'tempTemplates') continue;
         if (row.data !== null) applyRemote(row.slice as WorldSlice, row.data);
       }
+      const inventory = useInventoryStore.getState();
+      if (Object.keys(inventory.items).length || Object.keys(inventory.deleted).length) {
+        socket.emit('state:update', { slice: 'omniInventory', data: { items: inventory.items, deleted: inventory.deleted } });
+      }
       applyRemote('tempTemplates', mergedTemplates);
       if (shouldMigrateLocal) {
         localStorage.setItem(migrationKey, 'true');
@@ -778,7 +793,7 @@ export function useMultiplayerSync() {
       money?: unknown; items?: unknown; calendar?: unknown; spellProposals?: unknown;
       establishments?: unknown; discounts?: unknown;
       omniEntidades?: unknown; omniRuntime?: unknown; omniSpatial?: unknown;
-      omniProposals?: unknown;
+      omniProposals?: unknown; omniInventory?: unknown;
       mapScene?: unknown;
       testRequests?: unknown;
     }) => {
@@ -834,6 +849,12 @@ export function useMultiplayerSync() {
       applyRemote('establishments', mergedEsts);
       applyRemote('discounts', mergedDiscounts);
       applyRemote('omniProposals', mergedOmniProps);
+
+      applyRemote('omniInventory', world.omniInventory);
+      const inventory = useInventoryStore.getState();
+      if (Object.keys(inventory.items).length || Object.keys(inventory.deleted).length) {
+        socket.emit('state:update', { slice: 'omniInventory', data: { items: inventory.items, deleted: inventory.deleted } });
+      }
 
       // Slices "replace": só aplica o remoto se o local estiver vazio/default.
       // Logs, combat e chronos podem ser puxados do servidor sem perda.
@@ -1084,6 +1105,17 @@ export function useMultiplayerSync() {
       socket.emit('state:update', { slice: 'discounts', data: next });
     });
 
+    let lastInventory = JSON.stringify({ items: useInventoryStore.getState().items, deleted: useInventoryStore.getState().deleted });
+    const unsubInventory = useInventoryStore.subscribe(() => {
+      const state = useInventoryStore.getState();
+      const next = { items: state.items, deleted: state.deleted };
+      const json = JSON.stringify(next);
+      if (json === lastInventory) return;
+      lastInventory = json;
+      if (applyingRemote) return;
+      socket.emit('state:update', { slice: 'omniInventory', data: next });
+    });
+
     // Omni — entidades (somente Mestre publica; jogadores recebem broadcast).
     let lastOmniEnt = JSON.stringify(pickOmniEntidades(useOmniEntidadesStore.getState()));
     const unsubOmniEnt = useOmniEntidadesStore.subscribe((state) => {
@@ -1286,6 +1318,7 @@ export function useMultiplayerSync() {
       unsubProposals();
       unsubEsts();
       unsubDiscounts();
+      unsubInventory();
       unsubOmniEnt();
       unsubOmniRt();
       unsubOmniSp();

@@ -3,6 +3,7 @@
  * Cada entrada é uma cópia "snapshot" da entidade no momento da aquisição,
  * permitindo carregar a flag isBought sem mexer no template original.
  */
+import { stampInventoryChanges } from '@/lib/omni/inventorySync';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { EntidadeOmni } from '@/lib/omni/tipos';
@@ -15,6 +16,8 @@ export interface InventoryItem {
   /** Snapshot da entidade Omni (com comercio.isBought ajustado). */
   entity: EntidadeOmni;
   acquiredAt: number;
+  /** Versão da instância para sincronização entre telas. */
+  _syncAt?: number;
   /** Se o item está atualmente equipado em algum slot da ficha. */
   isEquipped?: boolean;
   /**
@@ -39,6 +42,7 @@ export interface InventoryItem {
 }
 
 interface InventoryState {
+  deleted: Record<string, number>;
   items: Record<string, InventoryItem>;
   /** Adiciona um item ao inventário do personagem (clonando a entidade). */
   add: (ownerId: string, entity: EntidadeOmni, opts?: { markBought?: boolean }) => InventoryItem;
@@ -94,6 +98,7 @@ export const useInventoryStore = create<InventoryState>()(
   persist(
     (set, get) => ({
       items: {},
+      deleted: {},
 
       add: (ownerId, entity, opts) => {
         const total = entity.usos?.total;
@@ -234,3 +239,9 @@ export const useInventoryStore = create<InventoryState>()(
 if (import.meta.env.DEV && typeof window !== 'undefined') {
   (window as unknown as Record<string, unknown>).__inventoryStore = useInventoryStore;
 }
+
+// Antes dos subscribers de rede: carimba mutações e conserva remoções no cache.
+useInventoryStore.subscribe((next, prev) => {
+  const stamped = stampInventoryChanges(next, prev);
+  if (stamped !== next) useInventoryStore.setState(stamped);
+});
