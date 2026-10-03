@@ -579,7 +579,7 @@ function TabAutocompletePlayground({ onInserir }: { onInserir: (s: string) => vo
         {' '}<kbd className="px-1.5 py-0.5 rounded bg-violet-500/20 border border-violet-500/40 text-violet-200 font-mono text-xs">↑ ↓</kbd> para navegar,
         {' '}<kbd className="px-1.5 py-0.5 rounded bg-violet-500/20 border border-violet-500/40 text-violet-200 font-mono text-xs">Enter</kbd> aceita,
         {' '}<kbd className="px-1.5 py-0.5 rounded bg-violet-500/20 border border-violet-500/40 text-violet-200 font-mono text-xs">Esc</kbd> fecha.
-        Funciona com todas as <strong>~200 chaves</strong> do sistema.
+        Usa as chaves publicadas no catálogo oficial do OMNI.
       </p>
 
       <div className="relative rounded-md border border-violet-500/40 bg-zinc-950/80">
