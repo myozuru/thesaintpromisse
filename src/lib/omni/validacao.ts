@@ -198,6 +198,9 @@ const EntidadeSchema = z.object({
   }).optional(),
   bonusEquipadoFormula: z.object({
     hp: z.string().optional(), pe: z.string().optional(), ca: z.string().optional(), rd: z.string().optional(), esc: z.string().optional(), slots: z.string().optional(),
+    deslocamento: z.string().optional(),
+    pericias: z.record(z.string(), z.string()).optional(),
+    trs: z.object({ astucia: z.string().optional(), fortitude: z.string().optional(), integridade: z.string().optional(), reflexos: z.string().optional(), vontade: z.string().optional() }).optional(),
   }).optional(),
   combatData: CombatDataSchema.optional(),
   usos: z.object({
