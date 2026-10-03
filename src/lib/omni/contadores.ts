@@ -14,6 +14,8 @@ export interface OpcoesContador {
   escopoTeto?: 'global' | 'porFonte';
   /** Criatura que originou o acúmulo (ex.: aliado ferido). */
   fonteId?: string;
+  /** Destino explicitamente selecionado por `contador nome fonte id`. */
+  fonteExata?: boolean;
 }
 
 export interface ResultadoContador {
@@ -48,6 +50,17 @@ export function calcularContador(
   const anterior = c[nome] ?? 0;
   const teto = op.teto !== undefined && op.teto > 0 ? Math.round(op.teto) : undefined;
   let consumido = 0;
+
+  if (op.fonteExata && op.fonteId) {
+    const fk = `${prefixoFonte(nome)}${op.fonteId}`;
+    const atual = c[fk] ?? 0;
+    const qtd = Math.max(0, Math.round(op.valor));
+    if (acao === 'INCREMENTAR_CONTADOR') c[fk] = teto === undefined ? atual + qtd : Math.min(teto, atual + qtd);
+    else if (acao === 'CONSUMIR_CONTADOR') { consumido = Math.min(atual, qtd || atual); c[fk] = atual - consumido; }
+    else c[fk] = acao === 'ZERAR_CONTADOR' ? 0 : teto === undefined ? qtd : Math.min(teto, qtd);
+    c[nome] = somarFontes(c, nome);
+    return { counters: c, anterior, consumido };
+  }
 
   if (acao === 'INCREMENTAR_CONTADOR') {
     const qtd = Math.round(op.valor);

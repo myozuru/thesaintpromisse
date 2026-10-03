@@ -18,6 +18,7 @@
 import type { CombatEffect } from './tipos';
 import { aplicarEfeitoNoPersonagem } from './aplicarEfeito';
 import { avaliarFormula } from './parser';
+import { planejarTransferencia } from './componentes/transferencia';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { ALL_CONDITIONS, type ActiveCondition } from '@/types/conditions';
 
@@ -98,6 +99,14 @@ export function executarCombatEffect(
   const out = avaliarFormulaEfeito(eff, ctx);
   const valor = Math.round(out.valor);
   const targetId = resolverTargetId(eff, ctx);
+  if (eff.transferencia) {
+    const store = useCharacterStore.getState();
+    const c = store.characters.find(x => x.id === targetId);
+    const plano = c && !out.diagnosticos.length ? planejarTransferencia(c, eff.transferencia.origem, eff.transferencia.destino, valor) : undefined;
+    if (!plano) return { aplicado: 0, detalhe: 'Transferência inválida: selecione dois saldos compatíveis.' };
+    store.updateCharacter(targetId, plano.patch);
+    return { aplicado: plano.valor };
+  }
   const r = aplicarEfeitoNoPersonagem(targetId, eff.type, eff.resourcePath, valor, {
     peSpellReduction: eff.peSpellReduction,
     immunityGrant: eff.immunityGrant,

@@ -30,7 +30,7 @@ import {
   OPERADORES_LOGICOS,
 } from './constantesDoSistema';
 import { avaliarFormula } from './parser';
-import { canonicalizarChave, expandirParaCaminhoLegado } from './keyAliases';
+import { canonicalizarChave } from './keyAliases';
 import { lerCaminhoOmni, montarVariaveisDoPersonagem } from './resolvedor';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLogStore } from '@/stores/useLogStore';
@@ -38,6 +38,7 @@ import { useOmniRuntimeStore } from '@/stores/useOmniRuntimeStore';
 import { grantAdvantage, clearAllAdvantage, type AdvScope } from './rollAdvantage';
 import { adicionarImunidade, removerImunidade, formatarImunidade } from './immunity';
 import { calcularContador } from './contadores';
+import { aplicarEfeitoNoPersonagem } from './aplicarEfeito';
 
 const PROFUNDIDADE_MAX = 8;
 
@@ -175,36 +176,20 @@ function aplicarPatchNumerico(
   delta: number,
   modo: 'somar' | 'definir' | 'multiplicar' | 'dividir',
 ) {
+  if (modo === 'somar') {
+    aplicarEfeitoNoPersonagem(charId, delta < 0 ? 'SUBTRAIR' : 'ADICIONAR', caminhoRaw, Math.abs(delta));
+    return;
+  }
+  if (modo === 'definir') {
+    aplicarEfeitoNoPersonagem(charId, 'MODIFICADOR', caminhoRaw, delta);
+    return;
+  }
   const store = useCharacterStore.getState();
   const c = store.characters.find((x) => x.id === charId);
   if (!c) return;
-  // 🧭 Aceita tanto a forma legada (status.vida.atual) quanto a nova
-  // canônica curta (vida) — colapsa para o mesmo caminho interno.
-  const caminhoCanonico = canonicalizarChave(caminhoRaw);
-  const caminho = expandirParaCaminhoLegado(caminhoCanonico) || caminhoRaw;
-
-  const calcular = (atual: number, max: number): number => {
-    let bruto: number;
-    switch (modo) {
-      case 'somar': bruto = atual + delta; break;
-      case 'definir': bruto = delta; break;
-      case 'multiplicar': bruto = atual * delta; break;
-      case 'dividir': bruto = delta === 0 ? atual : atual / delta; break;
-    }
-    return Math.max(0, Math.min(max, Math.round(bruto)));
-  };
-
-  // Mapeia caminhos Omni → campos do Character existente.
-  const patches: Record<string, Partial<Character>> = {
-    'status.vida.atual': {
-      hpCurrent: calcular(c.hpCurrent ?? 0, c.hpMax ?? 0),
-    },
-    'status.energiaAmaldicoada.atual': {
-      peCurrent: calcular(c.peCurrent ?? 0, c.peMax ?? 0),
-    },
-  };
-  const patch = patches[caminho];
-  if (patch) store.updateCharacter(charId, patch);
+  const atual = lerCaminhoOmni(c, caminhoRaw);
+  const novo = modo === 'multiplicar' ? atual * delta : delta === 0 ? atual : atual / delta;
+  aplicarEfeitoNoPersonagem(charId, 'MODIFICADOR', caminhoRaw, novo);
 }
 
 function executarAcao(a: AcaoLogica, ctx: ContextoRuntime, log: (m: string) => void) {
@@ -235,7 +220,7 @@ function executarAcao(a: AcaoLogica, ctx: ContextoRuntime, log: (m: string) => v
         const red = alvoChar.omniCostReduction?.[key];
         let custo = Math.abs(valor);
         if (red && red.reduce > 0) custo = Math.max(red.min ?? 1, custo - red.reduce);
-        aplicarPatchNumerico(alvoChar.id, a.caminhoAlvo, -custo, 'somar');
+        aplicarPatchNumerico(alvoChar.id, a.caminhoAlvo, Math.max(0, lerCaminhoOmni(alvoChar, a.caminhoAlvo) - custo), 'definir');
         log(`${nomeOrigem}: ${nomeAlvo} gastou ${custo} em ${a.caminhoAlvo}${red ? ` (reduzido de ${Math.abs(valor)})` : ''}`);
       }
       break;

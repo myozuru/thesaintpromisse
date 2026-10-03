@@ -33,6 +33,7 @@ import { resolverGatilho, aliasPreferido } from './gatilhoAliases';
 import { ALL_CONDITIONS } from '@/types/conditions';
 import { transformarForaDasComposicoes } from './componentes/expressoes';
 import { interpretarComposicao } from './componentes/interpretar';
+import { destinoComposto } from './componentes/escrita';
 
 /** Palavras reservadas da OmniScript. */
 export const OMNI_SCRIPT_KEYWORDS = [
@@ -70,6 +71,7 @@ const ALIASES_RECURSO: Record<string, string> = {
 };
 
 function traduzirRecurso(recurso: string): string {
+  if (/\s/.test(recurso)) return recurso;
   const k = recurso.toLowerCase();
   return ALIASES_RECURSO[k] ?? k;
 }
@@ -208,10 +210,10 @@ function extrairAlvoDoRecurso(
   fallback: CombatEffect['target'],
 ): { target: CombatEffect['target']; recurso: string } {
   const m = raw.match(/^@?(usuario|alvo|area)\.(.+)$/i);
-  if (!m) return { target: fallback, recurso: raw.toLowerCase() };
+  if (!m) return { target: fallback, recurso: /\s/.test(raw) ? raw : raw.toLowerCase() };
   const px = m[1].toUpperCase();
   const target = (px === 'USUARIO' ? 'USUARIO' : px === 'ALVO' ? 'ALVO' : 'AREA') as CombatEffect['target'];
-  return { target, recurso: m[2].toLowerCase() };
+  return { target, recurso: /\s/.test(m[2]) ? m[2] : m[2].toLowerCase() };
 }
 
 /**
@@ -225,6 +227,14 @@ function parsearComando(
   opts: OmniScriptParseOpts = {},
 ): { efeito?: CombatEffect; erro?: OmniScriptIssue } {
   let txt = raw.trim();
+  const transferencia = txt.match(/^transferir\s+(.+?)\s+de\s+(.+?)\s+para\s+(.+?)$/i);
+  if (transferencia) {
+    const origem = extrairAlvoDoRecurso(transferencia[2], opts.defaultTarget ?? 'ALVO');
+    const destino = extrairAlvoDoRecurso(transferencia[3], origem.target);
+    if (origem.target !== destino.target || !destinoComposto(origem.recurso) || !destinoComposto(destino.recurso)) return { erro: { posicao, trecho: raw, mensagem: 'Transferência exige saldos graváveis da mesma ficha.' } };
+    return { efeito: { id: crypto.randomUUID(), type: 'MODIFICADOR', target: origem.target, resourcePath: destino.recurso,
+      formula: autoArrobaExpressao(normalizarConjuncaoComoSoma(transferencia[1])), transferencia: { origem: origem.recurso, destino: destino.recurso } } };
+  }
   // Alvo explícito dos comandos especiais (condição, botão, imunidade, rolagem).
   const alvoEspecial = txt.match(/\s+em\s+@?(usuario|alvo|area)\s*$/i);
   if (alvoEspecial) {
@@ -437,10 +447,11 @@ function parsearComando(
   }
 
   // Forma absoluta: `anular <recurso>` / `ignorar <recurso>` (sem fórmula).
-  const mAbs = txt.match(/^(anular|ignorar)\s+(@?[A-Za-zÀ-ÿ_][\w.]*)\s*$/i);
+  const mAbs = txt.match(/^(anular|ignorar)\s+(.+?)\s*$/i);
   if (mAbs) {
     const cmd = mAbs[1].toLowerCase() as 'anular' | 'ignorar';
     const recursoBruto = mAbs[2].trim();
+    if (/\s/.test(recursoBruto) && !destinoComposto(recursoBruto)) return { erro: { posicao, trecho: raw, mensagem: 'Essa composição não identifica um recurso gravável.' } };
     const { target, recurso } = extrairAlvoDoRecurso(recursoBruto, opts.defaultTarget ?? 'ALVO');
     return {
       efeito: {
@@ -466,7 +477,7 @@ function parsearComando(
     if (!quoted && !resolverTipoDano(damageType)) return { erro: { posicao, trecho: raw, mensagem: `Tipo de dano desconhecido: ${damageType}. Use um código do motor (ex.: DQ).` } };
     txt = txt.slice(0, mTipo.index).trim();
   }
-  const m = txt.match(/^(somar|subtrair|reduzir|definir)\s+(.+?)\s+em\s+(@?[A-Za-zÀ-ÿ_][\w.]*)(?:\s+at[eé]\s+(.+?))?(\s+por_fonte)?\s*$/i);
+  const m = txt.match(/^(somar|subtrair|reduzir|definir)\s+(.+?)\s+em\s+(.+?)(?:\s+at[eé]\s+(.+?))?(\s+por_fonte)?\s*$/i);
   if (!m) {
     return {
       erro: {
@@ -479,6 +490,7 @@ function parsearComando(
   const cmd = m[1].toLowerCase();
   const expr = m[2].trim();
   const recursoBruto = m[3].trim();
+  if (/\s/.test(recursoBruto) && !destinoComposto(recursoBruto)) return { erro: { posicao, trecho: raw, mensagem: 'Essa composição não identifica um recurso gravável.' } };
   const tipo = COMANDO_PARA_TIPO[cmd];
   if (!tipo) {
     return { erro: { posicao, trecho: raw, mensagem: `Comando desconhecido: ${cmd}` } };
@@ -830,6 +842,10 @@ export function efeitosParaScript(
 
   // Serializa um único efeito como `<verbo> <formula> em <recurso>` (ou forma absoluta).
   const renderEfeito = (e: CombatEffect, defaultTarget = def): string => {
+    if (e.transferencia) {
+      const prefixo = e.target !== defaultTarget ? `${e.target.toLowerCase()}.` : '';
+      return `transferir ${e.formula} de ${prefixo}${e.transferencia.origem} para ${prefixo}${e.transferencia.destino}`;
+    }
     const alvoEspecial = e.target !== defaultTarget ? ` em ${e.target.toLowerCase()}` : '';
     if (e.buttonOnly) return `botao${e.buttonOnly.label ? ` ${JSON.stringify(e.buttonOnly.label)}` : ''}${alvoEspecial}`;
     if (e.diceSwitch) {

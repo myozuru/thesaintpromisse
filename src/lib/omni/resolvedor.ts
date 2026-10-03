@@ -5,6 +5,7 @@ import { dadosEquipamento } from './componentes/equipamento';
 import { dadosCena, dadosTurnos } from './componentes/cena';
 import { dadosMagia } from './componentes/magia';
 import { dadosHistorico } from './componentes/eventos';
+import { avaliarFormula } from './parser';
 /**
  * Resolvedor de Caminhos (ponte Omni ↔ sistema existente).
  *
@@ -125,6 +126,7 @@ export function projetarPersonagemParaOmni(c: Character): Record<string, unknown
 
 /** Lê um caminho Omni diretamente do Character. */
 export function lerCaminhoOmni(c: Character, caminho: string): number {
+  if (/\s/.test(caminho)) return avaliarFormula(caminho, montarVariaveisDoPersonagem(c)).valor;
   const chave = canonicalizarChave(caminho);
   if (!chave) return 0;
   let legado = expandirParaCaminhoLegado(chave);

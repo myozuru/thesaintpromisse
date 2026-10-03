@@ -315,6 +315,12 @@ export const useCombatStore = create<CombatStore>()(
       setParticipants: (ids) => set({ participantIds: ids }),
       clearParticipants: () => set({ participantIds: [] }),
       startCombat: (entries) => {
+        for (const c of useCharacterStore.getState().characters) {
+          useCharacterStore.getState().updateCharacter(c.id, { omniCounters: {
+            ...c.omniCounters, __omni_rodada: 1, cura_recebida_nesta_rodada: 0,
+            dano_recebido_nesta_rodada: 0, vida_perdida_nesta_rodada: 0,
+          } });
+        }
         const sorted = [...entries].sort((a, b) => b.total - a.total);
         set((s) => ({
           inCombat: true,

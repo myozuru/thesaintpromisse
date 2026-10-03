@@ -1,4 +1,5 @@
 import { resolverTipoDano } from './contextoDano';
+import { destinoComposto } from './componentes/escrita';
 /**
  * 🎯 Ponte Omni-Engine → Character Store.
  *
@@ -23,9 +24,16 @@ const RECURSO_PARA_CAMPO: Record<string, string> = {
   defesa: 'ca',
   esquiva: 'escCurrent',
   rd_curse: 'rd',
+  vida_temp: 'escCurrent', vida_temp_max: 'escMax', pe_temp: 'tempPE',
+  sorte: 'luckCurrent', sorte_max: 'luckMax', dado_vida: 'hitDiceCurrent', dado_vida_max: 'hitDiceMax',
+  reserva_pe: 'economiaPEReserve', fome: 'hunger',
+  ataques_restantes: 'actionsCurrent', ataques_max: 'actionsMax', acao_bonus: 'bonusActionsCurrent',
+  reacoes_restantes: 'reactionsCurrent', reacoes_max: 'reactionsMax', ado_restantes: 'opportunityCurrent', ado_max: 'opportunityMax',
 };
 
 function normalizarRecursoAplicacao(resourcePath?: string): string {
+  if (resourcePath) { const destino = destinoComposto(resourcePath); if (destino) return destino.caminho; }
+  if (resourcePath && /\s/.test(resourcePath)) return destinoComposto(resourcePath)?.caminho ?? '';
   return canonicalizarChave(resourcePath || 'vida') || 'vida';
 }
 
@@ -55,6 +63,7 @@ export function aplicarEfeitoNoPersonagem(
     contador?: { teto?: number; porFonte?: boolean; fonteId?: string };
   },
 ): { aplicado: number; absorvidoPorBloqueio?: boolean; consumido?: number } {
+  if (!Number.isFinite(valor)) return { aplicado: 0 };
   // 🪄 Caminho especial: redutor de custo de PE de feitiços. NÃO mexe em
   // recursos numéricos — apenas adiciona/atualiza entrada em
   // `omniSpellCostReduction[]` com o valor calculado da fórmula.
@@ -89,6 +98,7 @@ export function aplicarEfeitoNoPersonagem(
   }
 
   const path = normalizarRecursoAplicacao(resourcePath);
+  const destino = resourcePath ? destinoComposto(resourcePath) : undefined;
   const store = useCharacterStore.getState();
   const c = store.characters.find((x) => x.id === charId);
   if (!c) return { aplicado: 0 };
@@ -99,14 +109,15 @@ export function aplicarEfeitoNoPersonagem(
   {
     const bruto = (resourcePath ?? '').trim().toLowerCase().replace(/^(usuario|alvo|area)\./, '');
     const mC = bruto.match(/^contador[._]([a-z0-9_]+)$/);
-    if (mC) {
-      const nome = mC[1];
+    if (mC || destino?.contador) {
+      const nome = destino?.contador?.nome ?? mC![1];
       const acao = tipo === 'ADICIONAR' ? 'INCREMENTAR_CONTADOR' : tipo === 'SUBTRAIR' ? 'CONSUMIR_CONTADOR' : 'DEFINIR_CONTADOR';
       const res = calcularContador(c.omniCounters ?? {}, nome, acao, {
         valor,
         teto: extras?.contador?.teto,
-        escopoTeto: extras?.contador?.porFonte ? 'porFonte' : 'global',
-        fonteId: extras?.contador?.fonteId,
+        escopoTeto: destino?.contador?.fonte || extras?.contador?.porFonte ? 'porFonte' : 'global',
+        fonteId: destino?.contador?.fonte ?? extras?.contador?.fonteId,
+        fonteExata: Boolean(destino?.contador?.fonte),
       });
       store.updateCharacter(charId, { omniCounters: res.counters });
       return { aplicado: res.counters[nome] ?? 0, consumido: res.consumido };
@@ -200,13 +211,14 @@ export function aplicarEfeitoNoPersonagem(
   else if (tipo === 'ADICIONAR') novo = atual + Math.round(valor);
   else novo = Math.round(valor);
 
-  store.updateCharacter(charId, { [campo]: novo } as Partial<typeof c>);
+  const maximos: Record<string, string> = { peCurrent: 'peMax', escCurrent: 'escMax', luckCurrent: 'luckMax', hitDiceCurrent: 'hitDiceMax', actionsCurrent: 'actionsMax', reactionsCurrent: 'reactionsMax', opportunityCurrent: 'opportunityMax' };
+  const limite = maximos[campo] ? (c as unknown as Record<string, number>)[maximos[campo]] : undefined;
+  novo = Math.max(0, limite === undefined ? novo : Math.min(Math.max(0, limite), novo));
 
-  if (path === 'vida_max') {
-    store.updateCharacter(charId, { hpCurrent: Math.min(c.hpCurrent, novo) } as Partial<typeof c>);
-  } else if (path === 'pe_max') {
-    store.updateCharacter(charId, { peCurrent: Math.min(c.peCurrent, novo) } as Partial<typeof c>);
-  }
+  const atuais: Record<string, string> = { hpMax: 'hpCurrent', peMax: 'peCurrent', escMax: 'escCurrent', luckMax: 'luckCurrent', hitDiceMax: 'hitDiceCurrent', actionsMax: 'actionsCurrent', reactionsMax: 'reactionsCurrent', opportunityMax: 'opportunityCurrent' };
+  const patch: Record<string, number> = { [campo]: novo };
+  if (atuais[campo]) patch[atuais[campo]] = Math.min((c as unknown as Record<string, number>)[atuais[campo]] ?? 0, novo);
+  store.updateCharacter(charId, patch as Partial<typeof c>);
   return { aplicado: novo };
 }
 
