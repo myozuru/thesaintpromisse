@@ -174,16 +174,51 @@ export function GuiaFormulasDialog({ aberto, onClose, modo = 'dialog', onAplicar
             <h2 className="text-base font-semibold text-primary">Exemplos clicáveis</h2>
             <div className="grid gap-2 sm:grid-cols-2">
               {[
-                { titulo: 'Vitalidade dinâmica', script: 'somar @USUARIO.treino * 2 em vida_max', descricao: 'Aumenta vida máxima conforme o treinamento.' },
-                { titulo: 'Ataque básico', script: 'subtrair @USUARIO.for + 2d6 em @ALVO.vida', descricao: 'Força e dados determinam o dano.' },
-                { titulo: 'Maldição severa', script: 'subtrair 10 em @ALVO.vida_max, definir 0 em @ALVO.pe', descricao: 'Reduz vida máxima e zera PE do alvo.' },
-                { titulo: 'Dreno vital', script: 'subtrair 2d6 em @ALVO.vida, somar 1d6 em @USUARIO.vida', descricao: 'Causa dano e recupera vida.' },
-                { titulo: 'Bola de fogo', script: 'subtrair @USUARIO.int + 2d6 em @ALVO.vida', descricao: 'Dano mágico baseado em Inteligência.' },
-                { titulo: 'Buff de defesa', script: 'somar @USUARIO.pericia_feiticaria em defesa', descricao: 'Usa Feitiçaria como bônus defensivo.' },
-                { titulo: 'Área escalável', script: 'subtrair @USUARIO.int + @USUARIO.nivel em @ALVO.vida', descricao: 'Dano que escala com nível.' },
-                { titulo: 'Postura defensiva', script: 'somar 2 em defesa, subtrair 2 em acerto', descricao: 'Troca acerto por defesa.' },
-                { titulo: 'Condição por gatilho', script: '@fim_turno -> aplicar cego em alvo', descricao: 'Demonstra o alias amigável de evento.' },
-                { titulo: 'Recuperar energia', script: 'somar 1d6 em @USUARIO.pe', descricao: 'Recupera PE com dados.' },
+                {
+                  titulo: 'Cura limitada à vida que falta',
+                  script: 'somar min(1d8 + @USUARIO.sab, @ALVO.vida_max - @ALVO.vida) em @ALVO.vida',
+                  descricao: 'Rola 1d8 e soma Sabedoria. min compara essa cura com o espaço que falta até a vida máxima e usa o menor valor. Exemplo: se a rolagem cura 9, mas faltam 4 PV, recupera só 4.',
+                },
+                {
+                  titulo: 'Golpe que aproveita a vida baixa',
+                  script: 'se @ALVO.vida_pct <= 25 entao subtrair 2d8 em @ALVO.vida',
+                  descricao: 'A condição consulta a porcentagem de vida do alvo. O golpe de 2d8 só acontece quando ela está em 25% ou menos; acima desse limite, o comando não aplica dano.',
+                },
+                {
+                  titulo: 'Explosão em área',
+                  script: 'subtrair 2d6 + @USUARIO.inteligencia em area.vida',
+                  descricao: 'Rola 2d6, soma Inteligência e envia o resultado ao recurso Vida do alvo AREA. O construtor determina quais criaturas fazem parte da área.',
+                },
+                {
+                  titulo: 'Drenagem em duas etapas',
+                  script: 'subtrair 2d6 + @USUARIO.forca em @ALVO.vida, somar floor(@RESULTADO_1 / 2) em @USUARIO.vida',
+                  descricao: 'Primeiro calcula e aplica o dano ao alvo. Depois, @RESULTADO_1 reutiliza o resultado do primeiro comando; floor arredonda para baixo a metade que será recuperada pelo usuário.',
+                },
+                {
+                  titulo: 'Recuperar PE sem passar do máximo',
+                  script: 'somar min(3, @ALVO.pe_max - @ALVO.pe) em @ALVO.pe',
+                  descricao: 'Tenta recuperar 3 PE. min limita a recuperação ao espaço disponível: se faltam 2 PE para o máximo, recupera 2; se faltam 5, recupera 3.',
+                },
+                {
+                  titulo: 'Defesa que cresce com treinamento',
+                  script: 'somar @USUARIO.treino em usuario.defesa',
+                  descricao: 'Adiciona à Defesa do usuário o valor atual de Treinamento. Com Treinamento 4, o bônus aplicado é +4; a fórmula acompanha o valor da ficha.',
+                },
+                {
+                  titulo: 'Aplicar cegueira por duas rodadas',
+                  script: 'aplicar cego rodadas 2 em alvo',
+                  descricao: 'Aplica a condição Cego ao alvo e define sua duração em duas rodadas. O comando de condição não precisa ser escrito como uma alteração numérica de Vida ou PE.',
+                },
+                {
+                  titulo: 'Efeito aleatório no fim do turno',
+                  script: '@fim_turno -> ( rolar 1d4 entao ( 1: aplicar cego rodadas 1, 2: aplicar surdo rodadas 1, 3-4: subtrair 2d6 em alvo.vida ) )',
+                  descricao: 'No fim do turno, rola 1d4. Resultado 1 aplica Cego; 2 aplica Surdo; 3 ou 4 causa 2d6 de dano. Os parênteses mantêm todas as opções sob o mesmo gatilho.',
+                },
+                {
+                  titulo: 'Reduzir custo de feitiços de círculo baixo',
+                  script: 'reduzir custo pe de feitico nivel:1-3 em 2 min 1',
+                  descricao: 'Reduz em 2 PE o custo de feitiços dos níveis 1 a 3. min 1 impede que o custo final fique abaixo de 1 PE.',
+                },
               ].map((item) => <ExemploCard key={item.titulo} titulo={item.titulo} formula={item.script} explicacao={item.descricao} onInsert={inserir} />)}
             </div>
           </section>
@@ -469,19 +504,22 @@ function FuncCard({ fn, desc, ex }: { fn: string; desc: string; ex: string }) {
 
 function ExemploCard({ titulo, formula, explicacao, onInsert }: { titulo: string; formula: string; explicacao: string; onInsert?: (trecho: string) => void }) {
   return (
-    <div className="rounded-md border border-primary/20 bg-primary/5 p-2.5">
-      <div className="text-xs font-semibold text-foreground">{titulo}</div>
+    <article className="rounded-lg border border-border bg-background/70 p-3 shadow-sm">
+      <h3 className="text-sm font-semibold leading-relaxed text-foreground">{titulo}</h3>
       <button
         type="button"
         onClick={() => onInsert?.(formula)}
         disabled={!onInsert}
-        title={onInsert ? 'Clique para inserir/copiar a fórmula' : ''}
-        className="block w-full text-left mt-1 text-xs font-mono text-primary bg-background/60 px-2 py-1 rounded whitespace-pre-wrap hover:bg-primary/15 transition-colors disabled:cursor-default"
+        title={onInsert ? 'Clique para inserir/copiar o exemplo' : ''}
+        className="mt-2 block w-full break-words rounded-md border border-primary/20 bg-muted/70 px-3 py-2 text-left font-mono text-sm leading-relaxed text-primary hover:border-primary/50 hover:bg-primary/10 transition-colors disabled:cursor-default"
       >
         {formula}
       </button>
-      <div className="text-xs text-muted-foreground mt-1">{explicacao}</div>
-    </div>
+      <div className="mt-3 border-t border-border pt-2">
+        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Como funciona</div>
+        <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-foreground/80">{explicacao}</p>
+      </div>
+    </article>
   );
 }
 
