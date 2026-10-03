@@ -170,6 +170,23 @@ function criarChavesGuia(): ChaveGuia[] {
     if (!card || alias.includes('.')) continue;
     if (alias !== id && !card.aliases.includes(alias)) card.aliases.push(alias);
   }
+  const aliasesDeTemplate: Array<[RegExp, (match: RegExpMatchArray) => string]> = [
+    [/^condicao_rodadas_desde_(.+)$/i, (m) => 'condicao_idade_rodadas_' + m[1]],
+    [/^condicao_tem_idade_(.+)$/i, (m) => 'condicao_idade_conhecida_' + m[1]],
+    [/^condicao_rodadas_restantes_(.+)$/i, (m) => 'condicao_rodadas_' + m[1]],
+    [/^origem_(.+)$/i, (m) => 'origem_id_' + m[1]],
+    [/^especializacao_(.+)$/i, (m) => 'especializacao_id_' + m[1]],
+    [/^qtd_feiticos_tipo_(.+)$/i, (m) => 'qtd_feiticos_elemento_' + m[1]],
+  ];
+  for (const card of cards.values()) {
+    for (const [pattern, format] of aliasesDeTemplate) {
+      const match = card.id.match(pattern);
+      if (match) {
+        const alias = format(match);
+        if (!card.aliases.includes(alias)) card.aliases.push(alias);
+      }
+    }
+  }
 
   return [...cards.values()].sort((a, b) => a.categoria.localeCompare(b.categoria) || a.id.localeCompare(b.id));
 }
