@@ -56,6 +56,20 @@ describe('editor e execução por cliques reais', () => {
     fireEvent.change(screen.getByLabelText('Largura da linha'), { target: { value: '3' } });
     expect(save.mock.lastCall![0].acoesAtivas[0].area).toEqual({ forma: 'linha', tamanho_m: 12, largura_m: 3 });
   });
+  it('configura uma disputa de perícias e preserva as opções no editor', () => {
+    const save = vi.fn();
+    function Tela() {
+      const [ent, setEnt] = useState<EntidadeOmni>({ ...novaEntidade('item', 'item'), acoesAtivas: [novaAcaoAtiva()] });
+      return <EditorAcoesAtivas ent={ent} setEnt={e => { save(e); setEnt(e); }} />;
+    }
+    render(<Tela />);
+    fireEvent.change(screen.getByLabelText('Teste da ação'), { target: { value: 'disputa' } });
+    fireEvent.change(screen.getByLabelText('Perícia do usuário'), { target: { value: 'Enganação' } });
+    fireEvent.change(screen.getByLabelText('Perícias possíveis do alvo'), { target: { value: 'Percepção, Intuição' } });
+    expect(save.mock.lastCall![0].acoesAtivas[0]).toMatchObject({
+      teste: 'disputa', pericia_usuario: 'Enganação', pericias_alvo: ['Percepção', 'Intuição'],
+    });
+  });
   it('seleciona dois alvos e executa uma única ação', async () => {
     painel({ tipo_alvo: 'multiplo', filtro_alvo: 'inimigos', max_alvos: '2' });
     const select = screen.getByLabelText('Alvos de Teste') as HTMLSelectElement;

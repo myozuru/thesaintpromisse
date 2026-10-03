@@ -300,8 +300,11 @@ export interface AcaoAtivaConfig {
   /** Fórmula inteira, por exemplo "3" ou "@USUARIO.treino". */
   max_alvos?: string;
   area?: { forma: 'cone' | 'linha' | 'raio_em_si' | 'raio_no_ponto'; tamanho_m: number; largura_m?: number };
-  teste: 'tr' | 'ataque' | 'nenhum';
+  teste: 'tr' | 'ataque' | 'disputa' | 'nenhum';
   tr?: TrNome;
+  /** Perícia usada pelo usuário e conjunto de perícias defensivas disponíveis ao alvo. */
+  pericia_usuario?: string;
+  pericias_alvo?: string[];
   /** Fórmula da CD; vazio = CD da Especialização. */
   cd?: string;
   metadeNoSucesso?: boolean;

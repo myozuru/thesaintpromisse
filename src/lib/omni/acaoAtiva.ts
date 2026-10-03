@@ -19,6 +19,7 @@ import { resolverTipoDano, type MetadadosAtaqueDano } from './contextoDano';
  * Custos, ação e cargas são pagos ANTES da rolagem (gastos mesmo errando).
  */
 import type { Character, DamageType } from '@/types';
+import { getLevelSkillBonus, getTrainingBonus } from '@/types';
 import type { AcaoAtivaConfig, DesfechoTRAtivo, EfeitoSecundarioAtivo, EntidadeOmni, TrNome } from './tipos';
 import { avaliarFormula } from './parser';
 import { ajustarProtecoesOmni } from './protecoesAtivas';
@@ -36,6 +37,7 @@ import { findWeaponByName, resolveWeaponDamage, type Weapon } from '@/lib/weapon
 import { buildAttackContext, rollAttack } from '@/lib/combatEngine';
 import { computeTotalDefense } from '@/lib/defenseCalc';
 import { replicaWeaponName } from '@/lib/replicas';
+import { getSkillModFromConditions } from '@/lib/conditionEffects';
 
 // ─── Regras puras ────────────────────────────────────────────────────
 
@@ -125,6 +127,38 @@ export function modTR(alvo: Character, tr: TrNome): number {
   );
 }
 
+function normalizarPericia(nome: string) {
+  return nome.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase();
+}
+
+function obterPericia(char: Character, nome: string) {
+  const key = normalizarPericia(nome);
+  return (char.skills ?? []).find(skill => normalizarPericia(skill.name) === key);
+}
+
+/** Bônus base usado pela rolagem de perícia da ficha, sem os bônus contextuais exclusivos do painel. */
+export function modificadorPericiaAtiva(char: Character, nome: string): number | undefined {
+  const skill = obterPericia(char, nome);
+  if (!skill) return undefined;
+  const attr = skill.linkedAttribute ? char.attributes.find(a => a.id === skill.linkedAttribute) : undefined;
+  const modAtributo = attr ? Math.floor((attr.value - 10) / 2) : 0;
+  const skillKey = skill.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_');
+  return (skill.value || 0) + modAtributo + getTrainingBonus(char.level, skill.trained, skill.mastery)
+    + getLevelSkillBonus(char.level) + (skill.externalBonus || 0) + getSkillModFromConditions(char, skill.name)
+    + ((char.omniSkillBonuses ?? {})[skillKey] ?? 0);
+}
+
+/** Empates ficam com quem defende a manobra. */
+export function usuarioVenceDisputa(totalUsuario: number, totalAlvo: number): boolean {
+  return totalUsuario > totalAlvo;
+}
+
+export function melhorPericiaDaDisputa(char: Character, opcoes: string[]): { nome: string; bonus: number } | undefined {
+  return opcoes.map(nome => ({ nome, bonus: modificadorPericiaAtiva(char, nome) }))
+    .filter((item): item is { nome: string; bonus: number } => item.bonus !== undefined)
+    .sort((a, b) => b.bonus - a.bonus)[0];
+}
+
 function danoArmaBase(arma?: Weapon) {
   if (!arma) return undefined;
   const dano = resolveWeaponDamage(arma) ?? undefined;
@@ -175,6 +209,11 @@ export type ResultadoAtiva = { ok: false; reason: string } | { ok: true; dano: n
 
 export function podeUsarAtiva(u: Character, alvo: Character | undefined, cfg: AcaoAtivaConfig, intensificacoes = 0, arma?: Weapon): { ok: true } | { ok: false; reason: string } {
   if (!alvo) return { ok: false, reason: 'Escolha um alvo.' };
+  if (cfg.teste === 'disputa') {
+    if (!cfg.pericia_usuario?.trim() || !cfg.pericias_alvo?.some(p => p.trim())) return { ok: false, reason: 'Configure a perícia do usuário e ao menos uma perícia possível do alvo.' };
+    if (modificadorPericiaAtiva(u, cfg.pericia_usuario) === undefined) return { ok: false, reason: `A perícia "${cfg.pericia_usuario}" não existe na ficha do usuário.` };
+    if (!melhorPericiaDaDisputa(alvo, cfg.pericias_alvo)) return { ok: false, reason: 'O alvo não possui nenhuma das perícias configuradas para a disputa.' };
+  }
   const efeitos = [...(cfg.efeitos ?? []), ...Object.values(cfg.desfechosTR ?? {}).flatMap(d => d?.efeitos ?? [])];
   for (const ef of efeitos) {
     if (ef.tipo === 'pv_temporarios' || ef.tipo === 'escudo') {
@@ -405,6 +444,26 @@ export async function executarAcaoAtiva(
       const msg = `✨ ${u.name} usa ${cfg.nome} (${pago}) em ${t.name}: recupera ${recuperado} ${recurso.toUpperCase()} (valor ${valor}${dados ? '; ' + dados : ''})${notas.length ? ' · ' + notas.join(' · ') : ''}.`;
       log(msg); detalhes.push(msg);
       continue;
+    }
+
+    if (cfg.teste === 'disputa') {
+      const periciaUsuario = cfg.pericia_usuario!;
+      const periciaAlvo = melhorPericiaDaDisputa(t, cfg.pericias_alvo!)!;
+      const advU = consumeAdvantageFor(u.id, { kind: 'skill', name: periciaUsuario });
+      const flatU = consumeFlatBonusFor(u.id, { kind: 'skill', name: periciaUsuario });
+      const advT = consumeAdvantageFor(t.id, { kind: 'skill', name: periciaAlvo.nome });
+      const flatT = consumeFlatBonusFor(t.id, { kind: 'skill', name: periciaAlvo.nome });
+      const rollU = await applyAdvantageToD20(advU.net, () => rollD20Com(u.id, undefined, { label: `Disputa ${periciaUsuario}` }));
+      const rollT = await applyAdvantageToD20(advT.net, () => rollD20Com(t.id, undefined, { label: `Disputa ${periciaAlvo.nome}` }));
+      const totalU = rollU.d20 + modificadorPericiaAtiva(u, periciaUsuario)! + flatU.bonus;
+      const totalT = rollT.d20 + periciaAlvo.bonus + flatT.bonus;
+      const venceu = usuarioVenceDisputa(totalU, totalT);
+      aplicaEfeitos = venceu;
+      cabecalho = `disputa ${periciaUsuario} ${rollU.d20}+${totalU - rollU.d20}=${totalU} vs ${periciaAlvo.nome} ${rollT.d20}+${totalT - rollT.d20}=${totalT} → ${venceu ? 'VENCEU' : totalU === totalT ? 'EMPATE (alvo vence)' : 'PERDEU'}`;
+      if (!venceu) {
+        const msg = `⚔️ ${u.name} usa ${cfg.nome} (${pago}) em ${t.name}: ${cabecalho}.`;
+        log(msg); detalhes.push(msg); continue;
+      }
     }
 
     // ── Dano ──

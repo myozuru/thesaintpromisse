@@ -62,8 +62,8 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
           </div>}
           <div className="grid grid-cols-3 gap-2">
             <div><Label className="text-xs">Teste</Label>
-              <select className={sel} value={a.teste} onChange={(e) => set(i, { teste: e.target.value as AcaoAtivaConfig['teste'] })}>
-                <option value="nenhum">Nenhum</option><option value="tr">TR do alvo</option><option value="ataque">Ataque com arma</option>
+              <select aria-label="Teste da ação" className={sel} value={a.teste} onChange={(e) => set(i, { teste: e.target.value as AcaoAtivaConfig['teste'] })}>
+                <option value="nenhum">Nenhum</option><option value="tr">TR do alvo</option><option value="ataque">Ataque com arma</option><option value="disputa">Disputa de perícias</option>
               </select></div>
             {a.teste === 'tr' && <>
               <div><Label className="text-xs">TR</Label>
@@ -78,6 +78,10 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
               </label>
             )}
           </div>
+          {a.teste === 'disputa' && <div className="grid grid-cols-2 gap-2">
+            <label className="text-xs">Perícia do usuário<Input aria-label="Perícia do usuário" value={a.pericia_usuario ?? ''} placeholder="Atletismo" onChange={e => set(i, { pericia_usuario: e.target.value })} /></label>
+            <label className="text-xs">Perícias possíveis do alvo<Input aria-label="Perícias possíveis do alvo" value={(a.pericias_alvo ?? []).join(', ')} placeholder="Atletismo, Acrobacia" onChange={e => set(i, { pericias_alvo: e.target.value.split(',').map(v => v.trim()).filter(Boolean) })} /><span className="text-[10px] text-muted-foreground">Separadas por vírgula; o alvo usa a de maior bônus. Empate favorece o alvo.</span></label>
+          </div>}
           {a.teste === 'tr' && <EditorDesfechosTR acao={a} onChange={p => set(i, p)} />}
           {a.teste === 'tr' && (
             <label className="flex items-center gap-2 text-xs">
