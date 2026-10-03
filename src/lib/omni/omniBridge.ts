@@ -302,6 +302,9 @@ export function selectOmniModifiers(
     omniEntidadesMap?.[inv.entity.id] ?? inv.entity;
 
   for (const inv of equipped) {
+    // null identifica explicitamente uma instância guardada; undefined continua
+    // compatível com chamadores antigos que já fornecem apenas itens equipados.
+    if (inv.equippedSlot === null) continue;
     const ent = resolverEntidade(inv);
     // Acessórios passivos só contam quando estão num slot.
     if (!ent.slotType || ent.slotType === 'nenhum') continue;
