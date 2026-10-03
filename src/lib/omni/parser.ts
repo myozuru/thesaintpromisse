@@ -204,7 +204,6 @@ const ATALHOS_PT_BR: Record<string, string> = {
   qtd_habilidades_spec: 'QTD_HABILIDADES_SPEC',
 
   // Nomes preferidos mais claros. Os identificadores antigos continuam aceitos.
-  dificuldade: 'DT',
   distancia_m: 'DISTANCIA',
   distancia_plana: 'DISTANCIA_XY',
   distancia_grade: 'DISTANCIA_MANHATTAN',
