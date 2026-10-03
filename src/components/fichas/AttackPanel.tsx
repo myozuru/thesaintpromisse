@@ -1,3 +1,4 @@
+import { ContadoresEquipamento } from '@/components/omni/ContadoresEquipamento';
 import type { MetadadosAtaqueDano } from '@/lib/omni/contextoDano';
 /**
  * AttackPanel — UI de combate ancorada no `combatEngine`.
@@ -10,7 +11,7 @@ import type { MetadadosAtaqueDano } from '@/lib/omni/contextoDano';
  *   • Defesa do alvo: dropdown de personagens (NPC/INIMIGO) — calcula via
  *     `computeTotalDefense`. Permite override manual.
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { ALL_CONDITIONS } from '@/types/conditions';
 import type { Character } from '@/types';
 import {
@@ -1366,6 +1367,14 @@ export function AttackPanel({ character: cProp }: Props) {
   const ability = mainWeapon ? pickAttackAbility(c, mainWeapon) : null;
   const abilityMod = ability ? getAbilityMod(c, ability) : 0;
 
+  const contadoresArma = (nome: string | null | undefined) => {
+    if (!nome) return null;
+    const candidatas = omniInventoryList.filter(inv => inv.ownerId === c.id && inv.entity.nome === nome);
+    const instancia = candidatas.find(inv => inv.isEquipped) ?? candidatas[0];
+    if (!instancia) return null;
+    return <ContadoresEquipamento charId={c.id} entidade={omniEntidadesMap[instancia.entity.id] ?? instancia.entity} />;
+  };
+
   return (
     <div className="px-4 pb-3">
       <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-3">
@@ -1411,6 +1420,7 @@ export function AttackPanel({ character: cProp }: Props) {
             <div className="grid grid-cols-2 gap-2">
               <HandSlot
                 label="Mão Principal"
+                rodape={contadoresArma(c.mainHandWeaponName)}
                 currentName={c.mainHandWeaponName ?? null}
                 inventory={inventoryWeapons}
                 disabledForOther={null}
@@ -1418,6 +1428,7 @@ export function AttackPanel({ character: cProp }: Props) {
               />
               <HandSlot
                 label="Mão Secundária"
+                rodape={usingTwoHanded ? null : contadoresArma(c.offHandWeaponName)}
                 currentName={
                   // se duas-mãos, mostra a mesma arma "ocupando" mas sem permitir alterar
                   usingTwoHanded ? c.mainHandWeaponName ?? null : (offWeapon?.name ?? null)
@@ -1429,6 +1440,8 @@ export function AttackPanel({ character: cProp }: Props) {
               />
             </div>
           )}
+
+
 
           {mainWeapon && (
             <div className="text-[11px] text-muted-foreground">
@@ -2038,7 +2051,7 @@ export function AttackPanel({ character: cProp }: Props) {
 }
 
 function HandSlot({
-  label, currentName, inventory, onChange, disabledForOther, lockedReason,
+  label, currentName, inventory, onChange, disabledForOther, lockedReason, rodape,
 }: {
   label: string;
   currentName: string | null;
@@ -2047,6 +2060,7 @@ function HandSlot({
   /** Nome de arma já equipada na outra mão (não pode aparecer aqui se for o mesmo item). */
   disabledForOther: string | null;
   lockedReason?: string | null;
+  rodape?: ReactNode;
 }) {
   const locked = !!lockedReason;
   return (
@@ -2086,6 +2100,7 @@ function HandSlot({
           );
         })}
       </select>
+      {rodape}
       {locked && <div className="text-[10px] text-muted-foreground italic">{lockedReason}</div>}
     </div>
   );

@@ -1,3 +1,4 @@
+import { ContadoresEquipamento } from '@/components/omni/ContadoresEquipamento';
 import { consumeCritNegated } from '@/lib/suporteNegacao';
 import { implementoMarcialBonus } from '@/lib/golpeEspecial';
 import { InspiradoButton } from './SuporteNivel4Sections';
@@ -4610,6 +4611,7 @@ function AccessorySlotsSection({
               <span className="text-foreground font-medium text-sm">
                 ◇ {omniEquipped.entity.nome}
               </span>
+              <ContadoresEquipamento charId={character.id} entidade={resolverEntidadeOmniAtual(omniEquipped)} />
               {omniEquipped.usosTotais !== undefined && (
                 <button
                   onClick={(e) => {
@@ -4817,3 +4819,4 @@ function ActionCostBadge({ actionId }: { actionId?: string }) {
     </span>
   );
 }
+
