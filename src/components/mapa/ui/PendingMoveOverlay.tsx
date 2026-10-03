@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { abrirJanelaReacaoAtiva, ofertasReacaoAtiva } from '@/lib/omni/reacoesAtivas';
+import { amostrarTrajetoria } from '@/lib/omni/geometriaReacao';
 /**
  * PendingMoveOverlay — Confirma/cancela movimento em combate.
  *
@@ -57,7 +58,8 @@ export function PendingMoveOverlay() {
     if (locked.current) return;
     locked.current = true; setBusy(true);
     try {
-      const movimento = { de: { x: pending.startX, y: pending.startY }, para: { x: ent.x, y: ent.y } };
+      const de = { x: pending.startX, y: pending.startY }, para = { x: ent.x, y: ent.y };
+      const movimento = { de, para, trajetoria: amostrarTrajetoria(de, para, (gridConfig.dpi || 70) / 4) };
       for (const gatilho of ['quando_inimigo_sair_alcance', 'quando_inimigo_entrar_alcance'] as const) {
         const evento = { gatilho, origemId: pending.charId, movimento };
         const r = ofertasReacaoAtiva(evento).length ? await abrirJanelaReacaoAtiva(evento) : { cancelado: false };
