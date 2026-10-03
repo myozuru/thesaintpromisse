@@ -2,7 +2,7 @@
  * Movimento efetivo do personagem considerando sobrecarga de inventário.
  *
  * Regra: se `slotsCurrent` exceder `slotsMax`, o movimento é cortado pela metade.
- * Mobilidade Avançada (Suporte) soma +3 m antes da sobrecarga.
+ * Mobilidade Avançada (Suporte) e itens equipados somam metros antes da sobrecarga.
  */
 import type { Character } from '@/types';
 
@@ -21,19 +21,19 @@ export function getMobilidadeBonus(c: Partial<Pick<Character, 'chosenSpecAbiliti
   return (c?.chosenSpecAbilities ?? []).some((a) => a.abilityId === MOBILIDADE_ID) ? MOBILIDADE_BONUS_M : 0;
 }
 
-export function effectiveMovement(c: MoveChar | undefined | null): number {
-  const base = Math.max(0, (c?.movement ?? 0) + getMobilidadeBonus(c));
+export function effectiveMovement(c: MoveChar | undefined | null, bonusDeslocamento = 0): number {
+  const base = Math.max(0, (c?.movement ?? 0) + getMobilidadeBonus(c) + bonusDeslocamento);
   return isOverloaded(c) ? base / 2 : base;
 }
 
 /** Orçamento fora do turno liberado pela reação de Mobilidade Avançada (null = nenhum). */
-export function reactionMoveBudget(c: MoveChar | undefined | null): number | null {
+export function reactionMoveBudget(c: MoveChar | undefined | null, bonusDeslocamento = 0): number | null {
   if (!c || !((c.mobilidadeReacaoM ?? 0) > 0)) return null;
-  return (c.mobilidadeReacaoBase ?? 0) + (c.mobilidadeReacaoM ?? 0);
+  return (c.mobilidadeReacaoBase ?? 0) + (c.mobilidadeReacaoM ?? 0) + bonusDeslocamento;
 }
 
 /** Orçamento total de movimento em combate: turno ativo ou reação. null = não pode mover. */
-export function combatMoveBudget(c: MoveChar | undefined | null, isActiveTurn: boolean): number | null {
-  if (isActiveTurn) return effectiveMovement(c);
-  return reactionMoveBudget(c);
+export function combatMoveBudget(c: MoveChar | undefined | null, isActiveTurn: boolean, bonusDeslocamento = 0): number | null {
+  if (isActiveTurn) return effectiveMovement(c, bonusDeslocamento);
+  return reactionMoveBudget(c, bonusDeslocamento);
 }
