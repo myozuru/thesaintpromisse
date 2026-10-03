@@ -10,6 +10,9 @@ import { Check, X } from 'lucide-react';
 import { useMapStore } from '@/stores/useMapStore';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
+import { useInventoryStore } from '@/stores/useInventoryStore';
+import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
+import { selectOmniModifiers } from '@/lib/omni/omniBridge';
 import { useOpportunityStore } from '@/stores/useOpportunityStore';
 import { detectOpportunityCandidates } from '../opportunityEngine';
 import { detectarZonaRisco } from '@/lib/zonaRisco';
@@ -34,6 +37,8 @@ export function PendingMoveOverlay() {
   const character = useCharacterStore((s) =>
     pending ? s.characters.find((c) => c.id === pending.charId) : undefined,
   );
+  const inventoryItems = useInventoryStore((s) => s.items);
+  const omniEntidades = useOmniEntidadesStore((s) => s.entidades);
 
   if (!pending) return null;
   const ent = entities[pending.entityId];
@@ -43,7 +48,9 @@ export function PendingMoveOverlay() {
   const isActiveTurn = !combatNow.inCombat || combatNow.initiativeOrder[combatNow.currentTurnIndex]?.charId === pending.charId;
   const isFreeform = isActiveTurn && isFreeformFor(character, freeformMode);
   const used = movementUsed[pending.charId] ?? 0;
-  const total = isFreeform ? Infinity : (combatMoveBudget(character, isActiveTurn) ?? 0);
+  const equipped = Object.values(inventoryItems).filter((item) => item.ownerId === pending.charId && item.isEquipped && item.equippedSlot);
+  const bonusDeslocamento = character ? selectOmniModifiers(character, equipped, omniEntidades).deslocamento : 0;
+  const total = isFreeform ? Infinity : (combatMoveBudget(character, isActiveTurn, bonusDeslocamento) ?? 0);
   const remaining = isFreeform ? Infinity : Math.max(0, total - used - pending.distM);
 
   const confirm = async () => {
