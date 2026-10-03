@@ -66,7 +66,7 @@ async def main():
         sec = pg.get_by_test_id("acoes-ativas-section")
         print("SEÇÃO ações ativas:", await sec.count())
         await sec.first.scroll_into_view_if_needed(); await sec.first.screenshot(path=S+"1_secao.png")
-        await sec.get_by_test_id("acao-ativa-alvo").select_option(label="TESTE Inimigo")
+        await sec.get_by_test_id("acao-ativa-alvo").first.select_option(label="TESTE Inimigo")
         usar = lambda n: sec.get_by_test_id("acao-ativa-"+n).get_by_role("button", name="Usar").click()
         ex = lambda: pg.evaluate("window.__mapStore.getState().entities.e2.x/window.__D")
         print("ANTES → PE", await st('teste-esp','peCurrent'), "HP alvo", await st('teste-ini','hpCurrent'), "casa alvo", await ex())
