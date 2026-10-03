@@ -3,6 +3,7 @@ import { anexarDadosCompostos } from './componentes/contexto';
 import { dadosRecursos } from './componentes/recursos';
 import { dadosEquipamento } from './componentes/equipamento';
 import { dadosCena, dadosTurnos } from './componentes/cena';
+import { dadosMagia } from './componentes/magia';
 /**
  * Resolvedor de Caminhos (ponte Omni ↔ sistema existente).
  *
@@ -977,6 +978,7 @@ export function montarVariaveisDoPersonagem(
   const bag = anexarDadosCompostos({ ...base, ...prefixado }, escopo, { selecoes: {
     ...dadosRecursos(base).selecoes, ...dadosEquipamento(c, base).selecoes,
     ...dadosTurnos(base).selecoes,
+    ...dadosMagia(c, base).selecoes,
   } });
   return anexarDadosCompostos(bag, 'CENA', dadosCena(base));
 }

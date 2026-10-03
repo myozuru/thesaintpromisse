@@ -3,8 +3,8 @@ import { tokenizarComposicao, type TokenComposicao } from './lexer';
 import type { ComponenteOmni } from './ids';
 
 const operacoes = new Set<ComponenteOmni>(['quantidade','tem','max','maximo','maximos','minimo','percentual','porcentagem','bonus','margem_critico','reducao','restante','restantes','livre','idade','custo','velocidade','duração','rolagem','posicao','indice','total','recuperavel']);
-const argumentosSelecao: Partial<Record<ComponenteOmni, ArgumentoComposicao['tipo']>> = { contador: 'nome', condicao: 'id', item: 'id', feitico: 'id', talento: 'id', habilidade: 'id', origem: 'id', especializacao: 'id', buff: 'nome', moeda: 'moeda' };
-const opcoesSemArgumento: Partial<Record<ComponenteOmni, readonly string[]>> = { feitico: ['pronto','anterior'], buff: [], item: [], condicao: [], especializacao: [], origem: [] };
+const argumentosSelecao: Partial<Record<ComponenteOmni, ArgumentoComposicao['tipo']>> = { contador: 'nome', condicao: 'id', item: 'id', feitico: 'id', talento: 'id', habilidade: 'id', origem: 'id', especializacao: 'id', buff: 'nome', moeda: 'moeda', aptidao: 'id' };
+const opcoesSemArgumento: Partial<Record<ComponenteOmni, readonly string[]>> = { feitico: ['pronto','anterior'], aptidao: ['au','cl','bar','dom','er'], buff: [], item: [], condicao: [], especializacao: [], origem: [] };
 
 export interface InterpretacaoComposicao {
   referencia?: ReferenciaComposta;
