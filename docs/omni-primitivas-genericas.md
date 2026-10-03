@@ -315,7 +315,7 @@ O campo de dano do construtor indica os tokens disponíveis; eles também aparec
 | --- | --- | --- |
 | 6 | Bônus passivos de perícias e TR em equipamentos | Implementada |
 | 7 | Resistências, vulnerabilidades e imunidades passivas de dano | Implementada |
-| 8 | Modificador passivo de deslocamento | Pendente |
+| 8 | Modificador passivo de deslocamento | Implementada |
 | 9 | Zonas persistentes de terreno | Pendente |
 | 10 | Trajetória intermediária para reações e duplicação/presets de ações | Pendente |
 
