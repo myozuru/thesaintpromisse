@@ -411,5 +411,6 @@ export function asSemanticModifiers(bag: OmniModifierBag): Record<string, number
     rd: bag.totals.rd,
     esquiva: bag.totals.esc,
     slots: bag.totals.slots,
+    deslocamento: bag.deslocamento,
   };
 }
