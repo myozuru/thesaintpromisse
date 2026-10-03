@@ -87,6 +87,9 @@ import { buildSegments as buildFogSegments } from '@/lib/fog/visibility';
 import { useProfileStore } from '@/stores/useProfileStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useCombatStore } from '@/stores/useCombatStore';
+import { useInventoryStore } from '@/stores/useInventoryStore';
+import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
+import { selectOmniModifiers } from '@/lib/omni/omniBridge';
 import { MapContextMenu, type CtxMenuAction } from './ui/MapContextMenu';
 import { LayerPanel } from './ui/LayerPanel';
 import { InitiativePanel } from './ui/InitiativePanel';
@@ -109,6 +112,13 @@ const MIN_SCALE = 0.1;
 const MAX_SCALE = 10;
 const ZOOM_STEP = 1.1;
 const isRotatableAoEKind = (kind: MapTemplate['kind']) => kind === 'square' || kind === 'cone' || kind === 'cone_attached' || kind === 'line';
+
+function bonusDeslocamentoOmni(character: Character | undefined): number {
+  if (!character) return 0;
+  const equipped = useInventoryStore.getState().listEquipped(character.id);
+  const entities = useOmniEntidadesStore.getState().entidades;
+  return selectOmniModifiers(character, equipped, entities).deslocamento;
+}
 
 export const snapBypassRef = { current: false };
 
@@ -250,14 +260,14 @@ const canStartMoveEntityNow = (entity: Entity): boolean => {
   const isActiveTurn = combat.initiativeOrder[combat.currentTurnIndex]?.charId === entity.characterId;
   const character = characters.find((c) => c.id === entity.characterId);
   // Fora do turno só move quem tem movimento de reação (Mobilidade Avançada).
-  if (!isActiveTurn && reactionMoveBudget(character) == null) return false;
+  if (!isActiveTurn && reactionMoveBudget(character, bonusDeslocamentoOmni(character)) == null) return false;
 
   // Se já existe um pendingMove para esse token, permite retomar mesmo
   // sem orçamento restante (o jogador pode arrastar de volta para reduzir).
   if (samePending) return true;
 
   if (isActiveTurn && isFreeformFor(character, combat.freeformMode)) return true;
-  const budgetM = combatMoveBudget(character, isActiveTurn) ?? 0;
+  const budgetM = combatMoveBudget(character, isActiveTurn, bonusDeslocamentoOmni(character)) ?? 0;
   const usedM = combat.movementUsedByChar[entity.characterId] ?? 0;
   return budgetM - usedM > MOVEMENT_EPS_M;
 };
@@ -617,7 +627,7 @@ export function MapaModule() {
         const cb2 = useCombatStore.getState();
         const ch2 = useCharacterStore.getState().characters.find((c) => c.id === pm.charId);
         const active2 = cb2.initiativeOrder[cb2.currentTurnIndex]?.charId === pm.charId;
-        const budgetM2 = active2 && isFreeformFor(ch2, cb2.freeformMode) ? Infinity : (ch2 ? (combatMoveBudget(ch2, active2) ?? undefined) : undefined);
+        const budgetM2 = active2 && isFreeformFor(ch2, cb2.freeformMode) ? Infinity : (ch2 ? (combatMoveBudget(ch2, active2, bonusDeslocamentoOmni(ch2)) ?? undefined) : undefined);
         const committed = cb2.movementUsedByChar[pm.charId] ?? 0;
         const totalUsed = committed + pm.distM;
         drawTrail(pm.trail, '#fcd34d', totalUsed, budgetM2);
@@ -1900,10 +1910,10 @@ export function MapaModule() {
           const activeChar = cb.initiativeOrder[cb.currentTurnIndex]?.charId;
           const chMove = useCharacterStore.getState().characters.find((c) => c.id === linkedCharId);
           const isActiveMove = activeChar === linkedCharId;
-          if (isActiveMove || reactionMoveBudget(chMove) != null) {
+          if (isActiveMove || reactionMoveBudget(chMove, bonusDeslocamentoOmni(chMove)) != null) {
             const ch = chMove;
             const free = isActiveMove && isFreeformFor(ch, cb.freeformMode);
-            const budgetM = free ? Infinity : (combatMoveBudget(ch, isActiveMove) ?? 0);
+            const budgetM = free ? Infinity : (combatMoveBudget(ch, isActiveMove, bonusDeslocamentoOmni(ch)) ?? 0);
             const usedBeforeM = free ? 0 : (cb.movementUsedByChar[linkedCharId] ?? 0);
             const cfg = store.getState().gridConfig;
             const metersPerPx = (cfg.metersPerCell || 1.5) / (cfg.dpi || 70);
