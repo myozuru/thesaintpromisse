@@ -141,6 +141,7 @@ const EntidadeSchema = z.object({
   bonusEquipado: z.object({
     hp: z.number().finite().optional(), pe: z.number().finite().optional(), ca: z.number().finite().optional(),
     rd: z.number().finite().optional(), esc: z.number().finite().optional(), slots: z.number().finite().optional(),
+    deslocamento: z.number().finite().optional(),
     pericias: z.record(z.string(), z.number().finite()).optional(),
     trs: z.object({ astucia: z.number().finite().optional(), fortitude: z.number().finite().optional(), integridade: z.number().finite().optional(), reflexos: z.number().finite().optional(), vontade: z.number().finite().optional() }).optional(),
   }).optional(),
