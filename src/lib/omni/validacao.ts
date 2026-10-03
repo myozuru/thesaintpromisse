@@ -3,6 +3,8 @@
  * Defesa contra JSON corrompido / vindo de outro sistema.
  */
 import { z } from 'zod';
+import { DAMAGE_TYPES } from '@/types';
+const DamageTypeSchema = z.enum(DAMAGE_TYPES);
 
 const ValorDinamicoSchema = z.union([
   z.object({ tipo: z.literal('fixo'), valor: z.number() }),
@@ -145,6 +147,9 @@ const EntidadeSchema = z.object({
   bonusEquipadoFormula: z.object({
     hp: z.string().optional(), pe: z.string().optional(), ca: z.string().optional(), rd: z.string().optional(), esc: z.string().optional(), slots: z.string().optional(),
   }).optional(),
+  resistencias: z.array(DamageTypeSchema).optional(),
+  vulnerabilidades: z.array(DamageTypeSchema).optional(),
+  imunidades_dano: z.array(DamageTypeSchema).optional(),
   acoesAtivas: z.array(AcaoAtivaSchema).optional(),
   comercio: z
     .object({

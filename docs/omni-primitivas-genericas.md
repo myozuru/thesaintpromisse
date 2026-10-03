@@ -307,3 +307,24 @@ O avaliador de fórmulas e o campo de dano das ações ativas podem acessar dado
 Exemplo: `@ARMA.DANO + 2d8` herda o dano-base da arma e acrescenta 2d8. Também é possível montar um dado escalável com `(@ARMA.DADOS)d@ARMA.PASSO`. O campo existente `tipoDano` converte todo o dano da ação, incluindo a parcela herdada; sem conversão, o dano-base usa o tipo padrão da arma. `incluirArma` continua somando a rolagem completa de um ataque; ao usar `@ARMA.DANO` na fórmula da ação, a soma separada é suprimida para evitar duplicação. Fórmulas que pedem arma sem haver arma identificável são recusadas antes de pagar o custo.
 
 O campo de dano do construtor indica os tokens disponíveis; eles também aparecem no autocomplete do OmniScript. A expressão do dano-base usa a resolução normal da arma versátil sem declarar empunhadura de duas mãos; `@ARMA.PASSO` representa o maior passo quando o dano-base contém tipos diferentes de dado.
+
+
+## Plano complementar de lacunas
+
+| Etapa | Categoria | Situação |
+| --- | --- | --- |
+| 6 | Bônus passivos de perícias e TR em equipamentos | Implementada |
+| 7 | Resistências, vulnerabilidades e imunidades passivas de dano | Implementada |
+| 8 | Modificador passivo de deslocamento | Pendente |
+| 9 | Zonas persistentes de terreno | Pendente |
+| 10 | Trajetória intermediária para reações e duplicação/presets de ações | Pendente |
+
+## Contrato da etapa complementar 7 — mitigação passiva de dano
+
+Itens e armas equipáveis podem declarar listas de `resistencias`, `vulnerabilidades` e `imunidades_dano` usando as chaves canônicas de tipo de dano. Só instâncias equipadas em um slot válido contam. A definição mais recente da entidade Omni prevalece sobre o snapshot do inventário.
+
+- Imunidade anula o dano antes da RD e respeita `ignoresResistance`.
+- A RD é aplicada antes da resistência ou vulnerabilidade. Resistência reduz pela metade; vulnerabilidade multiplica por 1,5; ambos arredondam para baixo.
+- Resistência e vulnerabilidade do mesmo tipo se anulam. Imunidade prevalece.
+
+O construtor no-code expõe seletores de tipos de dano, os painéis de detalhes listam as propriedades e a importação de pacote valida os tipos contra `DAMAGE_TYPES`.

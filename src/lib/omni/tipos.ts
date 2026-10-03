@@ -12,6 +12,7 @@ import type {
   GatilhoId,
   OperadorId,
 } from './constantesDoSistema';
+import type { DamageType } from '@/types';
 
 /** Valor que pode ser fixo ou uma fórmula escalável. */
 export type ValorDinamico =
@@ -159,6 +160,10 @@ export interface EntidadeOmni {
     /** Bônus fixo para cada Teste de Resistência. */
     trs?: Partial<Record<TrNome, number>>;
   };
+  /** Mitigação passiva aplicada quando a instância equipada recebe dano. */
+  resistencias?: DamageType[];
+  vulnerabilidades?: DamageType[];
+  imunidades_dano?: DamageType[];
   /**
    * Bônus dinâmicos calculados por fórmula quando o item está equipado.
    * Avaliados a cada render usando o contexto do USUARIO (dono do item).

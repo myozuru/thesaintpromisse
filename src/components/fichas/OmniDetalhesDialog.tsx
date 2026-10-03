@@ -18,6 +18,7 @@ import {
 import type { EntidadeOmni, ValorDinamico, Operando, BlocoLogico, CombatEffect } from '@/lib/omni/tipos';
 import { normalizarCombatData } from '@/lib/omni/tipos';
 import { frasePlanoExecucao, humanizarWatcher } from '@/lib/omni/omniScript';
+import { DAMAGE_TYPE_LABELS } from '@/types';
 
 const CATEGORIA_LABEL: Record<string, string> = {
   feitico: 'Feitiço',
@@ -180,6 +181,17 @@ export function OmniDetalhesDialog({ open, onOpenChange, entidade }: Props) {
                 </div>
               </section>
             )}
+
+            {(entidade.resistencias?.length || entidade.vulnerabilidades?.length || entidade.imunidades_dano?.length) ? (
+              <section>
+                <h4 className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Mitigação de dano quando equipado</h4>
+                <div className="flex flex-wrap gap-1">
+                  {entidade.resistencias?.map((tipo) => <Badge key={`res-${tipo}`} variant="outline">Resiste: {DAMAGE_TYPE_LABELS[tipo]}</Badge>)}
+                  {entidade.vulnerabilidades?.map((tipo) => <Badge key={`vul-${tipo}`} variant="outline">Vulnerável: {DAMAGE_TYPE_LABELS[tipo]}</Badge>)}
+                  {entidade.imunidades_dano?.map((tipo) => <Badge key={`im-${tipo}`} variant="outline">Imune: {DAMAGE_TYPE_LABELS[tipo]}</Badge>)}
+                </div>
+              </section>
+            ) : null}
 
             {entidade.bonusEquipadoFormula && Object.values(entidade.bonusEquipadoFormula).some((v) => v) && (
               <section>

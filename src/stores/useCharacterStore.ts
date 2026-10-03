@@ -75,6 +75,7 @@ import { findWeaponByName, requiresTwoHands, isLight } from '@/lib/weapons';
 import { hasCombatStyle, isThrownWeapon } from '@/lib/combateEstilos';
 import { clampExh, getExhaustionHpReduction, syncExhaustionConditions, EXHAUSTION_MAX } from '@/lib/exhaustionEffects';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
+import { useInventoryStore } from '@/stores/useInventoryStore';
 import { selectOmniPassiveBonuses } from '@/lib/omni/omniBridge';
 import { formatDamageBreakdown } from '@/lib/damageLog';
 
@@ -2287,11 +2288,15 @@ export const useCharacterStore = create<CharacterStore>()(
         const preSet = get().characters.find((c) => c.id === id);
         const preEsc = preSet?.escCurrent ?? 0;
         const preHp = preSet?.hpCurrent ?? 0;
+        const entidadesOmniAtuais = useOmniEntidadesStore.getState().entidades;
+        const mitigacoesOmni = useInventoryStore.getState().listEquipped(id)
+          .filter((item) => item.entity.slotType && item.entity.slotType !== 'nenhum')
+          .map((item) => entidadesOmniAtuais[item.entity.id] ?? item.entity);
 
         set((state) => ({
           characters: state.characters.map((c) => {
             if (c.id !== id) return c;
-            const immunes = c.immunities || [];
+            const immunes = [...(c.immunities || []), ...mitigacoesOmni.flatMap((item) => item.imunidades_dano ?? [])];
             if (damageType && immunes.includes(damageType) && !opts?.ignoresResistance) {
               damageResolved = true;
               return c;
@@ -2328,9 +2333,15 @@ export const useCharacterStore = create<CharacterStore>()(
 
             let damageFinal = Math.max(0, rawDamage - effectiveRd);
             rdApplied = Math.min(rawDamage, effectiveRd);
-            const vulns = c.vulnerabilities || [];
-            if (damageType && vulns.includes(damageType) && !opts?.ignoresResistance) {
-              damageFinal = Math.floor(damageFinal * 1.5);
+            const vulns = [...(c.vulnerabilities || []), ...mitigacoesOmni.flatMap((item) => item.vulnerabilidades ?? [])];
+            const resistencias = mitigacoesOmni.flatMap((item) => item.resistencias ?? []);
+            const vulneravel = !!damageType && vulns.includes(damageType);
+            const resistente = !!damageType && resistencias.includes(damageType);
+            // Resistência e vulnerabilidade do mesmo tipo se anulam. Caso contrário,
+            // aplicam metade ou ×1,5 após RD, com arredondamento para baixo.
+            if (!opts?.ignoresResistance && vulneravel !== resistente) {
+              if (resistente) damageFinal = Math.floor(damageFinal / 2);
+              else damageFinal = Math.floor(damageFinal * 1.5);
             }
             finalDamage = damageFinal;
             damageResolved = true;

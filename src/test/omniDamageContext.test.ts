@@ -6,6 +6,7 @@ vi.mock('@/lib/socket', () => ({ getSocket: () => null }));
 vi.mock('@/integrations/supabase/safeClient', async () => ({ hasWorkspaceCloud: false, supabase: (await import('./helpers/mesaReal')).nuvemFalsa }));
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
+import { useInventoryStore } from '@/stores/useInventoryStore';
 import { parseOmniScript } from '@/lib/omni/omniScript';
 import { novaEntidade } from '@/lib/omni/tipos';
 import type { EntidadeOmni } from '@/lib/omni/tipos';
@@ -35,11 +36,33 @@ const registro = () => script('registro', `@causar_dano -> somar 1 em contador_e
 beforeEach(() => {
   comoTela({ profileId: null, role: 'MASTER' });
   useOmniEntidadesStore.setState({ entidades: {} });
+  useInventoryStore.setState({ items: {} });
   for (const method of ['log', 'group', 'groupEnd'] as const) vi.spyOn(console, method).mockImplementation(() => {});
 });
 afterEach(() => { limparMesa(); vi.restoreAllMocks(); });
 
 describe('Contexto DANO do combate real', () => {
+  it.each([
+    ['resistência', { resistencias: ['DCO'] as const }, {}, 10],
+    ['vulnerabilidade', { vulnerabilidades: ['DCO'] as const }, {}, 30],
+    ['imunidade', { imunidades_dano: ['DCO'] as const }, {}, 0],
+    ['resistência e vulnerabilidade cancelam', { resistencias: ['DCO'] as const, vulnerabilidades: ['DCO'] as const }, {}, 20],
+    ['ignorar resistência', { resistencias: ['DCO'] as const }, { ignoresResistance: true }, 20],
+  ] as const)('%s de acessório equipado aplica o resultado ao dano', async (_nome, mitigacao, opts, danoFinal) => {
+    montarMesa([char('alvo')], {});
+    const item = { ...novaEntidade('item', 'Broche'), slotType: 'anel' as const, ...mitigacao } as unknown as EntidadeOmni;
+    const instancia = useInventoryStore.getState().add('alvo', item);
+    expect(useInventoryStore.getState().equipItem(instancia.instanceId, 'anel:0')).toBe(true);
+    useCharacterStore.getState().applyDamage('alvo', 20, 'DCO', opts);
+    await waitFor(() => expect(pegarFicha('alvo').hpCurrent).toBe(100 - danoFinal));
+  });
+
+  it('não aplica as propriedades de um acessório guardado no inventário', async () => {
+    montarMesa([char('alvo')], {});
+    useInventoryStore.getState().add('alvo', { ...novaEntidade('item', 'Broche'), slotType: 'anel', resistencias: ['DCO'] });
+    useCharacterStore.getState().applyDamage('alvo', 20, 'DCO');
+    await waitFor(() => expect(pegarFicha('alvo').hpCurrent).toBe(80));
+  });
   it.each(['global', 'porFonte'] as const)('incrementar zero preserva contadores com teto %s', (escopoTeto) => {
     const origem: Record<string, number> = escopoTeto === 'global' ? { cargas: 3 } : { cargas: 3, cargas__fonte__alvo: 3 };
     const res = calcularContador(origem, 'cargas', 'INCREMENTAR_CONTADOR', { valor: 0, fonteId: 'alvo', escopoTeto, teto: 4 });

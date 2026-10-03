@@ -1,4 +1,4 @@
-import { DAMAGE_TYPES as TIPOS_DANO_MOTOR, DAMAGE_TYPE_LABELS } from '@/types';
+import { DAMAGE_TYPES as TIPOS_DANO_MOTOR, DAMAGE_TYPE_LABELS, type DamageType } from '@/types';
 import { resolverTipoDano } from '@/lib/omni/contextoDano';
 /**
  * Modal No-Code para criar/editar uma EntidadeOmni.
@@ -83,6 +83,10 @@ const CATEGORIAS: { id: CategoriaEntidade; label: string }[] = [
 export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar, onProporConceito, abaInicial }: Props) {
   const [ent, setEnt] = useState<EntidadeOmni>(entidadeInicial);
   useEffect(() => setEnt(entidadeInicial), [entidadeInicial]);
+  const toggleMitigacao = (campo: 'resistencias' | 'vulnerabilidades' | 'imunidades_dano', tipo: DamageType) => {
+    const atual = ent[campo] ?? [];
+    setEnt({ ...ent, [campo]: atual.includes(tipo) ? atual.filter((t) => t !== tipo) : [...atual, tipo] });
+  };
 
   // Modal "Modo Preguiça" — captura Nome + Descrição com explicação dedicada.
   const [conceitoAberto, setConceitoAberto] = useState(false);
@@ -450,6 +454,26 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                               onChange={(e) => setEnt({ ...ent, bonusEquipado: { ...ent.bonusEquipado, trs: { ...ent.bonusEquipado?.trs, [tr]: Number(e.target.value) || 0 } } })} />
                           </div>;
                         })}
+                      </div>
+                    </details>
+                    <details>
+                      <summary className="cursor-pointer text-xs text-primary">Resistências, vulnerabilidades e imunidades</summary>
+                      <div className="mt-2 space-y-3">
+                        {([
+                          ['resistencias', 'Resistências (metade do dano)'],
+                          ['vulnerabilidades', 'Vulnerabilidades (×1,5 dano)'],
+                          ['imunidades_dano', 'Imunidades (anula o dano)'],
+                        ] as const).map(([campo, titulo]) => (
+                          <fieldset key={campo} className="space-y-1">
+                            <legend className="text-[11px] font-medium text-muted-foreground">{titulo}</legend>
+                            <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
+                              {TIPOS_DANO_MOTOR.map((tipo) => <label key={tipo} className="flex items-center gap-1 text-[10px]">
+                                <input type="checkbox" checked={(ent[campo] ?? []).includes(tipo)} onChange={() => toggleMitigacao(campo, tipo)} />
+                                {DAMAGE_TYPE_LABELS[tipo]}
+                              </label>)}
+                            </div>
+                          </fieldset>
+                        ))}
                       </div>
                     </details>
                   </div>
