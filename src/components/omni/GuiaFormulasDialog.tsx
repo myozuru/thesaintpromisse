@@ -202,7 +202,7 @@ export function GuiaFormulasDialog({ aberto, onClose, modo = 'dialog', onAplicar
                 {
                   titulo: 'Defesa que cresce com treinamento',
                   script: 'somar @USUARIO.treino em usuario.defesa',
-                  descricao: 'Adiciona à Defesa do usuário o valor atual de Treinamento. Com Treinamento 4, o bônus aplicado é +4; a fórmula acompanha o valor da ficha.',
+                  descricao: 'Quando o script é executado, consulta Treinamento e soma esse valor à Defesa do usuário. Com Treinamento 4, adiciona +4; mudanças futuras na ficha não atualizam esse bônus automaticamente.',
                 },
                 {
                   titulo: 'Aplicar cegueira por duas rodadas',
