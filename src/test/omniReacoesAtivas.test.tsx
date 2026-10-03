@@ -13,7 +13,7 @@ import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { useReactionStore } from '@/stores/useReactionStore';
-import { abrirJanelaReacaoAtiva, ofertasReacaoAtiva, useReacoesAtivasStore, responderReacaoAtiva, cancelarJanelasReacoesAtivas } from '@/lib/omni/reacoesAtivas';
+import { abrirJanelaReacaoAtiva, ofertasReacaoAtiva, receberRespostaRemota, receberSondagemRemota, useReacoesAtivasStore, responderReacaoAtiva, cancelarJanelasReacoesAtivas } from '@/lib/omni/reacoesAtivas';
 import { ReacoesAtivasOverlay } from '@/components/omni/ReacoesAtivasOverlay';
 import { EditorAcoesAtivas } from '@/components/omni/EditorAcoesAtivas';
 import { PendingMoveOverlay } from '@/components/mapa/ui/PendingMoveOverlay';
@@ -35,9 +35,31 @@ beforeEach(() => {
   useMapStore.setState({ pendingMove: null, walls: [], initiative: { ...useMapStore.getState().initiative, entries: [] } });
   useCombatStore.setState({ inCombat: true, movementUsedByChar: {}, initiativeOrder: [], currentTurnIndex: 0 });
 });
-afterEach(async () => { cancelarJanelasReacoesAtivas(); cleanup(); await import('@/lib/omni/eventBus'); await import('@/lib/omni/observadores'); await esperar(); useCombatStore.setState({ inCombat: false }); limparMesa(); });
+afterEach(async () => { cancelarJanelasReacoesAtivas(); useReacoesAtivasStore.setState({ janelas: [], ofertasRemotas: [] }); cleanup(); await import('@/lib/omni/eventBus'); await import('@/lib/omni/observadores'); await esperar(); useCombatStore.setState({ inCombat: false }); limparMesa(); });
 
 describe('janelas de reação', () => {
+  it('encaminha a oferta ao perfil dono e devolve a escolha à sessão de origem', async () => {
+    useCharacterStore.getState().updateCharacter('u', { profileId: 'perfil-u' });
+    const enviados: CustomEvent[] = [];
+    const capturar = (e: Event) => enviados.push(e as CustomEvent);
+    window.addEventListener('omni-reaction:send', capturar);
+    const p = abrirJanelaReacaoAtiva(evento);
+    expect(enviados[0].detail).toMatchObject({ tipo: 'sondar', perfilId: 'perfil-u' });
+    const d = enviados[0].detail;
+    add(); // inventário local apenas na sessão proprietária
+    comoTela({ profileId: 'perfil-u', role: 'PLAYER' });
+    receberSondagemRemota({ janelaId: d.janelaId, clienteOrigem: 'origem', perfilId: d.perfilId, evento: d.evento });
+    render(<ReacoesAtivasOverlay />);
+    fireEvent.click(screen.getByText('u: Responder'));
+    await waitFor(() => expect(enviados.some(e => e.detail.tipo === 'resultado')).toBe(true));
+    const resposta = enviados.find(e => e.detail.tipo === 'resultado')!.detail;
+    await receberRespostaRemota({ tipo: 'resultado', janelaId: d.janelaId, perfilId: 'perfil-u', clienteOrigem: 'origem', resultado: resposta.resultado }, 'origem');
+    window.removeEventListener('omni-reaction:send', capturar);
+    expect(useReacoesAtivasStore.getState().ofertasRemotas).toHaveLength(0);
+    expect(pegarFicha('u').peCurrent).toBe(18);
+    expect((await p).cancelado).toBe(false);
+  });
+
   it('pausa o ataque antes do d20 e passar retoma sem cobrar reação', async () => {
     add(); render(<ReacoesAtivasOverlay />); forcarDados(12, 3);
     let finalizou = false; const promessa = ataque().then(r => { finalizou = true; return r; }); await esperar();

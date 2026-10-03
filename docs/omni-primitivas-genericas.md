@@ -8,7 +8,7 @@ Este ciclo sucede a auditoria das keys. Cada categoria é uma entrega independen
 | 2 | Condicionais dinâmicas | Implementada: checagens de usuário/alvo, idade de condição, crítico, dano extra, vantagem e TR |
 | 3 | Movimento | Implementada: puxar, empurrar, avançar, teleportar e trocar; fórmulas, obstáculos e destinos válidos |
 | 4 | Custos flexíveis | Implementada: intensificação com teto, consumo parcial/total, PV, tipo de ação e manutenção de condições por turno |
-| 5 | Reações interrompíveis | Implementada: cinco gatilhos, janela aguardada, defesa local, cancelamento e integração com ataques/conjurações/movimento |
+| 5 | Reações interrompíveis | Implementada: cinco gatilhos, janelas entre sessões por perfil, defesa local, cancelamento e integração com ataques/conjurações/movimento |
 | 6 | Graus de TR | Implementada: falha crítica, dano total/metade/nenhum, dano maximizado ou extra, duração e efeitos por grau |
 
 ## Contrato da etapa 1
@@ -193,7 +193,7 @@ A origem deve ser inimiga do reagente, usando os mesmos lados da iniciativa/filt
 
 ### Resolução e custos
 
-A janela global funciona tanto na ficha quanto no mapa e aguarda uma escolha explícita: executar uma oferta ou passar. Cada oferta é usada no máximo uma vez por janela. Ao aceitar, recursos, item, configuração, personagem e alcance são revalidados. Falhas de validação não cobram recursos e mostram a razão, permitindo continuar. Cliques duplicados são bloqueados durante a execução. Ofertas restantes são revalidadas depois de uma reação.
+A janela funciona tanto na ficha quanto no mapa e aguarda uma escolha explícita: executar uma oferta ou passar. Perfis de jogadores recebem uma sondagem pelo Supabase Realtime; cada sessão procura as reações no inventário local do perfil, executa a escolha e devolve o resultado à sessão que pausou a ação. Assim, a ação e seus custos são aplicados na sessão proprietária, mesmo que o inventário não esteja replicado entre navegadores. Cada oferta é usada no máximo uma vez por janela. Ao aceitar, recursos, item, configuração, personagem e alcance são revalidados. Falhas de validação não cobram recursos e mostram a razão, permitindo continuar. Cliques duplicados são bloqueados durante a execução. Ofertas restantes são revalidadas depois de uma reação.
 
 PE, PV, cargas e orçamento vêm da etapa 4; uma reação paga seus custos uma vez, mesmo se seu ataque errar ou o alvo passar no TR. Se usar orçamento de reação, também marca o controle compartilhado de reações da rodada. Defesa local e cancelamento só se aplicam quando o teste da reação permite seus efeitos. Cancelar não desfaz dano/erro já resolvido; `cancelar_evento` é útil nas janelas de declaração e movimento.
 
@@ -203,7 +203,7 @@ A confirmação de movimento mantém a prévia visível enquanto aguarda; o orç
 
 ### Escopo operacional
 
-A oferta automática executa uma ação de alvo único/próprio, sem intensificação opcional; área e múltiplos alvos continuam disponíveis para uso manual. Reações não abrem outras janelas, evitando ciclos de contra-ataques. Encerrar o combate cancela as janelas pendentes. As janelas são locais à tela que iniciou a resolução; a escolha não é encaminhada a outra sessão do jogador. Alterações de fichas e mapa seguem a sincronização existente.
+A oferta automática executa uma ação de alvo único/próprio, sem intensificação opcional; área e múltiplos alvos continuam disponíveis para uso manual. Reações não abrem outras janelas, evitando ciclos de contra-ataques. Encerrar o combate cancela as janelas pendentes. Personagens vinculados a `profileId` recebem ofertas somente no perfil dono; os sem vínculo continuam na sessão local. Alterações de fichas e mapa seguem a sincronização existente.
 
 O sistema específico de Zona de Risco continua disponível. O novo gatilho de entrada exige cruzar de fora para dentro; a habilidade antiga também reage a movimento que termina dentro de alcance mesmo se começou dentro, e mantém seu limite próprio por rodada. Estes comportamentos não foram fundidos.
 

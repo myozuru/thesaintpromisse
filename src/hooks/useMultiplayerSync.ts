@@ -544,11 +544,31 @@ export function useMultiplayerSync() {
         else if (r.type === 'open') st.open({ supporterId: r.supporterId, friendId: r.friendId });
       });
     });
+    worldBus.on('broadcast', { event: 'omni-reaction' }, ({ payload }) => {
+      const msg = payload as { clientId?: string; tipo?: string; janelaId?: string; perfilId?: string; evento?: unknown; clienteOrigem?: string; resultado?: unknown } | null;
+      if (!msg || msg.clientId === clientId || !msg.tipo || !msg.janelaId) return;
+      if (msg.tipo === 'sondar' && msg.perfilId && msg.perfilId === useProfileStore.getState().activeProfileId && msg.evento) {
+        void import('@/lib/omni/reacoesAtivas').then(({ receberSondagemRemota }) => receberSondagemRemota({
+          janelaId: msg.janelaId!, clienteOrigem: msg.clientId!, perfilId: msg.perfilId!, evento: msg.evento as never,
+        }));
+      } else if (msg.tipo === 'fechar' && msg.perfilId === useProfileStore.getState().activeProfileId) {
+        void import('@/lib/omni/reacoesAtivas').then(({ useReacoesAtivasStore }) => useReacoesAtivasStore.getState().fecharOfertaRemota(msg.janelaId!));
+      } else if ((msg.tipo === 'resultado' || msg.tipo === 'passar' || msg.tipo === 'indisponivel') && msg.clienteOrigem === clientId && msg.perfilId) {
+        void import('@/lib/omni/reacoesAtivas').then(({ receberRespostaRemota }) => receberRespostaRemota({
+          tipo: msg.tipo as 'resultado' | 'passar' | 'indisponivel', janelaId: msg.janelaId!, perfilId: msg.perfilId!, clienteOrigem: msg.clienteOrigem!, resultado: msg.resultado as never,
+        }, clientId));
+      }
+    });
     const onAmizadeSend = (e: Event) => {
       const d = (e as CustomEvent).detail ?? {};
       void worldBus.send({ type: 'broadcast', event: 'amizade', payload: { clientId, ...d } });
     };
     window.addEventListener('amizade:send', onAmizadeSend);
+    const onOmniReactionSend = (e: Event) => {
+      const d = (e as CustomEvent).detail ?? {};
+      void worldBus.send({ type: 'broadcast', event: 'omni-reaction', payload: { clientId, ...d } });
+    };
+    window.addEventListener('omni-reaction:send', onOmniReactionSend);
     worldBus.on('broadcast', { event: 'sintonizacao' }, ({ payload }) => {
       void import('@/lib/suporteSintonizacao').then(({ useSintonizacaoPromptStore, shouldSeeSintonizacaoPrompt, reduceSintonizacaoMessage }) => {
         const st = useSintonizacaoPromptStore.getState();
@@ -1244,6 +1264,7 @@ export function useMultiplayerSync() {
       void supabase.removeChannel(cloudMapChannel);
       void supabase.removeChannel(cloudAssetChannel);
       window.removeEventListener('amizade:send', onAmizadeSend);
+      window.removeEventListener('omni-reaction:send', onOmniReactionSend);
       window.removeEventListener('sintonizacao:send', onSintonizacaoSend);
       window.removeEventListener('outra-chance:send', onOutraChanceSend);
       window.removeEventListener('negacao:send', onNegacaoSend);
