@@ -267,3 +267,52 @@ describe('Bônus de perícias e TR em itens equipados', () => {
     expect(pacote.entidades[0].bonusEquipado).toEqual(item.bonusEquipado);
   });
 });
+
+
+describe('Fórmulas de bônus equipado para perícias, TRs e deslocamento', () => {
+  it('avalia fórmulas com o estado atual da ficha e soma bônus fixos', () => {
+    const c = baseCobaia();
+    const item = novaEntidade('item', 'Manto Adaptativo');
+    item.slotType = 'anel';
+    item.bonusEquipado = {
+      deslocamento: 1,
+      pericias: { furtividade: 1 },
+      trs: { reflexos: 1 },
+    };
+    item.bonusEquipadoFormula = {
+      deslocamento: '@USUARIO.treino',
+      pericias: { furtividade: '@USUARIO.treino / 2' },
+      trs: { reflexos: '@USUARIO.treino - 1' },
+    };
+
+    const bag = selectOmniModifiers(c, [{ instanceId: 'formula-1', equippedSlot: 'anel:0', entity: item }]);
+    expect(bag.deslocamento).toBe(4);
+    expect(bag.pericias.furtividade).toBe(2.5);
+    expect(bag.trs.reflexos).toBe(3);
+    expect(bag.periciaOrigins.furtividade.map((origin) => origin.source)).toEqual([expect.stringContaining(item.nome)]);
+    expect(bag.trOrigins.reflexos.map((origin) => origin.source)).toEqual([expect.stringContaining(item.nome)]);
+  });
+
+  it('ignora fórmulas de itens que não estão equipados', () => {
+    const c = baseCobaia();
+    const item = novaEntidade('item', 'Botas guardadas');
+    item.slotType = 'pes';
+    item.bonusEquipadoFormula = { deslocamento: '10', pericias: { atletismo: '5' }, trs: { vontade: '4' } };
+    const bag = selectOmniModifiers(c, [{ instanceId: 'stored', equippedSlot: null, entity: item }]);
+    expect(bag.deslocamento).toBe(0);
+    expect(bag.pericias.atletismo).toBeUndefined();
+    expect(bag.trs.vontade).toBeUndefined();
+  });
+
+  it('preserva as fórmulas no pacote importado', () => {
+    const item = novaEntidade('item', 'Anel escalável');
+    item.slotType = 'anel';
+    item.bonusEquipadoFormula = {
+      deslocamento: '@NIVEL / 2',
+      pericias: { atletismo: '@TREINO' },
+      trs: { vontade: '@TREINO + 1' },
+    };
+    const pacote = PacoteOmniSchema.parse({ formato: 'omni-engine.v1', nome: 'Teste', geradoEm: 1, entidades: [item] });
+    expect(pacote.entidades[0].bonusEquipadoFormula).toEqual(item.bonusEquipadoFormula);
+  });
+});
