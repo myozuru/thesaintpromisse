@@ -1186,6 +1186,14 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
 
               {/* COMBATE — Dano nativo (Pilar de Dano) */}
               <TabsContent value="combate" className="space-y-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setAbaAtiva('ativas')}
+                  className="w-full rounded-md border border-primary/50 bg-primary/10 p-3 text-left text-sm hover:bg-primary/20"
+                >
+                  <b className="text-primary">⚡ Quer criar um golpe com nome, custo de PE, teste (TR/ataque) e dano?</b>
+                  <span className="block text-xs text-muted-foreground">Clique aqui para abrir a aba Ações Ativas. Esta aba é só para scripts passivos/ativos em texto.</span>
+                </button>
                 {/* Toolbar: modo + Omni-Helper -------------------------- */}
                 <div className="flex flex-wrap items-center gap-2 justify-end">
                   <Button
