@@ -16,7 +16,7 @@ export interface EventoReacaoAtiva {
   gatilho: GatilhoReacaoAtiva;
   origemId: string;
   protegidoId?: string;
-  movimento?: { de: { x: number; y: number }; para: { x: number; y: number } };
+  movimento?: { de: { x: number; y: number }; para: { x: number; y: number }; /** Amostras intermediárias do trajeto, na ordem do movimento. */ trajetoria?: { x: number; y: number }[] };
 }
 export interface ResultadoJanelaAtiva { cancelado: boolean; defesaBonus: number }
 export interface OfertaReacaoAtiva { id: string; usuarioId: string; nomeUsuario: string; instanceId: string; cfg: AcaoAtivaConfig; ent: EntidadeOmni; alvoId: string }
@@ -94,6 +94,30 @@ export async function responderOfertaRemota(janelaId: string, ofertaId?: string,
   }
 }
 
+function segmentoCruzaAlcance(
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+  fixo: EntidadeOmni extends never ? never : { x: number; y: number; w: number; h: number },
+  movel: { w: number; h: number },
+  grid: { dpi?: number; metersPerCell?: number },
+  alcanceM: number,
+): boolean {
+  const dpi = grid.dpi || 70, mpc = grid.metersPerCell || 1.5;
+  const rx = Math.max(0, (fixo.w - dpi) / 2) + Math.max(0, (movel.w - dpi) / 2) + (alcanceM + 0.05) * dpi / mpc;
+  const ry = Math.max(0, (fixo.h - dpi) / 2) + Math.max(0, (movel.h - dpi) / 2) + (alcanceM + 0.05) * dpi / mpc;
+  const dx = b.x - a.x, dy = b.y - a.y;
+  let t0 = 0, t1 = 1;
+  const clip = (p: number, q: number) => {
+    if (p === 0) return q >= 0;
+    const t = q / p;
+    if (p < 0) { if (t > t1) return false; t0 = Math.max(t0, t); }
+    else { if (t < t0) return false; t1 = Math.min(t1, t); }
+    return true;
+  };
+  return clip(-dx, a.x - (fixo.x - rx)) && clip(dx, fixo.x + rx - a.x)
+    && clip(-dy, a.y - (fixo.y - ry)) && clip(dy, fixo.y + ry - a.y);
+}
+
 function elegivel(oferta: OfertaReacaoAtiva, evento: EventoReacaoAtiva): boolean {
   const chars = useCharacterStore.getState().characters;
   const u = chars.find(c => c.id === oferta.usuarioId), origem = chars.find(c => c.id === evento.origemId);
@@ -106,9 +130,11 @@ function elegivel(oferta: OfertaReacaoAtiva, evento: EventoReacaoAtiva): boolean
   const ms = useMapStore.getState(), ut = findCharEntity(ms.entities, u.id), ot = findCharEntity(ms.entities, origem.id);
   if (!ut || !ot || !Number.isFinite(r.alcance_m) || r.alcance_m <= 0) return false;
   if (evento.movimento) {
-    const antes = touchDistanceMeters(ut, { ...ot, ...evento.movimento.de }, ms.gridConfig);
-    const depois = touchDistanceMeters(ut, { ...ot, ...evento.movimento.para }, ms.gridConfig);
-    if (evento.gatilho === 'quando_inimigo_entrar_alcance' ? !(antes > r.alcance_m + 0.05 && depois <= r.alcance_m + 0.05) : !(antes <= r.alcance_m + 0.05 && depois > r.alcance_m + 0.05)) return false;
+    const caminho = [evento.movimento.de, ...(evento.movimento.trajetoria ?? []), evento.movimento.para];
+    const inicioDentro = touchDistanceMeters(ut, { ...ot, ...caminho[0] }, ms.gridConfig) <= r.alcance_m + 0.05;
+    const pontosDentro = caminho.map(p => touchDistanceMeters(ut, { ...ot, ...p }, ms.gridConfig) <= r.alcance_m + 0.05);
+    const cruzou = caminho.slice(0, -1).some((p, i) => segmentoCruzaAlcance(p, caminho[i + 1], ut, ot, ms.gridConfig, r.alcance_m));
+    if (evento.gatilho === 'quando_inimigo_entrar_alcance' ? (inicioDentro || !cruzou) : (!inicioDentro || pontosDentro.every(Boolean))) return false;
     if (evento.gatilho === 'quando_inimigo_sair_alcance' && (origem.desengajado || origem.desengajadoDe?.includes(u.id))) return false;
   } else {
     // Defesa/interceptação mede alcance até o protegido; demais gatilhos até a origem.
