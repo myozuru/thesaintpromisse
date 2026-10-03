@@ -37,13 +37,13 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
         <div className="space-y-1">
           {sust.map((s) => (
             <div key={s.id} className="flex items-center gap-2 rounded border border-border bg-background/60 px-2 py-1 text-xs">
-              <span className="min-w-0 flex-1 truncate">🔁 <b>{s.nome}</b> · sustentada · {s.pePorTurno} PE/turno</span>
+              <span className="min-w-0 flex-1 truncate"><b>{s.nome}</b> · sustentada · {s.pePorTurno} PE/turno</span>
               <button className="shrink-0 rounded border border-destructive/50 px-2 py-0.5 text-destructive hover:bg-destructive/10" aria-label={`Encerrar ${s.nome}`} onClick={() => encerrarSustentacaoAtiva(charId, s.id)}>Encerrar</button>
             </div>
           ))}
           {prot.map((p) => (
             <div key={p.id} className="flex items-center gap-2 rounded border border-border bg-background/60 px-2 py-1 text-xs">
-              <span className="min-w-0 flex-1 truncate">🛡 <b>{p.fonte}</b> · {p.restante} {p.tipo === 'escudo' ? 'escudo' : 'PV temp.'} · {p.rodadas ? `${p.rodadas} rod.` : 'até remover'}</span>
+              <span className="min-w-0 flex-1 truncate"><b>{p.fonte}</b> · {p.restante} {p.tipo === 'escudo' ? 'escudo' : 'PV temp.'} · {p.rodadas ? `${p.rodadas} rod.` : 'até remover'}</span>
               <button aria-label={`Remover proteção ${p.fonte}`} className="shrink-0 rounded border border-border px-2 py-0.5 hover:bg-muted" onClick={() => {
                 const atual = useCharacterStore.getState().characters.find((c) => c.id === charId);
                 if (!atual) return;
@@ -75,16 +75,16 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
                 <div className="truncate text-sm font-bold text-foreground">{cfg.nome || 'Ação sem nome'}</div>
                 <div className="truncate text-[10px] text-muted-foreground">{ent.nome}</div>
               </div>
-              <span className={`${chip} border-primary/50 bg-primary/15 text-primary`}>{p ? `${p.pe} PE${p.pv ? ` + ${p.pv} PV` : ''}` : '—'}</span>
+              <span className={`${chip} border-primary/50 bg-primary/15 text-primary`}>{p ? `${p.pe} PE${p.pv ? ` + ${p.pv} PV` : ''}` : `${cfg.custoPE} PE`}</span>
             </div>
             <div className="flex flex-wrap gap-1">
               <span className={`${chip} border-border`}>{ACAO_ROT[p?.acao ?? cfg.acao]}</span>
-              {teste && <span className={`${chip} border-border`}>🎯 {teste}</span>}
-              {cfg.alcanceM > 0 && <span className={`${chip} border-border`}>📏 {String(cfg.alcanceM).replace('.', ',')} m</span>}
+              {teste && <span className={`${chip} border-border`}>{teste}</span>}
+              {cfg.alcanceM > 0 && <span className={`${chip} border-border`}>{String(cfg.alcanceM).replace('.', ',')} m</span>}
               {area && <span className={`${chip} border-border`}>Área: {cfg.area?.forma ?? '?'} {cfg.area?.tamanho_m ?? ''}m</span>}
               {proprio && <span className={`${chip} border-border`}>Em si</span>}
-              {cfg.dano && cfg.tipo_efeito !== 'cura' && <span className={`${chip} border-border`}>💥 {cfg.dano}</span>}
-              {cfg.tipo_efeito === 'cura' && <span className={`${chip} border-border`}>💚 {cfg.cura ?? '0'} {(cfg.recurso_cura ?? 'pv').toUpperCase()}</span>}
+              {cfg.dano && cfg.tipo_efeito !== 'cura' && <span className={`${chip} border-border`}>Dano {cfg.dano}</span>}
+              {cfg.tipo_efeito === 'cura' && <span className={`${chip} border-border`}>Cura {cfg.cura ?? '0'} {(cfg.recurso_cura ?? 'pv').toUpperCase()}</span>}
               {p?.contador && <span className={`${chip} border-accent/50`}>{p.contador}: {cargas} (gasta {p.cargas})</span>}
               {p?.municao ? <span className={`${chip} border-border`}>Munição {p.municao}/{p.armaMunicao?.restanteAntes}</span> : null}
               {p?.usosItem ? <span className={`${chip} border-border`}>Usos {useInventoryStore.getState().items[instanceId]?.usosRestantes ?? ent.usos?.total ?? 0}</span> : null}
