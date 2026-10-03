@@ -20,6 +20,7 @@ import { novaEntidade } from '@/lib/omni/tipos';
 import { PacoteOmniSchema } from '@/lib/omni/validacao';
 import type { Character } from '@/types';
 import type { EntidadeOmni, CombatEffect } from '@/lib/omni/tipos';
+import { effectiveMovement, combatMoveBudget, reactionMoveBudget } from '@/lib/movementBudget';
 import { ORDEM_PERICIAS, SISTEMA_PERICIAS, ORDEM_TR, SISTEMA_TR } from '@/lib/omni/constantesDoSistema';
 
 // ─── Cobaia padronizada ──────────────────────────────────────────────────
@@ -246,9 +247,22 @@ describe('Bônus de perícias e TR em itens equipados', () => {
     expect(bag.periciaOrigins.atletismo[0].source).toContain(item.nome);
     expect(selectOmniModifiers(c, []).pericias.atletismo).toBeUndefined();
   });
+  it('aplica deslocamento equipado ao orçamento normal, sobrecarregado e de reação', () => {
+    const c = baseCobaia();
+    const item = novaEntidade('item', 'Botas de Velocidade'); item.slotType = 'pes';
+    item.bonusEquipado = { deslocamento: 3 };
+    const bag = selectOmniModifiers(c, [{ instanceId: 'botas', equippedSlot: 'pes', entity: item }]);
+    expect(bag.deslocamento).toBe(3);
+    expect(bag.deslocamentoOrigins[0].source).toContain(item.nome);
+    const move = { movement: 9, slotsCurrent: 0, slotsMax: 10 };
+    expect(combatMoveBudget(move, true, bag.deslocamento)).toBe(12);
+    expect(effectiveMovement({ ...move, slotsCurrent: 11 }, bag.deslocamento)).toBe(6);
+    expect(reactionMoveBudget({ ...move, mobilidadeReacaoBase: 3, mobilidadeReacaoM: 2 }, bag.deslocamento)).toBe(8);
+    expect(selectOmniModifiers(c, []).deslocamento).toBe(0);
+  });
   it('preserva bônus no importador Omni', () => {
     const item = novaEntidade('item', 'Amuleto'); item.slotType = 'colar';
-    item.bonusEquipado = { pericias: { furtividade: 2 }, trs: { vontade: 1 } };
+    item.bonusEquipado = { pericias: { furtividade: 2 }, trs: { vontade: 1 }, deslocamento: 3 };
     const pacote = PacoteOmniSchema.parse({ formato: 'omni-engine.v1', nome: 'Teste', geradoEm: 1, entidades: [item] });
     expect(pacote.entidades[0].bonusEquipado).toEqual(item.bonusEquipado);
   });
