@@ -172,6 +172,11 @@ function compilarDicionario(): SugestaoAutocomplete[] {
 
 export const DICIONARIO_AUTOCOMPLETE: SugestaoAutocomplete[] = compilarDicionario();
 
+// Ordenação e normalização feitas uma vez, fora do caminho de digitação.
+const INDICE_AUTOCOMPLETE = DICIONARIO_AUTOCOMPLETE
+  .map(s => ({ sugestao: s, prefixo: s.valor.toLowerCase() }))
+  .sort((a, b) => a.sugestao.valor.localeCompare(b.sugestao.valor));
+
 /** Caracteres considerados parte de uma "palavra" de identificador. */
 const RE_PALAVRA = /[\p{L}\p{N}_.@:-]/u;
 
@@ -193,16 +198,12 @@ export function extrairPrefixoNoCaret(texto: string, caret: number): {
 export function filtrarSugestoes(prefixo: string, limite = 12): SugestaoAutocomplete[] {
   if (!prefixo) return [];
   const p = prefixo.toLowerCase();
-  const matches = DICIONARIO_AUTOCOMPLETE.filter((s) =>
-    s.valor.toLowerCase().startsWith(p),
-  );
-  // Ordena: exato primeiro, depois alfabético.
-  matches.sort((a, b) => {
-    if (a.valor.toLowerCase() === p) return -1;
-    if (b.valor.toLowerCase() === p) return 1;
-    return a.valor.localeCompare(b.valor);
-  });
-  return matches.slice(0, limite);
+  const exatos: SugestaoAutocomplete[] = [], demais: SugestaoAutocomplete[] = [];
+  for (const item of INDICE_AUTOCOMPLETE) {
+    if (item.prefixo === p) exatos.push(item.sugestao);
+    else if (item.prefixo.startsWith(p)) demais.push(item.sugestao);
+  }
+  return [...exatos, ...demais].slice(0, limite);
 }
 
 /** Completa uma parte, preservando as anteriores e evitando tratar argumentos como keys. */

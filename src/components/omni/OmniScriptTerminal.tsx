@@ -5,7 +5,7 @@
  * tokens da OmniScript (somar, subtrair, definir, em, e). Exibe um
  * pré-visualizador da compilação (efeitos detectados) abaixo.
  */
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
@@ -26,7 +26,9 @@ import type { Character } from '@/types';
 
 interface Props {
   valor: string;
-  onChange: (s: string) => void;
+  onChange: (s: string, compilado?: ReturnType<typeof parseOmniScript>) => void;
+  /** Isola a digitação e entrega texto e compilação juntos após uma pausa. */
+  adiarEdicao?: boolean;
   onFocus?: () => void;
   ativoParaInsercao?: boolean;
   /** Personagem opcional para preview de valores reais no Plano de Execução. */
@@ -46,15 +48,72 @@ const COR_TOKEN: Record<OmniToken['tipo'], string> = {
   espaco: '',
 };
 
-export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao, personagemPreview, defaultTarget }: Props) {
-  const tokens = useMemo(() => tokenizarOmniScript(valor || ''), [valor]);
-  const compilado = useMemo(() => parseOmniScript(valor || '', { defaultTarget }), [valor, defaultTarget]);
+export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao, personagemPreview, defaultTarget, adiarEdicao = false }: Props) {
+  const [rascunho, setRascunho] = useState(valor);
+  const texto = adiarEdicao ? rascunho : valor;
+  const rascunhoRef = useRef(texto);
+  const enviadoRef = useRef(valor);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [analise, setAnalise] = useState(() => ({ texto: valor, alvo: defaultTarget,
+    compilado: parseOmniScript(valor || '', { defaultTarget }), tokens: tokenizarOmniScript(valor || '') }));
+  const analiseRef = useRef(analise);
+  const atualizar = (novo: string) => {
+    rascunhoRef.current = novo;
+    if (adiarEdicao) setRascunho(novo);
+    else onChangeRef.current(novo);
+  };
+  const concluirEdicao = useCallback(() => {
+    if (!adiarEdicao) return;
+    clearTimeout(timerRef.current);
+    const novo = rascunhoRef.current;
+    let a = analiseRef.current;
+    if (a.texto !== novo || a.alvo !== defaultTarget) {
+      a = { texto: novo, alvo: defaultTarget, compilado: parseOmniScript(novo || '', { defaultTarget }), tokens: tokenizarOmniScript(novo || '') };
+      analiseRef.current = a;
+      setAnalise(a);
+    }
+    if (enviadoRef.current !== novo) {
+      enviadoRef.current = novo;
+      onChangeRef.current(novo, a.compilado);
+    }
+  }, [adiarEdicao, defaultTarget]);
+  useEffect(() => {
+    if (valor !== enviadoRef.current) {
+      enviadoRef.current = valor;
+      rascunhoRef.current = valor;
+      setRascunho(valor);
+    }
+  }, [valor]);
+  useEffect(() => {
+    if (!adiarEdicao) return;
+    timerRef.current = setTimeout(concluirEdicao, 250);
+    return () => clearTimeout(timerRef.current);
+  }, [rascunho, concluirEdicao, adiarEdicao]);
+  const opcoesRef = useRef({ adiarEdicao, defaultTarget });
+  opcoesRef.current = { adiarEdicao, defaultTarget };
+  useEffect(() => () => {
+    clearTimeout(timerRef.current);
+    const novo = rascunhoRef.current;
+    if (!opcoesRef.current.adiarEdicao || enviadoRef.current === novo) return;
+    const a = analiseRef.current;
+    const compilado = a.texto === novo && a.alvo === opcoesRef.current.defaultTarget
+      ? a.compilado : parseOmniScript(novo || '', { defaultTarget: opcoesRef.current.defaultTarget });
+    enviadoRef.current = novo;
+    onChangeRef.current(novo, compilado);
+  }, []);
+  const tokens = useMemo(() => adiarEdicao || analise.texto === valor ? analise.tokens : tokenizarOmniScript(valor || ''), [adiarEdicao, analise, valor]);
+  const compilado = useMemo(() => adiarEdicao || analise.texto === valor && analise.alvo === defaultTarget ? analise.compilado : parseOmniScript(valor || '', { defaultTarget }), [adiarEdicao, analise, valor, defaultTarget]);
+  const pendente = adiarEdicao && texto !== analise.texto;
+
+  const variaveisPreview = useMemo(() => personagemPreview ? montarVariaveisDoPersonagem(personagemPreview, 'USUARIO') : undefined, [personagemPreview]);
 
   // Calcula valores mock dos efeitos quando há um personagem selecionado.
   const avaliacoesMock = useMemo<(ReturnType<typeof avaliarFormula> | undefined)[]>(() => {
     if (!personagemPreview) return compilado.efeitos.map(() => undefined);
     try {
-      const vars = montarVariaveisDoPersonagem(personagemPreview, 'USUARIO');
+      const vars = variaveisPreview!;
       return compilado.efeitos.map((eff) => {
         try {
           const r = avaliarFormula(eff.formula || '0', vars, () => 0.5);
@@ -66,7 +125,7 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
     } catch {
       return compilado.efeitos.map(() => undefined);
     }
-  }, [compilado.efeitos, personagemPreview]);
+  }, [compilado.efeitos, variaveisPreview]);
   const valoresMock = avaliacoesMock.map(r => r && r.diagnosticos.length === 0 ? Math.round(r.valor) : undefined);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -96,7 +155,7 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
   const aplicarSugestao = (texto: string, caret: number, escolha: SugestaoAutocomplete) => {
     const { inicio, fim } = extrairPrefixoNoCaret(texto, caret);
     const novo = texto.slice(0, inicio) + escolha.valor + texto.slice(fim);
-    onChange(novo);
+    atualizar(novo);
     // Reposiciona o caret após a palavra inserida.
     const novoCaret = inicio + escolha.valor.length;
     requestAnimationFrame(() => {
@@ -110,7 +169,7 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
 
   const handleChange = (ev: ChangeEvent<HTMLTextAreaElement>) => {
     const texto = ev.target.value;
-    onChange(texto);
+    atualizar(texto);
     ciclandoRef.current = false;
     const caret = ev.target.selectionStart ?? texto.length;
     recomputarSugestoes(texto, caret);
@@ -140,7 +199,7 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
     // Enter aceita sugestão atual quando dropdown está aberto.
     if (ev.key === 'Enter' && sugestoes.length > 0 && !ev.shiftKey) {
       ev.preventDefault();
-      aplicarSugestao(valor, caret, sugestoes[indiceSugestao]);
+      aplicarSugestao(texto, caret, sugestoes[indiceSugestao]);
       setSugestoes([]);
       ciclandoRef.current = false;
       return;
@@ -151,9 +210,9 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
       // Recalcula sugestões a partir do prefixo atual se ainda não temos.
       let lista = sugestoes;
       if (!ciclandoRef.current || lista.length === 0) {
-        const { prefixo } = extrairPrefixoNoCaret(valor, caret);
+        const { prefixo } = extrairPrefixoNoCaret(texto, caret);
         if (prefixo.length === 0) return; // deixa o Tab navegar normalmente
-        lista = sugerirNoCaret(valor, caret);
+        lista = sugerirNoCaret(texto, caret);
         if (lista.length === 0) return;
         setSugestoes(lista);
         setPrefixoAtual(prefixo);
@@ -165,7 +224,7 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
         : 0;
       setIndiceSugestao(proximoIndice);
       ciclandoRef.current = true;
-      aplicarSugestao(valor, caret, lista[proximoIndice]);
+      aplicarSugestao(texto, caret, lista[proximoIndice]);
     }
   };
 
@@ -188,7 +247,7 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
           Omni-Script (Terminal)
         </Label>
         <span className="text-[10px] text-muted-foreground">
-          {compilado.efeitos.length} efeito(s) · {compilado.erros.length} erro(s)
+          {compilado.efeitos.length} efeito(s) · {compilado.erros.length} erro(s){pendente ? ' · Atualizando prévia…' : ''}
         </span>
       </div>
 
@@ -204,21 +263,22 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
           className="whitespace-pre-wrap break-words p-3 font-mono text-[13px] leading-[1.5] text-transparent min-h-[4.5em] m-0"
           style={{ fontFamily: 'JetBrains Mono, Courier New, monospace' }}
         >
-          {tokens.map((t, i) => (
+          {pendente ? texto : tokens.map((t, i) => (
             <span key={i} className={COR_TOKEN[t.tipo]}>{t.texto}</span>
           ))}
           {/* Garante que a última linha vazia conte na altura */}
-          {(valor === '' || valor.endsWith('\n')) && <span> </span>}
+          {(texto === '' || texto.endsWith('\n')) && <span> </span>}
         </pre>
         <Textarea
           ref={textareaRef}
-          value={valor}
+          value={texto}
+          onBlur={concluirEdicao}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           onFocus={onFocus}
           placeholder={'somar treino * 2 em vida_max, somar 10 em vida_atual  ·  Tab para autocompletar'}
           spellCheck={false}
-          className="absolute inset-0 h-full w-full resize-none overflow-hidden bg-transparent text-transparent caret-violet-300 selection:bg-violet-500/30 placeholder:text-muted-foreground/40 font-mono text-[13px] leading-[1.5] border-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-3"
+          className={`absolute inset-0 h-full w-full resize-none overflow-hidden bg-transparent ${pendente ? 'text-zinc-100' : 'text-transparent'} caret-violet-300 selection:bg-violet-500/30 placeholder:text-muted-foreground/40 font-mono text-[13px] leading-[1.5] border-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-3`}
           style={{ fontFamily: 'JetBrains Mono, Courier New, monospace' }}
         />
 
@@ -242,8 +302,8 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
                 }`}
                 onClick={() => {
                   const ta = textareaRef.current;
-                  const caret = ta?.selectionStart ?? valor.length;
-                  aplicarSugestao(valor, caret, s);
+                  const caret = ta?.selectionStart ?? texto.length;
+                  aplicarSugestao(texto, caret, s);
                   setSugestoes([]);
                   ciclandoRef.current = false;
                 }}

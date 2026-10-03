@@ -1281,9 +1281,10 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                         </header>
                         <OmniScriptTerminal
                           valor={scriptPassivo}
-                          onChange={(s) => {
+                          adiarEdicao
+                          onChange={(s, compilado) => {
                             setScriptPassivo(s);
-                            const { efeitos } = parseOmniScript(s, { defaultTarget: 'USUARIO' });
+                            const { efeitos } = compilado ?? parseOmniScript(s, { defaultTarget: 'USUARIO' });
                             setPassive(efeitos);
                           }}
                           ativoParaInsercao
@@ -1319,9 +1320,10 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                         </header>
                         <OmniScriptTerminal
                           valor={scriptAtivo}
-                          onChange={(s) => {
+                          adiarEdicao
+                          onChange={(s, compilado) => {
                             setScriptAtivo(s);
-                            const { efeitos } = parseOmniScript(s, { defaultTarget: 'ALVO' });
+                            const { efeitos } = compilado ?? parseOmniScript(s, { defaultTarget: 'ALVO' });
                             setActive(efeitos);
                           }}
                           ativoParaInsercao
@@ -2232,4 +2234,5 @@ function SemanticBuilder({
     </div>
   );
 }
+
 

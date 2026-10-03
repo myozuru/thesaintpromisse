@@ -65,7 +65,7 @@ export function SimuladorPreview({ entidade }: Props) {
 
   // Efeitos divididos em dois scripts (passivo + ativo). Mantemos o `effects`
   // legado como união para back-compat; cá usamos os splits canônicos.
-  const cd = normalizarCombatData(entidade.combatData);
+  const cd = useMemo(() => normalizarCombatData(entidade.combatData), [entidade.combatData]);
   const efeitosPassivos = cd?.effectsPassive ?? [];
   const efeitosAtivos = cd?.effectsActive ?? [];
   const efeitos = cd?.effects ?? [];
@@ -104,18 +104,20 @@ export function SimuladorPreview({ entidade }: Props) {
     return lista.map((eff, idx) => ({ eff, media: Math.round(somas[idx] / N) }));
   }
 
-  const resumoPassivos = useMemo(
-    () => simular(efeitosPassivos, vars, alvoVars),
-    [efeitosPassivos, vars, alvoVars],
-  );
-  const resumoAtivos = useMemo(
-    () => simular(efeitosAtivos, vars, alvoVars),
-    [efeitosAtivos, vars, alvoVars],
-  );
-  const resumoAlvoPerspectiva = useMemo(() => {
-    if (!usaAlvo || efeitosAtivos.length === 0) return null;
-    return simular(efeitosAtivos, alvoVars, vars);
-  }, [efeitosAtivos, vars, alvoVars, usaAlvo]);
+  // As médias só são recalculadas por uma ação explícita, não durante a edição.
+  const [simulacao, setSimulacao] = useState<{
+    cd: typeof cd; vars: typeof vars; alvoVars: typeof alvoVars;
+    passivos: ReturnType<typeof simular>; ativos: ReturnType<typeof simular>;
+    perspectiva: ReturnType<typeof simular> | null;
+  }>();
+  const atualizada = simulacao?.cd === cd && simulacao?.vars === vars && simulacao?.alvoVars === alvoVars;
+  const resumoPassivos = atualizada ? simulacao!.passivos : [];
+  const resumoAtivos = atualizada ? simulacao!.ativos : [];
+  const resumoAlvoPerspectiva = atualizada ? simulacao!.perspectiva : null;
+  const calcularMedias = () => setSimulacao({ cd, vars, alvoVars,
+    passivos: simular(efeitosPassivos, vars, alvoVars), ativos: simular(efeitosAtivos, vars, alvoVars),
+    perspectiva: usaAlvo && efeitosAtivos.length ? simular(efeitosAtivos, alvoVars, vars) : null,
+  });
 
   return (
     <div className="space-y-3 rounded-lg border border-primary/30 bg-gradient-to-br from-primary/5 to-transparent p-3">
@@ -183,6 +185,13 @@ export function SimuladorPreview({ entidade }: Props) {
           </select>
         </div>
       )}
+
+      {efeitos.length > 0 && <div className="space-y-1">
+        <button type="button" onClick={calcularMedias} className="rounded border border-primary/40 px-3 py-1.5 text-xs text-primary hover:bg-primary/10">
+          {atualizada ? 'Recalcular médias' : 'Calcular médias'}
+        </button>
+        {!atualizada && <p className="text-xs text-muted-foreground">Calcule as médias depois de editar as fórmulas ou os valores da simulação.</p>}
+      </div>}
 
       <div className="rounded-md border border-border/60 bg-background/60 p-3 text-xs space-y-1">
         <div className="text-sm font-semibold text-foreground">{entidade.nome || '—'}</div>
