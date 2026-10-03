@@ -61,7 +61,7 @@ O catálogo agora prioriza nomes curtos, em português e que descrevem o valor r
 | `reacao_usada_nesta_rodada` / `reacoes_usadas_nesta_rodada` | `reacao_usada` / `reacoes_usadas` |
 | `metros_movidos_neste_turno` | `metros_movidos` |
 
-Abreviações redundantes (`sab`, `pre`, `car`, `treinamento`), aliases repetidos (`bonus_treinamento`, `bonusdetreinamento`), campos constantes ou redundantes (`reserva_pe_atual`, `reserva_pe_max`, `sorte_atual`, `dado_vida_atual`, `fome_nivel`, `empolgacao_nivel`, `esta_morrendo`, `ataques_restantes`, `acao_restante`, `qtd_habilidades_spec`) e a key incorreta `CENA.turno_de` deixaram de aparecer no seletor. Quando havia valor útil, a opção principal permanece; nomes antigos seguem aceitos pelo parser para compatibilidade.
+Abreviações redundantes (`sab`, `pre`, `car`, `treinamento`), aliases repetidos (`bonus_treinamento`, `bonusdetreinamento`), campos constantes ou redundantes (`reserva_pe_atual`, `reserva_pe_max`, `sorte_atual`, `dado_vida_atual`, `fome_nivel`, `empolgacao_nivel`, `esta_morrendo`, `ataques_restantes`, `acao_restante`) e a key incorreta `CENA.turno_de` deixaram de aparecer no seletor. Quando havia valor útil, a opção principal permanece; nomes antigos seguem aceitos pelo parser para compatibilidade.
 
 ## Lacunas corrigidas nesta continuação
 
