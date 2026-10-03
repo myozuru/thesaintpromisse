@@ -191,7 +191,7 @@ export function GuiaFormulasDialog({ aberto, onClose, modo = 'dialog', onAplicar
             <h2 className="text-base font-semibold text-primary">Receitas do OMNI</h2>
             <p className="text-sm leading-relaxed text-muted-foreground">{onAplicarReceita ? 'Selecione uma receita para aplicar ao construtor.' : 'Receitas prontas do sistema. Conecte o construtor para aplicá-las diretamente.'}</p>
             <div className="grid gap-2 sm:grid-cols-2">
-              {RECEITAS_OMNI.map((receita) => <ReceitaCard key={receita.id} receita={receita} onAplicar={onAplicarReceita ? () => onAplicarReceita(receita.efeitos) : undefined} />)}
+              {RECEITAS_OMNI.map((receita) => <ReceitaCard key={receita.id} receita={receita} onAplicar={onAplicarReceita ? () => onAplicarReceita(receita.build()) : undefined} />)}
             </div>
           </section>
         </TabsContent>
