@@ -435,6 +435,11 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                       Bônus do acessório
                     </Label>
                     <p className="text-[11px] text-muted-foreground leading-relaxed">Bônus fixos somados às rolagens enquanto este item estiver equipado.</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <Label className="text-[11px]">Deslocamento (m)</Label>
+                      <Input type="number" className="h-7 w-20" value={ent.bonusEquipado?.deslocamento ?? 0}
+                        onChange={(e) => setEnt({ ...ent, bonusEquipado: { ...ent.bonusEquipado, deslocamento: Number(e.target.value) || 0 } })} />
+                    </div>
                     <details>
                       <summary className="cursor-pointer text-xs text-primary">Perícias e testes de resistência</summary>
                       <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
