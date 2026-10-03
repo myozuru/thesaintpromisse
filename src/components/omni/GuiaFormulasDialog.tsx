@@ -326,8 +326,8 @@ const EXEMPLOS_CONTEXTUAIS_CHAVES: Record<string, { formula: string; explicacao:
     explicacao: 'A key vale 1 quando a vida do alvo está em 25% ou menos. Nesse caso, o golpe recebe um efeito adicional de 2d8.',
   },
   qtd_inimigos_adjacentes: {
-    formula: 'subtrair @USUARIO.qtd_inimigos_adjacentes * 1d6 em @ALVO.vida',
-    explicacao: 'Multiplica 1d6 pela quantidade de inimigos adjacentes ao usuário. Com 3 inimigos adjacentes, por exemplo, a fórmula rola 3d6 de dano.',
+    formula: 'subtrair @USUARIO.qtd_inimigos_adjacentes * 6 em @ALVO.vida',
+    explicacao: 'Causa 6 pontos de dano por inimigo adjacente ao usuário. Com 3 inimigos adjacentes, o resultado é 18 de dano.',
   },
   'tem_condicao_<id>': {
     formula: 'se @ALVO.tem_condicao_atordoado > 0 entao subtrair 2d6 em @ALVO.vida',
