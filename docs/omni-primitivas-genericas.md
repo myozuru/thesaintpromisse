@@ -266,7 +266,7 @@ Para recuperação direta, configure `tipo_efeito: 'cura'`, `cura: '2d8 + @USUAR
 
 A recuperação exige `teste: 'nenhum'` e `tipo_alvo: 'proprio'` ou `filtro_alvo: 'aliados'`. Alvos únicos, múltiplos e áreas usam o seletor existente. Configurações inválidas são recusadas antes dos custos. O custo é pago uma vez por ação; a recuperação é calculada por alvo depois do pagamento. PV usa `applyHealing`, preservando limites especiais e eventos de cura; PE usa o máximo normal da ficha. Recuperação não reduz recursos que já excedem seu limite nem concede recursos temporários. Modificadores de dano e dados de intensificação de dano não aumentam a cura.
 
-As etapas restantes são: (3) contexto da arma; (4) testes opostos; (5) munição e usos; (6) bônus passivos de perícias/TR; (7) mitigação e deslocamento passivos; (8) zonas persistentes; (9) trajetória intermediária; (10) duplicação e biblioteca de ações.
+As etapas restantes são: (4) testes opostos; (5) munição e usos; (6) bônus passivos de perícias/TR; (7) mitigação e deslocamento passivos; (8) zonas persistentes; (9) trajetória intermediária; (10) duplicação e biblioteca de ações.
 
 ## Expansão de suporte — etapa 2 de 10
 
@@ -292,3 +292,18 @@ Os efeitos secundários aceitam três novos tipos, tanto em `efeitos` quanto nos
 PV temporários e escudo usam a reserva existente `escCurrent`, que absorve dano antes dos PV; as concessões somam, sem alterar `escMax`. `protecoesOmni` registra origem, tipo, prazo e saldo individual na ficha, preservados pela persistência e sincronização da ficha. O dano e reduções manuais consomem as concessões na ordem de criação antes da proteção de outras fontes; ao expirar, somente o saldo restante da concessão é retirado. Outras reservas ficam preservadas. Encerrar a cena ou descansar por longo período limpa a reserva e seus registros. O painel de ações mostra o saldo/prazo e permite remover cada concessão individualmente. Duração de proteção é independente da manutenção por PE das condições sustentadas existentes.
 
 `remover_condicao` aceita o identificador de uma condição do catálogo ou seu nome, sem distinguir maiúsculas/minúsculas. Remove todas as instâncias daquele tipo, preservando as demais. `condicao: 'todas'` remove todas as condições ativas, inclusive benéficas; não remove buffs de outros sistemas. O construtor oferece os tipos e campos nos efeitos padrão e nos graus de TR; exportação/importação preservam esses campos.
+
+## Expansão de suporte — etapa 3 de 10
+
+O avaliador de fórmulas e o campo de dano das ações ativas podem acessar dados da arma selecionada (arma do item OMNI ou arma principal equipada):
+
+| Token | Valor |
+| --- | --- |
+| `@ARMA.DANO` | Notação-base da arma, rolada como parte da fórmula e incluída entre os dados dobrados por crítico |
+| `@ARMA.DADOS` | Quantidade total de dados-base da arma |
+| `@ARMA.PASSO` | Lados do maior dado-base da arma |
+| `@ARMA.CRITICO_MARGEM` | Face natural base que inicia um crítico, ou zero se indefinida |
+
+Exemplo: `@ARMA.DANO + 2d8` herda o dano-base da arma e acrescenta 2d8. Também é possível montar um dado escalável com `(@ARMA.DADOS)d@ARMA.PASSO`. O campo existente `tipoDano` converte todo o dano da ação, incluindo a parcela herdada; sem conversão, o dano-base usa o tipo padrão da arma. `incluirArma` continua somando a rolagem completa de um ataque; ao usar `@ARMA.DANO` na fórmula da ação, a soma separada é suprimida para evitar duplicação. Fórmulas que pedem arma sem haver arma identificável são recusadas antes de pagar o custo.
+
+O campo de dano do construtor indica os tokens disponíveis; eles também aparecem no autocomplete do OmniScript. A expressão do dano-base usa a resolução normal da arma versátil sem declarar empunhadura de duas mãos; `@ARMA.PASSO` representa o maior passo quando o dano-base contém tipos diferentes de dado.

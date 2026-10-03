@@ -92,13 +92,14 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
             </>}
           </div>
           <div className="grid grid-cols-3 gap-2">
-            <div><Label className="text-xs">Dano (ex.: 6d8)</Label><Input value={a.dano ?? ''} onChange={(e) => set(i, { dano: e.target.value })} /></div>
+            <div><Label className="text-xs">Dano (ex.: 6d8)</Label><Input aria-label={`Dano de ${a.nome}`} value={a.dano ?? ''} placeholder="@ARMA.DANO + 2d8" onChange={(e) => set(i, { dano: e.target.value })} /><p className="text-[10px] text-muted-foreground">Fórmula: @ARMA.DANO, @ARMA.DADOS, @ARMA.PASSO, @ARMA.CRITICO_MARGEM</p></div>
             <div><Label className="text-xs" htmlFor={`tipo-dano-${a.id}`}>Tipo de dano</Label>
               <select id={`tipo-dano-${a.id}`} className={sel} value={resolverTipoDano(a.tipoDano) ?? a.tipoDano ?? ''} onChange={(e) => set(i, { tipoDano: e.target.value })}>
                 <option value="">—</option>{DAMAGE_TYPES.map((d) => <option key={d} value={d}>{DAMAGE_TYPE_LABELS[d]}</option>)}
                 {a.tipoDano && !resolverTipoDano(a.tipoDano) && <option value={a.tipoDano}>{a.tipoDano} (sem equivalência)</option>}
               </select>
               {a.tipoDano && !resolverTipoDano(a.tipoDano) && <p className="text-xs text-amber-600">Escolha um tipo reconhecido para aplicar resistências e imunidades específicas.</p>}
+              {a.tipoDano && <p className="text-[10px] text-muted-foreground">Aplica este tipo também ao dano herdado da arma.</p>}
             </div>
             <div><Label className="text-xs">Dados por carga</Label><Input value={a.dadosPorCarga ?? ''} onChange={(e) => set(i, { dadosPorCarga: e.target.value })} placeholder="1d8" /></div>
           </div>

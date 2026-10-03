@@ -26,6 +26,10 @@ export interface SugestaoAutocomplete {
 
 /** Verbos e palavras reservadas da OmniScript. */
 const VERBOS: SugestaoAutocomplete[] = [
+  { valor: '@ARMA.DANO', categoria: 'Fórmula', hint: 'Rola o dano-base da arma ativa na fórmula.' },
+  { valor: '@ARMA.DADOS', categoria: 'Fórmula', hint: 'Quantidade de dados no dano-base da arma.' },
+  { valor: '@ARMA.PASSO', categoria: 'Fórmula', hint: 'Lados do maior dado-base da arma.' },
+  { valor: '@ARMA.CRITICO_MARGEM', categoria: 'Fórmula', hint: 'Resultado natural que inicia um crítico da arma.' },
   { valor: 'somar',     categoria: 'Verbo', hint: 'somar X em recurso (+)' },
   { valor: 'subtrair',  categoria: 'Verbo', hint: 'subtrair X em recurso (−)' },
   { valor: 'definir',   categoria: 'Verbo', hint: 'definir recurso = X' },

@@ -19,6 +19,8 @@ export interface DiagnosticoFormula {
 export interface ContextoAvaliacao {
   /** Variáveis simples resolvidas (ex: TREINO=3, FOR=4). */
   variaveis: Record<string, number>;
+  /** Notação-base da arma; a única referência textual permitida em fórmulas. */
+  armaDano?: string;
   /** Rolagens coletadas durante a avaliação (para log/transparência). */
   rolagens: ResultadoRolagem[];
   /** Sementes opcionais para testes determinísticos. */
@@ -341,14 +343,21 @@ function valorDaReferencia(ctx: ContextoAvaliacao, referencia: string, chave: st
 function preprocessar(expressao: string, ctx: ContextoAvaliacao): string {
   let out = normalizarFormulaHumana(expressao);
 
+  // Expande a notação declarativa da arma antes de rolar os grupos de dados.
+  out = out.replace(/@ARMA\.DANO\b/gi, (referencia) => {
+    if (ctx.armaDano?.trim()) return `(${ctx.armaDano})`;
+    registrarDiagnostico(ctx, { tipo: 'chave_ausente', referencia, mensagem: 'A arma não tem dano-base disponível neste contexto.' });
+    return '0';
+  });
+
   // 1) Substitui notações de dado por números rolados.
   out = out.replace(/(\d+d\d+(?:!|kh\d+|kl\d+|r\d+)*)/gi, (match) =>
     String(rolarNotacao(match, ctx))
   );
 
-  // 2) Substitui @PREFIXO.subchave (ex: @USUARIO.vida, @ALVO.forca, @CENA.x, @ITEM.usos_restantes).
+  // 2) Substitui @PREFIXO.subchave (ex: @USUARIO.vida, @ALVO.forca, @CENA.x, @ITEM.usos_restantes, @ARMA.passo).
   out = out.replace(
-    /@(USUARIO|ALVO|CENA|ITEM|DANO)\.([A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_]*(?:\.[A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_]*)*)/gi,
+    /@(USUARIO|ALVO|CENA|ITEM|DANO|ARMA)\.([A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_]*(?:\.[A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_]*)*)/gi,
     (referencia, prefixo: string, sub: string) => {
       const px = prefixo.toUpperCase();
       // ITEM/DANO têm campos próprios. Personagens aceitam caminhos legados.
@@ -474,6 +483,8 @@ export function avaliarFormula(
     item?: Record<string, number>;
     /** Campos numéricos de um evento de dano, acessíveis via @DANO.X. */
     dano?: Record<string, number>;
+    /** Dano-base da arma e valores acessíveis via @ARMA.DADOS, @ARMA.PASSO etc. */
+    arma?: { dano?: string; [chave: string]: number | string | undefined };
     /**
      * Resultados de efeitos anteriores em uma cadeia (1-indexado).
      * Expostos como `RESULTADO_1`, `RESULTADO_2`, … na bag de variáveis,
@@ -485,11 +496,13 @@ export function avaliarFormula(
   // Mantém nomes originais para variáveis nuas em fórmulas legadas.
   const bag: Record<string, number> = { ...variaveis };
   for (const [k, v] of Object.entries(variaveis)) bag[k.toUpperCase()] = v;
-  for (const [prefixo, campos] of Object.entries({ ALVO: extras?.alvo, CENA: extras?.cena, ITEM: extras?.item, DANO: extras?.dano })) {
+  for (const [prefixo, campos] of Object.entries({ ALVO: extras?.alvo, CENA: extras?.cena, ITEM: extras?.item, DANO: extras?.dano, ARMA: extras?.arma })) {
     for (const [k, v] of Object.entries(campos ?? {})) {
+      if (prefixo === 'ARMA' && k.toUpperCase() === 'DANO') continue;
       const semPrefixo = k.replace(new RegExp(`^${prefixo}_`, 'i'), '');
       const chave = prefixo === 'ALVO' ? resolverChavePtBr(canonicalizarChave(semPrefixo))
         : prefixo === 'CENA' ? resolverChavePtBr(semPrefixo) : semPrefixo.toUpperCase();
+      if (typeof v !== 'number' || !Number.isFinite(v)) continue;
       bag[`${prefixo}_${chave}`] = v;
     }
   }
@@ -498,7 +511,7 @@ export function avaliarFormula(
       bag[`RESULTADO_${i + 1}`] = v;
     });
   }
-  const ctx: ContextoAvaliacao = { variaveis: bag, rolagens: [], rng, diagnosticos: [] };
+  const ctx: ContextoAvaliacao = { variaveis: bag, armaDano: extras?.arma?.dano, rolagens: [], rng, diagnosticos: [] };
   const resolvida = preprocessar(expressao, ctx);
   try {
     const expr = parser.parse(resolvida);
