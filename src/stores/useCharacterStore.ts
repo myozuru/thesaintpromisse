@@ -2611,7 +2611,7 @@ export const useCharacterStore = create<CharacterStore>()(
             const isFah = c.origin === 'Feto Amaldiçoada Híbrido (FAH)' && (c.healingHalved ?? true);
             const halve = isFah && source === 'cursed_energy_external';
             const effective = halve ? Math.floor(amount / 2) : amount;
-            const newHp = Math.min(getEffectiveHpMaxForHealing(c), c.hpCurrent + effective);
+            const newHp = Math.max(c.hpCurrent, Math.min(getEffectiveHpMaxForHealing(c), c.hpCurrent + Math.max(0, effective)));
             healedAmount = newHp - c.hpCurrent;
             if (isCamActive(c) && c.activeCoreId) {
               const newCores = (c.cores || []).map(co =>

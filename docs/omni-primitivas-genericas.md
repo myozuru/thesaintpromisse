@@ -258,3 +258,12 @@ Exemplo:
   }
 }
 ```
+# Expansão de suporte — etapa 1 de 10
+
+As ações ativas aceitam `tipo_efeito: 'dano' | 'cura' | 'buff'`. Sem esse campo, continuam ofensivas como antes. `buff` aplica os efeitos secundários sem dano primário; os novos escudos e a purificação ficam para a etapa 2.
+
+Para recuperação direta, configure `tipo_efeito: 'cura'`, `cura: '2d8 + @USUARIO.treino'` e `recurso_cura: 'pv' | 'pe'` (padrão: PV). A fórmula usa o parser OMNI, incluindo dados e contexto do usuário/alvo. O valor é arredondado para baixo, com mínimo zero; rolagens e recuperação efetiva ficam no histórico.
+
+A recuperação exige `teste: 'nenhum'` e `tipo_alvo: 'proprio'` ou `filtro_alvo: 'aliados'`. Alvos únicos, múltiplos e áreas usam o seletor existente. Configurações inválidas são recusadas antes dos custos. O custo é pago uma vez por ação; a recuperação é calculada por alvo depois do pagamento. PV usa `applyHealing`, preservando limites especiais e eventos de cura; PE usa o máximo normal da ficha. Recuperação não reduz recursos que já excedem seu limite nem concede recursos temporários. Modificadores de dano e dados de intensificação de dano não aumentam a cura.
+
+As próximas etapas são: (2) PV temporários, escudos e purificação; (3) contexto da arma; (4) testes opostos; (5) munição e usos; (6) bônus passivos de perícias/TR; (7) mitigação e deslocamento passivos; (8) zonas persistentes; (9) trajetória intermediária; (10) duplicação e biblioteca de ações.

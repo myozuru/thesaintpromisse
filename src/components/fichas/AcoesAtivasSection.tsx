@@ -50,6 +50,7 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
               {p?.pePorTurno ? ` · manutenção ${p.pePorTurno} PE/turno` : ''}
               {!custos.ok ? ` · ${custos.reason}` : ''}
               {cfg.tipo_alvo === 'proprio' ? ' · próprio' : cfg.tipo_alvo === 'area' ? ` · área: ${cfg.area?.forma ?? 'configurar'}` : ''}
+              {cfg.tipo_efeito === 'cura' ? ` · recupera ${cfg.cura ?? '0'} ${(cfg.recurso_cura ?? 'pv').toUpperCase()}` : ''}
               {cfg.alcanceM > 0 ? ` · ${String(cfg.alcanceM).replace('.', ',')} m` : ''}
             </span>
           </div>

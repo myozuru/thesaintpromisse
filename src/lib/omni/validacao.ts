@@ -82,6 +82,8 @@ const DesfechoTRSchema = z.object({
   efeitos: z.array(EfeitoSecundarioSchema).optional(),
 });
 const AcaoAtivaSchema = z.object({
+  tipo_efeito: z.enum(['dano', 'cura', 'buff']).optional(),
+  cura: z.string().optional(), recurso_cura: z.enum(['pv', 'pe']).optional(),
   desfechosTR: z.object({ falha: DesfechoTRSchema.optional(), sucesso: DesfechoTRSchema.optional(), falha_critica: DesfechoTRSchema.optional() }).optional(),
   reacao: z.object({
     gatilho: z.enum(['quando_inimigo_entrar_alcance', 'quando_inimigo_sair_alcance', 'quando_alvo_declarar_ataque', 'quando_ataque_errar', 'quando_inimigo_conjurar']),

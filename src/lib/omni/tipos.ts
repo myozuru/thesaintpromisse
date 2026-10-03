@@ -278,6 +278,9 @@ export interface ReacaoAtivaConfig {
 }
 
 export interface AcaoAtivaConfig {
+  tipo_efeito?: 'dano' | 'cura' | 'buff';
+  cura?: string;
+  recurso_cura?: 'pv' | 'pe';
   reacao?: ReacaoAtivaConfig;
   custo_recursos?: CustoRecursosAtivo;
   mod_acerto?: number;

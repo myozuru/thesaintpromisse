@@ -84,6 +84,13 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
             </label>
           )}
           <div className="grid grid-cols-3 gap-2">
+            <label className="text-xs">Tipo de efeito<select aria-label="Tipo de efeito" className={sel} value={a.tipo_efeito ?? 'dano'} onChange={e => set(i, { tipo_efeito: e.target.value as AcaoAtivaConfig['tipo_efeito'], ...(e.target.value === 'cura' ? { teste: 'nenhum', filtro_alvo: 'aliados' } : {}) })}><option value="dano">Dano</option><option value="cura">Cura / recuperação</option><option value="buff">Somente efeitos</option></select></label>
+            {a.tipo_efeito === 'cura' && <>
+              <label className="text-xs">Valor da recuperação<Input aria-label="Valor da recuperação" value={a.cura ?? ''} placeholder="2d8 + @USUARIO.treino" onChange={e => set(i, { cura: e.target.value })} /></label>
+              <label className="text-xs">Recurso<select aria-label="Recurso da recuperação" className={sel} value={a.recurso_cura ?? 'pv'} onChange={e => set(i, { recurso_cura: e.target.value as 'pv' | 'pe' })}><option value="pv">PV</option><option value="pe">PE</option></select></label>
+            </>}
+          </div>
+          <div className="grid grid-cols-3 gap-2">
             <div><Label className="text-xs">Dano (ex.: 6d8)</Label><Input value={a.dano ?? ''} onChange={(e) => set(i, { dano: e.target.value })} /></div>
             <div><Label className="text-xs" htmlFor={`tipo-dano-${a.id}`}>Tipo de dano</Label>
               <select id={`tipo-dano-${a.id}`} className={sel} value={resolverTipoDano(a.tipoDano) ?? a.tipoDano ?? ''} onChange={(e) => set(i, { tipoDano: e.target.value })}>
