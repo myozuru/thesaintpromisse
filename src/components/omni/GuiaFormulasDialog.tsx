@@ -301,8 +301,6 @@ function KeyCatalog({ categoria, onInsert, onSelecionarRecurso, extrairChaveRecu
 }
 
 const EXEMPLOS_CONTEXTUAIS_CHAVES: Record<string, { formula: string; explicacao: string }> = {
-  "CENA.distancia_m": {"formula":"se @CENA.distancia_m <= 3 entao subtrair 1d8 em @ALVO.vida","explicacao":"Uma lança alcança um alvo que esteja a até 3 m. A 2 m, a condição libera o dano de 1d8; a 4 m, não. A distância precisa ser fornecida no contexto da cena quando a fórmula é avaliada."},
-  "DANO.foi_critico": {"formula":"se @DANO.foi_critico > 0 entao subtrair 2d8 em @ALVO.vida","explicacao":"Depois que o evento informa um acerto crítico, a runa acrescenta 2d8 de dano ao alvo. Se o evento informa um acerto normal, o marcador vale 0 e o adicional não acontece. A fórmula precisa ser avaliada com o contexto do evento de dano."},
   "em_combate": {"formula":"se @USUARIO.em_combate > 0 entao somar 2 em @USUARIO.defesa","explicacao":"Uma postura defensiva só se arma quando o personagem está em um encontro ativo. Durante o combate, recebe +2 de Defesa; fora dele, o marcador vale 0 e não altera a ficha. Use a fórmula no início do combate ou na ativação da postura."},
   "numero_da_rodada": {"formula":"se @USUARIO.numero_da_rodada >= 3 entao subtrair 1d8 em @ALVO.vida","explicacao":"A criatura acumula energia e libera uma rajada a partir da terceira rodada. Na rodada 2, o dano extra não acontece; na 3 ou em qualquer rodada posterior, causa 1d8. O número é o round atual do combate."},
   "indice_turno_atual": {"formula":"se @USUARIO.indice_turno_atual = 0 entao somar 2 em @USUARIO.defesa","explicacao":"Uma sentinela ganha +2 de Defesa quando sua ação ocupa o primeiro índice da ordem: o índice começa em zero. Na posição seguinte, o valor é 1 e o bônus não ativa."},

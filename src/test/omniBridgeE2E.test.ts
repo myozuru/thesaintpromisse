@@ -290,7 +290,7 @@ describe('Fórmulas de bônus equipado para perícias, TRs e deslocamento', () =
     expect(bag.pericias.furtividade).toBe(2);
     expect(bag.trs.reflexos).toBe(3);
     expect(bag.periciaOrigins.furtividade.map((origin) => origin.source)).toEqual([expect.stringContaining(item.nome)]);
-    expect(bag.trOrigins.reflexos.map((origin) => origin.source)).toEqual([expect.stringContaining(item.nome)]);
+    expect(bag.trOrigins.reflexos?.map((origin) => origin.source)).toEqual([expect.stringContaining(item.nome)]);
   });
 
   it('ignora fórmulas de itens que não estão equipados', () => {
