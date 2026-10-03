@@ -954,6 +954,8 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
       auraSkillBonus += auraEffects.grappleBonus;
     }
     const conditionSkillBonus = getSkillModFromConditions(c, name);
+    const normalizedRollName = (name || '').trim().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    const omniEquipmentSkillBonus = omniModifiers.pericias[normalizedRollName.replace(/^pericia(s)?_/, '')] ?? 0;
     // 🪄 Omni Script Passivo (`somar X em pericia_<x>`).
     const omniSkillKey = (name || '')
       .toLowerCase()
@@ -967,11 +969,12 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     const concentrationBonus = isAstucia ? passiveAggEarly.concentrationCheckBonus : 0;
     // Bastião Interior (Tier 6) — Vantagem em TR vs Amedrontado / Desorientado / Enfeitiçado.
     const isSavingThrow = (c.savingThrows || []).some(st => st.name === name);
+    const omniEquipmentTrBonus = isSavingThrow ? (omniModifiers.trs[normalizedRollName as keyof typeof omniModifiers.trs] ?? 0) : 0;
     // Presença Inspiradora (Suporte Nv 3): bônus de cena em TODAS as perícias (não em TRs).
     const inspiracao = (isSavingThrow ? 0 : (c.inspiracaoBonus ?? 0)) + (isSavingThrow ? 0 : posturaPericia(c));
     // Guarda Estudada (EC Nv4): +2 no TR escolhido.
     const guardaBonus = guardaEstudadaTrBonus(c, name, isSavingThrow);
-    const totalBonus = guardaBonus + baseBonus + attrMod + itemBonus + trainBonus + levelBonus + extBonus + auraSkillBonus + conditionSkillBonus + saveBonus + sentidosBonus + concentrationBonus + omniSkillBonus + inspiracao + furtBonus + chamativa;
+    const totalBonus = guardaBonus + baseBonus + attrMod + itemBonus + trainBonus + levelBonus + extBonus + auraSkillBonus + conditionSkillBonus + saveBonus + sentidosBonus + concentrationBonus + omniSkillBonus + omniEquipmentSkillBonus + omniEquipmentTrBonus + inspiracao + furtBonus + chamativa;
     const activeCondIds = (c.activeConditions || []).map(ac => (ac.conditionId || '').toLowerCase());
     const triggersBastiao =
       isSavingThrow &&
@@ -1002,7 +1005,9 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     const flatLabel = flat.bonus ? ` (${flat.bonus > 0 ? '+' : ''}${flat.bonus} comando/apoio)` : '';
     const furtLabel = furtBonus > 0 ? ` (+${furtBonus} presença suprimida)` : '';
     const chamativaLabel = chamativa !== 0 ? ` (${chamativa} ação chamativa)` : '';
-    showRollAnimation(name + auraLabel + condLabel + specLabel + guardaLabel + sentidosLabel + inspiracaoLabel + flatLabel + furtLabel + chamativaLabel + masteryLabel + bastiaoLabel + modeLabel, d20, totalBonus + flat.bonus, d20 + totalBonus + flat.bonus);
+    const omniEquipmentBonus = omniEquipmentSkillBonus + omniEquipmentTrBonus;
+    const omniEquipmentLabel = omniEquipmentBonus !== 0 ? ` (${omniEquipmentBonus > 0 ? '+' : ''}${omniEquipmentBonus} equipamento)` : '';
+    showRollAnimation(name + auraLabel + omniEquipmentLabel + condLabel + specLabel + guardaLabel + sentidosLabel + inspiracaoLabel + flatLabel + furtLabel + chamativaLabel + masteryLabel + bastiaoLabel + modeLabel, d20, totalBonus + flat.bonus, d20 + totalBonus + flat.bonus);
 
     maybeApplyRecompensa(c.id, flat, { find: (id) => useCharacterStore.getState().characters.find((x) => x.id === id), update: updateCharacter, log: (m) => addLog('combat', m) });
   };

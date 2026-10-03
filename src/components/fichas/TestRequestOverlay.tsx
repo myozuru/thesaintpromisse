@@ -40,6 +40,8 @@ import { cn } from '@/lib/utils';
 import type { Character } from '@/types';
 import { canViewerRollTestRequest, isPlayerOwnedTestRequest } from '@/lib/testRequestAudience';
 import { guardaEstudadaTrBonus } from '@/lib/guardaEstudada';
+import { useInventoryStore } from '@/stores/useInventoryStore';
+import { selectOmniModifiers } from '@/lib/omni/omniBridge';
 
 /** Modificadores externos de combate que valem para qualquer teste pedido. */
 function bonusDeCombate(c: Character, req: TestRequest): { bonus: number; parts: string[] } {
@@ -82,13 +84,17 @@ function computeBonus(c: Character, req: TestRequest): { bonus: number; breakdow
     const half = getLevelSkillBonus(level);
     const ext = sk.externalBonus ?? 0;
     const insp = c.inspiracaoBonus ?? 0;
-    const bonus = attrMod + train + half + ext + insp;
+    const equipment = selectOmniModifiers(c, useInventoryStore.getState().listEquipped(c.id).map(item => ({ instanceId: item.instanceId, equippedSlot: item.equippedSlot, entity: item.entity })));
+    const skillKey = req.testName.trim().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    const equipmentBonus = equipment.pericias[skillKey] ?? 0;
+    const bonus = attrMod + train + half + ext + insp + equipmentBonus;
     const parts = [
       `½nv +${half}`,
       linked ? `${sk.linkedAttribute} ${attrMod >= 0 ? '+' : ''}${attrMod}` : null,
       train ? `treino +${train}` : null,
       ext ? `ext ${ext >= 0 ? '+' : ''}${ext}` : null,
       insp ? `inspirado +${insp}` : null,
+      equipmentBonus ? `equipamento ${equipmentBonus > 0 ? '+' : ''}${equipmentBonus}` : null,
     ].filter(Boolean);
     return { bonus: bonus + extra.bonus, breakdown: [...parts, ...extra.parts].join(' · ') };
   }
@@ -102,12 +108,16 @@ function computeBonus(c: Character, req: TestRequest): { bonus: number; breakdow
   const train = getTrainingBonus(level, st.trained, st.mastery);
   const ext = st.externalBonus ?? 0;
   const base = st.value ?? 0;
-  const bonus = base + attrMod + train + ext;
+  const equipment = selectOmniModifiers(c, useInventoryStore.getState().listEquipped(c.id).map(item => ({ instanceId: item.instanceId, equippedSlot: item.equippedSlot, entity: item.entity })));
+  const trKey = req.testName.trim().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_');
+  const equipmentBonus = equipment.trs[trKey as keyof typeof equipment.trs] ?? 0;
+  const bonus = base + attrMod + train + ext + equipmentBonus;
   const parts = [
     base ? `base +${base}` : null,
     linked ? `${st.linkedAttribute} ${attrMod >= 0 ? '+' : ''}${attrMod}` : null,
     train ? `treino +${train}` : null,
     ext ? `ext ${ext >= 0 ? '+' : ''}${ext}` : null,
+    equipmentBonus ? `equipamento ${equipmentBonus > 0 ? '+' : ''}${equipmentBonus}` : null,
   ].filter(Boolean);
   return {
     bonus: bonus + extra.bonus,

@@ -12,10 +12,12 @@
 import { describe, it, expect } from 'vitest';
 import {
   selectOmniPassiveBonuses,
+  selectOmniModifiers,
   resolveOmniKey,
   avaliarFormulaNaFicha,
 } from '@/lib/omni/omniBridge';
 import { novaEntidade } from '@/lib/omni/tipos';
+import { PacoteOmniSchema } from '@/lib/omni/validacao';
 import type { Character } from '@/types';
 import type { EntidadeOmni, CombatEffect } from '@/lib/omni/tipos';
 import { ORDEM_PERICIAS, SISTEMA_PERICIAS, ORDEM_TR, SISTEMA_TR } from '@/lib/omni/constantesDoSistema';
@@ -228,5 +230,26 @@ describe('🌉 OmniBridge E2E — avaliarFormulaNaFicha', () => {
   });
   it('expressão malformada não explode', () => {
     expect(avaliarFormulaNaFicha(c, '(((')).toBe(0);
+  });
+});
+
+
+describe('Bônus de perícias e TR em itens equipados', () => {
+  it('soma bônus por perícia e TR somente em itens equipados e preserva origens', () => {
+    const c = baseCobaia();
+    const item = novaEntidade('item', 'Broche do Especialista');
+    item.slotType = 'anel';
+    item.bonusEquipado = { pericias: { atletismo: 2 }, trs: { reflexos: 1 } };
+    const bag = selectOmniModifiers(c, [{ instanceId: 'i1', equippedSlot: 'anel:0', entity: item }]);
+    expect(bag.pericias.atletismo).toBe(2);
+    expect(bag.trs.reflexos).toBe(1);
+    expect(bag.periciaOrigins.atletismo[0].source).toContain(item.nome);
+    expect(selectOmniModifiers(c, []).pericias.atletismo).toBeUndefined();
+  });
+  it('preserva bônus no importador Omni', () => {
+    const item = novaEntidade('item', 'Amuleto'); item.slotType = 'colar';
+    item.bonusEquipado = { pericias: { furtividade: 2 }, trs: { vontade: 1 } };
+    const pacote = PacoteOmniSchema.parse({ formato: 'omni-engine.v1', nome: 'Teste', geradoEm: 1, entidades: [item] });
+    expect(pacote.entidades[0].bonusEquipado).toEqual(item.bonusEquipado);
   });
 });

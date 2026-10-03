@@ -154,6 +154,10 @@ export interface EntidadeOmni {
     rd?: number;
     esc?: number;
     slots?: number;
+    /** Bônus fixo por nome canônico ou rótulo da perícia (ex.: atletismo). */
+    pericias?: Record<string, number>;
+    /** Bônus fixo para cada Teste de Resistência. */
+    trs?: Partial<Record<TrNome, number>>;
   };
   /**
    * Bônus dinâmicos calculados por fórmula quando o item está equipado.

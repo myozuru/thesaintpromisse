@@ -167,13 +167,16 @@ export function OmniDetalhesDialog({ open, onOpenChange, entidade }: Props) {
               </section>
             )}
 
-            {entidade.bonusEquipado && Object.values(entidade.bonusEquipado).some((v) => v) && (
+            {entidade.bonusEquipado && (
               <section>
                 <h4 className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Bônus quando equipado</h4>
                 <div className="flex flex-wrap gap-1">
-                  {Object.entries(entidade.bonusEquipado).map(([k, v]) =>
-                    v ? <Badge key={k} variant="outline">{k.toUpperCase()}: {v! >= 0 ? '+' : ''}{v}</Badge> : null
-                  )}
+                  {(['hp','pe','ca','rd','esc','slots'] as const).map((key) => {
+                    const value = entidade.bonusEquipado?.[key] ?? 0;
+                    return value ? <Badge key={key} variant="outline">{key.toUpperCase()}: {value > 0 ? '+' : ''}{value}</Badge> : null;
+                  })}
+                  {Object.entries(entidade.bonusEquipado.pericias ?? {}).map(([key, value]) => value ? <Badge key={`p-${key}`} variant="outline">{key.replace(/_/g, ' ')}: {value > 0 ? '+' : ''}{value}</Badge> : null)}
+                  {Object.entries(entidade.bonusEquipado.trs ?? {}).map(([key, value]) => value ? <Badge key={`tr-${key}`} variant="outline">TR {key}: {value > 0 ? '+' : ''}{value}</Badge> : null)}
                 </div>
               </section>
             )}

@@ -135,6 +135,16 @@ const EntidadeSchema = z.object({
   alcance: ValorDinamicoSchema.optional(),
   areaRaio: ValorDinamicoSchema.optional(),
   gatilhos: z.array(GatilhoSchema),
+  slotType: z.string().optional(),
+  bonusEquipado: z.object({
+    hp: z.number().finite().optional(), pe: z.number().finite().optional(), ca: z.number().finite().optional(),
+    rd: z.number().finite().optional(), esc: z.number().finite().optional(), slots: z.number().finite().optional(),
+    pericias: z.record(z.string(), z.number().finite()).optional(),
+    trs: z.object({ astucia: z.number().finite().optional(), fortitude: z.number().finite().optional(), integridade: z.number().finite().optional(), reflexos: z.number().finite().optional(), vontade: z.number().finite().optional() }).optional(),
+  }).optional(),
+  bonusEquipadoFormula: z.object({
+    hp: z.string().optional(), pe: z.string().optional(), ca: z.string().optional(), rd: z.string().optional(), esc: z.string().optional(), slots: z.string().optional(),
+  }).optional(),
   acoesAtivas: z.array(AcaoAtivaSchema).optional(),
   comercio: z
     .object({

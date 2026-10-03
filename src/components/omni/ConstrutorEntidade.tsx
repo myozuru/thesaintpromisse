@@ -430,13 +430,28 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                     <Label className="text-xs uppercase tracking-wider text-muted-foreground">
                       Bônus do acessório
                     </Label>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed">
-                      Configure os bônus deste acessório na aba <strong>Efeitos e Combate</strong> usando
-                      o terminal do Omni-Script. Itens passivos aplicam automaticamente seus efeitos
-                      em <code className="text-foreground/80">@USUARIO</code> ao serem equipados, e você
-                      pode adicionar quantos efeitos quiser (ex.: <code className="text-foreground/80">+2 em vida_max</code>,
-                      <code className="text-foreground/80"> +(@USUARIO.treino) em ca</code>).
-                    </p>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">Bônus fixos somados às rolagens enquanto este item estiver equipado.</p>
+                    <details>
+                      <summary className="cursor-pointer text-xs text-primary">Perícias e testes de resistência</summary>
+                      <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {ORDEM_PERICIAS.map((key) => {
+                          const bonusKey = key.toLowerCase().replace(/[0-9]+$/, (m) => `_${m}`);
+                          return <div key={key} className="flex items-center justify-between gap-2">
+                            <Label className="text-[11px]">{ROTULOS_PERICIAS[key]}</Label>
+                            <Input type="number" className="h-7 w-20" value={ent.bonusEquipado?.pericias?.[bonusKey] ?? 0}
+                              onChange={(e) => setEnt({ ...ent, bonusEquipado: { ...ent.bonusEquipado, pericias: { ...ent.bonusEquipado?.pericias, [bonusKey]: Number(e.target.value) || 0 } } })} />
+                          </div>;
+                        })}
+                        {ORDEM_TR.map((key) => {
+                          const tr = key.toLowerCase() as 'astucia' | 'fortitude' | 'integridade' | 'reflexos' | 'vontade';
+                          return <div key={key} className="flex items-center justify-between gap-2">
+                            <Label className="text-[11px]">{ROTULOS_TR[key]}</Label>
+                            <Input type="number" className="h-7 w-20" value={ent.bonusEquipado?.trs?.[tr] ?? 0}
+                              onChange={(e) => setEnt({ ...ent, bonusEquipado: { ...ent.bonusEquipado, trs: { ...ent.bonusEquipado?.trs, [tr]: Number(e.target.value) || 0 } } })} />
+                          </div>;
+                        })}
+                      </div>
+                    </details>
                   </div>
                 )}
               </TabsContent>

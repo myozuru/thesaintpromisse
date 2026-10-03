@@ -84,6 +84,10 @@ function OmniDetails({
   const bonusEntries = (['ca','hp','pe','rd','esc','slots'] as const)
     .map((k) => ({ k, v: bonus[k] ?? 0, f: bonusF[k] }))
     .filter(({ v, f }) => v !== 0 || (f && f.trim() !== ''));
+  const rollBonusEntries = [
+    ...Object.entries(bonus.pericias ?? {}).map(([k, v]) => ({ k: `Perícia ${k.replace(/_/g, ' ')}`, v })),
+    ...Object.entries(bonus.trs ?? {}).map(([k, v]) => ({ k: `TR ${k}`, v })),
+  ].filter(({ v }) => v !== 0);
 
   const isActive = cd?.isActive === true;
 
@@ -130,7 +134,7 @@ function OmniDetails({
           </p>
         )}
 
-        {bonusEntries.length > 0 && (
+        {(bonusEntries.length > 0 || rollBonusEntries.length > 0) && (
           <section className="rounded-md border border-violet-500/30 bg-violet-500/5 p-2 space-y-1">
             <div className="text-[10px] uppercase tracking-wider text-violet-300/80">
               Bônus Passivos (quando equipado)
@@ -149,6 +153,7 @@ function OmniDetails({
                   </span>
                 </li>
               ))}
+              {rollBonusEntries.map(({ k, v }) => <li key={k} className="text-[12px] flex items-baseline justify-between gap-2"><span className="text-muted-foreground">{k}</span><span className="font-mono text-primary">{v > 0 ? '+' : ''}{v}</span></li>)}
             </ul>
           </section>
         )}

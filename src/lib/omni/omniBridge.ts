@@ -213,6 +213,10 @@ export interface OmniModifierContribution {
 export interface OmniModifierBag {
   totals: Record<OmniBonusKey, number>;
   origins: Record<OmniBonusKey, OmniModifierContribution[]>;
+  pericias: Record<string, number>;
+  periciaOrigins: Record<string, OmniModifierContribution[]>;
+  trs: Partial<Record<OmniRollBonusKey, number>>;
+  trOrigins: Partial<Record<OmniRollBonusKey, OmniModifierContribution[]>>;
 }
 
 export interface OmniPassiveBonusBag extends OmniModifierBag {
@@ -227,6 +231,7 @@ function vazio(): OmniModifierBag {
   return {
     totals: { hp: 0, pe: 0, ca: 0, rd: 0, esc: 0, slots: 0 },
     origins: { hp: [], pe: [], ca: [], rd: [], esc: [], slots: [] },
+    pericias: {}, periciaOrigins: {}, trs: {}, trOrigins: {},
   };
 }
 
@@ -311,6 +316,20 @@ export function selectOmniModifiers(
         out.totals[k] += total;
         out.origins[k].push({ source: `◇ ${ent.nome}`, delta: total });
       }
+    }
+    for (const [rawKey, rawValue] of Object.entries(fixos.pericias ?? {})) {
+      const key = normalizarChaveOmni(rawKey).replace(/^pericia(s)?_/, '');
+      const value = Number(rawValue) || 0;
+      if (!key || value === 0) continue;
+      out.pericias[key] = (out.pericias[key] ?? 0) + value;
+      (out.periciaOrigins[key] ??= []).push({ source: `◇ ${ent.nome}`, delta: value });
+    }
+    for (const [rawKey, rawValue] of Object.entries(fixos.trs ?? {})) {
+      const key = normalizarChaveOmni(rawKey) as OmniRollBonusKey;
+      const value = Number(rawValue) || 0;
+      if (!CHAVES_ROLAGEM_PASSIVA.includes(key) || value === 0) continue;
+      out.trs[key] = (out.trs[key] ?? 0) + value;
+      (out.trOrigins[key] ??= []).push({ source: `◇ ${ent.nome}`, delta: value });
     }
   }
 

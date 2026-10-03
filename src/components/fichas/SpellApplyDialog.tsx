@@ -8,6 +8,7 @@ import { useItemStore } from '@/stores/useItemStore';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { useTestRequestStore } from '@/stores/useTestRequestStore';
+import { useInventoryStore } from '@/stores/useInventoryStore';
 import { X, Shield, Target, Dice6, Send } from 'lucide-react';
 import { Spell, DAMAGE_TYPE_LABELS, ALL_CONDITIONS } from '@/types';
 import { rollDiceCom, rollD20Com } from '@/lib/dice';
@@ -28,6 +29,7 @@ import {
 import { prepareCast, applyCast, applyDamageMods, type RolledDie } from '@/lib/spellCastPipeline';
 import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import { aplicarReducaoCustoFeitico } from '@/lib/omni/spellCostReduction';
+import { selectOmniModifiers } from '@/lib/omni/omniBridge';
 
 interface Props {
   spell: Spell;
@@ -649,7 +651,10 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
       );
       if (spellAppliesDebuff) guardaInfalivelBonus = 3;
     }
-    return { bonus: attrMod + halfLevel + stTrain + stExtra + ocultamentoPenalty + guardaInfalivelBonus, attr: attrAbbr };
+    const equipados = useInventoryStore.getState().listEquipped(target.id).map(item => ({ instanceId: item.instanceId, equippedSlot: item.equippedSlot, entity: item.entity }));
+    const trKey = (stEntry?.name ?? '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    const equipamento = selectOmniModifiers(target, equipados).trs[trKey as 'astucia' | 'fortitude' | 'integridade' | 'reflexos' | 'vontade'] ?? 0;
+    return { bonus: attrMod + halfLevel + stTrain + stExtra + equipamento + ocultamentoPenalty + guardaInfalivelBonus, attr: attrAbbr };
   };
 
   const autoRollSave = async (targetId: string) => {

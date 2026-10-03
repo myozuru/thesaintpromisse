@@ -28,6 +28,7 @@ import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
+import { selectOmniModifiers } from '@/lib/omni/omniBridge';
 import { ALL_CONDITIONS, type ActiveCondition } from '@/types/conditions';
 import { findCharEntity, touchDistanceMeters, type TouchGrid } from '@/lib/touchRange';
 import { penalidadeTRFlanqueado } from '@/lib/flanqueadorSuperior';
@@ -122,7 +123,11 @@ const TR_ROTULO: Record<TrNome, string> = {
 /** Modificador do TR (ficha + Flanqueador Superior). */
 export function modTR(alvo: Character, tr: TrNome): number {
   const ms = useMapStore.getState();
-  return lerCaminhoOmni(alvo, `tr.${tr}`) + penalidadeTRFlanqueado(
+  const equipados = useInventoryStore.getState().listEquipped(alvo.id)
+    .filter((item) => item.entity.slotType && item.entity.slotType !== 'nenhum')
+    .map((item) => ({ instanceId: item.instanceId, equippedSlot: item.equippedSlot, entity: item.entity }));
+  const bonusEquipamento = selectOmniModifiers(alvo, equipados).trs[tr] ?? 0;
+  return lerCaminhoOmni(alvo, `tr.${tr}`) + bonusEquipamento + penalidadeTRFlanqueado(
     alvo, useCharacterStore.getState().characters, ms.entities as never, ms.gridConfig as never,
   );
 }
