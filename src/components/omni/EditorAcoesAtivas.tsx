@@ -51,6 +51,7 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
             }}><Save className="h-4 w-4" /></Button>
             <Button size="sm" variant="ghost" onClick={() => setEnt({ ...ent, acoesAtivas: lista.filter((_, j) => j !== i) })}><Trash2 className="h-4 w-4" /></Button>
           </div>
+          <div className="border-t border-border/50 pt-2 text-[11px] font-bold uppercase tracking-wider text-primary">Execução e alvos</div>
           <div className="grid grid-cols-3 gap-2">
             <div><Label className="text-xs">Ação</Label>
               <select className={sel} value={a.acao} onChange={(e) => set(i, { acao: e.target.value as AcaoAtivaConfig['acao'] })}>
@@ -77,6 +78,7 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
             <div><Label className="text-xs">Raio / comprimento (m)</Label><Input aria-label="Tamanho da área" type="number" min={0.1} step={1.5} value={a.area?.tamanho_m ?? 6} onChange={e => set(i, { area: { forma: 'cone', ...a.area, tamanho_m: Number(e.target.value) } })} /></div>
             {(a.area?.forma === 'linha') && <div><Label className="text-xs">Largura (m)</Label><Input aria-label="Largura da linha" type="number" min={0.1} step={1.5} value={a.area?.largura_m ?? 1.5} onChange={e => set(i, { area: { forma: 'linha', tamanho_m: 6, ...a.area, largura_m: Number(e.target.value) } })} /></div>}
           </div>}
+          <div className="border-t border-border/50 pt-2 text-[11px] font-bold uppercase tracking-wider text-primary">Teste</div>
           <div className="grid grid-cols-3 gap-2">
             <div><Label className="text-xs">Teste</Label>
               <select aria-label="Teste da ação" className={sel} value={a.teste} onChange={(e) => set(i, { teste: e.target.value as AcaoAtivaConfig['teste'] })}>
@@ -105,6 +107,7 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
               <input type="checkbox" checked={!!a.metadeNoSucesso} onChange={(e) => set(i, { metadeNoSucesso: e.target.checked })} /> Metade do dano no sucesso por padrão legado (senão, nada)
             </label>
           )}
+          <div className="border-t border-border/50 pt-2 text-[11px] font-bold uppercase tracking-wider text-primary">Dano, cura e cargas</div>
           <div className="grid grid-cols-3 gap-2">
             <label className="text-xs">Tipo de efeito<select aria-label="Tipo de efeito" className={sel} value={a.tipo_efeito ?? 'dano'} onChange={e => set(i, { tipo_efeito: e.target.value as AcaoAtivaConfig['tipo_efeito'], ...(e.target.value === 'cura' ? { teste: 'nenhum', filtro_alvo: 'aliados' } : {}) })}><option value="dano">Dano</option><option value="cura">Cura / recuperação</option><option value="buff">Somente efeitos</option></select></label>
             {a.tipo_efeito === 'cura' && <>
@@ -142,6 +145,7 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
           {a.teste === 'ataque' && <label className="text-xs">Modificador de acerto<Input aria-label="Modificador de acerto" type="number" value={a.mod_acerto ?? 0} onChange={e => set(i, { mod_acerto: Number(e.target.value) })} /></label>}
           <EditorReacoesAtivas acao={a} onChange={p => set(i, p)} />
           <EditorCondicionaisAtivos blocos={a.condicionais ?? []} onChange={condicionais => set(i, { condicionais })} />
+          <div className="border-t border-border/50 pt-2 text-[11px] font-bold uppercase tracking-wider text-primary">Efeitos secundários</div>
           <div className="space-y-1">
             <Label className="text-xs">Efeitos padrão (falha do TR ou acerto; graus do TR podem substituir)</Label>
             {(a.efeitos ?? []).map((ef, k) => {
