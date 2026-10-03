@@ -25,7 +25,7 @@ describe('GuiaFormulasDialog', () => {
     render(<GuiaFormulasDialog aberto onClose={() => {}} onInserirFormula={onInserirFormula} />);
     fireEvent.click(screen.getByRole('tab', { name: /Eventos/ }));
 
-    fireEvent.click(screen.getByRole('button', { name: '@fim_turno ->' }));
+    fireEvent.click(screen.getByRole('button', { name: 'fim_turno' }));
     expect(onInserirFormula).toHaveBeenLastCalledWith('@fim_turno -> ');
   });
 
