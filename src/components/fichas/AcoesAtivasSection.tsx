@@ -1,3 +1,5 @@
+import { agruparAcoesAtivas } from '@/lib/omni/agruparAcoesAtivas';
+import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { planejarCustosAtivos, encerrarSustentacaoAtiva } from '@/lib/omni/custosAtivos';
 import { ajustarProtecoesOmni } from '@/lib/omni/protecoesAtivas';
 /**
@@ -15,7 +17,9 @@ const TR_ROT: Record<string, string> = { astucia: 'Astúcia', fortitude: 'Fortit
 const chip = 'rounded border px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap';
 
 export function AcoesAtivasSection({ charId }: { charId: string }) {
-  useInventoryStore((s) => s.items);
+  const inventario = useInventoryStore((s) => s.items);
+  useOmniEntidadesStore((s) => s.entidades);
+  const [exemplares, setExemplares] = useState<Record<string, string>>({});
   const chars = useCharacterStore((s) => s.characters);
   const [alvos, setAlvos] = useState<Record<string, string>>({});
   const [multiplos, setMultiplos] = useState<Record<string, string[]>>({});
@@ -23,7 +27,7 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [erro, setErro] = useState<Record<string, string>>({});
   const u = chars.find((c) => c.id === charId);
-  const lista = acoesAtivasDe(charId);
+  const lista = agruparAcoesAtivas(acoesAtivasDe(charId));
   const sust = u?.omniSustentacoes ?? [];
   const prot = u ? ajustarProtecoesOmni(u) : [];
   if (!u || (lista.length === 0 && !sust.length && !prot.length)) return null;
@@ -55,7 +59,11 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
         </div>
       )}
 
-      {lista.map(({ instanceId, ent, cfg }) => {
+      {lista.map(grupo => {
+        const selecionado = grupo.exemplares.find(e => e.instanceId === exemplares[grupo.chave])
+          ?? grupo.exemplares.find(e => inventario[e.instanceId]?.isEquipped)
+          ?? grupo.exemplares[0];
+        const { instanceId, ent, cfg } = selecionado;
         const key = instanceId + cfg.id, intensidade = intensificacoes[key] ?? 0;
         const arma = armaDaAcao(u, ent);
         const custos = planejarCustosAtivos(cfg, u, intensidade, { armaNome: arma?.name, instanciaId: instanceId, entidadeId: ent.id });
@@ -69,7 +77,7 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
         const teste = cfg.teste === 'tr' ? `TR ${TR_ROT[cfg.tr ?? 'fortitude']}${cfg.cd ? ` CD ${cfg.cd}` : ''}` : cfg.teste === 'ataque' ? 'Ataque' : cfg.teste === 'disputa' ? 'Disputa' : null;
         const cargas = p?.contador ? (u.omniCounters?.[p.contador] ?? 0) : null;
         return (
-          <div key={key} className="rounded-md border border-border bg-background/70 p-2 space-y-1.5" data-testid={`acao-ativa-${cfg.nome}`}>
+          <div key={grupo.chave} className="rounded-md border border-border bg-background/70 p-2 space-y-1.5" data-testid={`acao-ativa-${cfg.nome}`}>
             <div className="flex items-start gap-2">
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-bold text-foreground">{cfg.nome || 'Ação sem nome'}</div>
@@ -77,6 +85,22 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
               </div>
               <span className={`${chip} border-primary/50 bg-primary/15 text-primary`}>{p ? `${p.pe} PE${p.pv ? ` + ${p.pv} PV` : ''}` : `${cfg.custoPE} PE`}</span>
             </div>
+            {grupo.exemplares.length > 1 && (
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>Exemplar ({grupo.exemplares.length})</span>
+                <select aria-label={`Exemplar para ${cfg.nome}`} value={instanceId} disabled={!!busy}
+                  onChange={e => setExemplares(s => ({ ...s, [grupo.chave]: e.target.value }))}
+                  className="min-w-0 rounded border border-border bg-background px-2 py-1 text-foreground">
+                  {grupo.exemplares.map((e, indice) => {
+                    const item = inventario[e.instanceId];
+                    return <option key={e.instanceId} value={e.instanceId}>
+                      {ent.nome} #{indice + 1}{item?.isEquipped ? ' · equipado' : ''}
+                      {item?.usosRestantes !== undefined ? ` · ${item.usosRestantes} usos` : ''}
+                    </option>;
+                  })}
+                </select>
+              </label>
+            )}
             <div className="flex flex-wrap gap-1">
               <span className={`${chip} border-border`}>{ACAO_ROT[p?.acao ?? cfg.acao]}</span>
               {teste && <span className={`${chip} border-border`}>{teste}</span>}
@@ -131,3 +155,4 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
     </div>
   );
 }
+

@@ -1,3 +1,4 @@
+import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { planejarCustosAtivos, validarRecursosAtivos, patchCustosAtivos, consumirUsosItemAtivo, type ContextoCustosAtivos } from './custosAtivos';
 import { prepararMovimentosAtivos, aplicarMovimentoAtivo, type PlanoMovimentoAtivo, type OpcoesMovimentoAtivo } from './movimentosAtivos';
 import { avaliarCondicionaisAtivos } from './condicionaisAtivos';
@@ -534,7 +535,8 @@ export function acoesAtivasDe(charId: string): { instanceId: string; ent: Entida
   const out: { instanceId: string; ent: EntidadeOmni; cfg: AcaoAtivaConfig }[] = [];
   for (const i of Object.values(useInventoryStore.getState().items)) {
     if (i.ownerId !== charId) continue;
-    for (const cfg of i.entity.acoesAtivas ?? []) out.push({ instanceId: i.instanceId, ent: i.entity, cfg });
+    const ent = useOmniEntidadesStore.getState().entidades[i.entity.id] ?? i.entity;
+    for (const cfg of ent.acoesAtivas ?? []) out.push({ instanceId: i.instanceId, ent, cfg });
   }
   return out;
 }
