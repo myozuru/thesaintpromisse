@@ -21,7 +21,7 @@ import {
 import { Plus, Trash2, BookOpen } from 'lucide-react';
 import type {
   AcaoLogica, BlocoLogico, CategoriaEntidade, CondicaoLogica,
-  EntidadeOmni, GatilhoEntidade, CombatData, CombatEffect,
+  EntidadeOmni, GatilhoEntidade, CombatData, CombatEffect, TrNome,
 } from '@/lib/omni/tipos';
 import { novoBloco, novoEfeitoCombate, normalizarCombatData, ehCategoriaSempreAtiva } from '@/lib/omni/tipos';
 import { descreverAcaoEfeito, descreverImpactoEfeito } from '@/lib/omni/aplicarEfeito';
@@ -86,6 +86,22 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
   const toggleMitigacao = (campo: 'resistencias' | 'vulnerabilidades' | 'imunidades_dano', tipo: DamageType) => {
     const atual = ent[campo] ?? [];
     setEnt({ ...ent, [campo]: atual.includes(tipo) ? atual.filter((t) => t !== tipo) : [...atual, tipo] });
+  };
+
+  const atualizarFormulaDeslocamento = (expressao: string) => {
+    setEnt({ ...ent, bonusEquipadoFormula: { ...ent.bonusEquipadoFormula, deslocamento: expressao || undefined } });
+  };
+  const atualizarFormulaPericia = (chave: string, expressao: string) => {
+    const pericias = { ...ent.bonusEquipadoFormula?.pericias };
+    if (expressao.trim()) pericias[chave] = expressao;
+    else delete pericias[chave];
+    setEnt({ ...ent, bonusEquipadoFormula: { ...ent.bonusEquipadoFormula, pericias } });
+  };
+  const atualizarFormulaTR = (chave: TrNome, expressao: string) => {
+    const trs = { ...ent.bonusEquipadoFormula?.trs };
+    if (expressao.trim()) trs[chave] = expressao;
+    else delete trs[chave];
+    setEnt({ ...ent, bonusEquipadoFormula: { ...ent.bonusEquipadoFormula, trs } });
   };
 
   // Modal "Modo Preguiça" — captura Nome + Descrição com explicação dedicada.
@@ -435,28 +451,38 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                       Bônus do acessório
                     </Label>
                     <p className="text-[11px] text-muted-foreground leading-relaxed">Bônus fixos somados às rolagens enquanto este item estiver equipado.</p>
-                    <div className="flex items-center justify-between gap-2">
-                      <Label className="text-[11px]">Deslocamento (m)</Label>
-                      <Input type="number" className="h-7 w-20" value={ent.bonusEquipado?.deslocamento ?? 0}
-                        onChange={(e) => setEnt({ ...ent, bonusEquipado: { ...ent.bonusEquipado, deslocamento: Number(e.target.value) || 0 } })} />
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <Label className="text-[11px]">Deslocamento fixo (m)</Label>
+                        <Input type="number" className="h-7 w-20" value={ent.bonusEquipado?.deslocamento ?? 0}
+                          onChange={(e) => setEnt({ ...ent, bonusEquipado: { ...ent.bonusEquipado, deslocamento: Number(e.target.value) || 0 } })} />
+                      </div>
+                      <label className="text-[11px]">Fórmula de deslocamento
+                        <Input aria-label="Fórmula de bônus de deslocamento" className="h-7" value={ent.bonusEquipadoFormula?.deslocamento ?? ''} placeholder="@USUARIO.treino"
+                          onChange={e => atualizarFormulaDeslocamento(e.target.value)} />
+                      </label>
                     </div>
                     <details>
                       <summary className="cursor-pointer text-xs text-primary">Perícias e testes de resistência</summary>
                       <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {ORDEM_PERICIAS.map((key) => {
                           const bonusKey = key.toLowerCase().replace(/[0-9]+$/, (m) => `_${m}`);
-                          return <div key={key} className="flex items-center justify-between gap-2">
+                          return <div key={key} className="grid grid-cols-[1fr_auto_auto] items-center gap-2">
                             <Label className="text-[11px]">{ROTULOS_PERICIAS[key]}</Label>
-                            <Input type="number" className="h-7 w-20" value={ent.bonusEquipado?.pericias?.[bonusKey] ?? 0}
+                            <Input aria-label={`Bônus fixo em ${ROTULOS_PERICIAS[key]}`} type="number" className="h-7 w-16" value={ent.bonusEquipado?.pericias?.[bonusKey] ?? 0}
                               onChange={(e) => setEnt({ ...ent, bonusEquipado: { ...ent.bonusEquipado, pericias: { ...ent.bonusEquipado?.pericias, [bonusKey]: Number(e.target.value) || 0 } } })} />
+                            <Input aria-label={`Fórmula de bônus em ${ROTULOS_PERICIAS[key]}`} className="h-7 w-32" value={ent.bonusEquipadoFormula?.pericias?.[bonusKey] ?? ''} placeholder="Fórmula"
+                              onChange={e => atualizarFormulaPericia(bonusKey, e.target.value)} />
                           </div>;
                         })}
                         {ORDEM_TR.map((key) => {
                           const tr = key.toLowerCase() as 'astucia' | 'fortitude' | 'integridade' | 'reflexos' | 'vontade';
-                          return <div key={key} className="flex items-center justify-between gap-2">
+                          return <div key={key} className="grid grid-cols-[1fr_auto_auto] items-center gap-2">
                             <Label className="text-[11px]">{ROTULOS_TR[key]}</Label>
-                            <Input type="number" className="h-7 w-20" value={ent.bonusEquipado?.trs?.[tr] ?? 0}
+                            <Input aria-label={`Bônus fixo em ${ROTULOS_TR[key]}`} type="number" className="h-7 w-16" value={ent.bonusEquipado?.trs?.[tr] ?? 0}
                               onChange={(e) => setEnt({ ...ent, bonusEquipado: { ...ent.bonusEquipado, trs: { ...ent.bonusEquipado?.trs, [tr]: Number(e.target.value) || 0 } } })} />
+                            <Input aria-label={`Fórmula de bônus em ${ROTULOS_TR[key]}`} className="h-7 w-32" value={ent.bonusEquipadoFormula?.trs?.[tr] ?? ''} placeholder="Fórmula"
+                              onChange={e => atualizarFormulaTR(tr, e.target.value)} />
                           </div>;
                         })}
                       </div>
