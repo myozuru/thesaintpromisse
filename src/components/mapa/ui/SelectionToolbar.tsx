@@ -15,10 +15,11 @@ import {
 } from 'lucide-react';
 import { assetCache } from '../assetCache';
 import { useChestStore } from '@/stores/useChestStore';
+import { MapPin } from 'lucide-react';
 
 const LAYER_ORDER: EntityLayer[] = ['map', 'tokens', 'gm'];
 
-export function SelectionToolbar({ visible = true, onAdjustToken }: { visible?: boolean; onAdjustToken?: (entityId: string) => void }) {
+export function SelectionToolbar({ visible = true, onAdjustToken, onEditTerrainZone }: { visible?: boolean; onAdjustToken?: (entityId: string) => void; onEditTerrainZone?: (entityId: string) => void }) {
   const selectedIds = useMapStore((s) => s.selectedIds);
   const entities = useMapStore((s) => s.entities);
   const camera = useMapStore((s) => s.camera);
@@ -170,6 +171,11 @@ export function SelectionToolbar({ visible = true, onAdjustToken }: { visible?: 
           <ToolBtn title="Renomear (F2)" onClick={startRename} active={renaming}>
             <TypeIcon className="h-3.5 w-3.5" />
           </ToolBtn>
+          {isMaster && !e.characterId && !e.chestId && onEditTerrainZone && (
+            <ToolBtn title={e.terrainZone ? 'Editar zona de terreno' : 'Configurar zona de terreno'} onClick={() => onEditTerrainZone(e.id)} active={!!e.terrainZone}>
+              <MapPin className="h-3.5 w-3.5" />
+            </ToolBtn>
+          )}
           {e.assetId && onAdjustToken && (
             <ToolBtn title="Ajustar imagem" onClick={() => onAdjustToken(e.id)}>
               <Scan className="h-3.5 w-3.5" />
