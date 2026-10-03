@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { EditorSuporteAtivo, ehSuporteAtivo, efeitoSuporteInicial } from './EditorSuporteAtivo';
 import { EditorDesfechosTR } from './EditorDesfechosTR';
 import { EditorReacoesAtivas } from './EditorReacoesAtivas';
@@ -6,19 +7,23 @@ import { EditorCondicionaisAtivos } from './EditorCondicionaisAtivos';
 /** Editor no-code das ações ativas genéricas de uma entidade OMNI. */
 import type { AcaoAtivaConfig, EfeitoSecundarioAtivo, EntidadeOmni, TrNome } from '@/lib/omni/tipos';
 import { novaAcaoAtiva } from '@/lib/omni/acaoAtiva';
+import { copiarAcaoAtiva, criarAcaoDePreset, lerPresetsAcoesAtivas, salvarPresetAcaoAtiva, type PresetAcaoAtiva } from '@/lib/omni/presetsAcoesAtivas';
 import { DAMAGE_TYPES, DAMAGE_TYPE_LABELS } from '@/types';
 import { resolverTipoDano } from '@/lib/omni/contextoDano';
 import { ALL_CONDITIONS } from '@/types/conditions';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Plus, Trash2 } from 'lucide-react';
+import { Copy, Plus, Save, Trash2 } from 'lucide-react';
 
 const sel = 'h-9 w-full rounded-md border border-input bg-background px-2 text-sm';
 const TRS: [TrNome, string][] = [['astucia', 'Astúcia'], ['fortitude', 'Fortitude'], ['integridade', 'Integridade'], ['reflexos', 'Reflexos'], ['vontade', 'Vontade']];
 
 export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: (e: EntidadeOmni) => void }) {
   const lista = ent.acoesAtivas ?? [];
+  const [presets, setPresets] = useState<PresetAcaoAtiva[]>(() => lerPresetsAcoesAtivas());
+  const [presetSelecionado, setPresetSelecionado] = useState('');
+  const [nomePreset, setNomePreset] = useState('');
   const set = (i: number, p: Partial<AcaoAtivaConfig>) => {
     const nx = [...lista]; nx[i] = { ...nx[i], ...p }; setEnt({ ...ent, acoesAtivas: nx });
   };
@@ -32,6 +37,12 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
         <div key={a.id} className="rounded-md border border-border/60 p-3 space-y-2">
           <div className="flex gap-2">
             <Input value={a.nome} onChange={(e) => set(i, { nome: e.target.value })} placeholder="Nome" />
+            <Button size="sm" variant="outline" title="Duplicar ação" aria-label={`Duplicar ação ${a.nome}`} onClick={() => setEnt({ ...ent, acoesAtivas: [...lista.slice(0, i + 1), copiarAcaoAtiva(a), ...lista.slice(i + 1)] })}><Copy className="h-4 w-4" /></Button>
+            <Button size="sm" variant="outline" title="Salvar esta ação como preset" aria-label={`Salvar preset de ${a.nome}`} onClick={() => {
+              const nome = nomePreset || a.nome;
+              const atualizado = salvarPresetAcaoAtiva(presets, a, nome);
+              setPresets(atualizado); setPresetSelecionado(atualizado.at(-1)?.id ?? ''); setNomePreset('');
+            }}><Save className="h-4 w-4" /></Button>
             <Button size="sm" variant="ghost" onClick={() => setEnt({ ...ent, acoesAtivas: lista.filter((_, j) => j !== i) })}><Trash2 className="h-4 w-4" /></Button>
           </div>
           <div className="grid grid-cols-3 gap-2">
@@ -156,6 +167,23 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
           </div>
         </div>
       ))}
+      <div className="rounded-md border border-border/60 p-3 space-y-2">
+        <Label className="text-xs">Biblioteca de ações ativas</Label>
+        <div className="flex gap-2">
+          <Input aria-label="Nome do preset" value={nomePreset} onChange={e => setNomePreset(e.target.value)} placeholder="Nome do novo preset" />
+          <span className="self-center text-xs text-muted-foreground">Use o ícone de salvar na ação que deseja guardar.</span>
+        </div>
+        <div className="flex gap-2">
+          <select aria-label="Preset de ação" className={sel} value={presetSelecionado} onChange={e => setPresetSelecionado(e.target.value)}>
+            <option value="">Escolha um preset salvo</option>{presets.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+          </select>
+          <Button size="sm" variant="outline" disabled={!presetSelecionado} onClick={() => {
+            const preset = presets.find(p => p.id === presetSelecionado);
+            if (preset) setEnt({ ...ent, acoesAtivas: [...lista, criarAcaoDePreset(preset)] });
+          }}><Plus className="h-3 w-3 mr-1" />Adicionar preset</Button>
+        </div>
+        <p className="text-[10px] text-muted-foreground">Os presets ficam salvos neste navegador. Para salvar outra ação, use o botão Salvar preset na própria ação.</p>
+      </div>
       <Button size="sm" variant="outline" data-testid="omni-nova-acao-ativa" onClick={() => setEnt({ ...ent, acoesAtivas: [...lista, novaAcaoAtiva()] })}>
         <Plus className="h-3 w-3 mr-1" />Nova ação ativa
       </Button>
