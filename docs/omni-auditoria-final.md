@@ -8,8 +8,8 @@ Concluída em 02/10/2026, na `main` de `myozuru/thesaintpromisse`.
 | --- | ---: | --- |
 | Grupos | 33 | Catálogo completo, sem selecionar somente grupos dos PRs antigos |
 | Opções estáticas | 342 | 613 referências nos escopos anunciados, sem diagnósticos de fallback |
-| Templates dinâmicos | 18 | Exemplos concretos em USUARIO e ALVO, com valores esperados |
-| Total de opções | 360 | Inclui aliases e templates; não é contagem de campos únicos da ficha |
+| Templates dinâmicos | 20 | Exemplos concretos em USUARIO e ALVO, com valores esperados |
+| Total de opções | 362 | Inclui aliases e templates; não é contagem de campos únicos da ficha |
 | Aliases oficiais de fórmula | 13 | Disponibilidade no parser |
 
 O teste do catálogo monta fichas com os atributos, perícias e TRs padrão.
@@ -21,6 +21,15 @@ ou não finita gera diagnóstico e não passa como implementação válida.
 Os templates cobrem grupo de arma, origem, especialização, condições e
 duração, contadores e parcelas por fonte, talentos, aptidões, habilidades,
 moedas, inventário/equipamento, feitiços, buffs e tipos de feitiços.
+
+## Lacunas corrigidas nesta continuação
+
+| Lacuna | Resultado |
+| --- | --- |
+| Importação Zod descartava campos existentes de efeitos, ações, usos e réplica | Schema preserva o formato completo e o teste valida round-trip |
+| Fórmulas passivas não cobriam deslocamento, perícias e TRs | Itens equipados combinam valores fixos e fórmulas; itens explicitamente guardados não aplicam bônus |
+| Sinônimos de tipos de dano eram limitados | Sinônimos inequívocos normalizam para os 15 códigos canônicos; termos sem equivalência continuam sem mapeamento |
+| Diagnósticos de referências ausentes precisavam ser visíveis | Parser mantém fallback numérico compatível e a prévia do terminal mostra o diagnóstico |
 
 ## Lacunas corrigidas nesta etapa
 
@@ -54,8 +63,7 @@ aplicar cego turnos 2 rodadas -1 em usuario
 rolar @DANO.tipo entao (1: aplicar cego, 7: remover cego)
 ```
 
-O autocomplete oferece os 15 códigos do motor, `tipo`, `turnos` e
-`rodadas`. Scripts antigos sem essas cláusulas continuam válidos.
+O catálogo tem 33 grupos, 342 opções estáticas e 20 templates dinâmicos (362 opções no total). O teste mantém exemplos concretos para todos os templates. O autocomplete oferece os 15 códigos do motor, `tipo`, `turnos` e `rodadas`. Scripts antigos sem essas cláusulas continuam válidos.
 Valores antigos de tipo podem ser reemitidos entre aspas para preservação,
 inclusive quando não têm equivalência no motor. Isso não cria uma nova
 regra de mitigação para esses nomes.
@@ -81,21 +89,21 @@ regra de mitigação para esses nomes.
   compartilhados. Ela cobre os caminhos Omni documentados, sem afirmar
   propagação em todos os produtores externos de eventos do jogo.
 
-## Validação final
+## Validação desta revisão
 
-- Suíte completa: 2.621 testes em 138 arquivos.
-- TypeScript: `npx tsc --noEmit`.
-- Build: `npm run build`.
-- Consistência do diff: `git diff --check`.
+- 68 testes do bridge Omni, incluindo fórmulas passivas e importação.
+- 4 testes de geometria de trajetória de reações.
+- 72 testes de aliases de dano e diagnósticos de fórmulas.
+- A suíte completa, TypeScript e build não foram repetidos nesta revisão; os números abaixo documentam a auditoria anterior de 02/10/2026.
 
-Para repetir a cobertura e obter as contagens:
+Auditoria anterior: 2.621 testes em 138 arquivos, `npx tsc --noEmit`,
+`npm run build` e `git diff --check`.
+
+Para repetir a cobertura do catálogo:
 
 ```sh
 OMNI_AUDIT_SUMMARY=1 npx vitest run src/test/omniCatalogCoverage.test.ts --reporter=verbose
-npx vitest run
-npx tsc --noEmit
-npm run build
 ```
 
-A sequência planejada de 11 etapas está encerrada. Os limites acima são
-contratos explícitos de compatibilidade e contexto, e não etapas adicionais.
+As lacunas listadas nesta continuação estão concluídas. Os limites conhecidos
+acima descrevem contratos de contexto e decisões explícitas de compatibilidade.
