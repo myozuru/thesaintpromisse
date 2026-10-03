@@ -14,6 +14,8 @@ import {
 import { listarAliasesParaAutocomplete } from './gatilhoAliases';
 import { ALL_CONDITIONS, CONDITION_CATEGORIES } from '@/types/conditions';
 import { DAMAGE_TYPES, DAMAGE_TYPE_LABELS } from '@/types';
+import { CATALOGO_COMPONENTES_UI } from './componentes/catalogoUI';
+import { tokenizarComposicao } from './componentes/lexer';
 
 export interface SugestaoAutocomplete {
   /** Texto que será inserido. */
@@ -33,6 +35,7 @@ const VERBOS: SugestaoAutocomplete[] = [
   { valor: 'somar',     categoria: 'Verbo', hint: 'somar X em recurso (+)' },
   { valor: 'subtrair',  categoria: 'Verbo', hint: 'subtrair X em recurso (−)' },
   { valor: 'definir',   categoria: 'Verbo', hint: 'definir recurso = X' },
+  { valor: 'transferir', categoria: 'Verbo', hint: 'transferir 2 de reserva pe para pe: conserva o saldo que não cabe.' },
   { valor: 'imune',     categoria: 'Verbo', hint: '🛡 imune <condição|categoria:X|todas>' },
   { valor: 'desimune',  categoria: 'Verbo', hint: '🛡 remove imunidade (mesmo formato)' },
   { valor: 'todas',     categoria: 'Escopo', hint: '🛡 todas as condições' },
@@ -58,6 +61,15 @@ const VERBOS: SugestaoAutocomplete[] = [
 function compilarDicionario(): SugestaoAutocomplete[] {
   const lista: SugestaoAutocomplete[] = [...VERBOS];
   const seen = new Set<string>(VERBOS.map((v) => v.valor.toLowerCase()));
+  for (const c of CATALOGO_COMPONENTES_UI) {
+    if (seen.has(c.key)) {
+      const existente = lista.find(s => s.valor === c.key);
+      if (existente) { existente.hint = c.funcao; existente.categoria = 'Componente'; }
+      continue;
+    }
+    seen.add(c.key);
+    lista.push({ valor: c.key, categoria: 'Componente', hint: c.funcao });
+  }
 
   // Recursos / atributos / perícias / TRs vindos do dicionário oficial.
   for (const cat of DICIONARIO_CHAVES_OMNI) {
@@ -161,7 +173,7 @@ function compilarDicionario(): SugestaoAutocomplete[] {
 export const DICIONARIO_AUTOCOMPLETE: SugestaoAutocomplete[] = compilarDicionario();
 
 /** Caracteres considerados parte de uma "palavra" de identificador. */
-const RE_PALAVRA = /[A-Za-z0-9_.@:]/;
+const RE_PALAVRA = /[\p{L}\p{N}_.@:-]/u;
 
 /**
  * Dado o texto completo e a posição do caret, devolve o prefixo (palavra
@@ -191,4 +203,22 @@ export function filtrarSugestoes(prefixo: string, limite = 12): SugestaoAutocomp
     return a.valor.localeCompare(b.valor);
   });
   return matches.slice(0, limite);
+}
+
+/** Completa uma parte, preservando as anteriores e evitando tratar argumentos como keys. */
+export function sugerirNoCaret(texto: string, caret: number, limite = 12): SugestaoAutocomplete[] {
+  const p = extrairPrefixoNoCaret(texto, caret);
+  const tokens = tokenizarComposicao(texto.slice(0, p.inicio)).tokens;
+  const ultimo = tokens.at(-1);
+  if (ultimo?.tipo === 'componente' && ['contador','buff','item','feitico','talento','habilidade','origem','especializacao','fonte','grupo','moeda','saldo'].includes(ultimo.valor)) return [];
+  if (ultimo?.tipo === 'componente' && ultimo.valor === 'condicao') return ALL_CONDITIONS
+    .filter(c => c.id.toLowerCase().startsWith(p.prefixo.toLowerCase())).slice(0, limite)
+    .map(c => ({ valor: c.id, categoria: 'Condição', hint: `${c.name}: ${c.description}` }));
+  const lista = filtrarSugestoes(p.prefixo, 1000);
+  const comp = lista.filter(s => s.categoria === 'Componente');
+  if (ultimo?.tipo === 'componente' && ultimo.valor === 'arma_principal') {
+    const propriedades = new Set(['leve','pesada','versatil','fineza','corpo_a_corpo','distancia','grupo','margem_critico']);
+    return comp.filter(s => propriedades.has(s.valor)).slice(0, limite);
+  }
+  return [...comp, ...lista.filter(s => s.categoria !== 'Componente')].slice(0, limite);
 }

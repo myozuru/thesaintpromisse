@@ -42,6 +42,13 @@ const PERICIAS_ITENS = ORDEM_PERICIAS.map((k) => ({
 
 /** Catálogo organizado por grupos visuais (espelha systemConstants). */
 export const CATEGORIAS_RECURSO: CategoriaRecurso[] = [
+  { grupo: 'Recursos por componentes', cor: 'text-emerald-300', itens: [
+    { id: 'vida temporaria', label: 'PV temporários', hint: 'Concede ou consome proteção até o limite configurado.' },
+    { id: 'vida temporaria maximo', label: 'Limite dos PV temporários' },
+    { id: 'vida maximo', label: 'Vida máxima' }, { id: 'pe maximo', label: 'PE máximo' },
+    { id: 'reserva pe', label: 'Reserva de PE' }, { id: 'dado_vida restante', label: 'Dados de Vida restantes' },
+    { id: 'sorte maximo', label: 'Sorte máxima' }, { id: 'acao bonus', label: 'Ações Bônus' },
+  ] },
   {
     grupo: 'Recursos Vitais', cor: 'text-emerald-300',
     itens: [
@@ -159,7 +166,7 @@ export function SeletorRecurso({ value, onChange, placeholder = 'Selecionar recu
               <CommandGroup heading="Customizada">
                 <CommandItem
                   value={`__custom__${buscaLower}`}
-                  onSelect={() => selecionar(buscaLower)}
+                  onSelect={() => selecionar(busca.trim())}
                   className="text-xs"
                 >
                   <Sparkles className="h-3 w-3 text-violet-400 mr-2" />

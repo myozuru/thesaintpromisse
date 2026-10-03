@@ -37,6 +37,7 @@ import { destinoComposto } from './componentes/escrita';
 
 /** Palavras reservadas da OmniScript. */
 export const OMNI_SCRIPT_KEYWORDS = [
+  'transferir', 'para',
   'somar', 'subtrair', 'definir', 'reduzir', 'anular', 'ignorar',
   'aplicar', 'remover', 'rolar', 'botao', 'botão',
   'em', 'se', 'entao', 'então',
@@ -412,7 +413,7 @@ function parsearComando(
         }
       }
       // Cada branch pode ter múltiplos sub-comandos ligados por " e ".
-      const subCmds = dividirNoNivelSuperior(cmdTxt, /^\s+e\s+(?=(?:somar|subtrair|reduzir|definir|anular|ignorar|aplicar|remover|rolar|bot[aã]o|imune|desimune)\b)/i);
+      const subCmds = dividirNoNivelSuperior(cmdTxt, /^\s+e\s+(?=(?:transferir|somar|subtrair|reduzir|definir|anular|ignorar|aplicar|remover|rolar|bot[aã]o|imune|desimune)\b)/i);
       const subEfeitos: CombatEffect[] = [];
       for (const sc of subCmds) {
         const sub = parsearComando(sc, posicao, opts);
@@ -655,7 +656,7 @@ export function desconstruirScript(script: string): DesconstrucaoOmniScript {
   // vai até o primeiro verbo de comando (somar/subtrair/...).
   let mCond = txt.match(/^\s*se\s+([^,]+?)\s+ent[aã]o\s+([\s\S]+)$/i);
   if (!mCond) {
-    mCond = txt.match(/^\s*se\s+([^,]+?)\s+(?=(?:somar|subtrair|reduzir|definir|anular|ignorar|aplicar|remover|rolar|bot[aã]o)\b)([\s\S]+)$/i);
+    mCond = txt.match(/^\s*se\s+([^,]+?)\s+(?=(?:transferir|somar|subtrair|reduzir|definir|anular|ignorar|aplicar|remover|rolar|bot[aã]o)\b)([\s\S]+)$/i);
   }
   if (mCond) {
     condition = mCond[1].trim();
@@ -756,7 +757,7 @@ export function parseOmniScript(
       let condicaoInline: string | undefined;
       let mInline = parte.match(/^\s*se\s+([^,]+?)\s+ent[aã]o\s+([\s\S]+)$/i);
       if (!mInline) {
-        mInline = parte.match(/^\s*se\s+([^,]+?)\s+(?=(?:somar|subtrair|reduzir|definir|anular|ignorar|aplicar|remover|rolar|bot[aã]o)\b)([\s\S]+)$/i);
+        mInline = parte.match(/^\s*se\s+([^,]+?)\s+(?=(?:transferir|somar|subtrair|reduzir|definir|anular|ignorar|aplicar|remover|rolar|bot[aã]o)\b)([\s\S]+)$/i);
       }
       if (mInline) {
         condicaoInline = autoArrobaExpressao(normalizarConjuncaoLogica(mInline[1].trim()));
@@ -774,7 +775,7 @@ export function parseOmniScript(
       // ter ou não condição inline. O lookahead garante que `e` usado como
       // soma dentro de fórmula ("somar nivel e treinamento em X") não seja
       // confundido com separador, pois exige verbo de comando à direita.
-      const subComandos = dividirNoNivelSuperior(restante, /^\s+e\s+(?=(?:somar|subtrair|reduzir|definir|anular|ignorar|aplicar|remover|rolar|bot[aã]o|se|imune|desimune)\b)/i);
+      const subComandos = dividirNoNivelSuperior(restante, /^\s+e\s+(?=(?:transferir|somar|subtrair|reduzir|definir|anular|ignorar|aplicar|remover|rolar|bot[aã]o|se|imune|desimune)\b)/i);
 
       // 🛡 Açúcar especial: "imune A e B e C" → vira ["imune A", "imune B", "imune C"].
       // Aplica APÓS o split de condição inline, então também funciona dentro
@@ -932,7 +933,7 @@ export function tokenizarOmniScript(script: string): OmniToken[] {
   const out: OmniToken[] = [];
   // Ordem importa: keywords compostas primeiro, depois operadores multi-char
   // (->, >=, <=, ==, !=) antes dos single-char.
-  const regex = /(\s+)|(somar|subtrair|reduzir|anular|ignorar|definir|em|se|ent[aã]o|quando|de|chegar|chega|chegou|baixar|baixa|baixou|cair|cai|caiu|subir|sobe|subiu|atingir|atinge|atingiu|para|igual|diferente|maior|menor)\b|(\d+(?:\.\d+)?(?:d\d+[!a-z\d]*)?%?)|([A-Za-zÀ-ÿ_@][\w.@]*)|(->|>=|<=|==|!=|[+\-*/()=<>%,]|\be\b)/gi;
+  const regex = /(\s+)|(transferir|somar|subtrair|reduzir|anular|ignorar|definir|em|se|ent[aã]o|quando|de|chegar|chega|chegou|baixar|baixa|baixou|cair|cai|caiu|subir|sobe|subiu|atingir|atinge|atingiu|para|igual|diferente|maior|menor)\b|(\d+(?:\.\d+)?(?:d\d+[!a-z\d]*)?%?)|([A-Za-zÀ-ÿ_@][\w.@]*)|(->|>=|<=|==|!=|[+\-*/()=<>%,]|\be\b)/gi;
   let last = 0;
   let m: RegExpExecArray | null;
   while ((m = regex.exec(script)) !== null) {

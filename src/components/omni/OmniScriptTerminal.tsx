@@ -19,7 +19,7 @@ import { avaliarFormula } from '@/lib/omni/parser';
 import { montarVariaveisDoPersonagem } from '@/lib/omni/resolvedor';
 import {
   extrairPrefixoNoCaret,
-  filtrarSugestoes,
+  sugerirNoCaret,
   type SugestaoAutocomplete,
 } from '@/lib/omni/dicionarioAutocomplete';
 import type { Character } from '@/types';
@@ -87,7 +87,7 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
       setIndiceSugestao(0);
       return;
     }
-    const matches = filtrarSugestoes(prefixo);
+    const matches = sugerirNoCaret(texto, caret);
     setSugestoes(matches);
     setPrefixoAtual(prefixo);
     setIndiceSugestao(0);
@@ -153,7 +153,7 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
       if (!ciclandoRef.current || lista.length === 0) {
         const { prefixo } = extrairPrefixoNoCaret(valor, caret);
         if (prefixo.length === 0) return; // deixa o Tab navegar normalmente
-        lista = filtrarSugestoes(prefixo);
+        lista = sugerirNoCaret(valor, caret);
         if (lista.length === 0) return;
         setSugestoes(lista);
         setPrefixoAtual(prefixo);

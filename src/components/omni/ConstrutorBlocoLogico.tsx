@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Trash2 } from 'lucide-react';
 import type { CondicaoLogica, Operando } from '@/lib/omni/tipos';
+import { interpretarComposicao } from '@/lib/omni/componentes/interpretar';
 import {
   ALVOS_REFERENCIA, OPERADORES_LOGICOS, DICIONARIO_CONDICOES,
   listarCaminhosNumericos, type AlvoRefId, type OperadorId,
@@ -40,7 +41,7 @@ function OperandoEditor({
 
       {op.tipo === 'ref' && (
         <>
-          <Select value={op.ref.alvo} onValueChange={(v) => onChange({ ...op, ref: { ...op.ref, alvo: v as AlvoRefId } })}>
+          <Select value={op.ref.alvo} onValueChange={(v) => onChange({ ...op, ref: { ...op.ref, alvo: v as AlvoRefId, composicao: op.ref.composicao ? { ...op.ref.composicao, contexto: v as AlvoRefId } : undefined } })}>
             <SelectTrigger className="w-24 h-8 text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
               {(Object.keys(ALVOS_REFERENCIA) as AlvoRefId[]).map((k) => (
@@ -48,7 +49,7 @@ function OperandoEditor({
               ))}
             </SelectContent>
           </Select>
-          <Select value={op.ref.caminho} onValueChange={(v) => onChange({ ...op, ref: { ...op.ref, caminho: v } })}>
+          <Select value={op.ref.caminho} onValueChange={(v) => onChange({ ...op, ref: { ...op.ref, caminho: v, composicao: undefined } })}>
             <SelectTrigger className="w-44 h-8 text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
               {caminhos.map((c) => (
@@ -56,6 +57,14 @@ function OperandoEditor({
               ))}
             </SelectContent>
           </Select>
+          <Input aria-label="Consulta por componentes" value={op.ref.caminho}
+            placeholder="vida temporaria maximo" className="h-8 min-w-56 flex-1 text-sm font-mono"
+            onChange={e => {
+              const caminho = e.target.value;
+              const r = interpretarComposicao(caminho, op.ref.alvo);
+              onChange({ ...op, ref: { ...op.ref, caminho,
+                composicao: r.referencia && !r.erro && r.consumido === caminho.length ? r.referencia : undefined } });
+            }} />
         </>
       )}
       {op.tipo === 'fixo' && (
