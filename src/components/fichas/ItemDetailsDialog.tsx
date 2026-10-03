@@ -87,6 +87,7 @@ function OmniDetails({
   const rollBonusEntries = [
     ...Object.entries(bonus.pericias ?? {}).map(([k, v]) => ({ k: `Perícia ${k.replace(/_/g, ' ')}`, v })),
     ...Object.entries(bonus.trs ?? {}).map(([k, v]) => ({ k: `TR ${k}`, v })),
+    ...(bonus.deslocamento ? [{ k: 'Deslocamento (m)', v: bonus.deslocamento }] : []),
   ].filter(({ v }) => v !== 0);
   const mitigationEntries = [
     ...(e.resistencias ?? []).map((t) => ({ label: `Resistência — ${DAMAGE_TYPE_LABELS[t]}`, value: 'metade' })),
