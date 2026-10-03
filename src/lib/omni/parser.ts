@@ -202,7 +202,72 @@ const ATALHOS_PT_BR: Record<string, string> = {
   qtd_talentos_combate: 'QTD_TALENTOS_COMBATE',
   qtd_aptidoes_aura: 'QTD_APTIDOES_AURA',
   qtd_habilidades_spec: 'QTD_HABILIDADES_SPEC',
+
+  // Nomes preferidos mais claros. Os identificadores antigos continuam aceitos.
+  dificuldade: 'DT',
+  distancia_m: 'DISTANCIA',
+  distancia_plana: 'DISTANCIA_XY',
+  distancia_grade: 'DISTANCIA_MANHATTAN',
+  diferenca_altura: 'ELEVACAO_DIFF',
+  sujeito_aliado: 'SUJEITO_EH_ALIADO',
+  outro_inimigo: 'OUTRO_EH_INIMIGO',
+  outro_aliado: 'OUTRO_EH_ALIADO',
+  outro_e_voce: 'OUTRO_EH_VOCE',
+  turno_de: 'TURNO_INDICE',
+
+  duas_armas: 'DUAL_WIELD',
+  defesa_duas_armas: 'DUAL_WIELD_DEF',
+  bonus_movimento: 'MOVIMENTO_BONUS_METROS',
+  bonus_tr_defesa_reduzida: 'TR_VS_DEBUFF_DEFESA_BONUS',
+  reducao_dano_alma: 'RD_ALMA',
+  concentracao_maxima: 'MAX_CONCENTRACAO',
+  sustentados_maximos: 'MAX_SUSTENTADOS',
+  bonus_slots_liberacao: 'SLOTS_LIBERACAO_BONUS',
+  aura_bonus_defesa: 'AURA_CA_BONUS',
+  aura_reducao_dano_fisico: 'AURA_RD_FISICA',
+  aura_bonus_furtividade: 'AURA_FURTIVIDADE_BONUS',
+  aura_bonus_agarrar: 'AURA_AGARRAR_BONUS',
+  arma_principal_corpo_a_corpo: 'ARMA_PRINCIPAL_EH_CAC',
+  arma_principal_a_distancia: 'ARMA_PRINCIPAL_EH_DISTANCIA',
+  arma_margem_critico: 'ARMA_PRINCIPAL_CRIT_RANGE',
+  reacao_usada: 'REACAO_USADA_NESTA_RODADA',
+  reacoes_usadas: 'REACOES_USADAS_NESTA_RODADA',
+  metros_movidos: 'METROS_MOVIDOS_NESTE_TURNO',
+  bonus_ataque_magia: 'SPELL_ATTACK_BONUS',
+  tem_tecnica: 'TECNICA_AMALDICOADA_DEFINIDA',
+  qtd_fundamentos: 'QTD_FUNDAMENTOS_TECNICA',
+  qtd_habilidades_especializacao: 'QTD_HABILIDADES_SPEC',
+  pe_sustentacao_por_rodada: 'PE_POR_RODADA_SUSTENTADO',
+  indice_turno_atual: 'TURNO_ATUAL_INDEX',
+  turnos_ate_meu_turno: 'TURNOS_ATE_MEU',
+  sou_proximo_no_turno: 'PROXIMO_NO_TURNO',
+  sou_ultimo_no_turno: 'ULTIMO_NO_TURNO',
+  duracao_turno_segundos: 'TURNO_DURACAO_SEG',
+  segundos_restantes_turno: 'TURNO_SEGUNDOS_RESTANTES',
+  qtd_flags: 'QTD_FLAGS_OMNI',
+  qtd_contadores: 'QTD_CONTADORES_OMNI',
 };
+
+const ALIASES_DANO: Record<string, string> = {
+  tem_atacante: 'ID_ORIGEM',
+  tem_alvo: 'ID_ALVO',
+};
+
+function resolverTemplateAmigavel(n: string): string | undefined {
+  const templates: Array<[RegExp, string]> = [
+    [/^origem_(.+)$/, 'ORIGEM_ID_'],
+    [/^especializacao_(.+)$/, 'ESPECIALIZACAO_ID_'],
+    [/^condicao_rodadas_desde_(.+)$/, 'CONDICAO_IDADE_RODADAS_'],
+    [/^condicao_tem_idade_(.+)$/, 'CONDICAO_IDADE_CONHECIDA_'],
+    [/^condicao_rodadas_restantes_(.+)$/, 'CONDICAO_RODADAS_'],
+    [/^qtd_feiticos_tipo_(.+)$/, 'QTD_FEITICOS_ELEMENTO_'],
+  ];
+  for (const [pattern, prefix] of templates) {
+    const match = n.match(pattern);
+    if (match) return prefix + match[1].toUpperCase();
+  }
+  return undefined;
+}
 
 function normalizarChavePt(s: string): string {
   return s
@@ -234,7 +299,7 @@ function normalizarFormulaHumana(expressao: string): string {
 /** Resolve uma chave pt-BR (vida, forca, etc.) para a chave canônica (VIDA, FOR…). */
 export function resolverChavePtBr(chave: string): string {
   const n = normalizarChavePt(chave);
-  return ATALHOS_PT_BR[n] ?? n.toUpperCase();
+  return resolverTemplateAmigavel(n) ?? ATALHOS_PT_BR[n] ?? n.toUpperCase();
 }
 
 // ============================================================================
@@ -361,7 +426,8 @@ function preprocessar(expressao: string, ctx: ContextoAvaliacao): string {
     (referencia, prefixo: string, sub: string) => {
       const px = prefixo.toUpperCase();
       // ITEM/DANO têm campos próprios. Personagens aceitam caminhos legados.
-      const chave = px === 'ITEM' || px === 'DANO' ? sub.toUpperCase()
+      const chave = px === 'ITEM' ? sub.toUpperCase()
+        : px === 'DANO' ? (ALIASES_DANO[normalizarChavePt(sub)] ?? sub.toUpperCase())
         : resolverChavePtBr(px === 'USUARIO' || px === 'ALVO' ? canonicalizarChave(sub) : sub);
       const namespaced = `${px}_${chave}`;
       return valorDaReferencia(ctx, referencia, namespaced, px === 'USUARIO' ? chave : undefined);
