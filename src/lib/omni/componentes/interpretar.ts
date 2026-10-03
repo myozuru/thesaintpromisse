@@ -68,7 +68,8 @@ export function interpretarComposicao(texto: string, contextoPadrao: ContextoCom
         if (t?.tipo !== 'percentual' || ![25,50].includes(t.valor)) throw new Error('Use um limiar percentual aprovado: 25% ou 50%.');
         usar();
         no = { tipo: 'comparacao', operador: '<=', esquerdo: no, direito: { tipo: 'literal', unidade: 'percentual', valor: t.valor } };
-      } else if (operacoes.has(c)) sufixos.push(c);
+      } else if (['max','maximo','maximos','minimo','percentual','porcentagem'].includes(c)) sufixos.push(c);
+      else if (operacoes.has(c) && !(raiz === 'acao' && c === 'bonus')) no = { tipo: 'operacao', componente: c, entrada: no };
       else {
         const argumentoTipo = c === 'grupo' ? 'grupo' : c === 'fonte' ? (raiz === 'dano' ? 'fonte_dano' : 'id') : c === 'tipo' && key(ts[i]) !== 'ataque' ? 'tipo_dano' : c === 'elemento' ? 'tipo_dano' : c === 'nivel' && ts[i]?.tipo === 'numero' ? 'numero' : undefined;
         const argumentoValor = argumentoTipo ? argumento(argumentoTipo) : undefined;

@@ -2,6 +2,7 @@ import { idadeCondicao } from './condicionaisAtivos';
 import { anexarDadosCompostos } from './componentes/contexto';
 import { dadosRecursos } from './componentes/recursos';
 import { dadosEquipamento } from './componentes/equipamento';
+import { dadosCena, dadosTurnos } from './componentes/cena';
 /**
  * Resolvedor de Caminhos (ponte Omni ↔ sistema existente).
  *
@@ -973,7 +974,9 @@ export function montarVariaveisDoPersonagem(
   for (const [k, v] of Object.entries(base)) {
     prefixado[`${escopo}_${k}`] = v;
   }
-  return anexarDadosCompostos({ ...base, ...prefixado }, escopo, { selecoes: {
+  const bag = anexarDadosCompostos({ ...base, ...prefixado }, escopo, { selecoes: {
     ...dadosRecursos(base).selecoes, ...dadosEquipamento(c, base).selecoes,
+    ...dadosTurnos(base).selecoes,
   } });
+  return anexarDadosCompostos(bag, 'CENA', dadosCena(base));
 }
