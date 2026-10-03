@@ -172,8 +172,9 @@ export interface EntidadeOmni {
    * Ex.: `vida_max = "(@USUARIO.treino * 2)"` aumenta a vida máxima
    *      proporcionalmente ao bônus de treinamento.
    *
-   * Aceita as mesmas chaves de `bonusEquipado`. Resultado é somado ao
-   * valor numérico fixo (se ambos existirem).
+   * Recursos e slots aceitam fórmulas; deslocamento, perícias e TRs também
+   * podem ser calculados usando o contexto do USUARIO. Resultados são somados
+   * ao bônus fixo correspondente quando ambos existem.
    */
   bonusEquipadoFormula?: {
     hp?: string;
@@ -182,6 +183,9 @@ export interface EntidadeOmni {
     rd?: string;
     esc?: string;
     slots?: string;
+    deslocamento?: string;
+    pericias?: Record<string, string>;
+    trs?: Partial<Record<TrNome, string>>;
   };
   /**
    * Dados nativos de combate (Pilar de Dano).
