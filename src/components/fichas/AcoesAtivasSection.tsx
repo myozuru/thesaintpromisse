@@ -38,7 +38,7 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
           {sust.map((s) => (
             <div key={s.id} className="flex items-center gap-2 rounded border border-border bg-background/60 px-2 py-1 text-xs">
               <span className="min-w-0 flex-1 truncate">🔁 <b>{s.nome}</b> · sustentada · {s.pePorTurno} PE/turno</span>
-              <button className="shrink-0 rounded border border-destructive/50 px-2 py-0.5 text-destructive hover:bg-destructive/10" onClick={() => encerrarSustentacaoAtiva(charId, s.id)}>Encerrar</button>
+              <button className="shrink-0 rounded border border-destructive/50 px-2 py-0.5 text-destructive hover:bg-destructive/10" aria-label={`Encerrar ${s.nome}`} onClick={() => encerrarSustentacaoAtiva(charId, s.id)}>Encerrar</button>
             </div>
           ))}
           {prot.map((p) => (
