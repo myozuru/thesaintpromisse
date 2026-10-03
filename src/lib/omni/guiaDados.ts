@@ -115,7 +115,7 @@ function canonizarId(id: string): string {
   const dynamic: Array<[RegExp, string]> = [
     [/^condicao_idade_rodadas_(.+)$/i, 'condicao_rodadas_desde_$1'],
     [/^condicao_idade_conhecida_(.+)$/i, 'condicao_tem_idade_$1'],
-    [/^condicao_rodadas_(?!desde_)(.+)$/i, 'condicao_rodadas_restantes_$1'],
+    [/^condicao_rodadas_(?!desde_|restantes_)(.+)$/i, 'condicao_rodadas_restantes_$1'],
     [/^origem_id_(.+)$/i, 'origem_$1'],
     [/^especializacao_id_(.+)$/i, 'especializacao_$1'],
     [/^qtd_feiticos_elemento_(.+)$/i, 'qtd_feiticos_tipo_$1'],
