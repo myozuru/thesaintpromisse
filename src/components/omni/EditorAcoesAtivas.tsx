@@ -33,10 +33,16 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
         Ações que o jogador usa no painel de ataque: custo, alcance, teste (TR ou ataque), dano, cargas e efeitos.
         Custos e cargas são pagos antes de rolar.
       </p>
+      {lista.length === 0 && (
+        <div className="rounded-md border border-dashed border-primary/40 p-4 text-center text-sm text-muted-foreground">
+          Nenhuma ação ativa ainda. Clique em <b className="text-primary">Nova ação ativa</b> abaixo para criar a primeira.
+        </div>
+      )}
       {lista.map((a, i) => (
-        <div key={a.id} className="rounded-md border border-border/60 p-3 space-y-2">
+        <div key={a.id} className="rounded-lg border border-primary/40 bg-primary/5 p-3 space-y-3 text-sm [&_label]:text-xs">
+          <div className="text-[11px] font-bold uppercase tracking-wider text-primary">⚡ Ação {i + 1} — Identificação</div>
           <div className="flex gap-2">
-            <Input value={a.nome} onChange={(e) => set(i, { nome: e.target.value })} placeholder="Nome" />
+            <Input aria-label="Nome da ação" className="font-semibold" value={a.nome} onChange={(e) => set(i, { nome: e.target.value })} placeholder="Nome da ação (ex.: Corte da Injustiça)" />
             <Button size="sm" variant="outline" title="Duplicar ação" aria-label={`Duplicar ação ${a.nome}`} onClick={() => setEnt({ ...ent, acoesAtivas: [...lista.slice(0, i + 1), copiarAcaoAtiva(a), ...lista.slice(i + 1)] })}><Copy className="h-4 w-4" /></Button>
             <Button size="sm" variant="outline" title="Salvar esta ação como preset" aria-label={`Salvar preset de ${a.nome}`} onClick={() => {
               const nome = nomePreset || a.nome;
