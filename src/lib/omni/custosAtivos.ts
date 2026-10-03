@@ -5,16 +5,22 @@ import { montarVariaveisDoPersonagem } from './resolvedor';
 import { calcularContador } from './contadores';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLogStore } from '@/stores/useLogStore';
+import { useInventoryStore } from '@/stores/useInventoryStore';
+import { capacidadePorNome, tirosRestantes } from '@/lib/recargaRapida';
+
+export interface ContextoCustosAtivos { armaNome?: string; instanciaId?: string; entidadeId?: string }
 
 export interface PlanoCustosAtivos {
   pe: number; pv: number; cargas: number; contador?: string;
+  municao: number; armaMunicao?: { nome: string; restanteAntes: number };
+  usosItem: number; instanciaItemId?: string;
   acao: AcaoAtivaConfig['acao']; intensificacoes: number; maxIntensificacoes: number;
   pePorTurno: number;
 }
 export type ResultadoCustosAtivos = { ok: true; plano: PlanoCustosAtivos } | { ok: false; reason: string };
 
 /** Recursos novos exigem fórmulas determinísticas; legados preservam seu arredondamento. */
-export function planejarCustosAtivos(cfg: AcaoAtivaConfig, u: Character, intensificacoes = 0): ResultadoCustosAtivos {
+export function planejarCustosAtivos(cfg: AcaoAtivaConfig, u: Character, intensificacoes = 0, contexto: ContextoCustosAtivos = {}): ResultadoCustosAtivos {
   const variaveis = montarVariaveisDoPersonagem(u, 'USUARIO');
   const numero = (expr: string | undefined, fallback = 0): number => {
     if (expr === undefined) return fallback;
@@ -37,6 +43,30 @@ export function planejarCustosAtivos(cfg: AcaoAtivaConfig, u: Character, intensi
     if (!Number.isSafeInteger(pe)) throw new Error('Custo de PE fora do limite numérico.');
     if (c?.limite_pe !== undefined && pe > numero(c.limite_pe)) return { ok: false, reason: 'Custo excede o limite de PE configurado.' };
     const pv = numero(c?.custo_pv);
+    const municao = c?.municao ?? 0, usosItem = c?.usos_item ?? 0;
+    if (![municao, usosItem].every(n => Number.isSafeInteger(n) && n >= 0)) throw new Error('Munição e usos do item devem ser inteiros não negativos.');
+    let armaMunicao: PlanoCustosAtivos['armaMunicao'];
+    if (municao > 0) {
+      if (!contexto.armaNome) throw new Error('Munição exige uma arma identificada para a ação.');
+      const capacidade = capacidadePorNome(contexto.armaNome);
+      if (capacidade === null) throw new Error(`${contexto.armaNome} não usa munição configurada.`);
+      const restanteAntes = tirosRestantes(u, contexto.armaNome) ?? capacidade;
+      if (restanteAntes < municao) throw new Error(`Munição insuficiente em ${contexto.armaNome} (tem ${restanteAntes}, precisa de ${municao}).`);
+      armaMunicao = { nome: contexto.armaNome, restanteAntes };
+    }
+    let instanciaItemId: string | undefined;
+    if (usosItem > 0) {
+      const itens = useInventoryStore.getState().listByOwner(u.id).filter(item =>
+        contexto.instanciaId ? item.instanceId === contexto.instanciaId : !!contexto.entidadeId && item.entity.id === contexto.entidadeId,
+      );
+      const item = itens.length === 1 ? itens[0] : undefined;
+      if (!item || contexto.entidadeId && item.entity.id !== contexto.entidadeId) throw new Error('Não foi possível identificar a instância do item desta ação.');
+      const total = item.usosTotais ?? item.entity.usos?.total;
+      const restante = item.usosRestantes ?? total;
+      if (total === undefined) throw new Error('O item desta ação não possui usos limitados configurados.');
+      if (restante === undefined || restante < usosItem) throw new Error(`Usos insuficientes do item (tem ${restante ?? 0}, precisa de ${usosItem}).`);
+      instanciaItemId = item.instanceId;
+    }
     const g = c?.gastar_cargas;
     const contador = g?.nome.trim().toLowerCase() ?? cfg.consumirContador?.nome.trim().toLowerCase();
     const tem = contador ? (u.omniCounters?.[contador] ?? 0) : 0;
@@ -51,7 +81,7 @@ export function planejarCustosAtivos(cfg: AcaoAtivaConfig, u: Character, intensi
     if (c?.tipo_acao === 'sustentada' && !cfg.efeitos?.some(e => e.tipo === 'condicao')) throw new Error('Ação sustentada exige ao menos uma condição para manter.');
     if (c?.tipo_acao === 'sustentada' && pePorTurno < 1) throw new Error('Ação sustentada exige PE por turno maior que zero.');
     const acao = c?.tipo_acao && c.tipo_acao !== 'sustentada' ? c.tipo_acao : cfg.acao;
-    return { ok: true, plano: { pe, pv, cargas, contador, acao, intensificacoes, maxIntensificacoes: max, pePorTurno } };
+    return { ok: true, plano: { pe, pv, cargas, contador, municao, armaMunicao, usosItem, instanciaItemId, acao, intensificacoes, maxIntensificacoes: max, pePorTurno } };
   } catch (e) { return { ok: false, reason: e instanceof Error ? e.message : 'Custos inválidos.' }; }
 }
 
@@ -73,7 +103,15 @@ export function patchCustosAtivos(u: Character, p: PlanoCustosAtivos): Partial<C
   if (p.acao === 'bonus') patch.bonusActionsCurrent = Math.max(0, (u.bonusActionsCurrent ?? 1) - 1);
   if (p.acao === 'reacao') patch.reactionsCurrent = Math.max(0, (u.reactionsCurrent ?? 1) - 1);
   if (p.contador && p.cargas > 0) patch.omniCounters = calcularContador(u.omniCounters ?? {}, p.contador, 'CONSUMIR_CONTADOR', { valor: p.cargas }).counters;
+  if (p.armaMunicao && p.municao > 0) patch.weaponAmmo = { ...(u.weaponAmmo ?? {}), [p.armaMunicao.nome]: p.armaMunicao.restanteAntes - p.municao };
   return patch;
+}
+
+/** Consome usos no inventário; chamadas devem validar o plano antes de alterar outros recursos. */
+export function consumirUsosItemAtivo(p: PlanoCustosAtivos): boolean {
+  if (p.usosItem <= 0) return true;
+  if (!p.instanciaItemId) return false;
+  return useInventoryStore.getState().consumirUso(p.instanciaItemId, p.usosItem);
 }
 
 export function encerrarSustentacaoAtiva(charId: string, id: string): void {

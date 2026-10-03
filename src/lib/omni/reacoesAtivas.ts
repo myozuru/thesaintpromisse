@@ -9,6 +9,8 @@ import { aceitaAlvoAtivo } from './alvosAtivos';
 import { useReactionStore } from '@/stores/useReactionStore';
 import { useProfileStore } from '@/stores/useProfileStore';
 import { planejarCustosAtivos, validarRecursosAtivos } from './custosAtivos';
+import { findWeaponByName } from '@/lib/weapons';
+import { replicaWeaponName } from '@/lib/replicas';
 
 export interface EventoReacaoAtiva {
   gatilho: GatilhoReacaoAtiva;
@@ -79,7 +81,7 @@ export async function responderOfertaRemota(janelaId: string, ofertaId?: string,
     if (!item || item.ownerId !== oferta.usuarioId || JSON.stringify(atual) !== JSON.stringify(oferta.cfg) || !elegivel(oferta, remoto.evento)) throw new Error('Reação indisponível: ficha, alcance, recursos ou configuração mudaram.');
     const { executarAcaoAtiva } = await import('./acaoAtiva');
     const cfg = { ...oferta.cfg, tipo_alvo: oferta.alvoId === oferta.usuarioId ? 'proprio' as const : 'unico' as const, ...(remoto.evento.movimento ? { alcanceM: 0 } : {}) };
-    const r = await executarAcaoAtiva(oferta.usuarioId, cfg, oferta.alvoId, oferta.ent, { ignorarReacoes: true });
+    const r = await executarAcaoAtiva(oferta.usuarioId, cfg, oferta.alvoId, oferta.ent, { ignorarReacoes: true, instanciaId: oferta.instanceId });
     if (!r.ok) throw new Error(r.reason);
     const tipoAcao = oferta.cfg.custo_recursos?.tipo_acao ?? oferta.cfg.acao;
     if (tipoAcao === 'reacao' || tipoAcao === 'sustentada' && oferta.cfg.acao === 'reacao') useReactionStore.getState().consumeReaction(oferta.usuarioId);
@@ -113,7 +115,9 @@ function elegivel(oferta: OfertaReacaoAtiva, evento: EventoReacaoAtiva): boolean
     const centro = evento.protegidoId ? findCharEntity(ms.entities, evento.protegidoId) : ot;
     if (!centro || touchDistanceMeters(ut, centro, ms.gridConfig) > r.alcance_m + 0.05) return false;
   }
-  const custos = planejarCustosAtivos(oferta.cfg, u);
+  const nomeArma = replicaWeaponName(oferta.ent) || u.mainHandWeaponName || undefined;
+  const arma = nomeArma ? findWeaponByName(nomeArma) : undefined;
+  const custos = planejarCustosAtivos(oferta.cfg, u, 0, { armaNome: arma?.name, instanciaId: oferta.instanceId, entidadeId: oferta.ent.id });
   return custos.ok && validarRecursosAtivos(u, custos.plano).ok && (custos.plano.acao !== 'reacao' || useReactionStore.getState().hasReactionAvailable(u.id));
 }
 
@@ -170,7 +174,7 @@ export async function responderReacaoAtiva(id: string, ofertaId?: string): Promi
     if (!item || item.ownerId !== oferta.usuarioId || JSON.stringify(atual) !== JSON.stringify(oferta.cfg) || !elegivel(oferta, j.evento)) throw new Error('Reação indisponível: ficha, alcance, recursos ou configuração mudaram.');
     const { executarAcaoAtiva } = await import('./acaoAtiva');
     const cfg = { ...oferta.cfg, tipo_alvo: oferta.alvoId === oferta.usuarioId ? 'proprio' as const : 'unico' as const, ...(j.evento.movimento ? { alcanceM: 0 } : {}) };
-    const r = await executarAcaoAtiva(oferta.usuarioId, cfg, oferta.alvoId, oferta.ent, { ignorarReacoes: true });
+    const r = await executarAcaoAtiva(oferta.usuarioId, cfg, oferta.alvoId, oferta.ent, { ignorarReacoes: true, instanciaId: oferta.instanceId });
     if (!r.ok) throw new Error(r.reason);
     const tipoAcao = oferta.cfg.custo_recursos?.tipo_acao ?? oferta.cfg.acao;
     if (tipoAcao === 'reacao' || tipoAcao === 'sustentada' && oferta.cfg.acao === 'reacao') useReactionStore.getState().consumeReaction(oferta.usuarioId);

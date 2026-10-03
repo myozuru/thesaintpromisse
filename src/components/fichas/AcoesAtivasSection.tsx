@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLogStore } from '@/stores/useLogStore';
-import { acoesAtivasDe, executarAcaoAtiva } from '@/lib/omni/acaoAtiva';
+import { acoesAtivasDe, armaDaAcao, executarAcaoAtiva } from '@/lib/omni/acaoAtiva';
 
 const ACAO_ROT = { comum: 'Ação Comum', bonus: 'Ação Bônus', reacao: 'Reação', livre: 'Livre' } as const;
 
@@ -45,7 +45,9 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
       }}>Remover</button></div>)}
       {lista.map(({ instanceId, ent, cfg }) => {
         const key = instanceId + cfg.id, intensidade = intensificacoes[key] ?? 0;
-        const custos = planejarCustosAtivos(cfg, u, intensidade);
+        const arma = armaDaAcao(u, ent);
+        const contextoCustos = { armaNome: arma?.name, instanciaId: instanceId, entidadeId: ent.id };
+        const custos = planejarCustosAtivos(cfg, u, intensidade, contextoCustos);
         const p = custos.ok ? custos.plano : undefined;
         return (
         <div key={instanceId + cfg.id} className="flex items-center gap-2 text-xs" data-testid={`acao-ativa-${cfg.nome}`}>
@@ -54,6 +56,8 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
             <span className="text-muted-foreground">
               {' '}· {ent.nome} · {ACAO_ROT[p?.acao ?? cfg.acao]} · {p ? `${p.pe} PE${p.pv ? ` + ${p.pv} PV` : ''}` : 'custo inválido'}
               {p?.contador ? ` + ${p.cargas} carga(s) de ${p.contador} (${u.omniCounters?.[p.contador] ?? 0})` : ''}
+              {p?.municao ? ` + ${p.municao} munição(ões) (${p.armaMunicao?.restanteAntes} disponível(is))` : ''}
+              {p?.usosItem ? ` + ${p.usosItem} uso(s) do item (${useInventoryStore.getState().items[instanceId]?.usosRestantes ?? ent.usos?.total ?? 0} disponível(is))` : ''}
               {p?.pePorTurno ? ` · manutenção ${p.pePorTurno} PE/turno` : ''}
               {!custos.ok ? ` · ${custos.reason}` : ''}
               {cfg.tipo_alvo === 'proprio' ? ' · próprio' : cfg.tipo_alvo === 'area' ? ` · área: ${cfg.area?.forma ?? 'configurar'}` : ''}
@@ -72,7 +76,7 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
             onClick={async () => {
               setBusy(true);
               try {
-                const r = await executarAcaoAtiva(charId, cfg, cfg.tipo_alvo === 'multiplo' ? (multiplos[instanceId + cfg.id] ?? []) : alvo, ent, { intensificacoes: intensidade });
+                const r = await executarAcaoAtiva(charId, cfg, cfg.tipo_alvo === 'multiplo' ? (multiplos[instanceId + cfg.id] ?? []) : alvo, ent, { intensificacoes: intensidade, instanciaId: instanceId });
                 if (!r.ok) useLogStore.getState().addLog('combat', `❌ ${cfg.nome}: ${r.reason}`);
               } finally { setBusy(false); }
             }}

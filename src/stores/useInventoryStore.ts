@@ -167,7 +167,8 @@ export const useInventoryStore = create<InventoryState>()(
           .map(adotarUsosSeFaltar),
 
       consumirUso: (instanceId, n = 1) => {
-        const cur = get().items[instanceId];
+        const stored = get().items[instanceId];
+        const cur = stored ? adotarUsosSeFaltar(stored) : undefined;
         if (!cur) return false;
         // Item sem usos limitados — passa direto.
         if (cur.usosRestantes === undefined || cur.usosTotais === undefined) return true;

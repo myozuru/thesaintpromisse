@@ -263,6 +263,10 @@ export interface CustoRecursosAtivo {
   max_intensificacoes?: string;
   limite_pe?: string;
   dano_por_intensificacao?: string;
+  /** Munição que a ação consome da arma associada. */
+  municao?: number;
+  /** Usos consumidos da instância do item que contém esta ação. */
+  usos_item?: number;
   gastar_cargas?: { nome: string; quantidade: 'todas' | string; minimo?: number };
   custo_pv?: string;
   tipo_acao?: 'comum' | 'bonus' | 'reacao' | 'livre' | 'sustentada';

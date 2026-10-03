@@ -97,6 +97,7 @@ const AcaoAtivaSchema = z.object({
     pe_base: z.string().optional(), pe_por_intensificacao: z.string().optional(),
     max_intensificacoes: z.string().optional(), limite_pe: z.string().optional(),
     dano_por_intensificacao: z.string().optional(), custo_pv: z.string().optional(),
+    municao: z.number().int().nonnegative().optional(), usos_item: z.number().int().nonnegative().optional(),
     gastar_cargas: z.object({ nome: z.string().trim().min(1), quantidade: z.string().min(1), minimo: z.number().int().positive().optional() }).optional(),
     tipo_acao: z.enum(['comum', 'bonus', 'reacao', 'livre', 'sustentada']).optional(), pe_por_turno: z.string().optional(),
   }).optional(),

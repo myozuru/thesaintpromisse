@@ -61,6 +61,38 @@ describe('custos genéricos de ações', () => {
     const r = await executarAcaoAtiva('u', cfg({ custo_recursos: { pe_base: '3', custo_pv: '5' } }), 'a');
     expect(r.ok).toBe(true); const u = pegarFicha('u'); expect(u.hpCurrent).toBe(25); expect(u.escCurrent).toBe(20); expect(u.tempPE).toBe(0); expect(u.peCurrent).toBe(19);
   });
+  it('consome munição configurada na arma associada à ação', async () => {
+    mesa({ mainHandWeaponName: 'Pistola', weaponAmmo: { Pistola: 4 } });
+    const r = await executarAcaoAtiva('u', cfg({ custo_recursos: { municao: 2 } }), 'a');
+    expect(r.ok).toBe(true); expect(pegarFicha('u').weaponAmmo?.Pistola).toBe(2);
+  });
+  it('rejeita munição insuficiente ou arma sem capacidade de recarga sem pagar PE', async () => {
+    mesa({ mainHandWeaponName: 'Pistola', weaponAmmo: { Pistola: 1 } });
+    expect((await executarAcaoAtiva('u', cfg({ custo_recursos: { municao: 2 } }), 'a')).ok).toBe(false);
+    expect(pegarFicha('u').peCurrent).toBe(20);
+    mesa({ mainHandWeaponName: 'Espada Curta' });
+    expect((await executarAcaoAtiva('u', cfg({ custo_recursos: { municao: 1 } }), 'a')).ok).toBe(false);
+    expect(pegarFicha('u').peCurrent).toBe(20);
+  });
+  it('consome usos da instância do item ativo, sem afetar outra cópia', async () => {
+    const acao = cfg({ custo_recursos: { usos_item: 2 } });
+    const ent = { ...novaEntidade('item'), usos: { total: 3, recarga: 'diaria' as const }, acoesAtivas: [acao] } as EntidadeOmni;
+    const usada = useInventoryStore.getState().add('u', ent), outra = useInventoryStore.getState().add('u', ent);
+    const r = await executarAcaoAtiva('u', acao, 'a', usada.entity, { instanciaId: usada.instanceId });
+    expect(r.ok).toBe(true);
+    expect(useInventoryStore.getState().items[usada.instanceId].usosRestantes).toBe(1);
+    expect(useInventoryStore.getState().items[outra.instanceId].usosRestantes).toBe(3);
+  });
+  it('não cobra PE quando os usos do item são insuficientes ou ilimitados', async () => {
+    const acao = cfg({ custo_recursos: { usos_item: 2 } });
+    const limitado = { ...novaEntidade('item'), usos: { total: 1, recarga: 'diaria' as const }, acoesAtivas: [acao] } as EntidadeOmni;
+    const inst = useInventoryStore.getState().add('u', limitado);
+    expect((await executarAcaoAtiva('u', acao, 'a', inst.entity, { instanciaId: inst.instanceId })).ok).toBe(false);
+    expect(pegarFicha('u').peCurrent).toBe(20);
+    const semUsos = useInventoryStore.getState().add('u', { ...novaEntidade('item'), acoesAtivas: [acao] });
+    expect((await executarAcaoAtiva('u', acao, 'a', semUsos.entity, { instanciaId: semUsos.instanceId })).ok).toBe(false);
+    expect(pegarFicha('u').peCurrent).toBe(20);
+  });
   it.each(['0', '-1', '6', '1d6', '@USUARIO.key_inexistente'])('quantidade %s inválida não cobra recursos', async quantidade => {
     const antes = pegarFicha('u'); const r = await executarAcaoAtiva('u', cfg({ custo_recursos: { custo_pv: '5', gastar_cargas: { nome: 'foco', quantidade } } }), 'a');
     expect(r.ok).toBe(false); expect(pegarFicha('u')).toEqual(antes);
@@ -108,7 +140,9 @@ describe('sustentação e interface reais', () => {
     fireEvent.change(screen.getByLabelText('Máximo de intensificações'), { target: { value: '4' } });
     fireEvent.change(screen.getByLabelText('Custo PV'), { target: { value: '5' } }); fireEvent.change(screen.getByLabelText('Contador de cargas'), { target: { value: 'foco' } });
     fireEvent.change(screen.getByLabelText('Quantidade de cargas'), { target: { value: '2' } });
-    expect(salvo!.acoesAtivas![0].custo_recursos).toMatchObject({ max_intensificacoes: '4', custo_pv: '5', gastar_cargas: { nome: 'foco', quantidade: '2' } });
+    fireEvent.change(screen.getByLabelText('Munição consumida'), { target: { value: '2' } });
+    fireEvent.change(screen.getByLabelText('Usos do item consumidos'), { target: { value: '1' } });
+    expect(salvo!.acoesAtivas![0].custo_recursos).toMatchObject({ max_intensificacoes: '4', custo_pv: '5', municao: 2, usos_item: 1, gastar_cargas: { nome: 'foco', quantidade: '2' } });
     const parsed = PacoteOmniSchema.parse({ formato: 'omni-engine.v1', nome: 'Teste', geradoEm: 0, entidades: [salvo!] }); expect(parsed.entidades[0].acoesAtivas![0]).toEqual(salvo!.acoesAtivas![0]);
   });
   it('jogador escolhe intensificação e usa a ação pelo painel', async () => {

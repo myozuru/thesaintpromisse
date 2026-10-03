@@ -1,4 +1,4 @@
-import { planejarCustosAtivos, validarRecursosAtivos, patchCustosAtivos } from './custosAtivos';
+import { planejarCustosAtivos, validarRecursosAtivos, patchCustosAtivos, consumirUsosItemAtivo, type ContextoCustosAtivos } from './custosAtivos';
 import { prepararMovimentosAtivos, aplicarMovimentoAtivo, type PlanoMovimentoAtivo, type OpcoesMovimentoAtivo } from './movimentosAtivos';
 import { avaliarCondicionaisAtivos } from './condicionaisAtivos';
 import { applyAdvantageToD20, consumeAdvantageFor, consumeFlatBonusFor } from './rollAdvantage';
@@ -207,7 +207,7 @@ export function custoPEDe(cfg: AcaoAtivaConfig, u: Character, intensificacoes = 
 
 export type ResultadoAtiva = { ok: false; reason: string } | { ok: true; dano: number; cura?: number; detalhe: string; efeitoAplicado?: boolean };
 
-export function podeUsarAtiva(u: Character, alvo: Character | undefined, cfg: AcaoAtivaConfig, intensificacoes = 0, arma?: Weapon): { ok: true } | { ok: false; reason: string } {
+export function podeUsarAtiva(u: Character, alvo: Character | undefined, cfg: AcaoAtivaConfig, intensificacoes = 0, arma?: Weapon, contexto?: ContextoCustosAtivos): { ok: true } | { ok: false; reason: string } {
   if (!alvo) return { ok: false, reason: 'Escolha um alvo.' };
   if (cfg.teste === 'disputa') {
     if (!cfg.pericia_usuario?.trim() || !cfg.pericias_alvo?.some(p => p.trim())) return { ok: false, reason: 'Configure a perícia do usuário e ao menos uma perícia possível do alvo.' };
@@ -236,7 +236,7 @@ export function podeUsarAtiva(u: Character, alvo: Character | undefined, cfg: Ac
   }
   if (!cfg.tipo_alvo && alvo.id === u.id) return { ok: false, reason: 'O alvo deve ser outra criatura.' };
   if (!aceitaAlvoAtivo(u, alvo, cfg)) return { ok: false, reason: 'O alvo não atende ao filtro.' };
-  const custos = planejarCustosAtivos(cfg, u, intensificacoes);
+  const custos = planejarCustosAtivos(cfg, u, intensificacoes, { armaNome: arma?.name, ...contexto });
   if (!custos.ok) return custos;
   const recursos = validarRecursosAtivos(u, custos.plano);
   if (!recursos.ok) return recursos;
@@ -291,7 +291,7 @@ function aplicarEfeitos(u: Character, alvo: Character, efeitos: EfeitoSecundario
 }
 
 /** Arma usada pela ação: a própria entidade (se for arma do catálogo) ou a da mão principal. */
-function armaDaAcao(u: Character, ent?: EntidadeOmni) {
+export function armaDaAcao(u: Character, ent?: EntidadeOmni) {
   const nome = (ent && replicaWeaponName(ent)) || u.mainHandWeaponName || '';
   return nome ? findWeaponByName(nome) : undefined;
 }
@@ -301,7 +301,7 @@ export async function executarAcaoAtiva(
   cfg: AcaoAtivaConfig,
   selecao: SelecaoAtiva,
   ent?: EntidadeOmni,
-  opcoes: OpcoesMovimentoAtivo & { intensificacoes?: number; ignorarReacoes?: boolean } = {},
+  opcoes: OpcoesMovimentoAtivo & { intensificacoes?: number; ignorarReacoes?: boolean; instanciaId?: string } = {},
 ): Promise<ResultadoAtiva> {
   const escolhidos = await selecionarAlvosAtivos(usuarioId, cfg, selecao);
   if (!escolhidos.ok) return escolhidos;
@@ -310,9 +310,10 @@ export async function executarAcaoAtiva(
   let u = store.characters.find((x) => x.id === usuarioId);
   if (!u) return { ok: false, reason: 'Personagem não encontrado.' };
   const arma = armaDaAcao(u, ent);
+  const contextoCustos: ContextoCustosAtivos = { armaNome: arma?.name, instanciaId: opcoes.instanciaId, entidadeId: ent?.id };
   let alvos = escolhidos.ids.map(id => store.characters.find(c => c.id === id)!);
   for (const alvo of alvos) {
-    const chk = podeUsarAtiva(u, alvo, cfg, opcoes.intensificacoes ?? 0, arma);
+    const chk = podeUsarAtiva(u, alvo, cfg, opcoes.intensificacoes ?? 0, arma, contextoCustos);
     if (!chk.ok) return chk;
   }
   if (cfg.teste === 'ataque' && !arma) return { ok: false, reason: 'Nenhuma arma empunhada para o ataque.' };
@@ -331,7 +332,7 @@ export async function executarAcaoAtiva(
   u = store.characters.find(c => c.id === usuarioId);
   if (!u) return { ok: false, reason: 'Personagem removido durante a seleção.' };
   alvos = escolhidos.ids.map(id => store.characters.find(c => c.id === id)!);
-  for (const alvo of alvos) { const chk = podeUsarAtiva(u, alvo, cfg, opcoes.intensificacoes ?? 0, arma); if (!chk.ok) return chk; }
+  for (const alvo of alvos) { const chk = podeUsarAtiva(u, alvo, cfg, opcoes.intensificacoes ?? 0, arma, contextoCustos); if (!chk.ok) return chk; }
 
   if (!opcoes.ignorarReacoes && ent?.categoria === 'feitico') {
     const { abrirJanelaReacaoAtiva } = await import('./reacoesAtivas');
@@ -340,7 +341,7 @@ export async function executarAcaoAtiva(
     store = useCharacterStore.getState();
     u = store.characters.find(c => c.id === usuarioId);
     if (!u || (u.hpCurrent ?? 1) <= 0) return { ok: false, reason: 'Conjurador indisponível.' };
-    for (const alvo of alvos) { const chk = podeUsarAtiva(u, store.characters.find(c => c.id === alvo.id), cfg, opcoes.intensificacoes ?? 0, arma); if (!chk.ok) return chk; }
+    for (const alvo of alvos) { const chk = podeUsarAtiva(u, store.characters.find(c => c.id === alvo.id), cfg, opcoes.intensificacoes ?? 0, arma, contextoCustos); if (!chk.ok) return chk; }
   }
   // Snapshot por alvo antes do consumo: cargas e PV são os da declaração.
   const condicionais = new Map(alvos.map(t => [t.id, {
@@ -349,13 +350,14 @@ export async function executarAcaoAtiva(
   }]));
 
   // ── Paga tudo antes de rolar ──
-  const custos = planejarCustosAtivos(cfg, u, opcoes.intensificacoes ?? 0);
+  const custos = planejarCustosAtivos(cfg, u, opcoes.intensificacoes ?? 0, contextoCustos);
   if (!custos.ok) return custos;
   const p = custos.plano;
+  if (!consumirUsosItemAtivo(p)) return { ok: false, reason: 'Os usos do item mudaram antes de a ação ser concluída.' };
   const cargas = p.cargas;
   store.updateCharacter(u.id, patchCustosAtivos(u, p));
   const fonte = ent?.nome ?? cfg.nome;
-  const pago = `${p.pe} PE${p.pv ? ` + ${p.pv} PV` : ''}${cargas ? ` + ${cargas} carga(s) de ${p.contador}` : ''}${p.intensificacoes ? ` · intensificação ${p.intensificacoes}` : ''}`;
+  const pago = `${p.pe} PE${p.pv ? ` + ${p.pv} PV` : ''}${cargas ? ` + ${cargas} carga(s) de ${p.contador}` : ''}${p.municao ? ` + ${p.municao} munição(ões)` : ''}${p.usosItem ? ` + ${p.usosItem} uso(s) do item` : ''}${p.intensificacoes ? ` · intensificação ${p.intensificacoes}` : ''}`;
   const sustentadas = p.pePorTurno > 0 ? [] as { charId: string; id: string }[] : undefined;
   const extraIntensificacao = planejarDano(undefined, cfg.custo_recursos?.dano_por_intensificacao, p.intensificacoes, false);
 
