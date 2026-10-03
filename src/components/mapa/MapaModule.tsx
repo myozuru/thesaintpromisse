@@ -73,6 +73,7 @@ import { AssetTypeDialog, type AssetKind } from './ui/AssetTypeDialog';
 import { TokenCropDialog } from './ui/TokenCropDialog';
 import { NotesOverlay } from './ui/NotesOverlay';
 import { SelectionToolbar } from './ui/SelectionToolbar';
+import { ZonaTerrenoDialog } from './ui/ZonaTerrenoDialog';
 import { PendingMoveOverlay } from './ui/PendingMoveOverlay';
 import { OpportunityPromptOverlay } from './ui/OpportunityPromptOverlay';
 import { ZonaRiscoPrompt } from '@/components/fichas/ZonaRiscoPrompt';
@@ -328,6 +329,7 @@ export function MapaModule() {
   const clickCountRef = useRef<{ id: string | null; count: number; t: number }>({ id: null, count: 0, t: 0 });
   const [selectionToolbarVisible, setSelectionToolbarVisible] = useState(false);
   const [tokenCropEntityId, setTokenCropEntityId] = useState<string | null>(null);
+  const [terrainZoneEditId, setTerrainZoneEditId] = useState<string | null>(null);
   const selectionToolbarVisibleRef = useRef(false);
 
   const gridConfig = useMapStore((s) => s.gridConfig);
@@ -2998,7 +3000,8 @@ export function MapaModule() {
 
 
           <NotesOverlay containerRef={containerRef as React.RefObject<HTMLDivElement>} />
-          <SelectionToolbar visible={selectionToolbarVisible} onAdjustToken={setTokenCropEntityId} />
+          <SelectionToolbar visible={selectionToolbarVisible} onAdjustToken={setTokenCropEntityId} onEditTerrainZone={setTerrainZoneEditId} />
+          <ZonaTerrenoDialog entityId={terrainZoneEditId} onClose={() => setTerrainZoneEditId(null)} />
           <PendingMoveOverlay />
           <OpportunityPromptOverlay />
           <ZonaRiscoPrompt />
