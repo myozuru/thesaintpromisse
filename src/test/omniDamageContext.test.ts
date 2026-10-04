@@ -7,6 +7,7 @@ vi.mock('@/integrations/supabase/safeClient', async () => ({ hasWorkspaceCloud: 
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
+import { useReactionStore } from '@/stores/useReactionStore';
 import { parseOmniScript } from '@/lib/omni/omniScript';
 import { novaEntidade } from '@/lib/omni/tipos';
 import type { EntidadeOmni } from '@/lib/omni/tipos';
@@ -15,7 +16,7 @@ import * as eventBus from '@/lib/omni/eventBus';
 import * as triggers from '@/lib/omni/triggerEfeitos';
 import { calcularContador } from '@/lib/omni/contadores';
 import { avaliarFormula } from '@/lib/omni/parser';
-import { ficha, montarMesa, limparMesa, comoTela, pegarFicha } from './helpers/mesaReal';
+import { ficha, montarMesa, limparMesa, comoTela, pegarFicha, capturarEnvios } from './helpers/mesaReal';
 
 function script(id: string, texto: string): EntidadeOmni {
   const parsed = parseOmniScript(texto, { defaultTarget: 'USUARIO' });
@@ -40,6 +41,66 @@ beforeEach(() => {
   for (const method of ['log', 'group', 'groupEnd'] as const) vi.spyOn(console, method).mockImplementation(() => {});
 });
 afterEach(() => { limparMesa(); vi.restoreAllMocks(); });
+
+describe('Cobrir-se antes da aplicação do dano', () => {
+  beforeEach(() => useReactionStore.setState({ prompts: [], reactionsUsedByChar: {} }));
+
+  it('encaminha uma reação ao perfil dono da ficha e devolve a escolha à tela de origem', () => {
+    const enviados = capturarEnvios('reaction-prompt');
+    const anterior = (window as unknown as { __worldBus?: unknown }).__worldBus;
+    (window as unknown as { __worldBus?: unknown }).__worldBus = { send: vi.fn() };
+    montarMesa([char('alvo', { profileId: 'perfil-alvo' })], {});
+    comoTela({ profileId: null, role: 'MASTER' });
+    useReactionStore.getState().enqueue({ charId: 'alvo', charName: 'alvo', kind: 'cobrir_se_offer', message: 'Teste' });
+    expect(useReactionStore.getState().prompts).toHaveLength(0);
+    expect(enviados.enviados[0]).toMatchObject({ tipo: 'prompt', destinatario: 'perfil-alvo' });
+
+    const prompt = enviados.enviados[0].prompt as import('@/stores/useReactionStore').ReactionPrompt;
+    comoTela({ profileId: 'perfil-alvo', role: 'PLAYER' });
+    useReactionStore.getState().receiveRemote(prompt, 'cliente-mestre');
+    useReactionStore.getState().resolveDecision(prompt.id, 2);
+    expect(enviados.enviados[1]).toMatchObject({ tipo: 'resposta', clienteOrigem: 'cliente-mestre', answer: 2 });
+
+    enviados.parar();
+    (window as unknown as { __worldBus?: unknown }).__worldBus = anterior;
+  });
+
+  it('pausa o dano até a decisão e aplica os PVTs antes do golpe', async () => {
+    montarMesa([char('alvo', {
+      hpCurrent: 100, escCurrent: 0, peCurrent: 3,
+      cursedAptitudes: { CL: 1 } as never,
+      chosenClAptitudes: ['cl-cobrir-se'],
+    })], {});
+
+    const damage = useCharacterStore.getState().applyDamage('alvo', 10, 'DCO');
+    await waitFor(() => expect(useReactionStore.getState().prompts.some((p) => p.kind === 'cobrir_se_offer')).toBe(true));
+    expect(pegarFicha('alvo')).toMatchObject({ hpCurrent: 100, escCurrent: 0, peCurrent: 3 });
+
+    const prompt = useReactionStore.getState().prompts.find((p) => p.kind === 'cobrir_se_offer')!;
+    useReactionStore.getState().resolveDecision(prompt.id, 2);
+    await damage;
+
+    expect(pegarFicha('alvo')).toMatchObject({ hpCurrent: 98, escCurrent: 0, peCurrent: 1 });
+    expect(useReactionStore.getState().reactionsUsedByChar.alvo).toBe(1);
+  });
+
+  it('aplica o dano normal quando o jogador recusa', async () => {
+    montarMesa([char('alvo', {
+      hpCurrent: 100, escCurrent: 0, peCurrent: 3,
+      cursedAptitudes: { CL: 1 } as never,
+      chosenClAptitudes: ['cl-cobrir-se'],
+    })], {});
+
+    const damage = useCharacterStore.getState().applyDamage('alvo', 10, 'DCO');
+    await waitFor(() => expect(useReactionStore.getState().prompts.some((p) => p.kind === 'cobrir_se_offer')).toBe(true));
+    const prompt = useReactionStore.getState().prompts.find((p) => p.kind === 'cobrir_se_offer')!;
+    useReactionStore.getState().resolveDecision(prompt.id, null);
+    await damage;
+
+    expect(pegarFicha('alvo')).toMatchObject({ hpCurrent: 90, escCurrent: 0, peCurrent: 3 });
+    expect(useReactionStore.getState().reactionsUsedByChar.alvo ?? 0).toBe(0);
+  });
+});
 
 describe('Contexto DANO do combate real', () => {
   it.each([

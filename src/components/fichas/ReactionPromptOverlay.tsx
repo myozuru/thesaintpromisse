@@ -19,7 +19,6 @@ import { effectiveMovement } from '@/lib/movementBudget';
 import { useLogStore } from '@/stores/useLogStore';
 import { DAMAGE_TYPE_LABELS, type DamageType } from '@/types';
 import { rollDiceCom } from '@/lib/dice';
-import { calcularCobrirSe } from '@/lib/clActivation';
 import { X, Shield, Flame, Crosshair, Skull, Sparkles, Hourglass, ShieldPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { playSuccessSound, playErrorSound, playClickSound } from '@/lib/sounds';
@@ -60,7 +59,10 @@ export function ReactionPromptOverlay() {
           key={p.id}
           prompt={p}
           reactionLocked={kindConsumesReaction(p.kind) && (reactionsUsedByChar[p.charId] ?? 0) >= 1}
-          onDismiss={() => dismiss(p.id)}
+          onDismiss={() => {
+            if (p.kind === 'cobrir_se_offer') useReactionStore.getState().resolveDecision(p.id, null);
+            else dismiss(p.id);
+          }}
           onNullify={(tier) => {
             if (!canReact(p.charId, p.kind)) return;
             const r = tryNullifyCondition(p.charId, tier);
@@ -284,46 +286,9 @@ export function ReactionPromptOverlay() {
           }}
           onCobrirSe={(peSpent) => {
             if (!canReact(p.charId, p.kind)) return;
-            const c = useCharacterStore.getState().characters.find(x => x.id === p.charId);
-            if (!c) { dismiss(p.id); return; }
-            const hasAvanc = !!p.payload?.hasCoberturaAvancada;
-            const calc = calcularCobrirSe(c, { peSpent, hasCoberturaAvancada: hasAvanc });
-            if (!calc.ok || !calc.shieldGranted) {
-              playErrorSound();
-              addLog('system', `${p.charName}: ${calc.reason ?? 'falha Cobrir-se'}`);
-              return;
-            }
-            consumeReaction(p.charId);
-            const shield = calc.shieldGranted;
-            const hpLost = p.payload?.hpLost ?? 0;
-            const escLost = p.payload?.escLost ?? 0;
-            // Refund: HP primeiro (mais crítico), depois Esc; sobra vira PVT.
-            const refundHp = Math.min(hpLost, shield);
-            const refundEsc = Math.min(escLost, shield - refundHp);
-            const leftover = shield - refundHp - refundEsc;
-            useCharacterStore.setState((s) => ({
-              characters: s.characters.map((cc) => {
-                if (cc.id !== p.charId) return cc;
-                const peNext = Math.max(0, (cc.peCurrent ?? 0) - calc.peSpent);
-                const escNext = (cc.escCurrent ?? 0) + refundEsc + leftover;
-                const hpMaxEff = cc.hpMax;
-                const hpNext = Math.min(hpMaxEff, (cc.hpCurrent ?? 0) + refundHp);
-                const patch: any = { peCurrent: peNext, escCurrent: escNext, hpCurrent: hpNext };
-                // CAM: sincroniza HP do núcleo ativo.
-                if (cc.activeCoreId && Array.isArray(cc.cores)) {
-                  patch.cores = cc.cores.map((co: any) =>
-                    co.id === cc.activeCoreId ? { ...co, hpCurrent: hpNext } : co,
-                  );
-                }
-                return { ...cc, ...patch };
-              }),
-            }));
+            useReactionStore.getState().resolveDecision(p.id, peSpent);
             playSuccessSound();
-            addLog(
-              'combat',
-              `🛡️ ${p.charName}: Cobrir-se reativo — ${calc.peSpent} PE → +${shield} (HP+${refundHp} / Esc+${refundEsc}${leftover ? ` / PVT+${leftover}` : ''}).`,
-            );
-            dismiss(p.id);
+            addLog('combat', `🛡️ ${p.charName}: confirmou Cobrir-se antes da aplicação do dano.`);
           }}
         />
       ))}
@@ -561,9 +526,9 @@ function PromptCard({
       {p.kind === 'cobrir_se_offer' && (
         <div className="space-y-1.5">
           <div className="text-[10px] text-muted-foreground">
-            Dano sofrido: <span className="font-semibold text-foreground">{p.payload?.damageDealt ?? 0}</span>
-            {' '}(HP {p.payload?.hpLost ?? 0} / Esc {p.payload?.escLost ?? 0}).
+            Dano previsto: <span className="font-semibold text-foreground">{p.payload?.damageDealt ?? 0}</span>.
             {' '}{p.payload?.hasCoberturaAvancada ? 'Cobertura Avançada' : 'Cobrir-se'}: {p.payload?.perPe ?? 4} PVTs/PE.
+            {' '}Você tem até 12 segundos para decidir; depois o dano segue normalmente.
           </div>
           <div className="flex items-center gap-1.5">
             <input

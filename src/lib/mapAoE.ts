@@ -8,6 +8,7 @@ import { type MapTemplate, type TemplateKind } from '@/components/mapa/TemplateE
 import type { Entity } from '@/stores/useMapStore';
 import type { EntidadeOmni } from '@/lib/omni/tipos';
 import type { Spell } from '@/types';
+import type { Character } from '@/types';
 
 /** Mapeia rótulos "Esfera/Cubo/Cone/Linha" para TemplateKind. */
 const SHAPE_LABEL_TO_KIND: Record<string, TemplateKind> = {
@@ -196,4 +197,33 @@ export function findEntitiesInTemplate(
     }
   }
   return out;
+}
+
+/** Resolve fichas atingidas por uma área, inclusive avatares ligados só ao perfil. */
+export function resolveAreaTargetCharacters(
+  entityIds: string[],
+  entities: Record<string, Entity>,
+  characters: Character[],
+  casterCharId?: string,
+  casterEntityId?: string,
+): { entityIds: string[]; characterIds: string[] } {
+  const hitEntityIds: string[] = [];
+  const hitCharacterIds = new Set<string>();
+  for (const entityId of entityIds) {
+    const entity = entities[entityId];
+    if (!entity || entityId === casterEntityId) continue;
+    hitEntityIds.push(entityId);
+    let character = entity.characterId
+      ? characters.find((candidate) => candidate.id === entity.characterId)
+      : undefined;
+    if (!character) {
+      const profileId = entity.avatarProfileId ?? entity.ownerProfileId;
+      if (profileId) {
+        const linked = characters.filter((candidate) => candidate.profileId === profileId);
+        if (linked.length === 1) character = linked[0];
+      }
+    }
+    if (character && character.id !== casterCharId) hitCharacterIds.add(character.id);
+  }
+  return { entityIds: hitEntityIds, characterIds: [...hitCharacterIds] };
 }

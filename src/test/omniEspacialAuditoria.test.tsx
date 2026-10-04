@@ -10,7 +10,7 @@ import { useOmniRuntimeStore } from '@/stores/useOmniRuntimeStore';
 import { useOmniSpatialStore } from '@/stores/useOmniSpatialStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { novaEntidade, type AcaoAtivaConfig } from '@/lib/omni/tipos';
-import { findEntitiesInTemplate } from '@/lib/mapAoE';
+import { findEntitiesInTemplate, resolveAreaTargetCharacters } from '@/lib/mapAoE';
 import { TemplateEngine, type MapTemplate } from '@/components/mapa/TemplateEngine';
 import { selecionarAlvosAtivos } from '@/lib/omni/alvosAtivos';
 import { iniciarEngineZonasTerreno } from '@/lib/mapa/engineZonasTerreno';
@@ -49,6 +49,23 @@ describe('geometria de áreas sem amostragem de nove pontos',()=>{
     const t=template({kind,x:0,y:0,length:100}); const offset=kind==='cone'?-50:0;
     expect(TemplateEngine.hitTest({x:offset+89,y:0},t)).toBe(true);
     expect(TemplateEngine.hitTest({x:offset+95,y:0},t)).toBe(false);
+  });
+});
+describe('resolução dos alvos das áreas',()=>{
+  it('converte token ligado direto à ficha em alvo',()=>{
+    const entities={t:token({characterId:'alvo'})};
+    expect(resolveAreaTargetCharacters(['t'],entities,[ficha('alvo')],'origem'))
+      .toEqual({entityIds:['t'],characterIds:['alvo']});
+  });
+  it('resolve token do jogador ligado só pelo perfil',()=>{
+    const entities={t:token({ownerProfileId:'perfil-alvo'})};
+    expect(resolveAreaTargetCharacters(['t'],entities,[ficha('alvo',{profileId:'perfil-alvo'})],'origem'))
+      .toEqual({entityIds:['t'],characterIds:['alvo']});
+  });
+  it('deduplica tokens da ficha, exclui o token do conjurador e evita perfis ambíguos',()=>{
+    const entities={caster:token({id:'caster',characterId:'origem'}),a:token({id:'a',avatarProfileId:'perfil'}),b:token({id:'b',ownerProfileId:'perfil'})};
+    expect(resolveAreaTargetCharacters(['caster','a','b'],entities,[ficha('origem'),ficha('alvo',{profileId:'perfil'}),ficha('outro',{profileId:'perfil'})],'origem','caster'))
+      .toEqual({entityIds:['a','b'],characterIds:[]});
   });
 });
 describe('alcances e seleção',()=>{

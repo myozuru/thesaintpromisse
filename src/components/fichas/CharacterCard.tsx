@@ -1273,7 +1273,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     // para que tokens dentro do template sejam selecionados automaticamente —
     // em vez do dialog antigo "selecionar alvos" um a um.
     try {
-      const { getAoEFromSpell, findEntitiesInTemplate, getActiveSpellAreaBonus, getActiveSpellRangeBonus } = await import('@/lib/mapAoE');
+      const { getAoEFromSpell, findEntitiesInTemplate, resolveAreaTargetCharacters, getActiveSpellAreaBonus, getActiveSpellRangeBonus } = await import('@/lib/mapAoE');
       const aoe = getAoEFromSpell(spell);
       if (aoe) {
         const mp = (await import('@/stores/useMapStore')).useMapStore.getState();
@@ -1305,10 +1305,14 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
         if (!template) return;
         const allEntities = (await import('@/stores/useMapStore')).useMapStore.getState().entities;
         const hitIds = findEntitiesInTemplate(template, allEntities);
-        const hitCharIds = hitIds
-          .map((id) => allEntities[id]?.characterId)
-          .filter((cid): cid is string => !!cid && cid !== c.id);
-        setPendingSpellAreaTargets(hitCharIds);
+        const resolvedTargets = resolveAreaTargetCharacters(
+          hitIds,
+          allEntities,
+          (await import('@/stores/useCharacterStore')).useCharacterStore.getState().characters,
+          c.id,
+          casterEnt?.id,
+        );
+        setPendingSpellAreaTargets(resolvedTargets.characterIds);
         setPendingSpellAreaMode(true);
         setPendingSpellAreaTemplateId(template.id);
         setPendingSpell(spell);
@@ -4826,4 +4830,3 @@ function ActionCostBadge({ actionId }: { actionId?: string }) {
     </span>
   );
 }
-

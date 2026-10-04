@@ -750,7 +750,7 @@ interface CharacterStore {
    * onde X = AU. Acumulam. Retorna o roll para log.
    */
   triggerAuraDrenadora: (charId: string) => Promise<{ ok: boolean; reason?: string; rolls?: number[]; conMod?: number; total?: number }>;
-  applyDamage: (id: string, rawDamage: number, damageType?: DamageType, opts?: OpcoesDano) => void;
+  applyDamage: (id: string, rawDamage: number, damageType?: DamageType, opts?: OpcoesDano) => Promise<void>;
   /**
    * Aplica cura. `source` controla o redutor FAH:
    * - 'cursed_energy_external' → cura de Energia Reversa vinda de TERCEIROS
@@ -2111,11 +2111,11 @@ export const useCharacterStore = create<CharacterStore>()(
         }),
       })),
       // applyLevelDown removido: progressão de nível é irreversível para evitar farm de bônus.
-      applyDamage: (id, rawDamage, damageType, opts) => {
+      applyDamage: async (id, rawDamage, damageType, opts) => {
         const cadeia = reservarPassoOmni(opts?.cadeia);
         if (!cadeia) return;
         opts = { ...opts, cadeia };
-        return executarNaCadeiaOmni(cadeia, () => {
+        return executarNaCadeiaOmni(cadeia, async () => {
         damageType = resolverTipoDano(damageType);
         const totalDamage = Math.max(0, rawDamage);
         let rdApplied = 0;
@@ -2290,6 +2290,58 @@ export const useCharacterStore = create<CharacterStore>()(
         // Substitui rawDamage pelo dano efetivo daqui pra frente.
         rawDamage = danoEfetivo;
 
+        // ─── CL — Cobrir-se ANTES de aplicar PV/Escudo ──────────────────────
+        // A reação pausa o dano enquanto pergunta ao controlador da ficha.
+        // Se aceita, os PVTs entram primeiro no Escudo e absorvem este golpe;
+        // se recusa ou expira, o dano segue sem atraso adicional.
+        const coverTarget = get().characters.find((c) => c.id === id);
+        if (
+          coverTarget && rawDamage > 0 && damageType !== 'DAL' &&
+          (coverTarget.chosenClAptitudes ?? []).includes('cl-cobrir-se') &&
+          (coverTarget.peCurrent ?? 0) > 0 &&
+          !(opts?.tags ?? []).includes('__cobrir_se_resolved')
+        ) {
+          const { useReactionStore, requestReactionDecision } = await import('@/stores/useReactionStore');
+          if (useReactionStore.getState().hasReactionAvailable(id)) {
+            const hasAdvancedCover = (coverTarget.chosenClAptitudes ?? []).includes('cl-cobertura-avancada');
+            const maxPe = Math.min(
+              2 + getClLevel(coverTarget) * 2 + aggregateSpecChoices(coverTarget).cobrirSeMaxPeBonus,
+              coverTarget.peCurrent ?? 0,
+            );
+            if (maxPe > 0) {
+              const peSpent = await requestReactionDecision({
+                charId: coverTarget.id,
+                charName: coverTarget.name,
+                kind: 'cobrir_se_offer',
+                message: `${coverTarget.name} receberá ${rawDamage} de dano — Cobrir-se pode reduzir este golpe antes de ele ser aplicado.`,
+                payload: {
+                  damageDealt: rawDamage,
+                  maxPe,
+                  peAvailable: coverTarget.peCurrent ?? 0,
+                  perPe: hasAdvancedCover ? 8 : 4,
+                  hasCoberturaAvancada: hasAdvancedCover,
+                },
+              });
+              if (peSpent != null) {
+                const current = get().characters.find((c) => c.id === id);
+                if (current && peSpent > 0 && peSpent <= maxPe && peSpent <= (current.peCurrent ?? 0)) {
+                  const calc = calcularCobrirSe(current, { peSpent, hasCoberturaAvancada: hasAdvancedCover });
+                  if (calc.ok && calc.shieldGranted && calc.peSpent) {
+                    get().updateCharacter(id, {
+                      peCurrent: Math.max(0, (current.peCurrent ?? 0) - calc.peSpent),
+                      escCurrent: (current.escCurrent ?? 0) + calc.shieldGranted,
+                    });
+                    useReactionStore.getState().consumeReaction(id);
+                    try {
+                      useLogStore.getState().addLog('combat', `🛡️ ${current.name}: Cobrir-se antes do impacto — ${calc.peSpent} PE geram ${calc.shieldGranted} PVTs.`);
+                    } catch { /* noop */ }
+                  }
+                }
+              }
+            }
+          }
+        }
+
         // Snapshot pré-set para diff de dano (Cobrir-se reativo).
         const preSet = get().characters.find((c) => c.id === id);
         const preEsc = preSet?.escCurrent ?? 0;
@@ -2396,51 +2448,7 @@ export const useCharacterStore = create<CharacterStore>()(
           }
         }
 
-        // ─── CL — Cobrir-se reativo (após dano comprometer Esc/HP) ──────────
-        // Se o personagem tem a aptidão `cl-cobrir-se`, PE disponível e algum
-        // dano foi efetivamente sofrido, enfileira prompt para usar a reação
-        // — o handler do overlay reverte parte do dano via PVTs.
         const postSet = get().characters.find((c) => c.id === id);
-        if (
-          postSet &&
-          (postSet.chosenClAptitudes ?? []).includes('cl-cobrir-se') &&
-          (postSet.peCurrent ?? 0) > 0 &&
-          !opts?.tags?.includes('__cobrir_se_resolved') &&
-          damageType !== 'DAL'
-        ) {
-          const escLost = Math.max(0, preEsc - postSet.escCurrent);
-          const hpLost = Math.max(0, preHp - postSet.hpCurrent);
-          const dealt = escLost + hpLost;
-          if (dealt > 0) {
-            const hasAvanc = (postSet.chosenClAptitudes ?? []).includes('cl-cobertura-avancada');
-            const cl = getClLevel(postSet);
-            const specBonus = aggregateSpecChoices(postSet).cobrirSeMaxPeBonus;
-            const maxPe = Math.min(2 + cl * 2 + specBonus, postSet.peCurrent ?? 0);
-            const perPe = hasAvanc ? 8 : 4;
-            if (maxPe > 0) {
-              setTimeout(() => {
-                import('@/stores/useReactionStore').then(({ useReactionStore }) => {
-                  useReactionStore.getState().enqueue({
-                    charId: postSet.id,
-                    charName: postSet.name,
-                    kind: 'cobrir_se_offer',
-                    message: `${postSet.name} sofreu ${dealt} de dano — Cobrir-se disponível (até ${maxPe} PE × ${perPe} PVTs).`,
-                    payload: {
-                      damageDealt: dealt,
-                      hpLost,
-                      escLost,
-                      maxPe,
-                      peAvailable: postSet.peCurrent ?? 0,
-                      perPe,
-                      hasCoberturaAvancada: hasAvanc,
-                    },
-                  });
-                });
-              }, 0);
-            }
-          }
-        }
-
         // ─── Suporte — Protetor (aliado adjacente sofreu dano) ─────────────
         // Se um Suporte com a habilidade, escudo equipado e PE estiver a até
         // 1,5 m do alvo, oferece a redução retroativa (Xd10 + mod) ao dono da

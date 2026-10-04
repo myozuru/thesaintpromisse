@@ -13,6 +13,8 @@ import type { OpcoesDano } from '@/lib/omni/contextoDano';
  */
 import { create } from 'zustand';
 import type { DamageType } from '@/types';
+import { destinatarioReacao, podeResponderReacao } from '@/lib/omni/destinatarioReacao';
+import { useCharacterStore } from '@/stores/useCharacterStore';
 
 export type ReactionKind =
   | 'absorption_offer'         // Absorção Elemental — perguntar se quer armar com o elemento recebido
@@ -92,6 +94,9 @@ export interface ReactionPrompt {
     /** lua_reacao_offer — opções originais do applyDamage (atacante, RD ignorada...). */
     luaOpts?: Record<string, unknown>;
   };
+  /** Tela que originou uma decisão remota aguardada pelo motor de dano. */
+  remoteClientId?: string;
+  expiresAt?: number;
   /** Timestamp de criação — usado para ordenação. */
   createdAt: number;
 }
@@ -121,6 +126,8 @@ interface ReactionStoreState {
   /** charId → quantas reações já gastou na rodada atual (limite = 1). */
   reactionsUsedByChar: Record<string, number>;
   enqueue: (p: Omit<ReactionPrompt, 'id' | 'createdAt'>) => void;
+  receiveRemote: (p: ReactionPrompt, requesterClientId: string) => void;
+  resolveDecision: (id: string, answer: number | null) => void;
   dismiss: (id: string) => void;
   clearForChar: (charId: string) => void;
   /** Quantas reações o personagem ainda pode usar nesta rodada. */
@@ -135,13 +142,33 @@ interface ReactionStoreState {
 export const useReactionStore = create<ReactionStoreState>((set, get) => ({
   prompts: [],
   reactionsUsedByChar: {},
-  enqueue: (p) =>
-    set((state) => ({
-      prompts: [
-        ...state.prompts,
-        { ...p, id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, createdAt: Date.now() },
-      ],
-    })),
+  enqueue: (p) => {
+    const prompt = buildPrompt(p);
+    const character = useCharacterStore.getState().characters.find((c) => c.id === p.charId);
+    const destinatario = character ? destinatarioReacao(character) : null;
+    const hasBus = typeof window !== 'undefined' && !!(window as unknown as { __worldBus?: { send?: unknown } }).__worldBus?.send;
+    if (!destinatario || podeResponderReacao(destinatario) || !hasBus) {
+      set((state) => ({ prompts: [...state.prompts, prompt] }));
+      return;
+    }
+    window.dispatchEvent(new CustomEvent('reaction-prompt:send', {
+      detail: { tipo: 'prompt', requestId: prompt.id, destinatario, prompt },
+    }));
+  },
+  receiveRemote: (prompt, requesterClientId) => set((state) => ({
+    prompts: [...state.prompts.filter((x) => x.id !== prompt.id), { ...prompt, remoteClientId: requesterClientId }],
+  })),
+  resolveDecision: (id, answer) => {
+    const prompt = get().prompts.find((entry) => entry.id === id);
+    if (prompt?.remoteClientId && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('reaction-prompt:send', {
+        detail: { tipo: 'resposta', requestId: id, clienteOrigem: prompt.remoteClientId, answer },
+      }));
+    } else {
+      completeReactionDecision(id, answer);
+    }
+    get().dismiss(id);
+  },
   dismiss: (id) => set((state) => ({ prompts: state.prompts.filter((x) => x.id !== id) })),
   clearForChar: (charId) =>
     set((state) => ({ prompts: state.prompts.filter((x) => x.charId !== charId) })),
@@ -158,6 +185,62 @@ export const useReactionStore = create<ReactionStoreState>((set, get) => ({
     })),
   resetRoundReactions: () => set({ reactionsUsedByChar: {} }),
 }));
+
+function buildPrompt(p: Omit<ReactionPrompt, 'id' | 'createdAt'>): ReactionPrompt {
+  return { ...p, id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`, createdAt: Date.now() };
+}
+
+const pendingReactionDecisions = new Map<string, (answer: number | null) => void>();
+export const REACTION_DECISION_TIMEOUT_MS = 12000;
+
+/** Abre a decisão no controlador da ficha e só então deixa o dano prosseguir. */
+export async function requestReactionDecision(
+  p: Omit<ReactionPrompt, 'id' | 'createdAt'>,
+  timeoutMs = REACTION_DECISION_TIMEOUT_MS,
+): Promise<number | null> {
+  const prompt = buildPrompt({ ...p, expiresAt: Date.now() + timeoutMs });
+  let remoteRecipient: string | null = null;
+  const answer = new Promise<number | null>((resolve) => {
+    const timer = setTimeout(() => {
+      if (!pendingReactionDecisions.has(prompt.id)) return;
+      pendingReactionDecisions.delete(prompt.id);
+      useReactionStore.getState().dismiss(prompt.id);
+      if (typeof window !== 'undefined' && remoteRecipient) {
+        window.dispatchEvent(new CustomEvent('reaction-prompt:send', {
+          detail: { tipo: 'fechar', requestId: prompt.id, destinatario: remoteRecipient },
+        }));
+      }
+      resolve(null);
+    }, timeoutMs);
+    pendingReactionDecisions.set(prompt.id, (result) => {
+      clearTimeout(timer);
+      pendingReactionDecisions.delete(prompt.id);
+      resolve(result);
+    });
+  });
+
+  const character = useCharacterStore.getState().characters.find((c) => c.id === p.charId);
+  if (!character) {
+    completeReactionDecision(prompt.id, null);
+    return answer;
+  }
+  const destinatario = destinatarioReacao(character);
+  const hasBus = typeof window !== 'undefined' && !!(window as unknown as { __worldBus?: { send?: unknown } }).__worldBus?.send;
+  if (podeResponderReacao(destinatario) || !hasBus) {
+    useReactionStore.setState((state) => ({ prompts: [...state.prompts, prompt] }));
+  } else {
+    remoteRecipient = destinatario;
+    window.dispatchEvent(new CustomEvent('reaction-prompt:send', {
+      detail: { tipo: 'prompt', requestId: prompt.id, destinatario, prompt },
+    }));
+  }
+  return answer;
+}
+
+/** Resposta do overlay local ou de outro cliente multiplayer. */
+export function completeReactionDecision(requestId: string, answer: number | null) {
+  pendingReactionDecisions.get(requestId)?.(answer);
+}
 
 /** Helper de uso externo (combate): notifica que um ataque à distância ERROU
  *  para o atacante `attackerId`. Se ele tem `aura_redirecionadora` e PE, gera

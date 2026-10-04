@@ -29,7 +29,7 @@ import { useMapStore } from '@/stores/useMapStore';
 import { getAuraAptitudeById } from '@/lib/auraAptitudes';
 import { getCursedAptitudeById } from '@/lib/aptitudes';
 import { SpellApplyDialog } from '@/components/fichas/SpellApplyDialog';
-import { getAoEFromSpell, findEntitiesInTemplate, getActiveSpellAreaBonus, getActiveSpellRangeBonus } from '@/lib/mapAoE';
+import { getAoEFromSpell, findEntitiesInTemplate, resolveAreaTargetCharacters, getActiveSpellAreaBonus, getActiveSpellRangeBonus } from '@/lib/mapAoE';
 import { useLogStore } from '@/stores/useLogStore';
 import type { Spell } from '@/types';
 import { cn } from '@/lib/utils';
@@ -741,20 +741,17 @@ export function PlayerActionBar() {
                           if (!template) return;
                           const allEntities = useMapStore.getState().entities;
                           const hitIds = findEntitiesInTemplate(template, allEntities);
-                          // Inclui TODOS os tokens atingidos (mesmo sem ficha vinculada),
-                          // excluindo apenas o token do próprio conjurador.
-                          const hitEntityIds = hitIds.filter((id) => {
-                            const ent = allEntities[id];
-                            if (!ent) return false;
-                            return ent.characterId !== activeChar.id;
-                          });
-                          const hitCharIds = hitEntityIds
-                            .map((id) => allEntities[id]?.characterId)
-                            .filter((cid): cid is string => !!cid);
-                          setAreaTargetIds(hitCharIds);
-                          setAreaHitEntityIds(hitEntityIds);
+                          const resolvedTargets = resolveAreaTargetCharacters(
+                            hitIds,
+                            allEntities,
+                            allCharacters,
+                            activeChar.id,
+                            casterEnt?.id,
+                          );
+                          setAreaTargetIds(resolvedTargets.characterIds);
+                          setAreaHitEntityIds(resolvedTargets.entityIds);
                           setAreaTemplateId(template.id);
-                          useMapStore.getState().setAoETargetPreview({ templateId: template.id, entityIds: hitEntityIds });
+                          useMapStore.getState().setAoETargetPreview({ templateId: template.id, entityIds: resolvedTargets.entityIds });
                           setTargetCharId(null);
                           setArmedSpell(null);
                           setPendingAreaSpell(sp);
