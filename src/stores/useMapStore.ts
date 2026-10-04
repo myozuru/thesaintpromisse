@@ -77,6 +77,9 @@ export interface ZonaTerreno {
 }
 
 export interface Entity {
+  /** Checkpoint persistido da última confirmação de movimento. */
+  _omniMoveAt?: number;
+  _omniMoveId?: string;
   /** Equipamento solto na cena, preservando o exemplar e os usos restantes. */
   groundItem?: import('@/lib/omni/itensNoChao').ItemNoChao;
   id: string;

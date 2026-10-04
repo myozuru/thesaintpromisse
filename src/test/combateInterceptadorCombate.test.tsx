@@ -22,7 +22,7 @@ function abrir(pos: Record<string, [number, number]>, extra = {}) {
   fireEvent.change(screen.getByLabelText('Aliado interceptado'), { target: { value: 'caio' } });
 }
 
-beforeEach(() => comoTela({ profileId: 'p-ana', role: 'PLAYER' }));
+beforeEach(async () => { await import('@/lib/omni/executor'); comoTela({ profileId: 'p-ana', role: 'PLAYER' }); });
 afterEach(() => { cleanup(); limparMesa(); vi.restoreAllMocks(); });
 
 describe('Estilo do Interceptador em combate', () => {

@@ -1,3 +1,6 @@
+import { findCharEntity } from '@/lib/touchRange';
+import { useRoleStore } from '@/stores/useRoleStore';
+import { estadoRemotoEmAplicacao } from './estadoRemoto';
 import { useMapStore } from '@/stores/useMapStore';
 /**
  * Motor de Auras do Omni-Engine (Pilar 5).
@@ -8,7 +11,7 @@ import { useMapStore } from '@/stores/useMapStore';
  *
  * Também varre auras VINCULADAS via `Character.omniAtivos` (categoria 'aura'),
  * tratando o personagem dono como fonte da aura. O estado "dentroDe" para
- * essas auras vinculadas é mantido num cache em memória chaveado por
+ * essas auras vinculadas é persistido localmente e chaveado por
  * `${sceneId}:${charId}:${entidadeId}`.
  */
 import type { EfeitoAtivo } from '@/stores/useOmniRuntimeStore';
@@ -25,7 +28,7 @@ import type { Character } from '@/types';
 /** No mapa as coordenadas são pixels; o painel espacial usa metros. */
 function posicaoDoPersonagem(id: string) {
   const ms = useMapStore.getState();
-  const token = Object.values(ms.entities).find(e => e.characterId === id && !e.carriedBy && (e.layer ?? 'tokens') === 'tokens');
+  const token = findCharEntity(ms.entities, id);
   if (!token) return useOmniSpatialStore.getState().obter(id);
   const escala = (ms.gridConfig.metersPerCell || 1.5) / (ms.gridConfig.dpi || 70);
   const ponto = ms.pendingMove?.entityId === token.id ? { x: ms.pendingMove.startX, y: ms.pendingMove.startY } : token;
@@ -50,8 +53,6 @@ function raioDeEntidadeVinculada(ent: EntidadeOmni, dono: Character): number {
   return r.diagnosticos.length || !Number.isFinite(r.valor) ? 0 : r.valor;
 }
 
-/** Cache de "quem estava dentro" para auras vinculadas (não persistido). */
-const dentroDeVinculadas = new Map<string, Set<string>>();
 
 /**
  * Recalcula auras. Pode ser chamado:
@@ -59,19 +60,24 @@ const dentroDeVinculadas = new Map<string, Set<string>>();
  *  - No início de turno (sem charId → varre tudo).
  */
 export function recalcularAuras(_charIdMovido?: string) {
+  if (useRoleStore.getState().role === 'PLAYER' || estadoRemotoEmAplicacao()) return;
   const rt = useOmniRuntimeStore.getState();
   const personagens = useCharacterStore.getState().characters;
   const entidadesStore = useOmniEntidadesStore.getState().entidades;
 
   // ===== 1) Auras via runtime (efeitos ativos com areaRaio) =====
-  for (const ef of Object.values(rt.efeitos)) {
+  const runtimeVistos = new Set<string>();
+  for (const ef of Object.values(rt.efeitos).sort((a,b) => a.id.localeCompare(b.id))) {
+    const identidade = `${ef.sourceCharId}:${ef.entidadeId}`;
+    if (runtimeVistos.has(identidade)) continue; runtimeVistos.add(identidade);
+    if (ef.sourceCharId && personagens.find(c => c.id === ef.sourceCharId)?.omniAtivos?.some(v => v.categoria === 'aura' && v.entidadeId === ef.entidadeId)) continue;
     const raio = raioDoEfeito(ef);
     if (!Number.isFinite(raio) || raio <= 0 || !ef.sourceCharId) continue;
     const posOrigem = posicaoDoPersonagem(ef.sourceCharId);
     if (!posOrigem) continue;
 
-    const meta = (ef.meta ?? {}) as { dentroDe?: string[] };
-    const antes = new Set(meta.dentroDe ?? []);
+    const meta = (ef.meta ?? {}) as { dentroDe?: string[]; cenaAura?: string };
+    const antes = new Set(meta.cenaAura === useMapStore.getState().activeSceneId ? meta.dentroDe ?? [] : []);
     const agora = new Set<string>();
     for (const c of personagens) {
       const p = posicaoDoPersonagem(c.id);
@@ -87,7 +93,7 @@ export function recalcularAuras(_charIdMovido?: string) {
     if (!ent) continue;
 
     // Salva a transição antes dos efeitos: uma chamada aninhada não repete entrada.
-    useOmniRuntimeStore.setState(s => ({ efeitos: s.efeitos[ef.id] ? { ...s.efeitos, [ef.id]: { ...s.efeitos[ef.id], meta: { ...s.efeitos[ef.id].meta, dentroDe: Array.from(agora) } } } : s.efeitos }));
+    if (meta.cenaAura !== useMapStore.getState().activeSceneId || antes.size !== agora.size || [...antes].some(id => !agora.has(id))) useOmniRuntimeStore.setState(s => ({ efeitos: s.efeitos[ef.id] ? { ...s.efeitos, [ef.id]: { ...s.efeitos[ef.id], meta: { ...s.efeitos[ef.id].meta, dentroDe: Array.from(agora), cenaAura: useMapStore.getState().activeSceneId } } } : s.efeitos }));
     const usuario = personagens.find((c) => c.id === ef.sourceCharId);
     for (const id of escopoIds) {
       const alvo = personagens.find((c) => c.id === id);
@@ -119,7 +125,7 @@ export function recalcularAuras(_charIdMovido?: string) {
 
       const cacheKey = `${useMapStore.getState().activeSceneId}:${dono.id}:${ent.id}`;
       chavesAtivas.add(cacheKey);
-      const antes = dentroDeVinculadas.get(cacheKey) ?? new Set<string>();
+      const antes = new Set(useOmniSpatialStore.getState().aurasDentro[cacheKey] ?? []);
       const agora = new Set<string>();
       for (const c of personagens) {
         const p = posicaoDoPersonagem(c.id);
@@ -129,7 +135,8 @@ export function recalcularAuras(_charIdMovido?: string) {
         if (Math.sqrt(dx * dx + dy * dy) <= raio) agora.add(c.id);
       }
 
-      dentroDeVinculadas.set(cacheKey, agora);
+      const previous = useOmniSpatialStore.getState().aurasDentro[cacheKey] ?? [];
+      if (previous.length !== agora.size || previous.some(id => !agora.has(id))) useOmniSpatialStore.setState(s => ({ aurasDentro: { ...s.aurasDentro, [cacheKey]: [...agora] } }));
       const escopoIds = new Set([...antes, ...agora]);
       for (const id of escopoIds) {
         const alvo = personagens.find((c) => c.id === id);
@@ -144,5 +151,6 @@ export function recalcularAuras(_charIdMovido?: string) {
       }
     }
   }
-  for (const chave of dentroDeVinculadas.keys()) if (!chavesAtivas.has(chave)) dentroDeVinculadas.delete(chave);
+  const persistidas = useOmniSpatialStore.getState().aurasDentro;
+  if (Object.keys(persistidas).some(k => !chavesAtivas.has(k))) useOmniSpatialStore.setState({ aurasDentro: Object.fromEntries(Object.entries(persistidas).filter(([k]) => chavesAtivas.has(k))) });
 }

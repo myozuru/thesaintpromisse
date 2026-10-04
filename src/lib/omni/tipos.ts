@@ -126,6 +126,7 @@ export type OmniSlotType =
 
 /** Entidade Omni completa. Schema único para itens/feitiços/etc. */
 export interface EntidadeOmni {
+  _syncAt?: number;
   id: string;
   versao: 1;
   nome: string;

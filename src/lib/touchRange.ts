@@ -41,7 +41,7 @@ export function findCharEntity<E extends TouchEntity & { characterId?: string; h
   entities: Record<string, E>,
   charId: string,
 ): E | null {
-  return Object.values(entities).find(e => e.characterId === charId) ?? null;
+  return Object.entries(entities).filter(([,e]) => e.characterId === charId && !(e as {carriedBy?:string}).carriedBy && (!(e as {layer?:string}).layer || (e as {layer?:string}).layer === 'tokens')).sort(([a],[b])=>a.localeCompare(b))[0]?.[1] ?? null;
 }
 
 /** null = pode tocar; string = motivo do bloqueio. */

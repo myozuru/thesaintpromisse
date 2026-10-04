@@ -1,3 +1,4 @@
+import { exemplarEstaEmpunhado } from './exemplarArma';
 import { create } from 'zustand';
 import type { AcaoAtivaConfig, EntidadeOmni, GatilhoReacaoAtiva } from './tipos';
 import { useCharacterStore } from '@/stores/useCharacterStore';
@@ -105,7 +106,7 @@ function elegivel(oferta: OfertaReacaoAtiva, evento: EventoReacaoAtiva): boolean
   if (!item || item.ownerId !== oferta.usuarioId || !ent || JSON.stringify(ent) !== JSON.stringify(oferta.ent)) return false;
   if (ent.categoria === 'arma') {
     const nome = ent.replica ? item.replicaArma : ent.nome;
-    if (!u || !nome || !armaEstaEmpunhada(u, nome) || (ent.replica && !item.materializada)) return false;
+    if (!u || !nome || !exemplarEstaEmpunhado(u, item) || (ent.replica && !item.materializada)) return false;
   }
   const r = oferta.cfg.reacao;
   if (!u || !origem || !r || u.id === origem.id || (u.hpCurrent ?? 1) <= 0 || !aceitaAlvoAtivo(u, origem, { ...oferta.cfg, filtro_alvo: 'inimigos' })) return false;

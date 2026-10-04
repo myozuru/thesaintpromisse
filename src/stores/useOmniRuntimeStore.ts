@@ -1,3 +1,4 @@
+import { carimbarDicionario } from '@/lib/omni/dicionarioSync';
 /**
  * Omni-Engine Runtime Store (Pilar 3 + pré-Pilar 5).
  *
@@ -14,6 +15,7 @@ import { useCharacterStore } from './useCharacterStore';
 import { useChronosStore } from './useChronosStore';
 
 export interface EfeitoAtivo {
+  _syncAt?: number;
   id: string;
   entidadeId: string;
   nomeSnapshot: string;
@@ -25,6 +27,7 @@ export interface EfeitoAtivo {
 }
 
 interface OmniRuntimeStore {
+  deleted: Record<string, number>;
   efeitos: Record<string, EfeitoAtivo>;
   aplicarEfeito: (
     entidade: EntidadeOmni,
@@ -51,6 +54,7 @@ export const useOmniRuntimeStore = create<OmniRuntimeStore>()(
   persist(
     (set, get) => ({
       efeitos: {},
+      deleted: {},
 
       aplicarEfeito: (entidade, opts = {}) => {
         const chronos = useChronosStore.getState();
@@ -106,3 +110,9 @@ export const useOmniRuntimeStore = create<OmniRuntimeStore>()(
     { name: 'omni-runtime-efeitos' },
   ),
 );
+
+useOmniRuntimeStore.subscribe((next, prev) => {
+  const entrada = { records: next.efeitos, deleted: next.deleted };
+  const out = carimbarDicionario(entrada, { records: prev.efeitos, deleted: prev.deleted });
+  if (out !== entrada) useOmniRuntimeStore.setState({ efeitos: out.records, deleted: out.deleted });
+});

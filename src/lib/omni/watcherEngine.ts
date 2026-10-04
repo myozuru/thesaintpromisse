@@ -1,3 +1,4 @@
+import { estadoRemotoEmAplicacao } from './estadoRemoto';
 import { coletarFontesGatilho } from './fontesGatilho';
 import { capturarCadeiaOmni, executarNaCadeiaOmni, reservarPassoOmni } from './cadeiaEventos';
 /**
@@ -152,7 +153,7 @@ function processarPersonagemNaCadeia(c: Character, apenasSnapshot: boolean) {
       const eraKey = `${inst.instanceId}::${eff.id}::${JSON.stringify(eff)}`;
       if (!Number.isFinite(atual) || !Number.isFinite(thr)) continue;
       const era = previous.get(eraKey);
-      proximoSnapshot.set(eraKey, apenasSnapshot && era !== undefined ? era : atual);
+      proximoSnapshot.set(eraKey, atual);
       if (apenasSnapshot) continue;
 
       const condicaoAgora = bate(w.op, atual, thr);
@@ -260,10 +261,10 @@ export function iniciarWatcherEngine() {
   // Guarda cada mudança: duas travessias no mesmo tick não podem ser
   // perdidas por um debounce que só lê o último HP. Efeitos continuam fora
   // do set() original para evitar reentrada síncrona.
-  const fila: { personagens: Character[]; cadeia: ReturnType<typeof capturarCadeiaOmni> }[] = [];
+  const fila: { personagens: Character[]; apenasSnapshot: boolean; cadeia: ReturnType<typeof capturarCadeiaOmni> }[] = [];
   let pendente = false;
   useCharacterStore.subscribe((state) => {
-    fila.push({ personagens: state.characters, cadeia: capturarCadeiaOmni() });
+    fila.push({ personagens: state.characters, apenasSnapshot: estadoRemotoEmAplicacao(), cadeia: capturarCadeiaOmni() });
     if (pendente) return;
     pendente = true;
     setTimeout(() => {
@@ -272,7 +273,7 @@ export function iniciarWatcherEngine() {
       for (const snapshot of lote) {
         try {
           const processar = () => {
-            for (const c of snapshot.personagens) processarPersonagem(c);
+            for (const c of snapshot.personagens) processarPersonagem(c, snapshot.apenasSnapshot);
           };
           if (snapshot.cadeia) executarNaCadeiaOmni(snapshot.cadeia, processar);
           else processar();

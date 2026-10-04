@@ -1,3 +1,4 @@
+import { estadoRemotoEmAplicacao } from '@/lib/omni/estadoRemoto';
 import { emPreviaMovimento, observarMovimentoConfirmado, type MovimentoConfirmadoMapa } from './movimentoConfirmado';
 import { recalcularAuras } from '@/lib/omni/auras';
 import { useMapStore, type Entity, type GatilhoZonaTerreno, type ZonaTerreno } from '@/stores/useMapStore';
@@ -43,7 +44,7 @@ function executarEfeitos(zona: Entity, personagemId: string, gatilho: GatilhoZon
 }
 
 function processarMovimento(atual: ReturnType<typeof useMapStore.getState>, anterior: ReturnType<typeof useMapStore.getState>) {
-  if (useRoleStore.getState().role === 'PLAYER' || emPreviaMovimento() || atual.activeSceneId !== anterior.activeSceneId || atual.pendingMove) return;
+  if (estadoRemotoEmAplicacao() || useRoleStore.getState().role === 'PLAYER' || emPreviaMovimento() || atual.activeSceneId !== anterior.activeSceneId || atual.pendingMove) return;
   const atingidos = new Set<string>();
   for (const entidade of Object.values(atual.entities)) {
     const antes = anterior.entities[entidade.id];
@@ -106,10 +107,10 @@ export function iniciarEngineZonasTerreno() {
   observarMovimentoConfirmado(processarConfirmacao);
   useMapStore.subscribe((atual, anterior) => {
     processarMovimento(atual, anterior);
-    if (!emPreviaMovimento() && !atual.pendingMove && atual.activeSceneId === anterior.activeSceneId && useRoleStore.getState().role !== 'PLAYER' && Object.values(atual.entities).some(e => e.characterId && (!anterior.entities[e.id] || e.x !== anterior.entities[e.id].x || e.y !== anterior.entities[e.id].y))) recalcularAuras();
+    if (!estadoRemotoEmAplicacao() && !emPreviaMovimento() && !atual.pendingMove && atual.activeSceneId === anterior.activeSceneId && useRoleStore.getState().role !== 'PLAYER' && Object.values(atual.entities).some(e => e.characterId && (!anterior.entities[e.id] || e.x !== anterior.entities[e.id].x || e.y !== anterior.entities[e.id].y))) recalcularAuras();
   });
   useCombatStore.subscribe((atual, anterior) => {
-    if (useRoleStore.getState().role === 'PLAYER' || !atual.inCombat || !anterior.inCombat) return;
+    if (estadoRemotoEmAplicacao() || useRoleStore.getState().role === 'PLAYER' || !atual.inCombat || !anterior.inCombat) return;
     const mudouTurno = atual.currentTurnIndex !== anterior.currentTurnIndex || atual.round !== anterior.round;
     if (!mudouTurno) return;
     recalcularAuras();

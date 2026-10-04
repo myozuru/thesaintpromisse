@@ -120,6 +120,7 @@ export function PendingMoveOverlay() {
       };
       const payload = {
         clientId: w.__worldBusClientId,
+        at: Date.now(),
         patches: [{ id: pending.entityId, patch }],
       };
       w.__worldBus?.send({ type: 'broadcast', event: 'entity-patch', payload });

@@ -1,3 +1,5 @@
+import { findCharEntity } from '@/lib/touchRange';
+import { carimbarDicionario } from '@/lib/omni/dicionarioSync';
 import { useMapStore } from './useMapStore';
 import { comPreviaMovimento, confirmarMovimentoMapa } from '@/lib/mapa/movimentoConfirmado';
 /**
@@ -13,11 +15,15 @@ import { persist } from 'zustand/middleware';
 import { recalcularAuras } from '@/lib/omni/auras';
 
 export interface Posicao {
+  _syncAt?: number;
   x: number;
   y: number;
 }
 
 interface SpatialStore {
+  /** Cache local de pertencimento por cena/dono/aura; não contém posições. */
+  aurasDentro: Record<string, string[]>;
+  deleted: Record<string, number>;
   posicoes: Record<string, Posicao>;
   mover: (charId: string, x: number, y: number) => void;
   remover: (charId: string) => void;
@@ -29,10 +35,12 @@ export const useOmniSpatialStore = create<SpatialStore>()(
   persist(
     (set, get) => ({
       posicoes: {},
+      aurasDentro: {},
+      deleted: {},
       mover: (charId, x, y) => {
         if (![x, y].every(Number.isFinite)) return;
         const ms = useMapStore.getState();
-        const token = Object.values(ms.entities).find(e => e.characterId === charId && !e.carriedBy && (e.layer ?? 'tokens') === 'tokens');
+        const token = findCharEntity(ms.entities, charId);
         if (token) {
           const escala = (ms.gridConfig.dpi || 70) / (ms.gridConfig.metersPerCell || 1.5);
           comPreviaMovimento(() => ms.updateEntity(token.id, { x: x * escala, y: y * escala }));
@@ -60,3 +68,9 @@ export const useOmniSpatialStore = create<SpatialStore>()(
     { name: 'omni-spatial' },
   ),
 );
+
+useOmniSpatialStore.subscribe((next, prev) => {
+  const entrada = { records: next.posicoes, deleted: next.deleted };
+  const out = carimbarDicionario(entrada, { records: prev.posicoes, deleted: prev.deleted });
+  if (out !== entrada) useOmniSpatialStore.setState({ posicoes: out.records, deleted: out.deleted });
+});

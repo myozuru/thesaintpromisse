@@ -66,7 +66,7 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
           ?? grupo.exemplares[0];
         const { instanceId, ent, cfg } = selecionado;
         const key = instanceId + cfg.id, intensidade = intensificacoes[key] ?? 0;
-        const arma = armaDaAcao(u, ent);
+        const arma = armaDaAcao(u, ent, instanceId);
         const custos = planejarCustosAtivos(cfg, u, intensidade, { armaNome: arma?.name, instanciaId: instanceId, entidadeId: ent.id });
         const p = custos.ok ? custos.plano : undefined;
         const proprio = cfg.tipo_alvo === 'proprio';

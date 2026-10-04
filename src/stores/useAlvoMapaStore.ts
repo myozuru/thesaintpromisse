@@ -11,8 +11,9 @@ export type PedidoAlvoMapa = {
 let resolver: ((ids: string[] | null) => void) | null = null;
 export const useAlvoMapaStore = create<{ pending: PedidoAlvoMapa | null; selecionados: string[]; erro: string | null }>(() => ({ pending: null, selecionados: [], erro: null }));
 export function tokenDaFicha(char: Character): Entity | undefined {
-  return Object.values(useMapStore.getState().entities).find(e => !e.hidden && (e.layer ?? 'tokens') !== 'gm' &&
-    (e.characterId === char.id || !e.characterId && !!char.profileId && (e.avatarProfileId === char.profileId || e.ownerProfileId === char.profileId)));
+  const candidates = Object.values(useMapStore.getState().entities).filter(e => !e.hidden && !e.carriedBy && (e.layer ?? 'tokens') === 'tokens' && useMapStore.getState().layerVisible[e.layer ?? 'tokens'] !== false);
+  return candidates.filter(e=>e.characterId===char.id).sort((a,b)=>a.id.localeCompare(b.id))[0]
+    ?? candidates.filter(e=>!e.characterId && !!char.profileId && (e.avatarProfileId===char.profileId || e.ownerProfileId===char.profileId)).sort((a,b)=>a.id.localeCompare(b.id))[0];
 }
 export function alvosNoAlcance(pedido: PedidoAlvoMapa): Character[] {
   const chars = useCharacterStore.getState().characters;
@@ -34,7 +35,8 @@ export function terminarAlvoMapa(ids: string[] | null) {
 export function clicarAlvoMapa(entityId: string): boolean {
   const s = useAlvoMapaStore.getState(); if (!s.pending) return false;
   const e = useMapStore.getState().entities[entityId];
-  const alvo = alvosNoAlcance(s.pending).find(c => tokenDaFicha(c)?.id === e?.id || e?.characterId === c.id);
+  const valido = e && !e.hidden && !e.carriedBy && (e.layer ?? 'tokens') === 'tokens' && useMapStore.getState().layerVisible[e.layer ?? 'tokens'] !== false;
+  const alvo = valido ? alvosNoAlcance(s.pending).find(c => tokenDaFicha(c)?.id === e?.id) : undefined;
   if (!alvo) { useAlvoMapaStore.setState({ erro: 'Escolha um token válido dentro do alcance.' }); return true; }
   if ((s.pending.maxAlvos ?? 1) <= 1) terminarAlvoMapa([alvo.id]);
   else {
@@ -49,6 +51,7 @@ export function pedirAlvoMapa(pedido: PedidoAlvoMapa): Promise<string[] | null> 
   const u = useCharacterStore.getState().characters.find(c => c.id === pedido.usuarioId);
   if (!u || !tokenDaFicha(u)) return Promise.reject(new Error('Coloque o personagem no mapa antes de atacar.'));
   if (!Number.isFinite(pedido.maxRangeMeters) || pedido.maxRangeMeters < 0) return Promise.reject(new Error('Defina um alcance válido para a ação.'));
+  if (!Number.isSafeInteger(pedido.maxAlvos ?? 1) || (pedido.maxAlvos ?? 1) < 1) return Promise.reject(new Error('Defina um número positivo de alvos.'));
   useAlvoMapaStore.setState({ pending: pedido, selecionados: [], erro: null });
   const promise = new Promise<string[] | null>(r => { resolver = r; });
   window.dispatchEvent(new CustomEvent('app:navigate', { detail: 'mapa' }));

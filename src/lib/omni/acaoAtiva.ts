@@ -1,3 +1,4 @@
+import { exemplarEstaEmpunhado } from './exemplarArma';
 import { resolverCondicaoOmni } from './condicaoDoSistema';
 import { notificarEventoPersonagem } from './notificarEvento';
 import { planejarFormulaDano } from './planoDano';
@@ -342,9 +343,9 @@ function aplicarEfeitos(u: Character, alvo: Character, efeitos: EfeitoSecundario
 }
 
 /** Arma usada pela ação: a própria entidade (se for arma do catálogo) ou a da mão principal. */
-export function armaDaAcao(u: Character, ent?: EntidadeOmni) {
+export function armaDaAcao(u: Character, ent?: EntidadeOmni, instanciaId?: string) {
   const nome = (ent?.categoria === 'arma' && !ent.replica ? ent.nome : ent && replicaWeaponName(ent)) || u.mainHandWeaponName || '';
-  return nome ? armaDoPersonagem(u.id, nome) : undefined;
+  return nome ? armaDoPersonagem(u.id, nome, ent?.categoria === 'arma' && !ent.replica ? instanciaId : undefined) : undefined;
 }
 
 const acoesEmCurso = new Set<string>();
@@ -372,8 +373,15 @@ async function executarAcaoAtivaInterna(
   const log = (m: string) => useLogStore.getState().addLog('combat', m);
   let u = store.characters.find((x) => x.id === usuarioId);
   if (!u) return { ok: false, reason: 'Personagem não encontrado.' };
-  let arma = armaDaAcao(u, ent);
+  let arma = armaDaAcao(u, ent, opcoes.instanciaId);
   const armaDeclarada = JSON.stringify(arma);
+  const validarInstancia = () => {
+    if (!opcoes.instanciaId) return true;
+    const item = useInventoryStore.getState().items[opcoes.instanciaId];
+    const usuario = useCharacterStore.getState().characters.find(c => c.id === usuarioId);
+    return !!item && !!usuario && item.ownerId === usuarioId && (!ent || item.entity.id === ent.id) && (ent?.categoria !== 'arma' || armaEstaEmpunhada(usuario, ent.replica ? item.replicaArma ?? '' : ent.nome) && (!ent.replica || item.materializada));
+  };
+  if (!validarInstancia()) return { ok: false, reason: 'A instância desta ação não está disponível.' };
   if (ent?.categoria === 'arma' && !armaEstaEmpunhada(u, ent.replica ? replicaWeaponName(ent) ?? ent.nome : ent.nome)) return { ok: false, reason: 'Empunhe a arma antes de usar a ação.' };
   const contextoCustos: ContextoCustosAtivos = { armaNome: arma?.name, instanciaId: opcoes.instanciaId, entidadeId: ent?.id };
   let alvos = escolhidos.ids.map(id => store.characters.find(c => c.id === id)!);
@@ -414,7 +422,8 @@ async function executarAcaoAtivaInterna(
   store = useCharacterStore.getState();
   u = store.characters.find(c => c.id === usuarioId);
   if (!u) return { ok: false, reason: 'Usuário removido antes do pagamento.' };
-  arma = armaDaAcao(u, ent);
+  if (!validarInstancia()) return { ok: false, reason: 'A instância mudou durante a seleção.' };
+  arma = armaDaAcao(u, ent, opcoes.instanciaId);
   if (JSON.stringify(arma) !== armaDeclarada || ent?.categoria === 'arma' && !armaEstaEmpunhada(u, ent.replica ? replicaWeaponName(ent) ?? ent.nome : ent.nome)) return { ok: false, reason: 'A arma mudou durante a seleção. Use a ação novamente.' };
   alvos = escolhidos.ids.map(id => store.characters.find(c => c.id === id)!);
   for (const alvo of alvos) {
@@ -624,7 +633,7 @@ export function acoesAtivasDe(charId: string): { instanceId: string; ent: Entida
   for (const i of Object.values(useInventoryStore.getState().items)) {
     if (i.ownerId !== charId) continue;
     const ent = useOmniEntidadesStore.getState().entidades[i.entity.id] ?? i.entity;
-    if (ent.categoria === 'arma' && (!char || !armaEstaEmpunhada(char, ent.nome) || ent.replica && !i.materializada)) continue;
+    if (ent.categoria === 'arma' && (!char || !armaEstaEmpunhada(char, ent.replica ? i.replicaArma ?? '' : ent.nome) || ent.replica && !i.materializada)) continue;
     for (const cfg of ent.acoesAtivas ?? []) out.push({ instanceId: i.instanceId, ent, cfg });
   }
   return out;

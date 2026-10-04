@@ -1,3 +1,4 @@
+import { carimbarDicionario } from '@/lib/omni/dicionarioSync';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { CategoriaEntidade, EntidadeOmni, PacoteOmni } from '@/lib/omni/tipos';
@@ -5,6 +6,7 @@ import { novaEntidade } from '@/lib/omni/tipos';
 import { simplificarKeysLote, simplificarKeysEntidade } from '@/lib/omni/simplificarKeys';
 
 interface OmniState {
+  deleted: Record<string, number>;
   entidades: Record<string, EntidadeOmni>;
   criar: (categoria: CategoriaEntidade, nome?: string) => EntidadeOmni;
   atualizar: (id: string, patch: Partial<EntidadeOmni>) => void;
@@ -21,6 +23,7 @@ export const useOmniEntidadesStore = create<OmniState>()(
   persist(
     (set, get) => ({
       entidades: {},
+      deleted: {},
 
       criar: (categoria, nome) => {
         const ent = novaEntidade(categoria, nome);
@@ -109,3 +112,9 @@ export const useOmniEntidadesStore = create<OmniState>()(
 if (import.meta.env.DEV && typeof window !== 'undefined') {
   (window as unknown as Record<string, unknown>).__omniEntStore = useOmniEntidadesStore;
 }
+
+useOmniEntidadesStore.subscribe((next, prev) => {
+  const entrada = { records: next.entidades, deleted: next.deleted };
+  const out = carimbarDicionario(entrada, { records: prev.entidades, deleted: prev.deleted });
+  if (out !== entrada) useOmniEntidadesStore.setState({ entidades: out.records, deleted: out.deleted });
+});

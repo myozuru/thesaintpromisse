@@ -1,3 +1,4 @@
+import { estadoRemotoEmAplicacao } from './estadoRemoto';
 import type { InventoryItem } from '@/stores/useInventoryStore';
 
 export interface InventorySnapshot {
@@ -13,11 +14,11 @@ export function mergeInventory(local: InventorySnapshot, incoming: unknown): Inv
   if (!remote.items || typeof remote.items !== 'object' || Array.isArray(remote.items)) return local;
   const deleted = { ...local.deleted };
   for (const [id, at] of Object.entries(remote.deleted ?? {})) {
-    if (typeof at === 'number' && Number.isFinite(at)) deleted[id] = Math.max(deleted[id] ?? 0, at);
+    if (!['__proto__','constructor','prototype'].includes(id) && typeof at === 'number' && Number.isFinite(at) && at >= 0) deleted[id] = Math.max(deleted[id] ?? 0, at);
   }
   const items = { ...local.items };
   for (const [id, item] of Object.entries(remote.items)) {
-    if (!item || item.instanceId !== id || typeof item.ownerId !== 'string' || !item.entity) continue;
+    if (!item || ['__proto__','constructor','prototype'].includes(id) || item.instanceId !== id || typeof item.ownerId !== 'string' || !item.entity || typeof item.entity.id !== 'string' || !Number.isFinite(item.acquiredAt) || item.acquiredAt < 0 || !Number.isFinite(stamp(item)) || stamp(item)<0) continue;
     if (!items[id] || stamp(item) > stamp(items[id]) || stamp(item) === stamp(items[id]) && JSON.stringify(item) > JSON.stringify(items[id])) items[id] = item;
   }
   for (const id of Object.keys(deleted)) delete items[id];
@@ -26,6 +27,7 @@ export function mergeInventory(local: InventorySnapshot, incoming: unknown): Inv
 
 /** Captura também alterações feitas diretamente por outras mecânicas na store. */
 export function stampInventoryChanges(next: InventorySnapshot, prev: InventorySnapshot): InventorySnapshot {
+  if (estadoRemotoEmAplicacao()) return next;
   const items = { ...next.items }, deleted = { ...next.deleted };
   let changed = false;
   for (const [id, item] of Object.entries(items)) {

@@ -1,3 +1,4 @@
+import { useRoleStore } from '@/stores/useRoleStore';
 import { useEffect, useRef } from 'react';
 import { useChronosStore } from '@/stores/useChronosStore';
 import { useOmniRuntimeStore } from '@/stores/useOmniRuntimeStore';
@@ -27,7 +28,7 @@ export function GlobalClockTicker() {
       lastTimeRef.current = now;
       lastWallTimeRef.current = wallNow;
 
-      if (isRunning) {
+      if (isRunning && useRoleStore.getState().role !== 'PLAYER') {
         tickAccumRef.current += dt;
         if (tickAccumRef.current >= 0.25) {
           tick(tickAccumRef.current * multiplier, 'ticker');
@@ -39,7 +40,7 @@ export function GlobalClockTicker() {
 
       // Poda efeitos expirados ~2x por segundo
       pruneAccumRef.current += dt;
-      if (pruneAccumRef.current >= 0.5) {
+      if (pruneAccumRef.current >= 0.5 && useRoleStore.getState().role !== 'PLAYER') {
         pruneAccumRef.current = 0;
         useOmniRuntimeStore.getState().podarExpirados();
 

@@ -102,16 +102,24 @@ export const useInventoryStore = create<InventoryState>()(
       deleted: {},
 
       add: (ownerId, entity, opts) => {
-        const total = entity.usos?.total;
+        const requestedId = opts?.instanceId;
+        if (requestedId && get().items[requestedId]) {
+          const existing = get().items[requestedId];
+          if (existing.ownerId !== ownerId || existing.entity.id !== entity.id) throw new Error('Instância já pertence a outro item ou personagem.');
+          return existing;
+        }
+        if (requestedId && get().deleted[requestedId]) throw new Error('Uma instância removida não pode ser recriada.');
+        const snapshot = structuredClone(entity);
+        const total = snapshot.usos?.total;
         const inst: InventoryItem = {
           instanceId: opts?.instanceId ?? uid(),
           ownerId,
           entity: {
-            ...entity,
+            ...snapshot,
             comercio: {
-              basePrice: entity.comercio?.basePrice ?? 0,
-              hiddenTags: entity.comercio?.hiddenTags ?? [],
-              isBought: opts?.markBought ?? entity.comercio?.isBought ?? false,
+              basePrice: snapshot.comercio?.basePrice ?? 0,
+              hiddenTags: snapshot.comercio?.hiddenTags ?? [],
+              isBought: opts?.markBought ?? snapshot.comercio?.isBought ?? false,
             },
           },
           acquiredAt: Date.now(),
@@ -175,12 +183,13 @@ export const useInventoryStore = create<InventoryState>()(
           .map(adotarUsosSeFaltar),
 
       consumirUso: (instanceId, n = 1) => {
+        if (!Number.isSafeInteger(n) || n < 0) return false;
         const stored = get().items[instanceId];
         const cur = stored ? adotarUsosSeFaltar(stored) : undefined;
         if (!cur) return false;
         // Item sem usos limitados — passa direto.
         if (cur.usosRestantes === undefined || cur.usosTotais === undefined) return true;
-        if (cur.usosRestantes < n) return false;
+        if (!Number.isSafeInteger(cur.usosRestantes) || cur.usosRestantes < n || !Number.isSafeInteger(cur.usosTotais) || cur.usosTotais < 0) return false;
         set((s) => ({
           items: {
             ...s.items,

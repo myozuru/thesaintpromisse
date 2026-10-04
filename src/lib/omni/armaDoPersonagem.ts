@@ -1,3 +1,4 @@
+import { exemplarArma, entidadeDoExemplar } from './exemplarArma';
 import { ALL_WEAPONS, findWeaponByName, requiresTwoHands, resolveWeaponDamage, type Weapon, type WeaponPropertyKind } from '@/lib/weapons';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
@@ -5,10 +6,10 @@ import { resolverTipoDano } from './contextoDano';
 import { getWeaponMeta, efeitoDanoDaArma } from './weaponModel';
 
 /** Resolve também armas OMNI renomeadas e a empunhadura configurada no construtor. */
-export function armaDoPersonagem(charId: string, nome: string): Weapon | undefined {
-  const exemplares = useInventoryStore.getState().listByOwner(charId).filter(i => i.entity.categoria === 'arma' && i.entity.nome.trim().toLowerCase() === nome.trim().toLowerCase());
-  const item = exemplares.find(i => i.isEquipped) ?? exemplares[0];
-  const ent = item && (useOmniEntidadesStore.getState().entidades[item.entity.id] ?? item.entity);
+export function armaDoPersonagem(charId: string, nome: string, instanciaId?: string): Weapon | undefined {
+  const item = instanciaId ? useInventoryStore.getState().items[instanciaId] : exemplarArma(charId, nome);
+  if (instanciaId && (!item || item.ownerId !== charId || entidadeDoExemplar(item).categoria !== 'arma' || entidadeDoExemplar(item).nome.trim().toLowerCase() !== nome.trim().toLowerCase())) return undefined;
+  const ent = item && entidadeDoExemplar(item);
   if (!ent) return findWeaponByName(nome);
   const meta = getWeaponMeta(ent);
   const base = ALL_WEAPONS.find(w => w.id === meta.modeloId) ?? findWeaponByName(nome);

@@ -1,4 +1,7 @@
-import { comPreviaMovimento, receberMovimentoConfirmado, type MovimentoConfirmadoMapa } from '@/lib/mapa/movimentoConfirmado';
+import { entidadeSyncValida, efeitoSyncValido, posicaoSyncValida } from '@/lib/omni/validarSnapshot';
+import { pacoteDicionario, mergeDicionario } from '@/lib/omni/dicionarioSync';
+import { comEstadoRemoto } from '@/lib/omni/estadoRemoto';
+import { comPreviaMovimento, receberMovimentoConfirmado, previaDepoisDaConfirmacao, type MovimentoConfirmadoMapa } from '@/lib/mapa/movimentoConfirmado';
 import { mergeInventory } from '@/lib/omni/inventorySync';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { mergeIncomingCharacters, pickNewestPerCharacter, stampLocalChanges, withStamps } from '@/lib/charSyncStamps';
@@ -245,13 +248,13 @@ function pickDiscounts(s: ReturnType<typeof useDiscountStore.getState>) {
   return s.discounts;
 }
 function pickOmniEntidades(s: ReturnType<typeof useOmniEntidadesStore.getState>) {
-  return s.entidades;
+  return pacoteDicionario(s.entidades, s.deleted);
 }
 function pickOmniRuntime(s: ReturnType<typeof useOmniRuntimeStore.getState>) {
-  return s.efeitos;
+  return pacoteDicionario(s.efeitos, s.deleted);
 }
 function pickOmniSpatial(s: ReturnType<typeof useOmniSpatialStore.getState>) {
-  return s.posicoes;
+  return pacoteDicionario(s.posicoes, s.deleted);
 }
 function pickOmniProposals(s: ReturnType<typeof useOmniProposalStore.getState>) {
   return s.proposals;
@@ -265,7 +268,7 @@ function pickTempTemplates(s: ReturnType<typeof useTempTemplateStore.getState>) 
 
 // ── Suavização de movimento remoto ─────────────────────────────────────────
 // Posições recebidas deslizam até o destino em vez de "teleportar".
-type RemotePatch = { id: string; patch: Record<string, unknown> };
+type RemotePatch = { id: string; patch: Record<string, unknown>; at?: number };
 const smoothTargets = new Map<string, { x: number; y: number }>();
 /** Quando cada peça recebeu o último movimento ao vivo (para não ser atropelada por um mapa completo atrasado). */
 const remotePatchAt = new Map<string, number>();
@@ -304,7 +307,7 @@ function applyRemoteEntityUpdate(patches: RemotePatch[]) {
       if (changed) useMapStore.setState({ scenes } as never);
     }
   } finally {
-    setTimeout(() => { applyingRemote = false; }, 0);
+    applyingRemote = false;
   }
 }
 
@@ -365,6 +368,9 @@ function rememberPublishedMap(json: string) {
 }
 
 function applyRemote(slice: WorldSlice, data: unknown) {
+  return comEstadoRemoto(() => aplicarRemoteInterno(slice, data));
+}
+function aplicarRemoteInterno(slice: WorldSlice, data: unknown) {
   if (data == null) return;
   applyingRemote = true;
   try {
@@ -402,11 +408,17 @@ function applyRemote(slice: WorldSlice, data: unknown) {
     } else if (slice === 'omniInventory') {
       useInventoryStore.setState(mergeInventory(useInventoryStore.getState(), data));
     } else if (slice === 'omniEntidades' && data && typeof data === 'object') {
-      useOmniEntidadesStore.setState({ entidades: data as never });
+      const atual = useOmniEntidadesStore.getState();
+      const out = mergeDicionario({ records: atual.entidades, deleted: atual.deleted }, data, entidadeSyncValida);
+      useOmniEntidadesStore.setState({ entidades: out.records, deleted: out.deleted });
     } else if (slice === 'omniRuntime' && data && typeof data === 'object') {
-      useOmniRuntimeStore.setState({ efeitos: data as never });
+      const atual = useOmniRuntimeStore.getState();
+      const out = mergeDicionario({ records: atual.efeitos, deleted: atual.deleted }, data, efeitoSyncValido);
+      useOmniRuntimeStore.setState({ efeitos: out.records, deleted: out.deleted });
     } else if (slice === 'omniSpatial' && data && typeof data === 'object') {
-      useOmniSpatialStore.setState({ posicoes: data as never });
+      const atual = useOmniSpatialStore.getState();
+      const out = mergeDicionario({ records: atual.posicoes, deleted: atual.deleted }, data, posicaoSyncValida);
+      useOmniSpatialStore.setState({ posicoes: out.records, deleted: out.deleted });
     }
     else if (slice === 'mapScene' && isMapSceneSync(data)) {
       const incomingJSON = JSON.stringify(data);
@@ -429,11 +441,11 @@ function applyRemote(slice: WorldSlice, data: unknown) {
           if (!local) continue;
           const inc = mergedEntities[id];
           const livePatchAge = performance.now() - (remotePatchAt.get(id) ?? -Infinity);
-          if (recent.has(id) || livePatchAge < 1500 || localFresh) {
-            mergedEntities[id] = { ...inc, x: local.x, y: local.y };
+          if (((local._omniMoveAt ?? 0) > (inc._omniMoveAt ?? 0) || local._omniMoveAt === inc._omniMoveAt && (local._omniMoveId ?? '') > (inc._omniMoveId ?? '')) || recent.has(id) || livePatchAge < 1500 || localFresh) {
+            mergedEntities[id] = { ...inc, x: local.x, y: local.y, _omniMoveAt: local._omniMoveAt, _omniMoveId: local._omniMoveId };
           } else if (smoothTargets.has(id) && typeof inc.x === 'number' && typeof inc.y === 'number') {
             smoothTargets.set(id, { x: inc.x, y: inc.y });
-            mergedEntities[id] = { ...inc, x: local.x, y: local.y };
+            mergedEntities[id] = { ...inc, x: local.x, y: local.y, _omniMoveAt: local._omniMoveAt, _omniMoveId: local._omniMoveId };
           }
         }
       }
@@ -500,7 +512,7 @@ function applyRemote(slice: WorldSlice, data: unknown) {
     }
   } finally {
     // libera no próximo tick para garantir que o subscribe não dispare emit
-    setTimeout(() => { applyingRemote = false; }, 0);
+    applyingRemote = false;
   }
 }
 
@@ -698,27 +710,27 @@ export function useMultiplayerSync() {
     // Patches incrementais de entidade (drag/resize/rotate em tempo real,
     // estilo Owlbear token_positions). Aplica direto sem reserializar o mapa.
     worldBus.on('broadcast', { event: 'entity-patch' }, ({ payload }) => {
-      const p = payload as { clientId?: string; patches?: Array<{ id: string; patch: Record<string, unknown> }>; movimentoOmni?: MovimentoConfirmadoMapa } | null;
+      const p = payload as { clientId?: string; patches?: Array<{ id: string; patch: Record<string, unknown>; at?: number }>; movimentoOmni?: MovimentoConfirmadoMapa; at?: number } | null;
       if (!p || p.clientId === clientId || !Array.isArray(p.patches)) return;
       const protectedIds = getProtectedRemoteEntityPatchIds();
       const patches = protectedIds ? p.patches.filter((patch) => !protectedIds.has(patch.id)) : p.patches;
       if (!patches.length) return;
       if (p.movimentoOmni && !protectedIds?.has(p.movimentoOmni.entityId)) {
         applyingRemote = true;
-        try { if (receberMovimentoConfirmado(p.movimentoOmni)) { smoothTargets.delete(p.movimentoOmni.entityId); remotePatchAt.set(p.movimentoOmni.entityId, performance.now()); } }
-        finally { setTimeout(() => { applyingRemote = false; }, 0); }
-      } else applySmoothedEntityPatches(patches);
+        try { if (receberMovimentoConfirmado(p.movimentoOmni, () => { applyingRemote = false; })) { smoothTargets.delete(p.movimentoOmni.entityId); remotePatchAt.set(p.movimentoOmni.entityId, performance.now()); } }
+        finally { applyingRemote = false; }
+      } else applySmoothedEntityPatches(patches.filter(patch => !('x' in patch.patch || 'y' in patch.patch) || previaDepoisDaConfirmacao(useMapStore.getState().entities[patch.id] ?? {}, patch.at ?? p.at)));
     });
-    const onEntityPatch = (payload: { clientId?: string; patches?: Array<{ id: string; patch: Record<string, unknown> }>; movimentoOmni?: MovimentoConfirmadoMapa } | null) => {
+    const onEntityPatch = (payload: { clientId?: string; patches?: Array<{ id: string; patch: Record<string, unknown>; at?: number }>; movimentoOmni?: MovimentoConfirmadoMapa; at?: number } | null) => {
       if (!payload || payload.clientId === clientId || !Array.isArray(payload.patches)) return;
       const protectedIds = getProtectedRemoteEntityPatchIds();
       const patches = protectedIds ? payload.patches.filter((patch) => !protectedIds.has(patch.id)) : payload.patches;
       if (!patches.length) return;
       if (payload.movimentoOmni && !protectedIds?.has(payload.movimentoOmni.entityId)) {
         applyingRemote = true;
-        try { if (receberMovimentoConfirmado(payload.movimentoOmni)) { smoothTargets.delete(payload.movimentoOmni.entityId); remotePatchAt.set(payload.movimentoOmni.entityId, performance.now()); } }
-        finally { setTimeout(() => { applyingRemote = false; }, 0); }
-      } else applySmoothedEntityPatches(patches);
+        try { if (receberMovimentoConfirmado(payload.movimentoOmni, () => { applyingRemote = false; })) { smoothTargets.delete(payload.movimentoOmni.entityId); remotePatchAt.set(payload.movimentoOmni.entityId, performance.now()); } }
+        finally { applyingRemote = false; }
+      } else applySmoothedEntityPatches(patches.filter(patch => !('x' in patch.patch || 'y' in patch.patch) || previaDepoisDaConfirmacao(useMapStore.getState().entities[patch.id] ?? {}, patch.at ?? payload.at)));
     };
     void worldBus.subscribe();
     // expõe para o MapaModule emitir pings/cursor remotos
@@ -744,6 +756,17 @@ export function useMultiplayerSync() {
           void supabase.from('realtime_world').select('data').eq('slice', slice).maybeSingle().then(({ data: row }) => {
             const current = useInventoryStore.getState();
             void save(mergeInventory(current, row?.data) as unknown as Json);
+          });
+          return;
+        }
+        if (slice === 'omniEntidades' || slice === 'omniRuntime' || slice === 'omniSpatial') {
+          void supabase.from('realtime_world').select('data').eq('slice', slice).maybeSingle().then(({ data: row }) => {
+            const local = slice === 'omniEntidades' ? {records:useOmniEntidadesStore.getState().entidades,deleted:useOmniEntidadesStore.getState().deleted}
+              : slice === 'omniRuntime' ? {records:useOmniRuntimeStore.getState().efeitos,deleted:useOmniRuntimeStore.getState().deleted}
+              : {records:useOmniSpatialStore.getState().posicoes,deleted:useOmniSpatialStore.getState().deleted};
+            const validar = slice === 'omniEntidades' ? entidadeSyncValida : slice === 'omniRuntime' ? efeitoSyncValido : posicaoSyncValida;
+            const merged = mergeDicionario(local as any, row?.data, validar as any);
+            void save(pacoteDicionario(merged.records, merged.deleted) as unknown as Json);
           });
           return;
         }
@@ -872,10 +895,13 @@ export function useMultiplayerSync() {
       if (world.logs) applyRemote('logs', world.logs);
       if (world.testRequests) applyRemote('testRequests', world.testRequests);
 
-      // Omni: dicionários (merge raso, local prevalece).
-      const mergedOmniEnt = mergeObj(preLocal.omniEnt as never, world.omniEntidades);
-      const mergedOmniRt = mergeObj(preLocal.omniRt as never, world.omniRuntime);
-      const mergedOmniSp = mergeObj(preLocal.omniSp as never, world.omniSpatial);
+      // Omni: união versionada por registro, com exclusões persistentes.
+      applyRemote('omniEntidades', world.omniEntidades);
+      const mergedOmniEnt = pickOmniEntidades(useOmniEntidadesStore.getState());
+      applyRemote('omniRuntime', world.omniRuntime);
+      const mergedOmniRt = pickOmniRuntime(useOmniRuntimeStore.getState());
+      applyRemote('omniSpatial', world.omniSpatial);
+      const mergedOmniSp = pickOmniSpatial(useOmniSpatialStore.getState());
       applyRemote('omniEntidades', mergedOmniEnt);
       applyRemote('omniRuntime', mergedOmniRt);
       applyRemote('omniSpatial', mergedOmniSp);
@@ -1225,7 +1251,7 @@ export function useMultiplayerSync() {
           rememberLivePos();
           if (patches.length) {
             markLocalEntityEdits(patches.map((p) => p.id));
-            void worldBus.send({ type: 'broadcast', event: 'entity-patch', payload: { clientId, patches } });
+            void worldBus.send({ type: 'broadcast', event: 'entity-patch', payload: { clientId, patches, at: Date.now() } });
           }
           if (patches.length) persistMapLater();
           return;

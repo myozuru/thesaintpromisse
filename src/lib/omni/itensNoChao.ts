@@ -1,3 +1,4 @@
+import { exemplarEstaEmpunhado } from './exemplarArma';
 import { useMapStore } from '@/stores/useMapStore';
 import { useInventoryStore, type InventoryItem } from '@/stores/useInventoryStore';
 import { useItemStore } from '@/stores/useItemStore';
@@ -26,8 +27,7 @@ export function soltarItemNoChao(charId: string, id: string, legado = false): st
   if (legado ? !legacy?.assignedTo?.includes(charId) : !item || item.ownerId !== charId || !['arma', 'item'].includes(item.entity.categoria)) throw new Error('Item não encontrado neste inventário.');
   const ms = useMapStore.getState(), dpi = ms.gridConfig.dpi || 70;
   const nome = legado ? legacy!.name : item.entity.nome;
-  const candidatas = Object.values(inv.items).filter(i => i.ownerId === charId && i.entity.nome === nome);
-  const naMao = !legado && (candidatas.find(i => i.isEquipped) ?? candidatas[0])?.instanceId === id && [char.mainHandWeaponName, char.offHandWeaponName].includes(nome);
+  const naMao = !legado && exemplarEstaEmpunhado(char, item);
   const groundItem: ItemNoChao = legado ? { legacy: { ...legacy!, assignedTo: [] }, droppedByCharId: charId } : { item: { ...item, isEquipped: false, equippedSlot: undefined, materializada: false, sustentacaoPendente: false }, droppedByCharId: charId };
   const entityId = ms.addEntity({ shape: 'RECT', x: token.x + dpi * .65, y: token.y + dpi * .65, w: dpi * .4, h: dpi * .4, rotation: 0,
     color: '#c084fc', locked: true, layer: 'tokens', label: `📦 ${nome}`, nameplate: true, groundItem });

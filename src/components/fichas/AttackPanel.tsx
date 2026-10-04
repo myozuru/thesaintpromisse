@@ -1,3 +1,4 @@
+import { exemplarArma, entidadeDoExemplar } from '@/lib/omni/exemplarArma';
 import { notificarResultadoAtaque } from '@/lib/omni/resultadoAtaque';
 import { SoltarItemButton } from './SoltarItemButton';
 import { pedirAlvoMapa } from '@/stores/useAlvoMapaStore';
@@ -183,10 +184,8 @@ export function AttackPanel({ character: cProp }: Props) {
   // ─── AoE detection (forma de área da arma Omni equipada) ───────────────────
   const mainOmniEntity = useMemo(() => {
     if (!c.mainHandWeaponName) return null;
-    const inv = omniInventoryList.find(
-      (i) => i.ownerId === c.id && i.entity.nome === c.mainHandWeaponName,
-    );
-    return inv?.entity ?? null;
+    const inv = exemplarArma(c.id, c.mainHandWeaponName);
+    return inv ? entidadeDoExemplar(inv) : null;
   }, [omniInventoryList, c.id, c.mainHandWeaponName]);
   const weaponAoE: AoEDef | null = useMemo(
     () => getAoEFromOmniEntity(mainOmniEntity),

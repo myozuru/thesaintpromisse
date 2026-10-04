@@ -185,12 +185,14 @@ const ENTITY_PATCH_INTERVAL_MS = 125;
 const pendingEntityPatches = new Map<string, Partial<Entity>>();
 let entityPatchTimer: ReturnType<typeof setTimeout> | null = null;
 let lastEntityPatchSent = 0;
+const pendingEntityPatchAts = new Map<string, number>();
 
 const flushEntityPatches = () => {
   entityPatchTimer = null;
   if (!pendingEntityPatches.size) return;
-  const patches = [...pendingEntityPatches.entries()].map(([id, patch]) => ({ id, patch }));
+  const patches = [...pendingEntityPatches.entries()].map(([id, patch]) => ({ id, patch, at: pendingEntityPatchAts.get(id) }));
   pendingEntityPatches.clear();
+  pendingEntityPatchAts.clear();
   lastEntityPatchSent = performance.now();
   try {
     const w = window as unknown as {
@@ -205,9 +207,11 @@ const flushEntityPatches = () => {
 
 const sendEntityPatches = (patches: EntityPatchMessage) => {
   if (!patches.length) return;
+  const at = Date.now();
   markLocalEntityEdits(patches.map((p) => p.id));
   for (const { id, patch } of patches) {
     pendingEntityPatches.set(id, { ...(pendingEntityPatches.get(id) ?? {}), ...patch });
+    pendingEntityPatchAts.set(id, at);
   }
   if (entityPatchTimer) return;
   const wait = Math.max(0, ENTITY_PATCH_INTERVAL_MS - (performance.now() - lastEntityPatchSent));
