@@ -209,6 +209,10 @@ export function dispararGatilhoEfeitosItens(
       if (eff.condition && eff.condition.trim()) {
         try {
           const r = avaliarFormula(eff.condition, variaveis, undefined, { item: itemBag });
+          if (r.diagnosticos.length) {
+            log(`⛔ ${fresco.nome} (${evento}): condição inválida — ${r.diagnosticos.map(d => d.mensagem).join('; ')}`);
+            continue;
+          }
           console.log(`    ↳ condição "${eff.condition}" → ${r.valor}`);
           if (r.valor <= 0) {
             console.log('      ✗ condição falsa — pulando efeito');
@@ -240,9 +244,18 @@ export function dispararGatilhoEfeitosItens(
       let valor = 0;
       try {
         const r = avaliarFormula(eff.formula || '0', variaveis, undefined, { item: itemBag });
+        if (r.diagnosticos.length) {
+          log(`⛔ ${fresco.nome} (${evento}): fórmula inválida — ${r.diagnosticos.map(d => d.mensagem).join('; ')}`);
+          continue;
+        }
         valor = r.valor;
       } catch (err) {
         console.warn(`    ↳ erro avaliando fórmula "${eff.formula}":`, err);
+        continue;
+      }
+      const limite = eff.counterCap ? avaliarFormula(eff.counterCap, variaveis, undefined, { item: itemBag }) : undefined;
+      if (limite?.diagnosticos.length) {
+        log(`⛔ ${fresco.nome} (${evento}): teto inválido — ${limite.diagnosticos.map(d => d.mensagem).join('; ')}`);
         continue;
       }
       const targetId = eff.target === 'ALVO' ? (alvo?.id ?? usuario.id) : usuario.id;
@@ -253,7 +266,7 @@ export function dispararGatilhoEfeitosItens(
         damageType: eff.damageType,
         attackerId: usuario.id,
         contador: {
-          teto: eff.counterCap ? avaliarFormula(eff.counterCap, variaveis, undefined, { item: itemBag }).valor : undefined,
+          teto: limite?.valor,
           porFonte: eff.counterPerSource,
           fonteId: opts.alvoId && opts.alvoId !== usuario.id ? opts.alvoId : undefined,
         },

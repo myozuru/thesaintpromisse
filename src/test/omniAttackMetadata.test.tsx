@@ -1,3 +1,4 @@
+import { useLogStore } from '@/stores/useLogStore';
 import { novaEntidade } from '@/lib/omni/tipos';
 import { parseOmniScript } from '@/lib/omni/omniScript';
 import { useInventoryStore } from '@/stores/useInventoryStore';
@@ -194,4 +195,49 @@ it('Usar com Teste Ataque rola acerto e dispara Rancor; erro não aplica dano', 
   await waitFor(() => expect(spy.mock.calls.filter(([e]) => e === 'aoErrarAtaque')).toHaveLength(1));
   expect(pegarFicha('bruno').hpCurrent).toBe(hp);
   expect(spy.mock.calls.filter(([e]) => e === 'aoAcertarAtaque')).toHaveLength(1);
+});
+
+
+it.each([
+  ['condição', '@acertar -> se @USUARIO.key_inexistente == 0 entao subtrair 5 em @ALVO.vida tipo "Psíquico"'],
+  ['fórmula', '@acertar -> subtrair @USUARIO.key_inexistente + 5 em @ALVO.vida tipo "Psíquico"'],
+  ['teto', '@acertar -> somar 1 em @USUARIO.contador rancor ate @USUARIO.key_inexistente'],
+])('ataque pela UI recusa %s inválida sem bônus nem consumo de uso', async (campo, script) => {
+  mesa();
+  const parsed = parseOmniScript(script);
+  expect(parsed.erros).toEqual([]);
+  const ent = { ...novaEntidade('arma'), nome: 'Espada Longa', tags: ['modelo:espada-longa'], usos: { total: 5, recarga: 'diaria' as const }, combatData: { effects: [], critRange: 20, critMultiplier: 2, effectsPassive: parsed.efeitos } };
+  const inst = useInventoryStore.getState().add('ana', ent);
+  useCharacterStore.getState().updateCharacter('ana', { omniCounters: { rancor: 3 } });
+  const spy = vi.spyOn(eventBus, 'emitirEvento');
+  render(<AttackPanel character={pegarFicha('ana')} />);
+  await selecionarAlvo();
+  fireEvent.click(screen.getByRole('button', { name: /Rolar Ataque/ }));
+  await waitFor(() => expect(screen.getByRole('button', { name: /Rolar Dano/ })).toBeTruthy());
+  fireEvent.click(screen.getByRole('button', { name: /Rolar Dano/ }));
+  await waitFor(() => expect(spy.mock.calls.some(([e]) => e === 'aoCausarDano')).toBe(true));
+  const danoArma = spy.mock.calls.find(([e, op]) => e === 'aoCausarDano' && op?.dano?.fonte === 1)![1]!.dano!.valor_final;
+  expect(pegarFicha('bruno').hpCurrent).toBe(100 - danoArma);
+  expect(pegarFicha('ana').omniCounters?.rancor).toBe(3);
+  expect(useInventoryStore.getState().items[inst.instanceId].usosRestantes).toBe(5);
+  expect(useLogStore.getState().logs.some(log => JSON.stringify(log).includes(`⛔ Espada Longa (aoAcertarAtaque): ${campo}`))).toBe(true);
+});
+
+it('igualdade simples e condição composta funcionam no ataque real', async () => {
+  mesa();
+  const ent = equiparRancor();
+  const parsed = parseOmniScript('@acertar -> se @USUARIO.contador rancor = 3 e @DANO.tipo_ataque = 1 entao subtrair (@USUARIO.contador rancor)d1 em @ALVO.vida tipo "Psíquico"');
+  expect(parsed.erros).toEqual([]);
+  ent.combatData!.effectsPassive = parsed.efeitos;
+  const inst = Object.values(useInventoryStore.getState().items)[0];
+  useInventoryStore.setState({ items: { [inst.instanceId]: { ...inst, entity: ent } } });
+  const spy = vi.spyOn(eventBus, 'emitirEvento');
+  render(<AttackPanel character={pegarFicha('ana')} />);
+  await selecionarAlvo();
+  fireEvent.click(screen.getByRole('button', { name: /Rolar Ataque/ }));
+  await waitFor(() => expect(screen.getByRole('button', { name: /Rolar Dano/ })).toBeTruthy());
+  fireEvent.click(screen.getByRole('button', { name: /Rolar Dano/ }));
+  await waitFor(() => expect(spy.mock.calls.some(([e, op]) => e === 'aoCausarDano' && op?.dano?.tipo === 12)).toBe(true));
+  const danoArma = spy.mock.calls.find(([e, op]) => e === 'aoCausarDano' && op?.dano?.fonte === 1)![1]!.dano!.valor_final;
+  expect(pegarFicha('bruno').hpCurrent).toBe(100 - danoArma - 3);
 });

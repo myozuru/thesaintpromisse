@@ -148,7 +148,11 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
       return compilado.efeitos.map((eff) => {
         try {
           const r = avaliarFormula(eff.formula || '0', vars, () => 0.5);
-          return r;
+          const diagnosticos = [...r.diagnosticos];
+          for (const [label, expr] of [['Condição', eff.condition], ['Teto', eff.counterCap]]) {
+            if (expr) diagnosticos.push(...avaliarFormula(expr, vars, () => 0.5).diagnosticos.map(d => ({ ...d, mensagem: `${label}: ${d.mensagem}` })));
+          }
+          return { ...r, diagnosticos };
         } catch {
           return undefined;
         }

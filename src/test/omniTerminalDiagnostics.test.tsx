@@ -28,3 +28,13 @@ describe('Diagnósticos visíveis na prévia do terminal', () => {
     expect(screen.queryByRole('status')).toBeNull();
   });
 });
+
+
+it.each([
+  ['se @USUARIO.key_inexistente == 0 entao somar 1 em vida', 'Condição'],
+  ['somar 1 em contador_rancor ate @USUARIO.key_inexistente', 'Teto'],
+])('o terminal mostra referência inválida em %s', (script, campo) => {
+  render(<OmniScriptTerminal onChange={vi.fn()} personagemPreview={hero} valor={script} />);
+  expect(screen.getByRole('status').textContent).toContain(campo);
+  expect(screen.getByRole('status').textContent).toContain('@USUARIO.key_inexistente');
+});
