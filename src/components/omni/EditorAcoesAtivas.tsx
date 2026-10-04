@@ -1,4 +1,3 @@
-import { testeEfetivoAtivo } from '@/lib/omni/testeAtivo';
 import { useState } from 'react';
 import { EditorSuporteAtivo, ehSuporteAtivo, efeitoSuporteInicial } from './EditorSuporteAtivo';
 import { EditorDesfechosTR } from './EditorDesfechosTR';
@@ -98,7 +97,6 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
               </label>
             )}
           </div>
-          {testeEfetivoAtivo(a) !== a.teste && <p className="text-sm text-foreground">Este golpe usa dano da arma e rola acerto contra Defesa antes de causar dano. Selecione Ataque com arma para configurar seus modificadores.</p>}
           {a.teste === 'disputa' && <div className="grid grid-cols-2 gap-2">
             <label className="text-xs">Perícia do usuário<Input aria-label="Perícia do usuário" value={a.pericia_usuario ?? ''} placeholder="Atletismo" onChange={e => set(i, { pericia_usuario: e.target.value })} /></label>
             <label className="text-xs">Perícias possíveis do alvo<Input aria-label="Perícias possíveis do alvo" value={(a.pericias_alvo ?? []).join(', ')} placeholder="Atletismo, Acrobacia" onChange={e => set(i, { pericias_alvo: e.target.value.split(',').map(v => v.trim()).filter(Boolean) })} /><span className="text-[10px] text-muted-foreground">Separadas por vírgula; o alvo usa a de maior bônus. Empate favorece o alvo.</span></label>
@@ -202,4 +200,3 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
     </div>
   );
 }
-

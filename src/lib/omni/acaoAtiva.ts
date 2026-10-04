@@ -1,4 +1,3 @@
-import { testeEfetivoAtivo } from './testeAtivo';
 import { exemplarEstaEmpunhado } from './exemplarArma';
 import { resolverCondicaoOmni } from './condicaoDoSistema';
 import { notificarEventoPersonagem } from './notificarEvento';
@@ -358,7 +357,7 @@ export async function executarAcaoAtiva(
 ): Promise<ResultadoAtiva> {
   if (acoesEmCurso.has(usuarioId)) return { ok: false, reason: 'Este personagem já está executando uma ação.' };
   acoesEmCurso.add(usuarioId);
-  try { return await executarAcaoAtivaInterna(usuarioId, structuredClone({ ...cfg, teste: testeEfetivoAtivo(cfg) }), selecao, ent, opcoes); }
+  try { return await executarAcaoAtivaInterna(usuarioId, structuredClone(cfg), selecao, ent, opcoes); }
   catch (e) { return { ok: false, reason: e instanceof Error ? e.message : 'Não foi possível concluir a ação.' }; }
   finally { acoesEmCurso.delete(usuarioId); }
 }

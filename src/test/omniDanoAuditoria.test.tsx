@@ -132,7 +132,6 @@ it('cargas gastas participam do crítico sem multiplicar a parcela fixa', async 
   expect(vi.mocked(rollDiceCom).mock.calls.map(c => c[1])).toEqual(['3d8', '9d8']);
 });
 it('token de uma arma versátil configurada para duas mãos usa o dado de duas mãos', async () => {
-  vi.mocked(rollD20Com).mockResolvedValue(18);
   const ent = applyWeaponModel(novaEntidade('arma'), findWeaponByName('Espada Longa')!);
   ent.tags = [...ent.tags.filter(t => !t.startsWith('mao:')), 'mao:2'];
   ent.acoesAtivas = [{ id: 'duas', nome: 'Golpe com duas mãos', acao: 'livre', custoPE: '0', alcanceM: 3, teste: 'nenhum', dano: '@ARMA.DANO', efeitos: [] }];
