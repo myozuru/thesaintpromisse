@@ -1,3 +1,4 @@
+import { podeResponderReacao } from '@/lib/omni/destinatarioReacao';
 import { entidadeSyncValida, efeitoSyncValido, posicaoSyncValida } from '@/lib/omni/validarSnapshot';
 import { pacoteDicionario, mergeDicionario } from '@/lib/omni/dicionarioSync';
 import { comEstadoRemoto } from '@/lib/omni/estadoRemoto';
@@ -564,15 +565,15 @@ export function useMultiplayerSync() {
     worldBus.on('broadcast', { event: 'omni-reaction' }, ({ payload }) => {
       const msg = payload as { clientId?: string; tipo?: string; janelaId?: string; perfilId?: string; evento?: unknown; clienteOrigem?: string; resultado?: unknown } | null;
       if (!msg || msg.clientId === clientId || !msg.tipo || !msg.janelaId) return;
-      if (msg.tipo === 'sondar' && msg.perfilId && msg.perfilId === useProfileStore.getState().activeProfileId && msg.evento) {
+      if (msg.tipo === 'sondar' && msg.perfilId && podeResponderReacao(msg.perfilId) && msg.evento) {
         void import('@/lib/omni/reacoesAtivas').then(({ receberSondagemRemota }) => receberSondagemRemota({
           janelaId: msg.janelaId!, clienteOrigem: msg.clientId!, perfilId: msg.perfilId!, evento: msg.evento as never,
         }));
-      } else if (msg.tipo === 'fechar' && msg.perfilId === useProfileStore.getState().activeProfileId) {
+      } else if (msg.tipo === 'fechar' && msg.perfilId && podeResponderReacao(msg.perfilId)) {
         void import('@/lib/omni/reacoesAtivas').then(({ useReacoesAtivasStore }) => useReacoesAtivasStore.getState().fecharOfertaRemota(msg.janelaId!));
-      } else if ((msg.tipo === 'resultado' || msg.tipo === 'passar' || msg.tipo === 'indisponivel') && msg.clienteOrigem === clientId && msg.perfilId) {
+      } else if ((msg.tipo === 'resultado' || msg.tipo === 'passar' || msg.tipo === 'indisponivel' || msg.tipo === 'disponivel') && msg.clienteOrigem === clientId && msg.perfilId) {
         void import('@/lib/omni/reacoesAtivas').then(({ receberRespostaRemota }) => receberRespostaRemota({
-          tipo: msg.tipo as 'resultado' | 'passar' | 'indisponivel', janelaId: msg.janelaId!, perfilId: msg.perfilId!, clienteOrigem: msg.clienteOrigem!, resultado: msg.resultado as never,
+          tipo: msg.tipo as 'resultado' | 'passar' | 'indisponivel' | 'disponivel', janelaId: msg.janelaId!, perfilId: msg.perfilId!, clienteOrigem: msg.clienteOrigem!, resultado: msg.resultado as never,
         }, clientId));
       }
     });

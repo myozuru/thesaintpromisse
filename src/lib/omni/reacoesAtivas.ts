@@ -1,3 +1,5 @@
+import { destinatarioReacao, podeResponderReacao } from './destinatarioReacao';
+import { resolverTokenDaFicha } from '@/lib/mapa/tokenDaFicha';
 import { exemplarEstaEmpunhado } from './exemplarArma';
 import { create } from 'zustand';
 import type { AcaoAtivaConfig, EntidadeOmni, GatilhoReacaoAtiva } from './tipos';
@@ -5,7 +7,7 @@ import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { useLogStore } from '@/stores/useLogStore';
-import { findCharEntity, touchDistanceMeters } from '@/lib/touchRange';
+import { touchDistanceMeters } from '@/lib/touchRange';
 import { aceitaAlvoAtivo } from './alvosAtivos';
 import { useReactionStore } from '@/stores/useReactionStore';
 import { useProfileStore } from '@/stores/useProfileStore';
@@ -47,16 +49,24 @@ export const useReacoesAtivasStore = create<Estado>((set) => ({
   marcarOfertaRemotaBusy: (janelaId, busy, erro) => set(s => ({ ofertasRemotas: s.ofertasRemotas.map(x => x.janelaId === janelaId ? { ...x, busy, erro } : x) })),
 }));
 const resolvers = new Map<string, (r: ResultadoJanelaAtiva) => void>();
+const sondagens = new Map<string, ReturnType<typeof setTimeout>>();
+export const PRAZO_SONDAGEM_REACAO_MS = 3000;
+function limparSondagem(janelaId: string, perfilId: string) {
+  const key = `${janelaId}:${perfilId}`;
+  clearTimeout(sondagens.get(key)); sondagens.delete(key);
+}
 const vazio = (): ResultadoJanelaAtiva => ({ cancelado: false, defesaBonus: 0 });
 
-function perfisJogadores(): string[] {
-  return [...new Set(useCharacterStore.getState().characters.filter(c => c.category === 'PLAYER').map(c => c.profileId).filter((id): id is string => !!id))];
+function destinatariosReacoes(): string[] {
+  // Sem canal multiplayer não há sessão remota capaz de confirmar a sondagem.
+  if (typeof window === 'undefined' || !(window as unknown as { __worldBus?: { send?: unknown } }).__worldBus?.send) return [];
+  return [...new Set(useCharacterStore.getState().characters.map(destinatarioReacao))]
+    .filter(id => !podeResponderReacao(id));
 }
 function publicarParaPerfis(tipo: 'sondar' | 'fechar', janelaId: string, evento: EventoReacaoAtiva, destinatarios: string[]) {
   if (typeof window === 'undefined') return;
-  const meuPerfil = useProfileStore.getState().activeProfileId;
   for (const perfilId of destinatarios) {
-    if (perfilId === meuPerfil) continue;
+    if (podeResponderReacao(perfilId)) continue;
     window.dispatchEvent(new CustomEvent('omni-reaction:send', { detail: { tipo, janelaId, evento, perfilId } }));
   }
 }
@@ -65,14 +75,14 @@ export async function responderOfertaRemota(janelaId: string, ofertaId?: string,
   const remoto = useReacoesAtivasStore.getState().ofertasRemotas.find(x => x.janelaId === janelaId);
   if (!remoto || remoto.busy || !perfilId || !clienteOrigem || typeof window === 'undefined') return;
   if (!ofertaId) {
-    const tipo = useProfileStore.getState().activeProfileId === perfilId ? 'passar' : 'indisponivel';
+    const tipo = podeResponderReacao(perfilId) ? 'passar' : 'indisponivel';
     window.dispatchEvent(new CustomEvent('omni-reaction:send', { detail: { tipo, janelaId, perfilId, clienteOrigem } }));
     useReacoesAtivasStore.getState().fecharOfertaRemota(janelaId);
     return;
   }
   const oferta = remoto.ofertas.find(o => o.id === ofertaId);
   if (!oferta) return;
-  if (useProfileStore.getState().activeProfileId !== perfilId) {
+  if (!podeResponderReacao(perfilId)) {
     window.dispatchEvent(new CustomEvent('omni-reaction:send', { detail: { tipo: 'indisponivel', janelaId, perfilId, clienteOrigem } }));
     useReacoesAtivasStore.getState().fecharOfertaRemota(janelaId);
     return;
@@ -114,7 +124,7 @@ function elegivel(oferta: OfertaReacaoAtiva, evento: EventoReacaoAtiva): boolean
   if (evento.protegidoId) {
     if (!protegido || (r.protegido === 'usuario' && protegido.id !== u.id) || (r.protegido === 'aliados' && !aceitaAlvoAtivo(u, protegido, { ...oferta.cfg, filtro_alvo: 'aliados' }))) return false;
   }
-  const ms = useMapStore.getState(), ut = findCharEntity(ms.entities, u.id), ot = findCharEntity(ms.entities, origem.id);
+  const ms = useMapStore.getState(), ut = resolverTokenDaFicha(u, ms.entities, ms.layerVisible), ot = resolverTokenDaFicha(origem, ms.entities, ms.layerVisible);
   if (!ut || !ot || !Number.isFinite(r.alcance_m) || r.alcance_m <= 0) return false;
   if (evento.movimento) {
     const caminho = [evento.movimento.de, ...(evento.movimento.trajetoria ?? []), evento.movimento.para];
@@ -125,7 +135,7 @@ function elegivel(oferta: OfertaReacaoAtiva, evento: EventoReacaoAtiva): boolean
     if (evento.gatilho === 'quando_inimigo_sair_alcance' && (origem.desengajado || origem.desengajadoDe?.includes(u.id))) return false;
   } else {
     // Defesa/interceptação mede alcance até o protegido; demais gatilhos até a origem.
-    const centro = evento.protegidoId ? findCharEntity(ms.entities, evento.protegidoId) : ot;
+    const centro = protegido ? resolverTokenDaFicha(protegido, ms.entities, ms.layerVisible) : ot;
     if (!centro || touchDistanceMeters(ut, centro, ms.gridConfig) > r.alcance_m + 0.05) return false;
   }
   const nomeArma = replicaWeaponName(oferta.ent) || (oferta.ent.categoria === 'arma' ? oferta.ent.nome : u.mainHandWeaponName) || undefined;
@@ -153,18 +163,28 @@ export function ofertasReacaoAtiva(evento: EventoReacaoAtiva): OfertaReacaoAtiva
 }
 
 export function abrirJanelaReacaoAtiva(evento: EventoReacaoAtiva): Promise<ResultadoJanelaAtiva> {
-  const ofertas = ofertasReacaoAtiva(evento);
-  const destinatarios = perfisJogadores().filter(id => id !== useProfileStore.getState().activeProfileId);
+  const ofertas = ofertasReacaoAtiva(evento).filter(o => podeVerOfertaReacao(o, useProfileStore.getState().activeProfileId));
+  const destinatarios = destinatariosReacoes();
   if (!ofertas.length && !destinatarios.length) return Promise.resolve(vazio());
   const id = crypto.randomUUID();
   return new Promise(resolve => {
     resolvers.set(id, resolve);
     useReacoesAtivasStore.setState(s => ({ janelas: [...s.janelas, { id, evento, ofertas, destinatarios, pendentes: [...destinatarios], resultado: vazio(), busy: false }] }));
+    for (const perfilId of destinatarios) {
+      const key = `${id}:${perfilId}`;
+      sondagens.set(key, setTimeout(() => {
+        sondagens.delete(key);
+        useLogStore.getState().addLog('combat', 'Reação: controlador não confirmou o recebimento; continuando sem sua reação.');
+        publicarParaPerfis('fechar', id, evento, [perfilId]);
+        passarOfertaRemota(id, perfilId);
+      }, PRAZO_SONDAGEM_REACAO_MS));
+    }
     publicarParaPerfis('sondar', id, evento, destinatarios);
   });
 }
 function fechar(id: string, resultado: ResultadoJanelaAtiva) {
   const j = useReacoesAtivasStore.getState().janelas.find(x => x.id === id);
+  if (j) for (const perfilId of j.destinatarios) limparSondagem(id, perfilId);
   if (j) publicarParaPerfis('fechar', id, j.evento, j.destinatarios);
   useReacoesAtivasStore.setState(s => ({ janelas: s.janelas.filter(j => j.id !== id) }));
   const resolve = resolvers.get(id); resolvers.delete(id); resolve?.(resultado);
@@ -199,8 +219,12 @@ export async function responderReacaoAtiva(id: string, ofertaId?: string): Promi
     }
     useLogStore.getState().addLog('combat', `↪ ${oferta.nomeUsuario} reagiu com ${oferta.cfg.nome}${resultado.cancelado ? ' e interrompeu o evento' : ''}.`);
   } catch (e) { erro = e instanceof Error ? e.message : 'Falha ao resolver reação.'; }
-  const restantes = j.ofertas.filter(o => o.id !== oferta.id && elegivel(o, j.evento));
-  if (resultado.cancelado || (!restantes.length && !erro && !j.pendentes.length)) { fechar(id, resultado); return; }
+  const atualJanela = useReacoesAtivasStore.getState().janelas.find(x => x.id === id);
+  if (!atualJanela) return;
+  resultado.defesaBonus += atualJanela.resultado.defesaBonus - j.resultado.defesaBonus;
+  resultado.cancelado ||= atualJanela.resultado.cancelado;
+  const restantes = atualJanela.ofertas.filter(o => o.id !== oferta.id && elegivel(o, j.evento));
+  if (resultado.cancelado || (!restantes.length && !erro && !atualJanela.pendentes.length)) { fechar(id, resultado); return; }
   useReacoesAtivasStore.setState(s => ({ janelas: s.janelas.map(x => x.id === id ? { ...x, ofertas: restantes, resultado, busy: false, erro } : x) }));
 }
 
@@ -208,17 +232,20 @@ export async function responderReacaoAtiva(id: string, ofertaId?: string): Promi
 export function passarOfertaRemota(janelaId: string, perfilId: string) {
   const j = useReacoesAtivasStore.getState().janelas.find(x => x.id === janelaId);
   if (!j) return;
+  limparSondagem(janelaId, perfilId);
   const pendentes = j.pendentes.filter(x => x !== perfilId);
-  const ofertas = j.ofertas.filter(o => useCharacterStore.getState().characters.find(c => c.id === o.usuarioId)?.profileId !== perfilId);
+  const ofertas = j.ofertas.filter(o => destinatarioDaOferta(o) !== perfilId);
   if (!ofertas.length && !pendentes.length) { fechar(janelaId, j.resultado); return; }
   useReacoesAtivasStore.setState(s => ({ janelas: s.janelas.map(x => x.id === janelaId ? { ...x, ofertas, pendentes } : x) }));
 }
 
 /** Respostas remotas só são aceitas para perfil e cliente de origem correspondentes. */
-export async function receberRespostaRemota(msg: { tipo: 'resultado' | 'passar' | 'indisponivel'; janelaId: string; perfilId: string; clienteOrigem: string; resultado?: ResultadoJanelaAtiva }, clienteLocal: string) {
+export async function receberRespostaRemota(msg: { tipo: 'resultado' | 'passar' | 'indisponivel' | 'disponivel'; janelaId: string; perfilId: string; clienteOrigem: string; resultado?: ResultadoJanelaAtiva }, clienteLocal: string) {
   if (msg.clienteOrigem !== clienteLocal || !msg.perfilId) return;
   const j = useReacoesAtivasStore.getState().janelas.find(x => x.id === msg.janelaId);
   if (!j || !j.pendentes.includes(msg.perfilId)) return;
+  limparSondagem(msg.janelaId, msg.perfilId);
+  if (msg.tipo === 'disponivel') return;
   const resultado = msg.tipo === 'resultado' ? { cancelado: j.resultado.cancelado || !!msg.resultado?.cancelado, defesaBonus: j.resultado.defesaBonus + (msg.resultado?.defesaBonus ?? 0) } : j.resultado;
   if (resultado.cancelado) { fechar(j.id, resultado); return; }
   const pendentes = j.pendentes.filter(x => x !== msg.perfilId);
@@ -228,19 +255,28 @@ export async function receberRespostaRemota(msg: { tipo: 'resultado' | 'passar' 
 
 /** Executa a sondagem na sessão do perfil: o inventário pessoal não é replicado entre navegadores. */
 export function receberSondagemRemota(msg: { janelaId: string; perfilId: string; clienteOrigem: string; evento: EventoReacaoAtiva }) {
-  if (useProfileStore.getState().activeProfileId !== msg.perfilId) return;
-  const ofertas = ofertasReacaoAtiva(msg.evento).filter(o => useCharacterStore.getState().characters.find(c => c.id === o.usuarioId)?.profileId === msg.perfilId);
+  if (!podeResponderReacao(msg.perfilId)) return;
+  const ofertas = ofertasReacaoAtiva(msg.evento).filter(o => destinatarioDaOferta(o) === msg.perfilId);
   if (!ofertas.length) {
     window.dispatchEvent(new CustomEvent('omni-reaction:send', { detail: { tipo: 'indisponivel', janelaId: msg.janelaId, perfilId: msg.perfilId, clienteOrigem: msg.clienteOrigem } }));
     return;
   }
+  window.dispatchEvent(new CustomEvent('omni-reaction:send', { detail: { tipo: 'disponivel', janelaId: msg.janelaId, perfilId: msg.perfilId, clienteOrigem: msg.clienteOrigem } }));
   useReacoesAtivasStore.getState().receberOfertaRemota({ ...msg, ofertas, evento: msg.evento });
 }
 
-export function podeVerOfertaReacao(oferta: OfertaReacaoAtiva, perfilId: string | null): boolean {
-  const dono = useCharacterStore.getState().characters.find(c => c.id === oferta.usuarioId)?.profileId;
-  if (dono) return perfilId === dono;
-  return true;
+function destinatarioDaOferta(oferta: OfertaReacaoAtiva): string | undefined {
+  const c = useCharacterStore.getState().characters.find(c => c.id === oferta.usuarioId);
+  return c && destinatarioReacao(c);
+}
+export function podeVerOfertaReacao(oferta: OfertaReacaoAtiva, _perfilId: string | null): boolean {
+  const d = destinatarioDaOferta(oferta);
+  return !!d && podeResponderReacao(d);
+}
+/** Escape explícito para quem iniciou a ação quando uma sessão remota não responde. */
+export function continuarSemReacoesPendentes(id: string): void {
+  const j = useReacoesAtivasStore.getState().janelas.find(x => x.id === id);
+  if (j && !j.busy) fechar(id, j.resultado);
 }
 
 /** Encerramento de combate cancela as resoluções ainda aguardando escolha. */

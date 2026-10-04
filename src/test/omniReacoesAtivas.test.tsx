@@ -1,7 +1,8 @@
+import { DESTINATARIO_MESTRE, podeResponderReacao } from '@/lib/omni/destinatarioReacao';
 // @vitest-environment jsdom
 import { useState } from 'react';
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 vi.mock('@/integrations/supabase/client', async () => ({ supabase: (await import('./helpers/mesaReal')).nuvemFalsa }));
 vi.mock('@/integrations/supabase/safeClient', async () => ({ hasWorkspaceCloud: false, supabase: (await import('./helpers/mesaReal')).nuvemFalsa }));
 vi.mock('@/lib/socket', () => ({ getSocket: () => null }));
@@ -14,7 +15,7 @@ import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { useReactionStore } from '@/stores/useReactionStore';
-import { abrirJanelaReacaoAtiva, ofertasReacaoAtiva, receberRespostaRemota, receberSondagemRemota, useReacoesAtivasStore, responderReacaoAtiva, cancelarJanelasReacoesAtivas } from '@/lib/omni/reacoesAtivas';
+import { abrirJanelaReacaoAtiva, ofertasReacaoAtiva, receberRespostaRemota, receberSondagemRemota, useReacoesAtivasStore, responderReacaoAtiva, cancelarJanelasReacoesAtivas, PRAZO_SONDAGEM_REACAO_MS } from '@/lib/omni/reacoesAtivas';
 import { ReacoesAtivasOverlay } from '@/components/omni/ReacoesAtivasOverlay';
 import { EditorAcoesAtivas } from '@/components/omni/EditorAcoesAtivas';
 import { PendingMoveOverlay } from '@/components/mapa/ui/PendingMoveOverlay';
@@ -36,10 +37,11 @@ beforeEach(() => {
   useMapStore.setState({ pendingMove: null, walls: [], initiative: { ...useMapStore.getState().initiative, entries: [] } });
   useCombatStore.setState({ inCombat: true, movementUsedByChar: {}, initiativeOrder: [], currentTurnIndex: 0 });
 });
-afterEach(async () => { cancelarJanelasReacoesAtivas(); useReacoesAtivasStore.setState({ janelas: [], ofertasRemotas: [] }); cleanup(); await import('@/lib/omni/eventBus'); await import('@/lib/omni/observadores'); await esperar(); useCombatStore.setState({ inCombat: false }); limparMesa(); });
+afterEach(async () => { vi.unstubAllGlobals(); cancelarJanelasReacoesAtivas(); useReacoesAtivasStore.setState({ janelas: [], ofertasRemotas: [] }); cleanup(); await import('@/lib/omni/eventBus'); await import('@/lib/omni/observadores'); await esperar(); useCombatStore.setState({ inCombat: false }); limparMesa(); });
 
 describe('janelas de reação', () => {
   it('encaminha a oferta ao perfil dono e devolve a escolha à sessão de origem', async () => {
+    vi.stubGlobal('__worldBus', {send: vi.fn()});
     useCharacterStore.getState().updateCharacter('u', { profileId: 'perfil-u' });
     const enviados: CustomEvent[] = [];
     const capturar = (e: Event) => enviados.push(e as CustomEvent);
@@ -173,4 +175,96 @@ describe('movimento e conjuração', () => {
     render(<Editor />); fireEvent.click(screen.getByLabelText('Oferecer como reação automática')); fireEvent.change(screen.getByLabelText('Gatilho da reação'), { target: { value: 'quando_inimigo_conjurar' } }); fireEvent.click(screen.getByLabelText('Cancelar evento se a reação tiver efeito'));
     const p = PacoteOmniSchema.parse({ formato: 'omni-engine.v1', nome: 'Reações', geradoEm: 0, entidades: [salvo!] }); expect(p.entidades[0].acoesAtivas![0].reacao).toMatchObject({ gatilho: 'quando_inimigo_conjurar', cancelar_evento: true });
   });
+});
+
+
+describe('controlador remoto e confirmação de entrega', () => {
+  function mesaRemota() {
+    vi.stubGlobal('__worldBus', {send: vi.fn()});
+    montarMesa([ficha('u',{category:'PLAYER',profileId:'perfil-u',hpCurrent:50,hpMax:50}),ficha('a',{category:'INIMIGO',profileId:'perfil-antigo',peCurrent:20,actionsCurrent:1,reactionsCurrent:1,hpCurrent:50,hpMax:50})],{u:[0,0],a:[1,0]});
+    comoTela({role:'PLAYER',profileId:'perfil-u'});
+    return {gatilho:'quando_alvo_declarar_ataque' as const,origemId:'u',protegidoId:'a'};
+  }
+  it('envia reação de inimigo ao mestre e aplica sua escolha na origem', async () => {
+    const ev=mesaRemota();
+    add(config(), 'a');
+    const enviados: CustomEvent[]=[];
+    const onSend=(e:Event)=>enviados.push(e as CustomEvent);
+    window.addEventListener('omni-reaction:send',onSend);
+    try {
+      const p=abrirJanelaReacaoAtiva(ev);
+      const d=enviados.find(e=>e.detail.tipo==='sondar')!.detail;
+      expect(d.perfilId).toBe(DESTINATARIO_MESTRE);
+      expect(useReacoesAtivasStore.getState().janelas[0].ofertas).toHaveLength(0);
+      expect(podeResponderReacao(DESTINATARIO_MESTRE)).toBe(false);
+      comoTela({role:'MASTER',profileId:'perfil-mestre'});
+      receberSondagemRemota({...d,clienteOrigem:'origem'});
+      expect(enviados.some(e=>e.detail.tipo==='disponivel')).toBe(true);
+      await receberRespostaRemota({tipo:'disponivel',janelaId:d.janelaId,perfilId:d.perfilId,clienteOrigem:'origem'},'origem');
+      render(<ReacoesAtivasOverlay />);
+      fireEvent.click(screen.getByText('a: Responder'));
+      await waitFor(()=>expect(enviados.some(e=>e.detail.tipo==='resultado')).toBe(true));
+      const resposta=enviados.find(e=>e.detail.tipo==='resultado')!.detail;
+      comoTela({role:'PLAYER',profileId:'perfil-u'});
+      await receberRespostaRemota(resposta,'origem');
+      expect((await p).cancelado).toBe(false);
+      expect(pegarFicha('a').peCurrent).toBe(18);
+      expect(useReacoesAtivasStore.getState().janelas).toHaveLength(0);
+    } finally { window.removeEventListener('omni-reaction:send',onSend); }
+  });
+  it('destinatário que não confirma não deixa promessa presa', async () => {
+    const ev=mesaRemota();vi.useFakeTimers();
+    try {
+      const p=abrirJanelaReacaoAtiva(ev);
+      await vi.advanceTimersByTimeAsync(PRAZO_SONDAGEM_REACAO_MS);
+      expect(await p).toEqual({cancelado:false,defesaBonus:0});
+      expect(useReacoesAtivasStore.getState().janelas).toHaveLength(0);
+    } finally {vi.useRealTimers();}
+  });
+  it('confirmação preserva o tempo de escolha; continuar libera uma sessão que parou de responder', async () => {
+    const ev=mesaRemota();vi.useFakeTimers();
+    try {
+      const p=abrirJanelaReacaoAtiva(ev);
+      const j=useReacoesAtivasStore.getState().janelas[0];
+      await receberRespostaRemota({tipo:'disponivel',janelaId:j.id,perfilId:DESTINATARIO_MESTRE,clienteOrigem:'origem'},'origem');
+      await vi.advanceTimersByTimeAsync(PRAZO_SONDAGEM_REACAO_MS*2);
+      expect(useReacoesAtivasStore.getState().janelas).toHaveLength(1);
+      render(<ReacoesAtivasOverlay />);
+      fireEvent.click(screen.getByText('Passar e continuar'));
+      expect((await p).cancelado).toBe(false);
+      expect(pegarFicha('a').peCurrent).toBe(20);
+    } finally {vi.useRealTimers();}
+  });
+  it('outro jogador não recebe nem executa reação destinada ao mestre', () => {
+    const ev=mesaRemota();add(config(),'a');
+    receberSondagemRemota({janelaId:'j',perfilId:DESTINATARIO_MESTRE,clienteOrigem:'origem',evento:ev});
+    expect(useReacoesAtivasStore.getState().ofertasRemotas).toHaveLength(0);
+  });
+});
+
+it('sem transporte multiplayer resolve sem aguardar controlador remoto', async()=>{
+  comoTela({role:'PLAYER',profileId:'perfil-u'});
+  useCharacterStore.getState().updateCharacter('u',{profileId:'perfil-u'});
+  const p=abrirJanelaReacaoAtiva({gatilho:'quando_alvo_declarar_ataque',origemId:'u',protegidoId:'a'});
+  expect(await p).toEqual({cancelado:false,defesaBonus:0});
+  expect(useReacoesAtivasStore.getState().janelas).toHaveLength(0);
+});
+
+it('resposta remota durante a reação local não deixa janela vazia presa', async()=>{
+  vi.stubGlobal('__worldBus',{send:vi.fn()});
+  useCharacterStore.getState().updateCharacter('b',{profileId:'perfil-b'});
+  add();
+  const mod=await import('@/lib/omni/acaoAtiva');
+  let liberar!: (r: Awaited<ReturnType<typeof mod.executarAcaoAtiva>>) => void;
+  const spy=vi.spyOn(mod,'executarAcaoAtiva').mockImplementation(()=>new Promise(resolve=>{liberar=resolve;}));
+  try {
+    const p=abrirJanelaReacaoAtiva(evento), j=useReacoesAtivasStore.getState().janelas[0];
+    const local=responderReacaoAtiva(j.id,j.ofertas[0].id);
+    await waitFor(()=>expect(spy).toHaveBeenCalled());
+    await receberRespostaRemota({tipo:'resultado',janelaId:j.id,perfilId:'perfil-b',clienteOrigem:'origem',resultado:{cancelado:false,defesaBonus:3}},'origem');
+    liberar({ok:true,efeitoAplicado:false,dano:0,detalhe:''} as Awaited<ReturnType<typeof mod.executarAcaoAtiva>>);
+    await local;
+    expect(await p).toEqual({cancelado:false,defesaBonus:3});
+    expect(useReacoesAtivasStore.getState().janelas).toHaveLength(0);
+  } finally {spy.mockRestore();}
 });
