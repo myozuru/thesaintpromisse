@@ -5,7 +5,8 @@ import { avaliarFormula } from './parser';
 import { montarVariaveisDoPersonagem } from './resolvedor';
 import { useMapStore } from '@/stores/useMapStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
-import { findCharEntity, touchDistanceMeters } from '@/lib/touchRange';
+import { findCharEntity } from '@/lib/touchRange';
+import { distanciaCircularMetros } from '@/lib/mapa/alcanceCircular';
 import { findEntitiesInTemplate } from '@/lib/mapAoE';
 import type { MapTemplate } from '@/components/mapa/TemplateEngine';
 
@@ -108,7 +109,7 @@ export async function selecionarAlvosAtivos(usuarioId: string, cfg: AcaoAtivaCon
     if (tipo !== 'area' && tipo !== 'proprio' && cfg.alcanceM > 0) {
       const ms = useMapStore.getState(), origem = findCharEntity(ms.entities, u.id), alvo = findCharEntity(ms.entities, id);
       if (!origem || !alvo) return { ok: false, reason: 'Usuário e alvo precisam estar no mapa para medir o alcance.' };
-      if (origem && alvo && touchDistanceMeters(origem, alvo, ms.gridConfig) > cfg.alcanceM + 0.05) return { ok: false, reason: `${a.name} está fora de alcance.` };
+      if (origem && alvo && distanciaCircularMetros(origem, alvo, ms.gridConfig) > cfg.alcanceM + 0.05) return { ok: false, reason: `${a.name} está fora de alcance.` };
     }
   }
   return { ok: true, ids, ...(selecaoValidada ? { selecaoValidada } : {}) };

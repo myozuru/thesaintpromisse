@@ -69,7 +69,8 @@ describe('armas, mira e chão', () => {
     expect(useInventoryStore.getState().items[inst.instanceId].usosRestantes).toBe(4);
     act(() => clicarAlvoMapa('e-longe'));
     expect(screen.getByRole('alert')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'perto' }));
+    expect(screen.queryByRole('button', { name: 'perto' })).toBeNull();
+    act(() => clicarAlvoMapa('e-perto'));
     await waitFor(() => expect(useInventoryStore.getState().items[inst.instanceId].usosRestantes).toBe(3));
   });
   it('revalida movimento e limite de múltiplos, cancelando sem gastar', async () => {

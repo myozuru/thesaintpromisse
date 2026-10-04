@@ -151,7 +151,8 @@ describe('Posturas — parte 2', { timeout: 20000 }, () => {
   });
 
   it('Tempestade: acerto → Fortitude ou Caído; já Caído → Imóvel até o começo do turno do Especialista; passar não faz nada', async () => {
-    mesa(esp({ level: 10, posturasAprendidas: ['tempestade'] }), { caio: [0, 1], davi: [1, 1] });
+    // Todos os alvos deste teste de postura devem estar dentro do raio de 1,5 m.
+    mesa(esp({ level: 10, posturasAprendidas: ['tempestade'] }), { caio: [0, 1], davi: [-1, 0] });
     useCombatStore.setState({ initiativeOrder: [{ charId: 'ana' }, { charId: 'bruno' }, { charId: 'caio' }, { charId: 'davi' }] as never });
     clicar(/Entrar: Tempestade/);
     await atacarAlvo('bruno', 19, 1, 1, 1, 1);

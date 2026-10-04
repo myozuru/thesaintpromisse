@@ -314,6 +314,7 @@ const resolveEntityNameplateStats = (
 
 
 export function MapaModule() {
+  const selecionandoAlvo = useAlvoMapaStore(s => !!s.pending);
   const containerRef = useRef<HTMLDivElement>(null);
   const bgCanvasRef = useRef<HTMLCanvasElement>(null);
   const tokenCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -988,7 +989,7 @@ export function MapaModule() {
           const dxPx = mw.x - origin.x;
           const dyPx = mw.y - origin.y;
           const distPx = Math.hypot(dxPx, dyPx);
-          const distM = pedido ? Math.max(Math.abs(dxPx), Math.abs(dyPx)) / dpi * mpc : (distPx / dpi) * mpc;
+          const distM = (distPx / dpi) * mpc;
           const maxM = aim.maxRangeMeters;
           const outOfRange = maxM != null && distM > maxM;
           const color = aim.color || '#a78bfa';
@@ -1006,8 +1007,7 @@ export function MapaModule() {
             tkCtx.lineWidth = 1.25 / camera.scale;
             tkCtx.strokeStyle = outOfRange ? '#ef4444aa' : `${color}66`;
             tkCtx.beginPath();
-            if (pedido) tkCtx.rect(origin.x - maxPx, origin.y - maxPx, maxPx * 2, maxPx * 2);
-            else tkCtx.arc(origin.x, origin.y, maxPx, 0, Math.PI * 2);
+            tkCtx.arc(origin.x, origin.y, maxPx, 0, Math.PI * 2);
             tkCtx.stroke();
           }
           const labelText = maxM != null
@@ -3043,9 +3043,12 @@ export function MapaModule() {
           <LootOverlay />
           <ChestOverlay />
 
-          <CombatBar variant="player" className="absolute top-2 right-2 z-30" />
-          <CombatBar variant="master" className="absolute top-2 right-2 z-30" />
-          <PlayerActionBar />
+          {/* Keep panels mounted so the waiting action and expanded category survive selection. */}
+          <div className={selecionandoAlvo ? 'hidden' : 'contents'}>
+            <CombatBar variant="player" className="absolute top-2 right-2 z-30" />
+            <CombatBar variant="master" className="absolute top-2 right-2 z-30" />
+            <PlayerActionBar />
+          </div>
 
           {layerPanelOpen && <LayerPanel onClose={() => setLayerPanelOpen(false)} />}
           <InitiativeMount />

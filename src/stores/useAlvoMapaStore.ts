@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { useMapStore, type Entity } from './useMapStore';
 import { useCharacterStore } from './useCharacterStore';
-import { distanceBetweenChars } from '@/lib/weaponRange';
+import { distanciaCircularMetros } from '@/lib/mapa/alcanceCircular';
 import type { Character } from '@/types';
 
 export type PedidoAlvoMapa = {
@@ -18,12 +18,13 @@ export function tokenDaFicha(char: Character): Entity | undefined {
 export function alvosNoAlcance(pedido: PedidoAlvoMapa): Character[] {
   const chars = useCharacterStore.getState().characters;
   const u = chars.find(c => c.id === pedido.usuarioId);
-  if (!u || !tokenDaFicha(u)) return [];
+  const origem = u && tokenDaFicha(u);
+  if (!u || !origem) return [];
   const ms = useMapStore.getState();
-  const entities = Object.fromEntries(Object.entries(ms.entities).filter(([, e]) => !e.hidden && (e.layer ?? 'tokens') !== 'gm' && ms.layerVisible[e.layer ?? 'tokens'] !== false));
   return chars.filter(a => {
-    if (!tokenDaFicha(a) || (pedido.aceita ? !pedido.aceita(a) : a.id === u.id)) return false;
-    const d = distanceBetweenChars(u.id, a.id, entities, ms.gridConfig, { casterProfileId: u.profileId, targetProfileId: a.profileId });
+    const alvo = tokenDaFicha(a);
+    if (!alvo || (pedido.aceita ? !pedido.aceita(a) : a.id === u.id)) return false;
+    const d = distanciaCircularMetros(origem, alvo, ms.gridConfig);
     return d !== null && d <= pedido.maxRangeMeters + 0.05;
   });
 }

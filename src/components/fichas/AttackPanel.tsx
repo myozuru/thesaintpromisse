@@ -1393,7 +1393,6 @@ export function AttackPanel({ character: cProp }: Props) {
         if (atual?.mainHandWeaponName !== c.mainHandWeaponName) { addLog('combat', 'A arma mudou durante a seleção. Selecione o ataque novamente.'); return; }
         ataqueAposMira.current = atacar; setTargetId(ids[0]);
       }
-      window.dispatchEvent(new CustomEvent('app:navigate', { detail: 'fichas' }));
     } catch (e) { addLog('combat', `❌ ${e instanceof Error ? e.message : 'Não foi possível selecionar o alvo.'}`); }
     finally { setMirando(false); }
   };

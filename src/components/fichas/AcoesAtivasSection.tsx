@@ -135,7 +135,6 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
                         maxAlvos: multiplo ? limiteAlvosAtivos(cfg, u) : 1, aceita: alvo => aceitaAlvoAtivo(u, alvo, cfg) });
                       if (!ids) return;
                       alvoSel = multiplo ? ids : ids[0];
-                      window.dispatchEvent(new CustomEvent('app:navigate', { detail: 'fichas' }));
                     }
                     // Revalida a empunhadura após a seleção no mapa.
                     if (ent.categoria === 'arma' && !acoesAtivasDe(charId).some(a => a.instanceId === instanceId && a.cfg.id === cfg.id)) {
