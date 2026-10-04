@@ -10,6 +10,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { EntidadeOmni, DuracaoEntidade } from '@/lib/omni/tipos';
 import { duracaoParaSegundos, toTimelineSeconds } from '@/lib/omni/tempo';
+import { useCharacterStore } from './useCharacterStore';
 import { useChronosStore } from './useChronosStore';
 
 export interface EfeitoAtivo {
@@ -74,32 +75,26 @@ export const useOmniRuntimeStore = create<OmniRuntimeStore>()(
         return efeito;
       },
 
-      removerEfeito: (id) =>
-        set((s) => {
-          const { [id]: _, ...rest } = s.efeitos;
-          return { efeitos: rest };
-        }),
+      removerEfeito: (id) => {
+        const efeito = get().efeitos[id];
+        if (!efeito) return;
+        set(s => { const { [id]: _, ...rest } = s.efeitos; return { efeitos: rest }; });
+        const instanceId = efeito.meta?.conditionInstanceId;
+        if (typeof instanceId === 'string' && efeito.targetCharId) useCharacterStore.getState().removeCondition(efeito.targetCharId, instanceId);
+      },
 
-      dissiparTodos: (charId) =>
-        set((s) => {
-          if (!charId) return { efeitos: {} };
-          const rest: Record<string, EfeitoAtivo> = {};
-          for (const [k, v] of Object.entries(s.efeitos)) {
-            if (v.sourceCharId !== charId && v.targetCharId !== charId) rest[k] = v;
-          }
-          return { efeitos: rest };
-        }),
+      dissiparTodos: (charId) => {
+        for (const e of Object.values(get().efeitos)) if (!charId || e.sourceCharId === charId || e.targetCharId === charId) get().removerEfeito(e.id);
+      },
 
       podarExpirados: () => {
-        const chronos = useChronosStore.getState();
-        const agora = toTimelineSeconds(chronos);
+        const agora = toTimelineSeconds(useChronosStore.getState());
         const removidos: string[] = [];
-        const manter: Record<string, EfeitoAtivo> = {};
-        for (const [k, v] of Object.entries(get().efeitos)) {
-          if (v.expiraEm !== null && agora >= v.expiraEm) removidos.push(k);
-          else manter[k] = v;
+        for (const e of Object.values(get().efeitos)) {
+          const linked = e.meta?.conditionInstanceId;
+          const ausente = typeof linked === 'string' && !!e.targetCharId && !useCharacterStore.getState().characters.find(c => c.id === e.targetCharId)?.activeConditions?.some(c => c.id === linked);
+          if (ausente || e.expiraEm !== null && agora >= e.expiraEm) { removidos.push(e.id); get().removerEfeito(e.id); }
         }
-        if (removidos.length > 0) set({ efeitos: manter });
         return removidos;
       },
 

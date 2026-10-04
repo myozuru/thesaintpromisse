@@ -50,7 +50,7 @@ export interface AcaoLogica {
   /** DANO: tipo próprio do novo golpe; ausente mantém dano sem tipo. */
   tipoDano?: string;
   valor?: ValorDinamico;
-  condicao?: CondicaoId; // para APLICAR/REMOVER_CONDICAO
+  condicao?: CondicaoId | 'todas'; // para APLICAR/REMOVER_CONDICAO
   /**
    * Duração DESTE efeito específico, independente da entidade-fonte.
    * - Ausente em ações de mutação direta (DANO, CURAR, SOMAR, DEFINIR…)

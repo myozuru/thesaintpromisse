@@ -1,3 +1,4 @@
+import { resolverCondicaoOmni } from './condicaoDoSistema';
 import { notificarEventoPersonagem } from './notificarEvento';
 import { planejarFormulaDano } from './planoDano';
 import { notificarAtualizacaoContadores } from './atualizacaoContadores';
@@ -5,7 +6,7 @@ import { notificarResultadoAtaque } from './resultadoAtaque';
 import { armaDoPersonagem, armaEstaEmpunhada } from './armaDoPersonagem';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { planejarCustosAtivos, validarRecursosAtivos, patchCustosAtivos, consumirUsosItemAtivo, type ContextoCustosAtivos } from './custosAtivos';
-import { prepararMovimentosAtivos, aplicarMovimentoAtivo, type PlanoMovimentoAtivo, type OpcoesMovimentoAtivo } from './movimentosAtivos';
+import { prepararMovimentosAtivos, aplicarMovimentoAtivo, validarPlanoMovimento, type PlanoMovimentoAtivo, type OpcoesMovimentoAtivo } from './movimentosAtivos';
 import { avaliarCondicionaisAtivos } from './condicionaisAtivos';
 import { applyAdvantageToD20, consumeAdvantageFor, consumeFlatBonusFor } from './rollAdvantage';
 import { aceitaAlvoAtivo, selecionarAlvosAtivos, type SelecaoAtiva } from './alvosAtivos';
@@ -35,7 +36,7 @@ import { useMapStore } from '@/stores/useMapStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { selectOmniModifiers } from '@/lib/omni/omniBridge';
-import { ALL_CONDITIONS, type ActiveCondition } from '@/types/conditions';
+import { type ActiveCondition } from '@/types/conditions';
 import { findCharEntity, touchDistanceMeters, type TouchGrid } from '@/lib/touchRange';
 import { penalidadeTRFlanqueado } from '@/lib/flanqueadorSuperior';
 import { specDCFor } from '@/lib/golpeEspecial';
@@ -151,12 +152,14 @@ function obterPericia(char: Character, nome: string) {
 export function modificadorPericiaAtiva(char: Character, nome: string): number | undefined {
   const skill = obterPericia(char, nome);
   if (!skill) return undefined;
-  const attr = skill.linkedAttribute ? char.attributes.find(a => a.id === skill.linkedAttribute) : undefined;
+  const attr = skill.linkedAttribute ? (char.attributes ?? []).find(a => a.id === skill.linkedAttribute) : undefined;
   const modAtributo = attr ? Math.floor((attr.value - 10) / 2) : 0;
+  const equipados = useInventoryStore.getState().listEquipped(char.id).filter(i => i.entity.slotType && i.entity.slotType !== 'nenhum');
+  const equipamentos = selectOmniModifiers(char, equipados).pericias;
   const skillKey = skill.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_');
   return (skill.value || 0) + modAtributo + getTrainingBonus(char.level, skill.trained, skill.mastery)
     + getLevelSkillBonus(char.level) + (skill.externalBonus || 0) + getSkillModFromConditions(char, skill.name)
-    + ((char.omniSkillBonuses ?? {})[skillKey] ?? 0);
+    + ((char.omniSkillBonuses ?? {})[skillKey] ?? 0) + (equipamentos[skillKey] ?? 0);
 }
 
 /** Empates ficam com quem defende a manobra. */
@@ -172,12 +175,12 @@ export function melhorPericiaDaDisputa(char: Character, opcoes: string[]): { nom
 
 function danoArmaBase(arma?: Weapon, u?: Character) {
   if (!arma) return undefined;
-  const dano = resolveWeaponDamage(arma, requiresTwoHands(arma) || Boolean(u?.mainHandWeaponName && u.mainHandWeaponName === u.offHandWeaponName)) ?? undefined;
-  const dados = [...(dano ?? '').matchAll(/(\d*)d(\d+)/gi)];
+  const dano = arma.omniDamageFormula ?? resolveWeaponDamage(arma, requiresTwoHands(arma) || Boolean(u?.mainHandWeaponName && u.mainHandWeaponName === u.offHandWeaponName)) ?? undefined;
+  const grupos = dano && u ? planejarFormulaDano(dano, expr => avaliarFormula(expr, montarVariaveisDoPersonagem(u, 'USUARIO'), () => 0.5)).grupos : [...(dano ?? '').matchAll(/(\d*)d(\d+)/gi)].map(m => ({ count: Number(m[1] || 1), sides: Number(m[2]) }));
   return {
     ...(dano ? { dano } : {}),
-    dados: dados.reduce((n, m) => n + Number(m[1] || 1), 0),
-    passo: dados.reduce((n, m) => Math.max(n, Number(m[2])), 0),
+    dados: grupos.reduce((n, g) => n + g.count, 0),
+    passo: grupos.reduce((n, g) => Math.max(n, g.sides), 0),
     critico_margem: arma.critRange ?? 0,
   };
 }
@@ -219,7 +222,7 @@ function notacaoDanoAtivo(expressao: string | undefined, u: Character, alvo?: Ch
 
 export function custoPEDe(cfg: AcaoAtivaConfig, u: Character, intensificacoes = 0, arma?: Weapon): number {
   const r = planejarCustosAtivos(cfg, u, intensificacoes);
-  return r.ok ? r.plano.pe : Math.max(0, Math.round(avaliarFormulaAtiva(cfg.custo_recursos?.pe_base ?? cfg.custoPE ?? '0', u, undefined, arma).valor));
+  return r.ok ? r.plano.pe : Infinity;
 }
 
 // ─── Validação + execução ────────────────────────────────────────────
@@ -228,6 +231,18 @@ export type ResultadoAtiva = { ok: false; reason: string } | { ok: true; dano: n
 
 export function podeUsarAtiva(u: Character, alvo: Character | undefined, cfg: AcaoAtivaConfig, intensificacoes = 0, arma?: Weapon, contexto?: ContextoCustosAtivos): { ok: true } | { ok: false; reason: string } {
   if (!alvo) return { ok: false, reason: 'Escolha um alvo.' };
+  if (!Number.isFinite(cfg.alcanceM) || cfg.alcanceM < 0) return { ok: false, reason: 'Alcance inválido.' };
+  if (!['ataque', 'tr', 'disputa', 'nenhum'].includes(cfg.teste)) return { ok: false, reason: 'Teste inválido.' };
+  if (cfg.tipo_efeito && !['dano', 'cura', 'buff'].includes(cfg.tipo_efeito)) return { ok: false, reason: 'Tipo de efeito inválido.' };
+  if (cfg.teste === 'tr' && cfg.tr && !(cfg.tr in TR_ROTULO)) return { ok: false, reason: 'Resistência inválida.' };
+  if (cfg.teste === 'tr' && cfg.cd?.trim()) {
+    const r = avaliarFormulaAtiva(cfg.cd, u, alvo, arma, () => 0.5);
+    if (r.diagnosticos.length || r.rolagens.length || !Number.isSafeInteger(Math.round(r.valor))) return { ok: false, reason: 'CD exige fórmula válida e sem dados.' };
+  }
+  if (cfg.margemCritico) {
+    const r = avaliarFormulaAtiva(cfg.margemCritico.condicao, u, alvo, arma, () => 0.5);
+    if (r.diagnosticos.length || r.rolagens.length || !Number.isFinite(r.valor) || !Number.isSafeInteger(cfg.margemCritico.reducao)) return { ok: false, reason: 'Condição de crítico inválida.' };
+  }
   if (cfg.teste === 'disputa') {
     if (!cfg.pericia_usuario?.trim() || !cfg.pericias_alvo?.some(p => p.trim())) return { ok: false, reason: 'Configure a perícia do usuário e ao menos uma perícia possível do alvo.' };
     if (modificadorPericiaAtiva(u, cfg.pericia_usuario) === undefined) return { ok: false, reason: `A perícia "${cfg.pericia_usuario}" não existe na ficha do usuário.` };
@@ -238,17 +253,23 @@ export function podeUsarAtiva(u: Character, alvo: Character | undefined, cfg: Ac
       notacaoDanoAtivo(cfg.dano, u, alvo, arma);
       notacaoDanoAtivo(cfg.dadosPorCarga, u, alvo, arma);
       notacaoDanoAtivo(cfg.custo_recursos?.dano_por_intensificacao, u, alvo, arma);
+      for (const ramo of Object.values(cfg.desfechosTR ?? {})) notacaoDanoAtivo(ramo?.dano_extra, u, alvo, arma);
       if (cfg.teste === 'ataque' && arma?.omniDamageFormula) notacaoDanoAtivo(arma.omniDamageFormula, u, alvo, arma);
     }
     catch (e) { return { ok: false, reason: e instanceof Error ? e.message : 'Fórmula de dano inválida.' }; }
   }
   const efeitos = [...(cfg.efeitos ?? []), ...Object.values(cfg.desfechosTR ?? {}).flatMap(d => d?.efeitos ?? [])];
+  for (const ramo of Object.values(cfg.desfechosTR ?? {})) {
+    if (ramo?.dano && !['total','metade','nenhum'].includes(ramo.dano) || ramo?.multiplicador_duracao !== undefined && (!Number.isSafeInteger(ramo.multiplicador_duracao) || ramo.multiplicador_duracao < 1)) return { ok: false, reason: 'Desfecho de resistência inválido.' };
+  }
   for (const ef of efeitos) {
+    if (!['condicao','remover_condicao','pv_temporarios','escudo','puxar','empurrar','movimento'].includes(ef.tipo)) return { ok: false, reason: 'Efeito secundário inválido.' };
+    if (ef.tipo === 'condicao' && (!resolverCondicaoOmni(ef.condicao) || !Number.isSafeInteger(ef.rodadas) || ef.rodadas < 0)) return { ok: false, reason: 'Condição ou duração inválida.' };
     if (ef.tipo === 'pv_temporarios' || ef.tipo === 'escudo') {
       const r = avaliarFormulaAtiva(ef.valor, u, alvo, arma, () => 0.5);
       if (!ef.valor.trim() || r.diagnosticos.length || !Number.isFinite(r.valor) || !Number.isInteger(ef.rodadas) || ef.rodadas < 0) return { ok: false, reason: 'Proteção exige fórmula válida e duração inteira não negativa.' };
     }
-    if (ef.tipo === 'remover_condicao' && ef.condicao !== 'todas' && !ALL_CONDITIONS.some(c => c.id === ef.condicao || c.name.toLocaleLowerCase() === ef.condicao.toLocaleLowerCase())) return { ok: false, reason: 'Condição a remover não reconhecida.' };
+    if (ef.tipo === 'remover_condicao' && ef.condicao !== 'todas' && !resolverCondicaoOmni(ef.condicao)) return { ok: false, reason: 'Condição a remover não reconhecida.' };
   }
   const formulasArma = [cfg.dano, cfg.dadosPorCarga, ...(cfg.condicionais ?? []).map(b => b.dano_extra), ...Object.values(cfg.desfechosTR ?? {}).map(r => r?.dano_extra)]
     .filter((f): f is string => !!f && /@ARMA\./i.test(f));
@@ -271,6 +292,7 @@ export function podeUsarAtiva(u: Character, alvo: Character | undefined, cfg: Ac
   if (cfg.alcanceM > 0 && cfg.tipo_alvo !== 'area' && cfg.tipo_alvo !== 'proprio') {
     const ms = useMapStore.getState();
     const a = findCharEntity(ms.entities as never, u.id), b = findCharEntity(ms.entities as never, alvo.id);
+    if (!a || !b) return { ok: false, reason: 'Usuário e alvo precisam estar no mapa para medir o alcance.' };
     if (a && b) {
       const d = touchDistanceMeters(a, b, ms.gridConfig as TouchGrid);
       if (d > cfg.alcanceM + 0.05) return { ok: false, reason: `Fora de alcance (${d.toFixed(1).replace('.', ',')} m de ${cfg.alcanceM.toString().replace('.', ',')} m).` };
@@ -284,7 +306,7 @@ function aplicarEfeitos(u: Character, alvo: Character, efeitos: EfeitoSecundario
   const store = useCharacterStore.getState();
   for (const [indice, ef] of efeitos.entries()) {
     if (ef.tipo === 'condicao') {
-      const def = ALL_CONDITIONS.find((c) => c.id === ef.condicao);
+      const def = resolverCondicaoOmni(ef.condicao);
       if (!def) continue;
       const ac: ActiveCondition = {
         id: crypto.randomUUID(), conditionId: def.id, name: def.name, icon: def.icon,
@@ -292,9 +314,10 @@ function aplicarEfeitos(u: Character, alvo: Character, efeitos: EfeitoSecundario
       };
       store.addCondition(alvo.id, ac);
       if (sustentadas && useCharacterStore.getState().characters.find(c => c.id === alvo.id)?.activeConditions.some(c => c.id === ac.id)) sustentadas.push({ charId: alvo.id, id: ac.id });
+      if (!useCharacterStore.getState().characters.find(c => c.id === alvo.id)?.activeConditions.some(c => c.id === ac.id)) continue;
       notas.push(`${def.icon} ${def.name}${sustentadas ? ' (sustentada)' : ef.rodadas > 0 ? ` (${ef.rodadas} rod.)` : ''}`);
     } else if (ef.tipo === 'remover_condicao') {
-      const def = ALL_CONDITIONS.find(c => c.id === ef.condicao || c.name.toLocaleLowerCase() === ef.condicao.toLocaleLowerCase());
+      const def = resolverCondicaoOmni(ef.condicao);
       const atuais = useCharacterStore.getState().characters.find(c => c.id === alvo.id)?.activeConditions ?? [];
       const removidas = atuais.filter(c => ef.condicao === 'todas' || c.conditionId === def?.id);
       for (const c of removidas) store.removeCondition(alvo.id, c.id);
@@ -324,7 +347,19 @@ export function armaDaAcao(u: Character, ent?: EntidadeOmni) {
   return nome ? armaDoPersonagem(u.id, nome) : undefined;
 }
 
+const acoesEmCurso = new Set<string>();
 export async function executarAcaoAtiva(
+  usuarioId: string, cfg: AcaoAtivaConfig, selecao: SelecaoAtiva, ent?: EntidadeOmni,
+  opcoes: OpcoesMovimentoAtivo & { intensificacoes?: number; ignorarReacoes?: boolean; instanciaId?: string } = {},
+): Promise<ResultadoAtiva> {
+  if (acoesEmCurso.has(usuarioId)) return { ok: false, reason: 'Este personagem já está executando uma ação.' };
+  acoesEmCurso.add(usuarioId);
+  try { return await executarAcaoAtivaInterna(usuarioId, structuredClone(cfg), selecao, ent, opcoes); }
+  catch (e) { return { ok: false, reason: e instanceof Error ? e.message : 'Não foi possível concluir a ação.' }; }
+  finally { acoesEmCurso.delete(usuarioId); }
+}
+
+async function executarAcaoAtivaInterna(
   usuarioId: string,
   cfg: AcaoAtivaConfig,
   selecao: SelecaoAtiva,
@@ -337,7 +372,9 @@ export async function executarAcaoAtiva(
   const log = (m: string) => useLogStore.getState().addLog('combat', m);
   let u = store.characters.find((x) => x.id === usuarioId);
   if (!u) return { ok: false, reason: 'Personagem não encontrado.' };
-  const arma = armaDaAcao(u, ent);
+  let arma = armaDaAcao(u, ent);
+  const armaDeclarada = JSON.stringify(arma);
+  if (ent?.categoria === 'arma' && !armaEstaEmpunhada(u, ent.replica ? replicaWeaponName(ent) ?? ent.nome : ent.nome)) return { ok: false, reason: 'Empunhe a arma antes de usar a ação.' };
   const contextoCustos: ContextoCustosAtivos = { armaNome: arma?.name, instanciaId: opcoes.instanciaId, entidadeId: ent?.id };
   let alvos = escolhidos.ids.map(id => store.characters.find(c => c.id === id)!);
   for (const alvo of alvos) {
@@ -370,6 +407,19 @@ export async function executarAcaoAtiva(
     u = store.characters.find(c => c.id === usuarioId);
     if (!u || (u.hpCurrent ?? 1) <= 0) return { ok: false, reason: 'Conjurador indisponível.' };
     for (const alvo of alvos) { const chk = podeUsarAtiva(u, store.characters.find(c => c.id === alvo.id), cfg, opcoes.intensificacoes ?? 0, arma, contextoCustos); if (!chk.ok) return chk; }
+  }
+  const reescolhidos = await selecionarAlvosAtivos(usuarioId, cfg, escolhidos.selecaoValidada ?? escolhidos.ids);
+  if (!reescolhidos.ok) return reescolhidos;
+  if (reescolhidos.ids.length !== escolhidos.ids.length || reescolhidos.ids.some(id => !escolhidos.ids.includes(id))) return { ok: false, reason: 'Os alvos da área mudaram. Selecione novamente.' };
+  store = useCharacterStore.getState();
+  u = store.characters.find(c => c.id === usuarioId);
+  if (!u) return { ok: false, reason: 'Usuário removido antes do pagamento.' };
+  arma = armaDaAcao(u, ent);
+  if (JSON.stringify(arma) !== armaDeclarada || ent?.categoria === 'arma' && !armaEstaEmpunhada(u, ent.replica ? replicaWeaponName(ent) ?? ent.nome : ent.nome)) return { ok: false, reason: 'A arma mudou durante a seleção. Use a ação novamente.' };
+  alvos = escolhidos.ids.map(id => store.characters.find(c => c.id === id)!);
+  for (const alvo of alvos) {
+    const chk = podeUsarAtiva(u, alvo, cfg, opcoes.intensificacoes ?? 0, arma, contextoCustos); if (!chk.ok) return chk;
+    for (const plano of movimentos.planos.get(alvo.id) ?? []) { const erro = validarPlanoMovimento(u.id, alvo.id, plano); if (erro) return { ok: false, reason: erro }; }
   }
   // Snapshot por alvo antes do consumo: cargas e PV são os da declaração.
   const condicionais = new Map(alvos.map(t => [t.id, {
@@ -428,8 +478,8 @@ export async function executarAcaoAtiva(
       const rolled = await applyAdvantageToD20(adv.net, () => rollD20Com(t.id, undefined, { label: `TR ${TR_ROTULO[tr]}` }));
       const d20 = rolled.d20;
       const totalTR = d20 + mod;
-      passouTR = totalTR >= cd;
       grauTR = classificarGrauTR(d20, totalTR, cd);
+      passouTR = grauTR === 'sucesso';
       const ramo = cfg.desfechosTR?.[grauTR];
       desfechoTR = ramo;
       efeitosTR = ramo?.efeitos ?? (grauTR === 'sucesso' ? [] : cfg.efeitos ?? []);
@@ -442,7 +492,7 @@ export async function executarAcaoAtiva(
       const def = computeTotalDefense(t, {}, arma!.range === 'melee' ? 'melee' : 'ranged');
       const ctx = buildAttackContext({
         attacker: u, weapon: arma!, targetDefense: def, targetId: t.id, alcanceM: cfg.alcanceM, ignorarReacoes: opcoes.ignorarReacoes,
-        situation: { twoHanded: requiresTwoHands(arma!) || Boolean(u.mainHandWeaponName && u.mainHandWeaponName === u.offHandWeaponName), rolarDano: !!cfg.incluirArma && !/@ARMA\.DANO/i.test([cfg.dano, ...mods.danos].filter(Boolean).join('+')), hitBonusExtra: cfg.mod_acerto, critBonusExtra: critExtra || undefined, advantageExtra: mods.vantagemAcerto, critMultiplierExtra: mods.multiplicador },
+        situation: { twoHanded: requiresTwoHands(arma!) || Boolean(u.mainHandWeaponName && u.mainHandWeaponName === u.offHandWeaponName), rolarDano: cfg.tipo_efeito !== 'buff' && !!cfg.incluirArma && !/@ARMA\.DANO/i.test([cfg.dano, ...mods.danos].filter(Boolean).join('+')), hitBonusExtra: cfg.mod_acerto, critBonusExtra: critExtra || undefined, advantageExtra: mods.vantagemAcerto, critMultiplierExtra: mods.multiplicador },
         trainedRanges: [
           ...(u.meleeTrained ? (['melee'] as const) : []),
           ...(u.rangedTrained ? (['ranged', 'thrown'] as const) : []),
@@ -511,10 +561,10 @@ export async function executarAcaoAtiva(
     }
 
     // ── Dano ──
-    const extraIntensificacao = planejarDano(undefined, notacaoDanoAtivo(cfg.custo_recursos?.dano_por_intensificacao, u, t, arma), p.intensificacoes, false);
-    const danoConfigurado = [cfg.dano, ...mods.danos, ...extraIntensificacao.grupos.map(g => `${g.count}d${g.sides}`), extraIntensificacao.fixo ? String(extraIntensificacao.fixo) : '', desfechoTR?.dano_extra]
+    const extraIntensificacao = planejarDano(undefined, notacaoDanoAtivo(cfg.tipo_efeito === 'buff' ? undefined : cfg.custo_recursos?.dano_por_intensificacao, u, t, arma), p.intensificacoes, false);
+    const danoConfigurado = (cfg.tipo_efeito === 'buff' ? [] : [cfg.dano, ...mods.danos, ...extraIntensificacao.grupos.map(g => `${g.count}d${g.sides}`), extraIntensificacao.fixo ? String(extraIntensificacao.fixo) : '', desfechoTR?.dano_extra])
       .filter(Boolean).map(d => danoComContextoArma(d, arma, u)).filter((d): d is string => !!d).join('+');
-    const plano = planejarDano(notacaoDanoAtivo(danoConfigurado, u, t, arma), notacaoDanoAtivo(cfg.dadosPorCarga, u, t, arma), cargas, critico, (arma?.critMultiplier ?? 2) + mods.multiplicador);
+    const plano = planejarDano(notacaoDanoAtivo(danoConfigurado, u, t, arma), notacaoDanoAtivo(cfg.tipo_efeito === 'buff' ? undefined : cfg.dadosPorCarga, u, t, arma), cargas, critico, (arma?.critMultiplier ?? 2) + mods.multiplicador);
     const formulasComArma = [cfg.dano, ...mods.danos, desfechoTR?.dano_extra].filter(Boolean).join('+');
     const armaJaNaFormula = /@ARMA\.DANO/i.test(formulasComArma);
     const danoArmaAplicado = armaJaNaFormula ? 0 : armaDano;

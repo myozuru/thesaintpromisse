@@ -10,7 +10,7 @@ import { findEntitiesInTemplate } from '@/lib/mapAoE';
 import type { MapTemplate } from '@/components/mapa/TemplateEngine';
 
 export type SelecaoAtiva = string | string[] | { ponto: { x: number; y: number }; rotacao?: number };
-type SelecaoResultado = { ok: true; ids: string[] } | { ok: false; reason: string };
+type SelecaoResultado = { ok: true; ids: string[]; selecaoValidada?: SelecaoAtiva } | { ok: false; reason: string };
 
 /** Lados explícitos da iniciativa prevalecem; categoria é o fallback da mesa. */
 function lado(c: Character): 'grupo' | 'inimigo' | 'neutro' {
@@ -44,6 +44,7 @@ export async function selecionarAlvosAtivos(usuarioId: string, cfg: AcaoAtivaCon
   if (!Number.isFinite(cfg.alcanceM) || cfg.alcanceM < 0) return { ok: false, reason: 'Configure um alcance válido em metros.' };
   const tipo = cfg.tipo_alvo ?? 'unico';
   let ids: string[];
+  let selecaoValidada: SelecaoAtiva | undefined;
   if (tipo === 'proprio') ids = [u.id];
   else if (tipo !== 'area') {
     ids = [...new Set(typeof selecao === 'string' ? [selecao].filter(Boolean) : Array.isArray(selecao) ? selecao : [])];
@@ -84,6 +85,7 @@ export async function selecionarAlvosAtivos(usuarioId: string, cfg: AcaoAtivaCon
     if (area.forma === 'raio_no_ponto' && cfg.alcanceM > 0 && Math.hypot(ponto.x - origem.x, ponto.y - origem.y) / pxM > cfg.alcanceM + 0.05) {
       return { ok: false, reason: 'Centro da área fora de alcance.' };
     }
+    selecaoValidada = { ponto: { x: ponto.x, y: ponto.y }, rotacao };
     const ancorado = area.forma !== 'raio_no_ponto';
     const template: MapTemplate = {
       id: 'omni-selecao', kind, x: ancorado ? origem.x : ponto.x, y: ancorado ? origem.y : ponto.y,
@@ -109,5 +111,5 @@ export async function selecionarAlvosAtivos(usuarioId: string, cfg: AcaoAtivaCon
       if (origem && alvo && touchDistanceMeters(origem, alvo, ms.gridConfig) > cfg.alcanceM + 0.05) return { ok: false, reason: `${a.name} está fora de alcance.` };
     }
   }
-  return { ok: true, ids };
+  return { ok: true, ids, ...(selecaoValidada ? { selecaoValidada } : {}) };
 }

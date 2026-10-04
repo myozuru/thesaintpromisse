@@ -191,6 +191,21 @@ export const DICIONARIO_CONDICOES = [
   'cego',
   'surdo',
   'invisivel',
+  'engasgando',
+  'sangramento',
+  'sofrendo',
+  'indefeso',
+  'abalado',
+  'aterrorizado',
+  'confuso',
+  'caido',
+  'enredado',
+  'imovel',
+  'lento',
+  'surpreso',
+  'fragilizado',
+  'marcado',
+  'desmaiado',
 ] as const;
 
 export type CondicaoId = (typeof DICIONARIO_CONDICOES)[number];

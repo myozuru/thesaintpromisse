@@ -829,6 +829,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                                   <SelectTrigger className="w-40 h-8 text-xs"><SelectValue /></SelectTrigger>
                                   <SelectContent>
                                     {DICIONARIO_CONDICOES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                    {a.acao === 'REMOVER_CONDICAO' && <SelectItem value="todas">Todas as condições</SelectItem>}
                                   </SelectContent>
                                 </Select>
                               ) : a.acao === 'DISPARAR_GATILHO' ? (

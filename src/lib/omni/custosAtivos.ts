@@ -38,8 +38,13 @@ export function planejarCustosAtivos(cfg: AcaoAtivaConfig, u: Character, intensi
     }
     const max = numero(c?.max_intensificacoes);
     if (!Number.isSafeInteger(intensificacoes) || intensificacoes < 0 || intensificacoes > max) return { ok: false, reason: `Intensificação deve ser inteira entre 0 e ${max}.` };
-    const base = c?.pe_base !== undefined ? numero(c.pe_base) : Math.max(0, Math.round(avaliarFormula(cfg.custoPE || '0', variaveis).valor));
-    const pe = base + numero(c?.pe_por_intensificacao) * intensificacoes;
+    const legado = c?.pe_base === undefined ? avaliarFormula(cfg.custoPE || '0', variaveis, () => 0.5) : undefined;
+    if (legado && (legado.diagnosticos.length || legado.rolagens.length || !Number.isFinite(legado.valor) || legado.valor < 0 || !Number.isSafeInteger(Math.round(legado.valor)))) throw new Error('Custo de PE inválido: use fórmula não negativa e sem dados.');
+    const base = c?.pe_base !== undefined ? numero(c.pe_base) : Math.round(legado!.valor);
+    const brutoPE = base + numero(c?.pe_por_intensificacao) * intensificacoes;
+    const redutorPE = u.omniCostReduction?.pe;
+    if (redutorPE && (![redutorPE.reduce, redutorPE.min ?? 1].every(n => Number.isSafeInteger(n) && n >= 0))) throw new Error('Redutor de custo de PE inválido.');
+    const pe = brutoPE > 0 && redutorPE && redutorPE.reduce > 0 ? Math.max(redutorPE.min ?? 1, brutoPE - redutorPE.reduce) : brutoPE;
     if (!Number.isSafeInteger(pe)) throw new Error('Custo de PE fora do limite numérico.');
     if (c?.limite_pe !== undefined && pe > numero(c.limite_pe)) return { ok: false, reason: 'Custo excede o limite de PE configurado.' };
     const pv = numero(c?.custo_pv);
@@ -51,7 +56,7 @@ export function planejarCustosAtivos(cfg: AcaoAtivaConfig, u: Character, intensi
       const capacidade = capacidadePorNome(contexto.armaNome);
       if (capacidade === null) throw new Error(`${contexto.armaNome} não usa munição configurada.`);
       const restanteAntes = tirosRestantes(u, contexto.armaNome) ?? capacidade;
-      if (restanteAntes < municao) throw new Error(`Munição insuficiente em ${contexto.armaNome} (tem ${restanteAntes}, precisa de ${municao}).`);
+      if (!Number.isSafeInteger(restanteAntes) || restanteAntes < municao) throw new Error(`Munição insuficiente em ${contexto.armaNome} (tem ${restanteAntes}, precisa de ${municao}).`);
       armaMunicao = { nome: contexto.armaNome, restanteAntes };
     }
     let instanciaItemId: string | undefined;
@@ -64,7 +69,7 @@ export function planejarCustosAtivos(cfg: AcaoAtivaConfig, u: Character, intensi
       const total = item.usosTotais ?? item.entity.usos?.total;
       const restante = item.usosRestantes ?? total;
       if (total === undefined) throw new Error('O item desta ação não possui usos limitados configurados.');
-      if (restante === undefined || restante < usosItem) throw new Error(`Usos insuficientes do item (tem ${restante ?? 0}, precisa de ${usosItem}).`);
+      if (!Number.isSafeInteger(total) || !Number.isSafeInteger(restante) || restante! < usosItem) throw new Error(`Usos insuficientes do item (tem ${restante ?? 0}, precisa de ${usosItem}).`);
       instanciaItemId = item.instanceId;
     }
     const g = c?.gastar_cargas;
@@ -74,24 +79,27 @@ export function planejarCustosAtivos(cfg: AcaoAtivaConfig, u: Character, intensi
     if (g || cfg.consumirContador) {
       if (!contador) throw new Error('Informe o nome do contador.');
       cargas = g && g.quantidade !== 'todas' ? numero(g.quantidade) : tem;
-      const minimo = g ? (g.minimo ?? 1) : Math.max(1, cfg.consumirContador!.minimo);
+      if (!Number.isSafeInteger(tem) || tem < 0) throw new Error('Saldo de cargas inválido.');
+      const minimo = g ? (g.minimo ?? 1) : cfg.consumirContador!.minimo;
+      if (!Number.isSafeInteger(minimo) || minimo < 1) throw new Error('Mínimo de cargas deve ser um inteiro positivo.');
       if (cargas < 1 || tem < Math.max(minimo, cargas)) return { ok: false, reason: `Cargas insuficientes de ${contador} ou quantidade inválida (tem ${tem}).` };
     }
     const pePorTurno = c?.tipo_acao === 'sustentada' ? numero(c.pe_por_turno) : 0;
-    if (c?.tipo_acao === 'sustentada' && !cfg.efeitos?.some(e => e.tipo === 'condicao')) throw new Error('Ação sustentada exige ao menos uma condição para manter.');
+    if (c?.tipo_acao === 'sustentada' && ![...(cfg.efeitos ?? []), ...Object.values(cfg.desfechosTR ?? {}).flatMap(r => r?.efeitos ?? [])].some(e => e.tipo === 'condicao')) throw new Error('Ação sustentada exige ao menos uma condição para manter.');
     if (c?.tipo_acao === 'sustentada' && pePorTurno < 1) throw new Error('Ação sustentada exige PE por turno maior que zero.');
     const acao = c?.tipo_acao && c.tipo_acao !== 'sustentada' ? c.tipo_acao : cfg.acao;
+    if (!['comum', 'bonus', 'reacao', 'livre'].includes(acao)) throw new Error('Tipo de ação inválido.');
     return { ok: true, plano: { pe, pv, cargas, contador, municao, armaMunicao, usosItem, instanciaItemId, acao, intensificacoes, maxIntensificacoes: max, pePorTurno } };
   } catch (e) { return { ok: false, reason: e instanceof Error ? e.message : 'Custos inválidos.' }; }
 }
 
 export function validarRecursosAtivos(u: Character, p: PlanoCustosAtivos): { ok: true } | { ok: false; reason: string } {
-  if ((u.peCurrent ?? 0) + (u.tempPE ?? 0) < p.pe) return { ok: false, reason: `PE insuficiente (precisa de ${p.pe}).` };
+  if (![u.peCurrent ?? 0, u.tempPE ?? 0].every(n => Number.isFinite(n) && n >= 0) || (u.peCurrent ?? 0) + (u.tempPE ?? 0) < p.pe) return { ok: false, reason: `PE insuficiente (precisa de ${p.pe}).` };
   // Sacrifício usa PV reais, sem mitigação/escudo/PV temporários e sem matar o usuário.
-  if (p.pv > 0 && (u.hpCurrent ?? 0) <= p.pv) return { ok: false, reason: `PV insuficiente: o custo de ${p.pv} deve deixar ao menos 1 PV.` };
-  if (p.acao === 'comum' && (u.actionsCurrent ?? 1) <= 0) return { ok: false, reason: 'Sem Ação Comum disponível.' };
-  if (p.acao === 'bonus' && (u.bonusActionsCurrent ?? 1) <= 0) return { ok: false, reason: 'Sem Ação Bônus disponível.' };
-  if (p.acao === 'reacao' && (u.reactionsCurrent ?? 1) <= 0) return { ok: false, reason: 'Sem Reação disponível.' };
+  if (p.pv > 0 && (!Number.isFinite(u.hpCurrent) || (u.hpCurrent ?? 0) <= p.pv)) return { ok: false, reason: `PV insuficiente: o custo de ${p.pv} deve deixar ao menos 1 PV.` };
+  if (p.acao === 'comum' && (!Number.isFinite(u.actionsCurrent ?? 1) || (u.actionsCurrent ?? 1) < 1)) return { ok: false, reason: 'Sem Ação Comum disponível.' };
+  if (p.acao === 'bonus' && (!Number.isFinite(u.bonusActionsCurrent ?? 1) || (u.bonusActionsCurrent ?? 1) < 1)) return { ok: false, reason: 'Sem Ação Bônus disponível.' };
+  if (p.acao === 'reacao' && (!Number.isFinite(u.reactionsCurrent ?? 1) || (u.reactionsCurrent ?? 1) < 1)) return { ok: false, reason: 'Sem Reação disponível.' };
   return { ok: true };
 }
 
@@ -129,6 +137,8 @@ export function inicioTurnoSustentacoesAtivas(charId: string): void {
   for (const ativo of ativos) {
     const store = useCharacterStore.getState(), u = store.characters.find(c => c.id === charId);
     if (!u) return;
+    if (!u.omniSustentacoes?.some(s => s.id === ativo.id)) continue;
+    if (!ativo.condicoes.some(c => store.characters.find(x => x.id === c.charId)?.activeConditions?.some(a => a.id === c.id)) || !Number.isSafeInteger(ativo.pePorTurno) || ativo.pePorTurno < 1) { encerrarSustentacaoAtiva(charId, ativo.id); continue; }
     if ((u.peCurrent ?? 0) + (u.tempPE ?? 0) < ativo.pePorTurno) { encerrarSustentacaoAtiva(charId, ativo.id); continue; }
     const temp = Math.min(u.tempPE ?? 0, ativo.pePorTurno);
     store.updateCharacter(charId, { tempPE: (u.tempPE ?? 0) - temp, peCurrent: (u.peCurrent ?? 0) - (ativo.pePorTurno - temp) });

@@ -14,6 +14,7 @@ import { resolverTipoDano } from './contextoDano';
  * Proteção anti-loop em macros: profundidade ≤ 8.
  */
 import type { Character } from '@/types';
+import { resolverCondicaoOmni } from './condicaoDoSistema';
 import type {
   AcaoLogica,
   BlocoLogico,
@@ -195,13 +196,14 @@ function aplicarPatchNumerico(
   caminhoRaw: string,
   delta: number,
   modo: 'somar' | 'definir' | 'multiplicar' | 'dividir',
+  extras?: Parameters<typeof aplicarEfeitoNoPersonagem>[4],
 ) {
   if (modo === 'somar') {
-    aplicarEfeitoNoPersonagem(charId, delta < 0 ? 'SUBTRAIR' : 'ADICIONAR', caminhoRaw, Math.abs(delta));
+    aplicarEfeitoNoPersonagem(charId, delta < 0 ? 'SUBTRAIR' : 'ADICIONAR', caminhoRaw, Math.abs(delta), extras);
     return;
   }
   if (modo === 'definir') {
-    aplicarEfeitoNoPersonagem(charId, 'MODIFICADOR', caminhoRaw, delta);
+    aplicarEfeitoNoPersonagem(charId, 'MODIFICADOR', caminhoRaw, delta, extras);
     return;
   }
   const store = useCharacterStore.getState();
@@ -209,7 +211,7 @@ function aplicarPatchNumerico(
   if (!c) return;
   const atual = lerCaminhoOmni(c, caminhoRaw);
   const novo = modo === 'multiplicar' ? atual * delta : delta === 0 ? atual : atual / delta;
-  aplicarEfeitoNoPersonagem(charId, 'MODIFICADOR', caminhoRaw, novo);
+  aplicarEfeitoNoPersonagem(charId, 'MODIFICADOR', caminhoRaw, novo, extras);
 }
 
 function executarAcao(a: AcaoLogica, ctx: ContextoRuntime, log: (m: string) => void) {
@@ -217,6 +219,7 @@ function executarAcao(a: AcaoLogica, ctx: ContextoRuntime, log: (m: string) => v
   const alvoChar = personagemDoEscopo(ctx, a.alvoAplicacao);
   const nomeAlvo = alvoChar?.name ?? '—';
   const nomeOrigem = ctx.origemNome ?? 'Omni';
+  const extras = { attackerId: ctx.usuario?.id, damageType: a.tipoDano, sourceName: nomeOrigem };
 
   switch (a.acao) {
     case 'DANO': {
@@ -240,14 +243,14 @@ function executarAcao(a: AcaoLogica, ctx: ContextoRuntime, log: (m: string) => v
         const red = alvoChar.omniCostReduction?.[key];
         let custo = Math.abs(valor);
         if (red && red.reduce > 0) custo = Math.max(red.min ?? 1, custo - red.reduce);
-        aplicarPatchNumerico(alvoChar.id, a.caminhoAlvo, Math.max(0, lerCaminhoOmni(alvoChar, a.caminhoAlvo) - custo), 'definir');
+        aplicarPatchNumerico(alvoChar.id, a.caminhoAlvo, Math.max(0, lerCaminhoOmni(alvoChar, a.caminhoAlvo) - custo), 'definir', extras);
         log(`${nomeOrigem}: ${nomeAlvo} gastou ${custo} em ${a.caminhoAlvo}${red ? ` (reduzido de ${Math.abs(valor)})` : ''}`);
       }
       break;
     }
     case 'SOMAR': {
       if (alvoChar && a.caminhoAlvo) {
-        aplicarPatchNumerico(alvoChar.id, a.caminhoAlvo, valor, 'somar');
+        aplicarPatchNumerico(alvoChar.id, a.caminhoAlvo, valor, 'somar', extras);
         log(`${nomeOrigem}: ${nomeAlvo} ${valor >= 0 ? '+' : ''}${valor} em ${a.caminhoAlvo}`);
       }
       break;
@@ -263,14 +266,14 @@ function executarAcao(a: AcaoLogica, ctx: ContextoRuntime, log: (m: string) => v
           log(`${nomeOrigem}: 🛡️ ${nomeAlvo} absorveu o dano com Bloqueio Total`);
           break;
         }
-        aplicarPatchNumerico(alvoChar.id, a.caminhoAlvo, -Math.abs(valor), 'somar');
+        aplicarPatchNumerico(alvoChar.id, a.caminhoAlvo, -Math.abs(valor), 'somar', extras);
         log(`${nomeOrigem}: ${nomeAlvo} -${Math.abs(valor)} em ${a.caminhoAlvo}`);
       }
       break;
     }
     case 'DEFINIR': {
       if (alvoChar && a.caminhoAlvo) {
-        aplicarPatchNumerico(alvoChar.id, a.caminhoAlvo, valor, 'definir');
+        aplicarPatchNumerico(alvoChar.id, a.caminhoAlvo, valor, 'definir', extras);
         log(`${nomeOrigem}: ${nomeAlvo}.${a.caminhoAlvo} = ${valor}`);
       }
       break;
@@ -281,9 +284,13 @@ function executarAcao(a: AcaoLogica, ctx: ContextoRuntime, log: (m: string) => v
         // calculadas a partir do `valor` (compat legado); senão 1 rodada.
         const duracaoEfetiva = a.duracao
           ?? { tipo: 'rodadas' as const, valor: { tipo: 'fixo' as const, valor: Math.max(1, valor || 1) } };
-        const valorDuracao = duracaoEfetiva.valor && duracaoEfetiva.valor.tipo === 'fixo'
-          ? duracaoEfetiva.valor.valor
-          : Math.max(1, valor || 1);
+        const valorDuracao = duracaoEfetiva.valor ? resolverValorDinamico(duracaoEfetiva.valor, ctx) : Math.max(1, valor || 1);
+        if (!Number.isFinite(valorDuracao) || valorDuracao < 0) throw new Error('Duração de condição inválida.');
+        const def = resolverCondicaoOmni(a.condicao);
+        const conditionId = def?.id ?? a.condicao;
+        const instanceId = crypto.randomUUID();
+        useCharacterStore.getState().addCondition(alvoChar.id, { id: instanceId, conditionId, name: def?.name ?? a.condicao, icon: def?.icon ?? '✨', remainingTurns: -1, remainingRounds: -1, sourceCharId: ctx.usuario?.id, sourceCharName: nomeOrigem });
+        if (!useCharacterStore.getState().characters.find(c => c.id === alvoChar.id)?.activeConditions.some(c => c.id === instanceId)) break;
         // Registra como efeito ativo no runtime (visualização + expiração).
         const fakeEnt: EntidadeOmni = {
           id: `cond-${a.condicao}`,
@@ -303,7 +310,7 @@ function executarAcao(a: AcaoLogica, ctx: ContextoRuntime, log: (m: string) => v
           sourceCharId: ctx.usuario?.id,
           duracaoValor: valorDuracao,
           duracaoOverride: duracaoEfetiva,
-          meta: { condicao: a.condicao },
+          meta: { condicao: conditionId, conditionInstanceId: instanceId },
         });
         log(`${nomeOrigem}: ${nomeAlvo} ganhou a condição "${a.condicao}"`);
       }
@@ -311,11 +318,16 @@ function executarAcao(a: AcaoLogica, ctx: ContextoRuntime, log: (m: string) => v
     }
     case 'REMOVER_CONDICAO': {
       if (alvoChar && a.condicao) {
+        const def = resolverCondicaoOmni(a.condicao);
+        const conditionId = def?.id ?? a.condicao;
         const rt = useOmniRuntimeStore.getState();
         for (const ef of Object.values(rt.efeitos)) {
-          if (ef.targetCharId === alvoChar.id && (ef.meta as { condicao?: string } | undefined)?.condicao === a.condicao) {
+          if (ef.targetCharId === alvoChar.id && (a.condicao === 'todas' && !!(ef.meta as { condicao?: string } | undefined)?.condicao || (ef.meta as { condicao?: string } | undefined)?.condicao === conditionId)) {
             rt.removerEfeito(ef.id);
           }
+        }
+        for (const ac of useCharacterStore.getState().characters.find(c => c.id === alvoChar.id)?.activeConditions ?? []) {
+          if (a.condicao === 'todas' || ac.conditionId === conditionId || ac.name.toLocaleLowerCase() === a.condicao.toLocaleLowerCase()) useCharacterStore.getState().removeCondition(alvoChar.id, ac.id);
         }
         log(`${nomeOrigem}: removida a condição "${a.condicao}" de ${nomeAlvo}`);
       }
@@ -353,14 +365,14 @@ function executarAcao(a: AcaoLogica, ctx: ContextoRuntime, log: (m: string) => v
     }
     case 'MULTIPLICAR': {
       if (alvoChar && a.caminhoAlvo) {
-        aplicarPatchNumerico(alvoChar.id, a.caminhoAlvo, valor, 'multiplicar');
+        aplicarPatchNumerico(alvoChar.id, a.caminhoAlvo, valor, 'multiplicar', extras);
         log(`${nomeOrigem}: ${nomeAlvo}.${a.caminhoAlvo} ×${valor}`);
       }
       break;
     }
     case 'DIVIDIR': {
       if (alvoChar && a.caminhoAlvo) {
-        aplicarPatchNumerico(alvoChar.id, a.caminhoAlvo, valor, 'dividir');
+        aplicarPatchNumerico(alvoChar.id, a.caminhoAlvo, valor, 'dividir', extras);
         log(`${nomeOrigem}: ${nomeAlvo}.${a.caminhoAlvo} ÷${valor}`);
       }
       break;
