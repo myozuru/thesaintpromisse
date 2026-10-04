@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { useMapStore, type Entity } from './useMapStore';
 import { useCharacterStore } from './useCharacterStore';
 import { distanciaCircularMetros } from '@/lib/mapa/alcanceCircular';
+import { resolverTokenDaFicha } from '@/lib/mapa/tokenDaFicha';
 import type { Character } from '@/types';
 
 export type PedidoAlvoMapa = {
@@ -11,9 +12,8 @@ export type PedidoAlvoMapa = {
 let resolver: ((ids: string[] | null) => void) | null = null;
 export const useAlvoMapaStore = create<{ pending: PedidoAlvoMapa | null; selecionados: string[]; erro: string | null }>(() => ({ pending: null, selecionados: [], erro: null }));
 export function tokenDaFicha(char: Character): Entity | undefined {
-  const candidates = Object.values(useMapStore.getState().entities).filter(e => !e.hidden && !e.carriedBy && (e.layer ?? 'tokens') === 'tokens' && useMapStore.getState().layerVisible[e.layer ?? 'tokens'] !== false);
-  return candidates.filter(e=>e.characterId===char.id).sort((a,b)=>a.id.localeCompare(b.id))[0]
-    ?? candidates.filter(e=>!e.characterId && !!char.profileId && (e.avatarProfileId===char.profileId || e.ownerProfileId===char.profileId)).sort((a,b)=>a.id.localeCompare(b.id))[0];
+  const ms = useMapStore.getState();
+  return resolverTokenDaFicha(char, ms.entities, ms.layerVisible);
 }
 export function alvosNoAlcance(pedido: PedidoAlvoMapa): Character[] {
   const chars = useCharacterStore.getState().characters;

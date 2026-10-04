@@ -5,7 +5,7 @@ import { avaliarFormula } from './parser';
 import { montarVariaveisDoPersonagem } from './resolvedor';
 import { useMapStore } from '@/stores/useMapStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
-import { findCharEntity } from '@/lib/touchRange';
+import { resolverTokenDaFicha } from '@/lib/mapa/tokenDaFicha';
 import { distanciaCircularMetros } from '@/lib/mapa/alcanceCircular';
 import { findEntitiesInTemplate } from '@/lib/mapAoE';
 import type { MapTemplate } from '@/components/mapa/TemplateEngine';
@@ -60,7 +60,7 @@ export async function selecionarAlvosAtivos(usuarioId: string, cfg: AcaoAtivaCon
       return { ok: false, reason: 'Configure uma área com dimensões positivas.' };
     }
     let ms = useMapStore.getState();
-    let origem = findCharEntity(ms.entities, u.id);
+    let origem = resolverTokenDaFicha(u, ms.entities, ms.layerVisible);
     if (!origem) return { ok: false, reason: 'O usuário precisa estar no mapa para usar uma área.' };
     const kind = area.forma === 'cone' ? 'cone_attached' : area.forma === 'linha' ? 'line' : 'circle';
     let ponto: { x: number; y: number }, rotacao = 0;
@@ -79,7 +79,7 @@ export async function selecionarAlvosAtivos(usuarioId: string, cfg: AcaoAtivaCon
     // A mesa pode ter mudado enquanto o jogador posicionava a área.
     ms = useMapStore.getState();
     u = useCharacterStore.getState().characters.find(c => c.id === usuarioId);
-    origem = findCharEntity(ms.entities, usuarioId);
+    origem = u && resolverTokenDaFicha(u, ms.entities, ms.layerVisible);
     if (!u || !origem) return { ok: false, reason: 'Usuário removido do mapa.' };
     if (![ponto.x, ponto.y, rotacao].every(Number.isFinite)) return { ok: false, reason: 'Ponto ou direção inválidos.' };
     const pxM = (ms.gridConfig.dpi || 70) / (ms.gridConfig.metersPerCell || 1.5);
@@ -107,7 +107,7 @@ export async function selecionarAlvosAtivos(usuarioId: string, cfg: AcaoAtivaCon
     if (!aceitaAlvoAtivo(u, a, cfg)) return { ok: false, reason: `${a.name} não atende ao filtro de alvos.` };
     if (!cfg.tipo_alvo && a.id === u.id) return { ok: false, reason: 'O alvo deve ser outra criatura.' };
     if (tipo !== 'area' && tipo !== 'proprio' && cfg.alcanceM > 0) {
-      const ms = useMapStore.getState(), origem = findCharEntity(ms.entities, u.id), alvo = findCharEntity(ms.entities, id);
+      const ms = useMapStore.getState(), origem = resolverTokenDaFicha(u, ms.entities, ms.layerVisible), alvo = resolverTokenDaFicha(a, ms.entities, ms.layerVisible);
       if (!origem || !alvo) return { ok: false, reason: 'Usuário e alvo precisam estar no mapa para medir o alcance.' };
       if (origem && alvo && distanciaCircularMetros(origem, alvo, ms.gridConfig) > cfg.alcanceM + 0.05) return { ok: false, reason: `${a.name} está fora de alcance.` };
     }

@@ -38,7 +38,9 @@ import { useLogStore } from '@/stores/useLogStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { selectOmniModifiers } from '@/lib/omni/omniBridge';
 import { type ActiveCondition } from '@/types/conditions';
-import { findCharEntity, touchDistanceMeters, type TouchGrid } from '@/lib/touchRange';
+import type { TouchGrid } from '@/lib/touchRange';
+import { resolverTokenDaFicha } from '@/lib/mapa/tokenDaFicha';
+import { distanciaCircularMetros } from '@/lib/mapa/alcanceCircular';
 import { penalidadeTRFlanqueado } from '@/lib/flanqueadorSuperior';
 import { specDCFor } from '@/lib/golpeEspecial';
 import { rollD20Com, rollDiceGroups } from '@/lib/dice';
@@ -292,10 +294,10 @@ export function podeUsarAtiva(u: Character, alvo: Character | undefined, cfg: Ac
   if (!recursos.ok) return recursos;
   if (cfg.alcanceM > 0 && cfg.tipo_alvo !== 'area' && cfg.tipo_alvo !== 'proprio') {
     const ms = useMapStore.getState();
-    const a = findCharEntity(ms.entities as never, u.id), b = findCharEntity(ms.entities as never, alvo.id);
+    const a = resolverTokenDaFicha(u, ms.entities, ms.layerVisible), b = resolverTokenDaFicha(alvo, ms.entities, ms.layerVisible);
     if (!a || !b) return { ok: false, reason: 'Usuário e alvo precisam estar no mapa para medir o alcance.' };
     if (a && b) {
-      const d = touchDistanceMeters(a, b, ms.gridConfig as TouchGrid);
+      const d = distanciaCircularMetros(a, b, ms.gridConfig);
       if (d > cfg.alcanceM + 0.05) return { ok: false, reason: `Fora de alcance (${d.toFixed(1).replace('.', ',')} m de ${cfg.alcanceM.toString().replace('.', ',')} m).` };
     }
   }

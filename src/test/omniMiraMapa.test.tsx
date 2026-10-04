@@ -7,6 +7,8 @@ vi.mock('@/lib/socket', () => ({ getSocket: () => null }));
 import { ficha, montarMesa } from './helpers/mesaReal';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
+import { useMapStore } from '@/stores/useMapStore';
+import { resolverTokenDaFicha } from '@/lib/mapa/tokenDaFicha';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { novaEntidade, type AcaoAtivaConfig } from '@/lib/omni/tipos';
 import { AcoesAtivasSection } from '@/components/fichas/AcoesAtivasSection';
@@ -35,7 +37,11 @@ it('clique fora do círculo mantém a seleção; cancelar limpa a mira',async()=
   terminarAlvoMapa(null);
   expect(await p).toBeNull();
 });
-it('Usar e clique no token executam a ação sem abrir a ficha',async()=>{
+it.each(['direto', 'avatarProfileId', 'ownerProfileId'] as const)('Usar executa sem abrir ficha com vínculo %s',async vinculo=>{
+  if (vinculo !== 'direto') {
+    montarMesa([ficha('u',{profileId:'p-u',mainHandWeaponName:'Katana'}),ficha('a',{profileId:'p-a'})],{u:[0,0],a:[3,0]});
+    useMapStore.setState(s=>({entities:Object.fromEntries(Object.entries(s.entities).map(([id,e])=>[id,{...e,characterId:undefined,[vinculo]:e.characterId==='u'?'p-u':'p-a'}]))}));
+  }
   const ent={...novaEntidade('arma'),nome:'Katana',acoesAtivas:[cfg],usos:{total:3,recarga:'diaria' as const}};
   const item=useInventoryStore.getState().add('u',ent);
   const tabs:string[]=[];
@@ -58,4 +64,13 @@ it('a instrução não oferece seleção por nomes e mantém confirmação múlt
   act(()=>{ clicarAlvoMapa('e-a'); });
   fireEvent.click(screen.getByRole('button',{name:'Confirmar (1/2)'}));
   expect(await p).toEqual(['a']);
+});
+
+it('vínculo de perfil não toma token de outra ficha, oculto ou em camada desativada',()=>{
+  const ms=useMapStore.getState();
+  const t=ms.entities['e-u'];
+  const char={id:'nova',profileId:'p'};
+  expect(resolverTokenDaFicha(char,{t:{...t,characterId:'outra',ownerProfileId:'p'}},ms.layerVisible)).toBeUndefined();
+  expect(resolverTokenDaFicha(char,{t:{...t,characterId:undefined,ownerProfileId:'p',hidden:true}},ms.layerVisible)).toBeUndefined();
+  expect(resolverTokenDaFicha(char,{t:{...t,characterId:undefined,ownerProfileId:'p'}},{...ms.layerVisible,tokens:false})).toBeUndefined();
 });
