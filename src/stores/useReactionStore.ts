@@ -127,7 +127,7 @@ interface ReactionStoreState {
   reactionsUsedByChar: Record<string, number>;
   enqueue: (p: Omit<ReactionPrompt, 'id' | 'createdAt'>) => void;
   receiveRemote: (p: ReactionPrompt, requesterClientId: string) => void;
-  resolveDecision: (id: string, answer: number | null) => void;
+  resolveDecision: (id: string, answer: number | null) => boolean;
   dismiss: (id: string) => void;
   clearForChar: (charId: string) => void;
   /** Quantas reações o personagem ainda pode usar nesta rodada. */
@@ -160,14 +160,16 @@ export const useReactionStore = create<ReactionStoreState>((set, get) => ({
   })),
   resolveDecision: (id, answer) => {
     const prompt = get().prompts.find((entry) => entry.id === id);
+    const awaited = !!prompt?.remoteClientId || pendingReactionDecisions.has(id);
     if (prompt?.remoteClientId && typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('reaction-prompt:send', {
         detail: { tipo: 'resposta', requestId: id, clienteOrigem: prompt.remoteClientId, answer },
       }));
-    } else {
+    } else if (awaited) {
       completeReactionDecision(id, answer);
     }
     get().dismiss(id);
+    return awaited;
   },
   dismiss: (id) => set((state) => ({ prompts: state.prompts.filter((x) => x.id !== id) })),
   clearForChar: (charId) =>

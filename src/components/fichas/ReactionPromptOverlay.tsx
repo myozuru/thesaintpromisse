@@ -14,8 +14,6 @@
 import { useState } from 'react';
 import { useReactionStore, type ReactionPrompt, kindConsumesReaction } from '@/stores/useReactionStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
-import { useCombatStore } from '@/stores/useCombatStore';
-import { effectiveMovement } from '@/lib/movementBudget';
 import { useLogStore } from '@/stores/useLogStore';
 import { DAMAGE_TYPE_LABELS, type DamageType } from '@/types';
 import { rollDiceCom } from '@/lib/dice';
@@ -35,7 +33,6 @@ export function ReactionPromptOverlay() {
   const removeCondition = useCharacterStore(s => s.removeCondition);
   const useAlmaMaldita = useCharacterStore(s => s.useAlmaMaldita);
   const applyDamage = useCharacterStore(s => s.applyDamage);
-  const applyHealing = useCharacterStore(s => s.applyHealing);
   const addCondition = useCharacterStore(s => s.addCondition);
 
   if (prompts.length === 0) return null;
@@ -60,7 +57,8 @@ export function ReactionPromptOverlay() {
           prompt={p}
           reactionLocked={kindConsumesReaction(p.kind) && (reactionsUsedByChar[p.charId] ?? 0) >= 1}
           onDismiss={() => {
-            if (p.kind === 'cobrir_se_offer') useReactionStore.getState().resolveDecision(p.id, null);
+            if (p.kind === 'cobrir_se_offer' || p.kind === 'fah_anatomia_incompr_offer') useReactionStore.getState().resolveDecision(p.id, null);
+            else if (p.kind === 'lua_reacao_offer' || p.kind === 'fah_alma_maldita_offer') useReactionStore.getState().resolveDecision(p.id, 0);
             else dismiss(p.id);
           }}
           onNullify={(tier) => {
@@ -107,54 +105,35 @@ export function ReactionPromptOverlay() {
             dismiss(p.id);
           }}
           onAlmaMaldita={(useIt) => {
-            const raw = p.payload?.pendingSoulDamage ?? 0;
-            const opts = p.payload?.soulDamageOpts;
-            const opcoesResolvidas = { ...opts, tags: [...(opts?.tags ?? []), '__alma_maldita_resolved'] };
-            if (useIt) {
-              if (!canReact(p.charId, p.kind)) return;
-              const r = useAlmaMaldita(p.charId, raw);
-              if (r.ok) {
-                playSuccessSound();
-                consumeReaction(p.charId);
-                addLog('combat', `🩸 ${p.charName}: Alma Maldita — dano à Alma reduzido de ${raw} → ${r.reducedTo}. Restantes: ${r.usesLeft}.`);
-                if ((r.reducedTo ?? 0) > 0) {
-                  applyDamage(p.charId, r.reducedTo!, 'DAL', opcoesResolvidas);
-                }
-              } else {
-                playErrorSound();
-                addLog('system', `${p.charName}: ${r.reason ?? 'falha Alma Maldita'} — aplicando dano cheio.`);
-                applyDamage(p.charId, raw, 'DAL', opcoesResolvidas);
-              }
-            } else {
-              applyDamage(p.charId, raw, 'DAL', opcoesResolvidas);
-              addLog('combat', `${p.charName}: optou por NÃO usar Alma Maldita — sofreu ${raw} de dano à Alma.`);
+            if (useIt && !canReact(p.charId, p.kind)) return;
+            const awaited = useReactionStore.getState().resolveDecision(p.id, useIt ? 1 : 0);
+            if (!awaited) {
+              const raw = p.payload?.pendingSoulDamage ?? p.payload?.soulDamageRaw ?? 0;
+              const opts = p.payload?.soulDamageOpts;
+              const resolvedOpts = { ...opts, tags: [...(opts?.tags ?? []), '__alma_maldita_resolved'] };
+              if (useIt) {
+                const result = useAlmaMaldita(p.charId, raw);
+                if (result.ok && (result.reducedTo ?? 0) > 0) applyDamage(p.charId, result.reducedTo!, 'DAL', resolvedOpts);
+                else if (!result.ok) applyDamage(p.charId, raw, 'DAL', resolvedOpts);
+              } else applyDamage(p.charId, raw, 'DAL', resolvedOpts);
             }
-            dismiss(p.id);
+            if (!useIt) addLog('combat', `${p.charName}: optou por não usar Alma Maldita; o dano segue normalmente.`);
+            else playSuccessSound();
           }}
           onAnatomiaIncompreensivel={async () => {
             if (!canReact(p.charId, p.kind)) return;
-            consumeReaction(p.charId);
             // TR de Constituição vs CD informada no payload (cursedDC).
             const c = useCharacterStore.getState().characters.find((x) => x.id === p.charId);
-            if (!c) { dismiss(p.id); return; }
+            if (!c) { useReactionStore.getState().resolveDecision(p.id, null); return; }
             const con = c.attributes?.find((a) => a.name === 'Constituição');
             const conMod = con ? Math.floor((con.value - 10) / 2) : 0;
             const r = await rollDiceCom(p.charId, '1d20');
             const total = r.total + conMod;
             const dc = p.payload?.cursedDC ?? 12;
             const passed = total >= dc;
-            const raw = p.payload?.critDamageRaw ?? 0;
-            if (passed) {
-              // Mitigação: cura metade do dano sofrido (representa "ferida não atinge órgão vital").
-              const heal = Math.floor(raw / 2);
-              applyHealing(p.charId, heal, 'other');
-              playSuccessSound();
-              addLog('combat', `🧬 ${p.charName}: Anatomia Incompreensível — TR CON ${total} vs CD ${dc} ✅ — cura ${heal} (metade do crítico).`);
-            } else {
-              playErrorSound();
-              addLog('combat', `🧬 ${p.charName}: Anatomia Incompreensível — TR CON ${total} vs CD ${dc} ❌ — dano integral mantido.`);
-            }
-            dismiss(p.id);
+            useReactionStore.getState().resolveDecision(p.id, passed ? 2 : 1);
+            if (passed) playSuccessSound(); else playErrorSound();
+            addLog('combat', `🧬 ${p.charName}: TR CON ${total} vs CD ${dc} ${passed ? '✅' : '❌'}.`);
           }}
           onPresencaNefastaRoll={async (enemy) => {
             const dc = p.payload?.cursedDC ?? 12;
@@ -177,31 +156,18 @@ export function ReactionPromptOverlay() {
             playClickSound();
           }}
           onLua={(useIt) => {
-            const raw = p.payload?.luaDamage ?? 0;
-            const type = p.payload?.luaDamageType;
-            const opts = (p.payload?.luaOpts ?? {}) as Parameters<typeof applyDamage>[3] & { tags?: string[] };
-            const tags = [...(opts?.tags ?? []), '__lua'];
             const c = useCharacterStore.getState().characters.find((x) => x.id === p.charId);
-            if (useIt && c && (c.reactionsCurrent ?? 0) > 0 && canReact(p.charId, p.kind)) {
-              const red = p.payload?.luaReducao ?? c.level ?? 1;
-              const reduced = Math.max(0, raw - red);
-              const used = useCombatStore.getState().movementUsedByChar[p.charId] ?? 0;
-              useCharacterStore.getState().updateCharacter(p.charId, {
-                reactionsCurrent: Math.max(0, (c.reactionsCurrent ?? 0) - 1),
-                mobilidadeReacaoM: effectiveMovement(c),
-                mobilidadeReacaoBase: used,
-                desengajado: true,
+            const use = useIt && !!c && (c.reactionsCurrent ?? 0) > 0 && canReact(p.charId, p.kind);
+            const awaited = useReactionStore.getState().resolveDecision(p.id, use ? 1 : 0);
+            if (!awaited) {
+              const opts = (p.payload?.luaOpts ?? {}) as Parameters<typeof applyDamage>[3] & { tags?: string[] };
+              applyDamage(p.charId, p.payload?.luaDamage ?? 0, p.payload?.luaDamageType, {
+                ...opts,
+                tags: [...(opts?.tags ?? []), '__lua'],
               });
-              consumeReaction(p.charId);
-              playSuccessSound();
-              addLog('combat', `🌙 Postura da Lua: ${p.charName} usa a reação — dano ${raw} → ${reduced} (−${Math.min(red, raw)}). Pode Andar (${effectiveMovement(c)} m) e está Desengajado até o fim do seu turno.`);
-              if (reduced > 0) applyDamage(p.charId, reduced, type, { ...opts, tags });
-            } else {
-              if (useIt) addLog('system', `${p.charName}: sem reação disponível — dano cheio.`);
-              else addLog('combat', `🌙 ${p.charName}: não usou a reação da Lua — sofreu ${raw} de dano.`);
-              applyDamage(p.charId, raw, type, { ...opts, tags });
             }
-            dismiss(p.id);
+            if (use) playSuccessSound();
+            else addLog('combat', `🌙 ${p.charName}: não usou Postura da Lua; o dano segue normalmente.`);
           }}
           onDevoradorAck={() => {
             addLog('combat', `⚡ ${p.charName}: Devorador de Energia — +1 tempPE.`);

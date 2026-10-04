@@ -7,6 +7,7 @@ import { registrarHistorico } from '@/lib/omni/componentes/eventos';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { distanceBetweenChars } from '@/lib/weaponRange';
+import { effectiveMovement } from '@/lib/movementBudget';
 import { markCharacterDeleted } from "@/lib/charSyncStamps";
 import { luaReducao, quebraPostura } from '@/lib/posturas';
 import { arsenalTrocaLivreDisponivel, arsenalBonusAoTrocar } from '@/lib/arsenalCiclico';
@@ -2124,6 +2125,12 @@ export const useCharacterStore = create<CharacterStore>()(
         // Fase 9 — captura "antes/depois" para detectar gatilho de Absorção Elemental.
         const NON_ELEMENTAL = new Set<DamageType>(['DCO', 'DP', 'DI', 'DPS', 'DAL']);
         const beforeChar = get().characters.find((cc) => cc.id === id);
+        const reservarContinuidadeReacao = () => {
+          const continuidade = reservarPassoOmni(cadeia);
+          if (!continuidade) return false;
+          opts = { ...opts, cadeia: continuidade };
+          return true;
+        };
 
         // ─── Especialista — Estilo do Interceptador (redução armada) ─────────
         if (beforeChar?.interceptGuard && totalDamage > 0 && !opts?.tags?.includes('__interceptado')) {
@@ -2139,20 +2146,37 @@ export const useCharacterStore = create<CharacterStore>()(
         // ─── Especialista — Postura da Lua (reação reduz dano de ataque pelo nível) ─
         if (beforeChar && opts?.attackerId && totalDamage > 0 && !opts?.tags?.includes('__lua')) {
           const red = luaReducao(beforeChar);
-          if (red > 0) {
-            // Pergunta ao jogador se usa a reação; o dano fica pendente até decidir.
-            setTimeout(() => {
-              import('@/stores/useReactionStore').then(({ useReactionStore }) => {
-                useReactionStore.getState().enqueue({
-                  charId: beforeChar.id,
-                  charName: beforeChar.name,
-                  kind: 'lua_reacao_offer',
-                  message: `🌙 ${beforeChar.name} foi atingido (${totalDamage} de dano). Usar a reação da Postura da Lua? Reduz ${red} e permite Andar e Desengajar.`,
-                  payload: { luaDamage: totalDamage, luaDamageType: damageType, luaReducao: red, luaOpts: { ...(opts ?? {}) } as Record<string, unknown> },
+          if (red > 0 && (beforeChar.reactionsCurrent ?? 0) > 0) {
+            const { useReactionStore, requestReactionDecision } = await import('@/stores/useReactionStore');
+            if (!useReactionStore.getState().hasReactionAvailable(id)) {
+              // A reação da rodada já foi gasta; aplica o dano sem abrir outra oferta.
+            } else {
+            const answer = await requestReactionDecision({
+              charId: beforeChar.id,
+              charName: beforeChar.name,
+              kind: 'lua_reacao_offer',
+              message: `🌙 ${beforeChar.name} receberá ${totalDamage} de dano. Usar a reação da Postura da Lua?`,
+              payload: { luaDamage: totalDamage, luaDamageType: damageType, luaReducao: red, luaOpts: { ...(opts ?? {}) } as Record<string, unknown> },
+            });
+            if (!reservarContinuidadeReacao()) return;
+            if (answer === 1) {
+              const current = get().characters.find((c) => c.id === id);
+              if (current && (current.reactionsCurrent ?? 0) > 0 && useReactionStore.getState().hasReactionAvailable(id)) {
+                const reduced = Math.max(0, rawDamage - red);
+                const used = useCombatStore.getState().movementUsedByChar[id] ?? 0;
+                get().updateCharacter(id, {
+                  reactionsCurrent: Math.max(0, (current.reactionsCurrent ?? 0) - 1),
+                  mobilidadeReacaoM: effectiveMovement(current),
+                  mobilidadeReacaoBase: used,
+                  desengajado: true,
                 });
-              });
-            }, 0);
-            return;
+                useReactionStore.getState().consumeReaction(id);
+                rawDamage = reduced;
+                try { useLogStore.getState().addLog('combat', `🌙 Postura da Lua: ${current.name} reduz o golpe para ${reduced} e pode Andar e Desengajar.`); } catch { /* noop */ }
+                if (rawDamage <= 0) return;
+              }
+            }
+            }
           }
         }
 
@@ -2166,18 +2190,26 @@ export const useCharacterStore = create<CharacterStore>()(
           (beforeChar.almaMalditaUses ?? 0) > 0 &&
           !opts?.tags?.includes('__alma_maldita_resolved')
         ) {
-          setTimeout(() => {
-            import('@/stores/useReactionStore').then(({ useReactionStore }) => {
-              useReactionStore.getState().enqueue({
-                charId: beforeChar.id,
-                charName: beforeChar.name,
-                kind: 'fah_alma_maldita_offer',
-                message: `${beforeChar.name} sofrerá ${rawDamage} de dano à Alma — Alma Maldita disponível (${beforeChar.almaMalditaUses}/${beforeChar.almaMalditaMax}).`,
-                payload: { soulDamageRaw: rawDamage, pendingSoulDamage: rawDamage, soulDamageOpts: { ...opts, attack: opts?.attack ? { ...opts.attack } : undefined, tags: opts?.tags ? [...opts.tags] : undefined } },
-              });
+          const { useReactionStore, requestReactionDecision } = await import('@/stores/useReactionStore');
+          if (useReactionStore.getState().hasReactionAvailable(id)) {
+            const answer = await requestReactionDecision({
+              charId: beforeChar.id,
+              charName: beforeChar.name,
+              kind: 'fah_alma_maldita_offer',
+              message: `${beforeChar.name} sofrerá ${rawDamage} de dano à Alma. Usar Alma Maldita?`,
+              payload: { soulDamageRaw: rawDamage, pendingSoulDamage: rawDamage, soulDamageOpts: { ...opts, attack: opts?.attack ? { ...opts.attack } : undefined, tags: opts?.tags ? [...opts.tags] : undefined } },
             });
-          }, 0);
-          return; // bloqueia aplicação até o prompt ser resolvido
+            if (!reservarContinuidadeReacao()) return;
+            if (answer === 1 && useReactionStore.getState().hasReactionAvailable(id)) {
+              const result = get().useAlmaMaldita(id, rawDamage);
+              if (result.ok && result.reducedTo != null) {
+                useReactionStore.getState().consumeReaction(id);
+                rawDamage = result.reducedTo;
+                try { useLogStore.getState().addLog('combat', `🩸 ${beforeChar.name}: Alma Maldita reduziu dano à Alma para ${rawDamage}.`); } catch { /* noop */ }
+                if (rawDamage <= 0) return;
+              }
+            }
+          }
         }
 
         // ─── FAH — Anatomia Incompreensível em crítico/furtivo ────────────────
@@ -2187,17 +2219,28 @@ export const useCharacterStore = create<CharacterStore>()(
           (opts?.tags?.includes('critical') || opts?.tags?.includes('furtivo')) &&
           !opts?.tags?.includes('__anat_incompr_resolved')
         ) {
-          setTimeout(() => {
-            import('@/stores/useReactionStore').then(({ useReactionStore }) => {
-              useReactionStore.getState().enqueue({
-                charId: beforeChar.id,
-                charName: beforeChar.name,
-                kind: 'fah_anatomia_incompr_offer',
-                message: `${beforeChar.name} foi atingido por crítico/furtivo (${rawDamage} ${damageType ?? '?'}) — Anatomia Incompreensível pode mitigar.`,
-                payload: { critDamageRaw: rawDamage, critDamageType: damageType, cursedDC: calcCursedDC(beforeChar) },
-              });
+          const { useReactionStore, requestReactionDecision } = await import('@/stores/useReactionStore');
+          if (useReactionStore.getState().hasReactionAvailable(id)) {
+            const answer = await requestReactionDecision({
+              charId: beforeChar.id,
+              charName: beforeChar.name,
+              kind: 'fah_anatomia_incompr_offer',
+              message: `${beforeChar.name} receberá um crítico/furtivo (${rawDamage} ${damageType ?? '?'}) — rolar TR de Constituição para mitigar?`,
+              payload: { critDamageRaw: rawDamage, critDamageType: damageType, cursedDC: calcCursedDC(beforeChar) },
             });
-          }, 0);
+            if (!reservarContinuidadeReacao()) return;
+            if (answer != null && useReactionStore.getState().hasReactionAvailable(id)) {
+              useReactionStore.getState().consumeReaction(id);
+              opts = { ...opts, tags: [...(opts?.tags ?? []), '__anat_incompr_resolved'] };
+              if (answer === 2) {
+                rawDamage = Math.floor(rawDamage / 2);
+                try { useLogStore.getState().addLog('combat', `🧬 ${beforeChar.name}: Anatomia Incompreensível reduziu o dano do crítico para ${rawDamage}.`); } catch { /* noop */ }
+              } else {
+                try { useLogStore.getState().addLog('combat', `🧬 ${beforeChar.name}: falhou no TR de Anatomia Incompreensível; sofre o dano integral.`); } catch { /* noop */ }
+              }
+              if (rawDamage <= 0) return;
+            }
+          }
         }
 
         // ─── Omni-Engine: gatilho REATIVO ao receber dano ───────────────
@@ -2210,7 +2253,8 @@ export const useCharacterStore = create<CharacterStore>()(
         // diretamente no dano deste hit. Após o disparo dos triggers,
         // relemos o valor: 0 → absorção total; N < raw → dano reduzido.
         // Snapshot desta resolução: o pre-hook ainda não conhece dano final.
-        const atacanteDano = opts?.attackerId ? get().characters.find((cc) => cc.id === opts.attackerId) : undefined;
+        const attackerIdDano = opts?.attackerId;
+        const atacanteDano = attackerIdDano ? get().characters.find((cc) => cc.id === attackerIdDano) : undefined;
         const mapaDano = useMapStore.getState();
         const distanciaDano = opts?.attackerId && beforeChar
           ? distanceBetweenChars(opts.attackerId, id, mapaDano.entities, mapaDano.gridConfig, {
@@ -2322,6 +2366,7 @@ export const useCharacterStore = create<CharacterStore>()(
                   hasCoberturaAvancada: hasAdvancedCover,
                 },
               });
+              if (!reservarContinuidadeReacao()) return;
               if (peSpent != null) {
                 const current = get().characters.find((c) => c.id === id);
                 if (current && peSpent > 0 && peSpent <= maxPe && peSpent <= (current.peCurrent ?? 0)) {
@@ -2438,8 +2483,9 @@ export const useCharacterStore = create<CharacterStore>()(
         // Se o dano zerou os PV do alvo e há um atacante identificado que seja
         // Especialista em Combate Nv 6+, ele recupera 1 PE (até o máximo).
         if (damageResolved && opts?.attackerId) {
+          const attackerId = opts.attackerId;
           const alvoDepois = get().characters.find((c) => c.id === id);
-          const atacante = get().characters.find((c) => c.id === opts.attackerId);
+          const atacante = get().characters.find((c) => c.id === attackerId);
           if (alvoDepois && (alvoDepois.hpCurrent ?? 0) <= 0 && atacante && renovacaoSangueAtiva(atacante)) {
             const ok = aplicarRenovacao(atacante, get().updateCharacter);
             if (ok) {
@@ -2589,7 +2635,7 @@ export const useCharacterStore = create<CharacterStore>()(
               get().releaseAllGrapplesOf(id);
               // Artes do Combate: eliminar um inimigo recupera 1 Ponto de Preparo.
               if (opts?.attackerId) {
-                void import('@/lib/artesCombate').then((m) => m.recoverPreparoOnKill(opts.attackerId!)).catch(() => {});
+                void import('@/lib/artesCombate').then((m) => m.recoverPreparoOnKill(opts?.attackerId!)).catch(() => {});
               }
             }
           }

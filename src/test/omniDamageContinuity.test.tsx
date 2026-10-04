@@ -81,7 +81,8 @@ describe('Alma Maldita preserva o golpe no fluxo real de reação', () => {
     expect(pegarFicha('alvo').hpCurrent).toBe(100 - expected);
     const opts = events.mock.calls.find(([e]) => e === 'aoCausarDano')![1]!;
     expect(opts.dano).toMatchObject({ tipo: 9, fonte: 2, foi_critico: 1, valor_final: expected, id_origem: 1 });
-    expect(applied.mock.lastCall![3]).toMatchObject({ attackerId: 'caster', source: 'feitico', ignoresRD: true, rdIgnore: 3, tags: ['original', '__alma_maldita_resolved'], attack: { critical: true, kind: 'cursed' } });
+    expect(applied).toHaveBeenCalledTimes(1);
+    expect(applied.mock.lastCall![3]).toMatchObject({ attackerId: 'caster', source: 'feitico', ignoresRD: true, rdIgnore: 3, tags: ['original'], attack: { critical: true, kind: 'cursed' } });
     expect(useReactionStore.getState().prompts).toHaveLength(0);
   });
   it('anulação total continua sem reaplicar dano ou emitir dano causado', async () => {
@@ -90,9 +91,9 @@ describe('Alma Maldita preserva o golpe no fluxo real de reação', () => {
     render(<ReactionPromptOverlay />);
     useCharacterStore.getState().applyDamage('alvo', 24, 'DAL', { attackerId: 'caster', source: 'feitico' });
     fireEvent.click(await screen.findByRole('button', { name: /Usar \(1 uso\)/ }));
-    expect(pegarFicha('alvo').hpCurrent).toBe(100);
+    await waitFor(() => expect(pegarFicha('alvo').hpCurrent).toBe(100));
     expect(events.mock.calls.some(([e]) => e === 'aoCausarDano')).toBe(false);
-    expect(pegarFicha('alvo').almaMalditaUses).toBe(0);
+    await waitFor(() => expect(pegarFicha('alvo').almaMalditaUses).toBe(0));
   });
   it('prompt legado sem opções continua aplicando dano sem inventar atacante', async () => {
     montarMesa([char('alvo')], {});

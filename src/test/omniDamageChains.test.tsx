@@ -159,7 +159,7 @@ describe('Limites permanecem válidos através de callbacks assíncronos', () =>
     cadeia.orcamento.restantes = 0;
     fireEvent.click(screen.getByRole('button', { name: 'Aceitar dano' }));
     expect(pegarFicha('alvo').hpCurrent).toBe(1000);
-    expect(warning).toHaveBeenCalled();
+    await waitFor(() => expect(warning).toHaveBeenCalled());
     expect(useReactionStore.getState().prompts).toHaveLength(0);
   });
   it('restaura escopo mesmo com erro e não mistura ações independentes', () => {

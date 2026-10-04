@@ -118,7 +118,7 @@ describe('Posturas em combate', () => {
     useCharacterStore.getState().applyDamage('ana', 10, undefined, { attackerId: 'bruno' });
     expect(pegarFicha('ana').hpCurrent).toBe(50);
     fireEvent.click(await screen.findByRole('button', { name: /Usar reação/ }));
-    expect(pegarFicha('ana').hpCurrent).toBe(50 - 6);
+    await waitFor(() => expect(pegarFicha('ana').hpCurrent).toBe(50 - 6));
     expect(pegarFicha('ana').reactionsCurrent).toBe(0);
     // Andar fora do turno: deslocamento inteiro liberado; Desengajado.
     expect(reactionMoveBudget(pegarFicha('ana'))).toBe(9);
@@ -142,7 +142,7 @@ describe('Posturas em combate', () => {
     render(<ReactionPromptOverlay />);
     useCharacterStore.getState().applyDamage('ana', 10, undefined, { attackerId: 'bruno' });
     fireEvent.click(await screen.findByRole('button', { name: /Aceitar dano/ }));
-    expect(pegarFicha('ana').hpCurrent).toBe(40);
+    await waitFor(() => expect(pegarFicha('ana').hpCurrent).toBe(40));
     expect(pegarFicha('ana').reactionsCurrent).toBe(1);
     expect(pegarFicha('ana').desengajado).toBeFalsy();
     useCharacterStore.getState().applyDamage('ana', 5);

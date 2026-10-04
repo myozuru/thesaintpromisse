@@ -7,7 +7,7 @@ vi.mock('@/integrations/supabase/safeClient', async () => ({ hasWorkspaceCloud: 
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
-import { useReactionStore } from '@/stores/useReactionStore';
+import { requestReactionDecision, useReactionStore } from '@/stores/useReactionStore';
 import { parseOmniScript } from '@/lib/omni/omniScript';
 import { novaEntidade } from '@/lib/omni/tipos';
 import type { EntidadeOmni } from '@/lib/omni/tipos';
@@ -99,6 +99,20 @@ describe('Cobrir-se antes da aplicação do dano', () => {
 
     expect(pegarFicha('alvo')).toMatchObject({ hpCurrent: 90, escCurrent: 0, peCurrent: 3 });
     expect(useReactionStore.getState().reactionsUsedByChar.alvo ?? 0).toBe(0);
+  });
+
+  it('encerra a espera no prazo e segue sem a reação quando não há resposta', async () => {
+    vi.useFakeTimers();
+    try {
+      montarMesa([char('alvo')], {});
+      const pending = requestReactionDecision({
+        charId: 'alvo', charName: 'alvo', kind: 'cobrir_se_offer', message: 'Decisão pendente',
+      }, 250);
+      expect(useReactionStore.getState().prompts).toHaveLength(1);
+      await vi.advanceTimersByTimeAsync(250);
+      await expect(pending).resolves.toBeNull();
+      expect(useReactionStore.getState().prompts).toHaveLength(0);
+    } finally { vi.useRealTimers(); }
   });
 });
 
