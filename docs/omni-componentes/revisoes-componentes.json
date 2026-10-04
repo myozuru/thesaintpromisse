@@ -1,0 +1,26 @@
+{
+  "pericia": {
+    "funcao": "Seleciona o bônus de uma perícia por identificador. O bônus é uma parcela do teste, não o resultado do d20; em vantagem/desvantagem, identifica a classe da rolagem.",
+    "exemplo": "pericia medicina consulta o bônus de Medicina. Com bônus 5, dado 10 produz total 15; contra CD 13, a comparação passa. Para disputa com outra ficha e modificadores do HUD, configure Disputa na ação ativa."
+  },
+  "astucia": {
+    "funcao": "Consulta o bônus de Astúcia para um Teste de Resistência; não substitui a rolagem.",
+    "exemplo": "Com Astúcia +4 e d20 9, o total é 13 e alcança CD 13 numa resistência a uma finta. Dado 8 totaliza 12 e falha. Configure TR Astúcia para usar os desfechos nativos."
+  },
+  "fortitude": {
+    "funcao": "Consulta o bônus de Fortitude, usado com o d20 na resistência física; não é RD.",
+    "exemplo": "Contra veneno CD 14, Fortitude +5 e dado 10 somam 15. Um bônus +5 sozinho não informa sucesso; o teste exige o dado ou a modalidade TR do construtor."
+  },
+  "integridade": {
+    "funcao": "Consulta o bônus da resistência Integridade, independente de Vontade.",
+    "exemplo": "Contra corrupção CD 14, Integridade +3 e dado 11 somam 14. A fórmula simples pode comparar esse total; TR Integridade permite configurar falha, sucesso e falha crítica."
+  },
+  "reflexos": {
+    "funcao": "Consulta o bônus de Reflexos para um TR; não é Defesa passiva nem estoque de Esquiva.",
+    "exemplo": "Contra explosão CD 14, Reflexos +6 e dado 8 somam 14. Use teste TR Reflexos e desfecho Sucesso com metade do dano para uma esquiva parcial, sem descontar PV por comparar apenas o bônus."
+  },
+  "vontade": {
+    "funcao": "Consulta o bônus da resistência Vontade, usado com o d20 contra efeitos mentais.",
+    "exemplo": "Contra medo CD 15, Vontade +5 e dado 10 somam 15; dado 9 soma 14 e falha. Integridade continua uma resistência distinta. Desfechos e condição do medo são configurados na ação."
+  }
+}

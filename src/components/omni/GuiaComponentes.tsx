@@ -14,7 +14,8 @@ export function GuiaComponentes({ inserir }: { inserir: (texto: string) => void 
   const total = modo === 'keys' ? keys.length : composicoes.length;
   const inicio = Math.min(pagina, Math.max(0, Math.ceil(total / tamanho) - 1)) * tamanho;
   return <div className="space-y-4">
-    <p className="text-sm leading-relaxed">Cada palavra é um componente reutilizável. <code>arma_principal leve</code> combina um seletor e uma propriedade. <code>corpo_a_corpo</code> permanece um componente completo.</p>
+    <p className="text-sm leading-relaxed">Cada termo reconhecido é um componente reutilizável. Combinações válidas seguem a gramática do motor; uma palavra isolada nem sempre produz um valor ou aceita escrita. <code>arma_principal leve</code> combina um seletor e uma propriedade. <code>corpo_a_corpo</code> permanece um componente completo.</p>
+    <p className="text-sm leading-relaxed">As fórmulas são efeitos. Configure quando executar, quem é o alvo e quais custos pagar no construtor. Um teste precisa de dado mais bônus; somar um bônus não define sua duração. Dano em vida passa pela mitigação do motor.</p>
     <div className="flex flex-wrap gap-2">
       <Button variant={modo === 'keys' ? 'default' : 'outline'} onClick={() => { setModo('keys'); setPagina(0); }}>303 componentes</Button>
       <Button variant={modo === 'composicoes' ? 'default' : 'outline'} onClick={() => { setModo('composicoes'); setPagina(0); }}>335 composições e exemplos</Button>

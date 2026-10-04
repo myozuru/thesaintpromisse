@@ -1,5 +1,8 @@
 # Validação final — etapa 15
 
+> Registro histórico da implementação em 15 etapas. A auditoria posterior, com números e pendências atuais, está em [Resultado da auditoria OMNI](../omni-auditoria-final.md).
+
+
 Data: 2026-10-03. Fonte aprovada: versão 3.0, SHA-256 `6a76f732640e80b4a9f613c17e9132ac134c3c565134e3ec285ebb33350f3956`.
 
 ## Resultado

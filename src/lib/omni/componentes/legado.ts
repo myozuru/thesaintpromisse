@@ -49,7 +49,8 @@ export function mesclarDados(a: DadosComposicao, b: DadosComposicao): DadosCompo
     const antigo = obj(x), novo = y as RegistroComposto;
     const campos = { ...antigo.campos };
     for (const [k, v] of Object.entries(novo.campos ?? {})) campos[k] = mesclar(campos[k], v);
-    return { ...antigo, ...novo, campos };
+    const definidos = Object.fromEntries(Object.entries(novo).filter(([, valor]) => valor !== undefined));
+    return { ...antigo, ...definidos, campos };
   }
   const selecoes = { ...a.selecoes };
   for (const [k, v] of Object.entries(b.selecoes)) selecoes[k] = mesclar(selecoes[k], v);

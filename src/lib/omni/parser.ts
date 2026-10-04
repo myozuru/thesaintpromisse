@@ -13,6 +13,7 @@ import { localizarComposicoes } from './componentes/expressoes';
 import { avaliarComposicao, type DadosComposicao } from './componentes/avaliar';
 import type { ContextoComposicao } from './componentes/composicao';
 import { extrairDadosCompostos } from './componentes/contexto';
+import { recursoComposto } from './componentes/recursos';
 import { dadosCena } from './componentes/cena';
 import { dadosEventoDano } from './componentes/eventos';
 import { mesclarDados, projetarDadosLegados } from './componentes/legado';
@@ -607,9 +608,10 @@ export function avaliarFormula(
   const composicoes = { ...extrairDadosCompostos(variaveis), ...extrairDadosCompostos(extras?.alvo ?? {}), ...extrairDadosCompostos(extras?.cena ?? {}), ...extras?.composicoes };
   if (extras?.cena && !extras.composicoes?.CENA) {
     const campos = Object.fromEntries(Object.entries(extras.cena).map(([k, v]) => [`CENA_${resolverChavePtBr(k.replace(/^CENA_/i, ''))}`, v]));
-    composicoes.CENA = mesclarDados(composicoes.CENA ?? projetarDadosLegados(bag, 'CENA', resolverChavePtBr), dadosCena(campos));
+    composicoes.CENA = mesclarDados(mesclarDados(composicoes.CENA ?? { selecoes: {} }, projetarDadosLegados(campos, 'CENA', resolverChavePtBr)), dadosCena(campos));
   }
   if ((extras?.dano || Object.keys(bag).some(k => k.startsWith('DANO_'))) && !composicoes.DANO) composicoes.DANO = mesclarDados(projetarDadosLegados(bag, 'DANO', resolverChavePtBr), dadosEventoDano(bag));
+  if (extras?.item && !composicoes.ITEM) composicoes.ITEM = { selecoes: { usos: recursoComposto(bag.ITEM_USOS_RESTANTES ?? 0, bag.ITEM_USOS_TOTAIS ?? 0) } };
   const ctx: ContextoAvaliacao = { variaveis: bag, armaDano: extras?.arma?.dano, rolagens: [], rng, diagnosticos: [], composicoes };
   const resolvida = preprocessar(expressao, ctx);
   try {

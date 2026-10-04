@@ -30,7 +30,7 @@ export function dadosHistorico(c: Character, rodada: number): DadosComposicao {
     fonte: { registros: Object.fromEntries(Object.entries(cs).filter(([k]) => k.startsWith(`${nome}__fonte__`)).map(([k, v]) => [k.slice(nome.length + 9), v])) },
   } }]));
   return { selecoes: {
-    contador: { registros: contador },
+    contador: { registros: contador, padrao: { valor: 0, existe: false, campos: { fonte: { registros: {}, padrao: 0 } } } },
     cura: { campos: { recebida: { valor: cs.cura_recebida ?? 0, campos: { rodada: atual ? cs.cura_recebida_nesta_rodada ?? 0 : 0 } } } },
     dano: { campos: { recebido: { valor: cs.ultimo_dano_recebido ?? 0, campos: { rodada: atual ? cs.dano_recebido_nesta_rodada ?? 0 : 0 } } } },
   } };

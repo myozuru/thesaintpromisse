@@ -43,7 +43,19 @@ for (const e of exemplos) {
    e.explicacao += ' Neste exemplo, metros_taticos é um contador de distância criado pela mesa. Inicialize-o antes da ação e vincule-o à regra de deslocamento personalizada; ele não altera automaticamente o orçamento do mapa.';
  }
 }
+const revisoes = JSON.parse(readFileSync('docs/omni-componentes/revisoes-guia.json', 'utf8'));
+for (const [id, revisao] of Object.entries(revisoes)) {
+  const exemplo = exemplos.find(e => e.id === id);
+  if (!exemplo || !revisao.formula || !revisao.explicacao) throw new Error(`Revisão inválida: ${id}`);
+  Object.assign(exemplo, revisao);
+}
 const componentes = contrato.componentes.map(c => Object.fromEntries(['id','key','papel','funcao','exemplo','contextosPorConversao'].map(k => [k,c[k]])));
-writeFileSync('src/lib/omni/componentes/catalogoUI.ts', `// Descrições individuais do contrato aprovado.\nexport const CATALOGO_COMPONENTES_UI = ${JSON.stringify(componentes)} as const;\n`);
-writeFileSync('src/lib/omni/componentes/exemplosUI.ts', `// Exemplos individuais da especificação, com contratos numéricos verificados.\nexport const EXEMPLOS_COMPONENTES_UI = ${JSON.stringify(exemplos)} as const;\n`);
+const revisoesComponentes = JSON.parse(readFileSync('docs/omni-componentes/revisoes-componentes.json', 'utf8'));
+for (const [key, revisao] of Object.entries(revisoesComponentes)) {
+  const componente = componentes.find(c => c.key === key);
+  if (!componente) throw new Error(`Componente da revisão ausente: ${key}`);
+  Object.assign(componente, revisao);
+}
+writeFileSync('src/lib/omni/componentes/catalogoUI.ts', `// Descrições individuais do contrato, com revisões funcionais documentadas.\nexport const CATALOGO_COMPONENTES_UI = ${JSON.stringify(componentes)} as const;\n`);
+writeFileSync('src/lib/omni/componentes/exemplosUI.ts', `// Exemplos individuais; revisões funcionais em docs/omni-componentes/revisoes-guia.json.\nexport const EXEMPLOS_COMPONENTES_UI = ${JSON.stringify(exemplos)} as const;\n`);
 console.log(`${componentes.length} componentes e ${exemplos.length} exemplos individuais gerados.`);

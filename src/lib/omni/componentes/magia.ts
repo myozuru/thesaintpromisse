@@ -29,7 +29,7 @@ export function dadosMagia(c: Character, bag: Record<string, number>): DadosComp
       pronto: feiticos.filter(f => f.campos.prontos), anterior: c.lastSpellUsedId ? { id: c.lastSpellUsedId, valor: true } : undefined } },
     buffs: ativos,
     buff: { registros: Object.fromEntries(buffs.map((b, i) => [b.spellName, ativos[i]])) },
-    condicoes, condicao: { registros: Object.fromEntries(condicoes.map(x => [x.id, x])) },
+    condicoes, condicao: { padrao: { valor: false, existe: false, campos: { idade: -1, idade_conhecida: false, restante: -1, restantes: -1 } }, registros: Object.fromEntries(condicoes.map(x => [x.id, x])) },
     concentracao: { quantidade: n('QTD_CONCENTRANDO'), campos: { max: n('MAX_CONCENTRACAO'), maximo: n('MAX_CONCENTRACAO'), livre: n('SLOTS_CONCENTRACAO_LIVRES') } },
     sustentacao: { quantidade: buffs.filter(b => b.isSustained).length,
       campos: { max: n('MAX_SUSTENTADOS'), maximo: n('MAX_SUSTENTADOS'), livre: Math.max(0, n('MAX_SUSTENTADOS') - buffs.filter(b => b.isSustained).length),

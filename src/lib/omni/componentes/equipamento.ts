@@ -44,7 +44,7 @@ export function dadosEquipamento(c: Character, bag: Record<string, number>): Dad
   const equipado = (i: typeof itens[number]) => (catalogo[i.entity.id] ?? i.entity).categoria === 'arma' ? nasMaos.has(i.instanceId) : Boolean(i.isEquipped);
   // Preferir o exemplar equipado quando várias cópias têm o mesmo template.
   const porTemplate = [...itens].sort((a, b) => Number(equipado(a)) - Number(equipado(b)));
-  selecoes.item = { registros: Object.fromEntries(porTemplate.map(i => [i.entity.id, { id: i.entity.id,
+  selecoes.item = { padrao: { valor: false, existe: false, campos: { equipado: false } }, registros: Object.fromEntries(porTemplate.map(i => [i.entity.id, { id: i.entity.id,
     valor: true, campos: { equipado: equipado(i), usos: recursoComposto(i.usosRestantes ?? 0, i.usosTotais ?? 0) } }])) };
   selecoes.itens = itens.map(i => ({ id: i.entity.id, campos: { equipados: equipado(i) } }));
   const money = useMoneyStore.getState();

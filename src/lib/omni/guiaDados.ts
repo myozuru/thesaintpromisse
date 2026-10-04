@@ -5,6 +5,7 @@ import {
   ROTULOS_GATILHOS,
   type ChaveOmniOpcao,
 } from './constantesDoSistema';
+import { EXEMPLOS_GATILHOS } from './exemplosGatilhos';
 import { ALIASES_POR_EVENTO } from './gatilhoAliases';
 import { LEGACY_TO_CANONICAL } from './keyAliases';
 
@@ -196,7 +197,8 @@ export const GATILHOS_GUIA_OMNI = Object.values(GATILHOS_EVENTOS).map((id) => ({
   id,
   rotulo: ROTULOS_GATILHOS[id],
   aliases: ALIASES_POR_EVENTO[id],
-  exemplo: `@${ALIASES_POR_EVENTO[id][0]} -> `,
+  exemplo: `@${ALIASES_POR_EVENTO[id][0]} -> ${EXEMPLOS_GATILHOS[id].efeito}`,
+  explicacao: EXEMPLOS_GATILHOS[id].explicacao,
 }));
 export const ACOES_GUIA_OMNI = Object.entries(ACOES_EFEITO).map(([id, acao]) => ({
   id,

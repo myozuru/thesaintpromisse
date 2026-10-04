@@ -4,7 +4,7 @@
  * Cada receita é um conjunto pronto de efeitos que pode ser injetado
  * diretamente em `combatData.effects` da entidade que está sendo editada.
  * Servem como atalho didático para o Mestre — clicar em "Drenar Vida"
- * preenche os 2 efeitos (dano + cura) automaticamente.
+ * configura o gatilho pós-dano que concede a cura.
  */
 import type { CombatEffect } from './tipos';
 
@@ -48,11 +48,10 @@ export const RECEITAS_OMNI: ReceitaOmni[] = [
     id: 'drenar-vida',
     emoji: '🩸',
     nome: 'Drenar Vida',
-    descricao: 'Causa dano no alvo e cura o usuário em metade do dano.',
+    descricao: 'Após causar dano, cura o portador em metade do dano final, arredondada para baixo. Ex.: dano bruto 10 reduzido a 6 cura 3 PV; não inicia outro ataque.',
     cor: 'misto',
     build: () => [
-      eff({ formula: '1d6 + @USUARIO.forca', type: 'SUBTRAIR', target: 'ALVO', damageType: 'Necrótico', resourcePath: 'vida_atual' }),
-      eff({ formula: '@RESULTADO_1 / 2', type: 'ADICIONAR', target: 'USUARIO', damageType: 'Cura', resourcePath: 'vida_atual' }),
+      eff({ formula: 'floor(@DANO.valor_final / 2)', trigger: 'aoCausarDano', type: 'ADICIONAR', target: 'USUARIO', damageType: 'Cura', resourcePath: 'vida_atual' }),
     ],
   },
   {
@@ -69,7 +68,7 @@ export const RECEITAS_OMNI: ReceitaOmni[] = [
     id: 'dano-critico-massivo',
     emoji: '💥',
     nome: 'Dano Crítico Massivo',
-    descricao: 'Dano explosivo: 3d10 + Força com dados explosivos.',
+    descricao: 'Rola 3d10 explosivos e soma Força. Um d10 com 10 rola novamente e acrescenta o novo resultado. Isso não rola acerto nem torna o ataque crítico: configure teste Ataque na ação.',
     cor: 'dano',
     build: () => [
       eff({ formula: '3d10! + @USUARIO.forca', type: 'SUBTRAIR', target: 'ALVO', damageType: 'Cortante', resourcePath: 'vida_atual' }),
@@ -79,11 +78,11 @@ export const RECEITAS_OMNI: ReceitaOmni[] = [
     id: 'sacrificio',
     emoji: '💀',
     nome: 'Pacto de Sacrifício',
-    descricao: 'Custa 10% da vida do usuário e causa esse mesmo valor x3 ao alvo.',
+    descricao: 'Aplica dano Necrótico ao usuário igual a 10% dos PV e usa RESULTADO_1×3 no alvo, numa cadeia que forneça esse resultado. Ambos passam por mitigação; para custo sacrificial sem mitigação, configure custo_pv na ação ativa.',
     cor: 'misto',
     build: () => [
       eff({ formula: 'floor(@USUARIO.vida * 0.1)', type: 'SUBTRAIR', target: 'USUARIO', damageType: 'Necrótico', resourcePath: 'vida_atual' }),
-      eff({ formula: '@RESULTADO_1 * 3', type: 'SUBTRAIR', target: 'ALVO', damageType: 'Sombrio', resourcePath: 'vida_atual' }),
+      eff({ formula: '@RESULTADO_1 * 3', type: 'SUBTRAIR', target: 'ALVO', damageType: 'Necrótico', resourcePath: 'vida_atual' }),
     ],
   },
   {
@@ -99,11 +98,11 @@ export const RECEITAS_OMNI: ReceitaOmni[] = [
   {
     id: 'buff-forca',
     emoji: '✦',
-    nome: 'Buff de Força (+5)',
-    descricao: 'Aplica modificador positivo de +5 na Força do usuário.',
+    nome: 'Proteção pela Força',
+    descricao: 'Usa Força como escala para conceder PV temporários: Força 3 concede 11 (3×2 + 5). Não altera o atributo base.',
     cor: 'buff',
     build: () => [
-      eff({ formula: '@USUARIO.forca + 5', type: 'MODIFICADOR', target: 'USUARIO', damageType: 'Buff', resourcePath: 'forca' }),
+      eff({ formula: '@USUARIO.for * 2 + 5', type: 'ADICIONAR', target: 'USUARIO', damageType: 'Buff', resourcePath: 'vida_temp' }),
     ],
   },
   {
@@ -130,11 +129,11 @@ export const RECEITAS_OMNI: ReceitaOmni[] = [
     id: 'choque-encadeado',
     emoji: '⚡',
     nome: 'Choque Encadeado',
-    descricao: 'Dano em duas etapas: a segunda é metade da primeira.',
+    descricao: 'Duas descargas no mesmo alvo: segunda usa metade de RESULTADO_1 numa cadeia que forneça esse resultado. Cada descarga passa por mitigação. Para vários alvos, configure Área na ação ativa.',
     cor: 'dano',
     build: () => [
       eff({ formula: '2d6 + @USUARIO.inteligencia', type: 'SUBTRAIR', target: 'ALVO', damageType: 'Elétrico', resourcePath: 'vida_atual' }),
-      eff({ formula: 'floor(@RESULTADO_1 / 2)', type: 'SUBTRAIR', target: 'AREA', damageType: 'Elétrico', resourcePath: 'vida_atual' }),
+      eff({ formula: 'floor(@RESULTADO_1 / 2)', type: 'SUBTRAIR', target: 'ALVO', damageType: 'Elétrico', resourcePath: 'vida_atual' }),
     ],
   },
   {
@@ -151,28 +150,27 @@ export const RECEITAS_OMNI: ReceitaOmni[] = [
     id: 'drenagem-vampirica',
     emoji: '🧛',
     nome: 'Drenagem Vampírica (Lifesteal)',
-    descricao: 'Causa dano e cura o usuário em metade do dano causado.',
+    descricao: 'Cura 50% do dano final no evento ao causar dano. Com 9 efetivos, cura 4; com 0, não cura. Use como passiva do portador, sem duplicar o dano-base.',
     cor: 'misto',
     build: () => [
-      eff({ formula: '1d8 + @USUARIO.forca', type: 'SUBTRAIR', target: 'ALVO', damageType: 'Necrótico', resourcePath: 'vida_atual' }),
-      eff({ formula: 'floor(@RESULTADO_1 * 0.5)', type: 'ADICIONAR', target: 'USUARIO', damageType: 'Cura', resourcePath: 'vida_atual' }),
+      eff({ formula: 'floor(@DANO.valor_final * 0.5)', trigger: 'aoCausarDano', type: 'ADICIONAR', target: 'USUARIO', damageType: 'Cura', resourcePath: 'vida_atual' }),
     ],
   },
   {
     id: 'escalonamento-percentual',
     emoji: '📈',
     nome: 'Escalonamento por % (15%)',
-    descricao: 'Causa dano igual a 15% da vida máxima do alvo (ignora resistências escalares).',
+    descricao: 'Aplica dano Energético bruto de 15% da Vida Máxima. Máximo 100 gera 15 antes de mitigação; o motor continua respeitando RD, resistências e imunidades.',
     cor: 'dano',
     build: () => [
-      eff({ formula: '@ALVO.vida_max * 0.15', type: 'SUBTRAIR', target: 'ALVO', damageType: 'Verdadeiro', resourcePath: 'vida_atual' }),
+      eff({ formula: '@ALVO.vida_max * 0.15', type: 'SUBTRAIR', target: 'ALVO', damageType: 'Energético', resourcePath: 'vida_atual' }),
     ],
   },
   {
     id: 'vitalidade-mestre',
     emoji: '👑',
     nome: 'Vitalidade do Mestre',
-    descricao: 'Fixa a Vida Máxima do usuário como (vida_max + treino × 2). Use em passivas/itens permanentes.',
+    descricao: 'Ao executar, define Vida Máxima como máximo atual + Treino×2. Máximo 40 e Treino 3 passam a 46; repetir passa a 52. Para bônus fixo de equipamento, use bonusEquipado, evitando reaplicação.',
     cor: 'buff',
     build: () => [
       eff({

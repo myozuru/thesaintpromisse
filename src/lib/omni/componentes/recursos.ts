@@ -13,6 +13,10 @@ export function dadosRecursos(bag: Record<string, number>): DadosComposicao {
   const vida = n('VIDA'), maxVida = n('VIDA_MAX'), pe = n('PE'), maxPE = n('PE_MAX');
   const temporaria = recursoComposto(n('VIDA_TEMP'), n('VIDA_TEMP_MAX'));
   const selecoes: Record<string, DadoComposto> = {
+    sacrificio: recursoComposto(n('HP_SACRIFICADO'), maxVida),
+    suporte: { campos: { nivel: { registros: { '2': n('SUPORTE_LV2_UNLOCKED') } } } },
+    origem: { registros: Object.fromEntries(Object.entries(bag).filter(([k]) => k.startsWith('ORIGEM_ID_')).map(([k,v]) => [k.slice('ORIGEM_ID_'.length).toLowerCase(), v])), padrao: false },
+    especializacao: { registros: Object.fromEntries(Object.entries(bag).filter(([k]) => k.startsWith('ESPECIALIZACAO_ID_')).map(([k,v]) => [k.slice('ESPECIALIZACAO_ID_'.length).toLowerCase(), v])), padrao: false },
     vida: recursoComposto(vida, maxVida, { temporaria, temporarios: temporaria, total: vida + n('VIDA_TEMP'),
       sacrificada: recursoComposto(n('HP_SACRIFICADO'), maxVida), recuperavel: n('PODE_SER_CURADO') }),
     pe: recursoComposto(pe, maxPE, { temporario: n('PE_TEMP'), temporaria: n('PE_TEMP') }),

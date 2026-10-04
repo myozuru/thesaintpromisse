@@ -8,7 +8,7 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { CombateEstilosPanel } from '@/components/fichas/CombateEstilosPanel';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { interceptadorDice } from '@/lib/combateInterceptador';
-import { ficha, montarMesa, limparMesa, comoTela, pegarFicha } from './helpers/mesaReal';
+import { ficha, montarMesa, limparMesa, comoTela, pegarFicha, esperar } from './helpers/mesaReal';
 
 const inter = (extra = {}) => ficha('ana', {
   profileId: 'p-ana', characterClass: 'Feiticeiro', specialization: 'Especialista em Combate',
@@ -23,7 +23,7 @@ function abrir(pos: Record<string, [number, number]>, extra = {}) {
 }
 
 beforeEach(async () => { await import('@/lib/omni/executor'); comoTela({ profileId: 'p-ana', role: 'PLAYER' }); });
-afterEach(() => { cleanup(); limparMesa(); vi.restoreAllMocks(); });
+afterEach(async () => { await esperar(10); cleanup(); limparMesa(); vi.restoreAllMocks(); });
 
 describe('Estilo do Interceptador em combate', () => {
   it('aliado a 1,5 m: gasta reação e reduz o próximo dano real (só uma vez)', () => {

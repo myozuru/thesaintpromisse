@@ -1,0 +1,182 @@
+{
+  "195": {
+    "formula": "se 1d20 + @USUARIO.pericia acrobacia > @ALVO.acerto entao somar 1d6 em @USUARIO.vida temporaria",
+    "explicacao": "Para escapar de um golpe, role d20 e some Acrobacia. Dado 12 e bônus 4 somam 16: contra o bônus de Acerto 7 usado como limiar desta regra, concede 1d6 PV temporários. Esta comparação não usa a rolagem do atacante; para uma oposição real, configure Disputa no construtor."
+  },
+  "196": {
+    "formula": "se 1d20 + @USUARIO.pericia atletismo > 1d20 + @ALVO.pericia atletismo entao subtrair 1d8 em @ALVO.vida",
+    "explicacao": "Na disputa de força, cada lado rola seu próprio d20 e soma Atletismo. Usuário: dado 9 + bônus 6 = 15; alvo: dado 12 + bônus 4 = 16. Neste caso não há dano. Empate também não aplica, pois a fórmula exige >, como a disputa nativa que favorece o defensor. Esta fórmula causa impacto; empurrar exige adicionar Movimento no construtor."
+  },
+  "197": {
+    "formula": "se 1d20 + @USUARIO.pericia direcao >= @CENA.dificuldade entao somar 3 em @USUARIO.contador metros_taticos",
+    "explicacao": "Para conduzir o veículo na curva, compare d20 + Direção com a CD informada na cena. Dado 8 + bônus 4 = 12 passa em CD 12 e acrescenta 3 ao contador metros_taticos; dado 7 soma 11 e não acrescenta. Esse contador registra avanço narrativo e não move uma peça nem altera o orçamento nativo do mapa."
+  },
+  "198": {
+    "formula": "se 1d20 + @USUARIO.pericia enganacao > 1d20 + @ALVO.pericia intuicao entao subtrair 1d8 em @ALVO.vida",
+    "explicacao": "Numa finta verbal, o usuário rola d20 + Enganação e o alvo rola outro d20 + Intuição. Totais 17 contra 15 liberam 1d8; totais iguais não liberam. O dano é uma consequência desta regra da mesa, não parte automática da perícia. Para seleção de alvo e disputa com o HUD, use a modalidade Disputa da ação ativa."
+  },
+  "199": {
+    "formula": "se 1d20 + @USUARIO.pericia feiticaria >= @CENA.dificuldade entao subtrair 2d8 em @ALVO.vida",
+    "explicacao": "Para romper o selo, role d20 + Feitiçaria contra a dificuldade recebida na cena. Dado 10 + bônus 5 = 15 passa em CD 14 e causa 2d8 brutos ao alvo; dado 8 soma 13 e não causa dano. A comparação desta fórmula não faz ataque de arma nem consome PE: configure esses custos na ação."
+  },
+  "200": {
+    "formula": "se 1d20 + @USUARIO.pericia furtividade > 1d20 + @ALVO.pericia percepcao entao subtrair 2d6 em @ALVO.vida",
+    "explicacao": "Na emboscada, role separadamente d20 + Furtividade e d20 + Percepção. Usuário 11 + 9 = 20 contra alvo 14 + 7 = 21 não libera 2d6; usuário 15 + 9 = 24 libera. A fórmula não altera visibilidade dos tokens. Para uma oposição registrada no HUD, configure Disputa entre essas perícias."
+  },
+  "201": {
+    "formula": "se 1d20 + @USUARIO.pericia historia >= @CENA.dificuldade entao somar 1 em @USUARIO.sorte",
+    "explicacao": "Para reconhecer o brasão, d20 + História precisa atingir a CD. Dado 10 + bônus 4 = 14 passa em CD 14 e concede 1 Sorte, respeitando o máximo; dado 9 soma 13 e não concede. O efeito modifica apenas Sorte: revelar uma pista permanece decisão narrativa do Mestre."
+  },
+  "202": {
+    "formula": "se 1d20 + @USUARIO.pericia intimidacao > 1d20 + @ALVO.vontade entao aplicar amedrontado rodadas 1",
+    "explicacao": "A ameaça compara d20 + Intimidação do usuário com outro d20 + Vontade do alvo. Totais 16 contra 14 aplicam Amedrontado por uma rodada; empate 14 contra 14 não aplica. É uma oposição simples nesta fórmula, sem graus críticos; para uma resistência nativa, configure TR Vontade com CD no construtor."
+  },
+  "203": {
+    "formula": "se 1d20 + @USUARIO.pericia intuicao > 1d20 + @ALVO.pericia enganacao entao somar 2 em @USUARIO.acerto",
+    "explicacao": "Para identificar o blefe, o usuário rola d20 + Intuição e o adversário rola d20 + Enganação. Totais 18 contra 16 concedem +2 de Acerto; empate não concede. O comando soma esse bônus à ficha e não revela automaticamente a finta nem limita o bônus ao próximo ataque; configure remoção/duração na regra correspondente."
+  },
+  "204": {
+    "formula": "se 1d20 + @USUARIO.pericia investigacao >= @CENA.dificuldade entao somar 2 em @USUARIO.reserva pe",
+    "explicacao": "Ao buscar o compartimento oculto, d20 + Investigação enfrenta a CD da cena. Dado 12 + bônus 5 = 17 passa em CD 15 e acrescenta 2 à Reserva de PE, respeitando seu teto; dado 9 soma 14 e não acrescenta. A fórmula não transfere esse PE para a energia atual nem cria um item no mapa."
+  },
+  "205": {
+    "formula": "se 1d20 + @USUARIO.pericia medicina >= @CENA.dificuldade entao somar 2d8 em @ALVO.vida",
+    "explicacao": "Nos primeiros socorros, compare d20 + Medicina com a CD do ferimento. Dado 10 + bônus 5 = 15 passa em CD 13 e rola 2d8 de cura para o alvo; dado 7 soma 12 e não cura. A cura respeita limites e impedimentos da ficha. Esta linha não paga uma ação ou kit de medicina; configure-os como custos."
+  },
+  "206": {
+    "formula": "se 1d20 + @USUARIO.pericia ocultismo >= @CENA.dificuldade entao subtrair 2d8 em @ALVO.vida",
+    "explicacao": "Para inverter a marca amaldiçoada, d20 + Ocultismo deve alcançar a CD. Dado 11 + bônus 5 = 16 passa em CD 14 e causa 2d8 brutos à entidade-alvo; dado 8 soma 13 e não aplica. O comando não remove a marca nem desativa automaticamente uma zona de terreno: essas consequências precisam de efeitos próprios."
+  },
+  "207": {
+    "formula": "se 1d20 + @USUARIO.pericia oficio1 >= @CENA.dificuldade entao somar 1d8 em @USUARIO.vida temporaria",
+    "explicacao": "Se Ofício 1 representa ferraria, role d20 e some seu bônus para reforçar uma armadura. Dado 8 + bônus 4 = 12 passa em CD 11 e concede 1d8 PV temporários; em CD 13, o mesmo total falha. A proteção é concedida à ficha do usuário, sem criar equipamento ou aumentar a Defesa."
+  },
+  "208": {
+    "formula": "se 1d20 + @USUARIO.pericia oficio2 >= @CENA.dificuldade entao somar 1 em @USUARIO.pe",
+    "explicacao": "Se Ofício 2 representa fabricação de talismãs, d20 + o bônus enfrenta a CD da receita. Dado 11 + bônus 5 = 16 passa em CD 15 e recupera 1 PE atual; dado 9 soma 14 e não recupera. A fórmula não cria um talismã no inventário nem consome materiais: o Mestre configura esses passos separadamente."
+  },
+  "209": {
+    "formula": "se 1d20 + @USUARIO.pericia oficio3 >= @CENA.dificuldade entao somar 1d6 em @ALVO.vida",
+    "explicacao": "Se Ofício 3 representa culinária de campo, d20 + o bônus enfrenta a CD da refeição. Dado 9 + bônus 4 = 13 passa em CD 12 e cura 1d6 PV do aliado selecionado; dado 7 soma 11 e não cura. A especialidade do Ofício é definida na ficha; a fórmula não desconta comida ou água."
+  },
+  "210": {
+    "formula": "se 1d20 + @USUARIO.pericia percepcao > 1d20 + @ALVO.pericia furtividade entao somar 2 em @USUARIO.acerto",
+    "explicacao": "O sentinela e o invasor rolam separadamente d20 + Percepção e d20 + Furtividade. Totais 18 contra 16 concedem +2 de Acerto ao sentinela; empate ou total menor não concedem. A fórmula altera o bônus, sem tornar o token visível nem reservá-lo apenas para o primeiro disparo."
+  },
+  "211": {
+    "formula": "se 1d20 + @USUARIO.pericia performance >= @CENA.dificuldade entao somar 1d6 em @ALVO.vida",
+    "explicacao": "Na apresentação inspiradora, d20 + Performance enfrenta a CD do público. Dado 10 + bônus 5 = 15 passa em CD 13 e cura 1d6 PV do aliado; dado 7 soma 12 e não cura. É uma regra de apoio da mesa: Performance por si só não restaura vida, e a seleção de aliados deve ser configurada na ação."
+  },
+  "212": {
+    "formula": "se 1d20 + @USUARIO.pericia persuasao > 1d20 + @ALVO.pericia intuicao entao somar 2 em @ALVO.vida temporaria",
+    "explicacao": "Para convencer o aliado a manter a posição, compare dois dados: d20 + Persuasão contra d20 + Intuição. Totais 18 contra 16 concedem 2 PV temporários; empate não concede. A proteção não cura PV normais e a fórmula não muda controle ou comportamento do personagem."
+  },
+  "213": {
+    "formula": "se 1d20 + @USUARIO.pericia prestidigitacao > 1d20 + @ALVO.pericia percepcao entao somar 2 em @USUARIO.acerto",
+    "explicacao": "Na finta com uma moeda, role d20 + Prestidigitação contra outro d20 + Percepção. Totais 17 contra 15 concedem +2 de Acerto; empate não concede. O bônus somado permanece até ser removido por outra regra, portanto uma vantagem válida para um único ataque deve usar o fluxo de modificador com duração apropriada."
+  },
+  "214": {
+    "formula": "se 1d20 + @USUARIO.pericia sobrevivencia >= @CENA.dificuldade entao somar 1d8 em @USUARIO.vida",
+    "explicacao": "Para encontrar ervas durante o descanso, d20 + Sobrevivência enfrenta a CD da região. Dado 9 + bônus 4 = 13 passa em CD 12 e cura 1d8 PV do usuário; dado 7 soma 11 e não cura. A fórmula não avança o relógio nem consome um descanso automaticamente."
+  },
+  "215": {
+    "formula": "se 1d20 + @USUARIO.pericia tecnologia >= @CENA.dificuldade entao somar 2 em @USUARIO.contador metros_taticos",
+    "explicacao": "Para abrir a passagem eletrônica, compare d20 + Tecnologia com a CD do bloqueio. Dado 9 + bônus 4 = 13 passa em CD 12 e acrescenta 2 ao contador metros_taticos; dado 7 soma 11 e não acrescenta. O contador é narrativo: a fórmula não abre uma porta do mapa nem aumenta deslocamento nativo."
+  },
+  "216": {
+    "formula": "se 1d20 + @USUARIO.pericia teologia >= @CENA.dificuldade entao subtrair 2d6 em @ALVO.vida",
+    "explicacao": "No exorcismo, d20 + Teologia enfrenta a CD do ritual. Dado 12 + bônus 6 = 18 passa em CD 16 e causa 2d6 brutos ao alvo; dado 9 soma 15 e não causa dano. Defina o tipo de dano no efeito se a mesa exigir dano Radiante; a perícia não determina esse tipo automaticamente."
+  },
+  "027": {
+    "formula": "se 1d20 + @ALVO.astucia >= @CENA.dificuldade entao somar 1 em @ALVO.acerto",
+    "explicacao": "Nesta resistência simples contra finta, compare d20 + o bônus de Astucia com a CD da cena. Dado 9 + bônus 4 = 13 passa em CD 13 e executa somente o comando após entao; total menor não executa esse ramo. A key contém o bônus, não um resultado já rolado. Para TR com natural 1, falha crítica, metade do dano e consequências distintas, configure teste TR no construtor em vez desta comparação simples."
+  },
+  "156": {
+    "formula": "se 1d20 + @ALVO.fortitude >= @CENA.dificuldade entao subtrair 1d8 em @ALVO.vida",
+    "explicacao": "Nesta resistência simples contra veneno, compare d20 + o bônus de Fortitude com a CD da cena. Dado 10 + bônus 5 = 15 passa em CD 14 e executa somente o comando após entao; total menor não executa esse ramo. A key contém o bônus, não um resultado já rolado. Para TR com natural 1, falha crítica, metade do dano e consequências distintas, configure teste TR no construtor em vez desta comparação simples."
+  },
+  "168": {
+    "formula": "se 1d20 + @ALVO.integridade >= @CENA.dificuldade entao subtrair 1d6 em @ALVO.vida",
+    "explicacao": "Nesta resistência simples contra corrupção, compare d20 + o bônus de Integridade com a CD da cena. Dado 11 + bônus 3 = 14 passa em CD 14 e executa somente o comando após entao; total menor não executa esse ramo. A key contém o bônus, não um resultado já rolado. Para TR com natural 1, falha crítica, metade do dano e consequências distintas, configure teste TR no construtor em vez desta comparação simples."
+  },
+  "261": {
+    "formula": "se 1d20 + @ALVO.reflexos >= @CENA.dificuldade entao subtrair 1d6 em @ALVO.vida",
+    "explicacao": "Nesta resistência simples contra explosão, compare d20 + o bônus de Reflexos com a CD da cena. Dado 8 + bônus 6 = 14 passa em CD 14 e executa somente o comando após entao; total menor não executa esse ramo. A key contém o bônus, não um resultado já rolado. Para TR com natural 1, falha crítica, metade do dano e consequências distintas, configure teste TR no construtor em vez desta comparação simples."
+  },
+  "335": {
+    "formula": "se 1d20 + @ALVO.vontade >= @CENA.dificuldade entao subtrair 1 em @ALVO.empolgacao",
+    "explicacao": "Nesta resistência simples contra medo, compare d20 + o bônus de Vontade com a CD da cena. Dado 10 + bônus 5 = 15 passa em CD 15 e executa somente o comando após entao; total menor não executa esse ramo. A key contém o bônus, não um resultado já rolado. Para TR com natural 1, falha crítica, metade do dano e consequências distintas, configure teste TR no construtor em vez desta comparação simples."
+  },
+  "031": {
+    "formula": "se @USUARIO.atencao >= @ALVO.pericia furtividade entao somar 2 em @USUARIO.acerto",
+    "explicacao": "Atenção é uma defesa passiva: compare-a com o bônus de Furtividade do alvo para este requisito da mesa. Atenção 15 contra bônus 14 concede +2 de Acerto; contra bônus 16, não concede. Esta linha não rola dados, não revela tokens ocultos e não limita o bônus ao próximo ataque. Para descobrir alguém por um teste, use a perícia Percepção na modalidade Disputa."
+  },
+  "056": {
+    "formula": "se 1d20 + @USUARIO.pericia ocultismo >= @CENA.dificuldade entao somar 1 em @USUARIO.sorte",
+    "explicacao": "A dificuldade é o limiar informado para esta execução. Com CD 14, dado 9 + Ocultismo 5 = 14 concede 1 Sorte; dado 8 soma 13 e não concede. O bônus de Ocultismo sozinho não é o resultado do teste. Se o evento não fornecer a CD, defina-a no fluxo antes de usar a comparação."
+  },
+  "039": {
+    "formula": "se @ALVO.reducao dano fisico aura >= 1 entao subtrair 2d8 em @ALVO.vida tipo \"Cortante\"",
+    "explicacao": "Contra um alvo com RD física de aura, aplica 2d8 brutos de dano Cortante. A key confirma que existe a proteção; não é subtraída da fórmula, pois o motor de dano calcula a mitigação. Dados totalizando 9 com redução efetiva 3 deixam 6 antes das demais proteções. Com a consulta em zero, este ramo não aplica dano."
+  },
+  "260": {
+    "formula": "se @ALVO.reducao dano alma >= 1 entao subtrair 2d8 em @ALVO.vida tipo \"DAL\"",
+    "explicacao": "Este ramo atinge uma criatura que tem redução de Alma com 2d8 brutos desse tipo. A consulta verifica a proteção, mas não a desconta manualmente: o motor aplica a redução correspondente uma vez. O tipo Alma deve acompanhar o dano, pois Cortante ou dano sem tipo não representam esse ataque. Esta fórmula não impõe mínimo de 1 após mitigação."
+  },
+  "265": {
+    "formula": "se @ALVO.reducao dano >= 4 entao subtrair 2d8 em @ALVO.vida tipo \"Impacto\"",
+    "explicacao": "A manobra é reservada a alvos com RD de pelo menos 4. Aplica 2d8 brutos de Impacto e deixa o motor descontar a RD uma vez: dados 9 contra RD 4 deixam 5, antes de escudos e outras proteções. Não escreva 2d8 - RD e depois aplique em vida, pois esse caminho já mitiga o dano. RD abaixo de 4 não satisfaz o requisito desta manobra."
+  },
+  "077": {
+    "formula": "@inicio_turno -> se @CENA.rodada = 1 entao somar 2 em @USUARIO.acerto",
+    "explicacao": "No início do turno do portador, verifica se a rodada atual é 1 e soma +2 de Acerto. Na rodada 2 não soma novamente. O bônus já concedido não desaparece quando a condição passa a falsa: configure a remoção ao terminar sua duração. Rodada é informação da cena; não use um watcher de recurso da ficha para observá-la."
+  },
+  "078": {
+    "formula": "@fim_turno -> se @CENA.rodadas_em_combate >= 4 entao subtrair 1d8 em @USUARIO.vida tipo \"Veneno\"",
+    "explicacao": "Um veneno vinculado ao portador causa 1d8 bruto de Veneno ao fim de cada turno a partir da quarta rodada. Nas rodadas 1 a 3 não causa dano. O alvo aqui é o próprio portador envenenado; a condição consulta a rodada da cena e o gatilho nomeado define quando executar. A fórmula não observa o relógio em segundo plano."
+  },
+  "266": {
+    "formula": "@inicio_turno -> se @CENA.rodada = 3 entao subtrair 2d6 em @USUARIO.vida tipo \"Impacto\"",
+    "explicacao": "Uma armadilha vinculada ao portador o atinge com 2d6 brutos de Impacto ao início de seu turno na rodada 3. Rodada 2 ou 4 não aplica. O comando não escolhe sozinho uma vítima no mapa: para uma armadilha persistente que detecta entrada, use Zona de Terreno. O gatilho nomeado evita confundir rodada da cena com recurso observado da ficha."
+  },
+  "316": {
+    "formula": "se @ALVO.vida <= 10 entao subtrair 2d8 em @ALVO.vida",
+    "explicacao": "Como efeito adicional de um ataque já acertado, compara os PV atuais da vítima com 10. Alvo com 10 PV ou menos recebe 2d8 brutos; com 11 não recebe esse adicional. Use ALVO para a vítima e configure o evento de acerto ou uma ação ativa com teste Ataque. Esta condição sozinha não observa a vida continuamente nem rola acerto."
+  },
+  "094": {
+    "formula": "se @ALVO.tem condicao amedrontado > 0 e @ALVO.restante condicao amedrontado <= 1 entao remover amedrontado",
+    "explicacao": "Ao executar uma purificação no alvo, confirma Amedrontado ativo e duração restante de uma rodada ou menos, então remove a condição. Com duas rodadas restantes, mantém; duração indefinida não passa pelo limite. A checagem de existência impede tratar o valor sentinela de condição ausente como duração válida. Nenhuma rodada é avançada por esta fórmula."
+  },
+  "114": {
+    "formula": "se @DANO.dano final >= 20 entao somar 1 em @USUARIO.sorte",
+    "explicacao": "Execute após um evento de dano resolvido: se DANO final for pelo menos 20, concede 1 Sorte ao portador. Dano bruto 24 reduzido a 18 não passa. O campo é o valor efetivo publicado pelo produtor do evento, conforme a mitigação daquele fluxo; não confunda com dano base da arma. Configure o gatilho de dano e respeite o limite de Sorte da ficha."
+  },
+  "115": {
+    "formula": "somar min(@DANO.dano inicial, 10) em @USUARIO.vida temporaria",
+    "explicacao": "Concede PV temporários iguais ao dano inicial do evento, com teto 10: inicial 14 concede 10; inicial 6 concede 6. DANO só existe quando o produtor entrega esse contexto. Num gatilho pós-dano, a proteção vale para golpes posteriores e não desfaz PV já perdidos. Para interceptar o próprio golpe, use a reação interrompível configurada antes da resolução."
+  },
+  "005": {
+    "formula": "se @USUARIO.acao comum disponivel > 0 entao subtrair 1 em @USUARIO.ataques restantes, subtrair 1d10 em @ALVO.vida",
+    "explicacao": "Uma ação personalizada exige disponibilidade de ação comum, consome um ataque restante e aplica 1d10 bruto ao alvo. O script não faz a rolagem de acerto; não o use como substituto do botão de ataque. Se for uma ação ativa com custo de ação comum e teste Ataque, deixe o construtor cobrar a ação, evitando consumir o mesmo orçamento também nesta fórmula."
+  },
+  "030": {
+    "formula": "se @USUARIO.ataques restantes > 0 entao subtrair 1 em @USUARIO.ataques restantes, subtrair 1d8 + @USUARIO.for em @ALVO.vida",
+    "explicacao": "Neste comando de efeito, ter um ataque restante permite consumir um e aplicar 1d8 + o modificador de Força como dano bruto. Com zero restante, nenhum comando roda. Esta comparação não testa Defesa nem seleciona inimigos ao alcance. Para atacar com arma, configure teste Ataque e custo de ação comum no construtor, sem repetir a cobrança no script."
+  },
+  "003": {
+    "formula": "se @USUARIO.absorcao pendente > 0 entao subtrair 1d8 em @ALVO.vida",
+    "explicacao": "Absorção pendente vale 1 quando há uma absorção elemental guardada e 0 quando não há. Vincule este adicional de 1d8 ao fluxo de acerto que descarrega a absorção. A fórmula apenas consulta a marca e aplica dano; não zera a absorção nem impede usos repetidos por conta própria. O consumo precisa fazer parte da habilidade que a controla."
+  },
+  "007": {
+    "formula": "se @USUARIO.oportunidade concedida > 0 e @USUARIO.oportunidade consumida = 0 entao subtrair 2d6 + @USUARIO.treino em @ALVO.vida",
+    "explicacao": "Esta condição aplica 2d6 + Treino apenas quando uma oportunidade foi concedida e ainda não foi consumida. Ela consulta autorização e uso, mas não consome a oportunidade nem rola acerto. Configure reação de saída de alcance com teste Ataque e custo apropriado; não interpretar dano direto como um novo ataque completo."
+  },
+  "141": {
+    "formula": "se @USUARIO.escudo \"sh-leve\" equipado > 0 entao somar 3 em @USUARIO.defesa",
+    "explicacao": "O identificador do Escudo Leve é sh-leve e deve ficar entre aspas para preservar o hífen como parte do ID. Se esse escudo está equipado, soma +3 de Defesa; outro escudo ou slot vazio não concede. O comando adiciona um bônus: não equipa o escudo e não define duração ou remoção automática."
+  },
+  "093": {
+    "formula": "se @ALVO.tem condicao envenenado > 0 e @ALVO.condicao envenenado idade_conhecida > 0 e @ALVO.idade condicao envenenado >= 3 entao subtrair 2d8 em @ALVO.vida tipo \"Veneno\"",
+    "explicacao": "Uma toxina tardia exige Envenenado ativo com idade registrada de ao menos três rodadas. Com elapsedRounds 3, causa 2d8 brutos de Veneno; com 2 não causa. Sem idade conhecida, não presume três rodadas. Use no evento de turno apropriado: consultar a idade não avança nem observa a condição por conta própria."
+  }
+}
