@@ -261,12 +261,12 @@ export const TemplateEngine = {
       // cone centralizado: apex em -L/2, base em +L/2 (no frame local).
       const apexX = -t.length / 2;
       const lxFromApex = lx - apexX;
-      if (lxFromApex < 0 || lxFromApex > t.length) return false;
+      if (lxFromApex < 0 || lxFromApex > t.length * Math.cos(CONE_HALF)) return false;
       return Math.abs(ly) <= lxFromApex * Math.tan(CONE_HALF);
     }
     if (t.kind === 'cone_attached') {
       // apex em (0,0) no frame local, base em +L.
-      if (lx < 0 || lx > t.length) return false;
+      if (lx < 0 || lx > t.length * Math.cos(CONE_HALF)) return false;
       return Math.abs(ly) <= lx * Math.tan(CONE_HALF);
     }
     return false;

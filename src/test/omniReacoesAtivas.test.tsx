@@ -142,6 +142,17 @@ describe('movimento e conjuração', () => {
     render(<><PendingMoveOverlay /><ReacoesAtivasOverlay /></>); fireEvent.click(screen.getByTitle('Confirmar movimento')); await screen.findByText('u: Responder'); expect(useCombatStore.getState().movementUsedByChar.a ?? 0).toBe(0);
     fireEvent.click(screen.getByText('u: Responder')); await waitFor(() => expect(useMapStore.getState().pendingMove).toBeNull()); expect(useMapStore.getState().entities['e-a'].x).toBe(startX); expect(useCombatStore.getState().movementUsedByChar.a ?? 0).toBe(0);
   });
+  it('confirmação usa o trajeto curvo registrado, mesmo com extremos fora do alcance', async () => {
+    add(config({ gatilho: 'quando_inimigo_entrar_alcance', alcance_m: 3, cancelar_evento: true }));
+    useMapStore.getState().updateEntity('e-a', { x: 700, y: 350 });
+    useMapStore.getState().setPendingMove({ entityId: 'e-a', charId: 'a', startX: 700, startY: -350, distM: 30, trail: [{x:700,y:-350},{x:140,y:0},{x:700,y:350}] });
+    render(<><PendingMoveOverlay /><ReacoesAtivasOverlay /></>);
+    fireEvent.click(screen.getByTitle('Confirmar movimento'));
+    fireEvent.click(await screen.findByText('u: Responder'));
+    await waitFor(() => expect(useMapStore.getState().pendingMove).toBeNull());
+    expect(useMapStore.getState().entities['e-a'].y).toBe(-350);
+    expect(useCombatStore.getState().movementUsedByChar.a ?? 0).toBe(0);
+  });
   it('movimento que permanece no alcance e desengajar não oferecem saída', () => {
     add(config({ gatilho: 'quando_inimigo_sair_alcance', alcance_m: 3 })); const e = { gatilho: 'quando_inimigo_sair_alcance' as const, origemId: 'a', movimento: { de: { x: 70, y: 0 }, para: { x: 140, y: 0 } } }; expect(ofertasReacaoAtiva(e)).toHaveLength(0);
     useCharacterStore.getState().updateCharacter('a', { desengajado: true }); expect(ofertasReacaoAtiva({ ...e, movimento: { ...e.movimento, para: { x: 700, y: 0 } } })).toHaveLength(0);

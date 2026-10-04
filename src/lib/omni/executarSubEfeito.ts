@@ -33,6 +33,8 @@ export interface ExecucaoResultado {
 
 /** Variáveis disponíveis ao avaliar a fórmula numérica do efeito. */
 export interface ExecucaoContexto {
+  /** null indica ambiente sem autor; undefined preserva usuarioId como origem. */
+  origemId?: string | null;
   usuarioId: string;
   /** Quem recebe o efeito quando target = ALVO. Default = usuarioId. */
   alvoId?: string;
@@ -63,7 +65,8 @@ function resolverTargetId(eff: CombatEffect, ctx: ExecucaoContexto): string {
 
 /** Avalia a `formula` de um efeito numérico, retornando `{ valor, rolagens }`. */
 export function avaliarFormulaEfeito(eff: CombatEffect, ctx: ExecucaoContexto) {
-  const vars = eff.target === 'ALVO' ? (ctx.alvoVars ?? ctx.usuarioVars) : ctx.usuarioVars;
+  // O destino do efeito não troca a identidade de @USUARIO. @ALVO vem do contexto próprio.
+  const vars = ctx.usuarioVars;
   return avaliarFormula(eff.formula || '0', vars, undefined, {
     alvo: ctx.alvoVars ?? ctx.usuarioVars,
     item: ctx.itemVars,
@@ -115,7 +118,7 @@ export function executarCombatEffect(
     immunityGrant: eff.immunityGrant,
     sourceName: ctx.sourceName,
     damageType: eff.damageType,
-    attackerId: ctx.usuarioId,
+    attackerId: ctx.origemId === null ? undefined : ctx.origemId ?? ctx.usuarioId,
     contador: { teto: teto?.valor, porFonte: eff.counterPerSource, fonteId: ctx.alvoId ?? ctx.usuarioId },
   });
   return { aplicado: r.aplicado, absorvidoPorBloqueio: r.absorvidoPorBloqueio };
@@ -166,7 +169,7 @@ function executarConditionApply(eff: CombatEffect, ctx: ExecucaoContexto): Execu
       remainingTurns: ca.durationTurns ?? -1,
       remainingRounds: ca.durationRounds ?? -1,
       sourceCharName: ctx.sourceName,
-      sourceCharId: ctx.usuarioId,
+      sourceCharId: ctx.origemId === null ? undefined : ctx.origemId ?? ctx.usuarioId,
     };
     store.addCondition(targetId, ac);
     return { aplicado: 1, detalhe: `${def.icon} Aplicou ${def.name}` };

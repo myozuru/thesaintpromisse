@@ -67,6 +67,8 @@ export interface TokenCrop {
 export type GatilhoZonaTerreno = 'entrada' | 'fim_turno';
 
 export interface ZonaTerreno {
+  /** Origem identificada dos efeitos; ausente = ambiente sem autor. */
+  sourceCharId?: string;
   /** null mantém a zona até ser removida pelo Mestre. */
   duracaoRodadas: number | null;
   rodadasRestantes: number | null;

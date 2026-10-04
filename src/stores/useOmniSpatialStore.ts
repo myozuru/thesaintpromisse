@@ -1,7 +1,9 @@
+import { useMapStore } from './useMapStore';
+import { comPreviaMovimento, confirmarMovimentoMapa } from '@/lib/mapa/movimentoConfirmado';
 /**
  * Omni-Engine Spatial Store (Pilar 5).
  *
- * Posições abstratas (x,y em metros) por personagem. Não modifica o schema
+ * Posições em metros por personagem; mover também atualiza a peça explícita no mapa. Não modifica o schema
  * legado de Character — vive em store própria. Persistente.
  *
  * `mover(charId, x, y)` aciona o motor de auras (recalcular entrar/sair).
@@ -28,6 +30,14 @@ export const useOmniSpatialStore = create<SpatialStore>()(
     (set, get) => ({
       posicoes: {},
       mover: (charId, x, y) => {
+        if (![x, y].every(Number.isFinite)) return;
+        const ms = useMapStore.getState();
+        const token = Object.values(ms.entities).find(e => e.characterId === charId && !e.carriedBy && (e.layer ?? 'tokens') === 'tokens');
+        if (token) {
+          const escala = (ms.gridConfig.dpi || 70) / (ms.gridConfig.metersPerCell || 1.5);
+          comPreviaMovimento(() => ms.updateEntity(token.id, { x: x * escala, y: y * escala }));
+          confirmarMovimentoMapa(token.id, token);
+        }
         set((s) => ({ posicoes: { ...s.posicoes, [charId]: { x, y } } }));
         // Recalcula auras após o movimento (entrar/sair).
         recalcularAuras(charId);

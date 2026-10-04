@@ -1,3 +1,4 @@
+import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -19,12 +20,15 @@ export function ZonaTerrenoDialog({ entityId, onClose }: { entityId: string | nu
   const entity = useMapStore((s) => entityId ? s.entities[entityId] : undefined);
   const updateEntity = useMapStore((s) => s.updateEntity);
   const pushHistory = useMapStore((s) => s.pushHistory);
+  const personagens = useCharacterStore(s => s.characters);
+  const [origemId, setOrigemId] = useState('');
   const [duracao, setDuracao] = useState('1');
   const [gatilhos, setGatilhos] = useState<GatilhoZonaTerreno[]>(['entrada']);
   const [efeitos, setEfeitos] = useState<CombatEffect[]>([]);
 
   useEffect(() => {
     const zona = entity?.terrainZone;
+    setOrigemId(zona?.sourceCharId ?? '');
     setDuracao(zona?.duracaoRodadas == null ? '' : String(zona.duracaoRodadas));
     setGatilhos(zona?.gatilhos ?? ['entrada']);
     setEfeitos(zona?.efeitos ?? []);
@@ -51,7 +55,7 @@ export function ZonaTerrenoDialog({ entityId, onClose }: { entityId: string | nu
     const restantes = parsed === null ? null
       : zonaAnterior?.duracaoRodadas === parsed ? (zonaAnterior.rodadasRestantes ?? parsed) : parsed;
     pushHistory();
-    updateEntity(entity.id, { terrainZone: { duracaoRodadas: parsed, rodadasRestantes: restantes, gatilhos, efeitos } });
+    updateEntity(entity.id, { terrainZone: { sourceCharId: origemId || undefined, duracaoRodadas: parsed, rodadasRestantes: restantes, gatilhos, efeitos } });
     onClose();
   };
   const remover = () => {
@@ -72,6 +76,12 @@ export function ZonaTerrenoDialog({ entityId, onClose }: { entityId: string | nu
         </DialogHeader>
 
         <div className="space-y-4">
+          <label className="block space-y-1 text-sm">Origem da zona
+            <select aria-label="Origem da zona" className="w-full rounded border border-input bg-background p-2" value={origemId} onChange={e => setOrigemId(e.target.value)}>
+              <option value="">Ambiente (sem autor)</option>
+              {personagens.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </label>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <Label htmlFor="zona-duracao">Duração em rodadas</Label>
@@ -167,3 +177,4 @@ export function ZonaTerrenoDialog({ entityId, onClose }: { entityId: string | nu
     </Dialog>
   );
 }
+

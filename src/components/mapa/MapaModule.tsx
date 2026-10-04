@@ -1,3 +1,4 @@
+import { comPreviaMovimento, confirmarMovimentoMapa } from '@/lib/mapa/movimentoConfirmado';
 import { ItemNoChaoOverlay } from './ui/ItemNoChaoOverlay';
 import { AlvoMapaOverlay } from './ui/AlvoMapaOverlay';
 import { useAlvoMapaStore, tokenDaFicha, clicarAlvoMapa, terminarAlvoMapa, alvosNoAlcance } from '@/stores/useAlvoMapaStore';
@@ -384,7 +385,7 @@ export function MapaModule() {
     transientCommitRef.current += 1;
     holdLocalMapSync(220);
     try {
-      fn();
+      comPreviaMovimento(fn);
     } finally {
       window.setTimeout(() => {
         transientCommitRef.current = Math.max(0, transientCommitRef.current - 1);
@@ -2417,8 +2418,7 @@ export function MapaModule() {
           if (ent) {
             const tail = cm.trail[cm.trail.length - 1];
             if (!tail || Math.hypot(ent.x - tail.x, ent.y - tail.y) > 0.5) cm.trail.push({ x: ent.x, y: ent.y });
-            const straightPx = Math.hypot(ent.x - cm.startPrim.x, ent.y - cm.startPrim.y);
-            const distM = straightPx * cm.metersPerPx;
+            const distM = cm.movedPx * cm.metersPerPx;
             holdLocalMapSync(1200, drag.ids);
             st.setPendingMove({
               entityId: drag.primaryId,
@@ -2429,6 +2429,8 @@ export function MapaModule() {
               distM,
             });
           }
+        } else {
+          for (const id of drag.ids) if (drag.origs[id]) confirmarMovimentoMapa(id, drag.origs[id]);
         }
       }
       dragRef.current = { kind: 'none' };

@@ -1,3 +1,4 @@
+import { comPreviaMovimento, receberMovimentoConfirmado, type MovimentoConfirmadoMapa } from '@/lib/mapa/movimentoConfirmado';
 import { mergeInventory } from '@/lib/omni/inventorySync';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { mergeIncomingCharacters, pickNewestPerCharacter, stampLocalChanges, withStamps } from '@/lib/charSyncStamps';
@@ -285,7 +286,7 @@ function applyRemoteEntityUpdate(patches: RemotePatch[]) {
     const live = st.entities as Record<string, unknown>;
     const here = patches.filter((p) => live[p.id]);
     const elsewhere = patches.filter((p) => !live[p.id]);
-    if (here.length) st.updateEntities(here as never);
+    if (here.length) comPreviaMovimento(() => st.updateEntities(here as never));
     // Peças de cenas que esta tela não está vendo: atualiza a cópia guardada da
     // cena, para não reenviar posições antigas quando esta tela publicar o mapa.
     if (elsewhere.length) {
@@ -697,19 +698,27 @@ export function useMultiplayerSync() {
     // Patches incrementais de entidade (drag/resize/rotate em tempo real,
     // estilo Owlbear token_positions). Aplica direto sem reserializar o mapa.
     worldBus.on('broadcast', { event: 'entity-patch' }, ({ payload }) => {
-      const p = payload as { clientId?: string; patches?: Array<{ id: string; patch: Record<string, unknown> }> } | null;
+      const p = payload as { clientId?: string; patches?: Array<{ id: string; patch: Record<string, unknown> }>; movimentoOmni?: MovimentoConfirmadoMapa } | null;
       if (!p || p.clientId === clientId || !Array.isArray(p.patches)) return;
       const protectedIds = getProtectedRemoteEntityPatchIds();
       const patches = protectedIds ? p.patches.filter((patch) => !protectedIds.has(patch.id)) : p.patches;
       if (!patches.length) return;
-      applySmoothedEntityPatches(patches);
+      if (p.movimentoOmni && !protectedIds?.has(p.movimentoOmni.entityId)) {
+        applyingRemote = true;
+        try { if (receberMovimentoConfirmado(p.movimentoOmni)) { smoothTargets.delete(p.movimentoOmni.entityId); remotePatchAt.set(p.movimentoOmni.entityId, performance.now()); } }
+        finally { setTimeout(() => { applyingRemote = false; }, 0); }
+      } else applySmoothedEntityPatches(patches);
     });
-    const onEntityPatch = (payload: { clientId?: string; patches?: Array<{ id: string; patch: Record<string, unknown> }> } | null) => {
+    const onEntityPatch = (payload: { clientId?: string; patches?: Array<{ id: string; patch: Record<string, unknown> }>; movimentoOmni?: MovimentoConfirmadoMapa } | null) => {
       if (!payload || payload.clientId === clientId || !Array.isArray(payload.patches)) return;
       const protectedIds = getProtectedRemoteEntityPatchIds();
       const patches = protectedIds ? payload.patches.filter((patch) => !protectedIds.has(patch.id)) : payload.patches;
       if (!patches.length) return;
-      applySmoothedEntityPatches(patches);
+      if (payload.movimentoOmni && !protectedIds?.has(payload.movimentoOmni.entityId)) {
+        applyingRemote = true;
+        try { if (receberMovimentoConfirmado(payload.movimentoOmni)) { smoothTargets.delete(payload.movimentoOmni.entityId); remotePatchAt.set(payload.movimentoOmni.entityId, performance.now()); } }
+        finally { setTimeout(() => { applyingRemote = false; }, 0); }
+      } else applySmoothedEntityPatches(patches);
     };
     void worldBus.subscribe();
     // expõe para o MapaModule emitir pings/cursor remotos

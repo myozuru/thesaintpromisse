@@ -1,3 +1,4 @@
+import { comPreviaMovimento, confirmarMovimentoMapa } from '@/lib/mapa/movimentoConfirmado';
 import { notificarEventoPersonagem } from '@/lib/omni/notificarEvento';
 import { useRef, useState } from 'react';
 import { abrirJanelaReacaoAtiva, ofertasReacaoAtiva } from '@/lib/omni/reacoesAtivas';
@@ -60,7 +61,7 @@ export function PendingMoveOverlay() {
     locked.current = true; setBusy(true);
     try {
       const de = { x: pending.startX, y: pending.startY }, para = { x: ent.x, y: ent.y };
-      const movimento = { de, para, trajetoria: amostrarTrajetoria(de, para, (gridConfig.dpi || 70) / 4) };
+      const movimento = { de, para, trajetoria: pending.trail.length ? pending.trail : amostrarTrajetoria(de, para, (gridConfig.dpi || 70) / 4) };
       for (const gatilho of ['quando_inimigo_sair_alcance', 'quando_inimigo_entrar_alcance'] as const) {
         const evento = { gatilho, origemId: pending.charId, movimento };
         const r = ofertasReacaoAtiva(evento).length ? await abrirJanelaReacaoAtiva(evento) : { cancelado: false };
@@ -102,12 +103,13 @@ export function PendingMoveOverlay() {
     // ─── Zona de Risco (Especialista em Combate) ─────────────────────────
     try { detectarZonaRisco(pending.charId); } catch { /* ignore */ }
     setPendingMove(null);
+    confirmarMovimentoMapa(pending.entityId, de, movimento.trajetoria);
     } finally { locked.current = false; setBusy(false); }
   };
   const cancel = () => {
     const patch = { x: pending.startX, y: pending.startY };
     holdLocalMapSync(1500, [pending.entityId]);
-    updateEntity(pending.entityId, patch);
+    comPreviaMovimento(() => updateEntity(pending.entityId, patch));
     // Replica o rollback aos peers imediatamente (mesmo canal usado pelo drag),
     // evitando que um broadcast atrasado de mapScene de outro cliente reverta
     // a posição de volta ao ponto onde o token foi solto.

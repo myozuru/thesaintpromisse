@@ -34,13 +34,14 @@ export function aceitaAlvoAtivo(u: Character, a: Character, cfg: AcaoAtivaConfig
 }
 
 export function limiteAlvosAtivos(cfg: AcaoAtivaConfig, u: Character): number {
-  const n = avaliarFormula(cfg.max_alvos || '1', montarVariaveisDoPersonagem(u, 'USUARIO')).valor;
-  return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+  const r = avaliarFormula(cfg.max_alvos || '1', montarVariaveisDoPersonagem(u, 'USUARIO'));
+  return !r.diagnosticos.length && !r.rolagens.length && Number.isFinite(r.valor) ? Math.max(0, Math.floor(r.valor)) : 0;
 }
 
 export async function selecionarAlvosAtivos(usuarioId: string, cfg: AcaoAtivaConfig, selecao: SelecaoAtiva): Promise<SelecaoResultado> {
   let u = useCharacterStore.getState().characters.find(c => c.id === usuarioId);
   if (!u) return { ok: false, reason: 'Personagem não encontrado.' };
+  if (!Number.isFinite(cfg.alcanceM) || cfg.alcanceM < 0) return { ok: false, reason: 'Configure um alcance válido em metros.' };
   const tipo = cfg.tipo_alvo ?? 'unico';
   let ids: string[];
   if (tipo === 'proprio') ids = [u.id];
@@ -89,7 +90,7 @@ export async function selecionarAlvosAtivos(usuarioId: string, cfg: AcaoAtivaCon
       rotation: rotacao, length: area.tamanho_m * pxM, width: (area.largura_m ?? 1.5) * pxM,
       color: '#ff5577', opacity: 1,
     };
-    ids = [...new Set(findEntitiesInTemplate(template, ms.entities).map(id => ms.entities[id].characterId).filter((id): id is string => !!id))];
+    ids = [...new Set(findEntitiesInTemplate(template, Object.fromEntries(Object.entries(ms.entities).filter(([, e]) => ms.layerVisible[e.layer ?? 'tokens'] !== false))).map(id => ms.entities[id].characterId).filter((id): id is string => !!id))];
     ids = ids.filter(id => {
       const a = useCharacterStore.getState().characters.find(c => c.id === id);
       return a && aceitaAlvoAtivo(u!, a, cfg);
@@ -104,7 +105,7 @@ export async function selecionarAlvosAtivos(usuarioId: string, cfg: AcaoAtivaCon
     if (!cfg.tipo_alvo && a.id === u.id) return { ok: false, reason: 'O alvo deve ser outra criatura.' };
     if (tipo !== 'area' && tipo !== 'proprio' && cfg.alcanceM > 0) {
       const ms = useMapStore.getState(), origem = findCharEntity(ms.entities, u.id), alvo = findCharEntity(ms.entities, id);
-      if (cfg.tipo_alvo && (!origem || !alvo)) return { ok: false, reason: 'Usuário e alvo precisam estar no mapa para medir o alcance.' };
+      if (!origem || !alvo) return { ok: false, reason: 'Usuário e alvo precisam estar no mapa para medir o alcance.' };
       if (origem && alvo && touchDistanceMeters(origem, alvo, ms.gridConfig) > cfg.alcanceM + 0.05) return { ok: false, reason: `${a.name} está fora de alcance.` };
     }
   }

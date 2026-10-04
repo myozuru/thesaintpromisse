@@ -1,3 +1,5 @@
+import { emPreviaMovimento, observarMovimentoConfirmado, type MovimentoConfirmadoMapa } from './movimentoConfirmado';
+import { recalcularAuras } from '@/lib/omni/auras';
 import { useMapStore, type Entity, type GatilhoZonaTerreno, type ZonaTerreno } from '@/stores/useMapStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useCombatStore } from '@/stores/useCombatStore';
@@ -5,28 +7,33 @@ import { useRoleStore } from '@/stores/useRoleStore';
 import { montarVariaveisDoPersonagem } from '@/lib/omni/resolvedor';
 import { avaliarFormula } from '@/lib/omni/parser';
 import { executarCombatEffect } from '@/lib/omni/executarSubEfeito';
-import { avancarDuracaoZona, pontoDentroDaZona, segmentoEntraNaZona } from './zonaTerreno';
+import { avancarDuracaoZona, pontoDentroDaZona, segmentoEntraNaZona, zonaEstaAtiva } from './zonaTerreno';
 
 let iniciado = false;
 
 function executarEfeitos(zona: Entity, personagemId: string, gatilho: GatilhoZonaTerreno) {
   const config = zona.terrainZone;
-  if (!config?.gatilhos.includes(gatilho) || config.efeitos.length === 0) return;
+  if (!config || !zonaEstaAtiva(config) || !config.gatilhos.includes(gatilho) || config.efeitos.length === 0) return;
   const personagem = useCharacterStore.getState().characters.find((c) => c.id === personagemId);
   if (!personagem) return;
   for (const efeito of config.efeitos) {
-    const usuarioVars = montarVariaveisDoPersonagem(personagem, 'USUARIO');
-    const alvoVars = montarVariaveisDoPersonagem(personagem, 'ALVO');
+    const origem = config.sourceCharId ? useCharacterStore.getState().characters.find(c => c.id === config.sourceCharId) : undefined;
+    const alvoAtual = useCharacterStore.getState().characters.find(c => c.id === personagemId);
+    if (!alvoAtual) break;
+    const usuarioVars = montarVariaveisDoPersonagem(origem ?? alvoAtual, 'USUARIO');
+    const alvoVars = montarVariaveisDoPersonagem(alvoAtual, 'ALVO');
     const vars = { ...usuarioVars, ...alvoVars };
     if (efeito.condition?.trim()) {
       try {
-        if (avaliarFormula(efeito.condition, vars).valor <= 0) continue;
+        const r = avaliarFormula(efeito.condition, vars);
+        if (r.diagnosticos.length || !Number.isFinite(r.valor) || r.valor <= 0) continue;
       } catch {
         continue;
       }
     }
     executarCombatEffect(efeito, {
-      usuarioId: personagemId,
+      usuarioId: origem?.id ?? personagemId,
+      origemId: origem?.id ?? null,
       alvoId: personagemId,
       usuarioVars,
       alvoVars,
@@ -36,23 +43,40 @@ function executarEfeitos(zona: Entity, personagemId: string, gatilho: GatilhoZon
 }
 
 function processarMovimento(atual: ReturnType<typeof useMapStore.getState>, anterior: ReturnType<typeof useMapStore.getState>) {
-  if (useRoleStore.getState().role === 'PLAYER') return;
+  if (useRoleStore.getState().role === 'PLAYER' || emPreviaMovimento() || atual.activeSceneId !== anterior.activeSceneId || atual.pendingMove) return;
+  const atingidos = new Set<string>();
   for (const entidade of Object.values(atual.entities)) {
     const antes = anterior.entities[entidade.id];
     if (!antes || !entidade.characterId || (antes.x === entidade.x && antes.y === entidade.y)) continue;
     for (const zona of Object.values(atual.entities)) {
       if (!zona.terrainZone || zona.id === entidade.id) continue;
       if (segmentoEntraNaZona(zona, { x: antes.x, y: antes.y }, { x: entidade.x, y: entidade.y })) {
-        executarEfeitos(zona, entidade.characterId, 'entrada');
+        const key = `${zona.id}:${entidade.characterId}`;
+        if (!atingidos.has(key)) { atingidos.add(key); executarEfeitos(zona, entidade.characterId, 'entrada'); }
       }
     }
   }
 }
 
+function processarConfirmacao(m: MovimentoConfirmadoMapa) {
+  if (useRoleStore.getState().role === 'PLAYER') return;
+  const entities = useMapStore.getState().entities;
+  const caminho = [m.de, ...m.trajetoria, m.para];
+  for (const zona of Object.values(entities)) {
+    if (!zona.terrainZone) continue;
+    const entrou = m.teleporte ? !pontoDentroDaZona(zona, m.de) && pontoDentroDaZona(zona, m.para)
+      : caminho.slice(0, -1).some((p, i) => segmentoEntraNaZona(zona, p, caminho[i + 1]));
+    if (entrou) executarEfeitos(zona, m.characterId, 'entrada');
+  }
+  recalcularAuras(m.characterId);
+}
+
 function personagensNaZona(entities: Record<string, Entity>, zona: Entity): string[] {
   const ids = new Set<string>();
   for (const entidade of Object.values(entities)) {
-    if (entidade.characterId && pontoDentroDaZona(zona, { x: entidade.x, y: entidade.y })) ids.add(entidade.characterId);
+    const pending = useMapStore.getState().pendingMove;
+    const ponto = pending?.entityId === entidade.id ? { x: pending.startX, y: pending.startY } : entidade;
+    if (entidade.characterId && (entidade.layer ?? 'tokens') === 'tokens' && !entidade.carriedBy && pontoDentroDaZona(zona, ponto)) ids.add(entidade.characterId);
   }
   return [...ids];
 }
@@ -79,13 +103,19 @@ function expirarZonas() {
 export function iniciarEngineZonasTerreno() {
   if (iniciado) return;
   iniciado = true;
-  useMapStore.subscribe((atual, anterior) => processarMovimento(atual, anterior));
+  observarMovimentoConfirmado(processarConfirmacao);
+  useMapStore.subscribe((atual, anterior) => {
+    processarMovimento(atual, anterior);
+    if (!emPreviaMovimento() && !atual.pendingMove && atual.activeSceneId === anterior.activeSceneId && useRoleStore.getState().role !== 'PLAYER' && Object.values(atual.entities).some(e => e.characterId && (!anterior.entities[e.id] || e.x !== anterior.entities[e.id].x || e.y !== anterior.entities[e.id].y))) recalcularAuras();
+  });
   useCombatStore.subscribe((atual, anterior) => {
     if (useRoleStore.getState().role === 'PLAYER' || !atual.inCombat || !anterior.inCombat) return;
     const mudouTurno = atual.currentTurnIndex !== anterior.currentTurnIndex || atual.round !== anterior.round;
     if (!mudouTurno) return;
+    recalcularAuras();
     const encerrando = anterior.initiativeOrder[anterior.currentTurnIndex];
     if (encerrando) processarFimTurno(encerrando.charId);
     if (atual.round > anterior.round) expirarZonas();
   });
 }
+
