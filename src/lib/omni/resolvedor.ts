@@ -29,7 +29,8 @@ import { useCalendarStore } from '@/stores/useCalendarStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
-import { findWeaponByName } from '@/lib/weapons';
+import { armaDoPersonagem } from './armaDoPersonagem';
+import { weaponMaxRangeMeters } from '@/lib/weaponRange';
 import { ALL_CONDITIONS } from '@/types/conditions';
 import { canonicalizarChave, expandirParaCaminhoLegado } from './keyAliases';
 import { effectiveMovement } from '@/lib/movementBudget';
@@ -343,8 +344,8 @@ export function montarVariaveisDoPersonagem(
       const desarmado = !main && !off ? 1 : 0;
       const duasMaos = main && off && main === off ? 1 : 0;
       const dualWield = main && off && main !== off ? 1 : 0;
-      const mainW = main ? findWeaponByName(main) : undefined;
-      const offW = off && off !== main ? findWeaponByName(off) : undefined;
+      const mainW = main ? armaDoPersonagem(c.id, main) : undefined;
+      const offW = off && off !== main ? armaDoPersonagem(c.id, off) : undefined;
 
       const hasProp = (kind: string) => mainW?.properties?.some((p) => p.kind === kind) ? 1 : 0;
       return {
@@ -638,9 +639,9 @@ export function montarVariaveisDoPersonagem(
       const skScopes  = new Set(['next_skill','next_any','skill_specific']);
       const has = (kind: string, set: Set<string>) => arr.some((m) => m.kind === kind && set.has(m.scope)) ? 1 : 0;
 
-      const mainW = c.mainHandWeaponName ? findWeaponByName(c.mainHandWeaponName) : undefined;
+      const mainW = c.mainHandWeaponName ? armaDoPersonagem(c.id, c.mainHandWeaponName) : undefined;
       const critRange = mainW?.critRange ?? 20;
-      const reach = mainW?.range === 'melee' ? 1.5 : 0;
+      const reach = mainW?.range === 'melee' ? weaponMaxRangeMeters(mainW) ?? 0 : 0;
       const rs = mainW?.rangeShort ?? 0;
       const rl = mainW?.rangeLong ?? 0;
 
@@ -918,7 +919,7 @@ export function montarVariaveisDoPersonagem(
   const ohName = c.offHandWeaponName ?? null;
   for (const name of [mhName, ohName]) {
     if (!name) continue;
-    const w = findWeaponByName(name);
+    const w = armaDoPersonagem(c.id, name);
     if (w?.group) {
       const g = w.group.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9_]/g, '_');
       base[`ARMA_GRUPO_${g}`] = 1;

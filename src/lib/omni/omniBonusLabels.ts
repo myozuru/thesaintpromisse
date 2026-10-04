@@ -11,26 +11,28 @@ import { ROTULOS_RECURSOS } from './constantesDoSistema';
 import { derivarBonusEquipadoDosEfeitos } from './derivarBonusEquipado';
 
 export type ChaveBonusEquipado = 'hp' | 'pe' | 'ca' | 'rd' | 'esc' | 'slots';
+export type ChaveRecursoEquipado = ChaveBonusEquipado | 'deslocamento';
 
 /** Mapeia chave curta → rótulo humano oficial (alinhado com SISTEMA_RECURSOS). */
-export const ROTULO_BONUS_EQUIPADO: Record<ChaveBonusEquipado, string> = {
+export const ROTULO_BONUS_EQUIPADO: Record<ChaveRecursoEquipado, string> = {
   hp: ROTULOS_RECURSOS.VIDA_MAX,        // "Vida Máxima"
   pe: ROTULOS_RECURSOS.ENERGIA_MAX,     // "Energia Amaldiçoada Máx."
   ca: ROTULOS_RECURSOS.DEFESA,          // "Defesa"
   rd: 'Redução de Dano',
   esc: ROTULOS_RECURSOS.ESQUIVA,        // "Esquiva"
   slots: 'Slots de Ação',
+  deslocamento: 'Deslocamento',
 };
 
 /**
  * Lista todas as chaves de recurso efetivamente alteradas por uma entidade
  * Omni quando ela é equipada — considera tanto valores fixos quanto fórmulas.
  */
-export function listarRecursosAlterados(entidade: EntidadeOmni): ChaveBonusEquipado[] {
+export function listarRecursosAlterados(entidade: EntidadeOmni): ChaveRecursoEquipado[] {
   const b = entidade.bonusEquipado ?? {};
   const f = entidade.bonusEquipadoFormula ?? {};
   const fAuto = derivarBonusEquipadoDosEfeitos(entidade);
-  const chaves: ChaveBonusEquipado[] = ['hp', 'pe', 'ca', 'rd', 'esc', 'slots'];
+  const chaves: ChaveRecursoEquipado[] = ['hp', 'pe', 'ca', 'rd', 'esc', 'slots', 'deslocamento'];
   return chaves.filter((k) => {
     const val = (b as Record<string, number | undefined>)[k] ?? 0;
     const formula = (f as Record<string, string | undefined>)[k];

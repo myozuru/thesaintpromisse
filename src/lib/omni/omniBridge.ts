@@ -180,7 +180,7 @@ export function avaliarFormulaNaFicha(
   try {
     const vars = montarVariaveisDoPersonagem(character, 'USUARIO');
     const r = avaliarFormula(expr, vars);
-    return Math.round(r.valor || 0);
+    return r.diagnosticos.length ? 0 : Math.round(r.valor || 0);
   } catch {
     return 0;
   }
@@ -257,7 +257,8 @@ function avaliarBonusPorRecurso(character: Character, ent: EntidadeOmni, resourc
   const cd = normalizarCombatData(ent.combatData);
   const efeitosPassivos = cd?.effectsPassive ?? [];
   return efeitosPassivos.reduce((total, ef) => {
-    if (ef.watcher || (ef.target !== 'USUARIO' && ef.target !== 'ALVO')) return total;
+    if (ef.watcher || ef.trigger?.trim() || (ef.target !== 'USUARIO' && ef.target !== 'ALVO')) return total;
+    if (ef.condition?.trim() && !avaliarFormulaNaFicha(character, ef.condition)) return total;
     if (chaveRolagemDoRecurso(ef.resourcePath) !== resourceKey) return total;
     const valor = avaliarFormulaNaFicha(character, ef.formula);
     if (ef.type === 'SUBTRAIR') return total - valor;
@@ -323,7 +324,7 @@ export function selectOmniModifiers(
         out.origins[k].push({ source: `◇ ${ent.nome}`, delta: total });
       }
     }
-    const deslocamento = (Number(fixos.deslocamento) || 0) + avaliarFormulaNaFicha(character, formulas.deslocamento);
+    const deslocamento = (Number(fixos.deslocamento) || 0) + avaliarFormulaNaFicha(character, fundirFormula(formulas.deslocamento, derivadas.deslocamento));
     if (deslocamento !== 0) {
       out.deslocamento += deslocamento;
       out.deslocamentoOrigins.push({ source: `◇ ${ent.nome}`, delta: deslocamento });
@@ -395,6 +396,12 @@ export function selectOmniPassiveBonuses(
         out.totals[k] += total;
         out.origins[k].push({ source: `✦ ${ent.nome}`, delta: total });
       }
+    }
+
+    const deslocamento = (Number(fixos.deslocamento) || 0) + avaliarFormulaNaFicha(character, fundirFormula(formulas.deslocamento, derivadas.deslocamento));
+    if (deslocamento !== 0) {
+      out.deslocamento += deslocamento;
+      out.deslocamentoOrigins.push({ source: `✦ ${ent.nome}`, delta: deslocamento });
     }
 
     for (const k of CHAVES_ROLAGEM_PASSIVA) {

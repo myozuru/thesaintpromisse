@@ -107,12 +107,17 @@ export function getWeaponMeta(ent: EntidadeOmni): {
   const espacosStr = find('espacos:');
   const maosStr = find('mao:');
   const alcanceStr = find('alcance:');
-  const [curto, longo] = alcanceStr ? alcanceStr.split('/').map((n) => parseInt(n, 10)) : [null, null];
+  const numero = (texto: string | undefined | null): number | null => {
+    if (!texto?.trim()) return null;
+    const n = Number(texto);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  };
+  const [curto, longo] = alcanceStr ? alcanceStr.split('/').map(numero) : [null, null];
   const dano = ent.combatData?.effectsActive?.[0]?.formula
     ?? ent.combatData?.effects?.[0]?.formula ?? null;
   return {
     modeloId: find('modelo:'),
-    espacos: espacosStr ? parseInt(espacosStr, 10) : null,
+    espacos: numero(espacosStr),
     maos: maosStr === '1' ? 1 : maosStr === '2' ? 2 : null,
     alcanceCurto: Number.isFinite(curto as number) ? (curto as number) : null,
     alcanceLongo: Number.isFinite(longo as number) ? (longo as number) : null,

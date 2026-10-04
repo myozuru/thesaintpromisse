@@ -14,7 +14,7 @@
 import type { CombatEffect, EntidadeOmni } from './tipos';
 import { normalizarCombatData } from './tipos';
 
-export type ChaveBonusPassivo = 'hp' | 'pe' | 'ca' | 'rd' | 'esc' | 'slots';
+export type ChaveBonusPassivo = 'hp' | 'pe' | 'ca' | 'rd' | 'esc' | 'slots' | 'deslocamento';
 
 /**
  * Mapeia `resourcePath` semânticos para a chave usada em `bonusEquipado`.
@@ -32,7 +32,8 @@ function chaveDoRecurso(resourcePath?: string): ChaveBonusPassivo | null {
   if (/(^|_)(vida_max|hp_max|status_vida_max|max_hp)(_|$)/.test(norm)) return 'hp';
   if (/(^|_)(energia_max|pe_max|energia_amaldicoada_max|energiaamaldicoada_max|status_energia_amaldicoada_max|status_energiaamaldicoada_max|max_pe)(_|$)/.test(norm)) return 'pe';
   if (/(^|_)(defesa|ca|status_defesa|armor_class)(_|$)/.test(norm)) return 'ca';
-  if (/(^|_)(esquiva|esc|deslocamento)(_|$)/.test(norm)) return 'esc';
+  if (/(^|_)(esquiva|esc)(_|$)/.test(norm)) return 'esc';
+  if (/(^|_)(desloc|deslocamento)(_|$)/.test(norm)) return 'deslocamento';
   if (/(^|_)(slots|slots_acao|slots_max)(_|$)/.test(norm)) return 'slots';
   if (/(^|_)(rd|reducao_dano|reducao_de_dano|resistencia)(_|$)/.test(norm)) return 'rd';
   return null;
@@ -79,7 +80,7 @@ export function derivarBonusEquipadoDosEfeitos(
   for (const ef of efeitosPassivos) {
     // Efeitos com watcher não são bônus contínuos de equipamento: eles são
     // reações que devem rodar só quando o limite observado for cruzado.
-    if (ef.watcher) continue;
+    if (ef.watcher || ef.trigger?.trim()) continue;
     // Aceita @USUARIO (canônico) e @ALVO (legado: itens passivos antigos
     // costumavam nascer com target=ALVO; ao equipar, o "alvo" é o portador).
     if (ef.target !== 'USUARIO' && ef.target !== 'ALVO') continue;
@@ -91,7 +92,8 @@ export function derivarBonusEquipadoDosEfeitos(
     const formulaLimpa = (ef.formula || '').trim();
     if (!formulaLimpa) continue;
 
-    const expr = sinal === -1 ? `-(${formulaLimpa})` : `(${formulaLimpa})`;
+    const valor = sinal === -1 ? `-(${formulaLimpa})` : `(${formulaLimpa})`;
+    const expr = ef.condition?.trim() ? `if((${ef.condition}), ${valor}, 0)` : valor;
     (acumulado[chave] ??= []).push(expr);
   }
 
