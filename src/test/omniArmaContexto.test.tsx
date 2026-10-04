@@ -31,12 +31,12 @@ describe('contexto dinâmico da arma em fórmulas OMNI', () => {
     expect(r.valor).toBe(34); expect(r.diagnosticos).toEqual([]); expect(r.rolagens).toMatchObject([{ notacao: '1d8', rolls: [5], total: 5 }]);
   });
   it('herda só o dado-base da arma, combina dados adicionais e converte para o tipo escolhido', async () => {
-    mesa(); forcarDados(5, 3, 4);
+    mesa(); forcarDados(18, 5, 3, 4);
     const r = await executarAcaoAtiva('u', cfg(), 'a');
     expect(r.ok && r.dano).toBe(12); expect(pegarFicha('a').hpCurrent).toBe(91); expect(pegarFicha('u').peCurrent).toBe(18);
   });
   it('sem conversão conserva o tipo e a redução da arma equiparada', async () => {
-    mesa('Espada Longa'); forcarDados(5, 3, 4);
+    mesa('Espada Longa'); forcarDados(18, 5, 3, 4);
     const r = await executarAcaoAtiva('u', cfg({ tipoDano: undefined }), 'a');
     expect(r.ok && r.dano).toBe(12); expect(pegarFicha('a').hpCurrent).toBe(100);
   });

@@ -108,7 +108,7 @@ describe('resultados, armas, disputa e sustentação',()=>{
     expect(r.ok).toBe(true);expect(pegarFicha('a').escCurrent).toBe(5);expect(pegarFicha('a').hpCurrent).toBe(100);
   });
   it('herança ARMA.DANO respeita a fórmula personalizada do exemplar',async()=>{
-    const e=setWeaponDamage(applyWeaponModel(novaEntidade('arma'),findWeaponByName('Espada Longa')!),'2d6 + @USUARIO.treino');e.nome='Lâmina';useInventoryStore.getState().add('u',e);useCharacterStore.getState().updateCharacter('u',{mainHandWeaponName:e.nome,trainingBonus:3});forcarDados(2,2);
+    const e=setWeaponDamage(applyWeaponModel(novaEntidade('arma'),findWeaponByName('Espada Longa')!),'2d6 + @USUARIO.treino');e.nome='Lâmina';useInventoryStore.getState().add('u',e);useCharacterStore.getState().updateCharacter('u',{mainHandWeaponName:e.nome,trainingBonus:3});forcarDados(18,2,2);
     const r=await executarAcaoAtiva('u',cfg({dano:'@ARMA.DANO'}),'a',e);expect(r.ok&&r.dano).toBe(7);expect(pegarFicha('a').hpCurrent).toBe(93);
   });
   it('disputa incorpora bônus passivo equipado em perícia',()=>{

@@ -1,3 +1,4 @@
+import { testeEfetivoAtivo } from '@/lib/omni/testeAtivo';
 import { pedirAlvoMapa } from '@/stores/useAlvoMapaStore';
 import { aceitaAlvoAtivo, limiteAlvosAtivos } from '@/lib/omni/alvosAtivos';
 import { weaponMaxRangeMeters } from '@/lib/weaponRange';
@@ -73,7 +74,8 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
         const multiplo = cfg.tipo_alvo === 'multiplo';
         const area = cfg.tipo_alvo === 'area';
 
-        const teste = cfg.teste === 'tr' ? `TR ${TR_ROT[cfg.tr ?? 'fortitude']}${cfg.cd ? ` CD ${cfg.cd}` : ''}` : cfg.teste === 'ataque' ? 'Ataque' : cfg.teste === 'disputa' ? 'Disputa' : null;
+        const modoTeste = testeEfetivoAtivo(cfg);
+        const teste = modoTeste === 'tr' ? `TR ${TR_ROT[cfg.tr ?? 'fortitude']}${cfg.cd ? ` CD ${cfg.cd}` : ''}` : modoTeste === 'ataque' ? 'Ataque' : modoTeste === 'disputa' ? 'Disputa' : null;
         const cargas = p?.contador ? (u.omniCounters?.[p.contador] ?? 0) : null;
         return (
           <div key={grupo.chave} className="rounded-md border border-border bg-background/70 p-2 space-y-1.5" data-testid={`acao-ativa-${cfg.nome}`}>
