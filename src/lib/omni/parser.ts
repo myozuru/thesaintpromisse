@@ -613,7 +613,10 @@ export function avaliarFormula(
   const ctx: ContextoAvaliacao = { variaveis: bag, armaDano: extras?.arma?.dano, rolagens: [], rng, diagnosticos: [], composicoes };
   const resolvida = preprocessar(expressao, ctx);
   try {
-    const expr = parser.parse(resolvida);
+    // O terminal produz &&/||; expr-eval usa and/or.
+    // Preserva operadores dentro de strings literais.
+    const logica = resolvida.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|&&|\|\|/g, token => token === '&&' ? ' and ' : token === '||' ? ' or ' : token);
+    const expr = parser.parse(logica);
     const escopoAvaliacao: Record<string, number> = {};
     for (const [k, v] of Object.entries(bag)) {
       escopoAvaliacao[k] = v;

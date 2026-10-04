@@ -9,6 +9,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 vi.mock('@/integrations/supabase/client', async () => ({ supabase: (await import('./helpers/mesaReal')).nuvemFalsa }));
 vi.mock('@/lib/socket', () => ({ getSocket: () => null }));
 vi.mock('@/integrations/supabase/safeClient', async () => ({ hasWorkspaceCloud: false, supabase: (await import('./helpers/mesaReal')).nuvemFalsa }));
+import { useInventoryStore } from '@/stores/useInventoryStore';
+import { novaEntidade } from '@/lib/omni/tipos';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { parseOmniScript, efeitosParaScript } from '@/lib/omni/omniScript';
@@ -43,7 +45,7 @@ const danoEm = async (id: string, qtd: number, attackerId?: string) => {
   await esperar(20);
 };
 
-beforeEach(() => { comoTela({ profileId: null, role: 'MASTER' }); useOmniEntidadesStore.setState({ entidades: {} } as never); });
+beforeEach(() => { useInventoryStore.setState({ items: {}, deleted: {} }); comoTela({ profileId: null, role: 'MASTER' }); useOmniEntidadesStore.setState({ entidades: {} } as never); });
 afterEach(() => { limparMesa(); vi.restoreAllMocks(); });
 
 describe('Regras puras', () => {
@@ -143,4 +145,62 @@ describe('Combate real — outros observadores e condição com duração', () =
     dispararGatilhoEfeitosItens('aoAcertarAtaque', { usuarioId: 'ana', alvoId: 'inim' });
     expect(pegarFicha('ana').omniCounters?.margem).toBe(1);
   });
+});
+
+
+describe('Rancor na arma empunhada pelo painel', () => {
+  it('acumula pelo dano próprio e do aliado próximo sem isEquipped; arma guardada não dispara', async () => {
+    const script = `@sofrer_dano -> (somar 1 em usuario.contador_rancor ate treino por_fonte);
+@aliado_sofrer_dano -> se @CENA.distancia <= 4.5 entao (somar 1 em usuario.contador_rancor ate treino por_fonte);
+@acertar -> (subtrair (@USUARIO.contador rancor)d1 em vida_atual tipo "Psíquico")`;
+    const parsed = parseOmniScript(script, { defaultTarget: 'ALVO' });
+    expect(parsed.erros).toEqual([]);
+    const ent = { ...novaEntidade('arma'), nome: 'Katana', tags: ['modelo:katana'], combatData: { effects: [], critRange: 20, critMultiplier: 2, effectsPassive: parsed.efeitos } };
+    montarMesa([aliado('ana'), aliado('bia'), aliado('longe'), inimigo('inim')], { ana: [0, 0], bia: [3, 0], longe: [8, 0], inim: [1, 0] });
+    const inst = useInventoryStore.getState().add('ana', ent);
+    expect(useInventoryStore.getState().items[inst.instanceId].isEquipped).toBeFalsy();
+    useCharacterStore.getState().equipWeapons('ana', { mainHandName: 'Katana' });
+    await danoEm('ana', 2, 'inim');
+    expect(pegarFicha('ana').omniCounters?.rancor).toBe(1);
+    await danoEm('bia', 2, 'inim');
+    expect(pegarFicha('ana').omniCounters?.rancor).toBe(2);
+    await danoEm('longe', 2, 'inim');
+    expect(pegarFicha('ana').omniCounters?.rancor).toBe(2);
+    const hp = pegarFicha('inim').hpCurrent;
+    dispararGatilhoEfeitosItens('aoAcertarAtaque', { usuarioId: 'ana', alvoId: 'inim' });
+    expect(pegarFicha('inim').hpCurrent).toBe(hp - 2);
+    useCharacterStore.getState().equipWeapons('ana', { mainHandName: null });
+    await danoEm('ana', 2, 'inim');
+    await danoEm('bia', 2, 'inim');
+    expect(pegarFicha('ana').omniCounters?.rancor).toBe(2);
+  });
+});
+
+
+it('receita com teto total, inimigos e dano corpo a corpo; cópias não duplicam carga', async () => {
+  const script = `@sofrer_dano -> se @ALVO.eh_inimigo > 0 entao (somar 1 em @USUARIO.contador rancor ate @USUARIO.treino);
+@aliado_sofrer_dano -> se @CENA.distancia <= 4.5 e @CENA.outro_eh_inimigo > 0 entao (somar 1 em @USUARIO.contador rancor ate @USUARIO.treino);
+@acertar -> se @DANO.tipo_ataque == 1 entao (subtrair (@USUARIO.contador rancor)d1 em @ALVO.vida tipo "Psíquico")`;
+  const parsed = parseOmniScript(script, { defaultTarget: 'ALVO' });
+  expect(parsed.erros).toEqual([]);
+  const ent = { ...novaEntidade('arma'), nome: 'Katana', tags: ['modelo:katana'], combatData: { effects: [], critRange: 20, critMultiplier: 2, effectsPassive: parsed.efeitos } };
+  montarMesa([aliado('ana'), aliado('bia'), aliado('longe'), inimigo('inim')], { ana: [0, 0], bia: [3, 0], longe: [8, 0], inim: [1, 0] });
+  useInventoryStore.getState().add('ana', ent);
+  useInventoryStore.getState().add('ana', ent);
+  useCharacterStore.getState().equipWeapons('ana', { mainHandName: 'Katana' });
+  await danoEm('ana', 1, 'bia');
+  await danoEm('bia', 1, 'ana');
+  await danoEm('longe', 1, 'inim');
+  expect(pegarFicha('ana').omniCounters?.rancor ?? 0).toBe(0);
+  expect(pegarFicha('inim').category).toBe('INIMIGO');
+  expect(montarVariaveisDoPersonagem(pegarFicha('inim'), 'ALVO').ALVO_EH_INIMIGO).toBe(1);
+  await danoEm('ana', 1, 'inim');
+  expect(pegarFicha('ana').omniCounters?.rancor).toBe(1);
+  for (let i = 0; i < treinoDe('ana') + 1; i++) await danoEm('bia', 1, 'inim');
+  expect(pegarFicha('ana').omniCounters?.rancor).toBe(treinoDe('ana'));
+  const hp = pegarFicha('inim').hpCurrent;
+  dispararGatilhoEfeitosItens('aoAcertarAtaque', { usuarioId: 'ana', alvoId: 'inim', dano: { tipo_ataque: 2 } });
+  expect(pegarFicha('inim').hpCurrent).toBe(hp);
+  dispararGatilhoEfeitosItens('aoAcertarAtaque', { usuarioId: 'ana', alvoId: 'inim', dano: { tipo_ataque: 1 } });
+  expect(pegarFicha('inim').hpCurrent).toBe(hp - treinoDe('ana'));
 });

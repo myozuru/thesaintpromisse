@@ -20,6 +20,7 @@
  * passo da varredura, ideal para o desenvolvedor copiar/colar do console
  * do navegador quando algo não dispara como esperado.
  */
+import { armaEstaEmpunhada } from './armaDoPersonagem';
 import type { CombatEffect, EntidadeOmni } from './tipos';
 import { normalizarCombatData } from './tipos';
 import { avaliarFormula } from './parser';
@@ -73,7 +74,20 @@ export function dispararGatilhoEfeitosItens(
     : undefined;
 
   const inv = useInventoryStore.getState();
-  const equipados = inv.listEquipped(opts.usuarioId);
+  // Empunhar é registrado na ficha; armas não usam necessariamente isEquipped.
+  // Um exemplar por arma empunhada evita dobrar o gatilho com cópias iguais.
+  const porArma = new Map<string, ReturnType<typeof inv.listByOwner>[number]>();
+  const equipados = inv.listByOwner(opts.usuarioId).filter(inst => {
+    const ent = useOmniEntidadesStore.getState().entidades[inst.entity.id] ?? inst.entity;
+    if (ent.categoria !== 'arma') return inst.isEquipped;
+    const nome = ent.replica ? inst.replicaArma : ent.nome;
+    if (!nome || !armaEstaEmpunhada(usuario, nome) || (ent.replica && !inst.materializada)) return false;
+    const chave = nome.trim().toLowerCase();
+    const anterior = porArma.get(chave);
+    if (!anterior || (!anterior.isEquipped && inst.isEquipped)) porArma.set(chave, inst);
+    return false;
+  });
+  equipados.push(...porArma.values());
   // Mapa de templates "frescos" no banco de entidades. Usado como fonte
   // da verdade quando o snapshot do inventário está desatualizado (ex.:
   // o item foi pego ANTES do gatilho ser adicionado pelo Mestre).
