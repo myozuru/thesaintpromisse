@@ -1,3 +1,4 @@
+import { notificarResultadoAtaque } from '@/lib/omni/resultadoAtaque';
 import { SoltarItemButton } from './SoltarItemButton';
 import { pedirAlvoMapa } from '@/stores/useAlvoMapaStore';
 import { armaDoPersonagem } from '@/lib/omni/armaDoPersonagem';
@@ -700,7 +701,7 @@ export function AttackPanel({ character: cProp }: Props) {
         setArteInvestida(false);
       }
       // Golpe Especial: efeitos no acerto + ataque extra do Amplo.
-      const g = golpeRollRef.current;
+    const g = golpeRollRef.current;
       if (g) {
         if (result.hit && g.target && g.sel.sanguinario) aplicarSangramento(g.target, g.sel.sanguinario);
         setGolpeSel({});
@@ -717,6 +718,7 @@ export function AttackPanel({ character: cProp }: Props) {
             ],
           });
           const r2 = await rollAttack(ctx2);
+          notificarResultadoAtaque(c.id, alvo2.id, mainWeapon, r2);
           addLog('combat', `⚔️ Golpe Amplo: ${c.name} atinge também ${alvo2.name}: d20 ${r2.natural} · total ${r2.attackTotal} → ${r2.criticalFail ? '💀 falha crítica' : r2.critical ? '💥 CRÍTICO' : r2.hit ? '✅ acerto' : '❌ erro'}${r2.hit ? ` · dano ${r2.damageTotal} (${r2.damageDice})` : ''}`);
           if (r2.hit && g.sel.sanguinario) aplicarSangramento(alvo2, g.sel.sanguinario);
           if (r2.hit && g.sel.penetrante) addLog('combat', `   ↳ Penetrante: ignora ${penetranteRD(c)} de RD.`);
@@ -894,6 +896,7 @@ export function AttackPanel({ character: cProp }: Props) {
     setFirstD20Revealed(null);
 
     if (!result.hit) {
+      if (mainWeapon) notificarResultadoAtaque(c.id, target?.id, mainWeapon, result, metadadosAtaqueRef.current);
       setPendingResult(null);
       setPhase('done');
       return;
@@ -916,6 +919,7 @@ export function AttackPanel({ character: cProp }: Props) {
       'combat',
       `   💥 Dano: ${result.damageTotal} (${result.damageDice}${result.damageType ? ' ' + result.damageType : ''})`,
     );
+    notificarResultadoAtaque(c.id, target?.id, mainWeapon, result, metadadosAtaqueRef.current);
     const g = golpeRollRef.current;
     golpeRollRef.current = null;
     if (g?.sel.penetrante) addLog('combat', `   ↳ Penetrante: ignora ${penetranteRD(c)} de RD.`);
@@ -955,6 +959,7 @@ export function AttackPanel({ character: cProp }: Props) {
     });
     let r: AttackResult;
     try { r = await rollAttack(ctx); } catch (e) { console.error('[AttackPanel] ataque extra falhou:', e); return null; }
+    notificarResultadoAtaque(c.id, alvo.id, arma, r);
     recordAttackResult(c.id, r.hit);
     revelarPara(c.id, alvo.id);
     const verdict = r.criticalFail ? '💀 falha crítica' : r.critical ? '💥 CRÍTICO' : r.hit ? '✅ acerto' : '❌ erro';
@@ -1110,6 +1115,7 @@ export function AttackPanel({ character: cProp }: Props) {
       ],
     });
     const r = await rollAttack(ctx2);
+    notificarResultadoAtaque(c.id, alvo2.id, arma, r);
     addLog(
       'combat',
       `🎯 Arremesso Ágil: ${c.name} ataca ${alvo2.name} com ${arma.name} (ação livre): d20 ${r.natural} · total ${r.attackTotal} → ${r.critical ? '💥 CRÍTICO' : r.hit ? '✅ acerto' : '❌ erro'}${r.hit ? ` · dano ${r.damageTotal} (${r.damageDice})` : ''}`,

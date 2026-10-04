@@ -1,3 +1,8 @@
+import { novaEntidade } from '@/lib/omni/tipos';
+import { parseOmniScript } from '@/lib/omni/omniScript';
+import { useInventoryStore } from '@/stores/useInventoryStore';
+import { AcoesAtivasSection } from '@/components/fichas/AcoesAtivasSection';
+import { clicarAlvoMapa } from '@/stores/useAlvoMapaStore';
 import { selecionarAlvoNoMapaUI } from './helpers/alvoMapaUI';
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -10,7 +15,7 @@ vi.mock('@/lib/dice', async (original) => ({
   rollD20Com: vi.fn(async () => 20),
   rollDiceCom: vi.fn(async () => ({ rolls: [4], total: 4 })),
 }));
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { AttackPanel } from '@/components/fichas/AttackPanel';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useCombatStore } from '@/stores/useCombatStore';
@@ -23,6 +28,7 @@ import { avaliarFormula } from '@/lib/omni/parser';
 import { ficha, montarMesa, limparMesa, comoTela, pegarFicha } from './helpers/mesaReal';
 
 beforeEach(async () => {
+  useInventoryStore.setState({ items: {}, deleted: {} });
   comoTela({ profileId: 'p-ana', role: 'PLAYER' });
   vi.mocked(rollD20Com).mockResolvedValue(20);
   for (const method of ['log', 'group', 'groupEnd'] as const) vi.spyOn(console, method).mockImplementation(() => {});
@@ -139,4 +145,53 @@ describe('Painel real → motor → dano → Omni', () => {
     await waitFor(() => expect(spy.mock.calls.some(([e]) => e === 'aoCausarDano')).toBe(true));
     expect(spy.mock.calls.find(([e]) => e === 'aoCausarDano')![1]?.dano?.alcance).toBe(1.5);
   });
+});
+
+
+function equiparRancor() {
+  const parsed = parseOmniScript('@acertar -> se @DANO.tipo_ataque == 1 entao subtrair (@USUARIO.contador rancor)d1 em @ALVO.vida tipo "Psíquico"');
+  expect(parsed.erros).toEqual([]);
+  const ent = { ...novaEntidade('arma'), nome: 'Espada Longa', tags: ['modelo:espada-longa'], combatData: { effects: [], critRange: 20, critMultiplier: 2, effectsPassive: parsed.efeitos } };
+  useInventoryStore.getState().add('ana', ent);
+  useCharacterStore.getState().updateCharacter('ana', { omniCounters: { rancor: 3 } });
+  return ent;
+}
+it('botões reais de ataque e dano aplicam Rancor uma vez ao alvo', async () => {
+  mesa(); equiparRancor();
+  const spy = vi.spyOn(eventBus, 'emitirEvento');
+  render(<AttackPanel character={pegarFicha('ana')} />);
+  await selecionarAlvo();
+  fireEvent.click(screen.getByRole('button', { name: /Rolar Ataque/ }));
+  await waitFor(() => expect(screen.getByRole('button', { name: /Rolar Dano/ })).toBeTruthy());
+  expect(pegarFicha('bruno').hpCurrent).toBe(100);
+  fireEvent.click(screen.getByRole('button', { name: /Rolar Dano/ }));
+  await waitFor(() => expect(spy.mock.calls.filter(([e]) => e === 'aoAcertarAtaque')).toHaveLength(1));
+  const hit = spy.mock.calls.find(([e]) => e === 'aoAcertarAtaque')![1]!;
+  expect(hit.dano).toMatchObject({ tipo_ataque: 1 });
+  const hp = pegarFicha('bruno').hpCurrent;
+  await waitFor(() => expect(spy.mock.calls.some(([e, op]) => e === 'aoCausarDano' && op?.dano?.tipo === 12)).toBe(true));
+  const danoArma = spy.mock.calls.find(([e, op]) => e === 'aoCausarDano' && op?.dano?.fonte === 1)![1]!.dano!.valor_final;
+  expect(hp).toBe(100 - danoArma - 3);
+  expect(pegarFicha('ana').omniCounters?.rancor).toBe(3);
+});
+it('Usar com Teste Ataque rola acerto e dispara Rancor; erro não aplica dano', async () => {
+  mesa(); const ent = equiparRancor();
+  ent.acoesAtivas = [{ id: 'golpe', nome: 'Golpe de Rancor', acao: 'livre', custoPE: '0', alcanceM: 3, teste: 'ataque', incluirArma: true, dano: '1', efeitos: [] }];
+  const inst = Object.values(useInventoryStore.getState().items)[0];
+  useInventoryStore.setState({ items: { [inst.instanceId]: { ...inst, entity: ent } } });
+  const spy = vi.spyOn(eventBus, 'emitirEvento');
+  render(<AcoesAtivasSection charId="ana" />);
+  fireEvent.click(screen.getByRole('button', { name: 'Usar' }));
+  act(() => clicarAlvoMapa('e-bruno'));
+  await waitFor(() => expect(spy.mock.calls.filter(([e]) => e === 'aoAcertarAtaque')).toHaveLength(1));
+  expect(vi.mocked(rollD20Com)).toHaveBeenCalled();
+  expect(pegarFicha('bruno').hpCurrent).toBeLessThan(97);
+  await waitFor(() => expect((screen.getByRole('button', { name: 'Usar' }) as HTMLButtonElement).disabled).toBe(false));
+  const hp = pegarFicha('bruno').hpCurrent;
+  vi.mocked(rollD20Com).mockResolvedValue(1);
+  fireEvent.click(screen.getByRole('button', { name: 'Usar' }));
+  act(() => clicarAlvoMapa('e-bruno'));
+  await waitFor(() => expect(spy.mock.calls.filter(([e]) => e === 'aoErrarAtaque')).toHaveLength(1));
+  expect(pegarFicha('bruno').hpCurrent).toBe(hp);
+  expect(spy.mock.calls.filter(([e]) => e === 'aoAcertarAtaque')).toHaveLength(1);
 });

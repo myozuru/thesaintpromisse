@@ -1,3 +1,4 @@
+import { notificarResultadoAtaque } from './resultadoAtaque';
 import { armaDoPersonagem, armaEstaEmpunhada } from './armaDoPersonagem';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { planejarCustosAtivos, validarRecursosAtivos, patchCustosAtivos, consumirUsosItemAtivo, type ContextoCustosAtivos } from './custosAtivos';
@@ -423,7 +424,9 @@ export async function executarAcaoAtiva(
       armaDano = cfg.incluirArma && !/@ARMA\.DANO/i.test(cfg.dano ?? '') ? r.damageTotal : 0;
       cabecalho = `ataque ${r.attackTotal} vs Defesa ${def} → ${r.critical ? 'CRÍTICO' : r.hit ? 'ACERTOU' : 'ERROU'}${critExtra ? ` (margem −${critExtra})` : ''}`;
       if (r.cancelled) { log(`⛔ ${cfg.nome}: ataque interrompido.`); continue; }
+      if (r.hit) notificarResultadoAtaque(u.id, t.id, arma!, r, metadadosAtaque, 'omni');
       if (!r.hit) {
+        notificarResultadoAtaque(u.id, t.id, arma!, r, metadadosAtaque, 'omni');
         const msg = `⚔️ ${u.name} usa ${cfg.nome} (${pago}) em ${t.name}: ${cabecalho}.`;
         log(msg);
         detalhes.push(msg);
