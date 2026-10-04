@@ -16,6 +16,8 @@ import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { parseOmniScript, efeitosParaScript } from '@/lib/omni/omniScript';
 import { dispararGatilhoEfeitosItens } from '@/lib/omni/triggerEfeitos';
 import { montarVariaveisDoPersonagem } from '@/lib/omni/resolvedor';
+import { executarGatilho } from '@/lib/omni/executor';
+import * as eventBus from '@/lib/omni/eventBus';
 import { calcularContador } from '@/lib/omni/contadores';
 import { avaliarFormula } from '@/lib/omni/parser';
 import { eventoObservado } from '@/lib/omni/observadores';
@@ -162,8 +164,11 @@ describe('Rancor na arma empunhada pelo painel', () => {
     useCharacterStore.getState().equipWeapons('ana', { mainHandName: 'Katana' });
     await danoEm('ana', 2, 'inim');
     expect(pegarFicha('ana').omniCounters?.rancor).toBe(1);
+    expect(pegarFicha('ana').omniCounters?.['rancor__fonte__ana']).toBe(1);
+    expect(pegarFicha('ana').omniCounters?.['rancor__fonte__inim']).toBeUndefined();
     await danoEm('bia', 2, 'inim');
     expect(pegarFicha('ana').omniCounters?.rancor).toBe(2);
+    expect(pegarFicha('ana').omniCounters?.['rancor__fonte__bia']).toBe(1);
     await danoEm('longe', 2, 'inim');
     expect(pegarFicha('ana').omniCounters?.rancor).toBe(2);
     const hp = pegarFicha('inim').hpCurrent;
@@ -203,4 +208,18 @@ it('receita com teto total, inimigos e dano corpo a corpo; cópias não duplicam
   expect(pegarFicha('inim').hpCurrent).toBe(hp);
   dispararGatilhoEfeitosItens('aoAcertarAtaque', { usuarioId: 'ana', alvoId: 'inim', dano: { tipo_ataque: 1 } });
   expect(pegarFicha('inim').hpCurrent).toBe(hp - treinoDe('ana'));
+});
+
+
+it('construtor visual usa a vítima como fonte e notifica somente mudanças', async () => {
+  montarMesa([aliado('ana'), inimigo('inim')], { ana: [0, 0], inim: [1, 0] });
+  const ent = { ...novaEntidade('passiva'), gatilhos: [{ id: 'g', evento: 'aoSofrerDano' as const, blocos: [{ id: 'b', condicoes: [], modo: 'todas' as const, acoes: [{ id: 'a', acao: 'INCREMENTAR_CONTADOR' as const, alvoAplicacao: 'USUARIO' as const, caminhoAlvo: 'rancor', valor: { tipo: 'fixo' as const, valor: 1 }, teto: { tipo: 'fixo' as const, valor: 1 }, escopoTeto: 'porFonte' as const }] }] }] };
+  const spy = vi.spyOn(eventBus, 'emitirEvento');
+  for (let i = 0; i < 2; i++) {
+    executarGatilho(ent, 'aoSofrerDano', { usuario: pegarFicha('ana'), alvo: pegarFicha('inim') });
+    await esperar(20);
+  }
+  expect(pegarFicha('ana').omniCounters).toMatchObject({ rancor: 1, rancor__fonte__ana: 1 });
+  expect(pegarFicha('ana').omniCounters?.rancor__fonte__inim).toBeUndefined();
+  expect(spy.mock.calls.filter(([e]) => e === 'aoAtualizarContador')).toHaveLength(1);
 });

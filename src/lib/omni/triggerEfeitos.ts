@@ -1,3 +1,4 @@
+import { fonteDoContador } from './atualizacaoContadores';
 /**
  * 🎯 Disparador de gatilhos sobre efeitos de itens equipados.
  *
@@ -268,7 +269,7 @@ export function dispararGatilhoEfeitosItens(
         contador: {
           teto: limite?.valor,
           porFonte: eff.counterPerSource,
-          fonteId: opts.alvoId && opts.alvoId !== usuario.id ? opts.alvoId : undefined,
+          fonteId: fonteDoContador(evento, usuario.id, opts.alvoId),
         },
       });
       if (typeof res.consumido === 'number') cenaLocal.consumido = res.consumido;

@@ -1,3 +1,4 @@
+import { notificarAtualizacaoContadores } from './atualizacaoContadores';
 import { notificarResultadoAtaque } from './resultadoAtaque';
 import { armaDoPersonagem, armaEstaEmpunhada } from './armaDoPersonagem';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
@@ -363,7 +364,9 @@ export async function executarAcaoAtiva(
   const p = custos.plano;
   if (!consumirUsosItemAtivo(p)) return { ok: false, reason: 'Os usos do item mudaram antes de a ação ser concluída.' };
   const cargas = p.cargas;
-  store.updateCharacter(u.id, patchCustosAtivos(u, p));
+  const patchPago = patchCustosAtivos(u, p);
+  store.updateCharacter(u.id, patchPago);
+  if (patchPago.omniCounters) notificarAtualizacaoContadores(u.id, u.omniCounters, patchPago.omniCounters);
   const fonte = ent?.nome ?? cfg.nome;
   const pago = `${p.pe} PE${p.pv ? ` + ${p.pv} PV` : ''}${cargas ? ` + ${cargas} carga(s) de ${p.contador}` : ''}${p.municao ? ` + ${p.municao} munição(ões)` : ''}${p.usosItem ? ` + ${p.usosItem} uso(s) do item` : ''}${p.intensificacoes ? ` · intensificação ${p.intensificacoes}` : ''}`;
   const sustentadas = p.pePorTurno > 0 ? [] as { charId: string; id: string }[] : undefined;

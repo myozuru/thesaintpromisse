@@ -1,4 +1,4 @@
-import { capturarCadeiaOmni } from './cadeiaEventos';
+import { fonteDoContador, notificarAtualizacaoContadores } from './atualizacaoContadores';
 import { resolverTipoDano } from './contextoDano';
 /**
  * Omni-Engine Runtime Executor (Fatia 3 — Pilar 1+2+4 ao vivo).
@@ -60,6 +60,7 @@ function expandirEscopos(raw: string): string[] {
 }
 
 export interface ContextoRuntime {
+  evento?: GatilhoId;
   usuario?: Character;
   alvo?: Character;
   cena?: Record<string, number>;
@@ -504,10 +505,9 @@ function executarAcao(a: AcaoLogica, ctx: ContextoRuntime, log: (m: string) => v
         valor: a.acao === 'INCREMENTAR_CONTADOR' && !a.valor ? 1 : valor,
         teto: a.teto ? resolverValorDinamico(a.teto, ctx) : undefined,
         escopoTeto: a.escopoTeto,
-        fonteId: ctx.alvo?.id && ctx.alvo.id !== fresh.id ? ctx.alvo.id : undefined,
+        fonteId: fonteDoContador(ctx.evento, ctx.usuario?.id, ctx.alvo?.id),
       });
       const counters = res.counters;
-      const atual = res.anterior;
       useCharacterStore.getState().updateCharacter(alvoChar.id, { omniCounters: counters });
       if (a.acao === 'CONSUMIR_CONTADOR') {
         // Disponível para as próximas ações do mesmo bloco: @CENA.consumido
@@ -516,17 +516,7 @@ function executarAcao(a: AcaoLogica, ctx: ContextoRuntime, log: (m: string) => v
       } else {
         log(`${nomeOrigem}: ${nomeAlvo}.contador.${key} = ${counters[key]}`);
       }
-      // Dispara gatilho de atualização de contador no próprio personagem.
-      const cadeia = capturarCadeiaOmni();
-      import('./eventBus').then(({ emitirEvento }) => {
-        emitirEvento('aoAtualizarContador', {
-          cadeia,
-          usuarioId: alvoChar.id,
-          cena: { contador_valor: counters[key] ?? 0, contador_anterior: atual },
-          origemNome: `Contador: ${key}`,
-          incluirPassivas: true,
-        });
-      });
+      notificarAtualizacaoContadores(alvoChar.id, fresh.omniCounters, counters, true);
       break;
     }
     // ── Redutor de custo de recurso ─────────────────────────────────────
@@ -657,6 +647,7 @@ export function executarGatilho(
   const log = (m: string) => useLogStore.getState().addLog('system', m);
   const ctxComOrigem: ContextoRuntime = {
     ...ctx,
+    evento,
     origemNome: ctx.origemNome ?? entidade.nome,
     profundidade: profundidade + 1,
   };

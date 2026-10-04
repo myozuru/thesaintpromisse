@@ -1,3 +1,4 @@
+import { notificarAtualizacaoContadores } from './atualizacaoContadores';
 import { recursoBonito } from './rotulosRecurso';
 export { recursoBonito } from './rotulosRecurso';
 import { resolverTipoDano } from './contextoDano';
@@ -122,6 +123,7 @@ export function aplicarEfeitoNoPersonagem(
         fonteExata: Boolean(destino?.contador?.fonte),
       });
       store.updateCharacter(charId, { omniCounters: res.counters });
+      notificarAtualizacaoContadores(charId, c.omniCounters, res.counters);
       return { aplicado: res.counters[nome] ?? 0, consumido: res.consumido };
     }
   }
@@ -213,11 +215,11 @@ export function aplicarEfeitoNoPersonagem(
   else if (tipo === 'ADICIONAR') novo = atual + Math.round(valor);
   else novo = Math.round(valor);
 
-  const maximos: Record<string, string> = { peCurrent: 'peMax', escCurrent: 'escMax', luckCurrent: 'luckMax', hitDiceCurrent: 'hitDiceMax', actionsCurrent: 'actionsMax', reactionsCurrent: 'reactionsMax', opportunityCurrent: 'opportunityMax' };
+  const maximos: Record<string, string> = { peCurrent: 'peMax', escCurrent: 'escMax', luckCurrent: 'luckMax', hitDiceCurrent: 'hitDiceMax', actionsCurrent: 'actionsMax', bonusActionsCurrent: 'bonusActionsMax', reactionsCurrent: 'reactionsMax', opportunityCurrent: 'opportunityMax' };
   const limite = maximos[campo] ? (c as unknown as Record<string, number>)[maximos[campo]] : undefined;
   novo = Math.max(0, limite === undefined ? novo : Math.min(Math.max(0, limite), novo));
 
-  const atuais: Record<string, string> = { hpMax: 'hpCurrent', peMax: 'peCurrent', escMax: 'escCurrent', luckMax: 'luckCurrent', hitDiceMax: 'hitDiceCurrent', actionsMax: 'actionsCurrent', reactionsMax: 'reactionsCurrent', opportunityMax: 'opportunityCurrent' };
+  const atuais: Record<string, string> = { hpMax: 'hpCurrent', peMax: 'peCurrent', escMax: 'escCurrent', luckMax: 'luckCurrent', hitDiceMax: 'hitDiceCurrent', actionsMax: 'actionsCurrent', bonusActionsMax: 'bonusActionsCurrent', reactionsMax: 'reactionsCurrent', opportunityMax: 'opportunityCurrent' };
   const patch: Record<string, number> = { [campo]: novo };
   if (atuais[campo]) patch[atuais[campo]] = Math.min((c as unknown as Record<string, number>)[atuais[campo]] ?? 0, novo);
   store.updateCharacter(charId, patch as Partial<typeof c>);

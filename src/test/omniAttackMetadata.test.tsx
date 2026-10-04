@@ -241,3 +241,64 @@ it('igualdade simples e condição composta funcionam no ataque real', async () 
   const danoArma = spy.mock.calls.find(([e, op]) => e === 'aoCausarDano' && op?.dano?.fonte === 1)![1]!.dano!.valor_final;
   expect(pegarFicha('bruno').hpCurrent).toBe(100 - danoArma - 3);
 });
+
+it('incremento pelo ataque notifica o contador uma vez e não repete no teto', async () => {
+  mesa();
+  const parsed = parseOmniScript('@acertar -> somar 1 em @USUARIO.contador rancor ate 1; @atualizar_contador -> se @CENA.contador_valor == 1 entao somar 1 em @USUARIO.pe');
+  expect(parsed.erros).toEqual([]);
+  const ent = { ...novaEntidade('arma'), nome: 'Espada Longa', tags: ['modelo:espada-longa'], combatData: { effects: [], critRange: 20, critMultiplier: 2, effectsPassive: parsed.efeitos } };
+  useInventoryStore.getState().add('ana', ent);
+  useCharacterStore.getState().updateCharacter('ana', { peCurrent: 5 });
+  const spy = vi.spyOn(eventBus, 'emitirEvento');
+  render(<AttackPanel character={pegarFicha('ana')} />);
+  await selecionarAlvo();
+  for (let i = 1; i <= 2; i++) {
+    fireEvent.click(screen.getByRole('button', { name: /Rolar Ataque/ }));
+    await waitFor(() => expect(screen.getByRole('button', { name: /Rolar Dano/ })).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: /Rolar Dano/ }));
+    await waitFor(() => expect(spy.mock.calls.filter(([e]) => e === 'aoCausarDano')).toHaveLength(i));
+  }
+  await waitFor(() => expect(pegarFicha('ana').peCurrent).toBe(6));
+  expect(pegarFicha('ana').omniCounters?.rancor).toBe(1);
+  expect(spy.mock.calls.filter(([e]) => e === 'aoAtualizarContador')).toHaveLength(1);
+  expect(spy.mock.calls.find(([e]) => e === 'aoAtualizarContador')![1]?.cena).toMatchObject({ contador_anterior: 0, contador_valor: 1 });
+});
+
+it('Usar paga cargas parciais e notifica o contador uma única vez', async () => {
+  mesa(); const ent = equiparRancor();
+  const parsed = parseOmniScript('@atualizar_contador -> se @CENA.contador_valor == 1 entao somar 1 em @USUARIO.pe');
+  expect(parsed.erros).toEqual([]);
+  ent.combatData!.effectsPassive = parsed.efeitos;
+  ent.acoesAtivas = [{ id: 'consumir', nome: 'Golpe com duas cargas', acao: 'livre', custoPE: '0', alcanceM: 3, teste: 'nenhum', dano: '1', efeitos: [], custo_recursos: { gastar_cargas: { nome: 'rancor', quantidade: '2' } } }];
+  const inst = Object.values(useInventoryStore.getState().items)[0];
+  useInventoryStore.setState({ items: { [inst.instanceId]: { ...inst, entity: ent } } });
+  useCharacterStore.getState().updateCharacter('ana', { peCurrent: 5, peMax: 20, omniCounters: { rancor: 3 } });
+  const spy = vi.spyOn(eventBus, 'emitirEvento');
+  render(<AcoesAtivasSection charId="ana" />);
+  fireEvent.click(screen.getByRole('button', { name: 'Usar' }));
+  act(() => clicarAlvoMapa('e-bruno'));
+  await waitFor(() => expect(pegarFicha('ana').peCurrent).toBe(6));
+  expect(pegarFicha('ana').omniCounters?.rancor).toBe(1);
+  const updates = spy.mock.calls.filter(([e]) => e === 'aoAtualizarContador');
+  expect(updates).toHaveLength(1);
+  expect(updates[0][1]?.cena).toMatchObject({ contador_anterior: 3, contador_valor: 1 });
+  expect(pegarFicha('bruno').hpCurrent).toBe(99);
+});
+
+it('efeitos de acerto limitam PV, PE e ação bônus aos máximos da ficha', async () => {
+  mesa(); const ent = equiparRancor();
+  const parsed = parseOmniScript('@acertar -> somar 200 em @USUARIO.vida e somar 50 em @USUARIO.pe e somar 5 em @USUARIO.acao_bonus');
+  expect(parsed.erros).toEqual([]);
+  ent.combatData!.effectsPassive = parsed.efeitos;
+  const inst = Object.values(useInventoryStore.getState().items)[0];
+  useInventoryStore.setState({ items: { [inst.instanceId]: { ...inst, entity: ent } } });
+  useCharacterStore.getState().updateCharacter('ana', { hpCurrent: 20, peCurrent: 2, peMax: 20, bonusActionsCurrent: 0, bonusActionsMax: 1 });
+  render(<AttackPanel character={pegarFicha('ana')} />);
+  await selecionarAlvo();
+  fireEvent.click(screen.getByRole('button', { name: /Rolar Ataque/ }));
+  await waitFor(() => expect(screen.getByRole('button', { name: /Rolar Dano/ })).toBeTruthy());
+  fireEvent.click(screen.getByRole('button', { name: /Rolar Dano/ }));
+  await waitFor(() => expect(pegarFicha('ana').peCurrent).toBe(20));
+  expect(pegarFicha('ana').hpCurrent).toBe(100);
+  expect(pegarFicha('ana').bonusActionsCurrent).toBe(1);
+});
