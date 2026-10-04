@@ -1,3 +1,4 @@
+import { planejarFormulaDano } from './planoDano';
 import { notificarAtualizacaoContadores } from './atualizacaoContadores';
 import { notificarResultadoAtaque } from './resultadoAtaque';
 import { armaDoPersonagem, armaEstaEmpunhada } from './armaDoPersonagem';
@@ -38,7 +39,7 @@ import { findCharEntity, touchDistanceMeters, type TouchGrid } from '@/lib/touch
 import { penalidadeTRFlanqueado } from '@/lib/flanqueadorSuperior';
 import { specDCFor } from '@/lib/golpeEspecial';
 import { rollD20Com, rollDiceGroups } from '@/lib/dice';
-import { findWeaponByName, resolveWeaponDamage, type Weapon } from '@/lib/weapons';
+import { findWeaponByName, resolveWeaponDamage, requiresTwoHands, type Weapon } from '@/lib/weapons';
 import { buildAttackContext, rollAttack } from '@/lib/combatEngine';
 import { computeTotalDefense } from '@/lib/defenseCalc';
 import { replicaWeaponName } from '@/lib/replicas';
@@ -168,9 +169,9 @@ export function melhorPericiaDaDisputa(char: Character, opcoes: string[]): { nom
     .sort((a, b) => b.bonus - a.bonus)[0];
 }
 
-function danoArmaBase(arma?: Weapon) {
+function danoArmaBase(arma?: Weapon, u?: Character) {
   if (!arma) return undefined;
-  const dano = resolveWeaponDamage(arma) ?? undefined;
+  const dano = resolveWeaponDamage(arma, requiresTwoHands(arma) || Boolean(u?.mainHandWeaponName && u.mainHandWeaponName === u.offHandWeaponName)) ?? undefined;
   const dados = [...(dano ?? '').matchAll(/(\d*)d(\d+)/gi)];
   return {
     ...(dano ? { dano } : {}),
@@ -181,7 +182,7 @@ function danoArmaBase(arma?: Weapon) {
 }
 
 function vars(u: Character, a?: Character, arma?: Weapon) {
-  const contexto = danoArmaBase(arma);
+  const contexto = danoArmaBase(arma, u);
   return {
     ...montarVariaveisDoPersonagem(u, 'USUARIO'),
     ...(a ? montarVariaveisDoPersonagem(a, 'ALVO') : {}),
@@ -190,21 +191,29 @@ function vars(u: Character, a?: Character, arma?: Weapon) {
 }
 
 function avaliarFormulaAtiva(expressao: string, u: Character, alvo?: Character, arma?: Weapon, rng?: () => number) {
-  return avaliarFormula(expressao, vars(u, alvo, arma), rng, { arma: danoArmaBase(arma) });
+  return avaliarFormula(expressao, vars(u, alvo, arma), rng, { arma: danoArmaBase(arma, u) });
 }
 
 /** Substitui tokens de arma por notação/dados para compor os grupos críticos. */
-function danoComContextoArma(expressao: string | undefined, arma?: Weapon): string | undefined {
+function danoComContextoArma(expressao: string | undefined, arma?: Weapon, u?: Character): string | undefined {
   if (!expressao) return expressao;
-  const contexto = danoArmaBase(arma);
+  const contexto = danoArmaBase(arma, u);
   return expressao
     .replace(/\(?@ARMA\.DADOS\)?d@ARMA\.PASSO/gi, () => `${contexto?.dados ?? 0}d${contexto?.passo ?? 0}`)
     .replace(/@ARMA\.([A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_]*)/gi, (_token, campo: string) => {
       const chave = campo.toLowerCase();
       if (chave === 'dano') return contexto?.dano ?? '0';
       const n = (contexto as Record<string, number | string> | undefined)?.[chave];
-      return typeof n === 'number' && Number.isFinite(n) ? String(n) : '0';
+      if (typeof n === 'number' && Number.isFinite(n)) return String(n);
+      throw new Error(`Campo de arma desconhecido: ${campo}`);
     });
+}
+
+function notacaoDanoAtivo(expressao: string | undefined, u: Character, alvo?: Character, arma?: Weapon): string {
+  if (expressao && /@ARMA\./i.test(expressao) && !arma) throw new Error('Fórmula exige uma arma disponível.');
+  const expr = danoComContextoArma(expressao, arma, u);
+  const plano = planejarFormulaDano(expr, parcela => avaliarFormulaAtiva(parcela, u, alvo, arma));
+  return [...plano.grupos.map(g => `${g.count}d${g.sides}`), ...(plano.fixo ? [String(Math.round(plano.fixo))] : [])].join('+') || '0';
 }
 
 export function custoPEDe(cfg: AcaoAtivaConfig, u: Character, intensificacoes = 0, arma?: Weapon): number {
@@ -222,6 +231,15 @@ export function podeUsarAtiva(u: Character, alvo: Character | undefined, cfg: Ac
     if (!cfg.pericia_usuario?.trim() || !cfg.pericias_alvo?.some(p => p.trim())) return { ok: false, reason: 'Configure a perícia do usuário e ao menos uma perícia possível do alvo.' };
     if (modificadorPericiaAtiva(u, cfg.pericia_usuario) === undefined) return { ok: false, reason: `A perícia "${cfg.pericia_usuario}" não existe na ficha do usuário.` };
     if (!melhorPericiaDaDisputa(alvo, cfg.pericias_alvo)) return { ok: false, reason: 'O alvo não possui nenhuma das perícias configuradas para a disputa.' };
+  }
+  if (cfg.tipo_efeito !== 'cura' && cfg.tipo_efeito !== 'buff') {
+    try {
+      notacaoDanoAtivo(cfg.dano, u, alvo, arma);
+      notacaoDanoAtivo(cfg.dadosPorCarga, u, alvo, arma);
+      notacaoDanoAtivo(cfg.custo_recursos?.dano_por_intensificacao, u, alvo, arma);
+      if (cfg.teste === 'ataque' && arma?.omniDamageFormula) notacaoDanoAtivo(arma.omniDamageFormula, u, alvo, arma);
+    }
+    catch (e) { return { ok: false, reason: e instanceof Error ? e.message : 'Fórmula de dano inválida.' }; }
   }
   const efeitos = [...(cfg.efeitos ?? []), ...Object.values(cfg.desfechosTR ?? {}).flatMap(d => d?.efeitos ?? [])];
   for (const ef of efeitos) {
@@ -358,6 +376,13 @@ export async function executarAcaoAtiva(
     critLegado: cfg.margemCritico?.condicao && avaliarFormulaAtiva(cfg.margemCritico.condicao, u, t, arma).valor ? cfg.margemCritico.reducao : 0,
   }]));
 
+  if (cfg.tipo_efeito !== 'cura' && cfg.tipo_efeito !== 'buff') {
+    for (const alvo of alvos) {
+      try { for (const dano of condicionais.get(alvo.id)!.mods.danos) notacaoDanoAtivo(dano, u, alvo, arma); }
+      catch (e) { return { ok: false, reason: e instanceof Error ? e.message : 'Dano condicional inválido.' }; }
+    }
+  }
+
   // ── Paga tudo antes de rolar ──
   const custos = planejarCustosAtivos(cfg, u, opcoes.intensificacoes ?? 0, contextoCustos);
   if (!custos.ok) return custos;
@@ -370,7 +395,7 @@ export async function executarAcaoAtiva(
   const fonte = ent?.nome ?? cfg.nome;
   const pago = `${p.pe} PE${p.pv ? ` + ${p.pv} PV` : ''}${cargas ? ` + ${cargas} carga(s) de ${p.contador}` : ''}${p.municao ? ` + ${p.municao} munição(ões)` : ''}${p.usosItem ? ` + ${p.usosItem} uso(s) do item` : ''}${p.intensificacoes ? ` · intensificação ${p.intensificacoes}` : ''}`;
   const sustentadas = p.pePorTurno > 0 ? [] as { charId: string; id: string }[] : undefined;
-  const extraIntensificacao = planejarDano(undefined, cfg.custo_recursos?.dano_por_intensificacao, p.intensificacoes, false);
+
 
   let danoTotal = 0;
   let curaTotal = 0;
@@ -414,7 +439,7 @@ export async function executarAcaoAtiva(
       const def = computeTotalDefense(t, {}, arma!.range === 'melee' ? 'melee' : 'ranged');
       const ctx = buildAttackContext({
         attacker: u, weapon: arma!, targetDefense: def, targetId: t.id, alcanceM: cfg.alcanceM, ignorarReacoes: opcoes.ignorarReacoes,
-        situation: { hitBonusExtra: cfg.mod_acerto, critBonusExtra: critExtra || undefined, advantageExtra: mods.vantagemAcerto, critMultiplierExtra: mods.multiplicador },
+        situation: { twoHanded: requiresTwoHands(arma!) || Boolean(u.mainHandWeaponName && u.mainHandWeaponName === u.offHandWeaponName), rolarDano: !!cfg.incluirArma && !/@ARMA\.DANO/i.test([cfg.dano, ...mods.danos].filter(Boolean).join('+')), hitBonusExtra: cfg.mod_acerto, critBonusExtra: critExtra || undefined, advantageExtra: mods.vantagemAcerto, critMultiplierExtra: mods.multiplicador },
         trainedRanges: [
           ...(u.meleeTrained ? (['melee'] as const) : []),
           ...(u.rangedTrained ? (['ranged', 'thrown'] as const) : []),
@@ -427,9 +452,10 @@ export async function executarAcaoAtiva(
       armaDano = cfg.incluirArma && !/@ARMA\.DANO/i.test(cfg.dano ?? '') ? r.damageTotal : 0;
       cabecalho = `ataque ${r.attackTotal} vs Defesa ${def} → ${r.critical ? 'CRÍTICO' : r.hit ? 'ACERTOU' : 'ERROU'}${critExtra ? ` (margem −${critExtra})` : ''}`;
       if (r.cancelled) { log(`⛔ ${cfg.nome}: ataque interrompido.`); continue; }
-      if (r.hit) notificarResultadoAtaque(u.id, t.id, arma!, r, metadadosAtaque, 'omni');
+      const tipoDeclarado = resolverTipoDano(cfg.tipoDano) ?? (cfg.incluirArma || /@ARMA\./i.test([cfg.dano, ...mods.danos].join('+')) ? resolverTipoDano(arma!.omniDamageType ?? arma!.damageType ?? undefined) : undefined);
+      if (r.hit) notificarResultadoAtaque(u.id, t.id, arma!, r, metadadosAtaque, 'omni', tipoDeclarado ?? null);
       if (!r.hit) {
-        notificarResultadoAtaque(u.id, t.id, arma!, r, metadadosAtaque, 'omni');
+        notificarResultadoAtaque(u.id, t.id, arma!, r, metadadosAtaque, 'omni', tipoDeclarado ?? null);
         const msg = `⚔️ ${u.name} usa ${cfg.nome} (${pago}) em ${t.name}: ${cabecalho}.`;
         log(msg);
         detalhes.push(msg);
@@ -482,9 +508,10 @@ export async function executarAcaoAtiva(
     }
 
     // ── Dano ──
+    const extraIntensificacao = planejarDano(undefined, notacaoDanoAtivo(cfg.custo_recursos?.dano_por_intensificacao, u, t, arma), p.intensificacoes, false);
     const danoConfigurado = [cfg.dano, ...mods.danos, ...extraIntensificacao.grupos.map(g => `${g.count}d${g.sides}`), extraIntensificacao.fixo ? String(extraIntensificacao.fixo) : '', desfechoTR?.dano_extra]
-      .filter(Boolean).map(d => danoComContextoArma(d, arma)).filter((d): d is string => !!d).join('+');
-    const plano = planejarDano(danoConfigurado, danoComContextoArma(cfg.dadosPorCarga, arma), cargas, critico, 2 + mods.multiplicador);
+      .filter(Boolean).map(d => danoComContextoArma(d, arma, u)).filter((d): d is string => !!d).join('+');
+    const plano = planejarDano(notacaoDanoAtivo(danoConfigurado, u, t, arma), notacaoDanoAtivo(cfg.dadosPorCarga, u, t, arma), cargas, critico, (arma?.critMultiplier ?? 2) + mods.multiplicador);
     const formulasComArma = [cfg.dano, ...mods.danos, desfechoTR?.dano_extra].filter(Boolean).join('+');
     const armaJaNaFormula = /@ARMA\.DANO/i.test(formulasComArma);
     const danoArmaAplicado = armaJaNaFormula ? 0 : armaDano;
@@ -506,7 +533,7 @@ export async function executarAcaoAtiva(
     const dano = cfg.tipo_efeito === 'buff' ? 0 : cfg.teste === 'tr' && grauTR ? danoDoGrauTR(bruto, grauTR, desfechoTR, !!cfg.metadeNoSucesso) : bruto;
     if (dano > 0) {
       const tipoArma: Partial<Record<NonNullable<Weapon['damageType']>, DamageType>> = { Ct: 'DCO', Pf: 'DP', Im: 'DI' };
-      useCharacterStore.getState().applyDamage(t.id, dano, resolverTipoDano(cfg.tipoDano) ?? (tipoHerdado && arma?.damageType ? tipoArma[arma.damageType] : undefined), {
+      useCharacterStore.getState().applyDamage(t.id, dano, resolverTipoDano(cfg.tipoDano) ?? (tipoHerdado ? resolverTipoDano(arma?.omniDamageType) : undefined) ?? (tipoHerdado && arma?.damageType ? tipoArma[arma.damageType] : undefined), {
         attackerId: u.id, source: 'omni', attack: metadadosAtaque,
         isMelee: metadadosAtaque ? metadadosAtaque.kind === 'melee' : undefined,
       });

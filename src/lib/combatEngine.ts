@@ -1,3 +1,6 @@
+import { planejarFormulaDano } from './omni/planoDano';
+import { avaliarFormula } from './omni/parser';
+import { montarVariaveisDoPersonagem } from './omni/resolvedor';
 import { useMapStore } from '@/stores/useMapStore';
 import { checkWeaponRange, distanceBetweenChars } from './weaponRange';
 import { posturaAlcanceMult } from './posturas';
@@ -51,6 +54,8 @@ import { consumeAdvantageFor, consumeFlatBonusFor } from '@/lib/omni/rollAdvanta
 // ===== Tipos públicos =======================================================
 
 export interface AttackSituation {
+  /** A ação ativa pode usar apenas o acerto e planejar seu próprio dano. */
+  rolarDano?: boolean;
   /** O alvo está [Desprevenido] em relação ao atacante (apunhaladora, furtividade…). */
   targetUnaware?: boolean;
   /** O alvo está [Caído]. */
@@ -264,7 +269,9 @@ function applyTalentContextualBonuses(ctx: AttackContext, out: ContextualBonus):
 
   // Enérgica: 2º ataque ganha +qtdDadosBase; cada subsequente +1
   if (hasProperty(w, 'energica') && (ctx.situation.previousAttacksThisTurn ?? 0) > 0) {
-    const baseDice = parseDamage(resolveWeaponDamage(w, ctx.situation.twoHanded) ?? '1d4');
+    const baseDice = w.omniDamageFormula
+      ? planejarFormulaDano(resolveWeaponDamage(w, ctx.situation.twoHanded) ?? undefined, expr => avaliarFormula(expr, montarVariaveisDoPersonagem(ctx.attacker))).grupos
+      : parseDamage(resolveWeaponDamage(w, ctx.situation.twoHanded) ?? '1d4');
     const baseCount = baseDice.reduce((a, d) => a + d.count, 0);
     const n = ctx.situation.previousAttacksThisTurn!;
     const energicBonus = baseCount + Math.max(0, n - 1);
@@ -368,7 +375,16 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
   }
   const w = ctx.weapon;
   const dmgNotation = resolveWeaponDamage(w, ctx.situation.twoHanded) ?? '1d4';
-  const baseDice = parseDamage(dmgNotation);
+  let fixoArma = 0;
+  let baseDice: DamageDice;
+  try {
+    if (w.omniDamageFormula) {
+      const plano = planejarFormulaDano(dmgNotation, expr => avaliarFormula(expr, montarVariaveisDoPersonagem(ctx.attacker)));
+      baseDice = plano.grupos; fixoArma = plano.fixo;
+    } else baseDice = parseDamage(dmgNotation);
+  } catch (e) {
+    return { cancelled: true, d20: 0, attackRolls: [], rollMode: 'normal', natural: 0, attackTotal: 0, hit: false, critical: false, criticalFail: false, damageDice: '', damageRolls: [], damageTotal: 0, damageType: null, modifiers: [], notes: [e instanceof Error ? e.message : 'Dano de arma inválido.'], canRerollDamage: false };
+  }
 
   // Bônus contextuais (talentos + propriedades)
   const ctxBonus = emptyCtx();
@@ -499,8 +515,8 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
   const hit = !criticalFail && !jammed && (critical || attackTotal >= ctx.targetDefense);
 
   // Dano: aplica step + dados extras + crítico (Mortal/Fatal)
-  let finalDice: DamageDice = stepDamage(baseDice, ctxBonus.damageStepDelta);
-  finalDice = addBonusDice(finalDice, ctxBonus.bonusDice);
+  let finalDice: DamageDice = baseDice.length ? stepDamage(baseDice, ctxBonus.damageStepDelta) : [];
+  if (finalDice.length) finalDice = addBonusDice(finalDice, ctxBonus.bonusDice);
 
   // Arte do Combate — Execução Silenciosa: +Nd6 vs. alvo Desprevenido.
   const execucaoD6 = ctx.situation.arteExecucao && ctx.situation.targetUnaware
@@ -512,13 +528,13 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
     // Crítico padrão: dobra os dados. Mortal: +1 dado do tamanho listado.
     // Fatal: dado base sobe para o listado para fins de contagem.
     const fatal = getProperty(w, 'fatal');
-    if (fatal?.die) {
+    if (fatal?.die && finalDice.length) {
       // Aumenta o maior dado para `fatal.die` (se for menor)
       const big = finalDice.reduce((m, d) => (d.sides > m.sides ? d : m), finalDice[0]);
       if (big.sides < fatal.die) big.sides = fatal.die;
     }
     // Multiplicador genérico de crítico, x2 na ausência de modificador.
-    finalDice = finalDice.map(d => ({ ...d, count: d.count * Math.max(1, 2 + Math.trunc(ctx.situation.critMultiplierExtra ?? 0)) }));
+    finalDice = finalDice.map(d => ({ ...d, count: d.count * Math.max(1, (w.critMultiplier ?? 2) + Math.trunc(ctx.situation.critMultiplierExtra ?? 0)) }));
     const mortal = getProperty(w, 'mortal');
     if (mortal?.die) {
       finalDice.push({ count: 1, sides: mortal.die });
@@ -527,7 +543,7 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
 
   let damageRolls: number[] = [];
   let damageTotal = 0;
-  if (hit) {
+  if (hit && ctx.situation.rolarDano !== false) {
     const massivo = massivoApplies(ctx.attacker, w, !!ctx.situation.twoHanded);
     const rerolled: string[] = [];
     for (const term of finalDice) {
@@ -549,7 +565,7 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
       }
     }
     if (rerolled.length) ctxBonus.notes.push(`Estilo Massivo rerrolou: ${rerolled.join(', ')}`);
-    damageTotal += (posturaAtaque(ctx.attacker).semAtributo ? 0 : ctx.abilityMod) + ctxBonus.damageFlat;
+    damageTotal += fixoArma + (posturaAtaque(ctx.attacker).semAtributo ? 0 : ctx.abilityMod) + ctxBonus.damageFlat;
   }
 
   const notes = [...ctxBonus.notes];
@@ -568,9 +584,9 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
     d20: natural, attackRolls, rollMode, natural, attackTotal, hit, critical, criticalFail,
     emperrou: jammed,
 
-    damageDice: formatDamage(finalDice),
+    damageDice: `${formatDamage(finalDice)}${fixoArma ? `${fixoArma > 0 ? '+' : ''}${fixoArma}` : ''}`,
     damageRolls, damageTotal,
-    damageType: w.damageType,
+    damageType: w.omniDamageType ?? w.damageType,
     modifiers: mods, notes,
     canRerollDamage:
       hit && (ctx.attacker.chosenTalents ?? []).some(t => t.id === 'tal-ataque-infalivel'),

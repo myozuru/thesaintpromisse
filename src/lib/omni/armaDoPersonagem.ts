@@ -1,7 +1,8 @@
-import { ALL_WEAPONS, findWeaponByName, requiresTwoHands, type Weapon, type WeaponPropertyKind } from '@/lib/weapons';
+import { ALL_WEAPONS, findWeaponByName, requiresTwoHands, resolveWeaponDamage, type Weapon, type WeaponPropertyKind } from '@/lib/weapons';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
-import { getWeaponMeta } from './weaponModel';
+import { resolverTipoDano } from './contextoDano';
+import { getWeaponMeta, efeitoDanoDaArma } from './weaponModel';
 
 /** Resolve também armas OMNI renomeadas e a empunhadura configurada no construtor. */
 export function armaDoPersonagem(charId: string, nome: string): Weapon | undefined {
@@ -31,6 +32,15 @@ export function armaDoPersonagem(charId: string, nome: string): Weapon | undefin
   if (meta.maos || ent.tags.includes('prop:duas_maos')) {
     weapon.properties = weapon.properties.filter(p => p.kind !== 'duas_maos');
     if (meta.maos === 2 || ent.tags.includes('prop:duas_maos') || (base && requiresTwoHands(base))) weapon.properties.push({ kind: 'duas_maos' });
+  }
+  const efeito = efeitoDanoDaArma(ent);
+  if (meta.dano && (!base || meta.dano.trim() !== resolveWeaponDamage(base, false))) weapon.omniDamageFormula = meta.dano;
+  if (ent.combatData?.critMultiplier != null) weapon.critMultiplier = ent.combatData.critMultiplier;
+  const tipo = resolverTipoDano(efeito?.damageType);
+  if (tipo) {
+    const fisico = { DCO: 'Ct', DP: 'Pf', DI: 'Im' } as const;
+    weapon.omniDamageType = tipo;
+    weapon.damageType = fisico[tipo as keyof typeof fisico] ?? null;
   }
   if (ent.combatData?.critRange != null) weapon.critRange = ent.combatData.critRange;
   if (meta.espacos != null) weapon.spaces = meta.espacos;

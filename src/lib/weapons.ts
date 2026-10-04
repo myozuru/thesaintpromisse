@@ -36,6 +36,10 @@ export interface WeaponProperty {
 }
 
 export interface Weapon {
+  /** Configuração OMNI preservada sobre o modelo do catálogo. */
+  omniDamageFormula?: string;
+  omniDamageType?: string;
+  critMultiplier?: number;
   id: string;
   name: string;
   category: WeaponCategory;
@@ -326,6 +330,7 @@ export function getProperty(w: Weapon, kind: WeaponPropertyKind): WeaponProperty
 
 /** Resolve dano da arma para a mão escolhida (versátil). */
 export function resolveWeaponDamage(w: Weapon, twoHanded = false): string | null {
+  if (w.omniDamageFormula) return w.omniDamageFormula;
   if (w.damage) return w.damage;
   if (twoHanded && w.damage2H) return w.damage2H;
   if (w.damage1H) return w.damage1H;

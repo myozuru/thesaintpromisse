@@ -1,7 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { formatDamageBreakdown } from '@/lib/damageLog';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLogStore } from '@/stores/useLogStore';
+
+// applyDamage despacha eventos por import assíncrono: aguarda antes de encerrar o ambiente.
+afterEach(async () => { await import('@/lib/omni/eventBus'); await new Promise(resolve => setTimeout(resolve, 0)); });
 
 describe('registro detalhado de dano', () => {
   it('mostra dano total, RD aplicada e dano final', () => {

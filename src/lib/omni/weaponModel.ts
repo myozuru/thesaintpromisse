@@ -8,6 +8,7 @@
  */
 import type { Weapon, DamageType } from '@/lib/weapons';
 import { ALL_WEAPONS, resolveWeaponDamage } from '@/lib/weapons';
+import { canonicalizarChave } from './keyAliases';
 import type { EntidadeOmni, CombatEffect } from './tipos';
 
 const DAMAGE_TYPE_LABEL: Record<DamageType, string> = {
@@ -92,6 +93,12 @@ function buildCombatEffects(w: Weapon, formulaOverride?: string): CombatEffect[]
   }];
 }
 
+/** Dano-base declarado: não confunde cura, custo pessoal ou efeito de evento com o golpe. */
+export function efeitoDanoDaArma(ent: EntidadeOmni): CombatEffect | undefined {
+  const efeitos = ent.combatData?.effectsActive?.length ? ent.combatData.effectsActive : ent.combatData?.effects ?? [];
+  return efeitos.find(e => e.type === 'SUBTRAIR' && e.target === 'ALVO' && !e.trigger && canonicalizarChave(e.resourcePath ?? 'vida') === 'vida');
+}
+
 /** Lê metadados de arma das tags da entidade Omni. */
 export function getWeaponMeta(ent: EntidadeOmni): {
   modeloId: string | null;
@@ -113,8 +120,7 @@ export function getWeaponMeta(ent: EntidadeOmni): {
     return Number.isFinite(n) && n >= 0 ? n : null;
   };
   const [curto, longo] = alcanceStr ? alcanceStr.split('/').map(numero) : [null, null];
-  const dano = ent.combatData?.effectsActive?.[0]?.formula
-    ?? ent.combatData?.effects?.[0]?.formula ?? null;
+  const dano = efeitoDanoDaArma(ent)?.formula ?? null;
   return {
     modeloId: find('modelo:'),
     espacos: numero(espacosStr),
@@ -174,7 +180,9 @@ export function setWeaponDamage(ent: EntidadeOmni, formula: string): EntidadeOmn
   if (!cd) return ent;
   const patchEffects = (list?: CombatEffect[]) => {
     if (!list || list.length === 0) return list;
-    return [{ ...list[0], formula }, ...list.slice(1)];
+    const indice = list.findIndex(e => e.type === 'SUBTRAIR' && e.target === 'ALVO' && !e.trigger && canonicalizarChave(e.resourcePath ?? 'vida') === 'vida');
+    if (indice < 0) return list;
+    return list.map((e, i) => i === indice ? { ...e, formula } : e);
   };
   return {
     ...ent,
