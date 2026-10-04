@@ -9,7 +9,8 @@ import { aceitaAlvoAtivo } from './alvosAtivos';
 import { useReactionStore } from '@/stores/useReactionStore';
 import { useProfileStore } from '@/stores/useProfileStore';
 import { planejarCustosAtivos, validarRecursosAtivos } from './custosAtivos';
-import { findWeaponByName } from '@/lib/weapons';
+import { armaDoPersonagem, armaEstaEmpunhada } from './armaDoPersonagem';
+import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { replicaWeaponName } from '@/lib/replicas';
 import { segmentoCruzaAlcance } from './geometriaReacao';
 
@@ -78,7 +79,8 @@ export async function responderOfertaRemota(janelaId: string, ofertaId?: string,
   useReacoesAtivasStore.getState().marcarOfertaRemotaBusy(janelaId, true);
   try {
     const item = useInventoryStore.getState().items[oferta.instanceId];
-    const atual = item?.entity.acoesAtivas?.find(a => a.id === oferta.cfg.id);
+    const entAtual = item && (useOmniEntidadesStore.getState().entidades[item.entity.id] ?? item.entity);
+    const atual = entAtual?.acoesAtivas?.find(a => a.id === oferta.cfg.id);
     if (!item || item.ownerId !== oferta.usuarioId || JSON.stringify(atual) !== JSON.stringify(oferta.cfg) || !elegivel(oferta, remoto.evento)) throw new Error('Reação indisponível: ficha, alcance, recursos ou configuração mudaram.');
     const { executarAcaoAtiva } = await import('./acaoAtiva');
     const cfg = { ...oferta.cfg, tipo_alvo: oferta.alvoId === oferta.usuarioId ? 'proprio' as const : 'unico' as const, ...(remoto.evento.movimento ? { alcanceM: 0 } : {}) };
@@ -98,6 +100,13 @@ export async function responderOfertaRemota(janelaId: string, ofertaId?: string,
 function elegivel(oferta: OfertaReacaoAtiva, evento: EventoReacaoAtiva): boolean {
   const chars = useCharacterStore.getState().characters;
   const u = chars.find(c => c.id === oferta.usuarioId), origem = chars.find(c => c.id === evento.origemId);
+  const item = useInventoryStore.getState().items[oferta.instanceId];
+  const ent = item && (useOmniEntidadesStore.getState().entidades[item.entity.id] ?? item.entity);
+  if (!item || item.ownerId !== oferta.usuarioId || !ent || JSON.stringify(ent) !== JSON.stringify(oferta.ent)) return false;
+  if (ent.categoria === 'arma') {
+    const nome = ent.replica ? item.replicaArma : ent.nome;
+    if (!u || !nome || !armaEstaEmpunhada(u, nome) || (ent.replica && !item.materializada)) return false;
+  }
   const r = oferta.cfg.reacao;
   if (!u || !origem || !r || u.id === origem.id || (u.hpCurrent ?? 1) <= 0 || !aceitaAlvoAtivo(u, origem, { ...oferta.cfg, filtro_alvo: 'inimigos' })) return false;
   const protegido = chars.find(c => c.id === evento.protegidoId);
@@ -118,8 +127,8 @@ function elegivel(oferta: OfertaReacaoAtiva, evento: EventoReacaoAtiva): boolean
     const centro = evento.protegidoId ? findCharEntity(ms.entities, evento.protegidoId) : ot;
     if (!centro || touchDistanceMeters(ut, centro, ms.gridConfig) > r.alcance_m + 0.05) return false;
   }
-  const nomeArma = replicaWeaponName(oferta.ent) || u.mainHandWeaponName || undefined;
-  const arma = nomeArma ? findWeaponByName(nomeArma) : undefined;
+  const nomeArma = replicaWeaponName(oferta.ent) || (oferta.ent.categoria === 'arma' ? oferta.ent.nome : u.mainHandWeaponName) || undefined;
+  const arma = nomeArma ? armaDoPersonagem(u.id, nomeArma) : undefined;
   const custos = planejarCustosAtivos(oferta.cfg, u, 0, { armaNome: arma?.name, instanciaId: oferta.instanceId, entidadeId: oferta.ent.id });
   return custos.ok && validarRecursosAtivos(u, custos.plano).ok && (custos.plano.acao !== 'reacao' || useReactionStore.getState().hasReactionAvailable(u.id));
 }
@@ -127,14 +136,15 @@ function elegivel(oferta: OfertaReacaoAtiva, evento: EventoReacaoAtiva): boolean
 export function ofertasReacaoAtiva(evento: EventoReacaoAtiva): OfertaReacaoAtiva[] {
   const ofertas: OfertaReacaoAtiva[] = [];
   for (const item of Object.values(useInventoryStore.getState().items)) {
-    for (const cfg of item.entity.acoesAtivas ?? []) {
+    const ent = useOmniEntidadesStore.getState().entidades[item.entity.id] ?? item.entity;
+    for (const cfg of ent.acoesAtivas ?? []) {
       if (cfg.reacao?.gatilho !== evento.gatilho) continue;
       // Seleção determinística evita abrir um segundo seletor durante a interrupção.
       if (cfg.tipo_alvo === 'multiplo' || cfg.tipo_alvo === 'area') continue;
       const alvoId = cfg.reacao.alvo === 'usuario' ? item.ownerId : cfg.reacao.alvo === 'protegido' ? evento.protegidoId : evento.origemId;
       const u = useCharacterStore.getState().characters.find(c => c.id === item.ownerId);
       if (!u || !alvoId) continue;
-      const oferta = { id: `${item.instanceId}:${cfg.id}`, usuarioId: u.id, nomeUsuario: u.name, instanceId: item.instanceId, cfg, ent: item.entity, alvoId };
+      const oferta = { id: `${item.instanceId}:${cfg.id}`, usuarioId: u.id, nomeUsuario: u.name, instanceId: item.instanceId, cfg, ent, alvoId };
       if (elegivel(oferta, evento)) ofertas.push(oferta);
     }
   }
@@ -173,7 +183,8 @@ export async function responderReacaoAtiva(id: string, ofertaId?: string): Promi
   const resultado = { ...j.resultado };
   try {
     const item = useInventoryStore.getState().items[oferta.instanceId];
-    const atual = item?.entity.acoesAtivas?.find(a => a.id === oferta.cfg.id);
+    const entAtual = item && (useOmniEntidadesStore.getState().entidades[item.entity.id] ?? item.entity);
+    const atual = entAtual?.acoesAtivas?.find(a => a.id === oferta.cfg.id);
     if (!item || item.ownerId !== oferta.usuarioId || JSON.stringify(atual) !== JSON.stringify(oferta.cfg) || !elegivel(oferta, j.evento)) throw new Error('Reação indisponível: ficha, alcance, recursos ou configuração mudaram.');
     const { executarAcaoAtiva } = await import('./acaoAtiva');
     const cfg = { ...oferta.cfg, tipo_alvo: oferta.alvoId === oferta.usuarioId ? 'proprio' as const : 'unico' as const, ...(j.evento.movimento ? { alcanceM: 0 } : {}) };
@@ -235,3 +246,4 @@ export function podeVerOfertaReacao(oferta: OfertaReacaoAtiva, perfilId: string 
 export function cancelarJanelasReacoesAtivas(): void {
   for (const j of useReacoesAtivasStore.getState().janelas) fechar(j.id, { cancelado: true, defesaBonus: 0 });
 }
+

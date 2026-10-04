@@ -9,6 +9,7 @@ vi.mock('@/lib/sounds', async original => Object.fromEntries(Object.keys(await o
 vi.mock('@/components/dice-physics/DiceTrayPanel', () => ({ DiceTrayPanel: () => null }));
 import { ficha, montarMesa, pegarFicha, limparMesa, comoTela, esperar, forcarDados } from './helpers/mesaReal';
 import { useCharacterStore } from '@/stores/useCharacterStore';
+import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { useCombatStore } from '@/stores/useCombatStore';
@@ -60,6 +61,30 @@ describe('janelas de reação', () => {
     expect((await p).cancelado).toBe(false);
   });
 
+  it('arma guardada não oferece reação; empunhada oferece e soltar invalida a janela', async () => {
+    const ent = { ...novaEntidade('arma'), nome: 'Lâmina Reativa', acoesAtivas: [config()] };
+    useInventoryStore.getState().add('u', ent);
+    expect(ofertasReacaoAtiva(evento)).toHaveLength(0);
+    useCharacterStore.getState().updateCharacter('u', { mainHandWeaponName: ent.nome });
+    expect(ofertasReacaoAtiva(evento)).toHaveLength(1);
+    const p = abrirJanelaReacaoAtiva(evento), j = useReacoesAtivasStore.getState().janelas[0];
+    useCharacterStore.getState().updateCharacter('u', { mainHandWeaponName: null });
+    await responderReacaoAtiva(j.id, j.ofertas[0].id);
+    expect(pegarFicha('u').peCurrent).toBe(20);
+    expect(pegarFicha('u').reactionsCurrent).toBe(1);
+    await responderReacaoAtiva(j.id); await p;
+  });
+  it('usa configuração atual do catálogo e recusa edição após a oferta', async () => {
+    const item = add();
+    const atual = { ...item.entity, acoesAtivas: [config({}, { nome: 'Reação Atual', custoPE: '3' })] };
+    useOmniEntidadesStore.setState(s => ({ entidades: { ...s.entidades, [atual.id]: atual } }));
+    expect(ofertasReacaoAtiva(evento)[0].cfg.nome).toBe('Reação Atual');
+    const p = abrirJanelaReacaoAtiva(evento), j = useReacoesAtivasStore.getState().janelas[0];
+    useOmniEntidadesStore.setState(s => ({ entidades: { ...s.entidades, [atual.id]: { ...atual, acoesAtivas: [] } } }));
+    await responderReacaoAtiva(j.id, j.ofertas[0].id);
+    expect(pegarFicha('u').peCurrent).toBe(20);
+    await responderReacaoAtiva(j.id); await p;
+  });
   it('pausa o ataque antes do d20 e passar retoma sem cobrar reação', async () => {
     add(); render(<ReacoesAtivasOverlay />); forcarDados(12, 3);
     let finalizou = false; const promessa = ataque().then(r => { finalizou = true; return r; }); await esperar();
