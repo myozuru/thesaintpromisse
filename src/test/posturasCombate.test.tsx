@@ -16,6 +16,7 @@ import { reactionMoveBudget, effectiveMovement } from '@/lib/movementBudget';
 import { useLogStore } from '@/stores/useLogStore';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
+import { useReactionStore } from '@/stores/useReactionStore';
 import { computeTotalDefense } from '@/lib/defenseCalc';
 import { podeEntrar, podeAprender, posturasLimite, imuneMovimentoForcado, posturaFortitude } from '@/lib/posturas';
 import { ficha, montarMesa, limparMesa, comoTela, pegarFicha, forcarDados } from './helpers/mesaReal';
@@ -92,6 +93,36 @@ describe('Assumir Postura — base', () => {
 });
 
 describe('Posturas em combate', () => {
+  it('ataque real aguarda Cobrir-se e reduz o dano antes de alterar PV', async () => {
+    const alvo = inimigo('bruno');
+    Object.assign(alvo, {
+      peCurrent: 10, peMax: 10,
+      chosenClAptitudes: ['cl-cobrir-se'],
+      cursedAptitudes: { CL: 1 },
+    });
+    montarMesa([esp(), alvo, inimigo('caio'), inimigo('davi')], { ana: [0, 0], bruno: [1, 0] });
+    useCombatStore.setState({ inCombat: true, round: 1, initiativeOrder: [{ charId: 'ana' }, { charId: 'bruno' }] as never, currentTurnIndex: 0 } as never);
+    useReactionStore.setState({ prompts: [], reactionsUsedByChar: {} });
+    render(<><AttackPanel character={pegarFicha('ana')} /><ReactionPromptOverlay /></>);
+
+    await selecionarAlvoNoMapaUI('bruno');
+    forcarDados(15, 4, 4, 4);
+    clicar(/Rolar Ataque/);
+    fireEvent.click(await screen.findByRole('button', { name: /Rolar Dano/ }));
+
+    await screen.findByRole('button', { name: /Cobrir-se$/i });
+    const prompt = useReactionStore.getState().prompts.find((p) => p.kind === 'cobrir_se_offer')!;
+    const hpBefore = pegarFicha('bruno').hpCurrent;
+    expect(prompt.payload?.damageDealt).toBeGreaterThan(0);
+    expect(hpBefore).toBe(200); // a escolha ainda está pendente: PV não foram tocados
+
+    fireEvent.click(screen.getByRole('button', { name: /Cobrir-se$/i }));
+    const expectedHp = hpBefore - Math.max(0, (prompt.payload?.damageDealt ?? 0) - 4);
+    await waitFor(() => expect(pegarFicha('bruno').hpCurrent).toBe(expectedHp));
+    expect(pegarFicha('bruno').peCurrent).toBe(9);
+    expect(useReactionStore.getState().reactionsUsedByChar.bruno).toBe(1);
+  });
+
   it('Sol: +2 acerto, 2 dados no dano e −4 Defesa', async () => {
     const base = computeTotalDefense(esp());
     mesa(esp({ posturasAprendidas: ['sol'] }));

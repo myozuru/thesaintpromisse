@@ -11,6 +11,9 @@ vi.mock('@/integrations/supabase/safeClient', async () => ({ hasWorkspaceCloud: 
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { SpellApplyDialog } from '@/components/fichas/SpellApplyDialog';
 import { TestRequestOverlay } from '@/components/fichas/TestRequestOverlay';
+import { importCreatureToFichas } from '@/components/grimorio/convertToFicha';
+import { resolveAreaTargetCharacters } from '@/lib/mapAoE';
+import { useMapStore } from '@/stores/useMapStore';
 import { useTestRequestStore } from '@/stores/useTestRequestStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
@@ -102,6 +105,57 @@ describe('Feitiços reais pela UI', () => {
     const ctx = await resultadoCausado(spy);
     expect(ctx).toMatchObject({ tipo: 7, fonte: 2, id_origem: 1, tipo_ataque: 3, valor_inicial: 7, valor_final: 4 });
     expect(ctx).not.toHaveProperty('foi_falha_critica');
+  });
+
+  it('ataque em área importado do Grimório percorre mapa, TR do jogador e dano real', async () => {
+    useCharacterStore.setState({ characters: [] } as never);
+    const imported = importCreatureToFichas({
+      name: 'Calamidade de Teste',
+      core: { nd: 10, size: 'grande', origin: { type: 'maldicao' } },
+      attributes: { forca: 20, destreza: 16, constituicao: 20, inteligencia: 16, sabedoria: 16, presenca: 20 },
+      stats: { hpMax: 1000, peMax: 30, defesa: 20, deslocamento: 9, cdBase: 10 },
+      saves: { fortitude: 12, reflexos: 10, vontade: 14, astucia: 10, integridade: 12 },
+      skills: [],
+      defenses: { vulnerabilidades: [], imunidades: [], resistencias: [], condicoesImunes: [] },
+      aptidoes: { ea: 0, cl: 0, bar: 0, dom: 0, er: 0 },
+      actions: {
+        total: { comum: 1, bonus: 1, reacao: 1 },
+        list: [{
+          name: 'Onda de Cinzas', type: 'comum', attackType: 'tr_area', cd: 20,
+          trType: 'Vontade', cost: 5, range: '9m', area: 4.5, areaShape: 'circle',
+          damage: { roll: '2d8', type: 'queimante' },
+        }],
+      },
+    } as never)!;
+    const target = ficha('alvo', {
+      profileId: 'perfil-alvo', category: 'PLAYER', hpCurrent: 200, hpMax: 200, escCurrent: 0,
+      peCurrent: 20, peMax: 20, rd: 0, attributes: [], savingThrows: [], activeBuffs: [],
+    });
+    useCharacterStore.setState((s) => ({ characters: [...s.characters, target] }));
+    const entities = {
+      caster: { id: 'caster', characterId: imported.id, x: 0, y: 0, w: 70, h: 70 },
+      tokenAlvo: { id: 'tokenAlvo', avatarProfileId: 'perfil-alvo', x: 70, y: 0, w: 70, h: 70 },
+    } as never;
+    useMapStore.setState({ entities });
+    const resolved = resolveAreaTargetCharacters(
+      ['tokenAlvo'], entities as never, useCharacterStore.getState().characters, imported.id, 'caster',
+    );
+    expect(resolved.characterIds).toEqual(['alvo']);
+
+    const creature = pegarFicha(imported.id);
+    const areaAttack = creature.spells.find((s) => s.name === 'Onda de Cinzas')!;
+    expect(areaAttack.targetMode).toBe('area_tr');
+    expect(areaAttack.damageDice).toBe('2d8');
+    forcarDados(1, 4, 5); // falha crítica no TR, depois 2d8 de dano
+    const spy = vi.spyOn(eventBus, 'emitirEvento');
+    render(<><SpellApplyDialog spell={areaAttack} sourceCharId={creature.id} initialTargetIds={resolved.characterIds} areaMode onClose={() => {}} /><TestRequestOverlay /></>);
+    comoTela({ profileId: 'perfil-alvo', role: 'PLAYER' });
+    fireEvent.click(await screen.findByRole('button', { name: /Rolar d20/i }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Rolar Dano' }, { timeout: 5000 }));
+    const ctx = await resultadoCausado(spy);
+    await waitFor(() => expect(pegarFicha('alvo').hpCurrent).toBe(182));
+    expect(ctx).toMatchObject({ tipo: 7, fonte: 2, valor_inicial: 18, valor_final: 18, id_origem: 1 });
+    expect(pegarFicha(creature.id).peCurrent).toBe(creature.peCurrent - 5);
   });
 });
 
