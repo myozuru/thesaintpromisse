@@ -1,3 +1,6 @@
+import { pedirAlvoMapa } from '@/stores/useAlvoMapaStore';
+import { aceitaAlvoAtivo, limiteAlvosAtivos } from '@/lib/omni/alvosAtivos';
+import { weaponMaxRangeMeters } from '@/lib/weaponRange';
 import { agruparAcoesAtivas } from '@/lib/omni/agruparAcoesAtivas';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { planejarCustosAtivos, encerrarSustentacaoAtiva } from '@/lib/omni/custosAtivos';
@@ -21,8 +24,6 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
   useOmniEntidadesStore((s) => s.entidades);
   const [exemplares, setExemplares] = useState<Record<string, string>>({});
   const chars = useCharacterStore((s) => s.characters);
-  const [alvos, setAlvos] = useState<Record<string, string>>({});
-  const [multiplos, setMultiplos] = useState<Record<string, string[]>>({});
   const [intensificacoes, setIntensificacoes] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [erro, setErro] = useState<Record<string, string>>({});
@@ -71,9 +72,7 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
         const proprio = cfg.tipo_alvo === 'proprio';
         const multiplo = cfg.tipo_alvo === 'multiplo';
         const area = cfg.tipo_alvo === 'area';
-        const alvoAtual = alvos[key] ?? '';
-        const alvoSel = multiplo ? (multiplos[key] ?? []) : alvoAtual;
-        const precisaAlvo = !proprio && !area && (multiplo ? (multiplos[key] ?? []).length === 0 : !alvoAtual);
+
         const teste = cfg.teste === 'tr' ? `TR ${TR_ROT[cfg.tr ?? 'fortitude']}${cfg.cd ? ` CD ${cfg.cd}` : ''}` : cfg.teste === 'ataque' ? 'Ataque' : cfg.teste === 'disputa' ? 'Disputa' : null;
         const cargas = p?.contador ? (u.omniCounters?.[p.contador] ?? 0) : null;
         return (
@@ -116,19 +115,6 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
             </div>
             {!custos.ok && <div className="rounded bg-destructive/10 px-2 py-1 text-[11px] text-destructive">⚠ {custos.reason}</div>}
             <div className="flex flex-wrap items-center gap-2">
-              {!proprio && !area && !multiplo && (
-                <select data-testid="acao-ativa-alvo" aria-label={`Alvo de ${cfg.nome}`} value={alvoAtual} onChange={(e) => setAlvos({ ...alvos, [key]: e.target.value })}
-                  className="h-8 min-w-0 flex-1 rounded border border-input bg-background px-2 text-xs">
-                  <option value="">Escolha o alvo…</option>
-                  {outros.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                </select>
-              )}
-              {multiplo && (
-                <select multiple aria-label={`Alvos de ${cfg.nome}`} className="min-w-0 flex-1 rounded border border-input bg-background text-xs" value={multiplos[key] ?? []}
-                  onChange={(e) => setMultiplos({ ...multiplos, [key]: Array.from(e.target.selectedOptions, (o) => o.value) })}>
-                  {outros.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                </select>
-              )}
               {cfg.custo_recursos?.max_intensificacoes ? (
                 <label className="flex items-center gap-1 text-xs">Intensificar
                   <input aria-label={`Intensificação de ${cfg.nome}`} className="h-8 w-14 rounded border border-input bg-background px-1" type="number" min={0} max={p?.maxIntensificacoes} value={intensidade} disabled={!!busy}
@@ -136,15 +122,28 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
                 </label>
               ) : null}
               <button
-                disabled={!!busy || !custos.ok || precisaAlvo}
-                title={precisaAlvo ? 'Escolha um alvo primeiro' : undefined}
+                disabled={!!busy || !custos.ok}
+                title={!proprio && !area ? 'Selecionar alvos no alcance pelo mapa' : undefined}
                 className="ml-auto h-8 shrink-0 rounded bg-primary px-3 text-xs font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
                 onClick={async () => {
                   setBusy(key); setErro({ ...erro, [key]: '' });
                   try {
+                    let alvoSel: string | string[] = '';
+                    if (!proprio && !area) {
+                      const ids = await pedirAlvoMapa({ usuarioId: charId, label: cfg.nome,
+                        maxRangeMeters: cfg.alcanceM > 0 ? cfg.alcanceM : (arma ? weaponMaxRangeMeters(arma) ?? 0 : 0),
+                        maxAlvos: multiplo ? limiteAlvosAtivos(cfg, u) : 1, aceita: alvo => aceitaAlvoAtivo(u, alvo, cfg) });
+                      if (!ids) return;
+                      alvoSel = multiplo ? ids : ids[0];
+                      window.dispatchEvent(new CustomEvent('app:navigate', { detail: 'fichas' }));
+                    }
+                    // Revalida a empunhadura após a seleção no mapa.
+                    if (ent.categoria === 'arma' && !acoesAtivasDe(charId).some(a => a.instanceId === instanceId && a.cfg.id === cfg.id)) {
+                      setErro(e => ({ ...e, [key]: 'A arma não está mais empunhada.' })); return;
+                    }
                     const r = await executarAcaoAtiva(charId, cfg, alvoSel, ent, { intensificacoes: intensidade, instanciaId: instanceId });
                     if (!r.ok) { useLogStore.getState().addLog('combat', `❌ ${cfg.nome}: ${r.reason}`); setErro((e) => ({ ...e, [key]: r.reason ?? 'Falhou' })); }
-                  } finally { setBusy(null); }
+                  } catch (e) { setErro(s => ({ ...s, [key]: e instanceof Error ? e.message : 'Não foi possível selecionar o alvo.' })); } finally { setBusy(null); }
                 }}
               >{busy === key ? 'Usando…' : 'Usar'}</button>
             </div>

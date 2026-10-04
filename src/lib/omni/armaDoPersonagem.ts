@@ -1,11 +1,12 @@
-import { ALL_WEAPONS, findWeaponByName, type Weapon } from '@/lib/weapons';
+import { ALL_WEAPONS, findWeaponByName, requiresTwoHands, type Weapon } from '@/lib/weapons';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { getWeaponMeta } from './weaponModel';
 
 /** Resolve também armas OMNI renomeadas e a empunhadura configurada no construtor. */
 export function armaDoPersonagem(charId: string, nome: string): Weapon | undefined {
-  const item = useInventoryStore.getState().listByOwner(charId).find(i => i.entity.categoria === 'arma' && i.entity.nome === nome);
+  const exemplares = useInventoryStore.getState().listByOwner(charId).filter(i => i.entity.categoria === 'arma' && i.entity.nome.trim().toLowerCase() === nome.trim().toLowerCase());
+  const item = exemplares.find(i => i.isEquipped) ?? exemplares[0];
   const ent = item && (useOmniEntidadesStore.getState().entidades[item.entity.id] ?? item.entity);
   if (!ent) return findWeaponByName(nome);
   const meta = getWeaponMeta(ent);
@@ -16,7 +17,7 @@ export function armaDoPersonagem(charId: string, nome: string): Weapon | undefin
   };
   if (meta.maos || ent.tags.includes('prop:duas_maos')) {
     weapon.properties = weapon.properties.filter(p => p.kind !== 'duas_maos');
-    if (meta.maos === 2 || ent.tags.includes('prop:duas_maos')) weapon.properties.push({ kind: 'duas_maos' });
+    if (meta.maos === 2 || ent.tags.includes('prop:duas_maos') || (base && requiresTwoHands(base))) weapon.properties.push({ kind: 'duas_maos' });
   }
   if (meta.alcanceLongo != null) { weapon.rangeLong = meta.alcanceLongo; weapon.rangeShort = meta.alcanceCurto ?? meta.alcanceLongo; }
   return weapon;

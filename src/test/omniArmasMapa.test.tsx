@@ -18,6 +18,8 @@ import { useAlvoMapaStore, alvosNoAlcance, clicarAlvoMapa, terminarAlvoMapa, ped
 import { soltarItemNoChao, recolherItemDoChao } from '@/lib/omni/itensNoChao';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { useItemStore } from '@/stores/useItemStore';
+import { armaDoPersonagem } from '@/lib/omni/armaDoPersonagem';
+import { requiresTwoHands } from '@/lib/weapons';
 import { omniToItem } from '@/lib/omni/syncItemBank';
 const config: AcaoAtivaConfig = { id: 'corte', nome: 'Corte', acao: 'livre', custoPE: '0', teste: 'nenhum', tipo_alvo: 'unico', alcanceM: 3, efeitos: [], custo_recursos: { usos_item: 1 } };
 const arma = () => ({ ...novaEntidade('arma'), nome: 'Katana', tags: ['modelo:katana', 'mao:2'], usos: { total: 4, recarga: 'diaria' as const }, acoesAtivas: [config] });
@@ -29,6 +31,13 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); terminarAlvoMapa(null); });
 describe('armas, mira e chão', () => {
+  it('a exigência de duas mãos do modelo prevalece sobre metadados antigos de uma mão', () => {
+    useInventoryStore.getState().add('u', { ...arma(), nome: 'Espada Grande', tags: ['modelo:espada-grande', 'mao:1'] });
+    expect(requiresTwoHands(armaDoPersonagem('u', 'Espada Grande')!)).toBe(true);
+    expect(useCharacterStore.getState().equipWeapons('u', { mainHandName: 'Espada Grande' }).ok).toBe(true);
+    expect(useCharacterStore.getState().characters[0].offHandWeaponName).toBe('Espada Grande');
+  });
+
   it('ações só aparecem enquanto a arma estiver nas mãos', () => {
     useInventoryStore.getState().add('u', arma());
     expect(acoesAtivasDe('u')).toHaveLength(0);
@@ -44,6 +53,10 @@ describe('armas, mira e chão', () => {
     expect(u.mainHandWeaponName).toBe('Katana'); expect(u.offHandWeaponName).toBe('Katana');
     render(<AttackPanel character={u} />);
     expect(screen.getAllByText('🤲 Katana · duas mãos')).toHaveLength(2);
+    expect(screen.getAllByRole('combobox')).toHaveLength(1);
+    const antes = useCharacterStore.getState().characters[0];
+    expect(useCharacterStore.getState().equipWeapons('u', { mainHandName: 'Katana', offHandName: 'Adaga' }).ok).toBe(false);
+    expect(useCharacterStore.getState().characters[0].offHandWeaponName).toBe(antes.offHandWeaponName);
   });
   it('o botão abre o alcance, recusa o distante e só consome usos após escolher o próximo', async () => {
     const inst = useInventoryStore.getState().add('u', arma());

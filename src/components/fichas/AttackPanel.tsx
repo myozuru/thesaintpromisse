@@ -177,7 +177,7 @@ export function AttackPanel({ character: cProp }: Props) {
     c.offHandWeaponName && c.offHandWeaponName !== c.mainHandWeaponName
       ? armaDoPersonagem(c.id, c.offHandWeaponName)
       : null;
-  const usingTwoHanded = !!mainWeapon && requiresTwoHands(mainWeapon);
+  const usingTwoHanded = !!mainWeapon && (requiresTwoHands(mainWeapon) || c.mainHandWeaponName === c.offHandWeaponName);
 
   // ─── AoE detection (forma de área da arma Omni equipada) ───────────────────
   const mainOmniEntity = useMemo(() => {
@@ -430,11 +430,13 @@ export function AttackPanel({ character: cProp }: Props) {
     const isTwoHandedEquipped =
       !!c.mainHandWeaponName &&
       c.mainHandWeaponName === c.offHandWeaponName;
+    if (slot === 'off' && (usingTwoHanded || (twoHanded && !!mainWeapon && isVersatile(mainWeapon)))) return;
+    const novaArma = weaponName ? armaDoPersonagem(c.id, weaponName) : null;
     const payload =
       weaponName === null && isTwoHandedEquipped
         ? { mainHandName: null, offHandName: null }
         : slot === 'main'
-          ? { mainHandName: weaponName, offHandName: c.offHandWeaponName ?? null }
+          ? { mainHandName: weaponName, offHandName: isTwoHandedEquipped || (novaArma && requiresTwoHands(novaArma)) ? null : c.offHandWeaponName ?? null }
           : { mainHandName: c.mainHandWeaponName ?? null, offHandName: weaponName };
     const res = equipWeapons(c.id, payload, { inCombat, round: combatRound });
     if (!res.ok) {
