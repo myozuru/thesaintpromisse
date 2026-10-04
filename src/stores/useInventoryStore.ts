@@ -1,3 +1,4 @@
+import { notificarEquiparItem } from '@/lib/omni/notificarEvento';
 /**
  * Inventário dos personagens — instâncias de EntidadeOmni adquiridas.
  * Cada entrada é uma cópia "snapshot" da entidade no momento da aquisição,
@@ -136,6 +137,7 @@ export const useInventoryStore = create<InventoryState>()(
       equipItem: (instanceId, slotName) => {
         const inst = get().items[instanceId];
         if (!inst) return false;
+        if (inst.isEquipped && inst.equippedSlot === slotName) return true;
         // Slot já ocupado por outra instância do mesmo dono?
         const ocupado = Object.values(get().items).some(
           (i) =>
@@ -151,6 +153,7 @@ export const useInventoryStore = create<InventoryState>()(
             [instanceId]: { ...inst, isEquipped: true, equippedSlot: slotName },
           },
         }));
+        notificarEquiparItem(instanceId);
         return true;
       },
 

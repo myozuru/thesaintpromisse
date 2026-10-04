@@ -103,16 +103,23 @@ function variaveisCompletas(ctx: ContextoRuntime): Record<string, number> {
   return vars;
 }
 
+class FormulaRuntimeInvalida extends Error {}
+function avaliarFormulaSegura(expressao: string, ctx: ContextoRuntime): number {
+  const r = avaliarFormula(expressao, variaveisCompletas(ctx));
+  if (r.diagnosticos.length || !Number.isFinite(r.valor)) throw new FormulaRuntimeInvalida(`Fórmula inválida: ${expressao}`);
+  return r.valor;
+}
+
 function resolverValorDinamico(v: ValorDinamico | undefined, ctx: ContextoRuntime): number {
   if (!v) return 0;
   if (v.tipo === 'fixo') return v.valor;
-  return avaliarFormula(v.expressao, variaveisCompletas(ctx)).valor;
+  return avaliarFormulaSegura(v.expressao, ctx);
 }
 
 function resolverOperando(op: Operando, ctx: ContextoRuntime): number | string {
   if (op.tipo === 'fixo') return op.valor;
   if (op.tipo === 'condicao') return op.condicao;
-  if (op.tipo === 'formula') return avaliarFormula(op.expressao, variaveisCompletas(ctx)).valor;
+  if (op.tipo === 'formula') return avaliarFormulaSegura(op.expressao, ctx);
   // ref
   if (op.ref.composicao) {
     const dados = extrairDadosCompostos(variaveisCompletas(ctx))[op.ref.composicao.contexto];
@@ -221,7 +228,7 @@ function executarAcao(a: AcaoLogica, ctx: ContextoRuntime, log: (m: string) => v
     }
     case 'CURAR': {
       if (alvoChar) {
-        aplicarPatchNumerico(alvoChar.id, 'status.vida.atual', Math.abs(valor), 'somar');
+        aplicarEfeitoNoPersonagem(alvoChar.id, 'ADICIONAR', 'status.vida.atual', Math.abs(valor), { attackerId: ctx.usuario?.id });
         log(`${nomeOrigem}: ${nomeAlvo} recuperou ${Math.abs(valor)} de vida`);
       }
       break;
@@ -655,13 +662,15 @@ export function executarGatilho(
   let blocosDisparados = 0;
   for (const g of gatilhos) {
     for (const bloco of g.blocos) {
-      if (!blocoVale(bloco, ctxComOrigem)) continue;
+      try { if (!blocoVale(bloco, ctxComOrigem)) continue; }
+      catch (err) { if (!(err instanceof FormulaRuntimeInvalida)) throw err; log(`⛔ ${ctxComOrigem.origemNome}: ${err.message}`); continue; }
       blocosDisparados++;
       // Scratchpad de redutor de PE é por-bloco — encadeamento ESCOPO_*
       // só vale entre ações do mesmo bloco.
       ctxComOrigem._ultimoRedutorPeId = undefined;
       for (const acao of bloco.acoes) {
-        executarAcao(acao, ctxComOrigem, log);
+        try { executarAcao(acao, ctxComOrigem, log); }
+        catch (err) { if (!(err instanceof FormulaRuntimeInvalida)) throw err; log(`⛔ ${ctxComOrigem.origemNome}: ${err.message}`); }
       }
     }
   }

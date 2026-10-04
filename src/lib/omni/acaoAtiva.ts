@@ -1,3 +1,4 @@
+import { notificarEventoPersonagem } from './notificarEvento';
 import { planejarFormulaDano } from './planoDano';
 import { notificarAtualizacaoContadores } from './atualizacaoContadores';
 import { notificarResultadoAtaque } from './resultadoAtaque';
@@ -287,7 +288,7 @@ function aplicarEfeitos(u: Character, alvo: Character, efeitos: EfeitoSecundario
       if (!def) continue;
       const ac: ActiveCondition = {
         id: crypto.randomUUID(), conditionId: def.id, name: def.name, icon: def.icon,
-        remainingTurns: -1, remainingRounds: sustentadas ? -1 : ef.rodadas > 0 ? ef.rodadas : -1, sourceCharName: fonte,
+        remainingTurns: -1, remainingRounds: sustentadas ? -1 : ef.rodadas > 0 ? ef.rodadas : -1, sourceCharName: fonte, sourceCharId: u.id,
       };
       store.addCondition(alvo.id, ac);
       if (sustentadas && useCharacterStore.getState().characters.find(c => c.id === alvo.id)?.activeConditions.some(c => c.id === ac.id)) sustentadas.push({ charId: alvo.id, id: ac.id });
@@ -393,6 +394,8 @@ export async function executarAcaoAtiva(
   store.updateCharacter(u.id, patchPago);
   if (patchPago.omniCounters) notificarAtualizacaoContadores(u.id, u.omniCounters, patchPago.omniCounters);
   const fonte = ent?.nome ?? cfg.nome;
+  if (ent?.categoria === 'feitico') notificarEventoPersonagem('aoConjurarFeitico', u.id, fonte, { custoPE: p.pe });
+  else if (ent?.categoria === 'talento') notificarEventoPersonagem('aoUsarTalento', u.id, fonte);
   const pago = `${p.pe} PE${p.pv ? ` + ${p.pv} PV` : ''}${cargas ? ` + ${cargas} carga(s) de ${p.contador}` : ''}${p.municao ? ` + ${p.municao} munição(ões)` : ''}${p.usosItem ? ` + ${p.usosItem} uso(s) do item` : ''}${p.intensificacoes ? ` · intensificação ${p.intensificacoes}` : ''}`;
   const sustentadas = p.pePorTurno > 0 ? [] as { charId: string; id: string }[] : undefined;
 
@@ -473,7 +476,7 @@ export async function executarAcaoAtiva(
       const atual = useCharacterStore.getState().characters.find(c => c.id === t.id)!;
       const recurso = cfg.recurso_cura ?? 'pv';
       const antes = recurso === 'pv' ? atual.hpCurrent : atual.peCurrent;
-      if (recurso === 'pv') useCharacterStore.getState().applyHealing(t.id, valor, 'other');
+      if (recurso === 'pv') useCharacterStore.getState().applyHealing(t.id, valor, 'other', u.id);
       else useCharacterStore.getState().updateCharacter(t.id, { peCurrent: Math.max(atual.peCurrent, Math.min(atual.peMax, atual.peCurrent + valor)) });
       const depois = useCharacterStore.getState().characters.find(c => c.id === t.id)!;
       const recuperado = Math.max(0, (recurso === 'pv' ? depois.hpCurrent : depois.peCurrent) - antes);

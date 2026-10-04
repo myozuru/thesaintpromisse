@@ -196,7 +196,7 @@ export function aplicarEfeitoNoPersonagem(
     }
     if (tipo === 'ADICIONAR') {
       const cura = Math.max(0, Math.round(valor));
-      store.applyHealing(charId, cura);
+      store.applyHealing(charId, cura, 'other', extras?.attackerId);
       return { aplicado: cura };
     }
     if (tipo === 'MODIFICADOR') {

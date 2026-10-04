@@ -21,7 +21,7 @@ import { fonteDoContador } from './atualizacaoContadores';
  * passo da varredura, ideal para o desenvolvedor copiar/colar do console
  * do navegador quando algo não dispara como esperado.
  */
-import { armaEstaEmpunhada } from './armaDoPersonagem';
+import { coletarFontesGatilho, type FonteGatilho } from './fontesGatilho';
 import type { CombatEffect, EntidadeOmni } from './tipos';
 import { normalizarCombatData } from './tipos';
 import { avaliarFormula } from './parser';
@@ -46,6 +46,9 @@ function triggerCasa(evento: string, triggerEfeito?: string): boolean {
 }
 
 export interface DispararOpts {
+  /** Dispatch exclusivo para a aura/entidade que originou o evento. */
+  entidade?: EntidadeOmni;
+  instanciaId?: string;
   /** Personagem que é "USUARIO" no contexto (em geral, dono do item). */
   usuarioId: string;
   /** Personagem que é "ALVO" (ex.: o atacante, em ao_receber_dano). */
@@ -75,40 +78,11 @@ export function dispararGatilhoEfeitosItens(
     : undefined;
 
   const inv = useInventoryStore.getState();
-  // Empunhar é registrado na ficha; armas não usam necessariamente isEquipped.
-  // Um exemplar por arma empunhada evita dobrar o gatilho com cópias iguais.
-  const porArma = new Map<string, ReturnType<typeof inv.listByOwner>[number]>();
-  const equipados = inv.listByOwner(opts.usuarioId).filter(inst => {
-    const ent = useOmniEntidadesStore.getState().entidades[inst.entity.id] ?? inst.entity;
-    if (ent.categoria !== 'arma') return inst.isEquipped;
-    const nome = ent.replica ? inst.replicaArma : ent.nome;
-    if (!nome || !armaEstaEmpunhada(usuario, nome) || (ent.replica && !inst.materializada)) return false;
-    const chave = nome.trim().toLowerCase();
-    const anterior = porArma.get(chave);
-    if (!anterior || (!anterior.isEquipped && inst.isEquipped)) porArma.set(chave, inst);
-    return false;
-  });
-  equipados.push(...porArma.values());
-  // Mapa de templates "frescos" no banco de entidades. Usado como fonte
-  // da verdade quando o snapshot do inventário está desatualizado (ex.:
-  // o item foi pego ANTES do gatilho ser adicionado pelo Mestre).
   const omniMap = useOmniEntidadesStore.getState().entidades;
-
-  // 🆕 Inclui PASSIVAS / TALENTOS / AURAS vinculados à ficha
-  // (`Character.omniAtivos`). Eles não vivem no inventário, mas seus
-  // scripts (effectsActive/Passive com `trigger`) também devem disparar.
-  // Adaptamos cada um ao formato de "instância equipada" para reusar o
-  // loop principal sem duplicação.
-  const CATEGORIAS_VINCULO_ATIVO = new Set(['passiva', 'talento', 'aura']);
-  type ItemLike = { entity: EntidadeOmni; instanceId: string; usosRestantes?: number; usosTotais?: number };
-  const vinculados: ItemLike[] = [];
-  for (const vinc of usuario.omniAtivos ?? []) {
-    if (!CATEGORIAS_VINCULO_ATIVO.has(vinc.categoria)) continue;
-    const ent = omniMap?.[vinc.entidadeId];
-    if (!ent) continue;
-    vinculados.push({ entity: ent, instanceId: vinc.instanceId });
-  }
-  const todos: ItemLike[] = [...equipados, ...vinculados];
+  const { equipados, vinculados } = coletarFontesGatilho(usuario);
+  const instancia = opts.instanciaId ? inv.items[opts.instanciaId] : undefined;
+  if (opts.instanciaId && (!instancia || instancia.ownerId !== usuario.id)) return 0;
+  const todos: FonteGatilho[] = opts.entidade ? [instancia ?? { entity: opts.entidade, instanceId: `evento:${opts.entidade.id}` }] : [...equipados, ...vinculados];
 
   console.group(`[Trigger] ${evento} → ${usuario.name}`);
   console.log('opts', opts);
@@ -127,7 +101,7 @@ export function dispararGatilhoEfeitosItens(
     // Resolve a versão "fresca" do template — corrige bug onde o snapshot
     // no inventário não tinha trigger/condition por ter sido adicionado
     // antes da edição do script no Construtor.
-    const fresco: EntidadeOmni = omniMap?.[inst.entity.id] ?? inst.entity;
+    const fresco: EntidadeOmni = opts.entidade ?? omniMap?.[inst.entity.id] ?? inst.entity;
     const cd = normalizarCombatData(fresco.combatData);
     if (!cd) {
       console.log(`  ✗ ${fresco.nome}: combatData vazio`);
@@ -235,6 +209,7 @@ export function dispararGatilhoEfeitosItens(
           sourceName: fresco.nome,
           dano: opts.dano,
         });
+        if (r.invalido) continue;
         console.log(`    ↳ ✓ key especial → ${r.detalhe ?? '(sem detalhe)'}`);
         aplicados++;
         consumiuUso = true;

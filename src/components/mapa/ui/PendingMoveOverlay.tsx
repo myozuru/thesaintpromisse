@@ -1,3 +1,4 @@
+import { notificarEventoPersonagem } from '@/lib/omni/notificarEvento';
 import { useRef, useState } from 'react';
 import { abrirJanelaReacaoAtiva, ofertasReacaoAtiva } from '@/lib/omni/reacoesAtivas';
 import { amostrarTrajetoria } from '@/lib/omni/geometriaReacao';
@@ -70,6 +71,7 @@ export function PendingMoveOverlay() {
         if (r.cancelado || (ficha?.hpCurrent ?? 1) <= 0) { cancel(); return; }
       }
     addMovementUsed(pending.charId, pending.distM);
+    if (pending.distM > 0) notificarEventoPersonagem('aoMover', pending.charId, 'Movimento Confirmado');
     // ─── Ataque de Oportunidade ──────────────────────────────────────────
     try {
       const oppState = useOpportunityStore.getState();
@@ -160,3 +162,4 @@ export function PendingMoveOverlay() {
     </div>
   );
 }
+

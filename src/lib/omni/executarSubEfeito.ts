@@ -24,6 +24,7 @@ import { ALL_CONDITIONS, type ActiveCondition } from '@/types/conditions';
 
 /** Resultado padronizado de uma execução. */
 export interface ExecucaoResultado {
+  invalido?: boolean;
   aplicado: number;
   absorvidoPorBloqueio?: boolean;
   /** Descrição amigável do que aconteceu (para o log/toast). */
@@ -99,7 +100,7 @@ export function executarCombatEffect(
   const out = avaliarFormulaEfeito(eff, ctx);
   const valor = Math.round(out.valor);
   const teto = eff.counterCap ? avaliarFormulaEfeito({ ...eff, formula: eff.counterCap }, ctx) : undefined;
-  if (out.diagnosticos.length || teto?.diagnosticos.length) return { aplicado: 0, detalhe: 'Fórmula ou limite com referência inválida.' };
+  if (out.diagnosticos.length || teto?.diagnosticos.length) return { aplicado: 0, invalido: true, detalhe: 'Fórmula ou limite com referência inválida.' };
   const targetId = resolverTargetId(eff, ctx);
   if (eff.transferencia) {
     const store = useCharacterStore.getState();
@@ -129,6 +130,7 @@ function executarDiceSwitch(eff: CombatEffect, ctx: ExecucaoContexto): ExecucaoR
     alvo: ctx.alvoVars ?? ctx.usuarioVars, item: ctx.itemVars, resultados: ctx.resultados,
     dano: ctx.dano ? { ...ctx.dano } : undefined,
   });
+  if (out.diagnosticos.length || !Number.isFinite(out.valor)) return { aplicado: 0, invalido: true, detalhe: 'Dado de seleção com fórmula inválida.' };
   const valor = Math.round(out.valor);
   const branch = ds.branches.find((b) => b.values.includes(valor));
   if (!branch || branch.effects.length === 0) {
@@ -151,7 +153,7 @@ function executarConditionApply(eff: CombatEffect, ctx: ExecucaoContexto): Execu
   const ca = eff.conditionApply!;
   const def = ALL_CONDITIONS.find((c) => c.id === ca.id);
   if (!def) {
-    return { aplicado: 0, detalhe: `Condição desconhecida: ${ca.id}` };
+    return { aplicado: 0, invalido: true, detalhe: `Condição desconhecida: ${ca.id}` };
   }
   const targetId = resolverTargetId(eff, ctx);
   const store = useCharacterStore.getState();
@@ -164,6 +166,7 @@ function executarConditionApply(eff: CombatEffect, ctx: ExecucaoContexto): Execu
       remainingTurns: ca.durationTurns ?? -1,
       remainingRounds: ca.durationRounds ?? -1,
       sourceCharName: ctx.sourceName,
+      sourceCharId: ctx.usuarioId,
     };
     store.addCondition(targetId, ac);
     return { aplicado: 1, detalhe: `${def.icon} Aplicou ${def.name}` };

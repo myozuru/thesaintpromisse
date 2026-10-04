@@ -1,3 +1,4 @@
+import { coletarFontesGatilho } from './fontesGatilho';
 /**
  * Omni-Engine Event Bus (Fatia 3).
  *
@@ -21,13 +22,15 @@ import { dispararGatilhoEfeitosItens } from './triggerEfeitos';
 export interface EmitirOpts {
   /** Contexto interno da cadeia que originou este evento. */
   cadeia?: CadeiaOmni;
+  /** Instância de inventário em um dispatch exclusivo (ex.: equipar). */
+  instanciaId?: string;
   usuarioId?: string;
   alvoId?: string;
   cena?: Record<string, number>;
   /** Snapshot numérico do golpe; valores finais existem somente após resolução. */
   dano?: Readonly<Record<string, number>>;
   origemNome?: string;
-  /** Se true, considera entidades passivas globais (aoEquipar) também. */
+  /** Sem usuarioId, entrega o evento a cada ficha portadora de efeitos. */
   incluirPassivas?: boolean;
   /**
    * Se false, não varre `effectsActive/Passive` dos itens equipados
@@ -49,7 +52,22 @@ export function emitirEvento(evento: GatilhoId, opts: EmitirOpts = {}): number {
   return executarNaCadeiaOmni(cadeia, () => emitirEventoNaCadeia(evento, opts));
 }
 
+/** Evento de uma entidade específica: não dispara outras auras do portador. */
+export function emitirEventoDaEntidade(ent: EntidadeOmni, evento: GatilhoId, opts: EmitirOpts): number {
+  const cadeia = reservarPassoOmni(opts.cadeia);
+  if (!cadeia) return 0;
+  return executarNaCadeiaOmni(cadeia, () => {
+    const ctx = { usuario: pegarChar(opts.usuarioId), alvo: pegarChar(opts.alvoId), cena: opts.cena, dano: opts.dano, origemNome: opts.origemNome, profundidade: 0 };
+    return executarGatilho(ent, evento, ctx) + (opts.usuarioId ? dispararGatilhoEfeitosItens(evento, { usuarioId: opts.usuarioId, alvoId: opts.alvoId, cena: opts.cena, dano: opts.dano, entidade: ent, instanciaId: opts.instanciaId }) : 0);
+  });
+}
+
 function emitirEventoNaCadeia(evento: GatilhoId, opts: EmitirOpts): number {
+  // Eventos globais (relógio) são entregues a cada portador real. O catálogo
+  // contém modelos, não instâncias de passivas de todos os personagens.
+  if (!opts.usuarioId && opts.incluirPassivas) {
+    return useCharacterStore.getState().characters.reduce((total, c) => total + emitirEvento(evento, { ...opts, usuarioId: c.id, incluirPassivas: false }), 0);
+  }
   const usuario = pegarChar(opts.usuarioId);
   const alvo = pegarChar(opts.alvoId);
   const ctx: ContextoRuntime = {
@@ -69,44 +87,26 @@ function emitirEventoNaCadeia(evento: GatilhoId, opts: EmitirOpts): number {
 
   // 1) Pelo runtime (efeitos persistentes — condições aplicadas, buffs, etc.)
   for (const ef of efeitos) {
-    if (
-      (opts.usuarioId && (ef.sourceCharId === opts.usuarioId || ef.targetCharId === opts.usuarioId)) ||
-      (opts.alvoId && (ef.sourceCharId === opts.alvoId || ef.targetCharId === opts.alvoId))
-    ) {
+    if (opts.usuarioId && (ef.targetCharId ?? ef.sourceCharId) === opts.usuarioId) {
       idsAtivos.add(ef.entidadeId);
     }
   }
 
-  // 2) Pelas entidades VINCULADAS à ficha (`Character.omniAtivos`).
-  //    Categorias 'sempre ativas' — passiva/talento/aura — disparam gatilhos
-  //    de turno/eventos enquanto estiverem vinculadas, sem precisar do runtime.
-  //    'condicao' continua via runtime (aplica e expira). 'feitico' só
-  //    dispara via uso direto (botão Usar), não por gatilho automático.
-  const CATEGORIAS_VINCULO_ATIVO = new Set(['passiva', 'talento', 'aura']);
-  for (const charId of [opts.usuarioId, opts.alvoId]) {
-    if (!charId) continue;
-    const c = pegarChar(charId);
-    if (!c?.omniAtivos) continue;
-    for (const vinc of c.omniAtivos) {
-      if (CATEGORIAS_VINCULO_ATIVO.has(vinc.categoria)) {
-        idsAtivos.add(vinc.entidadeId);
-      }
+  // 2) Fontes do portador: armas empunhadas, equipamentos e vínculos.
+  // Scripts e blocos visuais precisam enxergar a mesma disponibilidade.
+  const fontesDoDono = new Map<string, EntidadeOmni>();
+  if (usuario) {
+    const fontes = coletarFontesGatilho(usuario);
+    for (const inst of [...fontes.equipados, ...fontes.vinculados]) {
+      idsAtivos.add(inst.entity.id);
+      fontesDoDono.set(inst.entity.id, entidades[inst.entity.id] ?? inst.entity);
     }
   }
 
   let total = 0;
   for (const id of idsAtivos) {
-    const ent = entidades[id];
+    const ent = fontesDoDono.get(id) ?? entidades[id];
     if (ent) total += executarGatilho(ent, evento, ctx);
-  }
-
-  if (opts.incluirPassivas) {
-    for (const ent of Object.values(entidades) as EntidadeOmni[]) {
-      if (idsAtivos.has(ent.id)) continue;
-      if (ent.gatilhos.some((g) => g.evento === 'aoEquipar')) {
-        total += executarGatilho(ent, evento, ctx);
-      }
-    }
   }
 
   // 3) Scripts do terminal Omni (effectsActive/effectsPassive em itens

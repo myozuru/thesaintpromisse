@@ -15,7 +15,7 @@ import { useOmniRuntimeStore } from '@/stores/useOmniRuntimeStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useOmniSpatialStore } from '@/stores/useOmniSpatialStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
-import { executarGatilho } from './executor';
+import { emitirEventoDaEntidade } from './eventBus';
 import { avaliarFormula } from './parser';
 import { montarVariaveisDoPersonagem } from './resolvedor';
 import type { EntidadeOmni } from './tipos';
@@ -27,14 +27,16 @@ function raioDoEfeito(ef: EfeitoAtivo): number {
   if (ent.areaRaio.tipo === 'fixo') return ent.areaRaio.valor;
   const src = useCharacterStore.getState().characters.find((c) => c.id === ef.sourceCharId);
   const vars = src ? montarVariaveisDoPersonagem(src, 'USUARIO') : {};
-  return avaliarFormula(ent.areaRaio.expressao, vars).valor;
+  const r = avaliarFormula(ent.areaRaio.expressao, vars);
+  return r.diagnosticos.length || !Number.isFinite(r.valor) ? 0 : r.valor;
 }
 
 function raioDeEntidadeVinculada(ent: EntidadeOmni, dono: Character): number {
   if (!ent.areaRaio) return 0;
   if (ent.areaRaio.tipo === 'fixo') return ent.areaRaio.valor;
   const vars = montarVariaveisDoPersonagem(dono, 'USUARIO');
-  return avaliarFormula(ent.areaRaio.expressao, vars).valor;
+  const r = avaliarFormula(ent.areaRaio.expressao, vars);
+  return r.diagnosticos.length || !Number.isFinite(r.valor) ? 0 : r.valor;
 }
 
 /** Cache de "quem estava dentro" para auras vinculadas (não persistido). */
@@ -54,7 +56,7 @@ export function recalcularAuras(charIdMovido?: string) {
   // ===== 1) Auras via runtime (efeitos ativos com areaRaio) =====
   for (const ef of Object.values(rt.efeitos)) {
     const raio = raioDoEfeito(ef);
-    if (raio <= 0 || !ef.sourceCharId) continue;
+    if (!Number.isFinite(raio) || raio <= 0 || !ef.sourceCharId) continue;
     const posOrigem = espacial.obter(ef.sourceCharId);
     if (!posOrigem) continue;
 
@@ -81,9 +83,9 @@ export function recalcularAuras(charIdMovido?: string) {
       const estavaDentro = antes.has(id);
       const estaDentro = agora.has(id);
       if (!estavaDentro && estaDentro) {
-        executarGatilho(ent, 'aoEntrarEmAura', { usuario, alvo, profundidade: 0 });
+        emitirEventoDaEntidade(ent, 'aoEntrarEmAura', { usuarioId: usuario?.id, alvoId: alvo.id });
       } else if (estavaDentro && !estaDentro) {
-        executarGatilho(ent, 'aoSairDaAura', { usuario, alvo, profundidade: 0 });
+        emitirEventoDaEntidade(ent, 'aoSairDaAura', { usuarioId: usuario?.id, alvoId: alvo.id });
       }
     }
 
@@ -102,7 +104,7 @@ export function recalcularAuras(charIdMovido?: string) {
       const ent = entidadesStore[vinc.entidadeId];
       if (!ent) continue;
       const raio = raioDeEntidadeVinculada(ent, dono);
-      if (raio <= 0) continue;
+      if (!Number.isFinite(raio) || raio <= 0) continue;
 
       const cacheKey = `${dono.id}:${ent.id}`;
       const antes = dentroDeVinculadas.get(cacheKey) ?? new Set<string>();
@@ -122,9 +124,9 @@ export function recalcularAuras(charIdMovido?: string) {
         const estavaDentro = antes.has(id);
         const estaDentro = agora.has(id);
         if (!estavaDentro && estaDentro) {
-          executarGatilho(ent, 'aoEntrarEmAura', { usuario: dono, alvo, profundidade: 0 });
+          emitirEventoDaEntidade(ent, 'aoEntrarEmAura', { usuarioId: dono.id, alvoId: alvo.id });
         } else if (estavaDentro && !estaDentro) {
-          executarGatilho(ent, 'aoSairDaAura', { usuario: dono, alvo, profundidade: 0 });
+          emitirEventoDaEntidade(ent, 'aoSairDaAura', { usuarioId: dono.id, alvoId: alvo.id });
         }
       }
       dentroDeVinculadas.set(cacheKey, agora);

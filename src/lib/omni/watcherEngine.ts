@@ -1,4 +1,5 @@
-import { capturarCadeiaOmni, executarNaCadeiaOmni } from './cadeiaEventos';
+import { coletarFontesGatilho } from './fontesGatilho';
+import { capturarCadeiaOmni, executarNaCadeiaOmni, reservarPassoOmni } from './cadeiaEventos';
 /**
  * 🔭 Watcher Engine — State Listener para gatilhos dinâmicos.
  *
@@ -67,19 +68,19 @@ function normalizarRecursoWatcher(recurso: string): string {
   return ALIASES_RECURSO_WATCHER[raw] ?? raw;
 }
 
-/** Lê o valor numérico atual de um recurso de um personagem. 0 se desconhecido. */
+/** Recurso desconhecido nunca é interpretado como zero para disparar um watcher. */
 function lerRecurso(c: Character, recurso: string): number {
-  if (/\s/.test(recurso)) return avaliarFormula(recurso, montarVariaveisDoPersonagem(c)).valor;
   const campo = RECURSO_PARA_CAMPO[normalizarRecursoWatcher(recurso)];
-  if (!campo) return 0;
-  const v = c[campo] as unknown;
-  return typeof v === 'number' ? v : 0;
+  if (campo) { const v = c[campo]; return typeof v === 'number' && Number.isFinite(v) ? v : NaN; }
+  const r = avaliarFormula(recurso, montarVariaveisDoPersonagem(c));
+  return r.diagnosticos.length || !Number.isFinite(r.valor) ? NaN : r.valor;
 }
 
-/** Resolve threshold final (literal ou %). */
+/** Percentuais usam o máximo do pool, não uma chave inventada *_atual_max. */
 function resolverThreshold(c: Character, w: NonNullable<CombatEffect['watcher']>): number {
   if (!w.percent) return w.threshold;
-  const base = w.percentBase ?? `${normalizarRecursoWatcher(w.resource)}_max`;
+  const campo = RECURSO_PARA_CAMPO[normalizarRecursoWatcher(w.resource)];
+  const base = w.percentBase ?? (campo === 'hpCurrent' ? 'vida_max' : campo === 'peCurrent' ? 'pe_max' : `${normalizarRecursoWatcher(w.resource)} maximo`);
   return lerRecurso(c, base) * w.threshold;
 }
 
@@ -101,22 +102,31 @@ function bate(op: NonNullable<CombatEffect['watcher']>['op'], valor: number, thr
  */
 const snapshotsAnteriores = new Map<string, Map<string, number>>();
 
-function processarTodosPersonagens() {
-  for (const c of useCharacterStore.getState().characters) processarPersonagem(c);
+function processarTodosPersonagens(apenasSnapshot = false) {
+  for (const c of useCharacterStore.getState().characters) processarPersonagem(c, apenasSnapshot);
 }
 
 /**
  * Para um personagem específico, varre todos os efeitos com `watcher` em
  * itens equipados e dispara aqueles que acabaram de virar true.
  */
-function processarPersonagem(c: Character) {
+function processarPersonagem(c: Character, apenasSnapshot = false) {
+  if (apenasSnapshot) return processarPersonagemNaCadeia(c, true);
+  const cadeia = reservarPassoOmni();
+  if (cadeia) executarNaCadeiaOmni(cadeia, () => processarPersonagemNaCadeia(c, false));
+}
+
+function processarPersonagemNaCadeia(c: Character, apenasSnapshot: boolean) {
+  const baseExecucao = useCharacterStore.getState().characters.find(x => x.id === c.id);
+  if (!baseExecucao) { snapshotsAnteriores.delete(c.id); return; }
   const inv = useInventoryStore.getState();
-  const equipados = inv.listEquipped(c.id);
-  if (equipados.length === 0) return;
+  const fontes = coletarFontesGatilho(baseExecucao);
+  const equipados = [...fontes.equipados, ...fontes.vinculados];
+  if (equipados.length === 0) { snapshotsAnteriores.delete(c.id); return; }
 
   const omniMap = useOmniEntidadesStore.getState().entidades;
   const previous = snapshotsAnteriores.get(c.id) ?? new Map<string, number>();
-  const proximoSnapshot = new Map<string, number>(previous);
+  const proximoSnapshot = new Map<string, number>();
 
   for (const inst of equipados) {
     const fresco: EntidadeOmni = omniMap?.[inst.entity.id] ?? inst.entity;
@@ -139,9 +149,11 @@ function processarPersonagem(c: Character) {
       const recursoObservado = normalizarRecursoWatcher(w.resource);
       const atual = lerRecurso(c, recursoObservado);
       const thr = resolverThreshold(c, w);
-      const eraKey = `${inst.instanceId}::${eff.id}`;
+      const eraKey = `${inst.instanceId}::${eff.id}::${JSON.stringify(eff)}`;
+      if (!Number.isFinite(atual) || !Number.isFinite(thr)) continue;
       const era = previous.get(eraKey);
-      proximoSnapshot.set(eraKey, atual);
+      proximoSnapshot.set(eraKey, apenasSnapshot && era !== undefined ? era : atual);
+      if (apenasSnapshot) continue;
 
       const condicaoAgora = bate(w.op, atual, thr);
       // Sem snapshot anterior (1ª passada): apenas grava, NÃO dispara.
@@ -150,11 +162,17 @@ function processarPersonagem(c: Character) {
       if (condicaoAntes || !condicaoAgora) continue; // Edge-trigger
 
       // Avaliar condição extra (`se …`) se houver.
-      const variaveis = montarVariaveisDoPersonagem(c, 'USUARIO');
+      const vivo = useCharacterStore.getState().characters.find(x => x.id === c.id) ?? c;
+      // A condição usa o estado da travessia; efeitos anteriores deste
+      // processamento continuam visíveis nos campos que acabaram de mudar.
+      const mudancas = Object.fromEntries(Object.entries(vivo).filter(([key, value]) => value !== baseExecucao[key as keyof Character]));
+      const atualChar = { ...c, ...mudancas } as Character;
+      const variaveis = { ...montarVariaveisDoPersonagem(atualChar, 'USUARIO'), ...montarVariaveisDoPersonagem(atualChar, 'ALVO') };
+      const itemBag = { usos_restantes: inst.usosRestantes ?? 0, usos_totais: inst.usosTotais ?? 0 };
       if (eff.condition && eff.condition.trim()) {
         try {
-          const r = avaliarFormula(eff.condition, variaveis, undefined);
-          if (r.valor <= 0) continue;
+          const r = avaliarFormula(eff.condition, variaveis, undefined, { item: itemBag });
+          if (r.diagnosticos.length || !Number.isFinite(r.valor) || r.valor <= 0) continue;
         } catch {
           continue;
         }
@@ -167,8 +185,10 @@ function processarPersonagem(c: Character) {
           alvoId: c.id, // watcher é sempre auto-aplicado
           usuarioVars: variaveis,
           alvoVars: variaveis,
+          itemVars: itemBag,
           sourceName: fresco.nome,
         });
+        if (r.invalido) continue;
         consumiuUso = true;
         useLogStore.getState().addLog(
           'system',
@@ -178,8 +198,16 @@ function processarPersonagem(c: Character) {
         continue;
       }
       let valor = 0;
+      let teto: number | undefined;
       try {
-        const r = avaliarFormula(eff.formula || '0', variaveis, undefined);
+        const r = avaliarFormula(eff.formula || '0', variaveis, undefined, { item: itemBag });
+        if (r.diagnosticos.length || !Number.isFinite(r.valor)) {
+          useLogStore.getState().addLog('system', `⛔ ${fresco.nome}: fórmula do observador inválida.`);
+          continue;
+        }
+        const limite = eff.counterCap ? avaliarFormula(eff.counterCap, variaveis, undefined, { item: itemBag }) : undefined;
+        if (limite?.diagnosticos.length || (limite && !Number.isFinite(limite.valor))) continue;
+        teto = limite?.valor;
         valor = r.valor;
       } catch {
         continue;
@@ -191,6 +219,7 @@ function processarPersonagem(c: Character) {
         sourceName: fresco.nome,
         damageType: eff.damageType,
         attackerId: c.id,
+        contador: { teto, porFonte: eff.counterPerSource, fonteId: c.id },
       });
       consumiuUso = true;
       useLogStore.getState().addLog(
@@ -228,43 +257,33 @@ export function iniciarWatcherEngine() {
   // Snapshot inicial para todos os personagens carregados.
   processarTodosPersonagens();
 
-  // Listener global. Usa setTimeout para evitar reentrada (caso o
-  // efeito disparado faça outro updateCharacter dentro do mesmo tick).
+  // Guarda cada mudança: duas travessias no mesmo tick não podem ser
+  // perdidas por um debounce que só lê o último HP. Efeitos continuam fora
+  // do set() original para evitar reentrada síncrona.
+  const fila: { personagens: Character[]; cadeia: ReturnType<typeof capturarCadeiaOmni> }[] = [];
   let pendente = false;
-  useCharacterStore.subscribe(() => {
+  useCharacterStore.subscribe((state) => {
+    fila.push({ personagens: state.characters, cadeia: capturarCadeiaOmni() });
     if (pendente) return;
     pendente = true;
-    const cadeia = capturarCadeiaOmni();
     setTimeout(() => {
       pendente = false;
-      try {
-        const processar = () => {
-          for (const c of useCharacterStore.getState().characters) processarPersonagem(c);
-        };
-        if (cadeia) executarNaCadeiaOmni(cadeia, processar);
-        else processar();
-      } catch (err) {
-        console.warn('[watcherEngine] erro no loop:', err);
+      const lote = fila.splice(0);
+      for (const snapshot of lote) {
+        try {
+          const processar = () => {
+            for (const c of snapshot.personagens) processarPersonagem(c);
+          };
+          if (snapshot.cadeia) executarNaCadeiaOmni(snapshot.cadeia, processar);
+          else processar();
+        } catch (err) { console.warn('[watcherEngine] erro no loop:', err); }
       }
     }, 0);
   });
 
-  // Equipar/editar um item com watcher não altera o Character, então também
-  // inicializamos snapshots quando o inventário ou o catálogo Omni mudam.
-  // Sem isso, o primeiro dano após equipar era tratado como "1ª passada" e
-  // apenas gravava o HP já zerado, perdendo o edge-trigger.
-  const agendarSnapshot = () => {
-    if (pendente) return;
-    pendente = true;
-    setTimeout(() => {
-      pendente = false;
-      try {
-        processarTodosPersonagens();
-      } catch (err) {
-        console.warn('[watcherEngine] erro no snapshot:', err);
-      }
-    }, 0);
-  };
-  useInventoryStore.subscribe(agendarSnapshot);
-  useOmniEntidadesStore.subscribe(agendarSnapshot);
+  // Inicializa novos efeitos imediatamente ao equipar: o primeiro dano
+  // pode ocorrer no mesmo tick. Não dispara efeitos durante configuração.
+  const inicializarNovos = () => processarTodosPersonagens(true);
+  useInventoryStore.subscribe(inicializarNovos);
+  useOmniEntidadesStore.subscribe(inicializarNovos);
 }

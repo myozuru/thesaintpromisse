@@ -73,6 +73,8 @@ export interface ActiveCondition {
   /** Rodadas completas decorridas desde a aplicação; ausente = histórico desconhecido. */
   elapsedRounds?: number;
   sourceCharName?: string;
+  /** Origem identificada para gatilhos; não é inferida pelo nome. */
+  sourceCharId?: string;
   // === Sistema de duração estruturada (opcional para compat com fichas antigas) ===
   durationMode?: ConditionDurationMode;
   /** CD do teste de fim de condição (modos *_tr). */

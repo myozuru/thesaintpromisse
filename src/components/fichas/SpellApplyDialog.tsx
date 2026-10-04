@@ -956,6 +956,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
               remainingTurns: isAtePassar ? -1 : (sc.durationTurns || 1),
               remainingRounds: sc.durationRounds,
               sourceCharName: source.name,
+              sourceCharId: source.id,
               durationMode: mode,
               endCD: sc.endCD,
               endTrType: sc.endTrType,
@@ -1107,7 +1108,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
         const canHealReal = source.hasEnergiaReversa;
         
         if (canHealReal) {
-          applyHealing(ts.id, baseHeal);
+          applyHealing(ts.id, baseHeal, 'other', source.id);
           addLog('spell', `💚 ${spell.name} → ${target.name}: ${baseHeal} cura | TR: ${saveLabel}`);
         } else {
           applyShield(ts.id, baseHeal);
@@ -1171,6 +1172,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
             remainingTurns: isAtePassar ? -1 : baseTurns,
             remainingRounds: sc.durationRounds > 0 ? sc.durationRounds + extraRounds : -1,
             sourceCharName: source.name,
+              sourceCharId: source.id,
             durationMode: mode,
             endCD: sc.endCD,
             endTrType: sc.endTrType,
@@ -1242,7 +1244,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
           { label: 'CA', value: conjuracaoBonus },
         ], finalTotal);
         if (canHealReal) {
-          applyHealing(id, finalTotal);
+          applyHealing(id, finalTotal, 'other', source.id);
           addLog('spell', `💚 ${spell.name} [${actionLabels[spell.actionType]}|Nv.${spell.spellLevel || '1'}] → ${target.name}: ${breakdown} cura`);
         } else {
           applyShield(id, finalTotal);
@@ -1295,6 +1297,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
             remainingTurns: isAtePassar ? -1 : (sc.durationTurns > 0 ? sc.durationTurns : -1),
             remainingRounds: sc.durationRounds > 0 ? sc.durationRounds : -1,
             sourceCharName: source.name,
+              sourceCharId: source.id,
             durationMode: mode,
             endCD: sc.endCD,
             endTrType: sc.endTrType,
@@ -1897,3 +1900,4 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
     </div>
   );
 }
+

@@ -1,3 +1,4 @@
+import { notificarEventoPersonagem } from './notificarEvento';
 /** Reposicionamento genérico. Usa patches de mapa e não debita movimento comum. */
 import type { Character } from '@/types';
 import { useMapStore, type Entity } from '@/stores/useMapStore';
@@ -115,9 +116,13 @@ export function aplicarMovimentoAtivo(uId: string, aId: string, p: PlanoMoviment
   // Avançar é voluntário; os demais deslocamentos do alvo são forçados.
   const forcado = p.tipo === 'puxar' || p.tipo === 'empurrar' || p.tipo === 'trocar_posicao' || (p.tipo === 'teleporte' && p.sujeito === 'alvo' && aId !== uId);
   if (forcado && ficha(aId) && imuneMovimentoForcado(ficha(aId)!)) return 'alvo imune a movimento forçado';
-  if (p.tipo === 'teleporte') { ms.updateEntity(movido.id, p.destino!); return 'teleportado sem AdO'; }
+  if (p.tipo === 'teleporte') { ms.updateEntity(movido.id, p.destino!); if (movido.x !== p.destino!.x || movido.y !== p.destino!.y) notificarEventoPersonagem('aoMover', p.sujeito === 'usuario' ? uId : aId, 'Teleporte'); return 'teleportado sem AdO'; }
   if (p.tipo === 'trocar_posicao') {
     ms.updateEntities([{ id: u.id, patch: { x: a.x, y: a.y } }, { id: a.id, patch: { x: u.x, y: u.y } }]);
+    if (u.x !== a.x || u.y !== a.y) {
+      notificarEventoPersonagem('aoMover', uId, 'Troca de posição');
+      if (aId !== uId) notificarEventoPersonagem('aoMover', aId, 'Troca de posição');
+    }
     return 'posições trocadas sem AdO';
   }
   const emDirecao = p.tipo === 'avancar_ate' ? a : u;
@@ -146,5 +151,6 @@ export function aplicarMovimentoAtivo(uId: string, aId: string, p: PlanoMoviment
   const final = { x: Math.round((movido.x + vx * t) * 1e9) / 1e9, y: Math.round((movido.y + vy * t) * 1e9) / 1e9 };
   if (!pontoValido(movido, final) || distancia(movido, final) < 1e-5) return 'movimento bloqueado';
   ms.updateEntity(movido.id, final);
+  notificarEventoPersonagem('aoMover', p.sujeito === 'usuario' ? uId : aId, 'Movimento OMNI');
   return `${p.tipo === 'avancar_ate' ? 'avançou' : p.tipo === 'puxar' ? 'puxado' : 'empurrado'} ${distancia(movido, final).toFixed(2).replace('.', ',')} m${hit && !contatoValido ? ' (obstáculo)' : ''}`;
 }

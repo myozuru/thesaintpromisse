@@ -1,3 +1,4 @@
+import { notificarEventoPersonagem } from '@/lib/omni/notificarEvento';
 import { armaDoPersonagem } from '@/lib/omni/armaDoPersonagem';
 import { reservarPassoOmni, executarNaCadeiaOmni, capturarCadeiaOmni } from '@/lib/omni/cadeiaEventos';
 import { ajustarProtecoesOmni, consumirProtecoesOmni, expirarProtecoesOmni } from '@/lib/omni/protecoesAtivas';
@@ -758,7 +759,7 @@ interface CharacterStore {
    *   para curar integralmente — o store NÃO debita PE; quem chama deve fazer).
    * - 'vigor_maldito' / 'other' (default) → não sofre redutor.
    */
-  applyHealing: (id: string, amount: number, source?: 'cursed_energy_external' | 'self_cursed_energy' | 'vigor_maldito' | 'other') => void;
+  applyHealing: (id: string, amount: number, source?: 'cursed_energy_external' | 'self_cursed_energy' | 'vigor_maldito' | 'other', healerId?: string) => void;
   applyShield: (id: string, amount: number) => void;
   /**
    * Talento "Discurso Motivador" — aplica PV Temporário a aliados selecionados.
@@ -1956,6 +1957,7 @@ export const useCharacterStore = create<CharacterStore>()(
               },
             ),
           }));
+          notificarEventoPersonagem('aoAtivarHabilidadeSpec', charId, ab.name);
           return { ok: true, peSpent: -recovered };
         }
 
@@ -2066,6 +2068,7 @@ export const useCharacterStore = create<CharacterStore>()(
             };
           }),
         }));
+        notificarEventoPersonagem('aoAtivarHabilidadeSpec', charId, ab.name);
         return { ok: true, peSpent: peCost, usesLeft };
       },
       resetSpecAbilityUsage: (charId, scope) => set((state) => ({
@@ -2623,7 +2626,8 @@ export const useCharacterStore = create<CharacterStore>()(
         }
         });
       },
-      applyHealing: (id, amount, source = 'other') => {
+      applyHealing: (id, amount, source = 'other', healerId) => {
+        if (!Number.isFinite(amount) || amount <= 0) return;
         const cadeia = capturarCadeiaOmni();
         let healedAmount = 0;
         set((state) => ({
@@ -2652,9 +2656,13 @@ export const useCharacterStore = create<CharacterStore>()(
             emitirEvento('aoReceberCura', {
               cadeia,
               usuarioId: id,
+              alvoId: healerId,
               cena: { cura: healedAmount },
               origemNome: 'Cura Recebida',
               incluirPassivas: true,
+            });
+            if (healerId && get().characters.some(c => c.id === healerId)) emitirEvento('aoCurar', {
+              cadeia, usuarioId: healerId, alvoId: id, cena: { cura: healedAmount }, origemNome: 'Cura Aplicada',
             });
           });
         }
@@ -3752,6 +3760,7 @@ export const useCharacterStore = create<CharacterStore>()(
             };
           }),
         }));
+        if (result.ok) notificarEventoPersonagem('aoAtivarAptidao', charId, getAuraAptitudeById(auraId)?.name ?? auraId);
         return result;
       },
       toggleAuraAptitude: (charId, auraId) => {
@@ -3792,6 +3801,7 @@ export const useCharacterStore = create<CharacterStore>()(
             };
           }),
         }));
+        if (result.ok && result.active) notificarEventoPersonagem('aoAtivarAptidao', charId, getAuraAptitudeById(auraId)?.name ?? auraId);
         return result;
       },
       resetAuraAptitudeUsage: (charId, scope) => {
@@ -4229,6 +4239,7 @@ export const useCharacterStore = create<CharacterStore>()(
       addCondition: (charId, condition) => {
         const cadeia = capturarCadeiaOmni();
         const target = get().characters.find((c) => c.id === charId);
+        if (!target) return;
         // Talento "Atenção Infalível" / outros: bloqueia condições listadas em immunities.
         if (target) {
           if (isSurpresoCondition(condition) && isProtegidoPreAnalise(target, get().characters)) {
@@ -4256,9 +4267,13 @@ export const useCharacterStore = create<CharacterStore>()(
           emitirEvento('aoReceberCondicao', {
             cadeia,
             usuarioId: charId,
+            alvoId: condition.sourceCharId,
             cena: {},
             origemNome: `Condição: ${condition.name}`,
             incluirPassivas: true,
+          });
+          if (condition.sourceCharId && get().characters.some(c => c.id === condition.sourceCharId)) emitirEvento('aoAplicarCondicao', {
+            cadeia, usuarioId: condition.sourceCharId, alvoId: charId, origemNome: `Condição: ${condition.name}`,
           });
         });
         // Fase 9 — gatilho de Aura Anuladora: se o alvo possui a aptidão e tem PE,
@@ -4863,7 +4878,7 @@ export const useCharacterStore = create<CharacterStore>()(
         if (!c) return { ok: false, reason: 'Personagem não encontrado.' };
         const t = getTalentById(talentId);
         if (!t) return { ok: false, reason: 'Talento desconhecido.' };
-        if (!t.usage) return { ok: true }; // sem limite
+        if (!t.usage) { notificarEventoPersonagem('aoUsarTalento', charId, t.name); return { ok: true }; } // sem limite
         const tb = getTrainingBonusByLevel(c.level);
         const desAttr = (c.attributes ?? []).find(a => a.name.toUpperCase() === 'DES');
         const preAttr = (c.attributes ?? []).find(a => a.name === 'Presença');
@@ -4883,6 +4898,7 @@ export const useCharacterStore = create<CharacterStore>()(
               : x,
           ),
         }));
+        notificarEventoPersonagem('aoUsarTalento', charId, t.name);
         return { ok: true, usesLeft };
       },
       recoverTalentUse: (charId, talentId) =>
