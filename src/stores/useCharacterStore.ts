@@ -2042,6 +2042,14 @@ export const useCharacterStore = create<CharacterStore>()(
             recoverPeRolls.push(total);
           }
         }
+        // Valida e consome no último ponto antes dos efeitos: um teste 3D
+        // assíncrono pode deixar a reação indisponível enquanto a janela está aberta.
+        if (ab.activation === 'reaction') {
+          const { useReactionStore } = await import('@/stores/useReactionStore');
+          if (!useReactionStore.getState().consumeReaction(charId)) {
+            return { ok: false, reason: 'Reação insuficiente.' };
+          }
+        }
         set((s) => ({
           characters: s.characters.map((x) => {
             if (x.id !== charId) return x;
@@ -2100,7 +2108,6 @@ export const useCharacterStore = create<CharacterStore>()(
                 : (x.sacrificioCooldownRounds ?? 0),
               actionsCurrent: ab.activation === 'action' ? x.actionsCurrent - 1 : x.actionsCurrent,
               bonusActionsCurrent: ab.activation === 'bonus' ? x.bonusActionsCurrent - 1 : x.bonusActionsCurrent,
-              reactionsCurrent: ab.activation === 'reaction' ? (x.reactionsCurrent ?? x.reactionsMax ?? 1) - 1 : x.reactionsCurrent,
               specAbilityUsage: {
                 ...(x.specAbilityUsage ?? {}),
                 [abilityId]: (x.specAbilityUsage?.[abilityId] ?? 0) + 1,
@@ -3553,6 +3560,14 @@ export const useCharacterStore = create<CharacterStore>()(
           return { ok: false, reason: calc?.reason ?? 'Falha ao calcular efeito.' };
         }
 
+        const usesReaction = clId === 'cl-cobrir-se' || clId === 'cl-cobertura-avancada';
+        if (usesReaction) {
+          const { useReactionStore } = await import('@/stores/useReactionStore');
+          if (!useReactionStore.getState().consumeReaction(charId)) {
+            return { ok: false, reason: 'Reação insuficiente.' };
+          }
+        }
+
         // Aplica side-effects.
         set((s) => ({
           characters: s.characters.map((cc) => {
@@ -3560,9 +3575,6 @@ export const useCharacterStore = create<CharacterStore>()(
             const next = {
               ...cc,
               peCurrent: Math.max(0, cc.peCurrent - calc!.peSpent),
-              ...((clId === 'cl-cobrir-se' || clId === 'cl-cobertura-avancada')
-                ? { reactionsCurrent: Math.max(0, (cc.reactionsCurrent ?? cc.reactionsMax ?? 1) - 1) }
-                : {}),
             };
             if (calc!.shieldGranted) next.escCurrent = (next.escCurrent ?? 0) + calc!.shieldGranted;
             if (calc!.omniFlagPatch) {

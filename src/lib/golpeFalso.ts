@@ -22,6 +22,7 @@ import { useMapStore } from '@/stores/useMapStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { grantAdvantage } from '@/lib/omni/rollAdvantage';
 import { rollD20Com } from '@/lib/dice';
+import { useReactionStore } from '@/stores/useReactionStore';
 import { getReactionsAvailable } from '@/lib/reactionBudget';
 
 export const GOLPE_FALSO_ID = 'ec-golpe-falso';
@@ -117,9 +118,9 @@ export async function golpeFalsoExecutar(
   const aliado = cs.find((x) => x.id === aliadoId)!;
   const ini = cs.find((x) => x.id === inimigoId)!;
 
-  useCharacterStore.getState().updateCharacter(espId, {
-    reactionsCurrent: getReactionsAvailable(esp!) - 1,
-  });
+  if (!useReactionStore.getState().consumeReaction(espId)) {
+    return { ok: false, reason: 'Sem reação disponível.' };
+  }
 
   const cd = specDCFor(esp!);
   const mod = astuciaMod(ini);

@@ -78,5 +78,6 @@ describe('orçamento de reação unificado com o saldo da ficha', () => {
     const result = await useCharacterStore.getState().activateClAptitude('alvo', 'cl-cobrir-se', { peSpent: 1 });
     expect(result.ok).toBe(true);
     expect(useCharacterStore.getState().characters[0]).toMatchObject({ reactionsCurrent: 1, peCurrent: 19 });
+    expect(useReactionStore.getState().reactionsUsedByChar.alvo).toBe(1);
   });
 });

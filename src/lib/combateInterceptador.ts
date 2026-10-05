@@ -11,6 +11,7 @@ import { fmtM, TOUCH_RANGE_M } from '@/lib/touchRange';
 import { hasCombatStyle, styleStepBonus } from '@/lib/combateEstilos';
 import { protetorDistance } from '@/lib/combateProtetor';
 import { getReactionsAvailable } from '@/lib/reactionBudget';
+import { useReactionStore } from '@/stores/useReactionStore';
 
 export const INTERCEPTADOR_RANGE_M = TOUCH_RANGE_M;
 type R = { ok: true; amount: number } | { ok: false; reason: string };
@@ -49,7 +50,7 @@ export function interceptadorInterceptar(
   const rolls = Array.from({ length: n }, () => 1 + Math.floor(rng() * 10));
   const mod = interceptadorMod(p);
   const amount = Math.max(0, rolls.reduce((a, b) => a + b, 0) + mod);
-  st.updateCharacter(interceptorId, { reactionsCurrent: reactionsAvailable - 1 });
+  if (!useReactionStore.getState().consumeReaction(interceptorId)) return fail('Sem reação disponível.');
   st.updateCharacter(allyId, { interceptGuard: { amount, byName: p.name } } as Partial<Character>);
   log('combat', `🗡️ ${p.name} usa a reação (Estilo do Interceptador) em ${ally.name}: ${n}d10 [${rolls.join(', ')}] ${mod >= 0 ? '+' : '−'} ${Math.abs(mod)} (${interceptadorAttr(p).slice(0, 3).toUpperCase()}) = ${amount} de redução no próximo dano.`);
   return { ok: true, amount };

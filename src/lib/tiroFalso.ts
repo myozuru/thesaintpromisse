@@ -19,6 +19,7 @@ import { useLogStore } from '@/stores/useLogStore';
 import { grantAdvantage } from '@/lib/omni/rollAdvantage';
 import { rollD20Com } from '@/lib/dice';
 import { getReactionsAvailable } from '@/lib/reactionBudget';
+import { useReactionStore } from '@/stores/useReactionStore';
 
 export const TIRO_FALSO_ID = 'ec-tiro-falso';
 
@@ -81,9 +82,9 @@ export async function tiroFalsoExecutar(
   const aliado = cs.find((x) => x.id === aliadoId)!;
   const ini = cs.find((x) => x.id === inimigoId)!;
 
-  useCharacterStore.getState().updateCharacter(espId, {
-    reactionsCurrent: getReactionsAvailable(esp!) - 1,
-  });
+  if (!useReactionStore.getState().consumeReaction(espId)) {
+    return { ok: false, reason: 'Sem reação disponível.' };
+  }
 
   const cd = specDCFor(esp!);
   const mod = astuciaMod(ini);

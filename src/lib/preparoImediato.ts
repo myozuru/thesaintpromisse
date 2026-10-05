@@ -17,6 +17,7 @@ import { getPreparoAtual, spendPreparo } from '@/lib/artesCombate';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { getReactionsAvailable } from '@/lib/reactionBudget';
+import { useReactionStore } from '@/stores/useReactionStore';
 
 export const PREPARO_IMEDIATO_ID = 'ec-preparo-imediato';
 export const CUSTO_BONUS = 3;
@@ -100,13 +101,16 @@ export function dispararPreparada(charId: string, opts: { meuTurno: boolean }): 
     return { ok: false, reason: 'Sem reação disponível para disparar fora do seu turno.' };
   }
   const { tipo } = c.prontidaoPreparada;
-  store.updateCharacter(charId, {
+  const updates = {
     prontidaoPreparada: null,
-    ...(opts.meuTurno ? {} : { reactionsCurrent: getReactionsAvailable(c) - 1 }),
     ...(tipo === 'action'
       ? { actionsCurrent: (c.actionsCurrent ?? 0) + 1 }
       : { bonusActionsCurrent: (c.bonusActionsCurrent ?? 0) + 1 }),
-  });
+  };
+  if (opts.meuTurno) store.updateCharacter(charId, updates);
+  else if (!useReactionStore.getState().consumeReaction(charId, updates)) {
+    return { ok: false, reason: 'Sem reação disponível para disparar fora do seu turno.' };
+  }
   useLogStore.getState().addLog(
     'combat',
     `⏱️ ${c.name} dispara a ação preparada (${rotuloDe(tipo)})${opts.meuTurno ? '' : ' — gasta a Reação'}.`,

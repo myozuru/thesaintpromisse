@@ -12,6 +12,7 @@ import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import { hasSpecAbility } from '@/lib/suporteNivel2';
 import { effectiveMovement, MOBILIDADE_ID } from '@/lib/movementBudget';
 import { getReactionsAvailable } from '@/lib/reactionBudget';
+import { useReactionStore } from '@/stores/useReactionStore';
 
 export const REPERTORIO_ID = 'sup-expandir-repertorio';
 export { MOBILIDADE_ID };
@@ -103,11 +104,10 @@ export function aceitarMobilidade(supporterId: string, movementUsed: number): { 
   const reactionsAvailable = getReactionsAvailable(c);
   if (reactionsAvailable <= 0) return { ok: false, reason: 'sem reação disponível', meters: 0 };
   const meters = getMobilidadeReacaoMeters(c);
-  store.updateCharacter(c.id, {
-    reactionsCurrent: reactionsAvailable - 1,
+  if (!useReactionStore.getState().consumeReaction(c.id, {
     mobilidadeReacaoM: meters,
     mobilidadeReacaoBase: movementUsed,
-  });
+  })) return { ok: false, reason: 'sem reação disponível', meters: 0 };
   return { ok: true, meters };
 }
 

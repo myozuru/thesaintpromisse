@@ -12,6 +12,7 @@ import { charsDistanceMeters, fmtM, TOUCH_RANGE_M } from '@/lib/touchRange';
 import { grantAdvantage } from '@/lib/omni/rollAdvantage';
 import { hasCombatStyle } from '@/lib/combateEstilos';
 import { getReactionsAvailable } from '@/lib/reactionBudget';
+import { useReactionStore } from '@/stores/useReactionStore';
 
 export const PROTETOR_RANGE_M = TOUCH_RANGE_M;
 
@@ -42,8 +43,7 @@ function baseCheck(protectorId: string, allyId: string): R {
 }
 
 function spendReaction(id: string) {
-  const p = chars().find((c) => c.id === id)!;
-  useCharacterStore.getState().updateCharacter(id, { reactionsCurrent: getReactionsAvailable(p) - 1 });
+  return useReactionStore.getState().consumeReaction(id);
 }
 
 export function protetorProteger(protectorId: string, allyId: string, attackerId: string): R {
@@ -54,8 +54,8 @@ export function protetorProteger(protectorId: string, allyId: string, attackerId
   const atk = chars().find((c) => c.id === attackerId);
   if (!atk) return { ok: false, reason: 'Escolha quem está atacando.' };
   const ally = chars().find((c) => c.id === allyId)!;
+  if (!spendReaction(protectorId)) return { ok: false, reason: 'Sem reação disponível.' };
   grantAdvantage(attackerId, 'disadvantage', 'next_attack', { expires: 'use', source: `Estilo do Protetor (${p!.name})`, grantedBy: protectorId });
-  spendReaction(protectorId);
   log('combat', `🛡️ ${p!.name} usa a reação (Estilo do Protetor): ${atk.name} ataca ${ally.name} com desvantagem.`);
   return { ok: true };
 }
