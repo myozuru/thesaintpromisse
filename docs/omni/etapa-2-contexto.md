@@ -16,7 +16,7 @@ Estado: base de contexto e ponte de consultas concluídas. A gramática textual 
 
 O futuro parser compila uma referência como sujeito mais chave, por exemplo `{tipo: 'recurso', papel: 'vitima', chave: 'vida'}`. O adaptador da cena fornece fichas, tokens, acesso e medidor; a ponte não acessa informação oculta por conta própria nem escolhe alvo.
 
-Não se usa `usuarioId`/`alvoId` do eventBus para inferir automaticamente atacante/vítima: esses IDs mudam de significado conforme o produtor legado. Os produtores serão adaptados explicitamente na etapa 6.
+Não se usa `usuarioId`/`alvoId` do eventBus para inferir automaticamente atacante/vítima: esses IDs mudam de significado conforme o produtor legado. A etapa 6 mapeia papéis de forma declarativa; adaptar produtores e garantir idempotência no barramento permanece para a etapa 24.
 
 Os valores de fichas e permissões são entradas da consulta. O chamador precisa obter a versão adequada ao momento de resolução; captura na declaração versus atualização após reação será definida em cada fluxo responsável. Este módulo não cobra custos, não registra pagamentos na persistência e não aplica dano.
 
