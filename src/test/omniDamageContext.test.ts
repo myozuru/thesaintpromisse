@@ -152,6 +152,46 @@ describe('Cobrir-se antes da aplicação do dano', () => {
       (window as unknown as { __worldBus?: unknown }).__worldBus = anterior;
     }
   });
+
+  it('aguarda a reação remota do jogador antes de aplicar dano letal', async () => {
+    const anterior = (window as unknown as { __worldBus?: unknown }).__worldBus;
+    (window as unknown as { __worldBus?: unknown }).__worldBus = { send: vi.fn() };
+    const enviados = capturarEnvios('reaction-prompt');
+    try {
+      montarMesa([
+        char('alvo', {
+          profileId: 'perfil-alvo', hpCurrent: 4, peCurrent: 10, peMax: 10,
+          chosenClAptitudes: ['cl-cobrir-se'], cursedAptitudes: { CL: 1 } as never,
+        }),
+        char('atacante', { category: 'INIMIGO' }),
+      ], {});
+      comoTela({ profileId: null, role: 'MASTER' });
+      useCombatStore.setState({ turnTimerEnabled: true, turnDurationSec: 60, turnRemainingAtStart: 25, turnStartedAt: Date.now(), turnPaused: false, reactionPauseIds: [] });
+
+      const damage = useCharacterStore.getState().applyDamage('alvo', 10, 'DCO', { attackerId: 'atacante' });
+      await waitFor(() => expect(enviados.enviados.some((m) => m.tipo === 'prompt')).toBe(true));
+      const enviado = enviados.enviados.find((m) => m.tipo === 'prompt')!;
+      expect(enviado.destinatario).toBe('perfil-alvo');
+      const prompt = enviado.prompt as import('@/stores/useReactionStore').ReactionPrompt;
+      expect(prompt.payload?.damageDealt).toBe(10);
+      expect(pegarFicha('alvo')).toMatchObject({ hpCurrent: 4, escCurrent: 0, peCurrent: 10 });
+      expect(useCombatStore.getState().reactionPauseIds).toContain(prompt.id);
+
+      comoTela({ profileId: 'perfil-alvo', role: 'PLAYER' });
+      useReactionStore.getState().receiveRemote(prompt, 'cliente-mestre');
+      expect(useReactionStore.getState().resolveDecision(prompt.id, 4)).toBe(true);
+      await damage;
+
+      expect(enviados.enviados.find((m) => m.tipo === 'resposta')).toMatchObject({ answer: 4, clienteOrigem: 'cliente-mestre' });
+      expect(pegarFicha('alvo')).toMatchObject({ hpCurrent: 4, peCurrent: 6 });
+      expect(pegarFicha('alvo').escCurrent).toBeGreaterThan(0);
+      expect(useReactionStore.getState().reactionsUsedByChar.alvo).toBe(1);
+      expect(useCombatStore.getState().reactionPauseIds).not.toContain(prompt.id);
+    } finally {
+      enviados.parar();
+      (window as unknown as { __worldBus?: unknown }).__worldBus = anterior;
+    }
+  });
 });
 
 describe('Contexto DANO do combate real', () => {

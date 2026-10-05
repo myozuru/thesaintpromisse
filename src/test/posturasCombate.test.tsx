@@ -123,6 +123,38 @@ describe('Posturas em combate', () => {
     expect(useReactionStore.getState().reactionsUsedByChar.bruno).toBe(1);
   });
 
+  it('oferece Cobrir-se antes de um ataque letal e mantém os PV intactos até a resposta', async () => {
+    const alvo = inimigo('bruno');
+    Object.assign(alvo, {
+      hpCurrent: 4, peCurrent: 10, peMax: 10,
+      chosenClAptitudes: ['cl-cobrir-se'],
+      cursedAptitudes: { CL: 1 },
+    });
+    montarMesa([esp(), alvo, inimigo('caio'), inimigo('davi')], { ana: [0, 0], bruno: [1, 0] });
+    useCombatStore.setState({ inCombat: true, round: 1, initiativeOrder: [{ charId: 'ana' }, { charId: 'bruno' }] as never, currentTurnIndex: 0 } as never);
+    useReactionStore.setState({ prompts: [], reactionsUsedByChar: {} });
+    render(<><AttackPanel character={pegarFicha('ana')} /><ReactionPromptOverlay /></>);
+
+    await selecionarAlvoNoMapaUI('bruno');
+    forcarDados(15, 4, 4, 4);
+    clicar(/Rolar Ataque/);
+    fireEvent.click(await screen.findByRole('button', { name: /Rolar Dano/ }));
+
+    await screen.findByRole('button', { name: /Cobrir-se$/i });
+    const prompt = useReactionStore.getState().prompts.find((p) => p.kind === 'cobrir_se_offer')!;
+    expect(prompt.payload?.damageDealt).toBeGreaterThanOrEqual(4);
+    expect(pegarFicha('bruno').hpCurrent).toBe(4);
+    expect(document.body.textContent).toMatch(/Rolando dano/);
+
+    fireEvent.change(screen.getByRole('spinbutton'), { target: { value: '4' } });
+    fireEvent.click(screen.getByRole('button', { name: /Cobrir-se$/i }));
+    await waitFor(() => expect(pegarFicha('bruno').escCurrent).toBeGreaterThan(0));
+    expect(pegarFicha('bruno').hpCurrent).toBe(4);
+    expect(pegarFicha('bruno').peCurrent).toBe(6);
+    expect(useReactionStore.getState().reactionsUsedByChar.bruno).toBe(1);
+    await waitFor(() => expect(document.body.textContent).not.toMatch(/Rolando dano/));
+  });
+
   it('Sol: +2 acerto, 2 dados no dano e −4 Defesa', async () => {
     const base = computeTotalDefense(esp());
     mesa(esp({ posturasAprendidas: ['sol'] }));

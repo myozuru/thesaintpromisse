@@ -836,7 +836,7 @@ export function AttackPanel({ character: cProp }: Props) {
         `   💥 Dano: ${damageTotal} (${mainWeapon.damage}${abMod ? (abMod > 0 ? '+' : '') + abMod : ''} = ${rolls.join('+')}${abMod ? (abMod > 0 ? '+' : '') + abMod : ''})`,
       );
       for (const target of hitChars) {
-        applyDamage(target.id, damageTotal, dmgType, { attackerId: c.id, source: 'arma', isMelee: mainWeapon.range === 'melee' });
+        await applyDamage(target.id, damageTotal, dmgType, { attackerId: c.id, source: 'arma', isMelee: mainWeapon.range === 'melee' });
       }
       setPhase('done');
     } catch (err) {
@@ -906,14 +906,13 @@ export function AttackPanel({ character: cProp }: Props) {
   };
 
   // ─── Rolar Dano (fase 2, manual) ───────────────────────────────────────────
-  const handleRollDamage = () => {
+  const handleRollDamage = async () => {
     if (phase !== 'await-dmg' || !pendingResult || !mainWeapon) return;
     const result = pendingResult;
     setPhase('rolling-dmg');
     setTickDmg(result.damageTotal);
     setLastResult(result);
     setPendingResult(null);
-    setPhase('done');
     addLog(
       'combat',
       `   💥 Dano: ${result.damageTotal} (${result.damageDice}${result.damageType ? ' ' + result.damageType : ''})`,
@@ -927,14 +926,19 @@ export function AttackPanel({ character: cProp }: Props) {
     if (mainWeapon && arremessosRdIgnorada(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, mainWeapon, turnInfo) > 0) {
       addLog('combat', `   ↳ Arremessos Potentes: ignora ${arremessosRdIgnorada(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, mainWeapon, turnInfo)} de RD.`);
     }
-    if (target && result.damageTotal > 0) {
-      applyDamage(target.id, result.damageTotal, (result.damageType ?? undefined) as never, {
-        attackerId: c.id, source: 'arma', isMelee: mainWeapon.range === 'melee', rdIgnore: rdIgn,
-        attack: { ...metadadosAtaqueRef.current, critical: result.critical, criticalFail: result.criticalFail },
-      });
+    try {
+      if (target && result.damageTotal > 0) {
+        await applyDamage(target.id, result.damageTotal, (result.damageType ?? undefined) as never, {
+          attackerId: c.id, source: 'arma', isMelee: mainWeapon.range === 'melee', rdIgnore: rdIgn,
+          attack: { ...metadadosAtaqueRef.current, critical: result.critical, criticalFail: result.criticalFail },
+        });
+      }
+      if (g?.sel.impactante && g.target) await empurrarImpactante(g.target, result.damageTotal);
+      if (target && result.damageTotal > 0) await explosaoDragao(target, result.damageTotal, result.damageType ?? undefined);
+    } finally {
+      // A rolagem só termina depois que os prompts de reação ao dano forem resolvidos.
+      setPhase('done');
     }
-    if (g?.sel.impactante && g.target) void empurrarImpactante(g.target, result.damageTotal);
-    if (target && result.damageTotal > 0) void explosaoDragao(target, result.damageTotal, result.damageType ?? undefined);
   };
 
   /** Ataque completo fora do fluxo principal (Técnicas de Avanço): rola, aplica dano e registra. */
@@ -964,7 +968,7 @@ export function AttackPanel({ character: cProp }: Props) {
     const verdict = r.criticalFail ? '💀 falha crítica' : r.critical ? '💥 CRÍTICO' : r.hit ? '✅ acerto' : '❌ erro';
     addLog('combat', `🗡️ ${c.name} ataca ${alvo.name} com ${arma.name}: d20 ${r.natural} · total ${r.attackTotal} vs Def ${def} → ${verdict}${r.hit ? ` · dano ${r.damageTotal} (${r.damageDice})` : ''}`);
     if (r.hit && r.damageTotal > 0) {
-      applyDamage(alvo.id, r.damageTotal, (r.damageType ?? undefined) as never, {
+      await applyDamage(alvo.id, r.damageTotal, (r.damageType ?? undefined) as never, {
         attackerId: c.id, source: 'arma', isMelee: arma.range === 'melee', rdIgnore: arremessosRdIgnorada(eu, arma, turnInfo),
         attack: { critical: r.critical, criticalFail: r.criticalFail, isSneak: furtivo, isOpportunity: false },
       });
