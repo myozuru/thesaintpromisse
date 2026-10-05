@@ -1,6 +1,6 @@
 # OMNI natural — contrato e entregas
 
-Estado: etapas 1–5 concluídas no escopo documentado em cada etapa. A linguagem natural ainda não executa no jogo nem está conectada ao salvamento de habilidades. Base inicial examinada: main d2ef673b0e2a92918fa9fd7fac0095733c5b1d68, especificação Texto colado(4) e correções aprovadas na conversa de 05/10/2026. Evidências complementares em inventario-natural.md, diagnostico-execucao.md, etapa-2-contexto.md, etapa-3-lexer.md, etapa-4-gramatica.md e etapa-5-compatibilidade.md.
+Estado: etapas 1–6 concluídas no escopo documentado em cada etapa. A linguagem natural ainda não executa no jogo nem está conectada ao salvamento de habilidades. Base inicial examinada: main d2ef673b0e2a92918fa9fd7fac0095733c5b1d68, especificação Texto colado(4) e correções aprovadas na conversa de 05/10/2026. Evidências complementares em inventario-natural.md, diagnostico-execucao.md e etapa-2-contexto.md a etapa-6-eventos.md.
 
 ## Fontes de verdade
 
@@ -57,7 +57,7 @@ Esta descrição é referência funcional, não exemplo de script já suportado.
 | 3 | Lexer | Acentos, compostos, unidades e posições de erros sem corromper IDs |
 | 4 | Gramática e AST | Precedência, condições e ações sem interpretações conflitantes |
 | 5 | Compatibilidade | Scripts antigos preservados e conversão estruturada |
-| 6 | Eventos | Relações corretas, identidade de ocorrência e disparo único |
+| 6 | Eventos | Mapeamento explícito para gatilhos existentes, papéis e filtros; deduplicação de seletores iguais por regra |
 | 7 | Atributos e sobrevivência | Mesmos valores e regras das fichas atuais |
 | 8 | Recursos e proteções | Leitura/escrita e limites; derivados não editáveis |
 | 9 | Modificadores e ações | Ordem definida, fontes, expiração e orçamento respeitados |
@@ -82,9 +82,9 @@ Esta descrição é referência funcional, não exemplo de script já suportado.
 | Risco | Etapas responsáveis |
 |---|---|
 | 1 IDs das fontes | 2, 13 |
-| 2 Sujeitos do evento | 2, 6 |
-| 3 Relações entre criaturas | 6, 16 |
-| 4 Vários tokens por ficha | 2, 16 |
+| 2 Sujeitos do evento | 2, 6, 24 |
+| 3 Relações entre criaturas | 6, 16, 24 |
+| 4 Vários tokens por ficha | 2, 16, 24 |
 | 5 Medição espacial | 16 |
 | 6 Ordem de modificadores | 9, 15, 20 |
 | 7 Momento de leitura | 2, 11, 15, 17 |
@@ -101,7 +101,7 @@ Esta descrição é referência funcional, não exemplo de script já suportado.
 | 18 Persistência e retomada | 11, 14, 21, 24 |
 | 19 Catálogo verificável | 1, 23 |
 
-Cinco riscos anteriores: colisão de aliases (3/5), precedência (4), unidades (3/18), idempotência e concorrência (6/13/24), cancelamento e recuperação (13/17/24).
+Cinco riscos anteriores: colisão de aliases (3/5), precedência (4), unidades (3/18), idempotência e concorrência (24), cancelamento e recuperação (13/17/24). A etapa 6 deduplica descritores iguais numa regra, mas não garante disparo único no combate; isso exige IDs de ocorrência estáveis e integração idempotente no barramento na etapa 24.
 
 ## Evidências iniciais e trabalho ainda aberto
 
