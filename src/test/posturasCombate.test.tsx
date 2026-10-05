@@ -212,6 +212,19 @@ describe('Posturas em combate', () => {
     expect(pegarFicha('ana').hpCurrent).toBe(35);
   });
 
+  it('Lua: não reduz dano nem libera movimento se o débito da reação falhar', async () => {
+    mesa(esp({ posturasAprendidas: ['lua'] }));
+    clicar(/Entrar: Lua/);
+    render(<ReactionPromptOverlay />);
+    vi.spyOn(useReactionStore.getState(), 'consumeReaction').mockReturnValue(false);
+    useCharacterStore.getState().applyDamage('ana', 10, undefined, { attackerId: 'bruno' });
+    fireEvent.click(await screen.findByRole('button', { name: /Usar reação/ }));
+    await waitFor(() => expect(pegarFicha('ana').hpCurrent).toBe(40));
+    expect(pegarFicha('ana').desengajado).toBeFalsy();
+    expect(pegarFicha('ana').mobilidadeReacaoM).toBeUndefined();
+    vi.restoreAllMocks();
+  });
+
   it('Terra: PV temporários = nível no começo do turno, +treinamento em Fortitude, imune a empurrão', async () => {
     mesa(esp({ posturasAprendidas: ['terra'] }));
     clicar(/Entrar: Terra/);

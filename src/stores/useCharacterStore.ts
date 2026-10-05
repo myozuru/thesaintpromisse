@@ -2212,12 +2212,12 @@ export const useCharacterStore = create<CharacterStore>()(
               if (current && (current.reactionsCurrent ?? current.reactionsMax ?? 1) > 0 && useReactionStore.getState().hasReactionAvailable(id)) {
                 const reduced = Math.max(0, rawDamage - red);
                 const used = useCombatStore.getState().movementUsedByChar[id] ?? 0;
-                get().updateCharacter(id, {
-                  mobilidadeReacaoM: effectiveMovement(current),
-                  mobilidadeReacaoBase: used,
-                  desengajado: true,
-                });
                 if (useReactionStore.getState().consumeReaction(id)) {
+                  get().updateCharacter(id, {
+                    mobilidadeReacaoM: effectiveMovement(current),
+                    mobilidadeReacaoBase: used,
+                    desengajado: true,
+                  });
                   rawDamage = reduced;
                   try { useLogStore.getState().addLog('combat', `🌙 Postura da Lua: ${current.name} reduz o golpe para ${reduced} e pode Andar e Desengajar.`); } catch { /* noop */ }
                   if (rawDamage <= 0) return;
@@ -2249,9 +2249,8 @@ export const useCharacterStore = create<CharacterStore>()(
             });
             if (!reservarContinuidadeReacao()) return;
             if (answer === 1 && useReactionStore.getState().hasReactionAvailable(id)) {
-              const result = get().useAlmaMaldita(id, rawDamage);
+              const result = useReactionStore.getState().runReaction(id, () => get().useAlmaMaldita(id, rawDamage));
               if (result.ok && result.reducedTo != null) {
-                useReactionStore.getState().consumeReaction(id);
                 rawDamage = result.reducedTo;
                 try { useLogStore.getState().addLog('combat', `🩸 ${beforeChar.name}: Alma Maldita reduziu dano à Alma para ${rawDamage}.`); } catch { /* noop */ }
                 if (rawDamage <= 0) return;
@@ -2277,8 +2276,7 @@ export const useCharacterStore = create<CharacterStore>()(
               payload: { critDamageRaw: rawDamage, critDamageType: damageType, cursedDC: calcCursedDC(beforeChar) },
             });
             if (!reservarContinuidadeReacao()) return;
-            if (answer != null && useReactionStore.getState().hasReactionAvailable(id)) {
-              useReactionStore.getState().consumeReaction(id);
+            if (answer != null && useReactionStore.getState().consumeReaction(id)) {
               opts = { ...opts, tags: [...(opts?.tags ?? []), '__anat_incompr_resolved'] };
               if (answer === 2) {
                 rawDamage = Math.floor(rawDamage / 2);
