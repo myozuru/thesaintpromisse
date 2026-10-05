@@ -46,4 +46,17 @@ describe('condições não acumulam instâncias iguais', () => {
     useCharacterStore.getState().updateCharacter('target', { hpCurrent: 10 });
     expect(useCharacterStore.getState().characters[0].activeConditions?.map((c) => c.id)).toEqual(['a1']);
   });
+
+  it('normaliza Caído antigo para não pedir TR de remoção', () => {
+    setTarget([{
+      ...condition('caido-antigo', 'caido', 'Caído', 'a'),
+      durationMode: 'ate_passar_tr', endCD: 18, endTrType: 'fortitude',
+    }]);
+    useCharacterStore.getState().updateCharacter('target', { hpCurrent: 10 });
+    expect(useCharacterStore.getState().characters[0].activeConditions?.[0]).toMatchObject({
+      conditionId: 'caido', durationMode: 'ate_acabar',
+    });
+    expect(useCharacterStore.getState().characters[0].activeConditions?.[0].endCD).toBeUndefined();
+    expect(useCharacterStore.getState().characters[0].activeConditions?.[0].endTrType).toBeUndefined();
+  });
 });

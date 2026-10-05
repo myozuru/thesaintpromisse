@@ -90,6 +90,7 @@ import { aggregateTalentBonuses } from '@/lib/talentEffects';
 import { aggregateAuraEffects, getPendingAbsorbedDice, hasKokusen, getKokusenCritThreshold } from '@/lib/auraEffects';
 import { aggregateConditionMods, getDefenseModFromConditions, getSkillModFromConditions, getAutoCritFromConditions } from '@/lib/conditionEffects';
 import { useCombatStore } from '@/stores/useCombatStore';
+import { useProfileStore } from '@/stores/useProfileStore';
 import { notifyMissedRangedAttack } from '@/stores/useReactionStore';
 import { TalentBonusBadge } from './TalentBonusBadge';
 import { RestModal } from './RestModal';
@@ -382,6 +383,15 @@ function DamageHealPanel({ sourceId, sourceName }: { sourceId: string; sourceNam
 
 export function CharacterCard({ character: c, hideAttackPanel, compactHeader = false }: Props) {
   const isPlayer = useRoleStore((s) => s.role) === 'PLAYER';
+  const activeProfileId = useProfileStore((s) => s.activeProfileId);
+  const combatInProgress = useCombatStore((s) => s.inCombat);
+  const activeTurnCharId = useCombatStore((s) => s.initiativeOrder[s.currentTurnIndex]?.charId);
+  const movementActionUsed = useCombatStore((s) => !!s.movementActionUsedByChar?.[c.id]);
+  const canManageThisCharacter = !isPlayer || (!!activeProfileId && c.profileId === activeProfileId);
+  const unableToMove = (c.hpCurrent ?? 1) <= 0 || (c.activeConditions ?? []).some((condition) =>
+    ['atordoado', 'inconsciente', 'indefeso', 'imovel', 'morto', 'paralisado', 'desmaiado'].includes(condition.conditionId),
+  );
+  const canStandFromProne = canManageThisCharacter && !unableToMove && (!combatInProgress || (activeTurnCharId === c.id && !movementActionUsed));
   // Omni-Engine: rolagens deste personagem passam pelo contexto de reroll.
   const rollD20 = () => rollD20Com(c.id);
   const rollDice = (notation: string) => rollDiceCom(c.id, notation);
@@ -454,6 +464,15 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
   const [manualCondId, setManualCondId] = useState(ALL_CONDITIONS[0].id);
   const [manualCondTurns, setManualCondTurns] = useState(1);
   const [manualCondRounds, setManualCondRounds] = useState(0);
+  const levantar = (conditionId: string) => {
+    if (!canStandFromProne) return;
+    if (!useCombatStore.getState().spendMovementAction(c.id)) {
+      toast.error('Ação de movimento indisponível: só é possível levantar no seu turno, uma vez por turno.');
+      return;
+    }
+    removeCondition(c.id, conditionId);
+    addLog('combat', `${c.name} gastou uma ação de movimento para se levantar.`);
+  };
 
   const effects = c.origin ? applyOriginEffects(c.origin, c.level, {}) : null;
   // Especialista em Técnica usa fórmula própria de slots:
@@ -1966,7 +1985,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
             return (
               <span key={cd.id} className="rounded-full bg-hp/20 border border-hp/30 px-2 py-0.5 text-xs text-hp font-medium group cursor-pointer" title={`${cd.name}${cd.sourceCharName ? ` (por ${cd.sourceCharName})` : ''}`}>
                 {cd.icon} {cd.name} ({dur})
-                <button onClick={() => removeCondition(c.id, cd.id)} className="ml-1 text-destructive/60 hover:text-destructive hidden group-hover:inline">✕</button>
+                {cd.conditionId !== 'caido' && <button onClick={() => removeCondition(c.id, cd.id)} className="ml-1 text-destructive/60 hover:text-destructive hidden group-hover:inline">✕</button>}
               </span>
             );
           })}
@@ -2920,7 +2939,19 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                   <div key={cd.id} className="rounded-lg bg-hp/10 border border-hp/20 px-2 py-1.5 text-sm">
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-hp">{cd.icon} {cd.name} <span className="text-xs text-muted-foreground">({dur})</span></span>
-                      <button onClick={() => removeCondition(c.id, cd.id)} className="text-destructive/60 hover:text-destructive"><X className="h-3 w-3" /></button>
+                      {cd.conditionId === 'caido' ? (
+                        <button
+                          type="button"
+                          onClick={() => levantar(cd.id)}
+                          disabled={!canStandFromProne}
+                          title={canStandFromProne ? 'Gasta a ação de movimento para se levantar; não exige TR.' : 'Disponível no próprio turno, uma vez por turno.'}
+                          className="rounded border border-primary/40 px-2 py-0.5 text-xs font-semibold text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          Levantar · Movimento
+                        </button>
+                      ) : (
+                        <button onClick={() => removeCondition(c.id, cd.id)} className="text-destructive/60 hover:text-destructive"><X className="h-3 w-3" /></button>
+                      )}
                     </div>
                     {condDef && <p className="text-xs text-muted-foreground mt-0.5">{condDef.description}</p>}
                     {cd.sourceCharName && <p className="text-xs text-muted-foreground">Causado por: {cd.sourceCharName}</p>}

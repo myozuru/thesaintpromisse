@@ -106,7 +106,8 @@ export function normalizeConditionExpiry<T extends {
   endCD?: number;
   endTrType?: string;
 }>(condition: T): Pick<T, 'durationMode' | 'endCD' | 'endTrType'> {
-  if (condition.conditionId.trim().toLowerCase() === 'caido') {
+  const conditionId = condition.conditionId.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (conditionId === 'caido') {
     return { durationMode: 'ate_acabar', endCD: undefined, endTrType: undefined } as Pick<T, 'durationMode' | 'endCD' | 'endTrType'>;
   }
   return {

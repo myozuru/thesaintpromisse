@@ -13,6 +13,7 @@ import { luaReducao, quebraPostura } from '@/lib/posturas';
 import { arsenalTrocaLivreDisponivel, arsenalBonusAoTrocar } from '@/lib/arsenalCiclico';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { normalizeConditionExpiry } from '@/types/conditions';
 import { dispararGatilhoEfeitosItens } from '@/lib/omni/triggerEfeitos';
 import { temImunidade as omniTemImunidade } from '@/lib/omni/immunity';
 import { useLogStore } from '@/stores/useLogStore';
@@ -123,7 +124,8 @@ function sameConditionKind(a: ActiveCondition, b: ActiveCondition): boolean {
 
 function normalizeActiveConditions(conditions: ActiveCondition[] | undefined): ActiveCondition[] {
   const unique: ActiveCondition[] = [];
-  for (const condition of conditions ?? []) {
+  for (const rawCondition of conditions ?? []) {
+    const condition = { ...rawCondition, ...normalizeConditionExpiry(rawCondition) };
     const severity = conditionSeverity(condition);
     const alreadyCovered = unique.some((active) =>
       sameConditionKind(active, condition)

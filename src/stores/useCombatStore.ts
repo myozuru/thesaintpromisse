@@ -191,6 +191,8 @@ interface CombatStore {
   participantIds: string[];
   /** Metros de movimento já consumidos no turno atual, por charId. */
   movementUsedByChar: Record<string, number>;
+  /** Ação de movimento gasta neste turno, separada do orçamento de metros. */
+  movementActionUsedByChar: Record<string, boolean>;
   /** Cronômetro de turno (definido pelo Mestre). */
   turnTimerEnabled: boolean;
   /** Duração padrão do turno em segundos. 0 = sem cronômetro. */
@@ -213,6 +215,7 @@ interface CombatStore {
   setMovementUsed: (charId: string, meters: number) => void;
   addMovementUsed: (charId: string, meters: number) => void;
   resetMovementUsed: (charId: string) => void;
+  spendMovementAction: (charId: string) => boolean;
   toggleParticipant: (charId: string) => void;
   setParticipants: (ids: string[]) => void;
   clearParticipants: () => void;
@@ -246,6 +249,7 @@ export const useCombatStore = create<CombatStore>()(
       initiativeOrder: [],
       participantIds: [],
       movementUsedByChar: {},
+      movementActionUsedByChar: {},
       turnTimerEnabled: false,
       turnDurationSec: 60,
       turnRemainingAtStart: 60,
@@ -329,6 +333,16 @@ export const useCombatStore = create<CombatStore>()(
           delete next[charId];
           return { movementUsedByChar: next };
         }),
+      spendMovementAction: (charId) => {
+        const s = get();
+        if (!s.inCombat) return true;
+        if (s.initiativeOrder[s.currentTurnIndex]?.charId !== charId) return false;
+        if (s.movementActionUsedByChar?.[charId]) return false;
+        set((state) => ({
+          movementActionUsedByChar: { ...(state.movementActionUsedByChar ?? {}), [charId]: true },
+        }));
+        return true;
+      },
       toggleParticipant: (charId) =>
         set((s) => ({
           participantIds: s.participantIds.includes(charId)
@@ -352,6 +366,7 @@ export const useCombatStore = create<CombatStore>()(
           currentTurnIndex: 0,
           initiativeOrder: sorted,
           movementUsedByChar: {},
+          movementActionUsedByChar: {},
           turnRemainingAtStart: s.turnDurationSec,
           turnStartedAt: Date.now(),
           turnPaused: !s.turnTimerEnabled,
@@ -496,6 +511,7 @@ export const useCombatStore = create<CombatStore>()(
             currentTurnIndex: 0,
             round: newRound,
             movementUsedByChar: {},
+            movementActionUsedByChar: {},
             turnRemainingAtStart: s.turnDurationSec,
             turnStartedAt: Date.now(),
             turnPaused: !s.turnTimerEnabled,
@@ -558,13 +574,19 @@ export const useCombatStore = create<CombatStore>()(
           }
           return { endOfRound: true };
         }
-        set((s) => ({
-          currentTurnIndex: nextIndex,
-          movementUsedByChar: {},
-          turnRemainingAtStart: s.turnDurationSec,
-          turnStartedAt: Date.now(),
-          turnPaused: !s.turnTimerEnabled,
-        }));
+        set((s) => {
+          const movementActionUsedByChar = { ...(s.movementActionUsedByChar ?? {}) };
+          const nextCharId = initiativeOrder[nextIndex]?.charId;
+          if (nextCharId) delete movementActionUsedByChar[nextCharId];
+          return {
+            currentTurnIndex: nextIndex,
+            movementUsedByChar: {},
+            movementActionUsedByChar,
+            turnRemainingAtStart: s.turnDurationSec,
+            turnStartedAt: Date.now(),
+            turnPaused: !s.turnTimerEnabled,
+          };
+        });
         import('@/stores/useMapStore').then(({ useMapStore }) => useMapStore.getState().setPendingMove(null));
         // Zera movimento do novo personagem ativo.
         const nextActive = initiativeOrder[nextIndex];
@@ -653,6 +675,7 @@ export const useCombatStore = create<CombatStore>()(
           currentTurnIndex: 0,
           initiativeOrder: [],
           movementUsedByChar: {},
+          movementActionUsedByChar: {},
           turnPaused: true,
           turnRemainingAtStart: s.turnDurationSec,
           turnStartedAt: Date.now(),
@@ -667,6 +690,7 @@ export const useCombatStore = create<CombatStore>()(
         round: s.round,
         currentTurnIndex: s.currentTurnIndex,
         initiativeOrder: s.initiativeOrder,
+        movementActionUsedByChar: s.movementActionUsedByChar,
         turnTimerEnabled: s.turnTimerEnabled,
         turnDurationSec: s.turnDurationSec,
         turnRemainingAtStart: s.turnRemainingAtStart,

@@ -201,6 +201,7 @@ function pickCombat(s: ReturnType<typeof useCombatStore.getState>) {
     currentTurnIndex: s.currentTurnIndex,
     initiativeOrder: s.initiativeOrder,
     movementUsedByChar: s.movementUsedByChar,
+    movementActionUsedByChar: s.movementActionUsedByChar,
     turnTimerEnabled: s.turnTimerEnabled,
     turnDurationSec: s.turnDurationSec,
     turnRemainingAtStart: s.turnRemainingAtStart,
