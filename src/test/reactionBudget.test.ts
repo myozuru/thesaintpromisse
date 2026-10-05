@@ -40,6 +40,19 @@ describe('orçamento de reação unificado com o saldo da ficha', () => {
     expect(useReactionStore.getState().reactionsUsedByChar.alvo ?? 0).toBe(0);
   });
 
+  it('runReaction reserva a reação antes do efeito e estorna apenas quando o efeito falha', () => {
+    placeFicha(1);
+    const failed = useReactionStore.getState().runReaction('alvo', () => ({ ok: false, reason: 'PE insuficiente.' }));
+    expect(failed).toMatchObject({ ok: false, reason: 'PE insuficiente.' });
+    expect(useCharacterStore.getState().characters[0].reactionsCurrent).toBe(1);
+    expect(useReactionStore.getState().reactionsUsedByChar.alvo ?? 0).toBe(0);
+
+    const applied = useReactionStore.getState().runReaction('alvo', () => ({ ok: true }));
+    expect(applied.ok).toBe(true);
+    expect(useCharacterStore.getState().characters[0].reactionsCurrent).toBe(0);
+    expect(useReactionStore.getState().reactionsUsedByChar.alvo).toBe(1);
+  });
+
   it('reconhece consumo manual feito na ficha sem liberar reação pelo contador auxiliar', () => {
     placeFicha(1);
     useCharacterStore.getState().updateCharacter('alvo', { reactionsCurrent: 0 });

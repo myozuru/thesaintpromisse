@@ -26,7 +26,7 @@ export function ReactionPromptOverlay() {
   const prompts = useReactionStore(s => s.prompts);
   const dismiss = useReactionStore(s => s.dismiss);
   useCharacterStore(s => s.characters);
-  const consumeReaction = useReactionStore(s => s.consumeReaction);
+  const runReaction = useReactionStore(s => s.runReaction);
   const addLog = useLogStore(s => s.addLog);
   const tryNullifyCondition = useCharacterStore(s => s.tryNullifyCondition);
   const armElementalAbsorption = useCharacterStore(s => s.armElementalAbsorption);
@@ -64,10 +64,9 @@ export function ReactionPromptOverlay() {
           }}
           onNullify={(tier) => {
             if (!canReact(p.charId, p.kind)) return;
-            const r = tryNullifyCondition(p.charId, tier);
+            const r = runReaction(p.charId, () => tryNullifyCondition(p.charId, tier));
             if (r.ok) {
               playSuccessSound();
-              consumeReaction(p.charId);
               if (p.payload?.conditionId) removeCondition(p.charId, p.payload.conditionId);
               addLog('combat', `🛡 ${p.charName}: Aura Anuladora — anulou ${p.payload?.conditionName ?? 'condição'} (tier ${tier}). Usos restantes: ${r.usesLeft ?? '∞'}.`);
             } else {
@@ -80,10 +79,9 @@ export function ReactionPromptOverlay() {
             if (!canReact(p.charId, p.kind)) return;
             const elem = p.payload?.element;
             if (!elem) return;
-            const r = armElementalAbsorption(p.charId, elem);
+            const r = runReaction(p.charId, () => armElementalAbsorption(p.charId, elem));
             if (r.ok) {
               playSuccessSound();
-              consumeReaction(p.charId);
               const sides = (r.au ?? 0) >= 5 ? 10 : (r.au ?? 0) >= 3 ? 8 : 6;
               addLog('combat', `🔮 ${p.charName}: Absorção Elemental ARMADA (${DAMAGE_TYPE_LABELS[elem]}) — próximo ataque ganha ${r.au}d${sides}.`);
             } else {
@@ -94,10 +92,9 @@ export function ReactionPromptOverlay() {
           }}
           onRedirect={() => {
             if (!canReact(p.charId, p.kind)) return;
-            const r = redirectMissedAttack(p.charId);
+            const r = runReaction(p.charId, () => redirectMissedAttack(p.charId));
             if (r.ok) {
               playSuccessSound();
-              consumeReaction(p.charId);
               addLog('combat', `🎯 ${p.charName}: Aura Redirecionadora — refaça o ataque com +${r.bonus} (-${r.peSpent} PE).`);
             } else {
               playErrorSound();

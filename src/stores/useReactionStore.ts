@@ -138,6 +138,8 @@ interface ReactionStoreState {
   hasReactionAvailable: (charId: string) => boolean;
   /** Debita atomicamente a reação da ficha e registra o consumo. */
   consumeReaction: (charId: string, updates?: Partial<Character>) => boolean;
+  /** Consome a reação antes do efeito e a devolve caso a validação do efeito falhe. */
+  runReaction: <T extends { ok: boolean; reason?: string }>(charId: string, effect: () => T) => T | { ok: false; reason: string };
   /** Limpa apenas a telemetria no início da rodada; saldo da ficha é reposto pelo motor de turnos. */
   resetRoundReactions: () => void;
 }
@@ -198,6 +200,28 @@ export const useReactionStore = create<ReactionStoreState>((set, get) => ({
       },
     }));
     return true;
+  },
+  runReaction: (charId, effect) => {
+    if (!get().consumeReaction(charId)) return { ok: false, reason: 'Sem reação disponível.' };
+    const result = effect();
+    if (result.ok) return result;
+
+    // `effect` é síncrono; se sua própria validação falhou, desfaz apenas o
+    // débito feito acima e mantém intactos os recursos e usos da habilidade.
+    const character = useCharacterStore.getState().characters.find((c) => c.id === charId);
+    if (character) {
+      useCharacterStore.getState().updateCharacter(charId, {
+        reactionsCurrent: getReactionsAvailable(character) + 1,
+      });
+    }
+    set((state) => {
+      const used = state.reactionsUsedByChar[charId] ?? 0;
+      const reactionsUsedByChar = { ...state.reactionsUsedByChar };
+      if (used <= 1) delete reactionsUsedByChar[charId];
+      else reactionsUsedByChar[charId] = used - 1;
+      return { reactionsUsedByChar };
+    });
+    return result;
   },
   resetRoundReactions: () => set({ reactionsUsedByChar: {} }),
 }));
