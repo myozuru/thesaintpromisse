@@ -85,6 +85,19 @@ describe('custos genéricos de ações', () => {
     expect(useInventoryStore.getState().items[usada.instanceId].usosRestantes).toBe(1);
     expect(useInventoryStore.getState().items[outra.instanceId].usosRestantes).toBe(3);
   });
+  it('não consome uso do item nem outros custos se faltar reação no pagamento final', async () => {
+    mesa({ reactionsCurrent: 1 });
+    const acao = cfg({ custoPE: '3', custo_recursos: { tipo_acao: 'reacao', usos_item: 1 } });
+    const ent = { ...novaEntidade('item'), usos: { total: 3, recarga: 'diaria' as const }, acoesAtivas: [acao] } as EntidadeOmni;
+    const item = useInventoryStore.getState().add('u', ent);
+    vi.spyOn(useReactionStore.getState(), 'consumeReaction').mockReturnValue(false);
+
+    const result = await executarAcaoAtiva('u', acao, 'a', item.entity, { instanciaId: item.instanceId });
+
+    expect(result).toMatchObject({ ok: false, reason: 'Sem reação disponível.' });
+    expect(useInventoryStore.getState().items[item.instanceId].usosRestantes).toBe(3);
+    expect(pegarFicha('u')).toMatchObject({ reactionsCurrent: 1, peCurrent: 20 });
+  });
   it('não cobra PE quando os usos do item são insuficientes ou ilimitados', async () => {
     const acao = cfg({ custo_recursos: { usos_item: 2 } });
     const limitado = { ...novaEntidade('item'), usos: { total: 1, recarga: 'diaria' as const }, acoesAtivas: [acao] } as EntidadeOmni;

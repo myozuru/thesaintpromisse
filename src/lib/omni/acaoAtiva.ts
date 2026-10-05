@@ -450,15 +450,18 @@ async function executarAcaoAtivaInterna(
   const custos = planejarCustosAtivos(cfg, u, opcoes.intensificacoes ?? 0, contextoCustos);
   if (!custos.ok) return custos;
   const p = custos.plano;
-  if (!consumirUsosItemAtivo(p)) return { ok: false, reason: 'Os usos do item mudaram antes de a ação ser concluída.' };
   const cargas = p.cargas;
   const patchPago = patchCustosAtivos(u, p);
   if (p.acao === 'reacao') {
     delete patchPago.reactionsCurrent;
-    if (!useReactionStore.getState().consumeReaction(u.id, patchPago)) {
-      return { ok: false, reason: 'Sem Reação disponível.' };
-    }
+    const pagamento = useReactionStore.getState().runReaction(u.id, () => {
+      if (!consumirUsosItemAtivo(p)) return { ok: false, reason: 'Os usos do item mudaram antes de a ação ser concluída.' };
+      useCharacterStore.getState().updateCharacter(u.id, patchPago);
+      return { ok: true };
+    });
+    if (!pagamento.ok) return pagamento;
   } else {
+    if (!consumirUsosItemAtivo(p)) return { ok: false, reason: 'Os usos do item mudaram antes de a ação ser concluída.' };
     store.updateCharacter(u.id, patchPago);
   }
   if (patchPago.omniCounters) notificarAtualizacaoContadores(u.id, u.omniCounters, patchPago.omniCounters);
