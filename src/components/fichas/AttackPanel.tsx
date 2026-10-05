@@ -722,7 +722,7 @@ export function AttackPanel({ character: cProp }: Props) {
           if (r2.hit && g.sel.sanguinario) aplicarSangramento(alvo2, g.sel.sanguinario);
           if (r2.hit && g.sel.penetrante) addLog('combat', `   ↳ Penetrante: ignora ${penetranteRD(c)} de RD.`);
           if (r2.hit && r2.damageTotal > 0) {
-            applyDamage(alvo2.id, r2.damageTotal, (r2.damageType ?? undefined) as never, {
+            await applyDamage(alvo2.id, r2.damageTotal, (r2.damageType ?? undefined) as never, {
               attackerId: c.id, source: 'arma', isMelee: mainWeapon.range === 'melee', rdIgnore: rdIgnoradaAtaque(!!g.sel.penetrante),
               attack: { critical: r2.critical, criticalFail: r2.criticalFail, isSneak: false, isOpportunity: false },
             });
@@ -772,7 +772,7 @@ export function AttackPanel({ character: cProp }: Props) {
       const modeLabel = result.rollMode === 'disadvantage' ? 'desvantagem' : 'vantagem';
       addLog('combat', `🎲 ${c.name} rolou o 1º d20 (${modeLabel}): ${first}. Aguardando 2º d20…`);
     } else {
-      finalizeAttackReveal(result, isReroll);
+      await finalizeAttackReveal(result, isReroll);
     }
   };
 
@@ -847,19 +847,19 @@ export function AttackPanel({ character: cProp }: Props) {
 
 
   // Anima e revela o 2º d20 em vantagem/desvantagem, então finaliza.
-  const handleRollSecondD20 = () => {
+  const handleRollSecondD20 = async () => {
     if (phase !== 'await-second-d20' || !pendingResult) return;
     const result = pendingResult;
     const meta = pendingRerollMeta ?? { isReroll: false };
     const second = result.attackRolls[1];
     setPhase('rolling-second-d20');
     setTickD20Pair([result.attackRolls[0], second]);
-    finalizeAttackReveal(result, meta.isReroll);
+    await finalizeAttackReveal(result, meta.isReroll);
   };
 
   // Finaliza o reveal do ataque: registra log, expõe acerto/erro e move
   // para await-dmg ou done. Comum aos fluxos d20 único / dual.
-  const finalizeAttackReveal = (result: AttackResult, isReroll: boolean) => {
+  const finalizeAttackReveal = async (result: AttackResult, isReroll: boolean) => {
     setTickD20(result.natural);
     if (result.attackRolls.length > 1) {
       setTickD20Pair([result.attackRolls[0], result.attackRolls[1]]);
@@ -1043,7 +1043,7 @@ export function AttackPanel({ character: cProp }: Props) {
       const mod = trFortitude(ch);
       const passou = d20 + mod >= cd;
       addLog('combat', `🐉 Postura do Dragão: ${ch.name} Fortitude d20 ${d20}${mod >= 0 ? '+' : ''}${mod} vs CD ${cd} → ${passou ? 'passou' : `falhou — sofre ${meio} de dano`}.`);
-      if (!passou) applyDamage(ch.id, meio, tipo as never, { attackerId: c.id, source: 'arma', tags: ['__dragao'] });
+      if (!passou) await applyDamage(ch.id, meio, tipo as never, { attackerId: c.id, source: 'arma', tags: ['__dragao'] });
     }
   };
 
@@ -1126,7 +1126,7 @@ export function AttackPanel({ character: cProp }: Props) {
     recordAttackResult(c.id, r.hit);
     if (r.hit && r.damageTotal > 0) {
       const ign = arremessosRdIgnorada(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, arma, turnInfo);
-      applyDamage(alvo2.id, r.damageTotal, (r.damageType ?? undefined) as never, { attackerId: c.id, source: 'arma', isMelee: false, rdIgnore: ign, attack: { critical: r.critical, criticalFail: r.criticalFail, isOpportunity: false } });
+      await applyDamage(alvo2.id, r.damageTotal, (r.damageType ?? undefined) as never, { attackerId: c.id, source: 'arma', isMelee: false, rdIgnore: ign, attack: { critical: r.critical, criticalFail: r.criticalFail, isOpportunity: false } });
     }
     if (r.hit && r.critical) checarRenovacaoCritico(true, alvo2.name);
     registrarDevastacao(alvo2.id, r.hit);
@@ -1187,12 +1187,16 @@ export function AttackPanel({ character: cProp }: Props) {
     const tipo = tiros[0].r.damageType ?? undefined;
     addLog('combat', `   💥 Dano combinado: ${total} (${tiros.map((t) => `${t.arma.name} ${t.r.damageTotal}`).join(' + ')}) — RD e resistências aplicadas uma única vez.`);
     const rdIgn = rdIgnoradaAtaque(false);
-    applyDamage(target.id, total, tipo as never, { attackerId: c.id, source: 'arma', isMelee: false, rdIgnore: rdIgn, attack: { critical: tiros.some((t) => t.r.critical), criticalFail: false, isSneak: escondidoDe(c, target.id), isOpportunity: false } });
-    if (tiros.some((t) => t.r.critical)) checarRenovacaoCritico(true, target.name);
-    void tempestadeGolpe(target);
-    void explosaoDragao(target, total, tipo);
-    setLastResult({ ...tiros[0].r, damageTotal: total, damageRolls: tiros.flatMap((t) => t.r.damageRolls) });
-    setPhase('done');
+    setPhase('rolling-dmg');
+    try {
+      await applyDamage(target.id, total, tipo as never, { attackerId: c.id, source: 'arma', isMelee: false, rdIgnore: rdIgn, attack: { critical: tiros.some((t) => t.r.critical), criticalFail: false, isSneak: escondidoDe(c, target.id), isOpportunity: false } });
+      if (tiros.some((t) => t.r.critical)) checarRenovacaoCritico(true, target.name);
+      await tempestadeGolpe(target);
+      await explosaoDragao(target, total, tipo);
+      setLastResult({ ...tiros[0].r, damageTotal: total, damageRolls: tiros.flatMap((t) => t.r.damageRolls) });
+    } finally {
+      setPhase('done');
+    }
   };
 
   const handleRerollDamage = async () => {
@@ -1220,7 +1224,7 @@ export function AttackPanel({ character: cProp }: Props) {
       addLog('combat', `🎲 Ataque Infalível: novo dano ${r2.damageTotal} (substituiu ${lastResult.damageTotal}).`);
       // O dano original já foi aplicado: aplica só a diferença (sem RD de novo).
       if (target) {
-        applyDamage(target.id, r2.damageTotal - lastResult.damageTotal, (lastResult.damageType ?? undefined) as never, {
+        await applyDamage(target.id, r2.damageTotal - lastResult.damageTotal, (lastResult.damageType ?? undefined) as never, {
           attackerId: c.id, source: 'arma', isMelee: mainWeapon.range === 'melee', ignoresRD: true,
           attack: { ...metadadosAtaqueRef.current, critical: lastResult.critical, criticalFail: lastResult.criticalFail },
         });
