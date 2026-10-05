@@ -61,7 +61,7 @@ export default function LivePreview({ draft, derived }) {
       <div className="px-4 pt-4 pb-4 space-y-3">
         <div className="flex items-center gap-2 -mt-1">
           <Eye className="w-3.5 h-3.5 text-purple-400" />
-          <h3 className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">
+          <h3 className="text-xs uppercase tracking-widest text-slate-500 font-bold">
             Preview em tempo real
           </h3>
         </div>
@@ -70,14 +70,14 @@ export default function LivePreview({ draft, derived }) {
         {!draft.portraitUrl && (
           <div>
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <span className="text-[9px] font-bold uppercase tracking-wider text-purple-300 bg-purple-950/60 border border-purple-800 rounded px-1.5 py-0.5">
+              <span className="text-xs font-bold uppercase tracking-wider text-purple-300 bg-purple-950/60 border border-purple-800 rounded px-1.5 py-0.5">
                 {PATAMAR_LABELS[draft.core.patamar]}
               </span>
-              <span className="text-[10px] text-slate-500">ND {draft.core.nd}</span>
-              <span className="text-[10px] text-slate-600">•</span>
-              <span className="text-[10px] text-slate-500">BT +{bt}</span>
-              <span className="text-[10px] text-slate-600">•</span>
-              <span className="text-[10px] font-bold text-purple-300 bg-purple-950/50 border border-purple-800 rounded px-1.5 py-0.5">
+              <span className="text-xs text-slate-500">ND {draft.core.nd}</span>
+              <span className="text-xs text-slate-600">•</span>
+              <span className="text-xs text-slate-500">BT +{bt}</span>
+              <span className="text-xs text-slate-600">•</span>
+              <span className="text-xs font-bold text-purple-300 bg-purple-950/50 border border-purple-800 rounded px-1.5 py-0.5">
                 CD {derived.cdBase}
               </span>
             </div>
@@ -105,14 +105,14 @@ export default function LivePreview({ draft, derived }) {
 
         {/* TR */}
         <div>
-          <h5 className="text-[10px] uppercase tracking-widest text-slate-500 mb-1 font-bold">
+          <h5 className="text-xs uppercase tracking-widest text-slate-500 mb-1 font-bold">
             Testes de Resistência
           </h5>
           {/* Bug #29 fix: inclui 'integridade' que era derivada mas omitida da preview */}
           <div className="grid grid-cols-5 gap-1">
             {["astucia", "fortitude", "reflexos", "vontade", "integridade"].map((k) => (
               <div key={k} className="bg-slate-950/60 rounded px-1.5 py-1 text-center">
-                <div className="text-[9px] text-slate-500 uppercase truncate">{k.slice(0, 3)}</div>
+                <div className="text-xs text-slate-500 uppercase truncate">{k.slice(0, 3)}</div>
                 <div className="text-xs font-mono text-white">+{saves[k] ?? 0}</div>
               </div>
             ))}
@@ -121,7 +121,7 @@ export default function LivePreview({ draft, derived }) {
 
         {/* Atributos Base */}
         <div>
-          <h5 className="text-[10px] uppercase tracking-widest text-slate-500 mb-1 font-bold">
+          <h5 className="text-xs uppercase tracking-widest text-slate-500 mb-1 font-bold">
             Atributos Base
           </h5>
           <div className="grid grid-cols-6 gap-1">
@@ -131,9 +131,9 @@ export default function LivePreview({ draft, derived }) {
               const modStr = mod >= 0 ? `+${mod}` : `${mod}`;
               return (
                 <div key={key} className="bg-slate-950/60 border border-slate-800 rounded px-1 py-1.5 flex flex-col items-center justify-center text-center">
-                  <span className={`text-[9px] font-bold ${accent}`}>{label}</span>
+                  <span className={`text-xs font-bold ${accent}`}>{label}</span>
                   <span className="text-xs font-bold text-white tabular-nums">{value}</span>
-                  <span className="text-[9px] text-slate-400">{modStr}</span>
+                  <span className="text-xs text-slate-400">{modStr}</span>
                 </div>
               );
             })}
@@ -156,7 +156,7 @@ export default function LivePreview({ draft, derived }) {
         {(draft.defenses?.condicoesImunes ?? []).length > 0 && (
           <div className="pt-2 border-t border-slate-800">
             <p className="text-xs text-slate-300 leading-relaxed">
-              <span className="font-bold text-amber-400/80 uppercase tracking-widest text-[10px]">Imune a Condições: </span>
+              <span className="font-bold text-amber-400/80 uppercase tracking-widest text-xs">Imune a Condições: </span>
               <span className="capitalize">{(draft.defenses.condicoesImunes).join(', ')}.</span>
             </p>
           </div>
@@ -165,7 +165,7 @@ export default function LivePreview({ draft, derived }) {
         {/* Perícias de Destaque — estilo statblock inline */}
         {masteredSkills.length > 0 && (
           <div className="pt-2 border-t border-slate-800">
-            <h5 className="text-[10px] uppercase tracking-widest text-slate-500 mb-1 font-bold flex items-center gap-1">
+            <h5 className="text-xs uppercase tracking-widest text-slate-500 mb-1 font-bold flex items-center gap-1">
               <Star className="w-3 h-3 text-amber-400" />
               Perícias de Destaque
               <span className="text-amber-500/70">
@@ -294,10 +294,10 @@ function PortraitHeader({ draft }) {
         {/* Texto sobreposto no rodapé */}
         <div className="absolute bottom-0 left-0 right-0 p-3">
           <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-white bg-black/60 backdrop-blur border border-white/20 rounded px-1.5 py-0.5">
+            <span className="text-xs font-bold uppercase tracking-wider text-white bg-black/60 backdrop-blur border border-white/20 rounded px-1.5 py-0.5">
               {PATAMAR_LABELS[draft.core.patamar]}
             </span>
-            <span className="text-[10px] text-white/80 bg-black/40 backdrop-blur px-1.5 py-0.5 rounded">
+            <span className="text-xs text-white/80 bg-black/40 backdrop-blur px-1.5 py-0.5 rounded">
               ND {draft.core.nd}
             </span>
           </div>
@@ -315,7 +315,7 @@ function ActionsList({ actions }) {
   if (!names.length) return null;
   return (
     <div className="pt-2 border-t border-slate-800">
-      <h5 className="text-[10px] uppercase tracking-widest text-slate-500 mb-1 font-bold flex items-center gap-1">
+      <h5 className="text-xs uppercase tracking-widest text-slate-500 mb-1 font-bold flex items-center gap-1">
         <Target className="w-3 h-3 text-rose-400" /> Ações
       </h5>
       <p className="text-xs leading-relaxed text-rose-300">
@@ -329,7 +329,7 @@ function CompactList({ label, icon, names, accent }) {
   if (!names.length) return null;
   return (
     <div className="pt-2 border-t border-slate-800">
-      <h5 className="text-[10px] uppercase tracking-widest text-slate-500 mb-1 font-bold flex items-center gap-1">
+      <h5 className="text-xs uppercase tracking-widest text-slate-500 mb-1 font-bold flex items-center gap-1">
         {icon} {label}
       </h5>
       <p className={`text-xs leading-relaxed ${accent}`}>
@@ -344,7 +344,7 @@ function MiniStat({ icon: Icon, label, value, accent }) {
     <div className="bg-slate-950/60 border border-slate-800 rounded px-2 py-1.5">
       <div className="flex items-center gap-1 mb-0.5">
         <Icon className={`w-2.5 h-2.5 ${accent}`} />
-        <span className="text-[9px] text-slate-500 uppercase truncate">{label}</span>
+        <span className="text-xs text-slate-500 uppercase truncate">{label}</span>
       </div>
       <div className="text-sm font-bold text-white tabular-nums">{value}</div>
     </div>

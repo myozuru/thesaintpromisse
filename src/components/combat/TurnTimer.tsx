@@ -109,7 +109,7 @@ export function TurnTimer({ className, layout = 'compact' }: Props) {
         {enabled ? fmt(remaining) : '—'}
       </span>
       {effectivelyPaused && enabled && (
-        <span className="text-[9px] uppercase tracking-wider text-muted-foreground">
+        <span className="text-xs uppercase tracking-wider text-muted-foreground">
           {pausedForReaction ? pauseLabel : 'pausado'}
         </span>
       )}
@@ -162,7 +162,7 @@ export function TurnTimer({ className, layout = 'compact' }: Props) {
           </button>
           <button
             type="button"
-            className={cn(btn, 'w-auto px-1.5 text-[10px] font-semibold')}
+            className={cn(btn, 'w-auto px-1.5 text-xs font-semibold')}
             onClick={() => {
               if (!enabled) setEnabled(true);
               adjust(10);
@@ -192,7 +192,7 @@ export function TurnTimer({ className, layout = 'compact' }: Props) {
         </div>
       </div>
       {bar}
-      <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+      <div className="flex items-center gap-1 text-xs text-muted-foreground">
         <span>Duração:</span>
         <input
           type="number"
@@ -209,7 +209,7 @@ export function TurnTimer({ className, layout = 'compact' }: Props) {
             key={s}
             type="button"
             onClick={() => setDuration(s)}
-            className="px-1.5 h-5 rounded border border-border/60 hover:bg-secondary/50 text-[10px]"
+            className="px-1.5 h-5 rounded border border-border/60 hover:bg-secondary/50 text-xs"
           >
             {s}s
           </button>

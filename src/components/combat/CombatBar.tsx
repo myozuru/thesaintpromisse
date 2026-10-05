@@ -64,10 +64,10 @@ export function CombatBar({ className, variant = 'bar' }: Props) {
     return (
       <div className={cn('pointer-events-none', className)}>
         <div className="flex flex-col gap-1 rounded-lg border border-border/60 bg-background/70 backdrop-blur-md px-2 py-2 shadow-md min-w-[160px] pointer-events-auto">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono px-1 flex items-center gap-1">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground font-mono px-1 flex items-center gap-1">
             <span>Rodada {combat.round}</span>
             {combat.freeformMode && (
-              <span className="ml-auto px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-200 text-[9px] font-bold border border-amber-500/40">
+              <span className="ml-auto px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-200 text-xs font-bold border border-amber-500/40">
                 MODO LIVRE
               </span>
             )}
@@ -83,9 +83,9 @@ export function CombatBar({ className, variant = 'bar' }: Props) {
                   isActive ? 'bg-primary/15 text-primary' : 'text-muted-foreground/80',
                 )}
               >
-                <span className="w-4 text-[10px] font-mono opacity-60">{idx + 1}.</span>
+                <span className="w-4 text-xs font-mono opacity-60">{idx + 1}.</span>
                 <span className="truncate flex-1">{entry.charName}</span>
-                <span className="text-[11px] font-mono font-bold tabular-nums opacity-80">{entry.total}</span>
+                <span className="text-xs font-mono font-bold tabular-nums opacity-80">{entry.total}</span>
                 {isActive && <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />}
               </div>
             );
@@ -212,14 +212,14 @@ export function CombatBar({ className, variant = 'bar' }: Props) {
     <div className={cn('pointer-events-auto', className)}>
       {!combat.inCombat ? (
         <div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-background/80 backdrop-blur-md px-2.5 py-2 shadow-md min-w-[200px] max-w-[240px]">
-          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
+          <div className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-muted-foreground font-mono">
             <Users className="h-3 w-3 text-primary" />
             <span className="flex-1">Participantes</span>
             <span className="font-bold text-primary">{participantsCount}</span>
           </div>
           <div className="flex flex-wrap gap-1 max-h-[180px] overflow-y-auto">
             {allCharacters.length === 0 ? (
-              <span className="text-[11px] text-muted-foreground">Nenhuma ficha.</span>
+              <span className="text-xs text-muted-foreground">Nenhuma ficha.</span>
             ) : (
               allCharacters.map((c) => {
                 const active = combat.participantIds.includes(c.id);
@@ -228,7 +228,7 @@ export function CombatBar({ className, variant = 'bar' }: Props) {
                     key={c.id}
                     onClick={() => toggleParticipant(c.id)}
                     className={cn(
-                      'rounded-md border px-1.5 py-0.5 text-[11px] font-medium transition-all truncate max-w-full',
+                      'rounded-md border px-1.5 py-0.5 text-xs font-medium transition-all truncate max-w-full',
                       active
                         ? 'bg-primary/15 border-primary text-primary'
                         : 'bg-secondary/20 border-border text-muted-foreground hover:bg-secondary/40',
@@ -256,7 +256,7 @@ export function CombatBar({ className, variant = 'bar' }: Props) {
               onClick={() => combat.setFreeformMode(!combat.freeformMode)}
               title={combat.freeformMode ? 'Modo Livre ativo — desligar' : 'Ativar Modo Livre (sem cap de movimento, sem hotbar)'}
               className={cn(
-                'h-7 px-2 rounded-md border text-[10px] font-bold uppercase tracking-wider flex items-center gap-1',
+                'h-7 px-2 rounded-md border text-xs font-bold uppercase tracking-wider flex items-center gap-1',
                 combat.freeformMode
                   ? 'border-amber-500 bg-amber-500/20 text-amber-200'
                   : 'border-border bg-secondary/30 text-muted-foreground hover:bg-secondary/50',
@@ -270,7 +270,7 @@ export function CombatBar({ className, variant = 'bar' }: Props) {
         <div className="flex flex-col gap-1 rounded-lg border border-primary/40 bg-background/80 backdrop-blur-md px-2 py-2 shadow-md min-w-[200px]">
           <div className="flex items-center gap-1.5 px-1">
             <Swords className="h-3 w-3 text-primary" />
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono flex-1">
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-mono flex-1">
               Rodada <span className="text-primary font-bold">{combat.round}</span>
             </span>
             <button
@@ -292,9 +292,9 @@ export function CombatBar({ className, variant = 'bar' }: Props) {
                   isActive ? 'bg-primary/15 text-primary' : 'text-muted-foreground/80',
                 )}
               >
-                <span className="w-4 text-[10px] font-mono opacity-60">{idx + 1}.</span>
+                <span className="w-4 text-xs font-mono opacity-60">{idx + 1}.</span>
                 <span className="truncate flex-1">{entry.charName}</span>
-                <span className="text-[11px] font-mono font-bold tabular-nums opacity-80">{entry.total}</span>
+                <span className="text-xs font-mono font-bold tabular-nums opacity-80">{entry.total}</span>
                 {isActive && <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />}
               </div>
             );

@@ -3408,7 +3408,7 @@ function ViewportControls() {
   const resetCamera = useMapStore((s) => s.resetCamera);
   return (
     <div className="border-t border-border pt-2 space-y-2">
-      <div className="text-muted-foreground uppercase tracking-wider text-[10px]">Viewport</div>
+      <div className="text-muted-foreground uppercase tracking-wider text-xs">Viewport</div>
       <div className="grid grid-cols-3 gap-2">
         <div>
           <div className="text-muted-foreground mb-1">Pos X</div>

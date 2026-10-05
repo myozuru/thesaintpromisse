@@ -186,7 +186,7 @@ export default function SectionDotes({ draft, actions }) {
                 <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                   <span className="text-sm font-semibold text-white">{d.nome}</span>
                   {d.tipo === "custom" && (
-                    <span className="text-[9px] uppercase tracking-wide text-amber-400 border border-amber-800/60 rounded px-1 py-0.5">
+                    <span className="text-xs uppercase tracking-wide text-amber-400 border border-amber-800/60 rounded px-1 py-0.5">
                       Custom
                     </span>
                   )}
@@ -209,7 +209,7 @@ export default function SectionDotes({ draft, actions }) {
 
       {/* Formulário de adição */}
       <div className="pt-3 border-t border-slate-800 space-y-3">
-        <h3 className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">
+        <h3 className="text-xs uppercase tracking-widest text-slate-500 font-bold">
           Adicionar Dote
         </h3>
 

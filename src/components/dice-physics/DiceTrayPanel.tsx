@@ -211,7 +211,7 @@ export function DiceTrayPanel({ handleRef, className, hideCinematicResultSummary
       {revealing && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 pointer-events-none">
           <div className="font-display text-4xl font-black tracking-[0.4em] text-accent animate-pulse" style={{ textShadow: '0 0 18px hsl(42 78% 58% / 0.8)' }}>…</div>
-          <div className="text-[10px] uppercase tracking-[0.3em] text-accent/70">{drama >= 3 ? 'O destino hesita' : drama === 2 ? 'Os astros decidem' : 'Revelando'}</div>
+          <div className="text-xs uppercase tracking-[0.3em] text-accent/70">{drama >= 3 ? 'O destino hesita' : drama === 2 ? 'Os astros decidem' : 'Revelando'}</div>
         </div>
       )}
 
@@ -275,7 +275,7 @@ export function DiceTrayPanel({ handleRef, className, hideCinematicResultSummary
           {!cinematicFocus && lastResults.map((r) => (
             <span
               key={r.id}
-              className="px-2 py-0.5 rounded-md text-[11px] tabular-nums font-semibold flex items-center gap-1"
+              className="px-2 py-0.5 rounded-md text-xs tabular-nums font-semibold flex items-center gap-1"
               style={{
                 background: 'linear-gradient(135deg, hsl(268 60% 22%) 0%, hsl(285 55% 18%) 100%)',
                 color: 'hsl(42 90% 75%)',
@@ -285,13 +285,13 @@ export function DiceTrayPanel({ handleRef, className, hideCinematicResultSummary
               }}
               title={`${r.type} tirou ${r.value}`}
             >
-              <span className="text-[9px] uppercase opacity-70 tracking-wider">{r.type}</span>
+              <span className="text-xs uppercase opacity-70 tracking-wider">{r.type}</span>
               {r.value}
             </span>
           ))}
           {lastBonus !== 0 && (
             <span
-              className="px-2 py-0.5 rounded-md text-[11px] tabular-nums font-semibold"
+              className="px-2 py-0.5 rounded-md text-xs tabular-nums font-semibold"
               style={{
                 background: 'linear-gradient(135deg, hsl(42 60% 22%) 0%, hsl(38 55% 16%) 100%)',
                 color: 'hsl(42 90% 78%)',

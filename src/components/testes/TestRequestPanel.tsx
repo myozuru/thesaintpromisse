@@ -61,7 +61,7 @@ export function TestRequestPanel({ open, onClose }: TestRequestPanelProps) {
         </div>
         <div className="min-w-0 flex-1">
           <h2 className="truncate font-display text-sm font-bold uppercase text-accent">Invocar destino</h2>
-          <p className="truncate text-[10px] text-muted-foreground">Forje um desafio para seus jogadores</p>
+          <p className="truncate text-xs text-muted-foreground">Forje um desafio para seus jogadores</p>
         </div>
         <Button type="button" variant="ghost" size="icon-sm" title={docked ? 'Usar como janela flutuante' : 'Fixar abaixo do relógio'} aria-label={docked ? 'Usar como janela flutuante' : 'Fixar abaixo do relógio'} onPointerDown={(event) => event.stopPropagation()} onClick={() => setMode(docked ? 'floating' : 'docked')}>
           {docked ? <Square className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}

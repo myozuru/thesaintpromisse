@@ -34,7 +34,7 @@ export function PreparoImediatoPrompt() {
             key={t}
             data-testid={`preparo-imediato-${t}`}
             onClick={() => prepararNaIniciativa(c.id, t, combatId)}
-            className="flex-1 text-[11px] px-2 py-1 rounded bg-amber-500/20 border border-amber-500/40 text-amber-200 font-bold hover:bg-amber-500/30"
+            className="flex-1 text-xs px-2 py-1 rounded bg-amber-500/20 border border-amber-500/40 text-amber-200 font-bold hover:bg-amber-500/30"
           >
             {rotuloDe(t)} ({custoDe(t)} Preparo)
           </button>
@@ -42,7 +42,7 @@ export function PreparoImediatoPrompt() {
         <button
           data-testid="preparo-imediato-nao"
           onClick={() => marcarOfertaRespondida(c.id, combatId)}
-          className="flex-1 text-[11px] px-2 py-1 rounded border border-border bg-secondary/40 hover:bg-secondary"
+          className="flex-1 text-xs px-2 py-1 rounded border border-border bg-secondary/40 hover:bg-secondary"
         >
           Não
         </button>

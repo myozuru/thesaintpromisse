@@ -526,7 +526,7 @@ export function PlayerActionBar() {
           <div className="space-y-3">
             {areaTargetSummaries.length > 0 ? (
               <div className="rounded-md border border-primary/30 bg-primary/10 px-3 py-2">
-                <div className="text-[11px] font-mono uppercase tracking-wider text-primary mb-1">
+                <div className="text-xs font-mono uppercase tracking-wider text-primary mb-1">
                   Será acertado ({areaTargetSummaries.length})
                 </div>
                 <div className="flex flex-wrap gap-1.5">
@@ -787,17 +787,17 @@ export function PlayerActionBar() {
                               {e.name}
                             </span>
                             {e.meta && (
-                              <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground shrink-0">
+                              <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground shrink-0">
                                 {e.meta}
                               </span>
                             )}
                           </div>
                           {e.disabled ? (
-                            <p className="text-[11px] text-destructive/90 mt-0.5">
+                            <p className="text-xs text-destructive/90 mt-0.5">
                               {e.disabledReason}
                             </p>
                           ) : e.description && (
-                            <p className="text-[11px] text-muted-foreground/90 mt-0.5 line-clamp-2 group-hover:line-clamp-none">
+                            <p className="text-xs text-muted-foreground/90 mt-0.5 line-clamp-2 group-hover:line-clamp-none">
                               {e.description}
                             </p>
                           )}
@@ -825,7 +825,7 @@ export function PlayerActionBar() {
               type="button"
               onClick={() => setOpen(isActive ? null : b.key)}
               className={cn(
-                'relative flex flex-col items-center gap-0.5 rounded-xl px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider transition-all duration-200',
+                'relative flex flex-col items-center gap-0.5 rounded-xl px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-all duration-200',
                 isActive
                   ? 'bg-primary/25 text-primary shadow-md shadow-primary/20 scale-105'
                   : 'text-muted-foreground hover:text-foreground hover:bg-primary/10',
@@ -835,7 +835,7 @@ export function PlayerActionBar() {
               {b.icon}
               <span>{b.label}</span>
               {count > 0 && (
-                <span className="absolute -top-1 -right-1 h-4 min-w-[16px] px-1 rounded-full bg-primary text-primary-foreground text-[9px] font-mono font-bold flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 h-4 min-w-[16px] px-1 rounded-full bg-primary text-primary-foreground text-xs font-mono font-bold flex items-center justify-center">
                   {count}
                 </span>
               )}

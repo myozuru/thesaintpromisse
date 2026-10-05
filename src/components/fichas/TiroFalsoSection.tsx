@@ -35,7 +35,7 @@ export function TiroFalsoSection({ character: c, target }: { character: Characte
     if (prontos.length === 0) return null;
     return (
       <div
-        className="rounded-md border border-primary/40 bg-primary/10 px-2 py-1 text-[11px] text-foreground"
+        className="rounded-md border border-primary/40 bg-primary/10 px-2 py-1 text-xs text-foreground"
         data-testid="tiro-falso-aviso"
       >
         🔫 <b>Tiro Falso</b> disponível: {prontos.map((p) => p.name).join(', ')} pode reagir e dar vantagem neste ataque.
@@ -54,7 +54,7 @@ export function TiroFalsoSection({ character: c, target }: { character: Characte
     return d > alcance + 0.05 ? ` · ${fmt(d)} m (fora de alcance)` : ` · ${fmt(d)} m (ao alcance)`;
   };
   const chk = aliadoId && inimigoId ? tiroFalsoPodeUsar(c.id, aliadoId, inimigoId) : { ok: false as const };
-  const sel = 'w-full rounded border border-border bg-background px-2 py-1 text-[11px] text-foreground';
+  const sel = 'w-full rounded border border-border bg-background px-2 py-1 text-xs text-foreground';
 
   const run = async () => {
     setBusy(true);
@@ -71,7 +71,7 @@ export function TiroFalsoSection({ character: c, target }: { character: Characte
 
   return (
     <div className="space-y-1.5 rounded-md border border-primary/40 bg-primary/5 p-2" data-testid="tiro-falso-secao">
-      <p className="text-[11px] font-bold text-primary">
+      <p className="text-xs font-bold text-primary">
         🔫 Tiro Falso — reação ({c.reactionsCurrent ?? 0} disp.)
         {alcance !== null
           ? <span className="ml-1 font-normal text-muted-foreground">· alcance {alcance} m</span>
@@ -90,14 +90,14 @@ export function TiroFalsoSection({ character: c, target }: { character: Characte
         data-testid="tiro-falso-usar"
         disabled={!chk.ok || busy}
         onClick={run}
-        className="w-full rounded border border-primary bg-primary/25 px-2 py-1 text-[11px] font-bold text-primary hover:bg-primary/45 disabled:opacity-40"
+        className="w-full rounded border border-primary bg-primary/25 px-2 py-1 text-xs font-bold text-primary hover:bg-primary/45 disabled:opacity-40"
       >
         Fingir o disparo (reação)
       </button>
       {!chk.ok && aliadoId && inimigoId && 'reason' in chk && chk.reason && (
-        <p className="text-[11px] text-destructive">{chk.reason}</p>
+        <p className="text-xs text-destructive">{chk.reason}</p>
       )}
-      {msg && <p className="text-[11px] text-muted-foreground" data-testid="tiro-falso-msg">{msg}</p>}
+      {msg && <p className="text-xs text-muted-foreground" data-testid="tiro-falso-msg">{msg}</p>}
     </div>
   );
 }

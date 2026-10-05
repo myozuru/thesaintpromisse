@@ -11,8 +11,8 @@ export function ZonaRiscoPrompt() {
         Zona de Risco: gastar {ZONA_RISCO_CUSTO} PE para atacar? (1 vez por rodada)
       </div>
       <div className="flex gap-1.5">
-        <button onClick={() => responderZonaRisco(pedido.id, true)} className="flex-1 text-[11px] px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold">Atacar ({ZONA_RISCO_CUSTO} PE)</button>
-        <button onClick={() => responderZonaRisco(pedido.id, false)} className="flex-1 text-[11px] px-2 py-1 rounded border border-border bg-secondary/40 hover:bg-secondary">Não</button>
+        <button onClick={() => responderZonaRisco(pedido.id, true)} className="flex-1 text-xs px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold">Atacar ({ZONA_RISCO_CUSTO} PE)</button>
+        <button onClick={() => responderZonaRisco(pedido.id, false)} className="flex-1 text-xs px-2 py-1 rounded border border-border bg-secondary/40 hover:bg-secondary">Não</button>
       </div>
     </div>
   );

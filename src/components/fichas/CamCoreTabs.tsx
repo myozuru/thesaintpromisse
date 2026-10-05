@@ -71,7 +71,7 @@ export function CamCoreTabs({ character: c }: Props) {
           Núcleos Amaldiçoados
         </span>
         {c.dying && (
-          <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-hp/60 bg-hp/15 px-2 py-0.5 text-[10px] font-bold text-hp">
+          <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-hp/60 bg-hp/15 px-2 py-0.5 text-xs font-bold text-hp">
             <Skull className="h-3 w-3" /> Morrendo
           </span>
         )}
@@ -111,20 +111,20 @@ export function CamCoreTabs({ character: c }: Props) {
                   <Sparkles className="h-3 w-3 text-primary" aria-label="Primário" />
                 )}
                 {damaged && (
-                  <span className="ml-auto inline-flex items-center gap-0.5 rounded-full border border-hp/60 bg-hp/15 px-1.5 py-px text-[9px] font-bold text-hp">
+                  <span className="ml-auto inline-flex items-center gap-0.5 rounded-full border border-hp/60 bg-hp/15 px-1.5 py-px text-xs font-bold text-hp">
                     <ShieldAlert className="h-2.5 w-2.5" /> DANIFICADO
                   </span>
                 )}
                 {active && !damaged && (
-                  <span className="ml-auto rounded-full bg-accent/30 px-1.5 py-px text-[9px] font-bold text-accent">
+                  <span className="ml-auto rounded-full bg-accent/30 px-1.5 py-px text-xs font-bold text-accent">
                     ATIVO
                   </span>
                 )}
               </div>
-              <div className="mt-1 text-[10px] text-muted-foreground">
+              <div className="mt-1 text-xs text-muted-foreground">
                 {core.specialization}
               </div>
-              <div className="mt-1 grid grid-cols-2 gap-1 text-[10px] font-mono">
+              <div className="mt-1 grid grid-cols-2 gap-1 text-xs font-mono">
                 <div className="text-hp">
                   HP {core.hpCurrent}/{core.hpMax}
                 </div>
@@ -139,7 +139,7 @@ export function CamCoreTabs({ character: c }: Props) {
 
       {/* Barra de Integridade da Alma */}
       <div className="space-y-1">
-        <div className="flex items-center justify-between text-[10px] uppercase tracking-wider">
+        <div className="flex items-center justify-between text-xs uppercase tracking-wider">
           <span className="font-bold text-accent">Integridade da Alma</span>
           <span className="font-mono text-accent/80">
             {soulCur} / {soulMax}
@@ -152,7 +152,7 @@ export function CamCoreTabs({ character: c }: Props) {
           />
         </div>
         {soulCur === 0 && soulMax > 0 && (
-          <p className="text-[10px] font-bold text-hp">
+          <p className="text-xs font-bold text-hp">
             ⚠ Alma destruída — todos os núcleos colapsam.
           </p>
         )}
@@ -160,7 +160,7 @@ export function CamCoreTabs({ character: c }: Props) {
 
       {/* Tamanho do CAM */}
       <div className="flex items-center gap-2 border-t border-accent/20 pt-2">
-        <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
+        <span className="text-xs uppercase tracking-wider font-bold text-muted-foreground">
           Tamanho
         </span>
         {(['Pequeno', 'Médio', 'Grande'] as const).map(size => {
@@ -175,7 +175,7 @@ export function CamCoreTabs({ character: c }: Props) {
               onClick={() => enabled && handleSize(size)}
               disabled={!enabled}
               className={cn(
-                'rounded-md border px-2 py-0.5 text-[10px] font-bold transition-colors',
+                'rounded-md border px-2 py-0.5 text-xs font-bold transition-colors',
                 current
                   ? 'bg-accent/30 border-accent text-accent'
                   : 'bg-background border-border text-muted-foreground hover:border-accent/40',
@@ -187,7 +187,7 @@ export function CamCoreTabs({ character: c }: Props) {
           );
         })}
         {!canPickGrande && (
-          <span className="ml-auto text-[9px] text-muted-foreground italic">
+          <span className="ml-auto text-xs text-muted-foreground italic">
             Grande disponível Nv 15+
           </span>
         )}

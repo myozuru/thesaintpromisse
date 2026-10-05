@@ -37,7 +37,7 @@ export function WallsSettings({ horizontal = false }: { horizontal?: boolean }) 
   if (horizontal) {
     return (
       <div className="flex shrink-0 items-center gap-1.5 text-popover-foreground">
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Paredes</span>
+        <span className="text-xs uppercase tracking-wider text-muted-foreground">Paredes</span>
         {SHAPES.map(({ id, label, Icon }) => (
           <IconBtn
             key={id}
@@ -101,7 +101,7 @@ export function WallsSettings({ horizontal = false }: { horizontal?: boolean }) 
             </IconBtn>
           ))}
         </div>
-        <div className="text-[11px] text-muted-foreground mt-1.5">
+        <div className="text-xs text-muted-foreground mt-1.5">
           <span className="text-foreground/80 font-medium">
             {KINDS.find((k) => k.id === kind)?.label}
           </span>
@@ -109,13 +109,13 @@ export function WallsSettings({ horizontal = false }: { horizontal?: boolean }) 
         </div>
       </div>
 
-      <p className="text-[11px] text-muted-foreground leading-snug">
+      <p className="text-xs text-muted-foreground leading-snug">
         Arraste para criar (linha/retângulo/elipse). Em <b>polígono</b>, clique em
         cada vértice e dê <b>duplo-clique</b> para fechar. <b>Shift+clique</b>{' '}
         remove um segmento.
       </p>
 
-      <div className="text-[11px] text-muted-foreground">{count} segmento(s)</div>
+      <div className="text-xs text-muted-foreground">{count} segmento(s)</div>
 
       <button
         onClick={() => clearWalls()}
@@ -131,7 +131,7 @@ function Header({ label }: { label: string }) {
   return <div className="text-foreground/80 text-xs font-semibold uppercase tracking-wider">{label}</div>;
 }
 function Label({ children }: { children: React.ReactNode }) {
-  return <div className="text-muted-foreground text-[11px] mb-1">{children}</div>;
+  return <div className="text-muted-foreground text-xs mb-1">{children}</div>;
 }
 function IconBtn({
   active, onClick, children, title,
@@ -141,7 +141,7 @@ function IconBtn({
       type="button"
       title={title}
       onClick={onClick}
-      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded text-[11px] font-medium transition-colors ${
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded text-xs font-medium transition-colors ${
         active
           ? 'bg-primary text-primary-foreground'
           : 'border border-border bg-secondary text-secondary-foreground hover:bg-accent hover:text-accent-foreground'

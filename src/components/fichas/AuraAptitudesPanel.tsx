@@ -594,7 +594,7 @@ export function AuraAptitudesPanel({
                 </div>
                 {grappling.length > 0 && (
                   <div className="space-y-1">
-                    <div className="text-[10px] uppercase text-muted-foreground">Agarrando:</div>
+                    <div className="text-xs uppercase text-muted-foreground">Agarrando:</div>
                     {grappling.map(id => {
                       const t = allCharacters.find(x => x.id === id);
                       if (!t) return null;
@@ -625,7 +625,7 @@ export function AuraAptitudesPanel({
               <div className="flex items-center gap-2">
                 <Lock className="h-3 w-3 text-destructive" />
                 <span className="text-xs font-bold flex-1 text-destructive">Você está AGARRADO</span>
-                <span className="text-[10px] text-muted-foreground">movimento bloqueado · desvantagem em ataques</span>
+                <span className="text-xs text-muted-foreground">movimento bloqueado · desvantagem em ataques</span>
               </div>
               {(c.grappleState?.grappledBy ?? []).map(grpId => {
                 const grp = allCharacters.find(x => x.id === grpId);

@@ -34,9 +34,9 @@ export function PosturasPanel({ charId, inCombat, round }: { charId: string; inC
     <div className="rounded-lg border border-primary/30 bg-background/40 p-2 space-y-1.5" data-testid="posturas">
       <div className="flex items-center justify-between text-sm">
         <span className="font-semibold text-foreground">Posturas</span>
-        <span className="text-[11px] text-muted-foreground">Usos: {posturaUsosRestantes(c)}/{posturaUsosMax(c)}</span>
+        <span className="text-xs text-muted-foreground">Usos: {posturaUsosRestantes(c)}/{posturaUsosMax(c)}</span>
       </div>
-      <div className="text-[11px] text-muted-foreground" data-testid="postura-ativa">
+      <div className="text-xs text-muted-foreground" data-testid="postura-ativa">
         {ativa
           ? <>Em vigor: <b className="text-primary">{getPostura(ativa)?.name}</b> até a rodada {c.posturaAtiva?.untilRound} — {getPostura(ativa)?.summary}</>
           : 'Nenhuma postura em vigor.'}
@@ -56,7 +56,7 @@ export function PosturasPanel({ charId, inCombat, round }: { charId: string; inC
       )}
       {known.length < limite && (
         <div className="space-y-1">
-          <div className="text-[11px] text-muted-foreground">Aprender postura ({known.length}/{limite}):</div>
+          <div className="text-xs text-muted-foreground">Aprender postura ({known.length}/{limite}):</div>
           <div className="flex flex-wrap gap-1">
             {POSTURAS.map((p) => {
               const chk = podeAprender(c, p.id);

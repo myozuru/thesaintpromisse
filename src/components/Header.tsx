@@ -214,7 +214,7 @@ export function Header({ activeTab, onTabChange, testsOpen = false, onToggleTest
                 {id === 'feiticos-players' && pending.total > 0 && (
                   <span
                     title={`${pending.total} debate(s) aguardando você`}
-                    className="ml-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-hp px-1 text-[10px] font-extrabold text-white shadow-[0_0_8px_hsl(var(--hp)/0.7)] animate-pulse"
+                    className="ml-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-hp px-1 text-xs font-extrabold text-white shadow-[0_0_8px_hsl(var(--hp)/0.7)] animate-pulse"
                   >
                     !{pending.total > 1 ? pending.total : ''}
                   </span>

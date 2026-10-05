@@ -143,7 +143,7 @@ function Pin({
         </button>
         {!isEditing && note.text && (
           <div
-            className="mt-0.5 px-1.5 py-0.5 rounded text-[10px] max-w-[180px] truncate"
+            className="mt-0.5 px-1.5 py-0.5 rounded text-xs max-w-[180px] truncate"
             style={{
               background: 'rgba(22,23,26,0.92)',
               color: 'hsl(var(--foreground))',
@@ -167,7 +167,7 @@ function Pin({
           onMouseDown={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[11px] text-muted-foreground">Editar nota</span>
+            <span className="text-xs text-muted-foreground">Editar nota</span>
             <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
               <X className="h-3.5 w-3.5" />
             </button>

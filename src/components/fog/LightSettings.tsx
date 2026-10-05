@@ -124,7 +124,7 @@ export function LightSettings() {
             </Button>
           ))}
         </div>
-        <p className="text-[11px] text-muted-foreground pt-1">
+        <p className="text-xs text-muted-foreground pt-1">
           Secundárias só iluminam onde uma primária enxerga.
         </p>
       </div>

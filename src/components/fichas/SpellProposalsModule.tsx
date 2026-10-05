@@ -66,7 +66,7 @@ function PassiveSummary({ p }: { p: Passive }) {
   return (
     <div className="rounded-md border border-border bg-background/50 p-2 text-xs space-y-0.5">
       <div className="font-bold text-primary">{p.name}</div>
-      <div className="flex flex-wrap gap-2 text-[11px]">
+      <div className="flex flex-wrap gap-2 text-xs">
         <span className="text-muted-foreground">Nv {p.spellLevel ?? '1'}</span>
         {p.bonusHP ? <span className="text-hp">HP {p.bonusHP >= 0 ? '+' : ''}{p.bonusHP}</span> : null}
         {p.bonusPE ? <span className="text-pe">PE {p.bonusPE >= 0 ? '+' : ''}{p.bonusPE}</span> : null}
@@ -151,7 +151,7 @@ function PassiveProposalCard({ proposal, asMaster }: { proposal: PassiveProposal
             {proposal.characterName} · {new Date(proposal.updatedAt).toLocaleString()}
           </div>
         </div>
-        <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase', statusBadge.cn)}>
+        <span className={cn('rounded-full border px-2 py-0.5 text-xs font-bold uppercase', statusBadge.cn)}>
           {statusBadge.label}
         </span>
         <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', open && 'rotate-180')} />
@@ -168,7 +168,7 @@ function PassiveProposalCard({ proposal, asMaster }: { proposal: PassiveProposal
           )}
           {last.diff.length > 0 && (
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Mudanças desta revisão</div>
+              <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Mudanças desta revisão</div>
               <PassiveDiffList diff={last.diff} />
             </div>
           )}
@@ -181,7 +181,7 @@ function PassiveProposalCard({ proposal, asMaster }: { proposal: PassiveProposal
             <div className="space-y-2 border-l-2 border-border pl-2">
               {proposal.revisions.slice(0, -1).map((rev, i) => (
                 <div key={i} className="space-y-1">
-                  <div className="text-[10px] font-bold uppercase text-muted-foreground">
+                  <div className="text-xs font-bold uppercase text-muted-foreground">
                     Revisão {i + 1} · {rev.by === 'PLAYER' ? 'Player' : 'Mestre'} · {new Date(rev.createdAt).toLocaleString()}
                   </div>
                   {rev.note && <div className="text-xs italic text-muted-foreground">"{rev.note}"</div>}
@@ -237,7 +237,7 @@ function PassiveProposalCard({ proposal, asMaster }: { proposal: PassiveProposal
           )}
           {(proposal.status === 'approved' || proposal.status === 'rejected') && (
             <div className="flex justify-end">
-              <button onClick={() => remove(proposal.id)} className="text-[10px] text-muted-foreground hover:text-hp">
+              <button onClick={() => remove(proposal.id)} className="text-xs text-muted-foreground hover:text-hp">
                 Remover do histórico
               </button>
             </div>
@@ -255,7 +255,7 @@ function SpellSummary({ spell }: { spell: Spell }) {
       <div className="text-muted-foreground">
         Nv {spell.spellLevel} · {spell.spellType} · {spell.actionType} · {spell.targetMode ?? '—'}
       </div>
-      <div className="flex flex-wrap gap-2 text-[11px]">
+      <div className="flex flex-wrap gap-2 text-xs">
         <span className="text-pe">PE: {spell.costPE}</span>
         {spell.damageDice && <span className="text-hp">{spell.damageDice}{spell.damageBonus ? `+${spell.damageBonus}` : ''}</span>}
         <span>Alc: {spell.range}</span>
@@ -347,7 +347,7 @@ function ProposalCard({ proposal, asMaster }: { proposal: SpellProposal; asMaste
             {proposal.characterName} · {new Date(proposal.updatedAt).toLocaleString()}
           </div>
         </div>
-        <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase', statusBadge.cn)}>
+        <span className={cn('rounded-full border px-2 py-0.5 text-xs font-bold uppercase', statusBadge.cn)}>
           {statusBadge.label}
         </span>
         <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', open && 'rotate-180')} />
@@ -365,7 +365,7 @@ function ProposalCard({ proposal, asMaster }: { proposal: SpellProposal; asMaste
 
           {last.diff.length > 0 && (
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+              <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
                 Mudanças desta revisão
               </div>
               <DiffList diff={last.diff} />
@@ -385,7 +385,7 @@ function ProposalCard({ proposal, asMaster }: { proposal: SpellProposal; asMaste
             <div className="space-y-2 border-l-2 border-border pl-2">
               {proposal.revisions.slice(0, -1).map((rev, i) => (
                 <div key={i} className="space-y-1">
-                  <div className="text-[10px] font-bold uppercase text-muted-foreground">
+                  <div className="text-xs font-bold uppercase text-muted-foreground">
                     Revisão {i + 1} · {rev.by === 'PLAYER' ? 'Player' : 'Mestre'} · {new Date(rev.createdAt).toLocaleString()}
                   </div>
                   {rev.note && <div className="text-xs italic text-muted-foreground">"{rev.note}"</div>}
@@ -459,7 +459,7 @@ function ProposalCard({ proposal, asMaster }: { proposal: SpellProposal; asMaste
             <div className="flex justify-end">
               <button
                 onClick={() => remove(proposal.id)}
-                className="text-[10px] text-muted-foreground hover:text-hp"
+                className="text-xs text-muted-foreground hover:text-hp"
               >
                 Remover do histórico
               </button>
@@ -524,7 +524,7 @@ function OmniSummary({ ent }: { ent: EntidadeOmni }) {
       {ent.tags.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {ent.tags.map((tag) => (
-            <span key={tag} className="rounded border border-primary/25 bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
+            <span key={tag} className="rounded border border-primary/25 bg-primary/10 px-1.5 py-0.5 text-xs text-primary">
               {tag === 'rascunho-conceito' ? 'Aguardando mecânica amaldiçoada' : tag}
             </span>
           ))}
@@ -533,7 +533,7 @@ function OmniSummary({ ent }: { ent: EntidadeOmni }) {
       {temEfeitosCombate && <OmniItemDescription effects={ent.combatData!.effects} variante="bloco" />}
       {ent.custos.length > 0 && (
         <div className="rounded-md border border-neon-yellow/30 bg-neon-yellow/5 p-2 space-y-1">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-neon-yellow">Custos</div>
+          <div className="text-xs font-bold uppercase tracking-wider text-neon-yellow">Custos</div>
           {ent.custos.map((c, i) => (
             <div key={i} className="text-foreground/90">Consumir {valorOmniTexto(c.valor)} de {nomeAmigavelRecurso(c.caminhoRecurso)}</div>
           ))}
@@ -541,7 +541,7 @@ function OmniSummary({ ent }: { ent: EntidadeOmni }) {
       )}
       {ent.gatilhos.length > 0 && (
         <div className="rounded-md border border-primary/25 bg-primary/5 p-2 space-y-1.5">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-primary">Gatilhos e lógica</div>
+          <div className="text-xs font-bold uppercase tracking-wider text-primary">Gatilhos e lógica</div>
           {ent.gatilhos.map((g) => (
             <div key={g.id} className="space-y-1">
               <div className="font-semibold text-foreground">{ROTULOS_GATILHOS[g.evento] ?? g.evento}</div>
@@ -676,7 +676,7 @@ function OmniProposalCard({ proposal, asMaster }: { proposal: OmniProposal; asMa
             {proposal.characterName} · {last.entidade.categoria} · {new Date(proposal.updatedAt).toLocaleString()}
           </div>
         </div>
-        <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase', statusBadge.cn)}>
+        <span className={cn('rounded-full border px-2 py-0.5 text-xs font-bold uppercase', statusBadge.cn)}>
           {statusBadge.label}
         </span>
         <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', open && 'rotate-180')} />
@@ -693,7 +693,7 @@ function OmniProposalCard({ proposal, asMaster }: { proposal: OmniProposal; asMa
           )}
           {last.diff.length > 0 && (
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Mudanças desta revisão</div>
+              <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Mudanças desta revisão</div>
               <OmniDiffList diff={last.diff} />
             </div>
           )}
@@ -706,7 +706,7 @@ function OmniProposalCard({ proposal, asMaster }: { proposal: OmniProposal; asMa
             <div className="space-y-2 border-l-2 border-border pl-2">
               {proposal.revisions.slice(0, -1).map((rev, i) => (
                 <div key={i} className="space-y-1">
-                  <div className="text-[10px] font-bold uppercase text-muted-foreground">
+                  <div className="text-xs font-bold uppercase text-muted-foreground">
                     Revisão {i + 1} · {rev.by === 'PLAYER' ? 'Player' : 'Mestre'} · {new Date(rev.createdAt).toLocaleString()}
                   </div>
                   {rev.note && <div className="text-xs italic text-muted-foreground">"{rev.note}"</div>}
@@ -760,7 +760,7 @@ function OmniProposalCard({ proposal, asMaster }: { proposal: OmniProposal; asMa
           )}
           {(proposal.status === 'approved' || proposal.status === 'rejected') && (
             <div className="flex justify-end">
-              <button onClick={() => remove(proposal.id)} className="text-[10px] text-muted-foreground hover:text-hp">
+              <button onClick={() => remove(proposal.id)} className="text-xs text-muted-foreground hover:text-hp">
                 Remover do histórico
               </button>
             </div>
@@ -896,7 +896,7 @@ export function SpellProposalsModule() {
         <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
           <Wand2 className="h-4 w-4" /> Feitiços {visible.length > 0 && <span className="text-primary">({visible.length})</span>}
           {pending.spells > 0 && (
-            <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-hp px-1.5 text-[10px] font-extrabold text-white animate-pulse">
+            <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-hp px-1.5 text-xs font-extrabold text-white animate-pulse">
               !{pending.spells > 1 ? pending.spells : ''}
             </span>
           )}
@@ -918,7 +918,7 @@ export function SpellProposalsModule() {
         <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
           <Star className="h-4 w-4" /> Passivas {visiblePassives.length > 0 && <span className="text-primary">({visiblePassives.length})</span>}
           {pending.passives > 0 && (
-            <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-hp px-1.5 text-[10px] font-extrabold text-white animate-pulse">
+            <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-hp px-1.5 text-xs font-extrabold text-white animate-pulse">
               !{pending.passives > 1 ? pending.passives : ''}
             </span>
           )}
@@ -940,12 +940,12 @@ export function SpellProposalsModule() {
         <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
           <Sparkles className="h-4 w-4" /> Entidades Omni {visibleOmni.length > 0 && <span className="text-primary">({visibleOmni.length})</span>}
           {pending.omni > 0 && (
-            <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-hp px-1.5 text-[10px] font-extrabold text-white animate-pulse">
+            <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-hp px-1.5 text-xs font-extrabold text-white animate-pulse">
               !{pending.omni > 1 ? pending.omni : ''}
             </span>
           )}
         </h2>
-        <p className="text-[11px] text-muted-foreground italic">
+        <p className="text-xs text-muted-foreground italic">
           Itens, magias, talentos, auras e condições criadas pelos jogadores no Omni-Engine.
           Inclui também <strong className="text-violet-300/90">conceitos sem mecânica</strong> (modo preguiça) —
           nesses casos o Mestre pode abrir e completar a lógica antes de aprovar.

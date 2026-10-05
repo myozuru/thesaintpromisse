@@ -156,7 +156,7 @@ export function AppSidebar({ activeTab, onTabChange }: Props) {
                           <span
                             title={`${pending.total} debate(s) aguardando você`}
                             className={cn(
-                              'inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-hp px-1 text-[10px] font-extrabold text-white shadow-[0_0_8px_rgba(239,68,68,0.7)] animate-pulse',
+                              'inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-hp px-1 text-xs font-extrabold text-white shadow-[0_0_8px_rgba(239,68,68,0.7)] animate-pulse',
                               collapsed ? 'absolute -top-1 -right-1' : 'ml-auto',
                             )}
                           >

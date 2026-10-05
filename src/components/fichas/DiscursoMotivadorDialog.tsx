@@ -88,7 +88,7 @@ export function DiscursoMotivadorDialog({ source, open, onOpenChange }: Props) {
             <div className="text-xs uppercase tracking-wider text-muted-foreground">
               Orador: <span className="text-foreground font-bold">{source.name}</span>
             </div>
-            <div className="flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground">
+            <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
               <span>Nível: <span className="text-foreground">{calc.level}</span></span>
               <span>Mod. PRE: <span className="text-foreground">{calc.preMod >= 0 ? '+' : ''}{calc.preMod}</span></span>
               <span>Treinamento: <span className="text-foreground">+{calc.trainingBonus}</span></span>
@@ -97,19 +97,19 @@ export function DiscursoMotivadorDialog({ source, open, onOpenChange }: Props) {
             <div className="text-xs">
               <span className="text-muted-foreground">PV Temporário por aliado:</span>{' '}
               <span className="text-primary font-bold text-base">{calc.tempHP}</span>{' '}
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 = {calc.level} × 2 + ⌈({calc.preMod} × {calc.trainingBonus}) ÷ 2⌉
               </span>
             </div>
             {!calc.eligible && (
-              <div className="text-[11px] text-destructive">
+              <div className="text-xs text-destructive">
                 Persuasão treinada é obrigatória para este talento.
               </div>
             )}
           </div>
 
           <div className="rounded-md border border-primary/40 bg-primary/5 p-2">
-            <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5 px-1">
+            <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5 px-1">
               Selecionar aliados (1 buff por criatura por Descanso Longo)
             </div>
             <div className="max-h-72 overflow-y-auto space-y-1">
@@ -137,10 +137,10 @@ export function DiscursoMotivadorDialog({ source, open, onOpenChange }: Props) {
                       <div className="text-xs font-bold truncate">
                         {a.name}
                         {a.id === source.id && (
-                          <span className="ml-1 text-[10px] text-muted-foreground">(você)</span>
+                          <span className="ml-1 text-xs text-muted-foreground">(você)</span>
                         )}
                       </div>
-                      <div className="text-[10px] text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         HP {a.hpCurrent}/{shownHpMax(a)} · PV Temp atual: {a.escCurrent ?? 0}
                         {already && <span className="ml-1 text-amber-400">— já buffado neste descanso</span>}
                       </div>
@@ -149,7 +149,7 @@ export function DiscursoMotivadorDialog({ source, open, onOpenChange }: Props) {
                 );
               })}
               {allies.length === 0 && (
-                <div className="text-[11px] text-muted-foreground px-2 py-3 text-center">
+                <div className="text-xs text-muted-foreground px-2 py-3 text-center">
                   Nenhum aliado disponível.
                 </div>
               )}

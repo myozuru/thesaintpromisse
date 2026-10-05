@@ -132,7 +132,7 @@ export function SelectionToolbar({ visible = true, onAdjustToken, onEditTerrainZ
           zIndex: 35,
         }}
       >
-        <div className="rounded-full border border-border bg-card/95 backdrop-blur px-2 py-0.5 text-[11px] font-semibold text-foreground shadow-lg tabular-nums">
+        <div className="rounded-full border border-border bg-card/95 backdrop-blur px-2 py-0.5 text-xs font-semibold text-foreground shadow-lg tabular-nums">
           {sizeLabel}
         </div>
       </div>
@@ -222,7 +222,7 @@ export function SelectionToolbar({ visible = true, onAdjustToken, onEditTerrainZ
             )}
             <div className="h-px bg-border my-1" />
             {Object.values(chestsRecord).length === 0 ? (
-              <div className="text-[11px] text-muted-foreground italic px-1">Nenhum baú existente.</div>
+              <div className="text-xs text-muted-foreground italic px-1">Nenhum baú existente.</div>
             ) : (
               Object.values(chestsRecord)
                 .sort((a, b) => b.updatedAt - a.updatedAt)
@@ -297,3 +297,4 @@ function ToolBtn({
     </button>
   );
 }
+

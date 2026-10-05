@@ -92,7 +92,7 @@ export function CamDeathReactionDialog({ character: c, onClose }: Props) {
           </div>
         ) : (
           <div className="space-y-1.5">
-            <label className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
+            <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground">
               Trocar para
             </label>
             <div className="grid grid-cols-1 gap-1.5">
@@ -108,7 +108,7 @@ export function CamDeathReactionDialog({ character: c, onClose }: Props) {
                   )}
                 >
                   <div className="font-bold">{co.name}</div>
-                  <div className="text-[10px] mt-0.5">
+                  <div className="text-xs mt-0.5">
                     {co.specialization} · HP {co.hpCurrent}/{co.hpMax} · PE{' '}
                     {co.peCurrent}/{co.peMax}
                   </div>

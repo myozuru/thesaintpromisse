@@ -107,7 +107,7 @@ export function SmartDropdown({ valor, onChange, rotulo }: Props) {
             placeholder="Ex: @TREINO * 2 + 1d6"
             className="font-mono text-xs"
           />
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Aliases: @FOR @DES @CON @INT @AST @VON @TREINO @NIVEL @VIDA @PE. Dados: 1d8, 2d6!, 1d20kh2, 1d6r1.
           </p>
         </div>

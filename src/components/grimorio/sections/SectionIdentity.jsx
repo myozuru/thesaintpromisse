@@ -152,7 +152,7 @@ function PortraitField({ value, settings, onChange, onSettingsChange }) {
             />
           )}
           {value && !imageError && !uploading && (
-            <span className="absolute inset-x-0 bottom-0 py-1.5 bg-slate-950/80 text-[11px] text-slate-200 opacity-0 group-hover:opacity-100 transition-opacity">
+            <span className="absolute inset-x-0 bottom-0 py-1.5 bg-slate-950/80 text-xs text-slate-200 opacity-0 group-hover:opacity-100 transition-opacity">
               Trocar imagem
             </span>
           )}
@@ -221,7 +221,7 @@ function PortraitField({ value, settings, onChange, onSettingsChange }) {
 function PortraitSlider({ label, value, min, max, suffix, onChange }) {
   return (
     <label className="block">
-      <span className="mb-1.5 flex items-center justify-between text-[11px] text-slate-400">
+      <span className="mb-1.5 flex items-center justify-between text-xs text-slate-400">
         <span>{label}</span>
         <span className="font-mono text-slate-200">{value}{suffix}</span>
       </span>

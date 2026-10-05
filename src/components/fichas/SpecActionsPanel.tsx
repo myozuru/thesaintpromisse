@@ -124,7 +124,7 @@ export function SpecActionsPanel({ character: c }: Props) {
         <span className="text-xs font-bold uppercase tracking-wider text-cyan-300">
           Ações — Especialista em Técnica
         </span>
-        <span className="ml-auto text-[10px] text-muted-foreground font-mono">
+        <span className="ml-auto text-xs text-muted-foreground font-mono">
           TB {tb} · Mod_Chave {sign(keyMod)}
         </span>
       </div>
@@ -159,14 +159,14 @@ export function SpecActionsPanel({ character: c }: Props) {
             <Swords className="h-3.5 w-3.5 flex-shrink-0 text-cyan-400" />
             <div className="min-w-0 flex-1">
               <div className="text-xs font-bold truncate">Imbuir com Técnica</div>
-              <div className="text-[10px] text-muted-foreground truncate">
+              <div className="text-xs text-muted-foreground truncate">
                 {c.imbuedSpell ? `Imbuído: ${c.imbuedSpell}` : '−2 PE · armazena feitiço na arma'}
               </div>
             </div>
             {c.imbuedSpell ? (
               <button
                 onClick={handleLiberar}
-                className="rounded bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 transition-colors flex items-center gap-1"
+                className="rounded bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold uppercase tracking-wider px-2.5 py-1 transition-colors flex items-center gap-1"
                 title="Liberar feitiço no ataque CaC"
               >
                 <X className="h-3 w-3" /> Liberar
@@ -182,7 +182,7 @@ export function SpecActionsPanel({ character: c }: Props) {
                 />
                 <button
                   onClick={handleImbuir}
-                  className="rounded bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 transition-colors"
+                  className="rounded bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold uppercase tracking-wider px-2.5 py-1 transition-colors"
                 >
                   Imbuir
                 </button>
@@ -199,7 +199,7 @@ export function SpecActionsPanel({ character: c }: Props) {
           />
         )}
       </div>
-      <p className="text-[9px] text-muted-foreground italic">
+      <p className="text-xs text-muted-foreground italic">
         Limites de uso e gatilhos contextuais ficam sob administração manual.
       </p>
     </div>
@@ -222,11 +222,11 @@ function ActionRow({
       <Icon className="h-3.5 w-3.5 flex-shrink-0 text-cyan-400" />
       <div className="min-w-0 flex-1">
         <div className="text-xs font-bold truncate">{name}</div>
-        <div className="text-[10px] text-muted-foreground truncate">{hint}</div>
+        <div className="text-xs text-muted-foreground truncate">{hint}</div>
       </div>
       <button
         onClick={onClick}
-        className="rounded bg-cyan-600 hover:bg-cyan-500 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 transition-colors flex-shrink-0"
+        className="rounded bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold uppercase tracking-wider px-2.5 py-1 transition-colors flex-shrink-0"
       >
         Ativar
       </button>

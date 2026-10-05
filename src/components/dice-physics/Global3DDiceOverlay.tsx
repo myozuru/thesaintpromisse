@@ -72,7 +72,7 @@ export function Global3DDiceOverlay() {
       {isMaster && (
         <div className="px-3 py-2 flex items-center gap-2 border-b border-primary/20">
           <Zap className="h-3.5 w-3.5 text-accent shrink-0" />
-          <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground shrink-0" style={{ fontFamily: "'Cinzel', serif" }}>
+          <span className="text-xs uppercase tracking-[0.15em] text-muted-foreground shrink-0" style={{ fontFamily: "'Cinzel', serif" }}>
             Quique
           </span>
           <Slider
@@ -83,7 +83,7 @@ export function Global3DDiceOverlay() {
             onValueChange={(v) => setBounciness(v[0] ?? 1)}
             className="flex-1"
           />
-          <span className="text-[11px] tabular-nums text-accent w-10 text-right font-semibold">
+          <span className="text-xs tabular-nums text-accent w-10 text-right font-semibold">
             {bounciness.toFixed(2)}x
           </span>
         </div>
@@ -96,7 +96,7 @@ export function Global3DDiceOverlay() {
       </div>
 
       <div
-        className="px-3 py-1.5 text-[10px] uppercase tracking-[0.15em] text-muted-foreground/70 border-t border-primary/15 text-center italic"
+        className="px-3 py-1.5 text-xs uppercase tracking-[0.15em] text-muted-foreground/70 border-t border-primary/15 text-center italic"
         style={{ fontFamily: "'Cormorant Garamond', serif", letterSpacing: '0.15em' }}
       >
         ✦ Destino lançado nos dados ✦

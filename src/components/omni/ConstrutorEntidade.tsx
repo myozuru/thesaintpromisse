@@ -220,7 +220,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                 <TabsTrigger className="flex-1 min-w-[110px]" value="ativas" data-testid="aba-acoes-ativas">
                   <span className="font-bold text-primary">⚡ Ações Ativas</span>
                   {(ent.acoesAtivas?.length ?? 0) > 0 && (
-                    <span className="ml-1 rounded-full bg-primary/20 px-1.5 text-[10px] text-primary">{ent.acoesAtivas!.length}</span>
+                    <span className="ml-1 rounded-full bg-primary/20 px-1.5 text-xs text-primary">{ent.acoesAtivas!.length}</span>
                   )}
                 </TabsTrigger>
                 <TabsTrigger className="flex-1 min-w-[110px]" value="comercio">Comércio</TabsTrigger>
@@ -292,7 +292,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-[11px] text-muted-foreground mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       {ent.categoria === 'arma' ? (
                         <>Armas ocupam o slot <strong>Mãos</strong> da ficha. Configure dano, crítico e propriedades na aba <strong>Combate</strong>.</>
                       ) : (
@@ -309,7 +309,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                     <Label className="text-xs uppercase tracking-wider text-primary">
                       Modelo Base (Tipo de Arma)
                     </Label>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    <p className="text-xs text-muted-foreground leading-relaxed">
                       Selecione um dos 52 modelos do livro para preencher
                       automaticamente <strong>nome</strong>, <strong>descrição</strong>,
                       <strong> dano</strong>, <strong>margem de crítico</strong>,
@@ -333,13 +333,13 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                           if (armas.length === 0) return null;
                           return (
                             <div key={grupo}>
-                              <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground bg-muted/40">
+                              <div className="px-2 py-1 text-xs uppercase tracking-wider text-muted-foreground bg-muted/40">
                                 {grupo}
                               </div>
                               {armas.map((w) => (
                                 <SelectItem key={w.id} value={w.id}>
                                   {w.name}
-                                  <span className="text-muted-foreground text-[10px] ml-2">
+                                  <span className="text-muted-foreground text-xs ml-2">
                                     ({w.category === 'simples' ? 'S' : 'C'} · {w.range === 'melee' ? 'Cac' : w.range === 'ranged' ? 'Dist' : 'Arr'})
                                   </span>
                                 </SelectItem>
@@ -370,7 +370,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                             onChange={(e) => setEnt(setWeaponDamage(ent, e.target.value))}
                             placeholder="ex.: 1d8 + @USUARIO.forca"
                           />
-                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                          <p className="text-xs text-muted-foreground mt-0.5">
                             Aceita dados (XdY), atributos e fórmulas Omni.
                           </p>
                         </div>
@@ -392,12 +392,12 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                           <Label className="text-xs">
                             Empunhadura
                             {isDuasMaos && (
-                              <span className="ml-1 text-[10px] text-amber-500">
+                              <span className="ml-1 text-xs text-amber-500">
                                 (esta arma exige duas mãos — bloqueado)
                               </span>
                             )}
                             {isVersatil && !isDuasMaos && (
-                              <span className="ml-1 text-[10px] text-primary/70">
+                              <span className="ml-1 text-xs text-primary/70">
                                 (Versátil — pode alternar)
                               </span>
                             )}
@@ -413,7 +413,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                               <SelectItem value="2">2 Mãos (ocupa ambos os slots)</SelectItem>
                             </SelectContent>
                           </Select>
-                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                          <p className="text-xs text-muted-foreground mt-0.5">
                             Definido automaticamente pelo modelo. Ao equipar, o sistema reserva os slots correspondentes.
                           </p>
                         </div>
@@ -455,14 +455,14 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                     <Label className="text-xs uppercase tracking-wider text-muted-foreground">
                       Bônus do acessório
                     </Label>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed">Bônus fixos somados às rolagens enquanto este item estiver equipado.</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">Bônus fixos somados às rolagens enquanto este item estiver equipado.</p>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="flex items-center justify-between gap-2">
-                        <Label className="text-[11px]">Deslocamento fixo (m)</Label>
+                        <Label className="text-xs">Deslocamento fixo (m)</Label>
                         <Input type="number" className="h-7 w-20" value={ent.bonusEquipado?.deslocamento ?? 0}
                           onChange={(e) => setEnt({ ...ent, bonusEquipado: { ...ent.bonusEquipado, deslocamento: Number(e.target.value) || 0 } })} />
                       </div>
-                      <label className="text-[11px]">Fórmula de deslocamento
+                      <label className="text-xs">Fórmula de deslocamento
                         <Input aria-label="Fórmula de bônus de deslocamento" className="h-7" value={ent.bonusEquipadoFormula?.deslocamento ?? ''} placeholder="@USUARIO.treino"
                           onChange={e => atualizarFormulaDeslocamento(e.target.value)} />
                       </label>
@@ -473,7 +473,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                         {ORDEM_PERICIAS.map((key) => {
                           const bonusKey = key.toLowerCase().replace(/[0-9]+$/, (m) => `_${m}`);
                           return <div key={key} className="grid grid-cols-[1fr_auto_auto] items-center gap-2">
-                            <Label className="text-[11px]">{ROTULOS_PERICIAS[key]}</Label>
+                            <Label className="text-xs">{ROTULOS_PERICIAS[key]}</Label>
                             <Input aria-label={`Bônus fixo em ${ROTULOS_PERICIAS[key]}`} type="number" className="h-7 w-16" value={ent.bonusEquipado?.pericias?.[bonusKey] ?? 0}
                               onChange={(e) => setEnt({ ...ent, bonusEquipado: { ...ent.bonusEquipado, pericias: { ...ent.bonusEquipado?.pericias, [bonusKey]: Number(e.target.value) || 0 } } })} />
                             <Input aria-label={`Fórmula de bônus em ${ROTULOS_PERICIAS[key]}`} className="h-7 w-32" value={ent.bonusEquipadoFormula?.pericias?.[bonusKey] ?? ''} placeholder="Fórmula"
@@ -483,7 +483,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                         {ORDEM_TR.map((key) => {
                           const tr = key.toLowerCase() as 'astucia' | 'fortitude' | 'integridade' | 'reflexos' | 'vontade';
                           return <div key={key} className="grid grid-cols-[1fr_auto_auto] items-center gap-2">
-                            <Label className="text-[11px]">{ROTULOS_TR[key]}</Label>
+                            <Label className="text-xs">{ROTULOS_TR[key]}</Label>
                             <Input aria-label={`Bônus fixo em ${ROTULOS_TR[key]}`} type="number" className="h-7 w-16" value={ent.bonusEquipado?.trs?.[tr] ?? 0}
                               onChange={(e) => setEnt({ ...ent, bonusEquipado: { ...ent.bonusEquipado, trs: { ...ent.bonusEquipado?.trs, [tr]: Number(e.target.value) || 0 } } })} />
                             <Input aria-label={`Fórmula de bônus em ${ROTULOS_TR[key]}`} className="h-7 w-32" value={ent.bonusEquipadoFormula?.trs?.[tr] ?? ''} placeholder="Fórmula"
@@ -501,9 +501,9 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                           ['imunidades_dano', 'Imunidades (anula o dano)'],
                         ] as const).map(([campo, titulo]) => (
                           <fieldset key={campo} className="space-y-1">
-                            <legend className="text-[11px] font-medium text-muted-foreground">{titulo}</legend>
+                            <legend className="text-xs font-medium text-muted-foreground">{titulo}</legend>
                             <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
-                              {TIPOS_DANO_MOTOR.map((tipo) => <label key={tipo} className="flex items-center gap-1 text-[10px]">
+                              {TIPOS_DANO_MOTOR.map((tipo) => <label key={tipo} className="flex items-center gap-1 text-xs">
                                 <input type="checkbox" checked={(ent[campo] ?? []).includes(tipo)} onChange={() => toggleMitigacao(campo, tipo)} />
                                 {DAMAGE_TYPE_LABELS[tipo]}
                               </label>)}
@@ -523,7 +523,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                   <Label className="text-xs uppercase tracking-wider text-amber-600">
                     Usos limitados
                   </Label>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
                     Se preenchido, cada cópia no inventário ganha um contador.
                     Use <code className="text-foreground/80">@ITEM.usos_restantes</code> e
                     <code className="text-foreground/80"> @ITEM.usos_totais</code> nas fórmulas.
@@ -588,7 +588,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                       />
                       Réplica / Item Materializável
                     </label>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    <p className="text-xs text-muted-foreground leading-relaxed">
                       O jogador escolhe quando materializar no combate: paga o PE de invocação,
                       a arma surge na mão e, no começo de cada turno dele, paga a sustentação ou deixa ela se desfazer.
                     </p>
@@ -685,7 +685,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                     <Label className="text-xs uppercase tracking-wider text-primary">
                       Duração: Permanente (sempre ativa)
                     </Label>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    <p className="text-xs text-muted-foreground leading-relaxed">
                       <strong>{CATEGORIAS.find((c) => c.id === ent.categoria)?.label}</strong> é uma fonte
                       sempre-ativa: ela existe enquanto estiver atribuída ao personagem
                       (talento na ficha, item equipado para auras, condição aplicada).
@@ -704,7 +704,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                           {Object.values(TIPOS_DURACAO).map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                         </SelectContent>
                       </Select>
-                      <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
+                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                         Define quanto tempo a entidade-fonte permanece ativa no mundo
                         após ser usada (ex.: feitiço de 10 minutos, poção instantânea).
                         Para efeitos persistentes específicos disparados pelos gatilhos,
@@ -1113,7 +1113,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                               {/* Duração POR AÇÃO — só faz sentido em ações que produzem efeito persistente. */}
                               {(a.acao === 'APLICAR_CONDICAO' || a.acao === 'REROLL') && (
                                 <div className="basis-full flex flex-wrap items-center gap-1.5 mt-1 pt-1 border-t border-border/40">
-                                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">
                                     ⏱ Duração do efeito
                                   </Label>
                                   <Select
@@ -1155,7 +1155,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                                     />
                                   )}
                                   {!a.duracao && (
-                                    <span className="text-[10px] text-muted-foreground italic">
+                                    <span className="text-xs text-muted-foreground italic">
                                       (padrão: 1 rodada)
                                     </span>
                                   )}
@@ -1268,7 +1268,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                             <div className="text-xs uppercase tracking-wider text-emerald-300 font-semibold">
                               🛡️ Script Passivo (Ao Equipar)
                             </div>
-                            <p className="text-[11px] text-muted-foreground leading-snug">
+                            <p className="text-xs text-muted-foreground leading-snug">
                               Roda automaticamente quando o item vai para um slot de equipamento.
                               Duração sempre <strong>permanente</strong>. Ideal para bônus em
                               <code className="mx-1 text-foreground/80">vida_max</code>,
@@ -1276,7 +1276,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                               <code className="text-foreground/80">esquiva</code>, etc.
                             </p>
                           </div>
-                          <span className="text-[10px] text-emerald-300/80">
+                          <span className="text-xs text-emerald-300/80">
                             {passiveEffects.length} efeito(s)
                           </span>
                         </header>
@@ -1292,7 +1292,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                           defaultTarget="USUARIO"
                         />
                         {ehAcessorio && (
-                          <div className="text-[10px] text-amber-200/90 flex items-start gap-1.5">
+                          <div className="text-xs text-amber-200/90 flex items-start gap-1.5">
                             <span>📌</span>
                             <span>
                               Aplicado enquanto equipado em{' '}
@@ -1309,13 +1309,13 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                             <div className="text-xs uppercase tracking-wider text-amber-300 font-semibold">
                               ⚔️ Script Ativo (Ação/Uso)
                             </div>
-                            <p className="text-[11px] text-muted-foreground leading-snug">
+                            <p className="text-xs text-muted-foreground leading-snug">
                               Roda apenas quando o jogador clica em <strong>Usar / Atacar</strong>{' '}
                               durante o jogo. Habilita Margem de Crítico, Custo de Ação, Alcance e Área.
                               Deixe vazio se for apenas um acessório passivo.
                             </p>
                           </div>
-                          <span className="text-[10px] text-amber-300/80">
+                          <span className="text-xs text-amber-300/80">
                             {activeEffects.length} efeito(s)
                           </span>
                         </header>
@@ -1330,7 +1330,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                           ativoParaInsercao
                           defaultTarget="ALVO"
                         />
-                        <div className="rounded-md border border-border/40 bg-background/40 p-2 text-[10px] text-muted-foreground leading-relaxed">
+                        <div className="rounded-md border border-border/40 bg-background/40 p-2 text-xs text-muted-foreground leading-relaxed">
                           💡 <strong className="text-violet-300">Dica:</strong>{' '}
                           <code className="mx-1 text-foreground/80">subtrair 1d8 + forca em alvo.vida_atual tipo DQ</code>{' '}
                           ou <code className="text-foreground/80">somar 2d4 em vida_atual</code> para curar o usuário.
@@ -1550,12 +1550,12 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                   />
                   <div className="flex flex-wrap gap-1 mt-2">
                     {(ent.comercio?.hiddenTags ?? []).map((t) => (
-                      <span key={t} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30">
+                      <span key={t} className="text-xs px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30">
                         {t}
                       </span>
                     ))}
                   </div>
-                  <p className="text-[11px] text-muted-foreground mt-2">
+                  <p className="text-xs text-muted-foreground mt-2">
                     Lojas só compram este item se uma de suas <em>acceptedTags</em> bater com alguma tag oculta acima.
                   </p>
                 </div>
@@ -1608,7 +1608,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                   </p>
                   <ul className="list-disc pl-5 space-y-0.5 text-amber-100/85">
                     <li>O conceito vai para o <strong>Catálogo do Mestre</strong> com o aviso{' '}
-                      <span className="px-1 rounded bg-amber-500/25 border border-amber-500/40 text-amber-50 text-[11px]">
+                      <span className="px-1 rounded bg-amber-500/25 border border-amber-500/40 text-amber-50 text-xs">
                         Aguardando mecânica amaldiçoada
                       </span>.
                     </li>
@@ -1638,7 +1638,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                     rows={4}
                     className="mt-1"
                   />
-                  <p className="text-[10px] text-muted-foreground mt-1 italic">
+                  <p className="text-xs text-muted-foreground mt-1 italic">
                     Quanto mais detalhes do efeito desejado, mais fácil para o Mestre traduzir em mecânica.
                   </p>
                 </div>
@@ -1731,7 +1731,7 @@ function EffectCard({
         <span className="text-xs font-semibold text-foreground">
           {rotuloTipo} <span className="text-muted-foreground">→ {rotuloAlvo}</span>
         </span>
-        <code className="ml-auto text-[10px] text-muted-foreground font-mono truncate max-w-[40%]">
+        <code className="ml-auto text-xs text-muted-foreground font-mono truncate max-w-[40%]">
           {efeito.formula || '— sem fórmula —'}
         </code>
         <Trash2
@@ -1746,7 +1746,7 @@ function EffectCard({
               a ambiguidade entre dano e cura. */}
           <div className="grid gap-2 pt-2 grid-cols-1 md:grid-cols-3">
             <div>
-              <Label className="text-[11px]">Tipo de Ação</Label>
+              <Label className="text-xs">Tipo de Ação</Label>
               <Select
                 value={efeito.type}
                 onValueChange={(v) => onChange({ type: v as CombatEffect['type'] })}
@@ -1770,7 +1770,7 @@ function EffectCard({
               </Select>
             </div>
             <div>
-              <Label className="text-[11px]">Alvo do Efeito</Label>
+              <Label className="text-xs">Alvo do Efeito</Label>
               <Select
                 value={efeito.target}
                 onValueChange={(v) => onChange({ target: v as CombatEffect['target'] })}
@@ -1784,7 +1784,7 @@ function EffectCard({
               </Select>
             </div>
             <div>
-              <Label className="text-[11px]">Afetar Recurso</Label>
+              <Label className="text-xs">Afetar Recurso</Label>
               <SeletorRecurso
                 value={efeito.resourcePath ?? ''}
                 onChange={(v) => onChange({ resourcePath: v })}
@@ -1795,13 +1795,13 @@ function EffectCard({
           </div>
 
           {/* Legenda dinâmica: explica em linguagem natural o que vai acontecer */}
-          <div className="rounded-md border border-dashed border-primary/30 bg-primary/5 p-2 text-[11px] leading-relaxed text-muted-foreground">
+          <div className="rounded-md border border-dashed border-primary/30 bg-primary/5 p-2 text-xs leading-relaxed text-muted-foreground">
             <span className="text-primary/80 font-semibold mr-1">ⓘ</span>
             {descreverImpactoEfeito(efeito.type, efeito.resourcePath)}
           </div>
 
           {/* Resumo da regra (Ação + Recurso + Fórmula) ----------------- */}
-          <div className="rounded-md border border-border/50 bg-background/60 p-2 text-[11px] leading-relaxed">
+          <div className="rounded-md border border-border/50 bg-background/60 p-2 text-xs leading-relaxed">
             <span className="text-muted-foreground">Regra: </span>
             <span
               className={
@@ -1820,7 +1820,7 @@ function EffectCard({
             </code>
             <span className="text-muted-foreground"> ← </span>
             <code className="font-mono text-foreground/90">{efeito.formula || '—'}</code>
-            <div className="mt-1 text-[10px] text-muted-foreground italic">
+            <div className="mt-1 text-xs text-muted-foreground italic">
               ⇒ {rotuloTipo} <span className="text-foreground/70">→ {rotuloAlvo}</span>
             </div>
           </div>
@@ -1828,7 +1828,7 @@ function EffectCard({
           {/* Tipo de Dano (apenas Modo Simples, para descrever a natureza) */}
           {modo === 'simples' && (
             <div>
-              <Label className="text-[11px]">Tipo de Dano</Label>
+              <Label className="text-xs">Tipo de Dano</Label>
               <Select
                 value={resolverTipoDano(efeito.damageType) ?? efeito.damageType ?? 'sem_tipo'}
                 onValueChange={(v) => onChange({ damageType: v === 'sem_tipo' ? undefined : v })}
@@ -1847,7 +1847,7 @@ function EffectCard({
             </div>
           )}
           {modo === 'avancado' && (
-            <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-2 text-[10px] text-amber-200/90 leading-snug">
+            <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-2 text-xs text-amber-200/90 leading-snug">
               ⚠ <strong>Modo Avançado:</strong> a tríade <em>Ação + Alvo + Recurso</em> acima é obrigatória —
               ela elimina a ambiguidade entre dano e cura. A fórmula calcula o <em>Resultado</em> que será
               aplicado segundo a Ação escolhida (Dano subtrai, Cura soma, Modificar fixa).
@@ -1859,13 +1859,13 @@ function EffectCard({
           ) : (
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label className="text-[11px]">Fórmula de Efeito</Label>
+                <Label className="text-xs">Fórmula de Efeito</Label>
                 {onAbrirHelper && (
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
-                    className={`h-6 text-[10px] gap-1 transition-all ${
+                    className={`h-6 text-xs gap-1 transition-all ${
                       helperAtivo
                         ? 'border-violet-300 bg-violet-500/30 text-violet-50 shadow-[0_0_14px_rgba(124,58,237,0.85)] ring-1 ring-violet-300/60'
                         : 'border-violet-500/60 bg-violet-500/10 text-violet-200 hover:bg-violet-500/25 hover:text-violet-100 shadow-[0_0_10px_rgba(124,58,237,0.45)]'
@@ -1900,7 +1900,7 @@ function EffectCard({
                       <div key={cat.grupo}>
                         {cat.escopos.map((esc) => (
                           <div key={`${cat.grupo}-${esc}`}>
-                            <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+                            <div className="px-2 py-1 text-xs uppercase tracking-wider text-muted-foreground">
                               {esc === 'NENHUM' ? cat.grupo : `${cat.grupo} · ${esc === 'USUARIO' ? 'Usuário' : 'Alvo'}`}
                             </div>
                             {cat.itens.map((it) => {
@@ -1908,7 +1908,7 @@ function EffectCard({
                               return (
                                 <SelectItem key={`${esc}-${value}`} value={value}>
                                   <span className="font-mono text-sky-300">@{value}</span>
-                                  {it.hint && <span className="ml-2 text-[10px] text-muted-foreground">{it.hint}</span>}
+                                  {it.hint && <span className="ml-2 text-xs text-muted-foreground">{it.hint}</span>}
                                 </SelectItem>
                               );
                             })}
@@ -1919,18 +1919,18 @@ function EffectCard({
                     {/* Encadeamento de efeitos */}
                     {indice > 1 && (
                       <>
-                        <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">Encadeamento</div>
+                        <div className="px-2 py-1 text-xs uppercase tracking-wider text-muted-foreground">Encadeamento</div>
                         {Array.from({ length: indice - 1 }).map((_, i) => (
                           <SelectItem key={`r${i + 1}`} value={`RESULTADO_${i + 1}`}>
                             <span className="font-mono text-amber-300">@RESULTADO_{i + 1}</span>
-                            <span className="ml-2 text-[10px] text-muted-foreground">Resultado do efeito #{i + 1}</span>
+                            <span className="ml-2 text-xs text-muted-foreground">Resultado do efeito #{i + 1}</span>
                           </SelectItem>
                         ))}
                       </>
                     )}
                   </SelectContent>
                 </Select>
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Dados:</span>
+                <span className="text-xs uppercase tracking-wider text-muted-foreground">Dados:</span>
                 {[
                   { d: '1d4', cls: 'bg-amber-500/15 border-amber-500/40 text-amber-300 hover:bg-amber-500/25' },
                   { d: '1d6', cls: 'bg-orange-500/15 border-orange-500/40 text-orange-300 hover:bg-orange-500/25' },
@@ -1946,7 +1946,7 @@ function EffectCard({
                     onClick={() => onChange({
                       formula: (efeito.formula || '') + (efeito.formula && !efeito.formula.endsWith(' ') ? ' + ' : '') + d,
                     })}
-                    className={`h-8 w-10 rounded-lg border-2 font-bold text-[11px] font-mono shadow-sm transition-all hover:scale-105 hover:shadow-md ${cls}`}
+                    className={`h-8 w-10 rounded-lg border-2 font-bold text-xs font-mono shadow-sm transition-all hover:scale-105 hover:shadow-md ${cls}`}
                   >
                     {d}
                   </button>
@@ -2101,14 +2101,14 @@ function SemanticBuilder({
 
   return (
     <div className="space-y-3 rounded-md border border-border/40 bg-background/40 p-2.5">
-      <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+      <div className="text-xs uppercase tracking-wider text-muted-foreground">
         Construtor de Frase Natural
       </div>
 
       {/* Linha BASE: [Base] [Ação] [Valor] ----------------------------------- */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
         <div>
-          <Label className="text-[10px] text-sky-400">① Base / Contexto</Label>
+          <Label className="text-xs text-sky-400">① Base / Contexto</Label>
           <Select value={ctx} onValueChange={(v) => atualizar({ ctx: v })}>
             <SelectTrigger className="h-8 text-xs border-sky-500/40 bg-sky-500/5">
               <SelectValue />
@@ -2121,7 +2121,7 @@ function SemanticBuilder({
           </Select>
         </div>
         <div>
-          <Label className="text-[10px] text-primary">② Operação</Label>
+          <Label className="text-xs text-primary">② Operação</Label>
           <Select value={acao} onValueChange={(v) => atualizar({ acao: v as typeof acao })}>
             <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -2132,7 +2132,7 @@ function SemanticBuilder({
           </Select>
         </div>
         <div>
-          <Label className="text-[10px]">③ Valor</Label>
+          <Label className="text-xs">③ Valor</Label>
           <Input
             type="number"
             value={valor}
@@ -2158,7 +2158,7 @@ function SemanticBuilder({
             }`}
           />
         </button>
-        <Label className="text-[11px] cursor-pointer" onClick={() => atualizar({ usarCondicao: !usarCondicao })}>
+        <Label className="text-xs cursor-pointer" onClick={() => atualizar({ usarCondicao: !usarCondicao })}>
           Aplicar uma condição (Se… então…)
         </Label>
       </div>
@@ -2166,12 +2166,12 @@ function SemanticBuilder({
       {/* Condicional ------------------------------------------------------- */}
       {usarCondicao && (
         <div className="space-y-2 rounded border border-amber-500/30 bg-amber-500/5 p-2">
-          <div className="text-[10px] uppercase tracking-wider text-amber-300/90 font-semibold">
+          <div className="text-xs uppercase tracking-wider text-amber-300/90 font-semibold">
             Se a condição for verdadeira…
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
             <div>
-              <Label className="text-[10px]">Se: Sujeito</Label>
+              <Label className="text-xs">Se: Sujeito</Label>
               <Select value={sujeitoId} onValueChange={(v) => atualizar({ sujeitoId: v })}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -2182,7 +2182,7 @@ function SemanticBuilder({
               </Select>
             </div>
             <div>
-              <Label className="text-[10px]">For: Operador</Label>
+              <Label className="text-xs">For: Operador</Label>
               <Select value={operadorId} onValueChange={(v) => atualizar({ operadorId: v })}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -2193,7 +2193,7 @@ function SemanticBuilder({
               </Select>
             </div>
             <div>
-              <Label className="text-[10px]">Limite</Label>
+              <Label className="text-xs">Limite</Label>
               <Select value={limiteId} onValueChange={(v) => atualizar({ limiteId: v })}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -2205,7 +2205,7 @@ function SemanticBuilder({
             </div>
           </div>
           <div>
-            <Label className="text-[10px]">Ação: então…</Label>
+            <Label className="text-xs">Ação: então…</Label>
             <Select value={acaoCondicaoId} onValueChange={(v) => atualizar({ acaoCondicaoId: v })}>
               <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -2220,14 +2220,14 @@ function SemanticBuilder({
 
       {/* Pré-visualização da fórmula gerada -------------------------------- */}
       <div className="rounded border border-border/40 bg-card/60 px-2 py-1.5">
-        <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">
+        <div className="text-xs uppercase tracking-wider text-muted-foreground mb-0.5">
           Fórmula gerada
         </div>
-        <code className="text-[11px] font-mono text-primary break-all">
+        <code className="text-xs font-mono text-primary break-all">
           {efeito.formula || '— vazio —'}
         </code>
       </div>
-      <p className="text-[10px] text-muted-foreground italic">
+      <p className="text-xs text-muted-foreground italic">
         💡 Tudo aqui é construído com cliques. Para encadeamentos com
         <code> @RESULTADO_N </code>ou funções avançadas (<code>floor</code>, <code>ceil</code>),
         use o Modo Avançado.

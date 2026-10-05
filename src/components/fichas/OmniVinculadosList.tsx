@@ -98,7 +98,7 @@ export function OmniVinculadosList({ charId, charName, onUsar, filtroCategoria, 
               title={podeAbrir ? 'Clique para ver detalhes' : undefined}
             >
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider opacity-90">
+                <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider opacity-90">
                   <Icon className="h-3 w-3" /> {meta.label}
                 </span>
                 <span className="font-semibold text-foreground inline-flex items-center gap-1">
@@ -107,7 +107,7 @@ export function OmniVinculadosList({ charId, charName, onUsar, filtroCategoria, 
                 </span>
                 {orfa && (
                   <span
-                    className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-300"
+                    className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 text-xs text-amber-300"
                     title="A entidade foi removida do catálogo Omni. Você pode desvincular para limpar."
                   >
                     <AlertTriangle className="h-3 w-3" /> órfã

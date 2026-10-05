@@ -118,14 +118,14 @@ export function CatalogoOmni() {
             </button>
           ))}
         </div>
-        <span className="ml-auto text-[11px] text-muted-foreground italic">
+        <span className="ml-auto text-xs text-muted-foreground italic">
           {filtradas.length} entrada(s) · pool global
         </span>
       </div>
 
       {filtro === 'arma' && (
         <div className="flex flex-wrap items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5">
-          <span className="text-[10px] uppercase tracking-wider text-primary/80">Tipos de Arma</span>
+          <span className="text-xs uppercase tracking-wider text-primary/80">Tipos de Arma</span>
           <Select value={filtroGrupo} onValueChange={setFiltroGrupo}>
             <SelectTrigger className="h-7 w-36 text-xs"><SelectValue placeholder="Grupo" /></SelectTrigger>
             <SelectContent>
@@ -155,7 +155,7 @@ export function CatalogoOmni() {
           {(filtroGrupo !== 'todos' || filtroComplex !== 'todos' || filtroAlcance !== 'todos') && (
             <button
               onClick={() => { setFiltroGrupo('todos'); setFiltroComplex('todos'); setFiltroAlcance('todos'); }}
-              className="text-[10px] text-muted-foreground hover:text-foreground underline ml-auto"
+              className="text-xs text-muted-foreground hover:text-foreground underline ml-auto"
             >
               limpar filtros
             </button>
@@ -182,7 +182,7 @@ export function CatalogoOmni() {
             >
               <div>
                 <div className="font-semibold text-foreground truncate">{e.nome}</div>
-                <div className="text-[10px] uppercase tracking-wider text-primary/70">
+                <div className="text-xs uppercase tracking-wider text-primary/70">
                   {e.categoria}
                   {e.combatData?.effects?.length
                     ? ` · ${e.combatData.effects.length} efeito(s)`
@@ -190,10 +190,10 @@ export function CatalogoOmni() {
                 </div>
               </div>
               {e.tags?.includes('rascunho-conceito') && (
-                <div className="rounded-md border border-amber-500/50 bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-200 flex items-start gap-1.5">
+                <div className="rounded-md border border-amber-500/50 bg-amber-500/10 px-2 py-1.5 text-xs text-amber-200 flex items-start gap-1.5">
                   <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                   <div>
-                    <div className="font-semibold uppercase tracking-wider text-[10px]">
+                    <div className="font-semibold uppercase tracking-wider text-xs">
                       Aguardando mecânica amaldiçoada
                     </div>
                     <div className="text-amber-100/80 mt-0.5">
@@ -212,7 +212,7 @@ export function CatalogoOmni() {
                     return (
                       <span
                         key={t}
-                        className={`text-[10px] px-1.5 py-0.5 rounded ${
+                        className={`text-xs px-1.5 py-0.5 rounded ${
                           isConceito
                             ? 'bg-amber-500/20 text-amber-200 border border-amber-500/40'
                             : 'bg-primary/10 text-primary'
@@ -253,7 +253,7 @@ export function CatalogoOmni() {
                       characters.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.name}
-                          <span className="text-muted-foreground ml-1.5 text-[10px]">
+                          <span className="text-muted-foreground ml-1.5 text-xs">
                             ({c.category ?? 'PJ'})
                           </span>
                         </SelectItem>

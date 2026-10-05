@@ -117,7 +117,7 @@ export function LayerPanel({ onClose }: Props) {
                 >
                   {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                 </button>
-                <span className="text-[11px] uppercase tracking-wider text-muted-foreground flex-1">
+                <span className="text-xs uppercase tracking-wider text-muted-foreground flex-1">
                   {LAYER_LABEL[layer]} <span className="text-muted-foreground/40">· {items.length}</span>
                 </span>
                 <button
@@ -133,7 +133,7 @@ export function LayerPanel({ onClose }: Props) {
                 <div className="ml-1 mt-0.5">
                   {items.length === 0 && (
                     <div
-                      className="px-2 py-1.5 text-[10px] text-muted-foreground/40 italic border border-dashed border-border rounded mx-1"
+                      className="px-2 py-1.5 text-xs text-muted-foreground/40 italic border border-dashed border-border rounded mx-1"
                       onDragOver={(e) => { e.preventDefault(); }}
                       onDrop={(e) => { e.preventDefault(); handleDropOn(null, layer); }}
                     >
@@ -185,7 +185,7 @@ export function LayerPanel({ onClose }: Props) {
                               if (ev.key === 'Enter') (ev.target as HTMLInputElement).blur();
                               if (ev.key === 'Escape') setEditingId(null);
                             }}
-                            className="flex-1 bg-[#0f1014] border border-border rounded px-1 text-[11px] text-foreground"
+                            className="flex-1 bg-[#0f1014] border border-border rounded px-1 text-xs text-foreground"
                           />
                         ) : (
                           <button
@@ -261,7 +261,7 @@ export function LayerPanel({ onClose }: Props) {
         })}
       </div>
 
-      <div className="px-3 py-1.5 border-t border-border text-[10px] text-muted-foreground">
+      <div className="px-3 py-1.5 border-t border-border text-xs text-muted-foreground">
         Arraste para reordenar/trocar de camada. Shift+clique para multi-seleção.
       </div>
     </div>

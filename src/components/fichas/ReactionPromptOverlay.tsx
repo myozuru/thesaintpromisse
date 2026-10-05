@@ -315,7 +315,7 @@ function PromptCard({
       )}
     >
       {reactionLocked && (
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-destructive bg-destructive/10 border border-destructive/30 rounded px-1.5 py-0.5">
+        <div className="text-xs font-semibold uppercase tracking-wide text-destructive bg-destructive/10 border border-destructive/30 rounded px-1.5 py-0.5">
           Reação já usada nesta rodada
         </div>
       )}
@@ -330,7 +330,7 @@ function PromptCard({
           <X className="h-3 w-3" />
         </button>
       </div>
-      <div className={cn('text-[10px] font-semibold tabular-nums', secondsLeft <= 3 ? 'text-destructive' : 'text-muted-foreground')}>
+      <div className={cn('text-xs font-semibold tabular-nums', secondsLeft <= 3 ? 'text-destructive' : 'text-muted-foreground')}>
         {secondsLeft > 0 ? `Tempo para reagir: ${secondsLeft}s` : 'Encerrando reação…'}
       </div>
 
@@ -339,7 +339,7 @@ function PromptCard({
           <select
             value={tier}
             onChange={(e) => setTier(e.target.value as typeof tier)}
-            className="flex-1 text-[11px] bg-secondary/40 border border-border rounded px-1.5 py-1 text-foreground"
+            className="flex-1 text-xs bg-secondary/40 border border-border rounded px-1.5 py-1 text-foreground"
           >
             <option value="fraca">Fraca — 2 PE</option>
             <option value="media">Média — 4 PE</option>
@@ -348,7 +348,7 @@ function PromptCard({
           </select>
           <button
             onClick={() => onNullify(tier)}
-            className="text-[10px] px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
+            className="text-xs px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
           >
             Anular
           </button>
@@ -358,7 +358,7 @@ function PromptCard({
       {p.kind === 'absorption_offer' && (
         <button
           onClick={onAbsorb}
-          className="w-full text-[10px] px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
+          className="w-full text-xs px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
         >
           🔮 Armar absorção {p.payload?.element ? `(${DAMAGE_TYPE_LABELS[p.payload.element as DamageType]})` : ''}
         </button>
@@ -367,7 +367,7 @@ function PromptCard({
       {p.kind === 'redirect_offer' && (
         <button
           onClick={onRedirect}
-          className="w-full text-[10px] px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
+          className="w-full text-xs px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
         >
           🎯 Redirecionar (2 PE)
         </button>
@@ -377,13 +377,13 @@ function PromptCard({
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => onLua(true)}
-            className="flex-1 text-[10px] px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
+            className="flex-1 text-xs px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
           >
             🌙 Usar reação
           </button>
           <button
             onClick={() => onLua(false)}
-            className="flex-1 text-[10px] px-2 py-1 rounded border border-border bg-secondary/40 hover:bg-secondary"
+            className="flex-1 text-xs px-2 py-1 rounded border border-border bg-secondary/40 hover:bg-secondary"
           >
             Aceitar dano
           </button>
@@ -394,13 +394,13 @@ function PromptCard({
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => onAlmaMaldita(true)}
-            className="flex-1 text-[10px] px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
+            className="flex-1 text-xs px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
           >
             🩸 Usar (1 uso)
           </button>
           <button
             onClick={() => onAlmaMaldita(false)}
-            className="flex-1 text-[10px] px-2 py-1 rounded border border-border bg-secondary/40 hover:bg-secondary"
+            className="flex-1 text-xs px-2 py-1 rounded border border-border bg-secondary/40 hover:bg-secondary"
           >
             Aceitar dano
           </button>
@@ -410,7 +410,7 @@ function PromptCard({
       {p.kind === 'fah_anatomia_incompr_offer' && (
         <button
           onClick={onAnatomiaIncompreensivel}
-          className="w-full text-[10px] px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
+          className="w-full text-xs px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
         >
           🧬 Rolar TR Constituição vs CD {p.payload?.cursedDC ?? '?'}
         </button>
@@ -419,7 +419,7 @@ function PromptCard({
       {p.kind === 'fah_devorador_energia_offer' && (
         <button
           onClick={onDevoradorAck}
-          className="w-full text-[10px] px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
+          className="w-full text-xs px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
         >
           ⚡ +1 tempPE confirmado
         </button>
@@ -427,13 +427,13 @@ function PromptCard({
 
       {p.kind === 'fah_presenca_nefasta' && (
         <div className="space-y-1">
-          <div className="text-[10px] text-muted-foreground">CD {p.payload?.cursedDC} — clique em cada inimigo para rolar TR Vontade.</div>
+          <div className="text-xs text-muted-foreground">CD {p.payload?.cursedDC} — clique em cada inimigo para rolar TR Vontade.</div>
           <div className="grid grid-cols-2 gap-1">
             {(p.payload?.enemies ?? []).map((e) => (
               <button
                 key={e.id}
                 onClick={() => onPresencaNefastaRoll(e)}
-                className="text-[10px] px-1.5 py-1 rounded border border-border bg-secondary/40 hover:bg-secondary text-left truncate"
+                className="text-xs px-1.5 py-1 rounded border border-border bg-secondary/40 hover:bg-secondary text-left truncate"
                 title={e.name}
               >
                 {e.name}
@@ -442,7 +442,7 @@ function PromptCard({
           </div>
           <button
             onClick={onDismiss}
-            className="w-full text-[10px] px-2 py-0.5 rounded text-muted-foreground hover:text-foreground"
+            className="w-full text-xs px-2 py-0.5 rounded text-muted-foreground hover:text-foreground"
           >
             Encerrar Presença Nefasta
           </button>
@@ -451,7 +451,7 @@ function PromptCard({
 
       {p.kind === 'condition_end_tr_offer' && (
         <div className="space-y-1.5">
-          <div className="text-[10px] text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             TR de <span className="font-semibold">{p.payload?.conditionName ?? 'condição'}</span>
             {p.payload?.durationMode === 'ate_passar_tr' && ' — só sai se passar.'}
             {p.payload?.durationMode === 'tr_todo_round' && ' — sucesso encerra antes do prazo.'}
@@ -459,13 +459,13 @@ function PromptCard({
           <div className="flex items-center gap-1.5">
             <button
               onClick={onConditionEndTR}
-              className="flex-1 text-[10px] px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
+              className="flex-1 text-xs px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
             >
               🎲 Rolar TR
             </button>
             <button
               onClick={onDismiss}
-              className="text-[10px] px-2 py-1 rounded border border-border bg-secondary/40 hover:bg-secondary"
+              className="text-xs px-2 py-1 rounded border border-border bg-secondary/40 hover:bg-secondary"
               title="Adiar (mantém o prompt fechado neste turno)"
             >
               Adiar
@@ -476,7 +476,7 @@ function PromptCard({
 
       {p.kind === 'persistent_area_tr_offer' && (
         <div className="space-y-1.5">
-          <div className="text-[10px] text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             Zona: <span className="font-semibold">{p.payload?.zoneLabel ?? 'área persistente'}</span>
             {p.payload?.zoneTRMode === 'uma_vez' && ' — TR uma vez ao entrar (imune se passar).'}
             {p.payload?.zoneTRMode === 'todo_round' && ' — TR a cada round (imune se passar).'}
@@ -485,13 +485,13 @@ function PromptCard({
           <div className="flex items-center gap-1.5">
             <button
               onClick={onPersistentAreaTR}
-              className="flex-1 text-[10px] px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
+              className="flex-1 text-xs px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
             >
               ⏳ Rolar TR vs zona
             </button>
             <button
               onClick={onDismiss}
-              className="text-[10px] px-2 py-1 rounded border border-border bg-secondary/40 hover:bg-secondary"
+              className="text-xs px-2 py-1 rounded border border-border bg-secondary/40 hover:bg-secondary"
               title="Aceitar efeito sem rolar"
             >
               Aceitar
@@ -502,7 +502,7 @@ function PromptCard({
 
       {p.kind === 'cobrir_se_offer' && (
         <div className="space-y-1.5">
-          <div className="text-[10px] text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             Dano previsto: <span className="font-semibold text-foreground">{p.payload?.damageDealt ?? 0}</span>.
             {' '}{p.payload?.hasCoberturaAvancada ? 'Cobertura Avançada' : 'Cobrir-se'}: {p.payload?.perPe ?? 4} PVTs/PE.
             {' '}Você tem até 12 segundos para decidir; depois o dano segue normalmente.
@@ -514,21 +514,21 @@ function PromptCard({
               max={Math.min(p.payload?.maxPe ?? 1, p.payload?.peAvailable ?? 1)}
               value={cobrirPe}
               onChange={(e) => setCobrirPe(Math.max(1, parseInt(e.target.value || '1', 10)))}
-              className="w-14 text-[11px] bg-secondary/40 border border-border rounded px-1.5 py-1 text-foreground"
+              className="w-14 text-xs bg-secondary/40 border border-border rounded px-1.5 py-1 text-foreground"
             />
-            <span className="text-[10px] text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               PE × {p.payload?.perPe ?? 4} = +{cobrirPe * (p.payload?.perPe ?? 4)}
             </span>
             <button
               onClick={() => onCobrirSe(cobrirPe)}
-              className="ml-auto text-[10px] px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
+              className="ml-auto text-xs px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
             >
               🛡️ Cobrir-se
             </button>
           </div>
           <button
             onClick={onDismiss}
-            className="w-full text-[10px] px-2 py-0.5 rounded text-muted-foreground hover:text-foreground"
+            className="w-full text-xs px-2 py-0.5 rounded text-muted-foreground hover:text-foreground"
           >
             Ignorar (aceitar dano)
           </button>

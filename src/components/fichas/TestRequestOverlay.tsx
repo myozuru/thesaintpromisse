@@ -185,7 +185,7 @@ function MasterWatchPanel() {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="truncate text-[10px] font-bold uppercase tracking-[0.16em] text-accent/75">{r.charName}</div>
+                <div className="truncate text-xs font-bold uppercase tracking-[0.16em] text-accent/75">{r.charName}</div>
                 <div className="truncate font-display text-sm font-bold">
                   {r.testName}{r.dc != null && <span className="font-body text-muted-foreground"> · CD {r.dc}</span>}
                 </div>
@@ -199,16 +199,16 @@ function MasterWatchPanel() {
                     <div className="text-2xl font-bold text-foreground leading-none">
                       {r.result.total}
                       {r.result.advantageMode && r.result.advantageMode !== 'normal' && (
-                        <span className="ml-1 text-[10px] font-normal text-muted-foreground">
+                        <span className="ml-1 text-xs font-normal text-muted-foreground">
                           ({r.result.advantageMode === 'advantage' ? 'V' : 'D'} {r.result.rolls?.join(',')})
                         </span>
                       )}
                     </div>
-                    <div className="font-mono text-[12px] text-muted-foreground">
+                    <div className="font-mono text-xs text-muted-foreground">
                       d20 {r.result.d20} {r.result.bonus >= 0 ? '+' : ''}{r.result.bonus}
                     </div>
                     {r.result.forced && (
-                      <div className="text-[10px] text-accent font-semibold mt-0.5">
+                      <div className="text-xs text-accent font-semibold mt-0.5">
                         {r.result.forced.kind === 'success' ? '✨ Sucesso garantido' : '💀 Falha garantida'}
                       </div>
                     )}
@@ -510,7 +510,7 @@ export function TestRequestOverlay() {
 
             <div className="border-b border-border/70 bg-secondary/30 px-5 pb-5 pt-6 text-center sm:px-8">
               <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-md border border-accent/30 bg-accent/10 text-accent"><ShieldQuestion className="h-5 w-5" /></div>
-              <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-accent/75">{kindLabel}</div>
+              <div className="text-xs font-bold uppercase tracking-[0.22em] text-accent/75">{kindLabel}</div>
               <h2 className="mt-1 font-display text-2xl font-black uppercase text-foreground sm:text-3xl">{current.testName}</h2>
               <div className="mt-1 text-sm text-muted-foreground">Desafio para <span className="font-semibold text-foreground">{current.charName}</span></div>
               <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
@@ -574,11 +574,11 @@ export function TestRequestOverlay() {
                   Rolar d20
                 </Button>
                 <div className="flex min-w-32 flex-col items-center justify-center rounded-md border border-border/80 bg-background/45 px-4 py-2 text-center">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Bônus</span>
+                  <span className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Bônus</span>
                   <strong className="font-display text-2xl text-accent">{bonus >= 0 ? '+' : ''}{bonus}</strong>
-                  <span className="max-w-48 text-[10px] leading-tight text-muted-foreground">{breakdown}</span>
+                  <span className="max-w-48 text-xs leading-tight text-muted-foreground">{breakdown}</span>
                   {current.masterBonus ? (
-                    <span className="text-[10px] font-bold text-accent">+ Mestre {current.masterBonus >= 0 ? '+' : ''}{current.masterBonus} (oculto)</span>
+                    <span className="text-xs font-bold text-accent">+ Mestre {current.masterBonus >= 0 ? '+' : ''}{current.masterBonus} (oculto)</span>
                   ) : null}
                 </div>
                 </div>
@@ -594,7 +594,7 @@ export function TestRequestOverlay() {
                       : 'border-neon-red/60 bg-neon-red/10 shadow-[0_0_30px_-5px_hsl(var(--neon-red)/0.5)]')
                   : 'border-primary/40 bg-primary/10'
               }`}>
-                <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Resultado final</div>
+                <div className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Resultado final</div>
                 <div className="mt-1 font-display text-6xl font-black text-foreground">
                   {current.result.total}
                 </div>
@@ -669,27 +669,27 @@ export function TestRequestOverlay() {
         {/* Cabeçalho ritualístico */}
         <div className={cn('border-b border-relic/25 bg-gradient-to-b from-relic/15 via-transparent to-transparent text-center transition-all duration-500', singleCinematicResult ? 'px-4 pb-3 pt-4' : 'px-5 pb-5 pt-7 sm:px-6')}>
           {!singleCinematicResult && <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full border border-relic/40 bg-relic/10 text-relic shadow-[0_0_20px_-4px_hsl(var(--relic)/0.7)]"><ShieldQuestion className="h-5 w-5" /></div>}
-          <div className="text-[9px] font-black uppercase tracking-[0.45em] text-relic">{kindLabel}</div>
+          <div className="text-xs font-black uppercase tracking-[0.45em] text-relic">{kindLabel}</div>
           <h2 className={cn('mt-1.5 font-display font-black uppercase text-foreground', singleCinematicResult ? 'text-xl' : 'text-3xl')} style={{ textShadow: '0 0 22px hsl(var(--relic)/0.5)' }}>{current.testName}</h2>
-          {!singleCinematicResult && <div className="mt-1.5 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Desafio de <span className="font-bold text-relic">{current.charName}</span></div>}
+          {!singleCinematicResult && <div className="mt-1.5 text-xs uppercase tracking-[0.2em] text-muted-foreground">Desafio de <span className="font-bold text-relic">{current.charName}</span></div>}
           {!singleCinematicResult && <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
             {showDc && (
               <div className="rounded-sm border border-relic/40 bg-relic/10 px-3 py-0.5 text-xs font-black text-relic">CD {current.dc}</div>
             )}
             {!showDc && current.dc != null && (
-              <div className="rounded-sm border border-border bg-muted/40 px-3 py-0.5 text-[10px] italic text-muted-foreground">CD oculta</div>
+              <div className="rounded-sm border border-border bg-muted/40 px-3 py-0.5 text-xs italic text-muted-foreground">CD oculta</div>
             )}
             {advPreview === 'advantage' && (
-              <div className="rounded-sm border border-neon-green/30 bg-neon-green/10 px-2.5 py-0.5 text-[11px] font-bold text-neon-green">Vantagem</div>
+              <div className="rounded-sm border border-neon-green/30 bg-neon-green/10 px-2.5 py-0.5 text-xs font-bold text-neon-green">Vantagem</div>
             )}
             {advPreview === 'disadvantage' && (
-              <div className="rounded-sm border border-neon-red/30 bg-neon-red/10 px-2.5 py-0.5 text-[11px] font-bold text-neon-red">Desvantagem</div>
+              <div className="rounded-sm border border-neon-red/30 bg-neon-red/10 px-2.5 py-0.5 text-xs font-bold text-neon-red">Desvantagem</div>
             )}
             {autoPreview === 'success' && (
-              <div className="rounded-sm border border-accent/30 bg-accent/10 px-2.5 py-0.5 text-[11px] font-bold text-accent">Sucesso garantido</div>
+              <div className="rounded-sm border border-accent/30 bg-accent/10 px-2.5 py-0.5 text-xs font-bold text-accent">Sucesso garantido</div>
             )}
             {autoPreview === 'failure' && (
-              <div className="rounded-sm border border-destructive/30 bg-destructive/10 px-2.5 py-0.5 text-[11px] font-bold text-destructive">Falha garantida</div>
+              <div className="rounded-sm border border-destructive/30 bg-destructive/10 px-2.5 py-0.5 text-xs font-bold text-destructive">Falha garantida</div>
             )}
           </div>}
         </div>
@@ -732,7 +732,7 @@ export function TestRequestOverlay() {
                           : 'border-neon-red/60 bg-neon-red/10 shadow-[0_0_30px_-5px_hsl(var(--neon-red)/0.5)]')
                       : 'border-primary/40 bg-primary/10',
                   )}>
-                    <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Resultado final</div>
+                    <div className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Resultado final</div>
                     <div className="mt-1 font-display text-6xl font-black text-foreground">{current.result.total}</div>
                     <div className="text-xs text-muted-foreground mt-1">
                       d20 {current.result.d20}
@@ -765,7 +765,7 @@ export function TestRequestOverlay() {
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="relative flex h-28 w-28 items-center justify-center rounded-full border border-relic/25 bg-relic/5">
                       <div className="absolute -inset-2 animate-pulse rounded-full border border-relic/10" />
-                      <span className="text-center text-[9px] font-black uppercase leading-relaxed tracking-[0.35em] text-relic/70">Solte o<br />Destino</span>
+                      <span className="text-center text-xs font-black uppercase leading-relaxed tracking-[0.35em] text-relic/70">Solte o<br />Destino</span>
                     </div>
                   </div>
                   {/* Controles ancorados no fundo do fosso */}
@@ -779,10 +779,10 @@ export function TestRequestOverlay() {
                       <Dice6 className="h-6 w-6 text-relic" />Rolar D20
                     </Button>
                     <div className="w-24 shrink-0 rounded-sm border border-relic/30 bg-relic-deep/40 px-2 py-2 text-center">
-                      <div className="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground">Bônus</div>
+                      <div className="text-xs font-black uppercase tracking-[0.3em] text-muted-foreground">Bônus</div>
                       <strong className="font-display text-2xl text-relic">{bonus >= 0 ? '+' : ''}{bonus}</strong>
-                      <div className="text-[9px] leading-tight text-muted-foreground">{breakdown}</div>
-                      {current.masterBonus ? <div className="text-[9px] font-black text-relic">+ ? do Mestre</div> : null}
+                      <div className="text-xs leading-tight text-muted-foreground">{breakdown}</div>
+                      {current.masterBonus ? <div className="text-xs font-black text-relic">+ ? do Mestre</div> : null}
                     </div>
                   </div>
                 </>
@@ -794,15 +794,15 @@ export function TestRequestOverlay() {
             <div className="mx-auto mt-3 w-56 animate-in fade-in slide-in-from-bottom-2 duration-500 sm:w-60">
               <div className="grid grid-cols-2 divide-x divide-relic/20 border-y border-relic/25 bg-relic/5 py-2 text-center">
                 <div>
-                  <div className="text-[8px] font-black uppercase tracking-[0.22em] text-muted-foreground">Bônus</div>
+                  <div className="text-xs font-black uppercase tracking-[0.22em] text-muted-foreground">Bônus</div>
                   <div className="font-display text-base font-black text-relic">{current.result.bonus >= 0 ? '+' : ''}{current.result.bonus}</div>
                 </div>
                 <div>
-                  <div className="text-[8px] font-black uppercase tracking-[0.22em] text-muted-foreground">Total</div>
+                  <div className="text-xs font-black uppercase tracking-[0.22em] text-muted-foreground">Total</div>
                   <div className="font-display text-base font-black text-foreground">{current.result.total}</div>
                 </div>
               </div>
-              {current.result.masterBonus ? <div className="mt-1.5 text-center text-[9px] font-bold text-relic">Bônus do Mestre: {current.result.masterBonus >= 0 ? '+' : ''}{current.result.masterBonus}</div> : null}
+              {current.result.masterBonus ? <div className="mt-1.5 text-center text-xs font-bold text-relic">Bônus do Mestre: {current.result.masterBonus >= 0 ? '+' : ''}{current.result.masterBonus}</div> : null}
               {showOutcome && current.dc != null && (
                 <div className={cn('mt-2 text-center font-display text-sm font-black uppercase', current.result.total >= current.dc ? 'text-neon-green' : 'text-neon-red')}>
                   {current.result.total >= current.dc ? 'Sucesso' : 'Falha'}
@@ -816,13 +816,14 @@ export function TestRequestOverlay() {
 
           {/* Rodapé de status */}
           {!singleCinematicResult && <div className="mt-3 flex items-center justify-between px-1">
-            <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-muted-foreground/60">
+            <span className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground/60">
               {rolling ? 'O destino está em movimento' : current.result ? 'Destino revelado' : 'Aguardando sua escolha'}
             </span>
-            <div className="flex gap-1 text-[8px] text-relic/50"><span>◆</span><span>◆</span><span>◆</span></div>
+            <div className="flex gap-1 text-xs text-relic/50"><span>◆</span><span>◆</span><span>◆</span></div>
           </div>}
         </div>
       </div>
     </div>
   );
 }
+

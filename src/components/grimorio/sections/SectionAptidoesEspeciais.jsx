@@ -252,11 +252,11 @@ export default function SectionAptidoesEspeciais({ draft, actions }) {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                   <span className="text-sm font-semibold text-white">{a.nome}</span>
-                  <span className="text-[9px] uppercase tracking-wide text-slate-500 border border-slate-700 rounded px-1 py-0.5">
+                  <span className="text-xs uppercase tracking-wide text-slate-500 border border-slate-700 rounded px-1 py-0.5">
                     {a.categoria}
                   </span>
                   {a.tipo === "custom" && (
-                    <span className="text-[9px] uppercase tracking-wide text-amber-400 border border-amber-800/60 rounded px-1 py-0.5">
+                    <span className="text-xs uppercase tracking-wide text-amber-400 border border-amber-800/60 rounded px-1 py-0.5">
                       Custom
                     </span>
                   )}
@@ -279,7 +279,7 @@ export default function SectionAptidoesEspeciais({ draft, actions }) {
 
       {/* Formulário de adição */}
       <div className="pt-3 border-t border-slate-800 space-y-3">
-        <h3 className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">
+        <h3 className="text-xs uppercase tracking-widest text-slate-500 font-bold">
           Adicionar Aptidão Amaldiçoada
         </h3>
 
@@ -310,7 +310,7 @@ export default function SectionAptidoesEspeciais({ draft, actions }) {
         {/* Preview da descrição oficial */}
         {oficialSelecionada && (
           <div className="bg-slate-900/50 border border-slate-800 rounded p-3">
-            <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-1 font-bold">
+            <p className="text-xs uppercase tracking-widest text-slate-500 mb-1 font-bold">
               {oficialSelecionada.categoria}
             </p>
             <p className="text-xs text-slate-400 leading-relaxed">{oficialSelecionada.descricao}</p>

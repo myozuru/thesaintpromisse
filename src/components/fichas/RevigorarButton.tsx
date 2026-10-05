@@ -31,7 +31,7 @@ export function RevigorarButton({ character: c }: { character: Character }) {
 
   return (
     <div className="space-y-1 rounded-md border border-emerald-500/40 bg-emerald-500/5 p-2" data-testid="revigorar-secao">
-      <p className="text-[11px] font-bold text-emerald-500">
+      <p className="text-xs font-bold text-emerald-500">
         💚 Revigorar — ação bônus · {dados}d10 {bonus >= 0 ? '+' : ''}{bonus} ·{' '}
         {revigorarUsosRestantes(c)}/{revigorarUsosMax(c)} usos
       </p>
@@ -40,12 +40,12 @@ export function RevigorarButton({ character: c }: { character: Character }) {
         data-testid="revigorar-usar"
         disabled={!chk.ok || busy}
         onClick={run}
-        className="w-full rounded border border-emerald-500 bg-emerald-500/20 px-2 py-1 text-[11px] font-bold text-emerald-500 hover:bg-emerald-500/40 disabled:opacity-40"
+        className="w-full rounded border border-emerald-500 bg-emerald-500/20 px-2 py-1 text-xs font-bold text-emerald-500 hover:bg-emerald-500/40 disabled:opacity-40"
       >
         Revigorar (Ação Bônus)
       </button>
-      {!chk.ok && chk.reason && <p className="text-[11px] text-destructive">{chk.reason}</p>}
-      {msg && <p className="text-[11px] text-muted-foreground" data-testid="revigorar-msg">{msg}</p>}
+      {!chk.ok && chk.reason && <p className="text-xs text-destructive">{chk.reason}</p>}
+      {msg && <p className="text-xs text-muted-foreground" data-testid="revigorar-msg">{msg}</p>}
     </div>
   );
 }

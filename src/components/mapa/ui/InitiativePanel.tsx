@@ -195,7 +195,7 @@ export function InitiativePanel({ onClose }: Props) {
       <div className="flex items-center gap-2 px-3 h-9 border-b border-border shrink-0">
         <Swords className="h-4 w-4 text-amber-300" />
         <span className="font-medium text-foreground">Iniciativa</span>
-        <span className="ml-2 px-1.5 py-0.5 rounded bg-secondary text-[10px] tracking-wider uppercase text-muted-foreground">
+        <span className="ml-2 px-1.5 py-0.5 rounded bg-secondary text-xs tracking-wider uppercase text-muted-foreground">
           Round {init.round}
         </span>
         <button

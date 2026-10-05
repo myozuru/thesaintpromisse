@@ -156,12 +156,12 @@ export function CardapiosModule() {
                         <span className="text-xs italic text-muted-foreground">— {est.type}</span>
                       )}
                       {est.hiddenMode === 'soldout' && (
-                        <span className="rounded-full bg-neon-yellow/15 border border-neon-yellow/30 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-neon-yellow">
+                        <span className="rounded-full bg-neon-yellow/15 border border-neon-yellow/30 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wider text-neon-yellow">
                           Esgotado
                         </span>
                       )}
                       {isMaster && est.hiddenMode === 'invisible' && (
-                        <span className="rounded-full bg-hp/15 border border-hp/30 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-hp">
+                        <span className="rounded-full bg-hp/15 border border-hp/30 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wider text-hp">
                           Oculto
                         </span>
                       )}
@@ -376,12 +376,12 @@ function MenuBlock({
           <Tag className="h-3.5 w-3.5 text-accent" />
           <span className="flex-1 text-sm font-semibold text-foreground">{menu.name}</span>
           {menu.hiddenMode === 'soldout' && (
-            <span className="rounded-full bg-neon-yellow/15 border border-neon-yellow/30 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-neon-yellow">
+            <span className="rounded-full bg-neon-yellow/15 border border-neon-yellow/30 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wider text-neon-yellow">
               Esgotado
             </span>
           )}
           {isMaster && menu.hiddenMode === 'invisible' && (
-            <span className="rounded-full bg-hp/15 border border-hp/30 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-hp">
+            <span className="rounded-full bg-hp/15 border border-hp/30 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wider text-hp">
               Oculto
             </span>
           )}
@@ -719,27 +719,27 @@ function ItemRow({
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="font-medium text-foreground truncate">{item.name}</span>
             {item.isFood && (
-              <span className="rounded-full bg-neon-yellow/15 border border-neon-yellow/30 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-neon-yellow">
+              <span className="rounded-full bg-neon-yellow/15 border border-neon-yellow/30 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wider text-neon-yellow">
                 🍽️ Comida
               </span>
             )}
             {item.hiddenMode === 'soldout' && (
-              <span className="rounded-full bg-neon-yellow/15 border border-neon-yellow/30 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-neon-yellow">
+              <span className="rounded-full bg-neon-yellow/15 border border-neon-yellow/30 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wider text-neon-yellow">
                 Esgotado
               </span>
             )}
             {!isMaster && stockOut && item.hiddenMode !== 'soldout' && (
-              <span className="rounded-full bg-neon-yellow/15 border border-neon-yellow/30 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-neon-yellow">
+              <span className="rounded-full bg-neon-yellow/15 border border-neon-yellow/30 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wider text-neon-yellow">
                 Esgotado
               </span>
             )}
             {stock !== undefined && !stockOut && (
-              <span className="rounded-full bg-secondary/40 border border-border px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+              <span className="rounded-full bg-secondary/40 border border-border px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
                 Estoque: {stock}
               </span>
             )}
             {isMaster && item.hiddenMode === 'invisible' && (
-              <span className="rounded-full bg-hp/15 border border-hp/30 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-hp">
+              <span className="rounded-full bg-hp/15 border border-hp/30 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wider text-hp">
                 Oculto
               </span>
             )}
@@ -752,22 +752,22 @@ function ItemRow({
           {item.isFood && (
             <div className="flex flex-wrap gap-1 mt-0.5">
               {(item.hungerRestore ?? 0) > 0 && (
-                <span className="rounded-full bg-neon-yellow/15 border border-neon-yellow/30 px-1.5 py-0.5 text-[10px] text-neon-yellow">
+                <span className="rounded-full bg-neon-yellow/15 border border-neon-yellow/30 px-1.5 py-0.5 text-xs text-neon-yellow">
                   🍞 +{item.hungerRestore}
                 </span>
               )}
               {(item.hpRestore ?? 0) > 0 && (
-                <span className="rounded-full bg-hp/15 border border-hp/30 px-1.5 py-0.5 text-[10px] text-hp">
+                <span className="rounded-full bg-hp/15 border border-hp/30 px-1.5 py-0.5 text-xs text-hp">
                   ❤️ +{item.hpRestore}
                 </span>
               )}
               {(item.peRestore ?? 0) > 0 && (
-                <span className="rounded-full bg-pe/15 border border-pe/30 px-1.5 py-0.5 text-[10px] text-pe">
+                <span className="rounded-full bg-pe/15 border border-pe/30 px-1.5 py-0.5 text-xs text-pe">
                   💠 +{item.peRestore}
                 </span>
               )}
               {(item.pvtRestore ?? 0) > 0 && (
-                <span className="rounded-full bg-shield/15 border border-shield/30 px-1.5 py-0.5 text-[10px] text-shield">
+                <span className="rounded-full bg-shield/15 border border-shield/30 px-1.5 py-0.5 text-xs text-shield">
                   🛡️ +{item.pvtRestore}
                 </span>
               )}
@@ -776,7 +776,7 @@ function ItemRow({
         </div>
         <div className="flex items-center gap-1.5 whitespace-nowrap">
           {hasDiscount && (
-            <span className="rounded-full bg-accent/15 border border-accent/30 px-1.5 py-0.5 text-[10px] font-bold text-accent">
+            <span className="rounded-full bg-accent/15 border border-accent/30 px-1.5 py-0.5 text-xs font-bold text-accent">
               -{percentEquivalent}%
             </span>
           )}
@@ -1012,7 +1012,7 @@ function ItemForm({
                 { label: '🛡️ PVT', value: pvtRestore, set: setPvtRestore, max: undefined },
               ] as const).map(({ label, value, set, max }) => (
                 <div key={label} className="flex items-center gap-1">
-                  <label className="text-[11px] text-muted-foreground w-12 truncate" title={label}>
+                  <label className="text-xs text-muted-foreground w-12 truncate" title={label}>
                     {label}
                   </label>
                   <input
@@ -1026,7 +1026,7 @@ function ItemForm({
                 </div>
               ))}
             </div>
-            <p className="text-[11px] text-muted-foreground italic mt-1">
+            <p className="text-xs text-muted-foreground italic mt-1">
               Ao confirmar a compra, os efeitos são aplicados na ficha. Origem CAM não recebe.
             </p>
           </>

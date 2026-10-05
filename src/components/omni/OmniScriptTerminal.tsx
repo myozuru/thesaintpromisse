@@ -280,11 +280,11 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
       {compilado.efeitos.length > 0 && (
         <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 space-y-1.5">
           <div className="flex items-center justify-between">
-            <div className="text-[10px] uppercase tracking-wider text-emerald-300/80">
+            <div className="text-xs uppercase tracking-wider text-emerald-300/80">
               Plano de Execução
             </div>
             {personagemPreview && (
-              <div className="text-[10px] text-emerald-300/60">
+              <div className="text-xs text-emerald-300/60">
                 Preview: {personagemPreview.name}
               </div>
             )}
@@ -333,11 +333,11 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
 
       {compilado.erros.length > 0 && (
         <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 space-y-1">
-          <div className="text-[10px] uppercase tracking-wider text-destructive">
+          <div className="text-xs uppercase tracking-wider text-destructive">
             ⚠ Erros de Sintaxe
           </div>
           {compilado.erros.map((er, i) => (
-            <div key={i} className="text-[11px] font-mono text-destructive/90">
+            <div key={i} className="text-xs font-mono text-destructive/90">
               <span className="opacity-70">"{er.trecho}"</span> — {er.mensagem}
             </div>
           ))}
@@ -348,10 +348,10 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label className="text-[11px] uppercase tracking-wider text-violet-300">
+        <Label className="text-xs uppercase tracking-wider text-violet-300">
           Omni-Script (Terminal)
         </Label>
-        <span className="text-[10px] text-muted-foreground">
+        <span className="text-xs text-muted-foreground">
           {compilado.efeitos.length} efeito(s) · {compilado.erros.length} erro(s){pendente ? ' · Atualizando prévia…' : ''}
         </span>
       </div>
@@ -393,7 +393,7 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
             className="absolute left-3 top-full z-50 mt-1 max-h-64 w-72 overflow-auto rounded-md border border-violet-500/40 bg-zinc-950/95 shadow-xl shadow-violet-900/40 backdrop-blur"
             onMouseDown={(e) => e.preventDefault()}
           >
-            <div className="px-2 py-1 text-[9px] uppercase tracking-wider text-violet-300/70 border-b border-violet-500/20">
+            <div className="px-2 py-1 text-xs uppercase tracking-wider text-violet-300/70 border-b border-violet-500/20">
               "{prefixoAtual}" · {sugestoes.length} sugestão(ões) · Tab para ciclar · Enter aceita
             </div>
             {sugestoes.map((s, i) => (
@@ -415,9 +415,9 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
               >
                 <span className="text-violet-300">{s.valor.slice(0, prefixoAtual.length)}</span>
                 <span>{s.valor.slice(prefixoAtual.length)}</span>
-                <span className="ml-2 text-[10px] text-zinc-500">{s.categoria}</span>
+                <span className="ml-2 text-xs text-zinc-500">{s.categoria}</span>
                 {s.hint && (
-                  <div className="text-[10px] text-zinc-500 truncate">{s.hint}</div>
+                  <div className="text-xs text-zinc-500 truncate">{s.hint}</div>
                 )}
               </button>
             ))}
@@ -426,7 +426,7 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
       </div>
 
       {/* Legenda das keywords */}
-      <div className="flex flex-wrap gap-2 text-[10px] text-muted-foreground">
+      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
         <span><span className="text-violet-400 font-bold font-mono">somar</span> = +</span>
         <span><span className="text-violet-400 font-bold font-mono">subtrair</span> = −</span>
         <span><span className="text-violet-400 font-bold font-mono">definir</span> = =</span>

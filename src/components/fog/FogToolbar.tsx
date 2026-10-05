@@ -165,7 +165,7 @@ export function FogToolbar() {
         </IconBtn>
       </div>
 
-      <div className="flex items-center justify-between gap-3 px-1 text-[10px] text-muted-foreground">
+      <div className="flex items-center justify-between gap-3 px-1 text-xs text-muted-foreground">
         <span className="truncate">{active?.hint}</span>
         <span className="shrink-0 tabular-nums">
           {walls.length}p · {doors.length}d · {lights.length}l

@@ -152,7 +152,7 @@ export function TalentCatalogModal({
                 key={t}
                 onClick={() => setTalentSubTab(t)}
                 className={cn(
-                  'rounded-md border px-2 py-0.5 text-[10px] font-bold transition-colors',
+                  'rounded-md border px-2 py-0.5 text-xs font-bold transition-colors',
                   talentSubTab === t
                     ? 'border-accent bg-accent/30 text-accent-foreground'
                     : 'border-border bg-background text-muted-foreground hover:border-accent/40',
@@ -194,7 +194,7 @@ export function TalentCatalogModal({
           )}
         </div>
 
-        <div className="border-t border-border px-4 py-2 text-[10px] text-muted-foreground">
+        <div className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
           Itens com pré-requisitos não atendidos ficam bloqueados. Itens repetíveis (↻) podem ser escolhidos múltiplas vezes.
         </div>
       </div>
@@ -230,7 +230,7 @@ function TabButton({ active, onClick, icon, label, count, tone }: TabBtnProps) {
     <button
       onClick={onClick}
       className={cn(
-        'rounded-md border px-2 py-1 text-[11px] font-bold transition-colors flex items-center gap-1.5',
+        'rounded-md border px-2 py-1 text-xs font-bold transition-colors flex items-center gap-1.5',
         active ? activeCls : `border-border bg-background text-muted-foreground ${hoverCls}`,
       )}
     >
@@ -288,14 +288,14 @@ function ClassAbilitiesList({
             )}
           >
             <div className="flex items-start gap-2 p-2">
-              <span className="rounded bg-primary/30 px-1.5 py-0.5 text-[10px] font-mono font-bold text-primary mt-0.5">
+              <span className="rounded bg-primary/30 px-1.5 py-0.5 text-xs font-mono font-bold text-primary mt-0.5">
                 T{a.tier}
               </span>
-              <span className="rounded border border-accent/40 bg-accent/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-accent-foreground mt-0.5">
+              <span className="rounded border border-accent/40 bg-accent/20 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wider text-accent-foreground mt-0.5">
                 {SPEC_ACTIVATION_LABEL[a.activation]}
               </span>
               {a.allowMultiplePurchases && (
-                <span className="rounded bg-muted/40 px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground mt-0.5">
+                <span className="rounded bg-muted/40 px-1.5 py-0.5 text-xs font-bold text-muted-foreground mt-0.5">
                   ↻
                 </span>
               )}
@@ -316,7 +316,7 @@ function ClassAbilitiesList({
                 disabled={blocked}
                 title={blocked ? `Requer: ${ev.missing.join(', ')}` : 'Escolher esta habilidade'}
                 className={cn(
-                  'rounded-md border px-2 py-1 text-[11px] font-bold transition-colors flex items-center gap-1',
+                  'rounded-md border px-2 py-1 text-xs font-bold transition-colors flex items-center gap-1',
                   blocked
                     ? 'border-border bg-muted/40 text-muted-foreground cursor-not-allowed'
                     : 'border-primary bg-primary/20 text-primary hover:bg-primary/40',
@@ -327,7 +327,7 @@ function ClassAbilitiesList({
               </button>
             </div>
             {(blocked || a.prerequisitesText) && (
-              <div className="px-3 pb-1.5 -mt-1 text-[10px] italic flex flex-wrap gap-x-2">
+              <div className="px-3 pb-1.5 -mt-1 text-xs italic flex flex-wrap gap-x-2">
                 {blocked && (
                   <span className="text-destructive">⚠ {ev.missing.join(' · ')}</span>
                 )}
@@ -338,13 +338,13 @@ function ClassAbilitiesList({
             )}
             {isOpen && (
               <div className="border-t border-border bg-background/40 px-3 py-2 space-y-1.5">
-                <p className="text-[11px] italic text-muted-foreground">{a.flavor}</p>
+                <p className="text-xs italic text-muted-foreground">{a.flavor}</p>
                 <p className="text-xs text-foreground leading-relaxed">{a.mechanic}</p>
                 <details className="rounded-md border border-border/60 bg-card/60 mt-1.5">
-                  <summary className="cursor-pointer select-none px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground">
+                  <summary className="cursor-pointer select-none px-2 py-1 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground">
                     ⚙ Detalhes técnicos (Mestre)
                   </summary>
-                  <div className="border-t border-border/60 p-2 grid gap-0.5 text-[10px]">
+                  <div className="border-t border-border/60 p-2 grid gap-0.5 text-xs">
                     <div>
                       <span className="text-muted-foreground">Gatilho:</span> {a.triggerText}
                     </div>
@@ -366,7 +366,7 @@ function ClassAbilitiesList({
         );
       })}
       {future.length > 0 && (
-        <li className="rounded-lg border border-dashed border-border/60 bg-background/20 px-3 py-2 text-[10px] text-muted-foreground italic">
+        <li className="rounded-lg border border-dashed border-border/60 bg-background/20 px-3 py-2 text-xs text-muted-foreground italic">
           🔒 {future.length} habilidade(s) bloqueada(s) por nível
           (próximo desbloqueio: Nv {future[0].tier}).
         </li>
@@ -416,16 +416,16 @@ function TalentsList({
             )}
           >
             <div className="flex items-start gap-2 p-2">
-              <span className="rounded border border-accent/40 bg-accent/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-accent-foreground mt-0.5">
+              <span className="rounded border border-accent/40 bg-accent/20 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wider text-accent-foreground mt-0.5">
                 {TALENT_ACTIVATION_LABEL[t.activation]}
               </span>
               {t.minLevel != null && (
-                <span className="rounded bg-primary/30 px-1.5 py-0.5 text-[10px] font-mono font-bold text-primary mt-0.5">
+                <span className="rounded bg-primary/30 px-1.5 py-0.5 text-xs font-mono font-bold text-primary mt-0.5">
                   Nv {t.minLevel}+
                 </span>
               )}
               {t.repeatable && (
-                <span className="rounded bg-muted/40 px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground mt-0.5">
+                <span className="rounded bg-muted/40 px-1.5 py-0.5 text-xs font-bold text-muted-foreground mt-0.5">
                   ↻
                 </span>
               )}
@@ -446,7 +446,7 @@ function TalentsList({
                 disabled={blocked}
                 title={blocked ? `Requer: ${evalResult.missing.join(', ')}` : 'Escolher este talento'}
                 className={cn(
-                  'rounded-md border px-2 py-1 text-[11px] font-bold transition-colors flex items-center gap-1',
+                  'rounded-md border px-2 py-1 text-xs font-bold transition-colors flex items-center gap-1',
                   blocked
                     ? 'border-border bg-muted/40 text-muted-foreground cursor-not-allowed'
                     : 'border-accent bg-accent/20 text-accent-foreground hover:bg-accent/40',
@@ -457,7 +457,7 @@ function TalentsList({
               </button>
             </div>
             {(blocked || t.requirementsText) && (
-              <div className="px-3 pb-1.5 -mt-1 text-[10px] italic flex flex-wrap gap-x-2">
+              <div className="px-3 pb-1.5 -mt-1 text-xs italic flex flex-wrap gap-x-2">
                 {blocked && (
                   <span className="text-destructive">⚠ {evalResult.missing.join(' · ')}</span>
                 )}
@@ -468,13 +468,13 @@ function TalentsList({
             )}
             {isOpen && (
               <div className="border-t border-border bg-background/40 px-3 py-2 space-y-1.5">
-                <p className="text-[11px] italic text-muted-foreground">{t.flavor}</p>
+                <p className="text-xs italic text-muted-foreground">{t.flavor}</p>
                 <p className="text-xs text-foreground leading-relaxed">{t.mechanic}</p>
                 <details className="rounded-md border border-border/60 bg-card/60 mt-1.5">
-                  <summary className="cursor-pointer select-none px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground">
+                  <summary className="cursor-pointer select-none px-2 py-1 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground">
                     ⚙ Detalhes técnicos (Mestre)
                   </summary>
-                  <div className="border-t border-border/60 p-2 grid gap-0.5 text-[10px]">
+                  <div className="border-t border-border/60 p-2 grid gap-0.5 text-xs">
                     <div>
                       <span className="text-muted-foreground">Gatilho:</span> {t.triggerText}
                     </div>

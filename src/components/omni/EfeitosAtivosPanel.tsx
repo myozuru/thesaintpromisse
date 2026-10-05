@@ -62,7 +62,7 @@ export function EfeitosAtivosPanel() {
             <div key={ef.id} className="flex items-center justify-between gap-2 text-xs bg-muted/20 rounded px-2 py-1.5">
               <div className="min-w-0">
                 <div className="font-medium truncate">{ef.nomeSnapshot}</div>
-                <div className="text-[10px] text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   {restante === null ? '∞ permanente' : `⏱ ${formatRestante(restante)}`}
                 </div>
               </div>

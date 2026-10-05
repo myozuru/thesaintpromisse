@@ -986,7 +986,7 @@ export function SpellCreationAssistant({
           <button
             onClick={() => setMaldicaoMode(v => !v)}
             title="Alternar Modo Maldição (Grimório): cálculos por ND/Patamar"
-            className={cn('rounded-md px-2 py-1 text-[10px] font-bold border transition-colors flex items-center gap-1',
+            className={cn('rounded-md px-2 py-1 text-xs font-bold border transition-colors flex items-center gap-1',
               maldicaoMode
                 ? 'bg-red-500/20 text-red-300 border-red-500/40'
                 : 'bg-secondary/40 text-muted-foreground border-border hover:border-red-500/30')}
@@ -998,7 +998,7 @@ export function SpellCreationAssistant({
               onClick={() => setPlayerMasterToggle(v => !v)}
               disabled={difficultyLevel !== 'none'}
               title={difficultyLevel !== 'none' ? 'Requisito ativo: Modo Mestre obrigatório' : 'Alternar Modo Concreto / Modo Mestre'}
-              className={cn('rounded-md px-2 py-1 text-[10px] font-bold border transition-colors',
+              className={cn('rounded-md px-2 py-1 text-xs font-bold border transition-colors',
                 (playerMasterToggle || difficultyLevel !== 'none')
                   ? 'bg-primary/20 text-primary border-primary/40'
                   : 'bg-secondary/40 text-muted-foreground border-border hover:border-primary/30')}
@@ -1022,13 +1022,13 @@ export function SpellCreationAssistant({
           <div className="flex items-center gap-2">
             <Skull className="h-4 w-4 text-red-400" />
             <span className="text-xs font-bold uppercase tracking-wider text-red-300">Modo Maldição — Grimório F&amp;M 2.5</span>
-            <span className="text-[10px] text-muted-foreground">(sobrescreve dano/acerto/CD)</span>
+            <span className="text-xs text-muted-foreground">(sobrescreve dano/acerto/CD)</span>
           </div>
 
           {/* Patamar + ND + Dificuldade */}
           <div className="grid grid-cols-3 gap-2">
             <div className="space-y-1">
-              <label className="text-[10px] uppercase text-muted-foreground font-bold">Patamar</label>
+              <label className="text-xs uppercase text-muted-foreground font-bold">Patamar</label>
               <select value={mPatamar} onChange={(e) => setMPatamar(e.target.value as MaldicaoPatamar)}
                 className="h-8 w-full rounded border border-input bg-background px-2 text-xs text-foreground">
                 {(Object.keys(PATAMAR_LABELS) as MaldicaoPatamar[]).map(p => (
@@ -1037,7 +1037,7 @@ export function SpellCreationAssistant({
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] uppercase text-muted-foreground font-bold">
+              <label className="text-xs uppercase text-muted-foreground font-bold">
                 ND (BT +{maldicaoBT})
               </label>
               <input type="number"
@@ -1052,7 +1052,7 @@ export function SpellCreationAssistant({
                 className="h-8 w-full rounded border border-input bg-background px-2 text-xs text-foreground" />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] uppercase text-muted-foreground font-bold">Dificuldade</label>
+              <label className="text-xs uppercase text-muted-foreground font-bold">Dificuldade</label>
               <select value={mDifficulty} onChange={(e) => setMDifficulty(e.target.value as MaldicaoDifficulty)}
                 className="h-8 w-full rounded border border-input bg-background px-2 text-xs text-foreground">
                 <option value="iniciante">Iniciante</option>
@@ -1064,7 +1064,7 @@ export function SpellCreationAssistant({
 
           {/* Tipo de Alvo */}
           <div className="space-y-1">
-            <label className="text-[10px] uppercase text-muted-foreground font-bold">Tipo de Resolução</label>
+            <label className="text-xs uppercase text-muted-foreground font-bold">Tipo de Resolução</label>
             <div className="flex gap-1 flex-wrap">
               {([
                 { v: 'acerto', l: '🎯 Teste de Acerto', t: 'Dano cheio da tabela' },
@@ -1072,7 +1072,7 @@ export function SpellCreationAssistant({
                 { v: 'tr_area', l: '💥 TR em Área', t: 'Dano pela metade' },
               ] as { v: MaldicaoTarget; l: string; t: string }[]).map(o => (
                 <button key={o.v} onClick={() => setMTarget(o.v)} title={o.t}
-                  className={cn('flex-1 rounded border px-2 py-1.5 text-[10px] font-bold transition-all',
+                  className={cn('flex-1 rounded border px-2 py-1.5 text-xs font-bold transition-all',
                     mTarget === o.v ? 'bg-red-500/30 text-red-200 border-red-500/60' : 'bg-secondary/30 text-muted-foreground border-border hover:border-red-500/30')}>
                   {o.l}
                 </button>
@@ -1087,7 +1087,7 @@ export function SpellCreationAssistant({
               <span className="text-foreground">Narrativa física (-2 dados)</span>
             </label>
             <div className="flex items-center gap-2 rounded border border-input bg-background px-2 py-1">
-              <label className="text-[10px] uppercase text-muted-foreground font-bold whitespace-nowrap">Mod Atributo</label>
+              <label className="text-xs uppercase text-muted-foreground font-bold whitespace-nowrap">Mod Atributo</label>
               <input type="number" value={mAttrMod || ''}
                 onChange={(e) => setMAttrMod(parseInt(e.target.value) || 0)}
                 placeholder="0"
@@ -1097,12 +1097,12 @@ export function SpellCreationAssistant({
 
           {/* Trocas dado → acerto / CD */}
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 space-y-2">
-            <div className="text-[10px] uppercase tracking-wider font-bold text-amber-300">
+            <div className="text-xs uppercase tracking-wider font-bold text-amber-300">
               ⚖ Conversões oficiais: 1 dado = +2 acerto = +1 CD
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="flex items-center gap-2">
-                <label className="text-[10px] text-muted-foreground whitespace-nowrap">−Dados → +Acerto</label>
+                <label className="text-xs text-muted-foreground whitespace-nowrap">−Dados → +Acerto</label>
                 <button onClick={() => setMHitTrade(Math.max(0, mHitTrade - 1))} className="h-6 w-6 rounded bg-secondary text-xs font-bold">−</button>
                 <span className="text-xs font-bold text-amber-300 w-8 text-center">{mHitTrade}d → +{mHitTrade * 2}</span>
                 <button onClick={() => setMHitTrade(Math.min(mFinal.dice + mHitTrade, mHitTrade + 1))}
@@ -1110,7 +1110,7 @@ export function SpellCreationAssistant({
                   className="h-6 w-6 rounded bg-secondary text-xs font-bold disabled:opacity-30">+</button>
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-[10px] text-muted-foreground whitespace-nowrap">−Dados → +CD</label>
+                <label className="text-xs text-muted-foreground whitespace-nowrap">−Dados → +CD</label>
                 <button onClick={() => setMCDTrade(Math.max(0, mCDTrade - 1))} className="h-6 w-6 rounded bg-secondary text-xs font-bold">−</button>
                 <span className="text-xs font-bold text-amber-300 w-8 text-center">{mCDTrade}d → +{mCDTrade}</span>
                 <button onClick={() => setMCDTrade(Math.min(mFinal.dice + mCDTrade, mCDTrade + 1))}
@@ -1124,23 +1124,23 @@ export function SpellCreationAssistant({
           {conditions.length > 0 && (
             <div className="rounded-lg border border-purple-500/30 bg-purple-500/5 p-2 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-purple-300">
+                <span className="text-xs uppercase tracking-wider font-bold text-purple-300">
                   Custo de Condições ({conditions.length})
                 </span>
                 <div className="flex gap-1">
                   <button onClick={() => setMCondCost('pe')}
-                    className={cn('rounded px-2 py-0.5 text-[10px] font-bold border',
+                    className={cn('rounded px-2 py-0.5 text-xs font-bold border',
                       mCondCost === 'pe' ? 'bg-pe/20 text-pe border-pe/40' : 'bg-secondary/30 text-muted-foreground border-border')}>
                     Pagar em PE
                   </button>
                   <button onClick={() => setMCondCost('nd')}
-                    className={cn('rounded px-2 py-0.5 text-[10px] font-bold border',
+                    className={cn('rounded px-2 py-0.5 text-xs font-bold border',
                       mCondCost === 'nd' ? 'bg-red-500/20 text-red-300 border-red-500/40' : 'bg-secondary/30 text-muted-foreground border-border')}>
                     Reduzir NDs
                   </button>
                 </div>
               </div>
-              <div className="text-[10px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 Fraca: 2PE/1ND • Média: 5PE/2ND • Forte: 8PE/3ND • Extrema: 10PE/4ND (não mescla)
               </div>
               <div className="text-xs font-bold">
@@ -1154,27 +1154,27 @@ export function SpellCreationAssistant({
           {/* Resultado Final do Grimório */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-lg border border-red-500/40 bg-red-950/40 p-2">
             <div>
-              <div className="text-[10px] text-muted-foreground">Tabela ({PATAMAR_LABELS[mPatamar]} ND{mFinalND})</div>
+              <div className="text-xs text-muted-foreground">Tabela ({PATAMAR_LABELS[mPatamar]} ND{mFinalND})</div>
               <div className="text-sm font-bold text-foreground">{mGrimorioPack.raw}</div>
             </div>
             <div>
-              <div className="text-[10px] text-muted-foreground">Dano Final</div>
+              <div className="text-xs text-muted-foreground">Dano Final</div>
               <div className="text-base font-bold text-hp">
                 {mDiceStr || '—'}{mFinal.fixed > 0 ? `+${mFinal.fixed}` : ''}
               </div>
             </div>
             <div>
-              <div className="text-[10px] text-muted-foreground">Acerto</div>
+              <div className="text-xs text-muted-foreground">Acerto</div>
               <div className="text-base font-bold text-neon-green">
                 +{mFinal.acerto}
-                <span className="text-[10px] text-muted-foreground ml-1">(base {mFinal.acertoBase})</span>
+                <span className="text-xs text-muted-foreground ml-1">(base {mFinal.acertoBase})</span>
               </div>
             </div>
             <div>
-              <div className="text-[10px] text-muted-foreground">CD</div>
+              <div className="text-xs text-muted-foreground">CD</div>
               <div className="text-base font-bold text-neon-yellow">
                 {mFinal.cd}
-                <span className="text-[10px] text-muted-foreground ml-1">(base {mFinal.cdBase})</span>
+                <span className="text-xs text-muted-foreground ml-1">(base {mFinal.cdBase})</span>
               </div>
             </div>
           </div>
@@ -1351,7 +1351,7 @@ export function SpellCreationAssistant({
             🎯 Atributo OU Teste de Resistência (alvo)
           </label>
           <div className="space-y-1">
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Atributo</div>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">Atributo</div>
             <div className="flex gap-1 flex-wrap">
               {SAVE_ATTRS.map(s => (
                 <button
@@ -1368,7 +1368,7 @@ export function SpellCreationAssistant({
             </div>
           </div>
           <div className="space-y-1">
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Teste de Resistência</div>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">Teste de Resistência</div>
             <div className="flex gap-1 flex-wrap">
               {DEFAULT_SAVING_THROWS.map(s => (
                 <button
@@ -1384,7 +1384,7 @@ export function SpellCreationAssistant({
               ))}
             </div>
           </div>
-          <p className="text-[10px] text-muted-foreground">O alvo rolará d20 + bônus de {saveAttr} (+ ½ nível, treino, etc.) contra a CD.</p>
+          <p className="text-xs text-muted-foreground">O alvo rolará d20 + bônus de {saveAttr} (+ ½ nível, treino, etc.) contra a CD.</p>
         </div>
       )}
 
@@ -1860,7 +1860,7 @@ export function SpellCreationAssistant({
                     ))}
                   </select>
                   {!rdDamageType && (
-                    <p className="text-[11px] text-hp italic">RD genérica não é mais permitida — escolha o tipo de dano.</p>
+                    <p className="text-xs text-hp italic">RD genérica não é mais permitida — escolha o tipo de dano.</p>
                   )}
                 </div>
               )}

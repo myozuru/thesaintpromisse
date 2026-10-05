@@ -1356,7 +1356,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
         <span className="font-semibold text-primary inline-flex items-center gap-1.5 flex-wrap">
           {spell.name} — <span className="font-mono text-xs">Nv.{levelLabel}</span> — <span title={isErHealing ? `Energia Reversa: ${baseEffectiveCostPE} PER × 2 = ${effectiveCostPE} PE` : undefined}>PE:{effectiveCostPE}{isErHealing && <span className="text-neon-green text-xs ml-1">(ER ×2)</span>}{hasCondenado && <span className="text-hp text-xs ml-1">(⛓+1)</span>}</span>
           {targetModeBadge && (
-            <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-extrabold tracking-wider", targetModeBadge.cls)} title={targetModeBadge.label}>
+            <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-extrabold tracking-wider", targetModeBadge.cls)} title={targetModeBadge.label}>
               {targetModeBadge.code}
             </span>
           )}
@@ -1470,7 +1470,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
                 <span className="text-xs font-bold uppercase tracking-wider text-primary">
                   🌀 Fundamentos
                 </span>
-                <span className="text-[10px] font-mono text-muted-foreground">
+                <span className="text-xs font-mono text-muted-foreground">
                   +{fundOutcome.extraPe} PE extra
                 </span>
               </div>
@@ -1512,7 +1512,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
               {fundOutcome.activeLabels.length > 0 && (
                 <div className="flex flex-wrap gap-1 pt-1 border-t border-primary/20">
                   {fundOutcome.activeLabels.map((lbl, i) => (
-                    <span key={i} className="rounded bg-primary/10 border border-primary/30 px-1.5 py-0.5 text-[10px] font-mono text-primary">
+                    <span key={i} className="rounded bg-primary/10 border border-primary/30 px-1.5 py-0.5 text-xs font-mono text-primary">
                       {lbl}
                     </span>
                   ))}
@@ -1553,7 +1553,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
                   ⚡ Sobrecarregar
                 </span>
                 <div className="flex items-center gap-1">
-                  <span className="text-[10px] text-muted-foreground">PE extra:</span>
+                  <span className="text-xs text-muted-foreground">PE extra:</span>
                   <input
                     type="number"
                     min={0}
@@ -1562,7 +1562,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
                     onChange={(e) => setOverchargePe(Math.max(0, Math.min(getTrainingBonusByLevel(source.level), parseInt(e.target.value) || 0)))}
                     className="h-6 w-12 rounded border border-input bg-background px-1 text-center font-mono text-xs"
                   />
-                  <span className="text-[10px] text-muted-foreground">→ CD +{overchargePe} (máx {getTrainingBonusByLevel(source.level)})</span>
+                  <span className="text-xs text-muted-foreground">→ CD +{overchargePe} (máx {getTrainingBonusByLevel(source.level)})</span>
                 </div>
               </div>
             </div>
@@ -1578,7 +1578,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
                   💢 Potência Concentrada
                 </span>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     +{5 * (spell.spellLevel === 'Técnica Máxima' ? 10 : Number(spell.spellLevel) || 1)} dano · consome Movimento
                   </span>
                   <input
@@ -1760,7 +1760,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
                   <span className="font-medium text-foreground text-sm min-w-[80px]">{ta.name}</span>
                   {/* CA do alvo oculta — apenas o resultado (acerto/erro) é revelado. */}
                   <div className="flex items-center gap-1">
-                    <span className="text-[10px] text-muted-foreground uppercase">Roll:</span>
+                    <span className="text-xs text-muted-foreground uppercase">Roll:</span>
                     {isRolling ? (
                       <span className="h-7 w-16 inline-flex items-center justify-center rounded border border-primary/50 bg-primary/10 px-2 text-sm text-primary font-mono">
                         <Dice6 className="h-4 w-4 animate-spin" />
@@ -1852,7 +1852,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
                 </div>
                 {r.diceRolls && r.diceRolls.length > 0 && r.diceSides && (
                   <div className="mt-1.5 rounded-md border border-primary/20 bg-primary/5 px-2 py-1.5 space-y-1">
-                    <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                    <div className="flex items-center justify-between text-xs font-mono uppercase tracking-wider text-muted-foreground">
                       <span>{r.diceRolls.length}d{r.diceSides}{r.isCrit ? ' (crítico ×2)' : ''}</span>
                       <span>
                         Soma: <span className="text-foreground font-bold">{r.diceRolls.reduce((a, b) => a + b, 0)}</span>

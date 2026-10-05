@@ -296,7 +296,7 @@ function ItemCard({
                       <span className="text-muted-foreground italic">Sem efeitos configurados.</span>
                     )}
                 </div>
-                <p className="text-[11px] text-muted-foreground italic mt-1">
+                <p className="text-xs text-muted-foreground italic mt-1">
                   Aplicado aos vinculados ao Gastar. Bloqueado para origem CAM.
                 </p>
               </div>
@@ -385,7 +385,7 @@ function ItemCard({
                     </button>
                   ))}
                 </div>
-                <p className="text-[11px] text-muted-foreground italic mt-1">
+                <p className="text-xs text-muted-foreground italic mt-1">
                   Cria uma instância no inventário do personagem (pode ser equipada na ficha).
                 </p>
               </div>
@@ -560,7 +560,7 @@ function ItemForm({
               </div>
             )})}
           </div>
-          <p className="text-[11px] text-muted-foreground italic mt-1">Itens gerais concedem bônus quando vinculados; acessórios precisam estar equipados em slot.</p>
+          <p className="text-xs text-muted-foreground italic mt-1">Itens gerais concedem bônus quando vinculados; acessórios precisam estar equipados em slot.</p>
         </div>
 
         {/* Comida / Consumível restaurador */}
@@ -598,7 +598,7 @@ function ItemForm({
                   </div>
                 ))}
               </div>
-              <p className="text-[11px] text-muted-foreground italic mt-1">
+              <p className="text-xs text-muted-foreground italic mt-1">
                 Ao Gastar, aplica os efeitos aos personagens vinculados. Cada ponto de Fome cobre ~1 hora. Origem CAM não recebe efeito.
               </p>
             </>

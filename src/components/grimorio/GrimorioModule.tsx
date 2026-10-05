@@ -103,7 +103,7 @@ export function GrimorioModule() {
                     {isLinked(c) && (
                       <span
                         title="Ficha vinculada"
-                        className="inline-flex items-center gap-0.5 rounded bg-emerald-500/15 px-1 py-0.5 text-[10px] font-medium text-emerald-400"
+                        className="inline-flex items-center gap-0.5 rounded bg-emerald-500/15 px-1 py-0.5 text-xs font-medium text-emerald-400"
                       >
                         <CheckCircle2 className="h-3 w-3" /> Ficha
                       </span>

@@ -43,7 +43,7 @@ export function PendingAoEOverlay() {
           <span className="font-bold text-foreground">
             Posicionar AoE — {pending.sourceLabel}
           </span>
-          <span className="text-[10px] text-muted-foreground">
+          <span className="text-xs text-muted-foreground">
             {isDirected
               ? 'Clique no ponto de origem e arraste na direção desejada · ESC ou botão direito cancela'
               : 'Clique no mapa para centrar a área · ESC ou botão direito cancela'}
@@ -54,7 +54,7 @@ export function PendingAoEOverlay() {
           if (!current) return null;
           const Icon = current.Icon;
           return (
-            <div className="flex items-center gap-1 border-l border-border/60 pl-2 text-[10px] font-medium text-primary">
+            <div className="flex items-center gap-1 border-l border-border/60 pl-2 text-xs font-medium text-primary">
               <Icon className="h-3 w-3" />
               {current.label}
             </div>

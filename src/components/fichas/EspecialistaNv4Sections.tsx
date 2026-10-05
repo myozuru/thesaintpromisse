@@ -168,7 +168,7 @@ function TecnicasAvanco({ character: c, possibleTargets, mainWeapon, rangedWeapo
 
   return (
     <div className={box} data-testid="tecnicas-avanco">
-      <div className="text-[11px] font-bold uppercase tracking-wider text-amber-300">Técnicas de Avanço · Preparo {preparo}</div>
+      <div className="text-xs font-bold uppercase tracking-wider text-amber-300">Técnicas de Avanço · Preparo {preparo}</div>
       {!fase && (
         <>
           <div className="flex flex-wrap items-center gap-1">
@@ -183,7 +183,7 @@ function TecnicasAvanco({ character: c, possibleTargets, mainWeapon, rangedWeapo
               Sombra Descendente (3 PP · Ação Comum)
             </button>
           </div>
-          <p className="text-[10px] text-muted-foreground">Bumerangue: clique no mapa onde parar (até 6 m), ataque e volte. Sombra: avança, ataca e pode cair sobre outro inimigo.</p>
+          <p className="text-xs text-muted-foreground">Bumerangue: clique no mapa onde parar (até 6 m), ataque e volte. Sombra: avança, ataca e pode cair sobre outro inimigo.</p>
         </>
       )}
       {fase?.k === 'retorno' && (
@@ -232,7 +232,7 @@ function BuscarOportunidade({ character: c }: { character: Character }) {
           Testar Percepção (Ação Livre)
         </button>
       </div>
-      <p className="text-[10px] text-muted-foreground">
+      <p className="text-xs text-muted-foreground">
         {inCombat ? `CD ${cdBuscar(inimigosVivos().length)} · ${pend.length} inimigo(s) ainda não testado(s) neste combate.` : 'Só em combate.'}
       </p>
       {ganhos.length > 0 && (
@@ -273,7 +273,7 @@ function CompensarErro({ character: c }: { character: Character }) {
         </button>
         <button type="button" className="text-muted-foreground text-xs" onClick={() => useCompensarErroStore.getState().set(null)}>✕</button>
       </div>
-      {!chk.ok && <p className="text-[10px] text-muted-foreground">{chk.reason}</p>}
+      {!chk.ok && <p className="text-xs text-muted-foreground">{chk.reason}</p>}
     </div>
   );
 }

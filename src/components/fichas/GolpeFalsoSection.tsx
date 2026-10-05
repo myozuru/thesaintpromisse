@@ -36,7 +36,7 @@ export function GolpeFalsoSection({ character: c, target }: { character: Charact
     if (prontos.length === 0) return null;
     return (
       <div
-        className="rounded-md border border-primary/40 bg-primary/10 px-2 py-1 text-[11px] text-foreground"
+        className="rounded-md border border-primary/40 bg-primary/10 px-2 py-1 text-xs text-foreground"
         data-testid="golpe-falso-aviso"
       >
         🎭 <b>Golpe Falso</b> disponível: {prontos.map((p) => p.name).join(', ')} pode reagir e dar vantagem neste ataque.
@@ -55,7 +55,7 @@ export function GolpeFalsoSection({ character: c, target }: { character: Charact
     return d > alcance + 0.05 ? ` · ${fmt(d)} m (fora de alcance)` : ` · ${fmt(d)} m (ao alcance)`;
   };
   const chk = aliadoId && inimigoId ? golpeFalsoPodeUsar(c.id, aliadoId, inimigoId) : { ok: false as const };
-  const sel = 'w-full rounded border border-border bg-background px-2 py-1 text-[11px] text-foreground';
+  const sel = 'w-full rounded border border-border bg-background px-2 py-1 text-xs text-foreground';
 
   const run = async () => {
     setBusy(true);
@@ -75,7 +75,7 @@ export function GolpeFalsoSection({ character: c, target }: { character: Charact
       className="space-y-1.5 rounded-md border border-primary/40 bg-primary/5 p-2"
       data-testid="golpe-falso-secao"
     >
-      <p className="text-[11px] font-bold text-primary">
+      <p className="text-xs font-bold text-primary">
         🎭 Golpe Falso — reação ({c.reactionsCurrent ?? 0} disp.)
         {alcance !== null && <span className="ml-1 font-normal text-muted-foreground">· alcance {alcance} m</span>}
       </p>
@@ -92,14 +92,14 @@ export function GolpeFalsoSection({ character: c, target }: { character: Charact
         data-testid="golpe-falso-usar"
         disabled={!chk.ok || busy}
         onClick={run}
-        className="w-full rounded border border-primary bg-primary/25 px-2 py-1 text-[11px] font-bold text-primary hover:bg-primary/45 disabled:opacity-40"
+        className="w-full rounded border border-primary bg-primary/25 px-2 py-1 text-xs font-bold text-primary hover:bg-primary/45 disabled:opacity-40"
       >
         Fingir o golpe (reação)
       </button>
       {!chk.ok && aliadoId && inimigoId && 'reason' in chk && chk.reason && (
-        <p className="text-[11px] text-destructive">{chk.reason}</p>
+        <p className="text-xs text-destructive">{chk.reason}</p>
       )}
-      {msg && <p className="text-[11px] text-muted-foreground" data-testid="golpe-falso-msg">{msg}</p>}
+      {msg && <p className="text-xs text-muted-foreground" data-testid="golpe-falso-msg">{msg}</p>}
     </div>
   );
 }

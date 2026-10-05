@@ -52,7 +52,7 @@ export function MeasureSettings() {
       </button>
 
       {showHelp && (
-        <p className="text-muted-foreground text-[11px] leading-relaxed">
+        <p className="text-muted-foreground text-xs leading-relaxed">
           Atalho: segure <kbd className="px-1 rounded bg-secondary border border-border">R</kbd> para medir sem trocar a ferramenta. Solte com <kbd className="px-1 rounded bg-secondary border border-border">Shift</kbd> para fixar a régua. Clique-direito em uma régua para removê-la.
         </p>
       )}
@@ -64,5 +64,5 @@ function Header({ label }: { label: string }) {
   return <div className="text-foreground/80 text-xs font-semibold uppercase tracking-wider">{label}</div>;
 }
 function Label({ children }: { children: React.ReactNode }) {
-  return <div className="text-muted-foreground text-[11px] mb-1">{children}</div>;
+  return <div className="text-muted-foreground text-xs mb-1">{children}</div>;
 }

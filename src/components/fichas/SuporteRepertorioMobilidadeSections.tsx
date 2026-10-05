@@ -83,7 +83,7 @@ export function RepertorioSection({ c }: { c: Character }) {
         </div>
       )}
       {(chosen.length > 0 || c.repertorioBonusSkill) && (
-        <button onClick={() => resetarRepertorio(c)} className="text-[11px] text-muted-foreground underline hover:text-foreground">
+        <button onClick={() => resetarRepertorio(c)} className="text-xs text-muted-foreground underline hover:text-foreground">
           Refazer escolhas
         </button>
       )}
@@ -100,7 +100,7 @@ export function MobilidadeSection({ c }: { c: Character }) {
         <Footprints className="h-3.5 w-3.5 text-primary" /> Mobilidade Avançada
         <span className="font-normal text-muted-foreground">+{getMobilidadeBonus(c)} m de movimento</span>
       </div>
-      <div className="text-[11px] text-muted-foreground">
+      <div className="text-xs text-muted-foreground">
         Quando um aliado cair a 0 PV, você recebe a pergunta para reagir e mover {getMobilidadeReacaoMeters(c).toFixed(1)} m na direção dele.
       </div>
       {reacao > 0 && (

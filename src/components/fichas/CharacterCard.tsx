@@ -1413,7 +1413,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
             <span className="truncate min-w-0 flex-1 basis-32 font-semibold text-foreground">{c.name}</span>
             {(c.omniFlags?.bloqueio_total ?? 0) >= 1 && (
               <span
-                className="flex-shrink-0 inline-flex items-center gap-1 rounded-full border border-sky-400/50 bg-sky-500/15 px-2 py-0.5 text-[10px] font-semibold text-sky-300 shadow-[0_0_12px_rgba(56,189,248,0.45)] animate-pulse"
+                className="flex-shrink-0 inline-flex items-center gap-1 rounded-full border border-sky-400/50 bg-sky-500/15 px-2 py-0.5 text-xs font-semibold text-sky-300 shadow-[0_0_12px_rgba(56,189,248,0.45)] animate-pulse"
                 title="Bloqueio Total: o próximo dano em Vida Atual será absorvido."
                 aria-label="Bloqueio Total ativo"
               >
@@ -1460,7 +1460,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
               {buffCA > 0 && <span className="ml-0.5 text-xs text-pe align-top">+{buffCA}</span>}
             </span>
             {hasDirectionalDef && (
-              <div className="mt-0.5 flex gap-1 text-[9px] font-mono leading-none text-primary/70">
+              <div className="mt-0.5 flex gap-1 text-xs font-mono leading-none text-primary/70">
                 <span title="Defesa contra ataques corpo-a-corpo">CaC {caVsMelee + buffCA}</span>
                 <span className="text-primary/30">·</span>
                 <span title="Defesa contra ataques à distância">Dist {caVsRanged + buffCA}</span>
@@ -1594,7 +1594,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                 <button
                   onClick={(e) => { e.stopPropagation(); useCharacterStore.getState().spendLuck(c.id); }}
                   disabled={(c.luckCurrent ?? 0) <= 0}
-                  className="ml-1 rounded border border-primary/40 bg-primary/15 px-1.5 py-0.5 text-[10px] uppercase font-bold text-primary hover:bg-primary/25 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="ml-1 rounded border border-primary/40 bg-primary/15 px-1.5 py-0.5 text-xs uppercase font-bold text-primary hover:bg-primary/25 disabled:opacity-40 disabled:cursor-not-allowed"
                   title="Gastar 1 Sorte: re-rola a última rolagem e fica com o MAIOR (exceto falha crítica). Pode repetir até esgotar. Reseta no Descanso Longo."
                 >
                   Gastar
@@ -2054,7 +2054,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                           if (!trained) updateCharacter(c.id, { [trainedKey]: true } as any);
                         }}
                         disabled={trained && !editMode}
-                        className={cn('w-4 h-4 rounded-sm border text-[7px] font-bold flex items-center justify-center disabled:cursor-not-allowed',
+                        className={cn('w-4 h-4 rounded-sm border text-xs font-bold flex items-center justify-center disabled:cursor-not-allowed',
                           trained ? 'bg-primary/30 border-primary text-primary' : 'border-border text-muted-foreground/40 hover:border-primary/50')}
                         title={
                           editMode
@@ -2064,7 +2064,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                       >T</button>
                     ) : trained ? (
                       <span
-                        className="w-4 h-4 rounded-sm border bg-primary/30 border-primary text-primary text-[7px] font-bold flex items-center justify-center"
+                        className="w-4 h-4 rounded-sm border bg-primary/30 border-primary text-primary text-xs font-bold flex items-center justify-center"
                         title={`Treinamento ativo (+${getMasteryBonus(c.level)}) — apenas o Mestre pode conceder`}
                       >T</span>
                     ) : null}
@@ -2131,7 +2131,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                       >
                         <Crosshair className="h-3 w-3" />
                         {attackTargets[atkType].length > 0 && (
-                          <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-primary text-[8px] font-bold text-primary-foreground flex items-center justify-center">
+                          <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-primary text-xs font-bold text-primary-foreground flex items-center justify-center">
                             {attackTargets[atkType].length}
                           </span>
                         )}
@@ -2687,7 +2687,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
           )}
 
           <Section icon={<ScrollText className="h-4 w-4" />} title="Perícias">
-            <label className="mb-1 flex items-center gap-2 text-[11px] text-muted-foreground" data-testid="chamativa-label">
+            <label className="mb-1 flex items-center gap-2 text-xs text-muted-foreground" data-testid="chamativa-label">
               <input
                 type="checkbox"
                 data-testid="chamativa-check"
@@ -3230,7 +3230,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                               }}
                               title={`Cargas restantes — clique para recarregar (${inv.usosTotais} máx)`}
                               className={cn(
-                                'flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold transition-colors',
+                                'flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs font-semibold transition-colors',
                                 (inv.usosRestantes ?? 0) === 0
                                   ? 'border-destructive/50 bg-destructive/15 text-destructive hover:bg-destructive/25'
                                   : (inv.usosRestantes ?? 0) <= Math.ceil((inv.usosTotais ?? 1) / 3)
@@ -3240,7 +3240,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                             >
                               ⚡ {inv.usosRestantes ?? 0}/{inv.usosTotais}
                             </button>
-                            <span className="text-[10px] text-muted-foreground">
+                            <span className="text-xs text-muted-foreground">
                               (recarga: {inv.entity.usos?.recarga ?? 'manual'})
                             </span>
                           </>
@@ -3261,7 +3261,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                           if (!usaUsos) return null;
                           return (
                             <span
-                              className="rounded-full border border-amber-500/50 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-400"
+                              className="rounded-full border border-amber-500/50 bg-amber-500/15 px-1.5 py-0.5 text-xs font-semibold text-amber-400"
                               title="Este item usa @ITEM.usos_restantes mas a aba 'Custos e Usos' não foi preenchida no Construtor — o efeito não vai consumir cargas."
                             >
                               ⚠ Sem cargas configuradas
@@ -3672,7 +3672,7 @@ function SkillBlock({
                     }}
                     disabled={(tDisabled && !s.trained) || (isPlayer && s.trained)}
                     className={cn(
-                      'w-4 h-4 rounded-sm border text-[8px] font-bold leading-none flex items-center justify-center transition-all disabled:cursor-not-allowed',
+                      'w-4 h-4 rounded-sm border text-xs font-bold leading-none flex items-center justify-center transition-all disabled:cursor-not-allowed',
                       s.trained ? 'bg-primary/30 border-primary text-primary' : 'border-border text-muted-foreground/40 hover:border-primary/50',
                       tDisabled && !s.trained && !s.mastery && 'opacity-30'
                     )}
@@ -3700,7 +3700,7 @@ function SkillBlock({
                     }}
                     disabled={(mDisabled && !s.mastery) || (isPlayer && s.mastery)}
                     className={cn(
-                      'w-4 h-4 rounded-sm border text-[8px] font-bold leading-none flex items-center justify-center transition-all disabled:cursor-not-allowed',
+                      'w-4 h-4 rounded-sm border text-xs font-bold leading-none flex items-center justify-center transition-all disabled:cursor-not-allowed',
                       s.mastery ? 'bg-pe/30 border-pe text-pe' : 'border-border text-muted-foreground/40 hover:border-pe/50',
                       mDisabled && !s.trained && !s.mastery && 'opacity-30'
                     )}
@@ -4631,7 +4631,7 @@ function AccessorySlotsSection({
                   }}
                   title={`Cargas restantes — clique para recarregar (${omniEquipped.usosTotais} máx)`}
                   className={cn(
-                    'flex items-center gap-0.5 rounded-full border px-1.5 py-0 text-[10px] font-semibold transition-colors',
+                    'flex items-center gap-0.5 rounded-full border px-1.5 py-0 text-xs font-semibold transition-colors',
                     (omniEquipped.usosRestantes ?? 0) === 0
                       ? 'border-destructive/50 bg-destructive/15 text-destructive hover:bg-destructive/25'
                       : (omniEquipped.usosRestantes ?? 0) <= Math.ceil((omniEquipped.usosTotais ?? 1) / 3)
@@ -4659,7 +4659,7 @@ function AccessorySlotsSection({
                 return (
                   <button
                     onClick={(e) => { e.stopPropagation(); onUseOmni(omniEquipped); }}
-                    className={`flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-semibold transition-colors ${cls}`}
+                    className={`flex items-center gap-1 rounded border px-1.5 py-0.5 text-xs font-semibold transition-colors ${cls}`}
                     title={`${label} com ${omniEquipped.entity.nome}`}
                   >
                     <Sword className="h-2.5 w-2.5" /> {label.toUpperCase()}
@@ -4823,7 +4823,7 @@ function ActionCostBadge({ actionId }: { actionId?: string }) {
   const cls = palette[actionId] ?? 'bg-muted/40 border-border text-muted-foreground';
   return (
     <span
-      className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${cls}`}
+      className={`text-xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${cls}`}
       title={`${meta.label} · custo ${meta.cost}`}
     >
       {meta.label}

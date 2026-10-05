@@ -124,20 +124,20 @@ export function AuthScreen() {
                   {avatar ? <img src={avatar} alt="Foto escolhida" className="h-full w-full object-cover" /> : <ImagePlus className="text-primary/70" />}
                 </Button>
                 <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) pickAvatar(f); e.target.value = ''; }} />
-                <p className="mt-2 text-[10px] uppercase text-muted-foreground tracking-[0.12em]">Foto opcional</p>
+                <p className="mt-2 text-xs uppercase text-muted-foreground tracking-[0.12em]">Foto opcional</p>
               </div>
             </div>
           </div>
 
           <label className="block space-y-2">
-            <span className="ml-1 text-[11px] uppercase text-muted-foreground tracking-[0.12em]">Nick</span>
+            <span className="ml-1 text-xs uppercase text-muted-foreground tracking-[0.12em]">Nick</span>
             <div className="relative">
             <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input value={nick} onChange={(e) => setNick(e.target.value)} placeholder="Ex: noctis" maxLength={20} autoComplete="username" spellCheck={false} disabled={busy} className={input} />
             </div>
           </label>
           <label className="block space-y-2">
-            <span className="ml-1 text-[11px] uppercase text-muted-foreground tracking-[0.12em]">Senha</span>
+            <span className="ml-1 text-xs uppercase text-muted-foreground tracking-[0.12em]">Senha</span>
             <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo de 6 caracteres" autoComplete={tab === 'login' ? 'current-password' : 'new-password'} disabled={busy} className={input} />
@@ -150,7 +150,7 @@ export function AuthScreen() {
           <div className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${tab === 'signup' ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
             <div className="overflow-hidden">
               <label className="block space-y-2">
-                <span className="ml-1 text-[11px] uppercase text-muted-foreground tracking-[0.12em]">Confirmar senha</span>
+                <span className="ml-1 text-xs uppercase text-muted-foreground tracking-[0.12em]">Confirmar senha</span>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input type={showPassword ? 'text' : 'password'} value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Repita sua senha" autoComplete="new-password" disabled={busy} className={input} />

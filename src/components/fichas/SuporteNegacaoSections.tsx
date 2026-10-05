@@ -18,7 +18,7 @@ export function NegacaoCriticaSection({ c }: { c: Character }) {
       <div className="flex items-center gap-2 text-xs font-bold text-foreground">
         <ShieldAlert className="h-3.5 w-3.5 text-primary" /> Negação Crítica
       </div>
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-xs text-muted-foreground">
         Usos nesta cena: {getNegacaoUsesLeft(c)}/{getNegacaoMaxUses(c)} · {NEGACAO_PE} PE. Quando um aliado a até 12 m tirar 1 natural, você recebe um aviso para negar.
       </p>
     </div>

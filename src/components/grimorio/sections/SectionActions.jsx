@@ -1397,7 +1397,7 @@ function ActionForm({ derived, draft, typeOptions, onAdd, onCancel }) {
           return (
             <div className="bg-slate-900/60 border border-slate-700 rounded p-3 space-y-1.5">
               <div className="flex items-center justify-between">
-                <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">
+                <div className="text-xs uppercase tracking-widest text-slate-500 font-bold">
                   Texto Final
                 </div>
                 <button
@@ -1409,7 +1409,7 @@ function ActionForm({ derived, draft, typeOptions, onAdd, onCancel }) {
                     color:       isMechanicalTextLocked ? "rgb(100 116 139)"       : "rgb(251 191 36)",
                     background:  isMechanicalTextLocked ? "transparent"            : "rgb(120 53 15 / 0.2)",
                   }}
-                  className="flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] transition-colors"
+                  className="flex items-center gap-1 px-1.5 py-0.5 rounded border text-xs transition-colors"
                 >
                   {isMechanicalTextLocked
                     ? <><Lock   className="w-3 h-3" /> Auto</>
@@ -1428,7 +1428,7 @@ function ActionForm({ derived, draft, typeOptions, onAdd, onCancel }) {
                 }`}
               />
               {!isMechanicalTextLocked && (
-                <p className="text-[10px] text-amber-500/70 italic">
+                <p className="text-xs text-amber-500/70 italic">
                   Editando manualmente — feche o cadeado para voltar ao texto automático.
                 </p>
               )}
@@ -1460,7 +1460,7 @@ function TradeRow({ label, hint, value, onChange, step = 1, blocked, max }) {
     <div className={`flex items-center gap-2 ${blocked ? "opacity-40" : ""}`}>
       <div className="flex-1 min-w-0">
         <div className="text-xs text-slate-300 leading-tight">{label}</div>
-        <div className="text-[10px] text-slate-500 leading-tight">{hint}</div>
+        <div className="text-xs text-slate-500 leading-tight">{hint}</div>
       </div>
       <div className="flex items-center gap-1.5 flex-shrink-0">
         <button
@@ -1691,7 +1691,7 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
             </div>
             <div>
               <FieldLabel hint={isFieldAuto('cd') ? "auto (tabela ND)" : "manual"}>
-                CD{tradeCdDelta !== 0 && <span className="text-slate-500 font-normal ml-1 text-[10px]">(base)</span>}
+                CD{tradeCdDelta !== 0 && <span className="text-slate-500 font-normal ml-1 text-xs">(base)</span>}
               </FieldLabel>
               <div className="flex gap-1">
                 {isFieldAuto('cd') ? (
@@ -1714,7 +1714,7 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
                 </button>
               </div>
               {tradeCdDelta !== 0 && (
-                <div className="mt-1 text-[11px] text-slate-400">
+                <div className="mt-1 text-xs text-slate-400">
                   Final: <span className="font-mono text-white font-semibold">{cdBase + tradeCdDelta}</span>
                   <span className="text-slate-500 ml-1">
                     ({tradeCdDelta > 0 ? "+" : ""}{tradeCdDelta} trades)
@@ -1728,7 +1728,7 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
           <div className="grid grid-cols-2 gap-3">
             <div>
               <FieldLabel hint={isFieldAuto('toHit') ? "auto (ND + Mod Técn)" : "manual"}>
-                Bônus de Acerto{tradeToHitDelta !== 0 && <span className="text-slate-500 font-normal ml-1 text-[10px]">(base)</span>}
+                Bônus de Acerto{tradeToHitDelta !== 0 && <span className="text-slate-500 font-normal ml-1 text-xs">(base)</span>}
               </FieldLabel>
               <div className="flex gap-1">
                 {isFieldAuto('toHit') ? (
@@ -1751,7 +1751,7 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
                 </button>
               </div>
               {tradeToHitDelta !== 0 && (
-                <div className="mt-1 text-[11px] text-slate-400">
+                <div className="mt-1 text-xs text-slate-400">
                   Final: <span className="font-mono text-white font-semibold">+{toHitBase + tradeToHitDelta}</span>
                   <span className="text-slate-500 ml-1">
                     ({tradeToHitDelta > 0 ? "+" : ""}{tradeToHitDelta} trades)
@@ -1786,7 +1786,7 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
             </button>
           ))}
         </div>
-        <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] font-mono">
+        <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs font-mono">
           <span className="text-slate-500">
             Alcance Máx: <span className="text-slate-300">{params.range}m</span>
           </span>
@@ -1879,7 +1879,7 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
                     });
                   }}
                   title={opt.id === "cone_attached" ? "Cone com apex no conjurador, mirando na direção do cursor (grudado no personagem)" : opt.id === "line_attached" ? "Linha que parte do conjurador, mirando na direção do cursor (grudada no personagem)" : opt.label}
-                  className={`h-9 rounded border text-[11px] font-medium transition-colors focus:outline-none ${
+                  className={`h-9 rounded border text-xs font-medium transition-colors focus:outline-none ${
                     active
                       ? "border-purple-500 bg-purple-600/30 text-purple-100"
                       : "border-slate-700 bg-slate-950 text-slate-300 hover:bg-slate-900"
@@ -1911,7 +1911,7 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
               <span className="min-w-[2ch] text-center font-mono text-sm text-white">{steps}</span>
               <button type="button" onClick={() => setSteps(steps + 1)} disabled={steps >= maxSteps}
                 className="w-8 h-8 rounded border border-slate-700 bg-slate-950 text-slate-200 disabled:opacity-40">+</button>
-              <span className="text-[11px] text-slate-400">
+              <span className="text-xs text-slate-400">
                 {steps > 0
                   ? `Área −${String(steps * AREA_TRADE_STEP_M).replace(".", ",")}m · Alcance +${steps * RANGE_TRADE_STEP_M}m`
                   : maxSteps > 0 ? "Sem troca" : "Área já está no mínimo (1,5m)"}
@@ -1940,7 +1940,7 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
               <span className="min-w-[2ch] text-center font-mono text-sm text-white">{wSteps}</span>
               <button type="button" onClick={() => setWSteps(wSteps + 1)} disabled={wSteps >= maxWSteps}
                 className="w-8 h-8 rounded border border-slate-700 bg-slate-950 text-slate-200 disabled:opacity-40">+</button>
-              <span className="text-[11px] text-slate-400">
+              <span className="text-xs text-slate-400">
                 {wSteps > 0
                   ? `Largura ${String(curWidth).replace(".", ",")}m · Comprimento −${String(wSteps * LINE_LENGTH_COST_M).replace(".", ",")}m`
                   : maxWSteps > 0 ? `Largura 1,5m (padrão)` : "Comprimento insuficiente para alargar"}
@@ -1959,7 +1959,7 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
             <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
               Dano Base
               {isAutoCalc && (
-                <span className="text-[10px] bg-purple-900/40 border border-purple-800 text-purple-300 px-1.5 py-0.5 rounded font-normal tracking-normal">
+                <span className="text-xs bg-purple-900/40 border border-purple-800 text-purple-300 px-1.5 py-0.5 rounded font-normal tracking-normal">
                   Auto
                 </span>
               )}
@@ -1968,7 +1968,7 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
               type="button"
               onClick={toggleLock}
               title={isLocked ? "Desbloquear (restaurar auto-cálculo)" : "Bloquear (manter valores manuais)"}
-              className="flex items-center gap-1 px-2 py-1 rounded text-[10px] border transition-colors focus:outline-none focus:ring-1 focus:ring-purple-500/40"
+              className="flex items-center gap-1 px-2 py-1 rounded text-xs border transition-colors focus:outline-none focus:ring-1 focus:ring-purple-500/40"
               style={{
                 borderColor: isLocked ? "rgb(217 119 6 / 0.6)" : "rgb(71 85 105)",
                 color:       isLocked ? "rgb(251 191 36)"       : "rgb(100 116 139)",
@@ -1997,8 +1997,8 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
             <div>
               <FieldLabel>
                 <span className="whitespace-nowrap">Nº Dados</span>
-                {hasActiveTrades && <span className="text-slate-600 font-normal ml-1 text-[9px]">base</span>}
-                {isFieldAuto('numDice') && <span className="text-slate-600 font-normal ml-1 text-[9px]">auto</span>}
+                {hasActiveTrades && <span className="text-slate-600 font-normal ml-1 text-xs">base</span>}
+                {isFieldAuto('numDice') && <span className="text-slate-600 font-normal ml-1 text-xs">auto</span>}
               </FieldLabel>
               <div className="flex gap-1">
                 {isFieldAuto('numDice') ? (
@@ -2028,7 +2028,7 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
             <div>
               <FieldLabel>
                 <span className="whitespace-nowrap">Dado</span>
-                {isFieldAuto('dieSize') && <span className="text-slate-600 font-normal ml-1 text-[9px]">auto</span>}
+                {isFieldAuto('dieSize') && <span className="text-slate-600 font-normal ml-1 text-xs">auto</span>}
               </FieldLabel>
               <div className="flex gap-1">
                 {isFieldAuto('dieSize') ? (
@@ -2058,7 +2058,7 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
             <div>
               <FieldLabel>
                 <span className="whitespace-nowrap">Fixo</span>
-                {isFieldAuto('mod') && <span className="text-slate-600 font-normal ml-1 text-[9px]">auto</span>}
+                {isFieldAuto('mod') && <span className="text-slate-600 font-normal ml-1 text-xs">auto</span>}
               </FieldLabel>
               <div className="flex gap-1">
                 {isFieldAuto('mod') ? (
@@ -2121,7 +2121,7 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
           {/* Conversão Equivalente — steppers contextuais por tipo de ofensiva */}
           {(isAcerto || isTR) && (
             <div className="border-t border-slate-700/50 pt-2.5 space-y-2.5">
-              <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">
+              <div className="text-xs uppercase tracking-widest text-slate-500 font-bold">
                 Conversão Equivalente
               </div>
 
@@ -2201,7 +2201,7 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
                 </select>
                 {form.condition?.tier && form.condition.tier !== "nenhuma" &&
                   (BT_MIN_FOR_TIER[form.condition.tier] ?? 0) > bt && (
-                  <div className="mt-1 text-[10px] text-red-400">
+                  <div className="mt-1 text-xs text-red-400">
                     BT insuficiente para esta condição (requer +{BT_MIN_FOR_TIER[form.condition.tier]}, atual +{bt})
                   </div>
                 )}
@@ -2218,7 +2218,7 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
                       disabled={effectOnly}
                     />
                     {effectOnly && (
-                      <div className="mt-1 text-[10px] text-slate-500">
+                      <div className="mt-1 text-xs text-slate-500">
                         Modo apenas-efeito: custo travado em PE (sem dano para descontar via ND).
                       </div>
                     )}
@@ -2296,7 +2296,7 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
                       options={CONDITION_DURATION_MODE_OPTIONS}
                     />
                     {(mode === "tr_todo_round" || mode === "ate_passar_tr") && (
-                      <div className="mt-1 text-[10px] text-slate-500">
+                      <div className="mt-1 text-xs text-slate-500">
                         TR usado: <span className="text-slate-300">{TR_TYPE_LABELS[condRemoveTr(form)] || "—"}</span> vs CD <span className="text-slate-300">{form.cd ?? 0}</span> (CD da própria ação).
                       </div>
                     )}
@@ -2386,7 +2386,7 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-300">
+                <div className="flex flex-wrap items-center gap-4 text-xs text-slate-300">
                   <label className="flex items-center gap-1.5">
                     <input
                       type="checkbox"
@@ -2408,7 +2408,7 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
                 </div>
 
                 <div className="border-t border-slate-800 pt-2 space-y-2">
-                  <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
                     Efeito residual ao sair
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2438,7 +2438,7 @@ function ActionFormFields({ form, bt = 2, nd = 0, creatureName, typeOptions, upd
                     )}
                   </div>
                   {res.mode === "manter_turnos" && (
-                    <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-300">
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-slate-300">
                       <label className="flex items-center gap-1.5">
                         <input
                           type="checkbox"
@@ -2499,7 +2499,7 @@ function BuffOrPassivePanel({ form, bt, nd, update }) {
           <Info className="w-3 h-3" />
           {form.type === "movimento" ? "Movimento" : "Livre"}
         </div>
-        <p className="text-[11px] text-slate-400 leading-relaxed">
+        <p className="text-xs text-slate-400 leading-relaxed">
           {form.type === "movimento"
             ? "Sem dano nem buff tabelado — apenas deslocamento (até o deslocamento total da criatura)."
             : "Sem dano nem buff tabelado — apenas timing (interagir, falar, gesticular, etc.)."}
@@ -2647,7 +2647,7 @@ function BuffOrPassivePanel({ form, bt, nd, update }) {
 
       {mode === "buff_defensivo" && trainingList.length > 0 && (
         <div className="border-t border-slate-700/50 pt-2 space-y-1.5">
-          <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">
+          <div className="text-xs uppercase tracking-widest text-slate-500 font-bold">
             Reações por Treinamento (atalhos — custo PE = BT)
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -2668,7 +2668,7 @@ function BuffOrPassivePanel({ form, bt, nd, update }) {
                     description: form.description?.trim() ? form.description : r.description,
                   });
                 }}
-                className={`px-2 py-1 rounded text-[11px] border transition-colors ${
+                className={`px-2 py-1 rounded text-xs border transition-colors ${
                   buff.training === r.id
                     ? "border-sky-500 bg-sky-900/40 text-sky-200"
                     : "border-slate-700 bg-slate-950 text-slate-300 hover:border-sky-700 hover:text-sky-200"
@@ -2682,7 +2682,7 @@ function BuffOrPassivePanel({ form, bt, nd, update }) {
         </div>
       )}
 
-      <div className="border-t border-slate-700/50 pt-2 text-[10px] text-slate-500 leading-relaxed font-mono">
+      <div className="border-t border-slate-700/50 pt-2 text-xs text-slate-500 leading-relaxed font-mono">
         <span className="text-slate-400 font-semibold">Tabela BT +{bt}:</span>{" "}
         {Object.entries(table).filter(([k]) => k !== "cost").map(([k, v]) => {
           const lbl = (kind === "ofensivo" ? BONUS_EFFECT_LABELS : REACTION_EFFECT_LABELS)[k] || k;
@@ -2727,7 +2727,7 @@ function RulesReference({ attackType, actionType, bt, conditionTier }) {
   return (
     <div className="bg-blue-950/30 border border-blue-900/40 rounded p-2.5 space-y-1">
       {tips.map((tip, i) => (
-        <div key={i} className="flex items-start gap-2 text-[11px] text-blue-300">
+        <div key={i} className="flex items-start gap-2 text-xs text-blue-300">
           <Info className="w-3 h-3 mt-0.5 flex-shrink-0 text-blue-400" />
           {tip}
         </div>

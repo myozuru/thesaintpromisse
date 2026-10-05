@@ -38,7 +38,7 @@ export function TemplateSettings() {
                 type="button"
                 title={k.label}
                 onClick={() => setToolSettings('template', { kind: k.id })}
-                className="flex flex-col items-center gap-1 py-2 rounded border text-[10px]"
+                className="flex flex-col items-center gap-1 py-2 rounded border text-xs"
                 style={{
                   background: active ? 'hsl(var(--border))' : 'hsl(var(--secondary))',
                   borderColor: active ? '#7cc4ff' : 'hsl(var(--border))',
@@ -101,7 +101,7 @@ export function TemplateSettings() {
       </button>
 
       {showHelp && (
-        <p className="text-muted-foreground text-[11px] leading-relaxed">
+        <p className="text-muted-foreground text-xs leading-relaxed">
           Arraste no mapa para posicionar. Clique-direito em um template para removê-lo.
         </p>
       )}
@@ -113,5 +113,5 @@ function Header({ label }: { label: string }) {
   return <div className="text-foreground/80 text-xs font-semibold uppercase tracking-wider">{label}</div>;
 }
 function Label({ children }: { children: React.ReactNode }) {
-  return <div className="text-muted-foreground text-[11px] mb-1">{children}</div>;
+  return <div className="text-muted-foreground text-xs mb-1">{children}</div>;
 }

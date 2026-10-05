@@ -53,17 +53,17 @@ export function AuraElementSelector({ character: c }: Props) {
 
   return (
     <div className="rounded-lg border border-primary/30 bg-primary/5 p-2 space-y-2">
-      <div className="text-[10px] uppercase tracking-wider text-primary font-bold flex items-center gap-1">
+      <div className="text-xs uppercase tracking-wider text-primary font-bold flex items-center gap-1">
         <Flame className="h-3 w-3" /> Elemento da aura
       </div>
       <div className="space-y-1.5">
         {pending.map(t => (
           <div key={t.id} className="flex items-center gap-2">
-            <span className="text-[11px] text-foreground flex-1">{t.label}</span>
+            <span className="text-xs text-foreground flex-1">{t.label}</span>
             <select
               defaultValue=""
               onChange={(e) => handle(t.id, e.target.value)}
-              className="text-[11px] bg-secondary/40 border border-border rounded px-1.5 py-1 text-foreground"
+              className="text-xs bg-secondary/40 border border-border rounded px-1.5 py-1 text-foreground"
             >
               <option value="">— escolher —</option>
               {ELEMENTAL_TYPES.map(et => (
@@ -73,7 +73,7 @@ export function AuraElementSelector({ character: c }: Props) {
           </div>
         ))}
       </div>
-      <div className="text-[9px] text-muted-foreground italic px-1">
+      <div className="text-xs text-muted-foreground italic px-1">
         ⚠ A escolha do elemento é definitiva e não pode ser revertida.
       </div>
     </div>

@@ -123,7 +123,7 @@ export default function SectionSkills({ draft, derived, actions }) {
       {/* Sugestões rápidas (lista do PDF) */}
       {showSuggestions && suggestionsLeft.length > 0 && (
         <div className="bg-slate-950/60 border border-slate-800 rounded p-3">
-          <h4 className="text-[10px] uppercase tracking-widest text-slate-500 mb-2 font-bold">
+          <h4 className="text-xs uppercase tracking-widest text-slate-500 mb-2 font-bold">
             Perícias do Livro
           </h4>
           <div className="flex flex-wrap gap-1.5">
@@ -135,7 +135,7 @@ export default function SectionSkills({ draft, derived, actions }) {
               >
                 <Plus className="w-2.5 h-2.5" />
                 {sug.name}
-                <span className="text-[9px] text-slate-600 uppercase">
+                <span className="text-xs text-slate-600 uppercase">
                   {sug.attribute.slice(0, 3)}
                 </span>
               </button>
@@ -277,7 +277,7 @@ function ModCell({ derivation, overrideValue, onOverride }) {
       </div>
       <button
         onClick={handleToggle}
-        className={`text-[9px] uppercase px-1.5 py-0.5 rounded transition-colors ${
+        className={`text-xs uppercase px-1.5 py-0.5 rounded transition-colors ${
           isOverridden
             ? "text-amber-400 hover:bg-amber-950/60"
             : "text-slate-600 hover:text-slate-400 hover:bg-slate-800"

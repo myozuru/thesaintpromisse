@@ -337,7 +337,7 @@ export function WorldMapView() {
                         <Skull className="h-5 w-5 text-accent" />
                       )}
                     </button>
-                    <div className="pointer-events-none absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap rounded bg-background/85 px-1.5 py-0.5 text-[10px] font-semibold">
+                    <div className="pointer-events-none absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap rounded bg-background/85 px-1.5 py-0.5 text-xs font-semibold">
                       {b.nome}
                     </div>
                     {isMaster && (
@@ -371,7 +371,7 @@ export function WorldMapView() {
               </button>
             </div>
 
-            <div className="pointer-events-none absolute bottom-3 left-3 flex items-center gap-1 rounded-md bg-background/75 px-2 py-1 text-[10px] text-muted-foreground">
+            <div className="pointer-events-none absolute bottom-3 left-3 flex items-center gap-1 rounded-md bg-background/75 px-2 py-1 text-xs text-muted-foreground">
               <MousePointerClick className="h-3 w-3" /> Arraste livremente · roda para zoom · botão direito marca o local
             </div>
           </div>

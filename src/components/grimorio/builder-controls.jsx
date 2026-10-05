@@ -13,7 +13,7 @@ export const FieldLabel = ({ children, hint, required }) => (
       {children}
       {required && <span className="text-red-400 ml-0.5">*</span>}
     </span>
-    {hint && <span className="text-[10px] text-slate-500 ml-2 normal-case">{hint}</span>}
+    {hint && <span className="text-xs text-slate-500 ml-2 normal-case">{hint}</span>}
   </label>
 );
 
@@ -158,7 +158,7 @@ export const StatField = ({
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-1.5 min-w-0">
           {Icon && <Icon className={`w-3 h-3 flex-shrink-0 ${accent}`} />}
-          <span className="text-[10px] uppercase tracking-wider text-slate-500 truncate">{label}</span>
+          <span className="text-xs uppercase tracking-wider text-slate-500 truncate">{label}</span>
         </div>
         <button
           onClick={toggleOverride}
@@ -188,7 +188,7 @@ export const StatField = ({
       )}
 
       {isOverridden && (
-        <div className="text-[10px] text-amber-500/70 mt-0.5">
+        <div className="text-xs text-amber-500/70 mt-0.5">
           Calc: {calculatedValue}
         </div>
       )}

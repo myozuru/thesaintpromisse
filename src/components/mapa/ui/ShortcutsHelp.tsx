@@ -89,14 +89,14 @@ export function ShortcutsHelp({ onClose }: Props) {
         <div className="p-4 grid grid-cols-2 gap-x-6 gap-y-4 text-xs">
           {GROUPS.map((g) => (
             <div key={g.title}>
-              <div className="text-[10px] uppercase tracking-wider text-amber-300/80 mb-2">
+              <div className="text-xs uppercase tracking-wider text-amber-300/80 mb-2">
                 {g.title}
               </div>
               <div className="flex flex-col gap-1">
                 {g.rows.map(([k, v]) => (
                   <div key={k} className="flex items-start gap-2">
                     <kbd
-                      className="shrink-0 px-1.5 py-0.5 rounded border text-[10px] font-mono text-foreground"
+                      className="shrink-0 px-1.5 py-0.5 rounded border text-xs font-mono text-foreground"
                       style={{ background: 'hsl(var(--background))', borderColor: 'hsl(var(--border))' }}
                     >
                       {k}

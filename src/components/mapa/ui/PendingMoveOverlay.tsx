@@ -140,7 +140,7 @@ export function PendingMoveOverlay() {
       style={{ left: screenX, top: screenY + 16, transform: 'translate(-50%, 0)', zIndex: 40 }}
     >
       <div className="pointer-events-auto flex flex-col items-center gap-1">
-        <div className="rounded-md border border-border bg-card/95 backdrop-blur px-2 py-0.5 text-[11px] font-mono text-amber-200 shadow-lg tabular-nums">
+        <div className="rounded-md border border-border bg-card/95 backdrop-blur px-2 py-0.5 text-xs font-mono text-amber-200 shadow-lg tabular-nums">
           {pending.distM.toFixed(1)}m{Number.isFinite(remaining) ? ` · resta ${remaining.toFixed(1)}m` : ' · livre'}
         </div>
         <div className="flex items-center gap-1 rounded-full border border-border bg-card/95 backdrop-blur px-1 py-1 shadow-xl">

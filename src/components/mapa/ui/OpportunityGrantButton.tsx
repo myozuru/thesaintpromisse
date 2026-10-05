@@ -47,7 +47,7 @@ export function OpportunityGrantButton() {
       <button
         onClick={() => setOpen((v) => !v)}
         title={allHaveGrant ? 'AdO ativo — clique para gerenciar' : 'Conceder Ataque de Oportunidade'}
-        className={`h-7 px-2 flex items-center gap-1 rounded text-[11px] font-medium transition ${
+        className={`h-7 px-2 flex items-center gap-1 rounded text-xs font-medium transition ${
           allHaveGrant
             ? 'bg-amber-500/30 hover:bg-amber-500/50 text-amber-100 border border-amber-500/60'
             : 'bg-secondary hover:bg-accent/20 text-foreground/80 border border-border'
@@ -58,7 +58,7 @@ export function OpportunityGrantButton() {
       </button>
       {open && (
         <div className="absolute left-0 top-full mt-1 w-64 rounded-md border border-border bg-card p-2 shadow-xl z-50 text-[12px] text-foreground">
-          <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
             Tipo de reação
           </div>
           <div className="flex gap-1 mb-2">
@@ -70,7 +70,7 @@ export function OpportunityGrantButton() {
               <button
                 key={m}
                 onClick={() => setMode(m)}
-                className={`flex-1 h-7 rounded text-[11px] ${
+                className={`flex-1 h-7 rounded text-xs ${
                   mode === m
                     ? 'bg-amber-500/30 text-amber-100 border border-amber-500/60'
                     : 'bg-secondary hover:bg-accent/20 border border-border'
@@ -80,7 +80,7 @@ export function OpportunityGrantButton() {
               </button>
             ))}
           </div>
-          <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
             Restringir a alvo (opcional)
           </div>
           <select
@@ -96,7 +96,7 @@ export function OpportunityGrantButton() {
           <div className="flex gap-1">
             <button
               onClick={apply}
-              className="flex-1 h-7 rounded bg-amber-500/30 hover:bg-amber-500/50 text-amber-100 text-[11px] font-medium border border-amber-500/60"
+              className="flex-1 h-7 rounded bg-amber-500/30 hover:bg-amber-500/50 text-amber-100 text-xs font-medium border border-amber-500/60"
             >
               Conceder ({selectedCharIds.length})
             </button>

@@ -275,7 +275,7 @@ export function ChronosModule() {
                   >
                     {char.name}
                     {grant && (
-                      <span className="text-[10px] uppercase tracking-wider text-primary/80">
+                      <span className="text-xs uppercase tracking-wider text-primary/80">
                         {grant === 'short' ? '☕ pendente' : '🌙 pendente'}
                       </span>
                     )}

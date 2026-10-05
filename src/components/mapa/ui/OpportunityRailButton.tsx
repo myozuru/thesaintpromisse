@@ -69,12 +69,12 @@ export function OpportunityRailButton() {
             </button>
           </div>
 
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
             Quem recebe o AdO
           </div>
           <div className="max-h-40 overflow-auto rounded border border-border bg-[#1a1b1f] mb-2">
             {characters.length === 0 && (
-              <div className="px-2 py-2 text-muted-foreground text-[11px]">
+              <div className="px-2 py-2 text-muted-foreground text-xs">
                 Nenhum personagem disponível.
               </div>
             )}
@@ -100,7 +100,7 @@ export function OpportunityRailButton() {
                   </span>
                   <span className="flex-1 truncate">{c.name}</span>
                   {active && (
-                    <span className="text-[9px] uppercase text-amber-300/80">
+                    <span className="text-xs uppercase text-amber-300/80">
                       ativo
                     </span>
                   )}
@@ -109,7 +109,7 @@ export function OpportunityRailButton() {
             })}
           </div>
 
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
             Contra quem (alvo)
           </div>
           <select
@@ -125,7 +125,7 @@ export function OpportunityRailButton() {
             ))}
           </select>
 
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
             Tipo
           </div>
           <div className="flex gap-1 mb-3">
@@ -139,7 +139,7 @@ export function OpportunityRailButton() {
               <button
                 key={m}
                 onClick={() => setMode(m)}
-                className={`flex-1 h-7 rounded text-[11px] ${
+                className={`flex-1 h-7 rounded text-xs ${
                   mode === m
                     ? 'bg-amber-500/30 text-amber-100 border border-amber-500/60'
                     : 'bg-secondary hover:bg-accent/20 border border-border'
@@ -154,7 +154,7 @@ export function OpportunityRailButton() {
             <button
               onClick={apply}
               disabled={recipients.length === 0}
-              className="flex-1 h-7 rounded bg-amber-500/30 hover:bg-amber-500/50 disabled:opacity-40 disabled:cursor-not-allowed text-amber-100 text-[11px] font-medium border border-amber-500/60"
+              className="flex-1 h-7 rounded bg-amber-500/30 hover:bg-amber-500/50 disabled:opacity-40 disabled:cursor-not-allowed text-amber-100 text-xs font-medium border border-amber-500/60"
             >
               Conceder ({recipients.length})
             </button>
@@ -162,7 +162,7 @@ export function OpportunityRailButton() {
               <button
                 onClick={clearAll}
                 title="Revogar todos os AdO ativos"
-                className="h-7 px-2 rounded bg-rose-500/20 hover:bg-rose-500/40 text-rose-200 text-[11px] border border-rose-500/40"
+                className="h-7 px-2 rounded bg-rose-500/20 hover:bg-rose-500/40 text-rose-200 text-xs border border-rose-500/40"
               >
                 Limpar
               </button>

@@ -355,10 +355,10 @@ export function LevelUpDialog({ character: c, onClose }: Props) {
           {hpMethod === 'roll' && rollCommitted && (
             <div className="flex items-center justify-between rounded-md border border-hp/30 bg-hp/10 px-3 py-2">
               <span className="text-xs text-hp font-mono font-bold">Rolado: {rolledValue}</span>
-              <span className="text-[10px] text-muted-foreground">Confirmado — não pode voltar atrás</span>
+              <span className="text-xs text-muted-foreground">Confirmado — não pode voltar atrás</span>
             </div>
           )}
-          <div className="text-[11px] text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             Ganho efetivo: <strong className="text-hp font-mono">+{totalHpGain} HP</strong>
             {' '}({effectiveHpBase} base {conMod >= 0 ? '+' : ''}{conMod} CON × este nível)
           </div>
@@ -371,19 +371,19 @@ export function LevelUpDialog({ character: c, onClose }: Props) {
               <Zap className="h-3.5 w-3.5" /> PE máximo (automático)
             </label>
             <div className="flex items-center justify-between rounded-md border border-pe/30 bg-background/40 px-3 py-2">
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              <span className="text-xs uppercase tracking-wider text-muted-foreground">
                 Ganho neste nível
               </span>
               <span className="text-sm font-mono font-bold text-pe">
                 +{autoPeGain} PE
               </span>
             </div>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Fórmula da {c.specialization}: <span className="font-mono">{peMult} × Nível{peKeyAttr ? ` + Mod_${peKeyAttr.slice(0, 3).toUpperCase()}` : ''}</span>
               {peKeyAttr && <> ({peKeyMod >= 0 ? '+' : ''}{peKeyMod} {peKeyAttr})</>}
             </p>
             <div className="border-t border-pe/20 pt-2">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                 Bônus EXTRA manual (opcional)
               </label>
               <input
@@ -393,7 +393,7 @@ export function LevelUpDialog({ character: c, onClose }: Props) {
                 disabled={confirmed}
                 className="mt-1 h-9 w-full rounded-lg border border-input bg-background px-3 text-center font-mono font-bold text-pe disabled:opacity-50"
               />
-              <p className="text-[10px] text-muted-foreground italic mt-1">
+              <p className="text-xs text-muted-foreground italic mt-1">
                 Use só se houver fonte externa (item, talento). Deixe 0 para o cálculo automático puro.
               </p>
             </div>
@@ -402,7 +402,7 @@ export function LevelUpDialog({ character: c, onClose }: Props) {
           {isMilestone && (
             <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2">
               <label className="text-xs font-bold text-primary">Marco de Nível</label>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Neste nível você não ganha atributo nem perícia automaticamente. Após confirmar, resolva no painel as escolhas de marco: <strong>Atributo +2</strong> ou <strong>Talento</strong>{c.origin === 'Derivado' ? ', além do bônus extra de Derivado' : ''}.
               </p>
             </div>
@@ -429,7 +429,7 @@ export function LevelUpDialog({ character: c, onClose }: Props) {
 
         {/* Aviso Restringido */}
         {isRestringido(c.specialization) && (
-          <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-[11px] text-destructive">
+          <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
             <strong>Restringido:</strong> não recebe Aptidão Amaldiçoada por nível (HARD LOCK).
           </div>
         )}
@@ -446,7 +446,7 @@ export function LevelUpDialog({ character: c, onClose }: Props) {
 
             {isOddLevel ? (
               <div className="space-y-1.5">
-                <label className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
+                <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground">
                   Habilidade / Aptidão Amaldiçoada (propagada aos 3 núcleos)
                 </label>
                 <input
@@ -462,7 +462,7 @@ export function LevelUpDialog({ character: c, onClose }: Props) {
                   if (!co || co.destroyed) return null;
                   return (
                     <div key={cid} className="space-y-1">
-                      <label className="text-[10px] uppercase tracking-wider font-bold text-accent flex items-center gap-1">
+                      <label className="text-xs uppercase tracking-wider font-bold text-accent flex items-center gap-1">
                         {co.name} <span className="text-muted-foreground">· {co.specialization}</span>
                         {cid === c.primaryCoreId && <Sparkles className="h-3 w-3 text-primary" />}
                       </label>
@@ -477,13 +477,13 @@ export function LevelUpDialog({ character: c, onClose }: Props) {
                   );
                 })}
                 {camPairBlocked && (
-                  <p className="text-[10px] font-bold text-hp">⚠ Preencha uma escolha para CADA núcleo antes de confirmar.</p>
+                  <p className="text-xs font-bold text-hp">⚠ Preencha uma escolha para CADA núcleo antes de confirmar.</p>
                 )}
               </div>
             )}
 
             <div className="space-y-1 border-t border-accent/20 pt-2">
-              <label className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
+              <label className="text-xs uppercase tracking-wider font-bold text-muted-foreground">
                 Talento (opcional · sempre fixo nos 3 núcleos)
               </label>
               <input
@@ -513,17 +513,17 @@ export function LevelUpDialog({ character: c, onClose }: Props) {
         {/* Footer (fixo, sempre visível) */}
         <div className="shrink-0 border-t border-border bg-card/95 backdrop-blur px-6 py-3 space-y-2">
           {hpMethod === 'roll' && !rollCommitted && !confirmed && (
-            <p className="text-[11px] font-bold text-hp text-center">
+            <p className="text-xs font-bold text-hp text-center">
               ⚠ Role o Dado de Vida (d{hitDie}) acima antes de confirmar.
             </p>
           )}
           {camPairBlocked && !confirmed && (
-            <p className="text-[11px] font-bold text-hp text-center">
+            <p className="text-xs font-bold text-hp text-center">
               ⚠ Preencha uma escolha para CADA núcleo antes de confirmar.
             </p>
           )}
           {hasCurrentLevelPending && (
-            <p className="text-[11px] font-bold text-primary text-center">
+            <p className="text-xs font-bold text-primary text-center">
               Resolva as pendências obrigatórias deste nível antes de fechar.
             </p>
           )}

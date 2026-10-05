@@ -81,7 +81,7 @@ export function AmizadeSection({ c }: { c: Character }) {
           O Amigo caiu — o interlúdio já passou? Liberar novo Amigo
         </button>
       ) : (
-        <div className="text-[11px] text-muted-foreground">O Amigo é permanente. Se ele cair a 0 PV, o Mestre libera um novo Amigo após o interlúdio.</div>
+        <div className="text-xs text-muted-foreground">O Amigo é permanente. Se ele cair a 0 PV, o Mestre libera um novo Amigo após o interlúdio.</div>
       )}
     </div>
   );
@@ -154,7 +154,7 @@ export function AnaliseSection({ c }: { c: Character }) {
           {busy ? 'Rolando…' : 'Analisar'}
         </button>
       </div>
-      {target && !check.ok && <div className="text-[11px] text-destructive">{check.reason}</div>}
+      {target && !check.ok && <div className="text-xs text-destructive">{check.reason}</div>}
 
       {result && resTarget && (
         <div className="space-y-1 text-xs">
@@ -185,7 +185,7 @@ export function AnaliseSection({ c }: { c: Character }) {
                       setShared((p) => [...p, t.key]);
                       addLog('combat', `🔍 ${c.name} compartilhou sobre ${resTarget.name} — ${t.label}: ${t.value}`);
                     }}
-                    className="rounded border border-border px-1.5 text-[10px] text-foreground hover:bg-secondary/40 disabled:opacity-50"
+                    className="rounded border border-border px-1.5 text-xs text-foreground hover:bg-secondary/40 disabled:opacity-50"
                   >
                     {shared.includes(t.key) ? 'Compartilhado' : 'Compartilhar'}
                   </button>

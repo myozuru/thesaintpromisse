@@ -106,27 +106,27 @@ function OmniDetails({
         </DialogTitle>
         <DialogDescription className="flex flex-wrap gap-1.5 mt-1">
           {isEquippable && (
-            <span className="rounded-full border border-primary/30 bg-primary/15 px-2 py-0.5 text-[11px] text-primary inline-flex items-center gap-1">
+            <span className="rounded-full border border-primary/30 bg-primary/15 px-2 py-0.5 text-xs text-primary inline-flex items-center gap-1">
               <Gem className="h-3 w-3" /> {ITEM_SLOT_LABELS[slotType]}
             </span>
           )}
           {target.isEquipped && target.equippedSlot && (
-            <span className="rounded-full border border-violet-500/40 bg-violet-500/15 px-2 py-0.5 text-[11px] text-violet-300">
+            <span className="rounded-full border border-violet-500/40 bg-violet-500/15 px-2 py-0.5 text-xs text-violet-300">
               Equipado em {target.equippedSlot}
             </span>
           )}
           {!isActive && (
-            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">
+            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-300">
               Passivo
             </span>
           )}
           {isActive && (
-            <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] text-amber-300">
+            <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs text-amber-300">
               Ativo (Uso)
             </span>
           )}
           {e.duracao?.tipo && (
-            <span className="rounded-full border border-border bg-secondary/40 px-2 py-0.5 text-[11px] text-muted-foreground inline-flex items-center gap-1">
+            <span className="rounded-full border border-border bg-secondary/40 px-2 py-0.5 text-xs text-muted-foreground inline-flex items-center gap-1">
               <Clock className="h-3 w-3" /> {e.duracao.tipo}
             </span>
           )}
@@ -142,7 +142,7 @@ function OmniDetails({
 
         {(bonusEntries.length > 0 || rollBonusEntries.length > 0 || mitigationEntries.length > 0) && (
           <section className="rounded-md border border-violet-500/30 bg-violet-500/5 p-2 space-y-1">
-            <div className="text-[10px] uppercase tracking-wider text-violet-300/80">
+            <div className="text-xs uppercase tracking-wider text-violet-300/80">
               Bônus Passivos (quando equipado)
             </div>
             <ul className="space-y-0.5">
@@ -171,7 +171,7 @@ function OmniDetails({
 
         {isActive && cd && (
           <section className="rounded-md border border-border/60 bg-background/40 p-2 space-y-1">
-            <div className="text-[10px] uppercase tracking-wider text-amber-300/80">
+            <div className="text-xs uppercase tracking-wider text-amber-300/80">
               Dados de Combate
             </div>
             <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[12px]">
@@ -226,15 +226,15 @@ function LegacyDetails({ item }: { item: Item }) {
         </DialogTitle>
         <DialogDescription className="flex flex-wrap gap-1.5 mt-1">
           {isEquippable && (
-            <span className="rounded-full border border-primary/30 bg-primary/15 px-2 py-0.5 text-[11px] text-primary inline-flex items-center gap-1">
+            <span className="rounded-full border border-primary/30 bg-primary/15 px-2 py-0.5 text-xs text-primary inline-flex items-center gap-1">
               <Gem className="h-3 w-3" /> {ITEM_SLOT_LABELS[slotType]}
             </span>
           )}
-          <span className="rounded-full border border-border bg-secondary/40 px-2 py-0.5 text-[11px] text-muted-foreground">
+          <span className="rounded-full border border-border bg-secondary/40 px-2 py-0.5 text-xs text-muted-foreground">
             {item.slots} slot{item.slots === 1 ? '' : 's'} · x{item.quantity || 1}
           </span>
           {item.isFood && (
-            <span className="rounded-full bg-neon-yellow/15 border border-neon-yellow/30 px-2 py-0.5 text-[11px] text-neon-yellow">
+            <span className="rounded-full bg-neon-yellow/15 border border-neon-yellow/30 px-2 py-0.5 text-xs text-neon-yellow">
               🍽️ Comida
             </span>
           )}
@@ -248,7 +248,7 @@ function LegacyDetails({ item }: { item: Item }) {
 
         {bonusList.length > 0 && (
           <section className="rounded-md border border-primary/30 bg-primary/5 p-2 space-y-1">
-            <div className="text-[10px] uppercase tracking-wider text-primary/80">
+            <div className="text-xs uppercase tracking-wider text-primary/80">
               Bônus do Item
             </div>
             <div className="flex flex-wrap gap-2">
@@ -263,7 +263,7 @@ function LegacyDetails({ item }: { item: Item }) {
 
         {item.isFood && (
           <section className="rounded-md border border-neon-yellow/30 bg-neon-yellow/5 p-2 space-y-1">
-            <div className="text-[10px] uppercase tracking-wider text-neon-yellow">
+            <div className="text-xs uppercase tracking-wider text-neon-yellow">
               Restauração ao Consumir
             </div>
             <div className="flex flex-wrap gap-2 text-[12px]">
@@ -278,3 +278,4 @@ function LegacyDetails({ item }: { item: Item }) {
     </>
   );
 }
+

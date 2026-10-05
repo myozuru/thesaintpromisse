@@ -81,17 +81,17 @@ export function ArtesCombatePanel({ character: c }: { character: Character }) {
               <div className="flex items-center gap-2">
                 <Swords className="h-3 w-3 text-amber-400/80 shrink-0" />
                 <span className="text-xs font-semibold text-foreground">{arte.name}</span>
-                <span className="ml-auto rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">
+                <span className="ml-auto rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-xs font-bold text-amber-300">
                   {arte.cost} PP
                 </span>
               </div>
-              <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{arte.summary}</p>
-              <p className="mt-0.5 text-[11px] leading-snug text-amber-200/80">{detalhe(arte.id)}</p>
+              <p className="mt-1 text-xs leading-snug text-muted-foreground">{arte.summary}</p>
+              <p className="mt-0.5 text-xs leading-snug text-amber-200/80">{detalhe(arte.id)}</p>
             </div>
           ))}
         </div>
 
-        <p className="text-[10px] text-muted-foreground leading-snug">
+        <p className="text-xs text-muted-foreground leading-snug">
           Preparo máximo = nível + Mod. de Sabedoria ({sab >= 0 ? '+' : ''}{sab}). Recupera +1 ao
           eliminar um inimigo, metade no descanso curto e tudo no descanso longo. Ative as artes
           no Painel de Ataque antes de rolar.

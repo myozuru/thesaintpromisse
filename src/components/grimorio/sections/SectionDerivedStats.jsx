@@ -73,7 +73,7 @@ export default function SectionDerivedStats({ draft, derived, actions }) {
       {/* Atributos Base */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">
+          <h3 className="text-xs uppercase tracking-widest text-slate-500 font-bold">
             Atributos Base
           </h3>
         </div>
@@ -84,7 +84,7 @@ export default function SectionDerivedStats({ draft, derived, actions }) {
             const modStr = mod >= 0 ? `+${mod}` : `${mod}`;
             return (
               <div key={key} className="bg-slate-950/60 border border-slate-800 rounded-md p-2 flex flex-col items-center justify-center text-center">
-                <span className={`text-[10px] uppercase tracking-wider font-bold ${accent}`}>{label}</span>
+                <span className={`text-xs uppercase tracking-wider font-bold ${accent}`}>{label}</span>
                 <span className="text-xl font-bold text-white tabular-nums mt-1">{value}</span>
                 <span className="text-xs text-slate-400">{modStr}</span>
               </div>
@@ -95,7 +95,7 @@ export default function SectionDerivedStats({ draft, derived, actions }) {
 
       {/* Stats principais */}
       <div>
-        <h3 className="text-[10px] uppercase tracking-widest text-slate-500 mb-2 font-bold">
+        <h3 className="text-xs uppercase tracking-widest text-slate-500 mb-2 font-bold">
           Estatísticas de Combate
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 items-stretch">
@@ -115,7 +115,7 @@ export default function SectionDerivedStats({ draft, derived, actions }) {
 
       {/* Testes de Resistência */}
       <div>
-        <h3 className="text-[10px] uppercase tracking-widest text-slate-500 mb-2 font-bold">
+        <h3 className="text-xs uppercase tracking-widest text-slate-500 mb-2 font-bold">
           Testes de Resistência
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 items-stretch">
@@ -133,12 +133,12 @@ export default function SectionDerivedStats({ draft, derived, actions }) {
 
       {/* Seleção de Atributos para Acerto e CD */}
       <div className="bg-slate-950/60 border border-slate-800 rounded p-3 space-y-3">
-        <h3 className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">
+        <h3 className="text-xs uppercase tracking-widest text-slate-500 font-bold">
           Atributo Base do Acerto e CD
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold flex items-center gap-1">
+            <label className="block text-xs uppercase tracking-wider text-slate-400 mb-1 font-semibold flex items-center gap-1">
               <Sword className="w-3 h-3 text-red-400" /> Atributo do Acerto
             </label>
             <Select
@@ -146,12 +146,12 @@ export default function SectionDerivedStats({ draft, derived, actions }) {
               onChange={actions.setAttackAttr}
               options={ATTR_OPTIONS}
             />
-            <div className="text-[10px] text-slate-500 mt-1">
+            <div className="text-xs text-slate-500 mt-1">
               Acerto calculado: <span className="font-mono text-white">+{derived.acertoPrincipal}</span>
             </div>
           </div>
           <div>
-            <label className="block text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold flex items-center gap-1">
+            <label className="block text-xs uppercase tracking-wider text-slate-400 mb-1 font-semibold flex items-center gap-1">
               <Crosshair className="w-3 h-3 text-orange-400" /> Atributo da CD
             </label>
             <Select
@@ -159,7 +159,7 @@ export default function SectionDerivedStats({ draft, derived, actions }) {
               onChange={actions.setCdAttr}
               options={ATTR_OPTIONS}
             />
-            <div className="text-[10px] text-slate-500 mt-1">
+            <div className="text-xs text-slate-500 mt-1">
               CD calculada: <span className="font-mono text-purple-300">{derived.cdBase}</span>
             </div>
           </div>

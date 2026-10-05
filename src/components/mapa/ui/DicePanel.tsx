@@ -121,7 +121,7 @@ export function DicePanel() {
               <button
                 key={v}
                 onClick={() => setAdvantage(v)}
-                className={`h-6 px-2 rounded border text-[11px] ${
+                className={`h-6 px-2 rounded border text-xs ${
                   advantage === v
                     ? 'bg-amber-500/15 border-amber-500/50 text-amber-200'
                     : 'border-border text-foreground/80 hover:bg-secondary'
@@ -160,12 +160,12 @@ export function DicePanel() {
             <Star className="h-3.5 w-3.5" />
           </button>
         </div>
-        {error && <div className="text-[11px] text-red-300">{error}</div>}
+        {error && <div className="text-xs text-red-300">{error}</div>}
 
         {/* Favorites */}
         {favorites.length > 0 && (
           <div className="flex flex-col gap-1">
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Favoritos</div>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">Favoritos</div>
             <div className="flex flex-wrap gap-1">
               {favorites.map((f) => (
                 <div
@@ -194,7 +194,7 @@ export function DicePanel() {
 
         {/* History */}
         <div className="flex items-center gap-1 mt-1">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Histórico</div>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground">Histórico</div>
           {history.length > 0 && (
             <button
               onClick={clearHistory}
@@ -207,7 +207,7 @@ export function DicePanel() {
         </div>
         <div className="flex flex-col gap-1 max-h-[240px] overflow-y-auto">
           {history.length === 0 && (
-            <div className="text-[11px] text-muted-foreground italic">Nenhuma rolagem ainda.</div>
+            <div className="text-xs text-muted-foreground italic">Nenhuma rolagem ainda.</div>
           )}
           {history.map((h) => (
             <div
@@ -215,7 +215,7 @@ export function DicePanel() {
               className="flex items-start gap-1 rounded border border-border bg-background p-1.5"
             >
               <div className="flex-1 min-w-0">
-                <div className="text-[10px] text-muted-foreground font-mono truncate">{h.pretty}</div>
+                <div className="text-xs text-muted-foreground font-mono truncate">{h.pretty}</div>
                 <div className="text-amber-200 font-semibold tabular-nums">= {h.total}</div>
               </div>
               <button

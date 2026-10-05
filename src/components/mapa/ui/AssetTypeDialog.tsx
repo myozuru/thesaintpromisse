@@ -83,7 +83,7 @@ function Choice({
     >
       <div className="text-foreground">{icon}</div>
       <div className="text-foreground text-xs font-medium">{label}</div>
-      <div className="text-muted-foreground text-[10px]">{hint}</div>
+      <div className="text-muted-foreground text-xs">{hint}</div>
     </button>
   );
 }

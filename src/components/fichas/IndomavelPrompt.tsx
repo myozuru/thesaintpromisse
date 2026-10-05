@@ -21,7 +21,7 @@ export function IndomavelPrompt() {
           type="button"
           data-testid="indomavel-sim"
           onClick={() => pedido.resolve(true)}
-          className="flex-1 rounded bg-primary px-2 py-1 text-[11px] font-bold text-primary-foreground hover:bg-primary/90"
+          className="flex-1 rounded bg-primary px-2 py-1 text-xs font-bold text-primary-foreground hover:bg-primary/90"
         >
           Rolar de novo (1 PE)
         </button>
@@ -29,7 +29,7 @@ export function IndomavelPrompt() {
           type="button"
           data-testid="indomavel-nao"
           onClick={() => pedido.resolve(false)}
-          className="flex-1 rounded border border-border bg-secondary/40 px-2 py-1 text-[11px] hover:bg-secondary"
+          className="flex-1 rounded border border-border bg-secondary/40 px-2 py-1 text-xs hover:bg-secondary"
         >
           Aceitar a falha
         </button>

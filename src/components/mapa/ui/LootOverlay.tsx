@@ -196,7 +196,7 @@ export function LootOverlay() {
           <Skull className="h-3.5 w-3.5" />
           Saquear
           {inRange && Number.isFinite(bestDistCells) && (
-            <span className="text-[10px] text-amber-300/70">({bestDistCells.toFixed(1)} blocos)</span>
+            <span className="text-xs text-amber-300/70">({bestDistCells.toFixed(1)} blocos)</span>
 
           )}
         </button>
@@ -322,7 +322,7 @@ function LootDialog({
           ))}
         </div>
 
-        <div className="flex items-center justify-between border-t border-amber-900/40 px-4 py-2 text-[11px] text-amber-300/60">
+        <div className="flex items-center justify-between border-t border-amber-900/40 px-4 py-2 text-xs text-amber-300/60">
           <span>[Clique] Pegar</span>
           <button
             onClick={onClose}
@@ -391,12 +391,12 @@ function LootRow({
         </div>
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm text-amber-100">{e.nome || 'Item sem nome'}</div>
-          <div className="truncate text-[10px] uppercase tracking-wider text-amber-300/50">
+          <div className="truncate text-xs uppercase tracking-wider text-amber-300/50">
             {e.categoria}{badge ? ` · ${badge}` : ''}
           </div>
         </div>
         {item.usosTotais !== undefined && (
-          <div className="shrink-0 rounded border border-amber-900/40 bg-black/40 px-1.5 py-0.5 text-[10px] text-amber-200/80">
+          <div className="shrink-0 rounded border border-amber-900/40 bg-black/40 px-1.5 py-0.5 text-xs text-amber-200/80">
             x{item.usosRestantes ?? 0}/{item.usosTotais}
           </div>
         )}

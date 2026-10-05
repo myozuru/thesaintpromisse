@@ -84,7 +84,7 @@ export function MiniClock() {
       >
         <div className="space-y-1.5">
           {/* Multiplier */}
-          <div className="flex items-center gap-1 text-[10px]">
+          <div className="flex items-center gap-1 text-xs">
             <span className="text-muted-foreground" style={{ fontFamily: "'Cinzel', serif" }}>×</span>
             {[1, 10, 60, 300].map((m) => (
               <button
@@ -104,7 +104,7 @@ export function MiniClock() {
               type="number"
               value={store.multiplier}
               onChange={(e) => store.setMultiplier(Math.max(1, parseInt(e.target.value) || 1))}
-              className="h-5 w-10 rounded-md border border-input bg-background px-1 text-center text-[10px] font-mono text-foreground"
+              className="h-5 w-10 rounded-md border border-input bg-background px-1 text-center text-xs font-mono text-foreground"
             />
           </div>
 
@@ -115,12 +115,12 @@ export function MiniClock() {
               value={advMin}
               onChange={(e) => setAdvMin(e.target.value)}
               placeholder="min"
-              className="h-5 w-14 rounded-md border border-input bg-background px-1 text-[10px] text-foreground text-center"
+              className="h-5 w-14 rounded-md border border-input bg-background px-1 text-xs text-foreground text-center"
             />
             <button
               onClick={handleAdvance}
               disabled={!advMin || parseInt(advMin) <= 0}
-              className="h-5 flex items-center gap-0.5 rounded-md bg-primary/20 px-1.5 text-[10px] text-primary hover:bg-primary/30 disabled:opacity-40 transition-all duration-300"
+              className="h-5 flex items-center gap-0.5 rounded-md bg-primary/20 px-1.5 text-xs text-primary hover:bg-primary/30 disabled:opacity-40 transition-all duration-300"
             >
               <FastForward className="h-2.5 w-2.5" /> Avançar
             </button>
@@ -130,7 +130,7 @@ export function MiniClock() {
           <button
             onClick={() => setShowEvent(!showEvent)}
             className={cn(
-              'flex items-center gap-1 text-[10px] transition-all duration-300 w-full',
+              'flex items-center gap-1 text-xs transition-all duration-300 w-full',
               showEvent ? 'text-primary glow-text' : 'text-muted-foreground hover:text-foreground'
             )}
           >
@@ -145,7 +145,7 @@ export function MiniClock() {
                 value={eventReason}
                 onChange={(e) => setEventReason(e.target.value)}
                 placeholder="Motivo do evento"
-                className="h-5 w-full rounded-md border border-input bg-background px-1.5 text-[10px] text-foreground"
+                className="h-5 w-full rounded-md border border-input bg-background px-1.5 text-xs text-foreground"
               />
               <div className="flex items-center gap-1">
                 <input
@@ -153,12 +153,12 @@ export function MiniClock() {
                   value={eventMinutes}
                   onChange={(e) => setEventMinutes(e.target.value)}
                   placeholder="min"
-                  className="h-5 w-14 rounded-md border border-input bg-background px-1 text-[10px] text-foreground text-center"
+                  className="h-5 w-14 rounded-md border border-input bg-background px-1 text-xs text-foreground text-center"
                 />
                 <button
                   onClick={handleEvent}
                   disabled={!eventMinutes || parseInt(eventMinutes) <= 0 || !eventReason.trim()}
-                  className="h-5 flex-1 flex items-center justify-center gap-0.5 rounded-md bg-primary/20 px-1.5 text-[10px] text-primary hover:bg-primary/30 disabled:opacity-40 transition-all duration-300"
+                  className="h-5 flex-1 flex items-center justify-center gap-0.5 rounded-md bg-primary/20 px-1.5 text-xs text-primary hover:bg-primary/30 disabled:opacity-40 transition-all duration-300"
                 >
                   <CalendarPlus className="h-2.5 w-2.5" /> Criar
                 </button>
@@ -167,7 +167,7 @@ export function MiniClock() {
           )}
 
           {/* Date */}
-          <div className="text-[10px] text-muted-foreground" style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}>
+          <div className="text-xs text-muted-foreground" style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}>
             Dia {store.day} · Mês {store.month} · Ano {store.year}
           </div>
         </div>

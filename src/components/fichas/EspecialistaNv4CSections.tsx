@@ -42,7 +42,7 @@ function PreparoImediatoSection({ character: c }: { character: Character }) {
   return (
     <div className={box} data-testid="preparo-imediato-section">
       <div className="text-xs font-bold text-amber-300">⏱️ Preparo Imediato</div>
-      <div className="text-[11px] text-muted-foreground">
+      <div className="text-xs text-muted-foreground">
         {rotuloDe(prep.tipo)} preparada ({prep.custo} Preparo).{' '}
         {meuTurno ? 'No seu turno, disparar não gasta a Reação.' : 'Disparar agora gasta a sua Reação.'}
       </div>
@@ -56,7 +56,7 @@ function PreparoImediatoSection({ character: c }: { character: Character }) {
       >
         Disparar ação preparada
       </button>
-      {msg && <div className="text-[11px] text-amber-200">{msg}</div>}
+      {msg && <div className="text-xs text-amber-200">{msg}</div>}
     </div>
   );
 }
@@ -71,14 +71,14 @@ function RecargaSection({ character: c }: { character: Character }) {
   return (
     <div className={box} data-testid="recarga-section">
       <div className="text-xs font-bold text-amber-300">
-        🔃 Munição {hasRecargaRapida(c) && <span className="text-[10px]">(Recarga Rápida)</span>}
+        🔃 Munição {hasRecargaRapida(c) && <span className="text-xs">(Recarga Rápida)</span>}
       </div>
       {nomes.map((nome) => {
         const cap = capacidadePorNome(nome)!;
         const rest = tirosRestantes(c, nome) ?? cap;
         const custo = custoRecarga(c, nome);
         return (
-          <div key={nome} className="flex items-center gap-2 text-[11px]">
+          <div key={nome} className="flex items-center gap-2 text-xs">
             <span data-testid={`ammo-${nome}`}>
               {nome}: {rest}/{cap} tiros
             </span>
@@ -96,7 +96,7 @@ function RecargaSection({ character: c }: { character: Character }) {
           </div>
         );
       })}
-      {msg && <div className="text-[11px] text-amber-200">{msg}</div>}
+      {msg && <div className="text-xs text-amber-200">{msg}</div>}
     </div>
   );
 }
@@ -113,7 +113,7 @@ function UsoRapidoSection({ character: c }: { character: Character }) {
   return (
     <div className={box} data-testid="uso-rapido-section">
       <div className="text-xs font-bold text-amber-300">⚡ Uso Rápido</div>
-      <div className="text-[11px] text-muted-foreground">
+      <div className="text-xs text-muted-foreground">
         Depois de usar um item com uma ação, gaste 1 PE para usar um item adicional (1 por turno).
       </div>
       <div className="flex items-center gap-2">
@@ -141,8 +141,8 @@ function UsoRapidoSection({ character: c }: { character: Character }) {
           Usar item adicional (1 PE)
         </button>
       </div>
-      {!chk.ok && <div className="text-[11px] text-muted-foreground">{chk.reason}</div>}
-      {msg && <div className="text-[11px] text-amber-200">{msg}</div>}
+      {!chk.ok && <div className="text-xs text-muted-foreground">{chk.reason}</div>}
+      {msg && <div className="text-xs text-amber-200">{msg}</div>}
     </div>
   );
 }

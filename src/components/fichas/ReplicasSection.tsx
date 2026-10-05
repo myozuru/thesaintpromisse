@@ -17,7 +17,7 @@ export function ReplicasSection({ charId }: { charId: string }) {
   if (replicas.length === 0) return null;
   return (
     <div className="rounded-md border border-primary/40 bg-primary/5 p-2 space-y-1.5" data-testid="replicas-section">
-      <div className="text-[11px] font-bold uppercase tracking-wider text-primary">✨ Réplicas</div>
+      <div className="text-xs font-bold uppercase tracking-wider text-primary">✨ Réplicas</div>
       {replicas.map((r) => {
         const cfg = r.entity.replica!;
         return (
@@ -73,12 +73,12 @@ export function ReplicaSustentacaoPrompt() {
           data-testid="replica-sustentar"
           disabled={!podePagar}
           onClick={() => pagarSustentacao(pend.instanceId)}
-          className="flex-1 text-[11px] px-2 py-1 rounded bg-primary/20 border border-primary/50 font-bold hover:bg-primary/30 disabled:opacity-40"
+          className="flex-1 text-xs px-2 py-1 rounded bg-primary/20 border border-primary/50 font-bold hover:bg-primary/30 disabled:opacity-40"
         >Sustentar ({cfg.peSustentacao} PE)</button>
         <button
           data-testid="replica-deixar"
           onClick={() => desfazerReplica(pend.instanceId, 'sustentação não paga')}
-          className="flex-1 text-[11px] px-2 py-1 rounded border border-border bg-secondary/40 hover:bg-secondary"
+          className="flex-1 text-xs px-2 py-1 rounded border border-border bg-secondary/40 hover:bg-secondary"
         >Deixar desfazer</button>
       </div>
     </div>

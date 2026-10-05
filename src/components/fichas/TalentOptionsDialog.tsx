@@ -269,7 +269,7 @@ function FisicoAperfeicoadoForm({ onConfirm }: { onConfirm: (c: Record<string, s
             <span className="font-mono font-bold text-primary">[{o.id}]</span>
             <span className="flex-1">{o.label}</span>
             {o.auto && (
-              <span className="rounded bg-accent/30 px-1.5 py-0.5 text-[9px] font-bold text-accent-foreground">
+              <span className="rounded bg-accent/30 px-1.5 py-0.5 text-xs font-bold text-accent-foreground">
                 ⚙ auto
               </span>
             )}
@@ -279,7 +279,7 @@ function FisicoAperfeicoadoForm({ onConfirm }: { onConfirm: (c: Record<string, s
 
       {option === 'B' && (
         <div className="rounded-md border border-border bg-secondary/30 p-2 space-y-1.5">
-          <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
+          <p className="text-xs uppercase tracking-wider font-bold text-muted-foreground">
             Qual perícia recebe +2?
           </p>
           <div className="flex gap-1.5">
@@ -301,7 +301,7 @@ function FisicoAperfeicoadoForm({ onConfirm }: { onConfirm: (c: Record<string, s
         </div>
       )}
 
-      <p className="text-[10px] italic text-muted-foreground">
+      <p className="text-xs italic text-muted-foreground">
         Apenas a opção <strong>[A]</strong> é automatizada (movimento). As outras ficam
         registradas como nota narrativa para o Mestre aplicar manualmente.
       </p>
@@ -346,14 +346,14 @@ function QuebraLimitesForm({
         Escolha <strong>2 atributos diferentes</strong> para receber <strong>+2 valor e +2 limite máximo</strong>.
       </p>
       {excluded.size > 0 && maxCap > 0 && (
-        <p className="text-[10px] italic text-muted-foreground">
+        <p className="text-xs italic text-muted-foreground">
           Excluído (maior limite atual): {[...excluded].join(', ')}
         </p>
       )}
 
       {[1, 2].map((slot) => (
         <div key={slot} className="space-y-1">
-          <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Atributo #{slot}</p>
+          <p className="text-xs uppercase tracking-wider font-bold text-muted-foreground">Atributo #{slot}</p>
           <div className="grid grid-cols-3 gap-1.5">
             {attrs.map((a) => {
               const isExcluded = excluded.has(a.name);
@@ -410,7 +410,7 @@ function EstudoAmaldicoadoForm({ onConfirm }: { onConfirm: (c: Record<string, st
 
       {[1, 2].map((slot) => (
         <div key={slot} className="space-y-1">
-          <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Aptidão #{slot}</p>
+          <p className="text-xs uppercase tracking-wider font-bold text-muted-foreground">Aptidão #{slot}</p>
           <div className="grid grid-cols-5 gap-1.5">
             {APTITUDE_KEYS.map((k) => {
               const isSelected = (slot === 1 ? a1 : a2) === k;
@@ -471,7 +471,7 @@ function IncrementoAtributoForm({
         Escolha <strong>1 atributo</strong> para receber <strong>+2 valor</strong> e <strong>+2 no Limite Máximo</strong>.
       </p>
       {alreadyTaken.size > 0 && (
-        <p className="text-[10px] italic text-muted-foreground">
+        <p className="text-xs italic text-muted-foreground">
           Já incrementado(s): {[...alreadyTaken].join(', ')} — não pode repetir.
         </p>
       )}
@@ -504,7 +504,7 @@ function IncrementoAtributoForm({
               )}
             >
               {a.name}
-              <span className="ml-1 text-[10px] font-mono opacity-70">{a.value}</span>
+              <span className="ml-1 text-xs font-mono opacity-70">{a.value}</span>
             </button>
           );
         })}
@@ -562,7 +562,7 @@ function SingleAttrForm({
               )}
             >
               {a.name}
-              <span className="ml-1 text-[10px] font-mono opacity-70">{a.value}</span>
+              <span className="ml-1 text-xs font-mono opacity-70">{a.value}</span>
             </button>
           );
         })}
@@ -590,7 +590,7 @@ function MestreArmasForm({
   return (
     <div className="space-y-3">
       <div className="space-y-1">
-        <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
+        <p className="text-xs uppercase tracking-wider font-bold text-muted-foreground">
           1) Atributo (+2)
         </p>
         <div className="grid grid-cols-2 gap-2">
@@ -610,7 +610,7 @@ function MestreArmasForm({
       </div>
 
       <div className="space-y-1">
-        <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">2) Treino</p>
+        <p className="text-xs uppercase tracking-wider font-bold text-muted-foreground">2) Treino</p>
         <div className="grid grid-cols-1 gap-1.5">
           {[
             { id: 'trained4', label: 'Treinado em 4 Armas (anote-as abaixo)' },
@@ -632,7 +632,7 @@ function MestreArmasForm({
 
       {path && (
         <div className="space-y-1">
-          <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
+          <p className="text-xs uppercase tracking-wider font-bold text-muted-foreground">
             {path === 'trained4' ? '4 armas (separadas por vírgula)' : 'Grupo de Arma escolhido'}
           </p>
           <input
@@ -644,7 +644,7 @@ function MestreArmasForm({
         </div>
       )}
 
-      <p className="text-[10px] italic text-muted-foreground">
+      <p className="text-xs italic text-muted-foreground">
         O atributo é aplicado automaticamente. A escolha de armas/grupo fica registrada como nota narrativa.
       </p>
 
@@ -702,11 +702,11 @@ function ResilienciaForm({
             )}
           >
             {s}
-            <span className="ml-1 text-[9px] opacity-70">({SAVE_TO_ATTR[s].slice(0, 3)})</span>
+            <span className="ml-1 text-xs opacity-70">({SAVE_TO_ATTR[s].slice(0, 3)})</span>
           </button>
         ))}
       </div>
-      <p className="text-[10px] italic text-muted-foreground">
+      <p className="text-xs italic text-muted-foreground">
         Atributo correspondente recebe +1 e a perícia equivalente é marcada como Treinada.
       </p>
       <ConfirmButton
@@ -743,7 +743,7 @@ function TempestadeIdeiasForm({
   return (
     <div className="space-y-3">
       <div className="space-y-1">
-        <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">1) Atributo (+1)</p>
+        <p className="text-xs uppercase tracking-wider font-bold text-muted-foreground">1) Atributo (+1)</p>
         <div className="grid grid-cols-3 gap-1.5">
           {attrs.map((a) => (
             <button
@@ -761,7 +761,7 @@ function TempestadeIdeiasForm({
       </div>
 
       <div className="space-y-1">
-        <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">2) Perícia (Treinada)</p>
+        <p className="text-xs uppercase tracking-wider font-bold text-muted-foreground">2) Perícia (Treinada)</p>
         <select
           value={skill ?? ''}
           onChange={(e) => setSkill(e.target.value || null)}
@@ -777,7 +777,7 @@ function TempestadeIdeiasForm({
       </div>
 
       <div className="space-y-1">
-        <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">3) Ferramenta</p>
+        <p className="text-xs uppercase tracking-wider font-bold text-muted-foreground">3) Ferramenta</p>
         <input
           value={tool}
           onChange={(e) => setTool(e.target.value)}
@@ -786,7 +786,7 @@ function TempestadeIdeiasForm({
         />
       </div>
 
-      <p className="text-[10px] italic text-muted-foreground">
+      <p className="text-xs italic text-muted-foreground">
         Ferramenta fica registrada como nota narrativa. Tracker de Vantagem em perícia (Treinamento ÷ 2 / curto)
         é gerenciado pelo Mestre.
       </p>
@@ -821,13 +821,13 @@ function MestreCriacaoForm({
         Escolha <strong>2 ofícios diferentes</strong> para receber <strong>+2</strong> (Treinado).
       </p>
       {oficios.length === 0 && (
-        <p className="text-[10px] italic text-amber-400">
+        <p className="text-xs italic text-amber-400">
           Nenhuma perícia "Ofício" encontrada na ficha.
         </p>
       )}
       {[1, 2].map((slot) => (
         <div key={slot} className="space-y-1">
-          <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Ofício #{slot}</p>
+          <p className="text-xs uppercase tracking-wider font-bold text-muted-foreground">Ofício #{slot}</p>
           <div className="grid grid-cols-3 gap-1.5">
             {oficios.map((s) => {
               const isSel = (slot === 1 ? s1 : s2) === s.name;
@@ -912,7 +912,7 @@ function ArtesaoForm({
           ))}
         </div>
       )}
-      <p className="text-[10px] italic text-muted-foreground">
+      <p className="text-xs italic text-muted-foreground">
         A aba de Criação de Itens é narrativa — habilitada pelo Mestre.
       </p>
       <ConfirmButton enabled={!!picked} onClick={() => onConfirm({ craft: picked!, skill: picked! })} />
@@ -943,7 +943,7 @@ function AptidaoDesenvolvidaForm({
         Escolha <strong>1 Aptidão Amaldiçoada</strong> para receber <strong>+1 nível</strong>.
       </p>
       {taken.size > 0 && (
-        <p className="text-[10px] italic text-muted-foreground">
+        <p className="text-xs italic text-muted-foreground">
           Já desenvolvida(s): {[...taken].join(', ')} — não pode repetir.
         </p>
       )}
@@ -1009,7 +1009,7 @@ function NarrativeChoiceForm({
           </button>
         ))}
       </div>
-      <p className="text-[10px] italic text-muted-foreground">{note}</p>
+      <p className="text-xs italic text-muted-foreground">{note}</p>
       <ConfirmButton enabled={!!picked} onClick={() => onConfirm({ [field]: picked! })} />
     </div>
   );

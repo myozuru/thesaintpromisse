@@ -112,7 +112,7 @@ export function CartPanel({ estId, estName }: Props) {
             <div className="flex items-center justify-between gap-2 pt-1">
               <button
                 onClick={() => { clearCart(estId); playClickSound(); }}
-                className="text-[11px] text-muted-foreground hover:text-hp underline"
+                className="text-xs text-muted-foreground hover:text-hp underline"
               >
                 Esvaziar
               </button>

@@ -118,8 +118,8 @@ export function PoolGrantDialog({ open, onOpenChange, character: c }: Props) {
               >
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-bold text-foreground truncate">{p.label}</div>
-                  <div className="text-[10px] text-muted-foreground italic truncate">{p.hint}</div>
-                  <div className="text-[11px] font-mono text-muted-foreground">
+                  <div className="text-xs text-muted-foreground italic truncate">{p.hint}</div>
+                  <div className="text-xs font-mono text-muted-foreground">
                     Atual: {cur}
                     {d !== 0 && (
                       <span className={cn('font-bold ml-1', d > 0 ? 'text-primary' : 'text-destructive')}>

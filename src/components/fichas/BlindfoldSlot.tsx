@@ -75,7 +75,7 @@ export function BlindfoldSlot({ character }: Props) {
         </PopoverTrigger>
         <PopoverContent className="w-64 space-y-2">
           <div className="text-xs font-semibold">Slot de Venda</div>
-          <div className="text-[11px] text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             Descreva a cobertura. Equipar/remover dispara <code>aoVendar</code> /{' '}
             <code>aoDescobrir</code> no Omni.
           </div>

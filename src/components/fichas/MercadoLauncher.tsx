@@ -48,7 +48,7 @@ export function MercadoLauncher({ characterId }: Props) {
                 >
                   <div className="font-semibold text-foreground">{s.name}</div>
                   {s.description && (
-                    <div className="text-[11px] text-muted-foreground line-clamp-1">
+                    <div className="text-xs text-muted-foreground line-clamp-1">
                       {s.description}
                     </div>
                   )}

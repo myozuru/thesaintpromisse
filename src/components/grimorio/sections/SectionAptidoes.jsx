@@ -82,12 +82,12 @@ export default function SectionAptidoes({ draft, actions }) {
             </span>
             <span className="text-slate-500 text-sm">/</span>
             <span className="text-slate-400 text-lg tabular-nums">{budget}</span>
-            <span className="text-[10px] uppercase tracking-wider text-slate-500 ml-1">
+            <span className="text-xs uppercase tracking-wider text-slate-500 ml-1">
               pontos gastos
             </span>
           </div>
 
-          <div className={`text-[10px] uppercase tracking-wider font-bold ${theme.text}`}>
+          <div className={`text-xs uppercase tracking-wider font-bold ${theme.text}`}>
             {budgetKey === "over" && `Excedeu em ${Math.abs(remaining)}`}
             {budgetKey === "ok" && "Limite exato"}
             {budgetKey === "warn" && `${remaining} disponível(is)`}
@@ -116,7 +116,7 @@ export default function SectionAptidoes({ draft, actions }) {
           </div>
         )}
 
-        <p className="text-[10px] text-slate-500 mt-2">
+        <p className="text-xs text-slate-500 mt-2">
           Regra: 1 ponto de Aptidão a cada 2 NDs · Criatura ND {draft.core?.nd ?? "?"} tem {budget} ponto(s).
         </p>
       </div>
@@ -153,7 +153,7 @@ export default function SectionAptidoes({ draft, actions }) {
 
       {/* ===== DICA QUANDO EXCEDEU ===== */}
       {budgetKey === "over" && (
-        <p className="text-[11px] text-red-400/90 leading-relaxed">
+        <p className="text-xs text-red-400/90 leading-relaxed">
           Essa criatura tem mais pontos de aptidão do que o sistema base permite.
           Pode ser intencional (criaturas especiais/únicas), mas o sistema vai sinalizar isso como um warning na ficha.
         </p>

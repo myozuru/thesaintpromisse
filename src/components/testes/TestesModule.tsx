@@ -134,7 +134,7 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
         <div className={compact ? 'grid grid-cols-2 gap-3' : 'grid md:grid-cols-2 gap-4'}>
           <div className={compact ? 'space-y-1.5 col-span-2' : 'space-y-1.5 md:col-span-2'}>
             <div className="flex items-center justify-between">
-              <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-accent/80">
+              <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.18em] text-accent/80">
                 <Users className="h-3.5 w-3.5" /> 01 · Alvos {selectedChars.length > 0 && `(${selectedChars.length})`}
               </label>
               {players.length > 0 && (
@@ -171,10 +171,10 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
           </div>
 
           <div className="col-span-2 space-y-2">
-            <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent/80">02 · Tipo de teste</label>
+            <label className="text-xs font-bold uppercase tracking-[0.18em] text-accent/80">02 · Tipo de teste</label>
             <div className="grid grid-cols-3 gap-1 rounded-md border border-border/70 bg-background/55 p-1">
               {([['attribute', 'Atributo'], ['skill', 'Perícia'], ['save', 'TR']] as const).map(([value, label]) => (
-                <Button key={value} type="button" variant="ghost" size="sm" className={cn('h-8 text-[10px] uppercase', kind === value ? 'border border-accent/25 bg-accent/10 text-accent' : 'text-muted-foreground')} onClick={() => {
+                <Button key={value} type="button" variant="ghost" size="sm" className={cn('h-8 text-xs uppercase', kind === value ? 'border border-accent/25 bg-accent/10 text-accent' : 'text-muted-foreground')} onClick={() => {
                   setKind(value);
                   const next = !refChar ? (value === 'save' ? DEFAULT_SAVING_THROWS : []) : value === 'attribute' ? refChar.attributes.map(a => a.name) : value === 'skill' ? refChar.skills.map(s => s.name) : (refChar.savingThrows ?? []).map(s => s.name);
                   ensureValidName(next);
@@ -183,7 +183,7 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
             </div>
           </div>
           <div className="col-span-2 space-y-1.5">
-            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Teste solicitado</label>
+            <label className="text-xs uppercase tracking-wider text-muted-foreground">Teste solicitado</label>
             <Select value={testName} onValueChange={setTestName}>
               <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
               <SelectContent className="z-[220] max-h-72">
@@ -198,8 +198,8 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
           </div>
 
           <div className="col-span-2 space-y-2 rounded-md border border-border/70 bg-background/35 p-3">
-            <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-accent/80"><EyeOff className="h-3.5 w-3.5" /> 03 · Desafio e sigilo</label>
-            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">CD opcional</label>
+            <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.18em] text-accent/80"><EyeOff className="h-3.5 w-3.5" /> 03 · Desafio e sigilo</label>
+            <label className="text-xs uppercase tracking-wider text-muted-foreground">CD opcional</label>
             <Input
               type="number"
               inputMode="numeric"
@@ -223,16 +223,16 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent/80">Bônus secreto do Mestre</label>
+          <label className="text-xs font-bold uppercase tracking-[0.18em] text-accent/80">Bônus secreto do Mestre</label>
           <Input type="number" inputMode="numeric" placeholder="ex.: 2 ou -3" value={masterBonus} onChange={(e) => setMasterBonus(e.target.value)} />
-          <p className="text-[10px] text-muted-foreground">O jogador só descobre o valor quando o resultado aparecer.</p>
+          <p className="text-xs text-muted-foreground">O jogador só descobre o valor quando o resultado aparecer.</p>
         </div>
 
         <div className="space-y-2">
-          <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-accent/80"><Flame className="h-3.5 w-3.5" /> Drama da rolagem</label>
+          <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.18em] text-accent/80"><Flame className="h-3.5 w-3.5" /> Drama da rolagem</label>
           <div className="grid grid-cols-4 gap-1 rounded-md border border-border/70 bg-background/55 p-1">
             {([[0, 'Normal'], [1, 'Tenso'], [2, 'Épico'], [3, 'Lendário']] as const).map(([value, label]) => (
-              <Button key={value} type="button" variant="ghost" size="sm" className={cn('h-8 text-[10px] uppercase', drama === value ? 'border border-accent/25 bg-accent/10 text-accent' : 'text-muted-foreground')} onClick={() => setDrama(value)}>{label}</Button>
+              <Button key={value} type="button" variant="ghost" size="sm" className={cn('h-8 text-xs uppercase', drama === value ? 'border border-accent/25 bg-accent/10 text-accent' : 'text-muted-foreground')} onClick={() => setDrama(value)}>{label}</Button>
             ))}
           </div>
           <label className={cn('flex cursor-pointer items-center gap-3 rounded-md border p-3 text-xs transition-colors', cinematicFocus ? 'border-accent/40 bg-accent/10 text-foreground' : 'border-border/70 bg-background/35 text-muted-foreground')}>
@@ -243,7 +243,7 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
         </div>
 
         <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-accent/80"><ScrollText className="h-3.5 w-3.5" /> 04 · Nota opcional</label>
+          <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.18em] text-accent/80"><ScrollText className="h-3.5 w-3.5" /> 04 · Nota opcional</label>
           <Input
             placeholder="ex.: você sente algo estranho no ar…"
             value={note}
@@ -258,7 +258,7 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
 
       <div className={compact ? 'space-y-2 border-t border-border/70 pt-4' : 'space-y-2'}>
         <div className="flex items-center justify-between">
-          <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent/80">
+          <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-accent/80">
             Pedidos em cena · {requests.length}
           </h3>
           {requests.length > 0 && (

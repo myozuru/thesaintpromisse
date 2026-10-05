@@ -789,7 +789,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                     <div className="flex items-center gap-2">
                       <Layers className="h-4 w-4 text-accent" />
                       <span className="text-sm font-bold text-accent uppercase tracking-wider">Talentos</span>
-                      <span className="rounded-full border border-accent/40 bg-accent/15 px-2 py-0.5 text-[10px] font-mono font-bold text-accent">
+                      <span className="rounded-full border border-accent/40 bg-accent/15 px-2 py-0.5 text-xs font-mono font-bold text-accent">
                         {liveTrackers.availableTalents} disponíveis
                       </span>
                     </div>
@@ -816,12 +816,12 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="text-sm font-bold text-foreground">{def.name}</span>
-                                <span className="text-[10px] uppercase tracking-wider rounded-full border border-accent/30 bg-accent/10 px-1.5 py-0.5 text-accent">
+                                <span className="text-xs uppercase tracking-wider rounded-full border border-accent/30 bg-accent/10 px-1.5 py-0.5 text-accent">
                                   {def.tag ?? def.category}
                                 </span>
                               </div>
                               {def.mechanic && (
-                                <p className="mt-1 text-[11px] text-muted-foreground line-clamp-2">{def.mechanic}</p>
+                                <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{def.mechanic}</p>
                               )}
                             </div>
                             <button
@@ -867,7 +867,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                 ) : (
                   <div className="flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-sm font-bold text-primary">
                     <Lock className="h-3.5 w-3.5" /> PLAYER
-                    <span className="ml-auto text-[10px] font-normal text-muted-foreground">Apenas o Mestre cria NPCs/Inimigos</span>
+                    <span className="ml-auto text-xs font-normal text-muted-foreground">Apenas o Mestre cria NPCs/Inimigos</span>
                   </div>
                 )}
               </div>
@@ -905,12 +905,12 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                   })}
                 </div>
                 {origin === 'Restringido' && (
-                  <p className="text-[10px] text-primary/80 italic">
+                  <p className="text-xs text-primary/80 italic">
                     Travada em "Feiticeiro" pela origem Restringido.
                   </p>
                 )}
                 {origin === 'Corpo Amaldiçoado Mutante (CAM)' && (
-                  <p className="text-[10px] text-accent/90 italic">
+                  <p className="text-xs text-accent/90 italic">
                     CAM proíbe Multiclasse — os 3 núcleos compartilham a classe Feiticeiro.
                   </p>
                 )}
@@ -937,7 +937,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                     ))}
                   </select>
                   {lockedSpec && (
-                    <p className="text-[10px] text-primary/80 italic">
+                    <p className="text-xs text-primary/80 italic">
                       Travada em "{lockedSpec}" pela origem.
                     </p>
                   )}
@@ -954,7 +954,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                     <option value="Inteligência">Inteligência</option>
                     <option value="Sabedoria">Sabedoria</option>
                   </select>
-                  <p className="text-[10px] text-muted-foreground italic">
+                  <p className="text-xs text-muted-foreground italic">
                     Define CDs, ataques amaldiçoados e o bônus único no PE Máximo (6 × Nv + Mod).
                   </p>
                 </div>
@@ -967,12 +967,12 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                     <ScrollText className="h-4 w-4 text-primary" />
                     <span className="text-sm font-bold text-primary">Treinamentos do Suporte</span>
                     {supChoicesComplete ? (
-                      <span className="ml-auto text-[10px] text-primary font-bold">✓ Completo</span>
+                      <span className="ml-auto text-xs text-primary font-bold">✓ Completo</span>
                     ) : (
-                      <span className="ml-auto text-[10px] text-destructive font-bold">Obrigatório</span>
+                      <span className="ml-auto text-xs text-destructive font-bold">Obrigatório</span>
                     )}
                   </div>
-                  <div className="text-[10px] text-muted-foreground space-y-0.5">
+                  <div className="text-xs text-muted-foreground space-y-0.5">
                     <p><strong>Automático:</strong> Armas Simples + Escudos.</p>
                     <p><strong>Perícias fixas:</strong> Medicina + Prestidigitação.</p>
                     <p><strong>Livres:</strong> 3 perícias quaisquer (passo Perícias).</p>
@@ -980,7 +980,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
 
                   {/* Atributo-chave: Presença OU Sabedoria */}
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-foreground">🔑 Atributo-Chave (CD das habilidades)</label>
+                    <label className="text-xs font-bold text-foreground">🔑 Atributo-Chave (CD das habilidades)</label>
                     <div className="grid grid-cols-2 gap-1.5">
                       {(['Presença', 'Sabedoria'] as const).map((s) => (
                         <button
@@ -988,7 +988,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                           type="button"
                           onClick={() => setSupKeyAttribute(s)}
                           className={cn(
-                            'h-8 rounded border text-[11px] font-bold transition-colors',
+                            'h-8 rounded border text-xs font-bold transition-colors',
                             supKeyAttribute === s
                               ? 'border-primary bg-primary text-primary-foreground'
                               : 'border-border bg-secondary/40 text-foreground hover:border-primary/60',
@@ -998,14 +998,14 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                         </button>
                       ))}
                     </div>
-                    <p className="text-[10px] text-muted-foreground italic">
+                    <p className="text-xs text-muted-foreground italic">
                       Define a CD das habilidades de Suporte e o bônus no PE Máximo (5 × Nv + Mod).
                     </p>
                   </div>
 
                   {/* TR Astúcia OU Vontade */}
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-foreground">Teste de Resistência (1)</label>
+                    <label className="text-xs font-bold text-foreground">Teste de Resistência (1)</label>
                     <div className="grid grid-cols-2 gap-1.5">
                       {(['Astúcia', 'Vontade'] as const).map((s) => (
                         <button
@@ -1013,7 +1013,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                           type="button"
                           onClick={() => setSupSaveChoice(s)}
                           className={cn(
-                            'h-8 rounded border text-[11px] font-bold transition-colors',
+                            'h-8 rounded border text-xs font-bold transition-colors',
                             supSaveChoice === s
                               ? 'border-primary bg-primary text-primary-foreground'
                               : 'border-border bg-secondary/40 text-foreground hover:border-primary/60',
@@ -1027,7 +1027,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
 
                   {/* Ofícios x2 */}
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-foreground">
+                    <label className="text-xs font-bold text-foreground">
                       Ofícios (2 de 3) — selecionados: {supOficioChoices.length}/2
                     </label>
                     <div className="grid grid-cols-3 gap-1.5">
@@ -1045,7 +1045,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                               );
                             }}
                             className={cn(
-                              'h-8 rounded border text-[11px] font-bold transition-colors',
+                              'h-8 rounded border text-xs font-bold transition-colors',
                               picked
                                 ? 'border-primary bg-primary text-primary-foreground'
                                 : 'border-border bg-secondary/40 text-foreground hover:border-primary/60',
@@ -1068,12 +1068,12 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                     <ScrollText className="h-4 w-4 text-primary" />
                     <span className="text-sm font-bold text-primary">Treinamentos de Combate</span>
                     {combChoicesComplete ? (
-                      <span className="ml-auto text-[10px] text-primary font-bold">✓ Completo</span>
+                      <span className="ml-auto text-xs text-primary font-bold">✓ Completo</span>
                     ) : (
-                      <span className="ml-auto text-[10px] text-destructive font-bold">Obrigatório</span>
+                      <span className="ml-auto text-xs text-destructive font-bold">Obrigatório</span>
                     )}
                   </div>
-                  <div className="text-[10px] text-muted-foreground space-y-0.5">
+                  <div className="text-xs text-muted-foreground space-y-0.5">
                     <p><strong>Automático:</strong> Todas as armas + Escudos.</p>
                     <p><strong>PV:</strong> 12 + CON no Nv 1; d10 (ou 6 fixo) + CON por nível.</p>
                     <p><strong>Livres:</strong> 3 perícias quaisquer (passo Perícias).</p>
@@ -1081,7 +1081,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
 
                   {/* Repertório do Especialista: 1 estilo no Nv 1 */}
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-foreground">⚔️ Estilo de Combate (Repertório do Especialista)</label>
+                    <label className="text-xs font-bold text-foreground">⚔️ Estilo de Combate (Repertório do Especialista)</label>
                     <div className="grid gap-1.5">
                       {COMBAT_STYLES.map((st) => (
                         <button
@@ -1096,16 +1096,16 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                           )}
                         >
                           <div className="text-xs font-bold text-foreground">{st.name}</div>
-                          <div className="text-[11px] text-muted-foreground">{st.summary}</div>
+                          <div className="text-xs text-muted-foreground">{st.summary}</div>
                         </button>
                       ))}
                     </div>
-                    <p className="text-[10px] text-muted-foreground italic">Novo estilo nos níveis 6 e 12.</p>
+                    <p className="text-xs text-muted-foreground italic">Novo estilo nos níveis 6 e 12.</p>
                   </div>
 
                   {/* Atributo-chave: Força | Destreza | Sabedoria */}
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-foreground">🔑 Atributo-Chave (CD das habilidades)</label>
+                    <label className="text-xs font-bold text-foreground">🔑 Atributo-Chave (CD das habilidades)</label>
                     <div className="grid grid-cols-3 gap-1.5">
                       {(['Força', 'Destreza', 'Sabedoria'] as const).map((s) => (
                         <button
@@ -1113,7 +1113,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                           type="button"
                           onClick={() => setCombKeyAttribute(s)}
                           className={cn(
-                            'h-8 rounded border text-[11px] font-bold transition-colors',
+                            'h-8 rounded border text-xs font-bold transition-colors',
                             combKeyAttribute === s
                               ? 'border-primary bg-primary text-primary-foreground'
                               : 'border-border bg-secondary/40 text-foreground hover:border-primary/60',
@@ -1123,14 +1123,14 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                         </button>
                       ))}
                     </div>
-                    <p className="text-[10px] text-muted-foreground italic">
+                    <p className="text-xs text-muted-foreground italic">
                       Define a CD das habilidades de especialização (10 + Mod). Não altera o PE (4 × Nv).
                     </p>
                   </div>
 
                   {/* TR Fortitude OU Reflexos */}
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-foreground">Teste de Resistência (1)</label>
+                    <label className="text-xs font-bold text-foreground">Teste de Resistência (1)</label>
                     <div className="grid grid-cols-2 gap-1.5">
                       {(['Fortitude', 'Reflexos'] as const).map((s) => (
                         <button
@@ -1138,7 +1138,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                           type="button"
                           onClick={() => setCombSaveChoice(s)}
                           className={cn(
-                            'h-8 rounded border text-[11px] font-bold transition-colors',
+                            'h-8 rounded border text-xs font-bold transition-colors',
                             combSaveChoice === s
                               ? 'border-primary bg-primary text-primary-foreground'
                               : 'border-border bg-secondary/40 text-foreground hover:border-primary/60',
@@ -1152,7 +1152,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
 
                   {/* 2 perícias entre Ofício | Atletismo | Acrobacia */}
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-foreground">
+                    <label className="text-xs font-bold text-foreground">
                       Perícias (2 de 5) — selecionadas: {combSkillChoices.length}/2
                     </label>
                     <div className="grid grid-cols-3 gap-1.5">
@@ -1171,7 +1171,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                               );
                             }}
                             className={cn(
-                              'h-8 rounded border text-[10px] font-bold transition-colors px-1',
+                              'h-8 rounded border text-xs font-bold transition-colors px-1',
                               picked
                                 ? 'border-primary bg-primary text-primary-foreground'
                                 : 'border-border bg-secondary/40 text-foreground hover:border-primary/60 disabled:opacity-40 disabled:cursor-not-allowed',
@@ -1194,19 +1194,19 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                     <ScrollText className="h-4 w-4 text-primary" />
                     <span className="text-sm font-bold text-primary">Treinamentos da Técnica</span>
                     {tecChoicesComplete ? (
-                      <span className="ml-auto text-[10px] text-primary font-bold">✓ Completo</span>
+                      <span className="ml-auto text-xs text-primary font-bold">✓ Completo</span>
                     ) : (
-                      <span className="ml-auto text-[10px] text-destructive font-bold">Obrigatório</span>
+                      <span className="ml-auto text-xs text-destructive font-bold">Obrigatório</span>
                     )}
                   </div>
-                  <div className="text-[10px] text-muted-foreground space-y-0.5">
+                  <div className="text-xs text-muted-foreground space-y-0.5">
                     <p><strong>Automático:</strong> Armas Simples + Armas a Distância.</p>
                     <p><strong>Perícias fixas:</strong> Feitiçaria + Ocultismo.</p>
                   </div>
 
                   {/* (1) TR Astúcia OU Vontade */}
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-foreground">Teste de Resistência (1)</label>
+                    <label className="text-xs font-bold text-foreground">Teste de Resistência (1)</label>
                     <div className="grid grid-cols-2 gap-1.5">
                       {(['Astúcia', 'Vontade'] as const).map((s) => (
                         <button
@@ -1214,7 +1214,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                           type="button"
                           onClick={() => setTecSaveChoice(s)}
                           className={cn(
-                            'h-8 rounded border text-[11px] font-bold transition-colors',
+                            'h-8 rounded border text-xs font-bold transition-colors',
                             tecSaveChoice === s
                               ? 'border-primary bg-primary text-primary-foreground'
                               : 'border-border bg-secondary/40 text-foreground hover:border-primary/60',
@@ -1228,7 +1228,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
 
                   {/* (2) Ofícios x2 */}
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-foreground">
+                    <label className="text-xs font-bold text-foreground">
                       Ofícios (2 de 3) — selecionados: {tecOficioChoices.length}/2
                     </label>
                     <div className="grid grid-cols-3 gap-1.5">
@@ -1246,7 +1246,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                               );
                             }}
                             className={cn(
-                              'h-8 rounded border text-[10px] font-bold transition-colors px-1',
+                              'h-8 rounded border text-xs font-bold transition-colors px-1',
                               picked
                                 ? 'border-primary bg-primary text-primary-foreground'
                                 : 'border-border bg-secondary/40 text-foreground hover:border-primary/60 disabled:opacity-40 disabled:cursor-not-allowed',
@@ -1258,13 +1258,13 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                         );
                       })}
                     </div>
-                    <p className="text-[10px] text-muted-foreground italic">Renomeie cada Ofício no passo "Perícias".</p>
+                    <p className="text-xs text-muted-foreground italic">Renomeie cada Ofício no passo "Perícias".</p>
                   </div>
 
                   {/* (3) Domínio dos Fundamentos — escolher 2. Fundamentos com requisito (ex.: Rápido Nv 6)
                       podem ser SELECIONADOS desde já, mas só ficam UTILIZÁVEIS quando a ficha atender ao requisito. */}
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-foreground">
+                    <label className="text-xs font-bold text-foreground">
                       Domínio dos Fundamentos (2 escolhas) — selecionados: {tecFundamentos.length}/2
                     </label>
                     <div className="grid grid-cols-1 gap-1.5">
@@ -1293,23 +1293,23 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                             title={det.effect}
                           >
                             <div className="flex items-center gap-1.5">
-                              <span className="text-[11px] font-bold">{f}</span>
+                              <span className="text-xs font-bold">{f}</span>
                               {locked && (
-                                <span className="rounded-sm bg-amber-500/20 border border-amber-500/40 px-1 py-px text-[8px] font-bold uppercase tracking-wider text-amber-300">
+                                <span className="rounded-sm bg-amber-500/20 border border-amber-500/40 px-1 py-px text-xs font-bold uppercase tracking-wider text-amber-300">
                                   🔒 Nv {det.unlockLevel}
                                 </span>
                               )}
                             </div>
-                            <div className="text-[9px] text-muted-foreground leading-tight mt-0.5">{det.effect}</div>
+                            <div className="text-xs text-muted-foreground leading-tight mt-0.5">{det.effect}</div>
                           </button>
                         );
                       })}
                     </div>
-                    <p className="text-[10px] text-muted-foreground italic">Você pode aprender fundamentos com requisito de nível agora; eles só ficarão utilizáveis ao atingir o nível necessário.</p>
+                    <p className="text-xs text-muted-foreground italic">Você pode aprender fundamentos com requisito de nível agora; eles só ficarão utilizáveis ao atingir o nível necessário.</p>
                   </div>
 
                   {!tecChoicesComplete && (
-                    <p className="text-[10px] text-destructive font-bold">
+                    <p className="text-xs text-destructive font-bold">
                       Conclua todas as escolhas para avançar do passo Classe.
                     </p>
                   )}
@@ -1363,7 +1363,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                   {lockedToLevel1 ? (
                     <div className="h-10 w-full rounded-lg border border-border bg-secondary/40 px-3 flex items-center justify-between text-sm font-mono">
                       <span className="text-foreground font-bold">1</span>
-                      <span className="text-[10px] text-muted-foreground">🔒 Players começam no Nv 1</span>
+                      <span className="text-xs text-muted-foreground">🔒 Players começam no Nv 1</span>
                     </div>
                   ) : (
                     <NullSafeInput value={level} onChange={setLevel} className="w-full" />
@@ -1372,7 +1372,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                 <div className="space-y-1">
                   <label className="text-sm text-muted-foreground flex items-center justify-between gap-2">
                     <span>❤️ Vida Total (HP)</span>
-                    <span className="text-[11px] text-hp font-bold">
+                    <span className="text-xs text-hp font-bold">
                       Final: {hpMax + bHP}
                       {bHP !== 0 && (
                         <span className="text-muted-foreground font-normal"> ({hpMax} {bHP >= 0 ? '+' : '−'} {Math.abs(bHP)} origem)</span>
@@ -1381,13 +1381,13 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                   </label>
                   <div className="h-10 w-full rounded-lg border border-border bg-secondary/40 px-3 flex items-center justify-between text-sm font-mono">
                     <span className="text-hp font-bold">{hpMax}</span>
-                    <span className="text-[10px] text-muted-foreground">d{hitDie} ({hitDie}) {fmtMod(conMod)} CON</span>
+                    <span className="text-xs text-muted-foreground">d{hitDie} ({hitDie}) {fmtMod(conMod)} CON</span>
                   </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-sm text-muted-foreground flex items-center justify-between gap-2">
                     <span>⚡ Pontos de Energia (PE)</span>
-                    <span className="text-[11px] text-pe font-bold">
+                    <span className="text-xs text-pe font-bold">
                       Final: {peMax + bPE}
                       {bPE !== 0 && (
                         <span className="text-muted-foreground font-normal"> ({peMax} {bPE >= 0 ? '+' : '−'} {Math.abs(bPE)} origem)</span>
@@ -1396,21 +1396,21 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                   </label>
                   <div className="h-10 w-full rounded-lg border border-border bg-secondary/40 px-3 flex items-center justify-between text-sm font-mono">
                     <span className="text-pe font-bold">{peMax}</span>
-                    <span className="text-[10px] text-muted-foreground">{getPePerLevelMult(specialization)} × Nv {keyAttrName ? `${fmtMod(keyMod)} ${keyAttrName}` : '(sem chave)'}</span>
+                    <span className="text-xs text-muted-foreground">{getPePerLevelMult(specialization)} × Nv {keyAttrName ? `${fmtMod(keyMod)} ${keyAttrName}` : '(sem chave)'}</span>
                   </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-sm text-muted-foreground">🛡️ Classe de Armadura (CA)</label>
                   <div className="h-10 w-full rounded-lg border border-border bg-secondary/40 px-3 flex items-center justify-between text-sm font-mono">
                     <span className="text-foreground font-bold">{ca}</span>
-                    <span className="text-[10px] text-muted-foreground">10 {fmtMod(desMod)} DES</span>
+                    <span className="text-xs text-muted-foreground">10 {fmtMod(desMod)} DES</span>
                   </div>
                 </div>
                 <div className="space-y-1 col-span-2">
                   <label className="text-sm text-muted-foreground">🎯 CD Base</label>
                   <div className="h-10 w-full rounded-lg border border-border bg-secondary/40 px-3 flex items-center justify-between text-sm font-mono">
                     <span className="text-foreground font-bold">{baseDC}</span>
-                    <span className="text-[10px] text-muted-foreground">10 {keyAttrName ? `${fmtMod(keyMod)} ${keyAttrName}` : '(sem atributo-chave)'}</span>
+                    <span className="text-xs text-muted-foreground">10 {keyAttrName ? `${fmtMod(keyMod)} ${keyAttrName}` : '(sem atributo-chave)'}</span>
                   </div>
                 </div>
                 {/* Aptidão Energia Reversa removida da criação — só pode ser adquirida via Aptidões Amaldiçoadas (ER) na ficha. */}
@@ -1571,7 +1571,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                             onClick={toggleTrain}
                             disabled={tecAutoTrained || (cannotTrain && !skillTrained[sd.name])}
                             className={cn(
-                              'w-5 h-5 rounded-sm border text-[9px] font-bold flex items-center justify-center transition-all flex-shrink-0 disabled:cursor-not-allowed',
+                              'w-5 h-5 rounded-sm border text-xs font-bold flex items-center justify-center transition-all flex-shrink-0 disabled:cursor-not-allowed',
                               trainedDisplay ? 'bg-primary/30 border-primary text-primary' : 'border-border text-muted-foreground/40 hover:border-primary/50',
                               !trainedDisplay && cannotTrain && 'opacity-30',
                               tecAutoTrained && 'cursor-not-allowed',
@@ -1592,7 +1592,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                             onClick={toggleMastery}
                             disabled={cannotMastery && !skillMastery[sd.name]}
                             className={cn(
-                              'w-5 h-5 rounded-sm border text-[9px] font-bold flex items-center justify-center transition-all flex-shrink-0 disabled:cursor-not-allowed',
+                              'w-5 h-5 rounded-sm border text-xs font-bold flex items-center justify-center transition-all flex-shrink-0 disabled:cursor-not-allowed',
                               skillMastery[sd.name] ? 'bg-pe/30 border-pe text-pe' : 'border-border text-muted-foreground/40 hover:border-pe/50',
                               !skillMastery[sd.name] && cannotMastery && 'opacity-30',
                             )}
@@ -1618,7 +1618,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                           ) : (
                             <span className={cn("flex-1 text-sm", blockedByWhitelist ? 'text-muted-foreground/50 italic' : 'text-foreground')}>
                               {sd.name}
-                              {blockedByWhitelist && <span className="ml-1 text-[10px]">🔒</span>}
+                              {blockedByWhitelist && <span className="ml-1 text-xs">🔒</span>}
                             </span>
                           )}
                           {trainBonus > 0 && (
@@ -1667,10 +1667,10 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                           <span className="text-primary">⭐</span>
                           <span className="font-bold text-foreground">{p.name}</span>
                           <span className={cn(
-                            'text-[10px] rounded-full border px-1.5 py-0.5 font-extrabold tracking-wider',
+                            'text-xs rounded-full border px-1.5 py-0.5 font-extrabold tracking-wider',
                             isActive ? 'bg-primary/15 text-primary border-primary/40' : 'bg-secondary/50 text-muted-foreground border-border'
                           )} title={`Nível de feitiço ${passiveSpellLv}`}>🔮 Nv.{passiveSpellLv}</span>
-                          {!isActive && <span className="text-[10px] text-hp font-bold">🔒 inativa</span>}
+                          {!isActive && <span className="text-xs text-hp font-bold">🔒 inativa</span>}
                         </div>
                         <button onClick={() => setPassives(passives.filter((_, j) => j !== i))} className="text-destructive/60 hover:text-destructive text-xs">✕</button>
                       </div>
@@ -1760,7 +1760,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                   >
                     🔰 RD por tipo de dano {showPassRdPicker ? '▲' : '▼'}
                     {DAMAGE_TYPES.filter(t => (passForm.bonusRdByType[t] || 0) !== 0).length > 0 && (
-                      <span className="rounded-full bg-pe/20 border border-pe/30 px-1.5 py-0.5 text-[10px] text-pe">
+                      <span className="rounded-full bg-pe/20 border border-pe/30 px-1.5 py-0.5 text-xs text-pe">
                         {DAMAGE_TYPES.filter(t => (passForm.bonusRdByType[t] || 0) !== 0).length} tipo(s)
                       </span>
                     )}
@@ -1769,7 +1769,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                     <div className="grid grid-cols-3 gap-1.5 rounded-xl border border-pe/20 bg-pe/5 p-3">
                       {DAMAGE_TYPES.map(t => (
                         <div key={t} className="space-y-0.5">
-                          <label className="text-[10px] font-bold text-pe uppercase">{DAMAGE_TYPE_ABBR[t]}</label>
+                          <label className="text-xs font-bold text-pe uppercase">{DAMAGE_TYPE_ABBR[t]}</label>
                           <input
                             type="text"
                             inputMode="numeric"
@@ -1840,20 +1840,20 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                       <div className="rounded-xl border bg-[#1A1A1B] p-3 space-y-2" style={{ borderColor: '#7C3AED' }}>
                         <div className="flex items-center justify-between gap-2 flex-wrap">
                           <div>
-                            <div className="text-[10px] uppercase tracking-wider font-bold" style={{ color: '#7C3AED' }}>Técnica Amaldiçoada</div>
+                            <div className="text-xs uppercase tracking-wider font-bold" style={{ color: '#7C3AED' }}>Técnica Amaldiçoada</div>
                             <div className="text-base font-bold text-foreground">{tecnica}</div>
                           </div>
-                          <span className="rounded-full border px-2 py-0.5 text-[10px] font-bold" style={{ borderColor: '#7C3AED', color: '#7C3AED' }}>
+                          <span className="rounded-full border px-2 py-0.5 text-xs font-bold" style={{ borderColor: '#7C3AED', color: '#7C3AED' }}>
                             Aptidão: {aptidao}
                           </span>
                         </div>
-                        <p className="text-[11px] text-muted-foreground italic leading-snug">
+                        <p className="text-xs text-muted-foreground italic leading-snug">
                           Trocar a <strong>Técnica de Estilo ativa</strong> no início do turno é uma <strong>Ação Livre</strong>, enquanto o Domínio Simples permanecer ativo.
                         </p>
 
                         {/* Seletor de Técnica de Estilo ativa */}
                         <div className="space-y-1">
-                          <label className="text-[10px] uppercase tracking-wider font-bold" style={{ color: '#7C3AED' }}>
+                          <label className="text-xs uppercase tracking-wider font-bold" style={{ color: '#7C3AED' }}>
                             Técnica de Estilo Ativa (Ação Livre)
                           </label>
                           <select
@@ -1878,7 +1878,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                           </span>
                         </div>
                         {remaining > 0 && (
-                          <div className="text-[10px] font-bold" style={{ color: '#7C3AED' }}>
+                          <div className="text-xs font-bold" style={{ color: '#7C3AED' }}>
                             ⚠️ Selecione +{remaining} Técnica(s) de Estilo antes de finalizar.
                           </div>
                         )}
@@ -1996,8 +1996,8 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                 {charClass === 'Feiticeiro' && <div className="flex justify-between"><span className="text-muted-foreground">Origem:</span><span>{origin}</span></div>}
                 {charClass === 'Maldição' && <div className="flex justify-between"><span className="text-muted-foreground">Motivação:</span><span>{motivation}</span></div>}
                 <div className="flex justify-between"><span className="text-muted-foreground">Nível:</span><span className="font-bold">{level}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">HP:</span><span className="text-hp font-bold">{hpMax + (effects.automation.bonusHP ?? 0)}{(effects.automation.bonusHP ?? 0) !== 0 && <span className="text-[10px] text-muted-foreground font-normal"> ({hpMax}{(effects.automation.bonusHP ?? 0) >= 0 ? '+' : '−'}{Math.abs(effects.automation.bonusHP ?? 0)})</span>}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">PE:</span><span className="text-pe font-bold">{peMax + (effects.automation.bonusPE ?? 0)}{(effects.automation.bonusPE ?? 0) !== 0 && <span className="text-[10px] text-muted-foreground font-normal"> ({peMax}{(effects.automation.bonusPE ?? 0) >= 0 ? '+' : '−'}{Math.abs(effects.automation.bonusPE ?? 0)})</span>}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">HP:</span><span className="text-hp font-bold">{hpMax + (effects.automation.bonusHP ?? 0)}{(effects.automation.bonusHP ?? 0) !== 0 && <span className="text-xs text-muted-foreground font-normal"> ({hpMax}{(effects.automation.bonusHP ?? 0) >= 0 ? '+' : '−'}{Math.abs(effects.automation.bonusHP ?? 0)})</span>}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">PE:</span><span className="text-pe font-bold">{peMax + (effects.automation.bonusPE ?? 0)}{(effects.automation.bonusPE ?? 0) !== 0 && <span className="text-xs text-muted-foreground font-normal"> ({peMax}{(effects.automation.bonusPE ?? 0) >= 0 ? '+' : '−'}{Math.abs(effects.automation.bonusPE ?? 0)})</span>}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">CA:</span><span>{ca}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">CD:</span><span>{baseDC}</span></div>
                 <div className="border-t border-border pt-2 mt-2">

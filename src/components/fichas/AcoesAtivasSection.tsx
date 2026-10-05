@@ -17,7 +17,7 @@ import { acoesAtivasDe, armaDaAcao, executarAcaoAtiva } from '@/lib/omni/acaoAti
 
 const ACAO_ROT = { comum: 'Ação Comum', bonus: 'Ação Bônus', reacao: 'Reação', livre: 'Livre' } as const;
 const TR_ROT: Record<string, string> = { astucia: 'Astúcia', fortitude: 'Fortitude', integridade: 'Integridade', reflexos: 'Reflexos', vontade: 'Vontade' };
-const chip = 'rounded border px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap';
+const chip = 'rounded border px-1.5 py-0.5 text-xs font-semibold whitespace-nowrap';
 
 export function AcoesAtivasSection({ charId }: { charId: string }) {
   const inventario = useInventoryStore((s) => s.items);
@@ -80,7 +80,7 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
             <div className="flex items-start gap-2">
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-bold text-foreground">{cfg.nome || 'Ação sem nome'}</div>
-                <div className="truncate text-[10px] text-muted-foreground">{ent.nome}</div>
+                <div className="truncate text-xs text-muted-foreground">{ent.nome}</div>
               </div>
               <span className={`${chip} border-primary/50 bg-primary/15 text-primary`}>{p ? `${p.pe} PE${p.pv ? ` + ${p.pv} PV` : ''}` : `${cfg.custoPE} PE`}</span>
             </div>
@@ -113,7 +113,7 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
               {p?.usosItem ? <span className={`${chip} border-border`}>Usos {useInventoryStore.getState().items[instanceId]?.usosRestantes ?? ent.usos?.total ?? 0}</span> : null}
               {p?.pePorTurno ? <span className={`${chip} border-border`}>+{p.pePorTurno} PE/turno</span> : null}
             </div>
-            {!custos.ok && <div className="rounded bg-destructive/10 px-2 py-1 text-[11px] text-destructive">⚠ {custos.reason}</div>}
+            {!custos.ok && <div className="rounded bg-destructive/10 px-2 py-1 text-xs text-destructive">⚠ {custos.reason}</div>}
             <div className="flex flex-wrap items-center gap-2">
               {cfg.custo_recursos?.max_intensificacoes ? (
                 <label className="flex items-center gap-1 text-xs">Intensificar
@@ -146,7 +146,7 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
                 }}
               >{busy === key ? 'Usando…' : 'Usar'}</button>
             </div>
-            {erro[key] && <div className="text-[11px] text-destructive">❌ {erro[key]}</div>}
+            {erro[key] && <div className="text-xs text-destructive">❌ {erro[key]}</div>}
           </div>
         );
       })}

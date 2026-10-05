@@ -89,7 +89,7 @@ export function SpecAbilityChoiceDialog({ charId, ability, current, open, onClos
 
           {schema.kind === 'weapon-group' && (
             <div className="space-y-2" data-testid="weapon-group-picker">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 {schema.label ?? 'Escolha o grupo de armas'}
               </p>
               <div className="grid grid-cols-3 gap-2">
@@ -171,7 +171,7 @@ function SpellLevelPicker({
   const levels = Array.from({ length: max - min + 1 }, (_, i) => min + i);
   return (
     <div className="space-y-2">
-      <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</p>
       <div className="grid grid-cols-5 gap-2">
         {levels.map((n) => (
           <button
@@ -203,7 +203,7 @@ function SavePicker({
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</p>
       <div className="grid grid-cols-2 gap-2">
         {options.map((opt) => (
           <button

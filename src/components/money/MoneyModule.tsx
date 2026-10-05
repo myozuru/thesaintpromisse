@@ -457,7 +457,7 @@ function WalletCard({ wallet, viewerRole, viewerCharacterId }: WalletCardProps) 
             {wallet.isPersonal ? <WalletIcon className="h-4 w-4" /> : <Users className="h-4 w-4" />}
             {displayName}
             {needsSuffix && (
-              <span className="ml-1 font-mono text-[10px] text-muted-foreground">{suffix}</span>
+              <span className="ml-1 font-mono text-xs text-muted-foreground">{suffix}</span>
             )}
           </h3>
           <p className="text-xs text-muted-foreground">{memberNames.join(' • ')}</p>
@@ -804,7 +804,7 @@ function TransactionHistory({ limit, filterCharacterId }: { limit: number; filte
                     {cur?.symbol}
                     {tx.amount}
                   </div>
-                  <div className="text-[10px] text-muted-foreground">{fmtDate(tx.at)}</div>
+                  <div className="text-xs text-muted-foreground">{fmtDate(tx.at)}</div>
                 </div>
               </li>
             );

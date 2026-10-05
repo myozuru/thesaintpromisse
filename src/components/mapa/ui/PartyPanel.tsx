@@ -95,7 +95,7 @@ export function PartyPanel({ collapsed, onToggleCollapsed }: Props) {
               <div className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-secondary">
                 <span className="inline-block h-7 w-7 rounded-full bg-amber-600 ring-2 ring-card" />
                 <span className="text-foreground flex-1 text-sm truncate">Você (GM)</span>
-                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                <span className="text-xs font-semibold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
                   GM
                 </span>
               </div>
@@ -123,7 +123,7 @@ function Section({
 }) {
   return (
     <div className="border-b border-border px-3 py-2.5">
-      <div className="flex items-center gap-1.5 mb-2 text-muted-foreground text-[10px] uppercase tracking-wider">
+      <div className="flex items-center gap-1.5 mb-2 text-muted-foreground text-xs uppercase tracking-wider">
         {icon}
         <span className="flex-1">{title}</span>
         {action}

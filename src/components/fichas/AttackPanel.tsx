@@ -1437,9 +1437,9 @@ export function AttackPanel({ character: cProp }: Props) {
 
         {/* ─── EMPUNHADURA ─────────────────────────────────────────────── */}
         <div className="rounded-lg border border-border bg-background/40 p-2 space-y-2">
-          <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+          <div className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">
             <Hand className="h-3 w-3" /> Empunhadura
-            <span className="ml-auto text-[10px] normal-case font-normal">
+            <span className="ml-auto text-xs normal-case font-normal">
               Trocas no turno: <b className="text-foreground">{c.weaponSwapsThisTurn ?? 0}</b>
               {' · '}AB: <b className="text-foreground">{c.bonusActionsCurrent}/{c.bonusActionsMax}</b>
             </span>
@@ -1448,7 +1448,7 @@ export function AttackPanel({ character: cProp }: Props) {
           <ReplicasSection charId={c.id} />
           <AcoesAtivasSection charId={c.id} />
           {inventoryWeapons.length === 0 ? (
-            <div className="text-[11px] text-muted-foreground italic">
+            <div className="text-xs text-muted-foreground italic">
               Nenhuma arma do catálogo no inventário deste personagem. Adicione armas pelo módulo Itens (vincule ao personagem).
             </div>
           ) : (
@@ -1480,7 +1480,7 @@ export function AttackPanel({ character: cProp }: Props) {
 
 
           {mainWeapon && (
-            <div className="text-[11px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               Atacando com <b className="text-foreground">{mainWeapon.name}</b>
               {' · '}atributo: <b className="text-foreground">{ability} ({abilityMod >= 0 ? '+' : ''}{abilityMod})</b>
               {' · '}dano: <b className="text-foreground">{mainWeapon.damage}</b>
@@ -1490,7 +1490,7 @@ export function AttackPanel({ character: cProp }: Props) {
         </div>
 
         {hasArsenalCiclico(c) && inCombat && (
-          <div className="rounded-md border border-primary/30 bg-background/40 px-2 py-1 text-[11px] text-muted-foreground" data-testid="arsenal-ciclico">
+          <div className="rounded-md border border-primary/30 bg-background/40 px-2 py-1 text-xs text-muted-foreground" data-testid="arsenal-ciclico">
             <b className="text-foreground">Arsenal Cíclico</b>
             {' · '}troca livre extra: {c.arsenalFreeSwapRound === combatRound ? 'usada nesta rodada' : 'disponível'}
             {arsenalBonusAtivo(c, c.arsenalBonus?.weaponName, combatRound) && <> {' · '}<b className="text-primary">+1 dado com {c.arsenalBonus?.weaponName}</b></>}
@@ -1498,7 +1498,7 @@ export function AttackPanel({ character: cProp }: Props) {
         )}
 
         {zonaAtaque && (
-          <div className="flex items-center justify-between gap-2 rounded border border-primary/60 bg-primary/10 px-2 py-1 text-[11px]" data-testid="zona-risco-banner">
+          <div className="flex items-center justify-between gap-2 rounded border border-primary/60 bg-primary/10 px-2 py-1 text-xs" data-testid="zona-risco-banner">
             <span>⚔️ Zona de Risco: ataque liberado contra <b>{characters.find((x) => x.id === zonaAtaque.alvoId)?.name ?? 'alvo'}</b> — role o ataque.</span>
             <button onClick={() => useZonaRiscoStore.getState().setAtaque(null)} className="text-muted-foreground hover:text-foreground">✕</button>
           </div>
@@ -1513,7 +1513,7 @@ export function AttackPanel({ character: cProp }: Props) {
         {mainWeapon && target && weaponRangeM !== null && targetDistanceM !== null && (
           <div
             className={cn(
-              'flex items-center gap-2 rounded-md border px-2 py-1.5 text-[11px]',
+              'flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs',
               rangeBlockReason
                 ? 'border-destructive/40 bg-destructive/15 text-destructive'
                 : 'border-border bg-background/40 text-muted-foreground',
@@ -1561,7 +1561,7 @@ export function AttackPanel({ character: cProp }: Props) {
 
 
         {/* ─── Situação (auto-lida do alvo + override manual) ─────────────── */}
-        <div className="flex flex-wrap gap-2 text-[11px]">
+        <div className="flex flex-wrap gap-2 text-xs">
           <ToggleChip on={ataqueOportunidade} onChange={setAtaqueOportunidade} label="Ataque de oportunidade" disabled={phase !== 'idle' && phase !== 'done'} />
           {mainWeapon && (hasProperty(mainWeapon, 'versatil') || hasProperty(mainWeapon, 'duas_maos')) && (
             <ToggleChip on={twoHanded || usingTwoHanded} onChange={setTwoHanded} label="Duas mãos" disabled={usingTwoHanded || !!offWeapon} />
@@ -1615,7 +1615,7 @@ export function AttackPanel({ character: cProp }: Props) {
           )}
         </div>
         {!inCombat && (
-          <div className="text-[10px] text-muted-foreground italic">
+          <div className="text-xs text-muted-foreground italic">
             ⚠ Sem combate ativo: a contagem de ataques prévios e trocas de arma só zera com o botão "Resetar turno" (não há virada automática de iniciativa).
           </div>
         )}
@@ -1623,14 +1623,14 @@ export function AttackPanel({ character: cProp }: Props) {
         {/* ─── Artes do Combate (Especialista em Combate) ─────────────────── */}
         {temArtes && (
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 space-y-1.5">
-            <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-300">
+            <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-300">
               <Zap className="h-3 w-3" /> Artes do Combate
               <span className="ml-auto normal-case font-normal text-muted-foreground">
                 Preparo: <b className={preparoAtual > 0 ? 'text-amber-300' : 'text-destructive'}>{preparoAtual}</b>/{preparoMax}
                 {arteCustoTotal > 0 && <span className="text-amber-200"> · custo {arteCustoTotal} PP</span>}
               </span>
             </div>
-            <div className="flex flex-wrap gap-1.5 text-[11px]">
+            <div className="flex flex-wrap gap-1.5 text-xs">
               <ToggleChip on={arteDistracao} onChange={setArteDistracao} label={`Distração Letal (1 PP) · −${metadeSab(c)} Def do alvo`} disabled={preparoAtual < 1} />
               <ToggleChip on={arteExecucao} onChange={setArteExecucao} label={`Execução Silenciosa (1 PP) · +${execucaoSilenciosaDice(c)}d6`} disabled={preparoAtual < 1 || !targetUnaware} />
               <ToggleChip on={arteGolpe} onChange={setArteGolpe} label={`Golpe Descendente (1 PP) · +${metadeSab(c)} Def sua`} disabled={preparoAtual < 1 || mainWeapon?.range !== 'melee'} />
@@ -1771,7 +1771,7 @@ export function AttackPanel({ character: cProp }: Props) {
         )}
 
         {arremessoAtaque && arremessoAtaque.espId === c.id && (
-          <div className="flex items-center justify-between gap-2 rounded border border-primary/60 bg-primary/10 px-2 py-1 text-[11px]" data-testid="arremesso-rapido-banner">
+          <div className="flex items-center justify-between gap-2 rounded border border-primary/60 bg-primary/10 px-2 py-1 text-xs" data-testid="arremesso-rapido-banner">
             <span>🌀 Arremesso Rápido: ataque extra liberado contra <b>{characters.find((x) => x.id === arremessoAtaque.alvoId)?.name ?? 'alvo'}</b> — role o ataque.</span>
             <button onClick={() => useArremessoRapidoStore.getState().setAtaque(null)} className="text-muted-foreground hover:text-foreground">✕</button>
           </div>
@@ -1931,7 +1931,7 @@ export function AttackPanel({ character: cProp }: Props) {
         {/* ─── Arremesso Ágil: ataque extra com arma de arremesso ────────── */}
         {temArtes && lastResult?.hit && phase === 'done' && mainWeapon?.range === 'melee' && arremessoWeapons.length > 0 && (
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2 space-y-1.5 animate-fade-in">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-amber-300">
+            <div className="text-xs font-bold uppercase tracking-wider text-amber-300">
               Arremesso Ágil (1 PP · ação livre)
             </div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -2034,7 +2034,7 @@ export function AttackPanel({ character: cProp }: Props) {
               </div>
             )}
             {lastResult.notes.length > 0 && (
-              <ul className="text-[11px] text-muted-foreground list-disc list-inside">
+              <ul className="text-xs text-muted-foreground list-disc list-inside">
                 {lastResult.notes.map((n, i) => <li key={i}>{n}</li>)}
               </ul>
             )}
@@ -2047,14 +2047,14 @@ export function AttackPanel({ character: cProp }: Props) {
         {/* Reações disponíveis */}
         {reactions.length > 0 && (
           <div className="rounded-lg border border-accent/30 bg-accent/5 p-2 space-y-1.5">
-            <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-accent">
+            <div className="flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-accent">
               <Shield className="h-3 w-3" /> Reações Disponíveis
             </div>
             {reactions.map(id => {
               const r = REACTION_LABELS[id];
               if (!r) return null;
               return (
-                <div key={id} className="text-[11px]">
+                <div key={id} className="text-xs">
                   <div className="font-bold">{r.name}</div>
                   <div className="text-muted-foreground"><Zap className="inline h-3 w-3" /> {r.trigger}</div>
                   <div>{r.effect}</div>
@@ -2064,7 +2064,7 @@ export function AttackPanel({ character: cProp }: Props) {
           </div>
         )}
 
-        <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+        <div className="text-xs text-muted-foreground flex items-center gap-1">
           <Sparkles className="h-3 w-3" />
           Bônus de talentos (Especialistas, Mestre dos Chicotes, Apunhaladora, Enérgica, Mortal/Fatal etc.) são aplicados automaticamente quando a arma e a situação combinarem.
         </div>
@@ -2090,7 +2090,7 @@ function HandSlot({
   const locked = !!lockedReason;
   return (
     <div className="space-y-1">
-      <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground">
+      <div className="flex items-center justify-between text-xs uppercase tracking-wider text-muted-foreground">
         <span>{label}</span>
         {currentName && !locked && (
           <button
@@ -2127,7 +2127,7 @@ function HandSlot({
       </select>}
       {ocupacaoDuasMaos && <div className="text-xs text-primary">🤲 {currentName} · duas mãos</div>}
       {rodape}
-      {locked && <div className="text-[10px] text-muted-foreground italic">{lockedReason}</div>}
+      {locked && <div className="text-xs text-muted-foreground italic">{lockedReason}</div>}
     </div>
   );
 }

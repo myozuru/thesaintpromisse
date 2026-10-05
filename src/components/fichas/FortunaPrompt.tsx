@@ -11,8 +11,8 @@ export function FortunaPrompt() {
         Postura da Fortuna: rolar de novo? O novo resultado vale. ({pedido.restantes} uso(s) nesta rodada)
       </div>
       <div className="flex gap-1.5">
-        <button onClick={() => pedido.resolve(true)} className="flex-1 text-[11px] px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold">Rolar de novo</button>
-        <button onClick={() => pedido.resolve(false)} className="flex-1 text-[11px] px-2 py-1 rounded border border-border bg-secondary/40 hover:bg-secondary">Manter</button>
+        <button onClick={() => pedido.resolve(true)} className="flex-1 text-xs px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold">Rolar de novo</button>
+        <button onClick={() => pedido.resolve(false)} className="flex-1 text-xs px-2 py-1 rounded border border-border bg-secondary/40 hover:bg-secondary">Manter</button>
       </div>
     </div>
   );

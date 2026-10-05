@@ -61,7 +61,7 @@ export function OpportunityPromptOverlay() {
                   {(c.mode === 'reaction' || c.mode === 'either') && (
                     <button
                       onClick={() => resolve(c.charId, c.charName, 'reaction')}
-                      className="h-6 px-2 rounded text-[10px] bg-amber-500/25 hover:bg-amber-500/45 text-amber-100 border border-amber-500/50 flex items-center gap-1"
+                      className="h-6 px-2 rounded text-xs bg-amber-500/25 hover:bg-amber-500/45 text-amber-100 border border-amber-500/50 flex items-center gap-1"
                       title="Marca a reação como usada (faça a rolagem na ficha)."
                     >
                       <Check className="h-3 w-3" /> Reação
@@ -70,7 +70,7 @@ export function OpportunityPromptOverlay() {
                   {(c.mode === 'action' || c.mode === 'either') && (
                     <button
                       onClick={() => resolve(c.charId, c.charName, 'action')}
-                      className="h-6 px-2 rounded text-[10px] bg-sky-500/25 hover:bg-sky-500/45 text-sky-100 border border-sky-500/50 flex items-center gap-1"
+                      className="h-6 px-2 rounded text-xs bg-sky-500/25 hover:bg-sky-500/45 text-sky-100 border border-sky-500/50 flex items-center gap-1"
                       title="Marca uso de 1 ação comum como AdO."
                     >
                       <Check className="h-3 w-3" /> Ação
@@ -78,7 +78,7 @@ export function OpportunityPromptOverlay() {
                   )}
                 </div>
               ) : (
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">aguardando mestre</span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">aguardando mestre</span>
               )}
             </div>
           ))}

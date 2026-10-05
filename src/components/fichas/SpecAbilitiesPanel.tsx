@@ -768,7 +768,7 @@ function PoolChip({
         toneCls,
       )}
     >
-      <span className="text-[8px] font-bold uppercase tracking-wider opacity-80 leading-none">
+      <span className="text-xs font-bold uppercase tracking-wider opacity-80 leading-none">
         {label}
       </span>
       <span className={cn('text-base font-mono font-bold tabular-nums leading-tight', value === 0 && 'opacity-40')}>
@@ -1079,7 +1079,7 @@ export function EmpolgacaoPanel({ character: c }: EmpolgacaoPanelProps) {
             >
               {n}
               {n >= 2 && (
-                <div className="text-[8px] font-mono opacity-80">{formatEmpolgacaoDie(table[n as 2 | 3 | 4 | 5])}</div>
+                <div className="text-xs font-mono opacity-80">{formatEmpolgacaoDie(table[n as 2 | 3 | 4 | 5])}</div>
               )}
             </div>
           );

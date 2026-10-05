@@ -135,7 +135,7 @@ export function CatalogoModule() {
             >
               <Icon className="h-3.5 w-3.5" />
               {s.label}
-              <span className={`ml-1 rounded px-1 text-[10px] ${secao === s.id ? 'bg-primary-foreground/20' : 'bg-secondary/60'}`}>
+              <span className={`ml-1 rounded px-1 text-xs ${secao === s.id ? 'bg-primary-foreground/20' : 'bg-secondary/60'}`}>
                 {s.count}
               </span>
             </button>
@@ -188,25 +188,25 @@ export function CatalogoModule() {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="text-sm font-semibold text-foreground truncate">{e.nome}</div>
-                  <div className="text-[10px] uppercase tracking-wider text-primary/70">
+                  <div className="text-xs uppercase tracking-wider text-primary/70">
                     {e.categoria}
                   </div>
                 </div>
                 {e.combatData?.effects?.length ? (
-                  <span className="shrink-0 text-[10px] rounded px-1.5 py-0.5 bg-primary/15 text-primary">
+                  <span className="shrink-0 text-xs rounded px-1.5 py-0.5 bg-primary/15 text-primary">
                     {e.combatData.effects.length} ef.
                   </span>
                 ) : null}
               </div>
               {e.descricao && (
-                <p className="text-[11px] text-muted-foreground italic line-clamp-3">{e.descricao}</p>
+                <p className="text-xs text-muted-foreground italic line-clamp-3">{e.descricao}</p>
               )}
               {e.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {e.tags.slice(0, 4).map((t) => (
                     <span
                       key={t}
-                      className="text-[10px] px-1.5 py-0.5 rounded bg-secondary/60 text-muted-foreground"
+                      className="text-xs px-1.5 py-0.5 rounded bg-secondary/60 text-muted-foreground"
                     >
                       {t}
                     </span>
@@ -216,12 +216,12 @@ export function CatalogoModule() {
               <div className="flex items-center gap-2 pt-1 border-t border-border/40">
                 <Send className="h-3.5 w-3.5 text-primary shrink-0" />
                 <Select onValueChange={(v) => entregarPara(e.id, v)}>
-                  <SelectTrigger className="h-7 text-[11px]">
+                  <SelectTrigger className="h-7 text-xs">
                     <SelectValue placeholder="Entregar para Jogador…" />
                   </SelectTrigger>
                   <SelectContent>
                     {characters.length === 0 && (
-                      <div className="px-2 py-1 text-[11px] text-muted-foreground">
+                      <div className="px-2 py-1 text-xs text-muted-foreground">
                         Nenhum personagem cadastrado
                       </div>
                     )}
@@ -301,28 +301,28 @@ function SimpleLibraryGrid({
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <div className="text-sm font-semibold text-foreground truncate">{e.name}</div>
-              <div className="text-[10px] uppercase tracking-wider text-primary/70">
+              <div className="text-xs uppercase tracking-wider text-primary/70">
                 de {e.authorName}
               </div>
             </div>
             {e.badge && (
-              <span className="shrink-0 text-[10px] rounded px-1.5 py-0.5 bg-primary/15 text-primary">
+              <span className="shrink-0 text-xs rounded px-1.5 py-0.5 bg-primary/15 text-primary">
                 {e.badge}
               </span>
             )}
           </div>
           {e.description && (
-            <p className="text-[11px] text-muted-foreground italic line-clamp-3">{e.description}</p>
+            <p className="text-xs text-muted-foreground italic line-clamp-3">{e.description}</p>
           )}
           <div className="flex items-center gap-2 pt-1 border-t border-border/40">
             <Send className="h-3.5 w-3.5 text-primary shrink-0" />
             <Select onValueChange={(v) => onEntregar(e.id, v)}>
-              <SelectTrigger className="h-7 text-[11px]">
+              <SelectTrigger className="h-7 text-xs">
                 <SelectValue placeholder="Entregar para Jogador…" />
               </SelectTrigger>
               <SelectContent>
                 {characters.length === 0 && (
-                  <div className="px-2 py-1 text-[11px] text-muted-foreground">
+                  <div className="px-2 py-1 text-xs text-muted-foreground">
                     Nenhum personagem cadastrado
                   </div>
                 )}

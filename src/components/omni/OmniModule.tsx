@@ -229,17 +229,17 @@ export function OmniModule() {
                             <span className="text-primary">◇</span> {last.entidade.nome}{' '}
                             <span className="text-muted-foreground">({last.entidade.categoria})</span>
                           </span>
-                          <span className="text-[10px] text-muted-foreground uppercase">{statusLabel}</span>
+                          <span className="text-xs text-muted-foreground uppercase">{statusLabel}</span>
                         </button>
                         {aberta && (
-                          <div className="border-t border-border/40 p-2 text-[11px] space-y-1.5">
+                          <div className="border-t border-border/40 p-2 text-xs space-y-1.5">
                             {last.entidade.descricao && (
                               <p className="text-muted-foreground italic">{last.entidade.descricao}</p>
                             )}
                             {last.entidade.tags.length > 0 && (
                               <div className="flex flex-wrap gap-1">
                                 {last.entidade.tags.map((t) => (
-                                  <span key={t} className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px]">
+                                  <span key={t} className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-xs">
                                     {t}
                                   </span>
                                 ))}
@@ -254,7 +254,7 @@ export function OmniModule() {
                             {/* Custos detalhados */}
                             {last.entidade.custos.length > 0 && (
                               <div className="rounded border border-amber-500/30 bg-amber-500/5 p-2 space-y-0.5">
-                                <div className="text-[10px] uppercase tracking-wider text-amber-300/80">Custos</div>
+                                <div className="text-xs uppercase tracking-wider text-amber-300/80">Custos</div>
                                 {last.entidade.custos.map((c, i) => (
                                   <div key={i} className="text-foreground/90">
                                     💰 {valorDinamicoTexto(c.valor)} de {nomeAmigavelRecurso(c.caminhoRecurso)}
@@ -265,7 +265,7 @@ export function OmniModule() {
                             {/* Gatilhos detalhados */}
                             {last.entidade.gatilhos.length > 0 && (
                               <div className="rounded border border-sky-500/30 bg-sky-500/5 p-2 space-y-0.5">
-                                <div className="text-[10px] uppercase tracking-wider text-sky-300/80">Gatilhos</div>
+                                <div className="text-xs uppercase tracking-wider text-sky-300/80">Gatilhos</div>
                                 {last.entidade.gatilhos.map((g, i) => (
                                   <div key={g.id ?? i} className="text-foreground/90">
                                     ⚡ {ROTULOS_GATILHOS[g.evento] ?? g.evento}
@@ -299,7 +299,7 @@ export function OmniModule() {
                                 💬 "{last.note}"
                               </p>
                             )}
-                            <p className="text-[10px] text-muted-foreground italic mt-1">
+                            <p className="text-xs text-muted-foreground italic mt-1">
                               Use a aba "Feitiços de Players" para responder contrapropostas em detalhe.
                             </p>
                           </div>
@@ -309,7 +309,7 @@ export function OmniModule() {
                   })}
                 </ul>
               )}
-              <p className="text-[10px] text-muted-foreground mt-2 italic">
+              <p className="text-xs text-muted-foreground mt-2 italic">
                 Acompanhe e responda contrapropostas na aba "Feitiços de Players".
               </p>
             </div>
@@ -470,7 +470,7 @@ export function OmniModule() {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="font-semibold text-foreground truncate">{e.nome}</div>
-                  <div className="text-[10px] uppercase tracking-wider text-primary/70">{e.categoria}</div>
+                  <div className="text-xs uppercase tracking-wider text-primary/70">{e.categoria}</div>
                 </div>
                 <div className="flex gap-1 shrink-0">
                   <Button
@@ -500,7 +500,7 @@ export function OmniModule() {
                 </div>
               </div>
               {e.descricao && <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{e.descricao}</p>}
-              <div className="flex gap-2 mt-2 text-[10px] text-muted-foreground">
+              <div className="flex gap-2 mt-2 text-xs text-muted-foreground">
                 <span>Duração: {e.duracao.tipo}</span>
                 <span>•</span>
                 <span>{e.gatilhos.length} gatilho(s)</span>
@@ -509,7 +509,7 @@ export function OmniModule() {
               </div>
               {characters.length > 0 && (
                 <div className="mt-2 flex items-center gap-1.5 border-t border-border/40 pt-2">
-                  <span className="text-[10px] uppercase text-muted-foreground">
+                  <span className="text-xs uppercase text-muted-foreground">
                     {e.categoria === 'item' || e.categoria === 'arma' ? 'Dar a:' : 'Atribuir a:'}
                   </span>
                   <select
@@ -549,7 +549,7 @@ export function OmniModule() {
                       }
                       ev.target.value = '';
                     }}
-                    className="flex-1 text-[11px] bg-background border border-border rounded px-1.5 py-1"
+                    className="flex-1 text-xs bg-background border border-border rounded px-1.5 py-1"
                   >
                     <option value="">— Selecionar personagem —</option>
                     {characters.map((c) => (

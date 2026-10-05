@@ -61,7 +61,7 @@ export function MultiSelectChips({ opcoes, valor, onChange, placeholder = 'Selec
                 <Badge
                   key={id}
                   variant="secondary"
-                  className="text-[10px] cursor-pointer hover:bg-destructive/20"
+                  className="text-xs cursor-pointer hover:bg-destructive/20"
                   onClick={() => toggle(id)}
                   title="Remover"
                 >

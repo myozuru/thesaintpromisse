@@ -46,7 +46,7 @@ export function TransmitirSection({ c }: { c: Character }) {
           <button
             key={m}
             onClick={() => setMode(m)}
-            className={`flex-1 rounded-md border px-2 py-1 text-[11px] ${
+            className={`flex-1 rounded-md border px-2 py-1 text-xs ${
               mode === m
                 ? 'border-primary bg-primary/20 text-foreground font-bold'
                 : 'border-border text-muted-foreground hover:bg-secondary/40'
@@ -57,7 +57,7 @@ export function TransmitirSection({ c }: { c: Character }) {
         ))}
       </div>
 
-      <div className="text-[11px] text-muted-foreground">
+      <div className="text-xs text-muted-foreground">
         Preparados neste descanso: <b className="text-foreground">{usados.length}/{limite}</b>
         {usados.length > 0 && (
           <span> — {usados.map((id) => characters.find((x) => x.id === id)?.name ?? '?').join(', ')}</span>
@@ -102,8 +102,8 @@ export function TransmitirSection({ c }: { c: Character }) {
           Transmitir
         </button>
       </div>
-      {check && !check.ok && <div className="text-[11px] text-destructive">{check.reason}</div>}
-      <div className="text-[11px] text-muted-foreground">
+      {check && !check.ok && <div className="text-xs text-destructive">{check.reason}</div>}
+      <div className="text-xs text-muted-foreground">
         O treinamento some no próximo descanso (curto ou longo) do aliado.
       </div>
     </div>

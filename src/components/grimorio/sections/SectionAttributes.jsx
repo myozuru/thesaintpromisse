@@ -34,7 +34,7 @@ export default function SectionAttributes({ draft, derived, actions }) {
         </span>
       </div>
 
-      <div className="text-[10px] text-slate-500">
+      <div className="text-xs text-slate-500">
         Atributos começam em 10 (ou 8, para liberar pontos). Limite por atributo: <b>{attrBudget.limit}</b>.
       </div>
 

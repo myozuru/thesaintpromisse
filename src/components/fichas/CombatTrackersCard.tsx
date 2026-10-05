@@ -191,7 +191,7 @@ export function CombatTrackersCard({ character: c }: Props) {
               </div>
             </div>
             <div className={cn(
-              'rounded-full px-2 py-0.5 text-[10px] font-mono font-bold',
+              'rounded-full px-2 py-0.5 text-xs font-mono font-bold',
               exhausted
                 ? 'border border-hp/40 bg-hp/10 text-hp'
                 : 'border border-neon-green/40 bg-neon-green/10 text-neon-green',
@@ -203,7 +203,7 @@ export function CombatTrackersCard({ character: c }: Props) {
               onClick={row.onUse}
               disabled={exhausted}
               className={cn(
-                'text-[11px] font-bold rounded px-2 py-1 transition',
+                'text-xs font-bold rounded px-2 py-1 transition',
                 exhausted
                   ? 'bg-muted text-muted-foreground cursor-not-allowed'
                   : 'bg-primary text-primary-foreground hover:bg-primary/90',
@@ -217,7 +217,7 @@ export function CombatTrackersCard({ character: c }: Props) {
                 onClick={row.onRecover}
                 disabled={u.used === 0}
                 className={cn(
-                  'text-[11px] font-bold rounded px-2 py-1 transition border',
+                  'text-xs font-bold rounded px-2 py-1 transition border',
                   u.used === 0
                     ? 'border-muted bg-muted/40 text-muted-foreground cursor-not-allowed'
                     : 'border-neon-green/40 bg-neon-green/10 text-neon-green hover:bg-neon-green/20',
@@ -249,7 +249,7 @@ export function CombatTrackersCard({ character: c }: Props) {
               addLog('combat', `🏃 ${c.name}: declarou Investida — +${investida.moveBonusMeters}m mov, +${investida.hitBonus} acerto, no acerto Disputa de Atletismo (falha → Caído).`);
               toast.success('Investida declarada — verifique log.');
             }}
-            className="text-[11px] font-bold rounded px-2 py-1 bg-primary text-primary-foreground hover:bg-primary/90"
+            className="text-xs font-bold rounded px-2 py-1 bg-primary text-primary-foreground hover:bg-primary/90"
           >
             Executar Investida
           </button>
@@ -324,7 +324,7 @@ export function CombatTrackersCard({ character: c }: Props) {
             }}
             disabled={!discursoCalc.eligible}
             className={cn(
-              'text-[11px] font-bold rounded px-2 py-1 transition',
+              'text-xs font-bold rounded px-2 py-1 transition',
               discursoCalc.eligible
                 ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                 : 'bg-muted text-muted-foreground cursor-not-allowed',

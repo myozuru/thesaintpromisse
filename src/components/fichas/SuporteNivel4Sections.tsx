@@ -48,7 +48,7 @@ export function GuardaSincronizadaSection({ c }: { c: Character }) {
       </div>
       {members.length > 0 ? (
         <>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Ativa: +{guardaBonus(members)} de Defesa para {names.join(', ')}.
           </p>
           <button type="button" onClick={encerrar} className="w-full rounded border border-border px-2 py-1 text-xs hover:bg-secondary/40">
@@ -57,7 +57,7 @@ export function GuardaSincronizadaSection({ c }: { c: Character }) {
         </>
       ) : (
         <>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Ação Bônus: aliados a até 7,5 m (sem Cego/Surdo) entram na guarda. Quem se afastar sai.
           </p>
           <button type="button" onClick={ativar} className="w-full rounded bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground hover:opacity-90">
@@ -116,21 +116,21 @@ export function InspirarAliadosSection({ c }: { c: Character }) {
         <Sparkles className="h-3.5 w-3.5 text-primary" /> Inspirar Aliados
       </div>
       {insp && insp.usesLeft > 0 ? (
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Ativa: {insp.usesLeft} uso(s) restantes para {insp.allyIds.map((id) => characters.find((x) => x.id === id)?.name ?? '?').join(', ')}.
         </p>
       ) : null}
       {c.inspirarUsadoCena ? (
-        <p className="text-[11px] text-muted-foreground">Já usada nesta cena.</p>
+        <p className="text-xs text-muted-foreground">Já usada nesta cena.</p>
       ) : max <= 0 ? (
-        <p className="text-[11px] text-muted-foreground">Seu bônus de treinamento ainda não permite inspirar aliados.</p>
+        <p className="text-xs text-muted-foreground">Seu bônus de treinamento ainda não permite inspirar aliados.</p>
       ) : (
         <>
-          <p className="text-[11px] text-muted-foreground">Escolha até {max} aliado(s). Custa 1 PE e a Ação Bônus.</p>
+          <p className="text-xs text-muted-foreground">Escolha até {max} aliado(s). Custa 1 PE e a Ação Bônus.</p>
           <div className="flex flex-wrap gap-1">
             {allies.map((a) => (
               <button key={a.id} type="button" onClick={() => toggle(a.id)}
-                className={`rounded border px-2 py-0.5 text-[11px] ${sel.includes(a.id) ? 'border-primary bg-primary/20 text-foreground' : 'border-border text-muted-foreground hover:bg-secondary/40'}`}>
+                className={`rounded border px-2 py-0.5 text-xs ${sel.includes(a.id) ? 'border-primary bg-primary/20 text-foreground' : 'border-border text-muted-foreground hover:bg-secondary/40'}`}>
                 {a.name}
               </button>
             ))}
@@ -229,7 +229,7 @@ export function IntervencaoSection({ c }: { c: Character }) {
       <div className="flex items-center gap-2 text-xs font-bold text-foreground">
         <HeartPulse className="h-3.5 w-3.5 text-primary" /> Intervenção
       </div>
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-xs text-muted-foreground">
         Ação Comum, alcance de toque. Encerra condições até <b>{GRAU_LABEL[maxGrau]}</b> (custo {getIntervencaoCusto(maxGrau)} PE nesse grau; fraca 3 PE).
       </p>
       <select value={targetId} onChange={(e) => { setTargetId(e.target.value); setCondId(''); }}
@@ -238,7 +238,7 @@ export function IntervencaoSection({ c }: { c: Character }) {
         {allies.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
       </select>
       {target ? (
-        conds.length === 0 ? <p className="text-[11px] text-muted-foreground">Sem condições ativas.</p> : (
+        conds.length === 0 ? <p className="text-xs text-muted-foreground">Sem condições ativas.</p> : (
           <select value={condId} onChange={(e) => setCondId(e.target.value)}
             className="w-full rounded border border-border bg-background px-2 py-1 text-xs">
             <option value="">Escolha a condição…</option>

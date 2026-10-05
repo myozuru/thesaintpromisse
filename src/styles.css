@@ -53,6 +53,8 @@
   --font-display: "Cinzel Decorative", "Cinzel", serif;
   --font-body: "Cormorant Garamond", Georgia, serif;
   --font-mono: "JetBrains Mono", monospace;
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1rem;
 }
 
 /*
@@ -170,6 +172,7 @@
     color: hsl(var(--foreground));
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-weight: 500;
+    font-variant-numeric: lining-nums tabular-nums;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background-image:
@@ -188,6 +191,18 @@
   }
   .text-xs, .text-sm {
     font-weight: 600;
+  }
+}
+
+/* Compatibilidade para classes pequenas ainda presentes fora de arquivos TSX. */
+@layer utilities {
+  .text-\[7px\],
+  .text-\[8px\],
+  .text-\[9px\],
+  .text-\[10px\],
+  .text-\[11px\] {
+    font-size: var(--text-xs);
+    line-height: var(--text-xs--line-height);
   }
 }
 

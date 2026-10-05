@@ -42,7 +42,7 @@ export function PreAnaliseSection({ c }: { c: Character }) {
         <Eye className="h-3.5 w-3.5 text-primary" /> Pré-Análise
         <span className="font-normal text-muted-foreground">Imune a Surpreso · Atenção +{PRE_ANALISE_ATENCAO}</span>
       </div>
-      <div className="text-[11px] text-muted-foreground">
+      <div className="text-xs text-muted-foreground">
         Aliado protegido: <strong className="text-foreground">{ally ? ally.name : 'nenhum'}</strong>
         {c.preAnaliseEscolhaUsada && ' · escolha usada (volta no descanso curto)'}
       </div>
@@ -59,7 +59,7 @@ export function PreAnaliseSection({ c }: { c: Character }) {
           Proteger
         </button>
       </div>
-      <div className="text-[10px] text-muted-foreground">O aliado perde a proteção quando fizer um descanso curto.</div>
+      <div className="text-xs text-muted-foreground">O aliado perde a proteção quando fizer um descanso curto.</div>
     </div>
   );
 }
@@ -105,13 +105,13 @@ export function ComandoSection({ c }: { c: Character }) {
       <input value={comando} onChange={(e) => setComando(e.target.value)} placeholder="Comando (opcional), ex: Ataque o líder!"
         className="w-full rounded-md border border-border bg-secondary/40 px-2 py-1 text-xs text-foreground" />
       {temRecompensa && (
-        <label className="flex items-center gap-2 text-[11px] text-foreground">
+        <label className="flex items-center gap-2 text-xs text-foreground">
           <input type="checkbox" checked={recompensa} onChange={(e) => setRecompensa(e.target.checked)} />
           🏆 Recompensa pelo Sucesso — bônus pela metade (+{getRecompensaBonus(c)}); se suceder, o aliado ganha 2 PE
         </label>
       )}
-      {target && !chk.ok && <div className="text-[11px] text-destructive">{chk.reason}</div>}
-      <div className="text-[10px] text-muted-foreground">Vale na próxima rolagem do aliado, até o início do seu próximo turno.</div>
+      {target && !chk.ok && <div className="text-xs text-destructive">{chk.reason}</div>}
+      <div className="text-xs text-muted-foreground">Vale na próxima rolagem do aliado, até o início do seu próximo turno.</div>
     </div>
   );
 }
@@ -164,7 +164,7 @@ export function DesvendarSection({ c }: { c: Character }) {
       {fase === 'aguardando-cd' && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           Aguardando o Mestre definir a CD…
-          <button onClick={() => cancelarDesvendar(c.id)} className="rounded border border-border px-1.5 text-[10px] text-foreground">Cancelar</button>
+          <button onClick={() => cancelarDesvendar(c.id)} className="rounded border border-border px-1.5 text-xs text-foreground">Cancelar</button>
         </div>
       )}
       {fase === 'pronto-para-rolar' && (
@@ -177,7 +177,7 @@ export function DesvendarSection({ c }: { c: Character }) {
           <button disabled={busy} onClick={procurar} className="rounded-md bg-primary px-2 py-1 text-xs font-bold text-primary-foreground disabled:opacity-50">
             Procurar no terreno (+{c.desvendarBonus})
           </button>
-          <div className="text-[10px] text-muted-foreground">Terreno desvendado — vale até o fim da cena.</div>
+          <div className="text-xs text-muted-foreground">Terreno desvendado — vale até o fim da cena.</div>
         </div>
       )}
     </div>

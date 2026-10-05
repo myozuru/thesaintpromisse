@@ -125,7 +125,7 @@ export function SimuladorPreview({ entidade }: Props) {
         <div className="text-xs uppercase tracking-[0.15em] text-primary/80 font-semibold">
           Simulador Dinâmico
         </div>
-        <div className="flex gap-1 text-[10px]">
+        <div className="flex gap-1 text-xs">
           <button
             onClick={() => setModo('mock')}
             className={`px-2 py-0.5 rounded ${modo === 'mock' ? 'bg-primary text-primary-foreground' : 'border border-border text-muted-foreground'}`}
@@ -149,19 +149,19 @@ export function SimuladorPreview({ entidade }: Props) {
       ) : (
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <Label className="text-[10px] text-muted-foreground">Nível</Label>
+            <Label className="text-xs text-muted-foreground">Nível</Label>
             <Input type="number" value={nivel} onChange={(e) => setNivel(Number(e.target.value) || 1)} className="h-8" />
           </div>
           <div>
-            <Label className="text-[10px] text-muted-foreground">Treino</Label>
+            <Label className="text-xs text-muted-foreground">Treino</Label>
             <Input type="number" value={treino} onChange={(e) => setTreino(Number(e.target.value) || 0)} className="h-8" />
           </div>
           <div>
-            <Label className="text-[10px] text-muted-foreground">Força</Label>
+            <Label className="text-xs text-muted-foreground">Força</Label>
             <Input type="number" value={forca} onChange={(e) => setForca(Number(e.target.value) || 0)} className="h-8" />
           </div>
           <div>
-            <Label className="text-[10px] text-muted-foreground">Inteligência</Label>
+            <Label className="text-xs text-muted-foreground">Inteligência</Label>
             <Input type="number" value={intel} onChange={(e) => setIntel(Number(e.target.value) || 0)} className="h-8" />
           </div>
         </div>
@@ -170,7 +170,7 @@ export function SimuladorPreview({ entidade }: Props) {
       {/* Seletor de ALVO (mostrado só quando a fórmula referencia @ALVO) */}
       {usaAlvo && (
         <div className="rounded-md border border-red-500/30 bg-red-500/5 p-2 space-y-1">
-          <Label className="text-[10px] uppercase tracking-wider text-red-400">
+          <Label className="text-xs uppercase tracking-wider text-red-400">
             🎯 Alvo da Fórmula
           </Label>
           <select
@@ -195,7 +195,7 @@ export function SimuladorPreview({ entidade }: Props) {
 
       <div className="rounded-md border border-border/60 bg-background/60 p-3 text-xs space-y-1">
         <div className="text-sm font-semibold text-foreground">{entidade.nome || '—'}</div>
-        <div className="text-muted-foreground italic text-[11px] whitespace-pre-wrap break-words">
+        <div className="text-muted-foreground italic text-xs whitespace-pre-wrap break-words">
           {entidade.descricao?.replace(/\*\*(.+?)\*\*/g, '$1').replace(/(^|\n)\*(.+?)\*(?=\n|$)/g, '$1$2') || 'Sem descrição'}
         </div>
         <div className="pt-2 grid grid-cols-2 gap-1">
@@ -209,7 +209,7 @@ export function SimuladorPreview({ entidade }: Props) {
           <div><span className="text-muted-foreground">Gatilhos:</span> {entidade.gatilhos.length}</div>
         </div>
         {custosResolvidos.length > 0 && (
-          <div className="pt-1 text-[11px]">
+          <div className="pt-1 text-xs">
             <span className="text-muted-foreground">Custos:</span>{' '}
             {custosResolvidos.map((c, i) => (
               <span key={i} className="text-primary">{c.valor} de {c.caminho}{i < custosResolvidos.length - 1 ? ', ' : ''}</span>
@@ -230,7 +230,7 @@ export function SimuladorPreview({ entidade }: Props) {
                 <span className={`${cor} font-semibold`}>{sinal}{media}</span>{' '}
                 <span className="text-muted-foreground">({verbo}) → {alvo} ({recursoNome}){eff.damageType ? ` · ${eff.damageType}` : ''}</span>
                 {eff.formula && (
-                  <div className="text-[10px] text-muted-foreground/70 font-mono pl-3">
+                  <div className="text-xs text-muted-foreground/70 font-mono pl-3">
                     <span className="text-muted-foreground/50">Cálculo:</span> ({eff.formula}) ={' '}
                     <span className={cor}>{sinal}{media}</span>{' '}
                     <span className="text-muted-foreground/60 not-italic">
@@ -242,14 +242,14 @@ export function SimuladorPreview({ entidade }: Props) {
             );
           };
           return (
-            <div className="pt-1 text-[11px] border-t border-border/40 mt-1 space-y-2">
+            <div className="pt-1 text-xs border-t border-border/40 mt-1 space-y-2">
               {/* === 🛡️ Bloco Passivo === */}
               {efeitosPassivos.length > 0 && (
                 <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-2 space-y-1">
-                  <div className="text-[10px] uppercase tracking-wider text-emerald-300 font-semibold">
+                  <div className="text-xs uppercase tracking-wider text-emerald-300 font-semibold">
                     🛡️ Efeitos Passivos (Ao Equipar) — {efeitosPassivos.length}
                   </div>
-                  <div className="text-emerald-400/80 font-semibold text-[10px]">
+                  <div className="text-emerald-400/80 font-semibold text-xs">
                     ▸ Aplicado em {modo === 'real' && charSel ? charSel.name : `mock Nv. ${nivel}`}
                   </div>
                   {resumoPassivos.map(({ eff, media }, i) => renderLinha(eff, media, i))}
@@ -259,17 +259,17 @@ export function SimuladorPreview({ entidade }: Props) {
               {/* === ⚔️ Bloco Ativo === */}
               {efeitosAtivos.length > 0 && (
                 <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-2 space-y-1">
-                  <div className="text-[10px] uppercase tracking-wider text-amber-300 font-semibold">
+                  <div className="text-xs uppercase tracking-wider text-amber-300 font-semibold">
                     ⚔️ Ação do Item (Ao Usar/Atacar) — {efeitosAtivos.length}
                   </div>
-                  <div className="text-amber-400/80 font-semibold text-[10px]">
+                  <div className="text-amber-400/80 font-semibold text-xs">
                     ▸ Disparado por {modo === 'real' && charSel ? charSel.name : `mock Nv. ${nivel}`}
                   </div>
                   {resumoAtivos.map(({ eff, media }, i) => renderLinha(eff, media, i))}
 
                   {resumoAlvoPerspectiva && (
                     <div className="space-y-1 pt-1 border-t border-border/30">
-                      <div className="text-red-400 font-semibold text-[10px]">
+                      <div className="text-red-400 font-semibold text-xs">
                         ▸ Se o Alvo {alvoSel ? `(${alvoSel.name})` : '(fictício)'} aplicasse
                       </div>
                       {resumoAlvoPerspectiva.map(({ eff, media }, i) => {
@@ -284,7 +284,7 @@ export function SimuladorPreview({ entidade }: Props) {
                           </div>
                         );
                       })}
-                      <div className="text-[10px] text-muted-foreground/70 italic">
+                      <div className="text-xs text-muted-foreground/70 italic">
                         Validação: confirme se "quem aplica em quem" está correto.
                       </div>
                     </div>
@@ -292,10 +292,10 @@ export function SimuladorPreview({ entidade }: Props) {
 
                   {!isPassivo && (
                     <>
-                      <div className="text-[10px] text-muted-foreground/80 mt-0.5">
+                      <div className="text-xs text-muted-foreground/80 mt-0.5">
                         crit ≥ {cd.critRange} ×{cd.critMultiplier}
                       </div>
-                      <div className="text-[10px] text-muted-foreground/80 mt-0.5 flex flex-wrap gap-x-2">
+                      <div className="text-xs text-muted-foreground/80 mt-0.5 flex flex-wrap gap-x-2">
                         {cd.actionCost && (
                           <span>⚡ {Object.values(SYSTEM_ACTIONS).find((a) => a.id === cd.actionCost)?.label ?? cd.actionCost}</span>
                         )}
@@ -315,7 +315,7 @@ export function SimuladorPreview({ entidade }: Props) {
         })()}
       </div>
 
-      <div className="text-[10px] text-muted-foreground">
+      <div className="text-xs text-muted-foreground">
         {modo === 'real' && charSel
           ? `Avaliando contra ${charSel.name} (Nv. ${charSel.level ?? 1}).`
           : `Mock: Nv ${nivel}, Treino ${treino}, FOR ${forca}, INT ${intel}.`}

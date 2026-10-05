@@ -40,7 +40,7 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
       )}
       {lista.map((a, i) => (
         <div key={a.id} className="rounded-lg border border-primary/40 bg-primary/5 p-3 space-y-3 text-sm [&_label]:text-xs">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-primary">⚡ Ação {i + 1} — Identificação</div>
+          <div className="text-xs font-bold uppercase tracking-wider text-primary">⚡ Ação {i + 1} — Identificação</div>
           <div className="flex gap-2">
             <Input aria-label="Nome da ação" className="font-semibold" value={a.nome} onChange={(e) => set(i, { nome: e.target.value })} placeholder="Nome da ação (ex.: Corte da Injustiça)" />
             <Button size="sm" variant="outline" title="Duplicar ação" aria-label={`Duplicar ação ${a.nome}`} onClick={() => setEnt({ ...ent, acoesAtivas: [...lista.slice(0, i + 1), copiarAcaoAtiva(a), ...lista.slice(i + 1)] })}><Copy className="h-4 w-4" /></Button>
@@ -51,7 +51,7 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
             }}><Save className="h-4 w-4" /></Button>
             <Button size="sm" variant="ghost" onClick={() => setEnt({ ...ent, acoesAtivas: lista.filter((_, j) => j !== i) })}><Trash2 className="h-4 w-4" /></Button>
           </div>
-          <div className="border-t border-border/50 pt-2 text-[11px] font-bold uppercase tracking-wider text-primary">Execução e alvos</div>
+          <div className="border-t border-border/50 pt-2 text-xs font-bold uppercase tracking-wider text-primary">Execução e alvos</div>
           <div className="grid grid-cols-3 gap-2">
             <div><Label className="text-xs">Ação</Label>
               <select className={sel} value={a.acao} onChange={(e) => set(i, { acao: e.target.value as AcaoAtivaConfig['acao'] })}>
@@ -78,7 +78,7 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
             <div><Label className="text-xs">Raio / comprimento (m)</Label><Input aria-label="Tamanho da área" type="number" min={0.1} step={1.5} value={a.area?.tamanho_m ?? 6} onChange={e => set(i, { area: { forma: 'cone', ...a.area, tamanho_m: Number(e.target.value) } })} /></div>
             {(a.area?.forma === 'linha') && <div><Label className="text-xs">Largura (m)</Label><Input aria-label="Largura da linha" type="number" min={0.1} step={1.5} value={a.area?.largura_m ?? 1.5} onChange={e => set(i, { area: { forma: 'linha', tamanho_m: 6, ...a.area, largura_m: Number(e.target.value) } })} /></div>}
           </div>}
-          <div className="border-t border-border/50 pt-2 text-[11px] font-bold uppercase tracking-wider text-primary">Teste</div>
+          <div className="border-t border-border/50 pt-2 text-xs font-bold uppercase tracking-wider text-primary">Teste</div>
           <div className="grid grid-cols-3 gap-2">
             <div><Label className="text-xs">Teste</Label>
               <select aria-label="Teste da ação" className={sel} value={a.teste} onChange={(e) => set(i, { teste: e.target.value as AcaoAtivaConfig['teste'] })}>
@@ -99,7 +99,7 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
           </div>
           {a.teste === 'disputa' && <div className="grid grid-cols-2 gap-2">
             <label className="text-xs">Perícia do usuário<Input aria-label="Perícia do usuário" value={a.pericia_usuario ?? ''} placeholder="Atletismo" onChange={e => set(i, { pericia_usuario: e.target.value })} /></label>
-            <label className="text-xs">Perícias possíveis do alvo<Input aria-label="Perícias possíveis do alvo" value={(a.pericias_alvo ?? []).join(', ')} placeholder="Atletismo, Acrobacia" onChange={e => set(i, { pericias_alvo: e.target.value.split(',').map(v => v.trim()).filter(Boolean) })} /><span className="text-[10px] text-muted-foreground">Separadas por vírgula; o alvo usa a de maior bônus. Empate favorece o alvo.</span></label>
+            <label className="text-xs">Perícias possíveis do alvo<Input aria-label="Perícias possíveis do alvo" value={(a.pericias_alvo ?? []).join(', ')} placeholder="Atletismo, Acrobacia" onChange={e => set(i, { pericias_alvo: e.target.value.split(',').map(v => v.trim()).filter(Boolean) })} /><span className="text-xs text-muted-foreground">Separadas por vírgula; o alvo usa a de maior bônus. Empate favorece o alvo.</span></label>
           </div>}
           {a.teste === 'tr' && <EditorDesfechosTR acao={a} onChange={p => set(i, p)} />}
           {a.teste === 'tr' && (
@@ -107,7 +107,7 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
               <input type="checkbox" checked={!!a.metadeNoSucesso} onChange={(e) => set(i, { metadeNoSucesso: e.target.checked })} /> Metade do dano no sucesso por padrão legado (senão, nada)
             </label>
           )}
-          <div className="border-t border-border/50 pt-2 text-[11px] font-bold uppercase tracking-wider text-primary">Dano, cura e cargas</div>
+          <div className="border-t border-border/50 pt-2 text-xs font-bold uppercase tracking-wider text-primary">Dano, cura e cargas</div>
           <div className="grid grid-cols-3 gap-2">
             <label className="text-xs">Tipo de efeito<select aria-label="Tipo de efeito" className={sel} value={a.tipo_efeito ?? 'dano'} onChange={e => set(i, { tipo_efeito: e.target.value as AcaoAtivaConfig['tipo_efeito'], ...(e.target.value === 'cura' ? { teste: 'nenhum', filtro_alvo: 'aliados' } : {}) })}><option value="dano">Dano</option><option value="cura">Cura / recuperação</option><option value="buff">Somente efeitos</option></select></label>
             {a.tipo_efeito === 'cura' && <>
@@ -116,14 +116,14 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
             </>}
           </div>
           <div className="grid grid-cols-3 gap-2">
-            <div><Label className="text-xs">Dano (ex.: 6d8)</Label><Input aria-label={`Dano de ${a.nome}`} value={a.dano ?? ''} placeholder="@ARMA.DANO + 2d8" onChange={(e) => set(i, { dano: e.target.value })} /><p className="text-[10px] text-muted-foreground">Fórmula: @ARMA.DANO, @ARMA.DADOS, @ARMA.PASSO, @ARMA.CRITICO_MARGEM</p></div>
+            <div><Label className="text-xs">Dano (ex.: 6d8)</Label><Input aria-label={`Dano de ${a.nome}`} value={a.dano ?? ''} placeholder="@ARMA.DANO + 2d8" onChange={(e) => set(i, { dano: e.target.value })} /><p className="text-xs text-muted-foreground">Fórmula: @ARMA.DANO, @ARMA.DADOS, @ARMA.PASSO, @ARMA.CRITICO_MARGEM</p></div>
             <div><Label className="text-xs" htmlFor={`tipo-dano-${a.id}`}>Tipo de dano</Label>
               <select id={`tipo-dano-${a.id}`} className={sel} value={resolverTipoDano(a.tipoDano) ?? a.tipoDano ?? ''} onChange={(e) => set(i, { tipoDano: e.target.value })}>
                 <option value="">—</option>{DAMAGE_TYPES.map((d) => <option key={d} value={d}>{DAMAGE_TYPE_LABELS[d]}</option>)}
                 {a.tipoDano && !resolverTipoDano(a.tipoDano) && <option value={a.tipoDano}>{a.tipoDano} (sem equivalência)</option>}
               </select>
               {a.tipoDano && !resolverTipoDano(a.tipoDano) && <p className="text-xs text-amber-600">Escolha um tipo reconhecido para aplicar resistências e imunidades específicas.</p>}
-              {a.tipoDano && <p className="text-[10px] text-muted-foreground">Aplica este tipo também ao dano herdado da arma.</p>}
+              {a.tipoDano && <p className="text-xs text-muted-foreground">Aplica este tipo também ao dano herdado da arma.</p>}
             </div>
             <div><Label className="text-xs">Dados por carga</Label><Input value={a.dadosPorCarga ?? ''} onChange={(e) => set(i, { dadosPorCarga: e.target.value })} placeholder="1d8" /></div>
           </div>
@@ -145,7 +145,7 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
           {a.teste === 'ataque' && <label className="text-xs">Modificador de acerto<Input aria-label="Modificador de acerto" type="number" value={a.mod_acerto ?? 0} onChange={e => set(i, { mod_acerto: Number(e.target.value) })} /></label>}
           <EditorReacoesAtivas acao={a} onChange={p => set(i, p)} />
           <EditorCondicionaisAtivos blocos={a.condicionais ?? []} onChange={condicionais => set(i, { condicionais })} />
-          <div className="border-t border-border/50 pt-2 text-[11px] font-bold uppercase tracking-wider text-primary">Efeitos secundários</div>
+          <div className="border-t border-border/50 pt-2 text-xs font-bold uppercase tracking-wider text-primary">Efeitos secundários</div>
           <div className="space-y-1">
             <Label className="text-xs">Efeitos padrão (falha do TR ou acerto; graus do TR podem substituir)</Label>
             {(a.efeitos ?? []).map((ef, k) => {
@@ -192,7 +192,7 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
             if (preset) setEnt({ ...ent, acoesAtivas: [...lista, criarAcaoDePreset(preset)] });
           }}><Plus className="h-3 w-3 mr-1" />Adicionar preset</Button>
         </div>
-        <p className="text-[10px] text-muted-foreground">Os presets ficam salvos neste navegador. Para salvar outra ação, use o botão Salvar preset na própria ação.</p>
+        <p className="text-xs text-muted-foreground">Os presets ficam salvos neste navegador. Para salvar outra ação, use o botão Salvar preset na própria ação.</p>
       </div>
       <Button size="sm" variant="outline" data-testid="omni-nova-acao-ativa" onClick={() => setEnt({ ...ent, acoesAtivas: [...lista, novaAcaoAtiva()] })}>
         <Plus className="h-3 w-3 mr-1" />Nova ação ativa
@@ -200,3 +200,4 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
     </div>
   );
 }
+

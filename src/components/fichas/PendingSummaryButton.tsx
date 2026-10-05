@@ -132,7 +132,7 @@ export function PendingSummaryButton({ character: c, onExpand }: Props) {
           <Bell className={cn('h-3 w-3', hasAny && 'animate-pulse')} />
           <span className="hidden sm:inline">Pendências</span>
           {hasAny && (
-            <span className="rounded-full bg-primary text-primary-foreground min-w-4 h-4 px-1 flex items-center justify-center text-[8px] font-mono">
+            <span className="rounded-full bg-primary text-primary-foreground min-w-4 h-4 px-1 flex items-center justify-center text-xs font-mono">
               {total}
             </span>
           )}

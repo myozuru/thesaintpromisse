@@ -184,7 +184,7 @@ export function AttributeSpendDialog({
         </div>
 
         {lockedTo && lockedTo.length > 0 && (
-          <div className="flex items-start gap-2 rounded-md border border-accent/40 bg-accent/10 p-2 text-[10px] text-accent-foreground">
+          <div className="flex items-start gap-2 rounded-md border border-accent/40 bg-accent/10 p-2 text-xs text-accent-foreground">
             <AlertTriangle className="h-3 w-3 mt-0.5 flex-shrink-0" />
             <span>
               Pontos restritos a: <strong>{lockedTo.join(', ')}</strong>.
@@ -217,11 +217,11 @@ export function AttributeSpendDialog({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2">
                     <span className="text-sm font-bold text-foreground truncate">{a.name}</span>
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-xs text-muted-foreground">
                       cap {cap}
                     </span>
                   </div>
-                  <div className="text-[11px] font-mono text-muted-foreground">
+                  <div className="text-xs font-mono text-muted-foreground">
                     {a.value}
                     {add > 0 && (
                       <span className="text-primary font-bold"> +{add} = {finalVal}</span>

@@ -276,12 +276,12 @@ export function TemporaryCharacterCard({ character: c }: Props) {
     <div className="card-enigmatic rounded-2xl border border-border overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-gradient-to-r from-primary/10 via-primary/5 to-transparent flex-wrap">
-        <Badge variant="outline" className="font-mono text-[10px] uppercase tracking-wider border-amber-500/60 text-amber-300 bg-amber-500/10">
+        <Badge variant="outline" className="font-mono text-xs uppercase tracking-wider border-amber-500/60 text-amber-300 bg-amber-500/10">
           <Clock className="h-3 w-3 mr-1" /> Temporária
         </Badge>
         {ffOv && (
           <Badge variant="outline" className={cn(
-            'font-mono text-[10px] uppercase tracking-wider',
+            'font-mono text-xs uppercase tracking-wider',
             ffOv === 'on' ? 'border-emerald-500/60 text-emerald-300 bg-emerald-500/10' : 'border-rose-500/60 text-rose-300 bg-rose-500/10',
           )}>
             {ffOv === 'on' ? 'Livre: ON' : 'Livre: OFF'}
@@ -298,12 +298,12 @@ export function TemporaryCharacterCard({ character: c }: Props) {
             {/* Item 5 — Modo livre por ficha */}
             <Popover>
               <PopoverTrigger asChild>
-                <Button size="sm" variant="outline" className="h-7 text-[10px] uppercase tracking-wider" title="Modo Livre por ficha">
+                <Button size="sm" variant="outline" className="h-7 text-xs uppercase tracking-wider" title="Modo Livre por ficha">
                   <Zap className="h-3 w-3 mr-1" /> Modo
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-56 p-2 space-y-1">
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground px-1 pb-1">Override Modo Livre</div>
+                <div className="text-xs uppercase tracking-wider text-muted-foreground px-1 pb-1">Override Modo Livre</div>
                 {(['auto', 'on', 'off'] as const).map((opt) => (
                   <Button
                     key={opt}
@@ -320,24 +320,24 @@ export function TemporaryCharacterCard({ character: c }: Props) {
             {/* Item 7 — Modelos */}
             <Popover>
               <PopoverTrigger asChild>
-                <Button size="sm" variant="outline" className="h-7 text-[10px] uppercase tracking-wider" title="Modelos de ficha temporária">
+                <Button size="sm" variant="outline" className="h-7 text-xs uppercase tracking-wider" title="Modelos de ficha temporária">
                   <Bookmark className="h-3 w-3 mr-1" /> Modelos
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-72 p-2 space-y-2">
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Salvar atual como modelo</div>
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">Salvar atual como modelo</div>
                 <div className="flex gap-1">
                   <Input value={newTplLabel} onChange={(e) => setNewTplLabel(e.target.value)} placeholder={`Ex: ${c.name} v1`} className="h-7 text-xs" />
                   <Button size="sm" onClick={saveAsTemplate} className="h-7 px-2"><BookmarkPlus className="h-3 w-3" /></Button>
                 </div>
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground pt-2">Aplicar modelo</div>
+                <div className="text-xs uppercase tracking-wider text-muted-foreground pt-2">Aplicar modelo</div>
                 <div className="max-h-44 overflow-y-auto space-y-1">
                   {tempTemplates.length === 0 && <div className="text-xs text-muted-foreground italic px-1">Nenhum modelo salvo.</div>}
                   {tempTemplates.map((t) => (
                     <div key={t.id} className="flex items-center gap-1">
                       <Button size="sm" variant="outline" className="flex-1 h-7 justify-start text-xs" onClick={() => applyTemplate(t.id)}>
                         {t.label}
-                        <span className="ml-auto font-mono text-[10px] text-muted-foreground">{t.data.hpMax}/{t.data.peMax}</span>
+                        <span className="ml-auto font-mono text-xs text-muted-foreground">{t.data.hpMax}/{t.data.peMax}</span>
                       </Button>
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-rose-400" onClick={() => removeTemplate(t.id)}>
                         <Trash2 className="h-3 w-3" />
@@ -358,12 +358,12 @@ export function TemporaryCharacterCard({ character: c }: Props) {
       {/* Quick Buffs Bar (item 4) */}
       <div className="px-4 py-2 border-b border-border bg-secondary/5 flex items-center gap-2 flex-wrap">
         <Sparkles className="h-3.5 w-3.5 text-violet-400" />
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Buffs ativos</span>
-        {activeBuffs.length === 0 && <span className="text-[10px] text-muted-foreground italic">nenhum</span>}
+        <span className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Buffs ativos</span>
+        {activeBuffs.length === 0 && <span className="text-xs text-muted-foreground italic">nenhum</span>}
         {activeBuffs.map((b) => (
           <span
             key={b.id}
-            className="inline-flex items-center gap-1 rounded-full bg-violet-500/15 border border-violet-500/40 px-2 py-0.5 text-[11px]"
+            className="inline-flex items-center gap-1 rounded-full bg-violet-500/15 border border-violet-500/40 px-2 py-0.5 text-xs"
             title={`${b.name} — ${b.remainingTurns === -1 ? '∞' : b.remainingTurns} turno(s)`}
           >
             <span>{b.icon}</span>
@@ -384,12 +384,12 @@ export function TemporaryCharacterCard({ character: c }: Props) {
         {isMaster && (
           <Popover>
             <PopoverTrigger asChild>
-              <Button size="sm" variant="outline" className="h-6 px-2 text-[10px] ml-auto">
+              <Button size="sm" variant="outline" className="h-6 px-2 text-xs ml-auto">
                 <PlusIcon className="h-3 w-3 mr-1" /> Empurrar buff
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-72 p-2 space-y-1">
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground px-1">Presets</div>
+              <div className="text-xs uppercase tracking-wider text-muted-foreground px-1">Presets</div>
               <div className="grid grid-cols-2 gap-1 max-h-56 overflow-y-auto">
                 {QUICK_BUFF_PRESETS.map((p) => (
                   <Button
@@ -400,7 +400,7 @@ export function TemporaryCharacterCard({ character: c }: Props) {
                     onClick={() => pushQuickBuff(p.label, p.icon, p.turns)}
                   >
                     <span className="mr-1">{p.icon}</span>{p.label}
-                    <span className="ml-auto font-mono text-[10px] text-muted-foreground">{p.turns}t</span>
+                    <span className="ml-auto font-mono text-xs text-muted-foreground">{p.turns}t</span>
                   </Button>
                 ))}
               </div>
@@ -425,11 +425,11 @@ export function TemporaryCharacterCard({ character: c }: Props) {
               <LockToggle locked={!!locks.hp} canEdit={isMaster} onToggle={() => toggleLock('hp')} />
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] uppercase text-muted-foreground w-10">Atual</span>
+              <span className="text-xs uppercase text-muted-foreground w-10">Atual</span>
               <NumStep disabled={!canEditHp} value={c.hpCurrent} onChange={(v) => { setField('hpCurrent', v); pushHistory('HP', v - c.hpCurrent, 'ajuste manual'); }} />
             </div>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-[10px] uppercase text-muted-foreground w-10">Máx</span>
+              <span className="text-xs uppercase text-muted-foreground w-10">Máx</span>
               <NumStep disabled={!canEditHp} value={c.hpMax} onChange={(v) => setField('hpMax', Math.max(1, v))} min={1} />
             </div>
           </div>
@@ -446,11 +446,11 @@ export function TemporaryCharacterCard({ character: c }: Props) {
               <LockToggle locked={!!locks.pe} canEdit={isMaster} onToggle={() => toggleLock('pe')} />
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] uppercase text-muted-foreground w-10">Atual</span>
+              <span className="text-xs uppercase text-muted-foreground w-10">Atual</span>
               <NumStep disabled={!canEditPe} value={c.peCurrent} onChange={(v) => { setField('peCurrent', v); pushHistory('PE', v - c.peCurrent, 'ajuste manual'); }} />
             </div>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-[10px] uppercase text-muted-foreground w-10">Máx</span>
+              <span className="text-xs uppercase text-muted-foreground w-10">Máx</span>
               <NumStep disabled={!canEditPe} value={c.peMax} onChange={(v) => setField('peMax', Math.max(0, v))} min={0} />
             </div>
           </div>
@@ -459,7 +459,7 @@ export function TemporaryCharacterCard({ character: c }: Props) {
             <div className="flex items-center gap-2 mb-2">
               <Footprints className="h-4 w-4 text-emerald-400" />
               <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Deslocamento</span>
-              <span className="ml-auto text-[10px] text-muted-foreground">m / turno</span>
+              <span className="ml-auto text-xs text-muted-foreground">m / turno</span>
             </div>
             <NumStep value={c.movement} onChange={(v) => setField('movement', Math.max(0, v))} min={0} />
           </div>
@@ -495,7 +495,7 @@ export function TemporaryCharacterCard({ character: c }: Props) {
             <div className="flex items-center gap-2 mb-2">
               <Shield className="h-4 w-4 text-amber-400" />
               <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">RD Geral</span>
-              <span className="ml-auto text-[10px] text-muted-foreground">aplica a todo dano</span>
+              <span className="ml-auto text-xs text-muted-foreground">aplica a todo dano</span>
               <LockToggle locked={!!locks.rd} canEdit={isMaster} onToggle={() => toggleLock('rd')} />
             </div>
             <NumStep disabled={!canEditRd} value={c.rd ?? 0} onChange={(v) => setField('rd', Math.max(0, v))} min={0} />
@@ -506,7 +506,7 @@ export function TemporaryCharacterCard({ character: c }: Props) {
               <Shield className="h-4 w-4 text-violet-400" />
               <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">RD por Tipo</span>
               {activeRdTypes.length > 0 && (
-                <span className="ml-auto text-[10px] font-mono text-violet-300">{activeRdTypes.length} ativas</span>
+                <span className="ml-auto text-xs font-mono text-violet-300">{activeRdTypes.length} ativas</span>
               )}
             </div>
             <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
@@ -515,7 +515,7 @@ export function TemporaryCharacterCard({ character: c }: Props) {
                 return (
                   <label key={t} className={cn('flex flex-col items-center gap-1 rounded-md border border-border/60 bg-background/40 px-2 py-1.5', v > 0 && 'border-violet-500/60 bg-violet-500/10')} title={`${DAMAGE_TYPE_LABELS[t]} (${DAMAGE_TYPE_ABBR[t]})`}>
                     <span className="text-xs font-medium leading-tight text-center text-muted-foreground truncate w-full">{DAMAGE_TYPE_LABELS[t]}</span>
-                    <span className="text-[10px] font-mono text-muted-foreground/60 -mt-0.5">{DAMAGE_TYPE_ABBR[t]}</span>
+                    <span className="text-xs font-mono text-muted-foreground/60 -mt-0.5">{DAMAGE_TYPE_ABBR[t]}</span>
                     <Input
                       type="number"
                       disabled={!canEditRd}
@@ -534,7 +534,7 @@ export function TemporaryCharacterCard({ character: c }: Props) {
             <div className="flex items-center gap-2">
               <Swords className="h-4 w-4 text-rose-400" />
               <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Aplicar</span>
-              <span className="ml-auto text-[10px] text-muted-foreground">RD calculada</span>
+              <span className="ml-auto text-xs text-muted-foreground">RD calculada</span>
             </div>
             <div className="grid grid-cols-2 gap-1">
               {(['dano', 'cura', 'pe-gasto', 'pe-recup'] as const).map((k) => (
@@ -542,7 +542,7 @@ export function TemporaryCharacterCard({ character: c }: Props) {
                   key={k}
                   size="sm"
                   variant={dmgKind === k ? 'default' : 'outline'}
-                  className="h-7 text-[11px]"
+                  className="h-7 text-xs"
                   onClick={() => setDmgKind(k)}
                 >
                   {k === 'dano' ? '💥 Dano' : k === 'cura' ? '💚 Cura' : k === 'pe-gasto' ? '🔻 PE−' : '✨ PE+'}
@@ -603,7 +603,7 @@ export function TemporaryCharacterCard({ character: c }: Props) {
           <div className="flex items-center gap-2 mb-2">
             <Dice6 className="h-4 w-4 text-emerald-400" />
             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">TRs</span>
-            <span className="ml-auto text-[10px] text-muted-foreground">bônus base</span>
+            <span className="ml-auto text-xs text-muted-foreground">bônus base</span>
           </div>
           <div className="space-y-1">
             {(c.savingThrows ?? []).map((s) => (
@@ -624,7 +624,7 @@ export function TemporaryCharacterCard({ character: c }: Props) {
           <div className="flex items-center gap-2 mb-2">
             <Dice6 className="h-4 w-4 text-amber-400" />
             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Perícias</span>
-            <span className="ml-auto text-[10px] text-muted-foreground">bônus extra</span>
+            <span className="ml-auto text-xs text-muted-foreground">bônus extra</span>
           </div>
           <div className="space-y-1 max-h-56 overflow-y-auto pr-1">
             {c.skills.map((s) => (
@@ -652,13 +652,13 @@ export function TemporaryCharacterCard({ character: c }: Props) {
           >
             <History className="h-4 w-4 text-muted-foreground" />
             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Histórico HP/PE</span>
-            <Badge variant="outline" className="font-mono text-[10px] ml-1">{(c.resourceHistory ?? []).length}</Badge>
-            <span className="ml-auto text-[10px] text-muted-foreground">{showHistory ? 'ocultar' : 'mostrar'}</span>
+            <Badge variant="outline" className="font-mono text-xs ml-1">{(c.resourceHistory ?? []).length}</Badge>
+            <span className="ml-auto text-xs text-muted-foreground">{showHistory ? 'ocultar' : 'mostrar'}</span>
           </button>
           {showHistory && (
             <div className="px-3 pb-3 space-y-1 max-h-44 overflow-y-auto">
               {(c.resourceHistory ?? []).length === 0 && (
-                <div className="text-[11px] text-muted-foreground italic px-1">Nenhuma alteração registrada.</div>
+                <div className="text-xs text-muted-foreground italic px-1">Nenhuma alteração registrada.</div>
               )}
               {(c.resourceHistory ?? []).slice().reverse().map((h) => {
                 const d = new Date(h.at);
@@ -666,11 +666,11 @@ export function TemporaryCharacterCard({ character: c }: Props) {
                 const sign = h.delta > 0 ? '+' : '';
                 const color = h.delta < 0 ? 'text-rose-300' : 'text-emerald-300';
                 return (
-                  <div key={h.id} className="flex items-center gap-2 text-[11px] font-mono">
+                  <div key={h.id} className="flex items-center gap-2 text-xs font-mono">
                     <span className="text-muted-foreground w-10">{time}</span>
                     <span className={cn('w-14 tabular-nums font-bold', color)}>{sign}{h.delta} {h.resource}</span>
                     <span className="text-muted-foreground truncate flex-1">{h.reason ?? '—'}</span>
-                    <span className="text-[10px] text-muted-foreground">{h.by === 'MASTER' ? 'Mestre' : 'Player'}</span>
+                    <span className="text-xs text-muted-foreground">{h.by === 'MASTER' ? 'Mestre' : 'Player'}</span>
                   </div>
                 );
               })}
@@ -678,7 +678,7 @@ export function TemporaryCharacterCard({ character: c }: Props) {
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-6 text-[10px] w-full"
+                  className="h-6 text-xs w-full"
                   onClick={() => updateCharacter(c.id, { resourceHistory: [] } as Partial<Character>)}
                 >
                   Limpar histórico
@@ -714,7 +714,7 @@ function CustomBuffForm({ onAdd }: { onAdd: (label: string, icon: string, turns:
   const [turns, setTurns] = useState(3);
   return (
     <div className="border-t border-border/60 pt-2 mt-2 space-y-1">
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Buff customizado</div>
+      <div className="text-xs uppercase tracking-wider text-muted-foreground">Buff customizado</div>
       <div className="flex gap-1">
         <Input value={icon} onChange={(e) => setIcon(e.target.value.slice(0, 2) || '✨')} className="h-7 w-12 text-center text-sm" />
         <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Nome do buff" className="h-7 flex-1 text-xs" />

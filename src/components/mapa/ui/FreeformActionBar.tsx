@@ -512,7 +512,7 @@ export function FreeformAttackForm({
               {trReqId && (
                 <div
                   className={cn(
-                    'text-[11px] text-center font-bold rounded-md py-1 border',
+                    'text-xs text-center font-bold rounded-md py-1 border',
                     trPassed === null
                       ? 'border-border bg-secondary/30 text-muted-foreground animate-pulse'
                       : trPassed
@@ -546,7 +546,7 @@ export function FreeformAttackForm({
                         setGroups(r.map((g) => ({ id: uid(), n: g.n, faces: g.faces })));
                         setDmgResult(null);
                       }}
-                      className="h-6 px-2 rounded-md border border-border bg-secondary/30 text-[11px] font-mono text-muted-foreground hover:bg-secondary/60 transition-colors"
+                      className="h-6 px-2 rounded-md border border-border bg-secondary/30 text-xs font-mono text-muted-foreground hover:bg-secondary/60 transition-colors"
                     >
                       {groupsLabel(r)}
                     </button>

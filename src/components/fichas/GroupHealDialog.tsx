@@ -118,7 +118,7 @@ export function GroupHealDialog({ caster, open, onOpenChange }: Props) {
             <div className="text-xs uppercase tracking-wider text-muted-foreground">
               Conjurador: <span className="text-foreground font-bold">{caster.name}</span>
             </div>
-            <div className="flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground">
+            <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
               <span>PE atual: <span className="text-foreground">{caster.peCurrent}/{shownPeMax(caster)}</span></span>
               <span>Limite PER: <span className="text-foreground">{peLimit}</span></span>
               <span>Dado: <span className="text-foreground">d{cfg.dieSize}</span></span>
@@ -129,7 +129,7 @@ export function GroupHealDialog({ caster, open, onOpenChange }: Props) {
 
             <div className="flex items-end gap-2">
               <div className="flex-1">
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">PER a gastar (1..{peLimit})</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">PER a gastar (1..{peLimit})</Label>
                 <Input
                   type="number"
                   min={1}
@@ -139,7 +139,7 @@ export function GroupHealDialog({ caster, open, onOpenChange }: Props) {
                   disabled={!!rolled}
                 />
               </div>
-              <div className="text-[11px] text-muted-foreground pb-2">
+              <div className="text-xs text-muted-foreground pb-2">
                 Custo: <span className={insufficientPe ? 'text-destructive font-bold' : 'text-amber-400 font-bold'}>{peCost} PE</span>
               </div>
               <Button
@@ -158,11 +158,11 @@ export function GroupHealDialog({ caster, open, onOpenChange }: Props) {
               <div className="text-xs">
                 <span className="text-muted-foreground">Pool de Cura:</span>{' '}
                 <span className="text-primary font-bold text-base">{rolled.total}</span>{' '}
-                <span className="text-[10px] text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                   [{rolled.rolls.join(', ')}] {rolled.mod >= 0 ? '+' : ''}{rolled.mod}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-[11px]">
+              <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">Alocado: <span className="text-foreground">{totalAllocated}</span></span>
                 <span className={remaining < 0 ? 'text-destructive font-bold' : 'text-emerald-400 font-bold'}>
                   Restante: {remaining}
@@ -177,7 +177,7 @@ export function GroupHealDialog({ caster, open, onOpenChange }: Props) {
                     <div key={a.id} className="flex items-center gap-2 px-1 py-1 rounded hover:bg-secondary/30">
                       <div className="flex-1 min-w-0">
                         <div className="text-xs font-bold truncate">{a.name}</div>
-                        <div className="text-[10px] text-muted-foreground">
+                        <div className="text-xs text-muted-foreground">
                           HP {a.hpCurrent}/{shownHpMax(a)} {missing > 0 && <span className="text-amber-400">(–{missing})</span>}
                         </div>
                       </div>

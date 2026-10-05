@@ -130,7 +130,7 @@ export function LogPanel() {
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-0.5 p-2">
           {isMaster && (
-            <div className="mb-1 rounded-lg border border-border bg-background/40 px-2 py-1 text-[10px] text-muted-foreground">
+            <div className="mb-1 rounded-lg border border-border bg-background/40 px-2 py-1 text-xs text-muted-foreground">
               <span className="text-primary">Visão dos players:</span> {visibilityMeta.label}
             </div>
           )}
@@ -156,7 +156,7 @@ export function LogPanel() {
                     <p className="mb-0.5 truncate text-xs font-semibold text-primary">{sourceName}</p>
                   )}
                   <p className="break-words font-mono text-[13px] font-medium leading-5 text-foreground tabular-nums">{log.message}</p>
-                  <span className="mt-0.5 block font-mono text-[11px] leading-4 text-muted-foreground tabular-nums">
+                  <span className="mt-0.5 block font-mono text-xs leading-4 text-muted-foreground tabular-nums">
                     {showGameTime ? (log.gameTime || '—') : new Date(log.timestamp).toLocaleTimeString('pt-BR')}
                   </span>
                 </div>

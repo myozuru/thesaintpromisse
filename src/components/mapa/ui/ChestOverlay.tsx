@@ -260,7 +260,7 @@ function SingleChestOverlay({ entityId }: { entityId: string }) {
             <span className="flex flex-col items-start leading-tight">
               <span>{unlocking ? 'Destrancando…' : 'Destrancar'}</span>
               {keyName && (
-                <span className="text-[10px] text-amber-300/70 inline-flex items-center gap-1">
+                <span className="text-xs text-amber-300/70 inline-flex items-center gap-1">
                   <KeySprite id={chest.keySpriteId} scale={0.9} />
                   {keyName}
                 </span>
@@ -403,7 +403,7 @@ function ChestDialog({
                         {it?.name ?? <span className="italic text-destructive">Item removido</span>}
                       </div>
                       {it?.description && (
-                        <div className="text-[11px] text-muted-foreground truncate">{it.description}</div>
+                        <div className="text-xs text-muted-foreground truncate">{it.description}</div>
                       )}
                     </div>
                     <span className="text-xs tabular-nums text-muted-foreground">x{entry.quantity}</span>

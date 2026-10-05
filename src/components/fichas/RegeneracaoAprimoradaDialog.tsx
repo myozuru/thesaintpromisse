@@ -91,7 +91,7 @@ export function RegeneracaoAprimoradaDialog({ character: c, open, onOpenChange }
         </DialogHeader>
 
         <div className="space-y-3 text-sm">
-          <div className="rounded-md border border-border bg-secondary/20 p-3 text-[11px] text-muted-foreground space-y-1">
+          <div className="rounded-md border border-border bg-secondary/20 p-3 text-xs text-muted-foreground space-y-1">
             <div>
               <span className="text-foreground font-bold">{c.name}</span> · PE: <span className="text-foreground">{c.peCurrent}/{shownPeMax(c)}</span> · ER: <span className="text-foreground">{er}/5</span>
             </div>
@@ -104,7 +104,7 @@ export function RegeneracaoAprimoradaDialog({ character: c, open, onOpenChange }
           {canFreeAction && (
             <label className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/5 px-3 py-2 cursor-pointer">
               <Checkbox checked={freeAction} onCheckedChange={(v) => setFreeAction(!!v)} className="mt-0.5" />
-              <div className="text-[11px]">
+              <div className="text-xs">
                 <div className="font-bold text-amber-400">Realizar como Ação Livre [10 PER → 20 PE]</div>
                 <div className="text-muted-foreground">
                   Override ER 5: ignora a ação comum/bônus exigida e gasta apenas a Ação Livre da rodada.
@@ -132,12 +132,12 @@ export function RegeneracaoAprimoradaDialog({ character: c, open, onOpenChange }
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs font-bold text-foreground">{opt.label}</span>
-                      <span className="text-[9px] uppercase tracking-wider text-primary/80 px-1.5 py-0.5 rounded bg-primary/10">
+                      <span className="text-xs uppercase tracking-wider text-primary/80 px-1.5 py-0.5 rounded bg-primary/10">
                         {freeAction ? 'Ação Livre' : opt.action}
                       </span>
-                      <span className="text-[9px] text-amber-400 font-bold">{per} PER · {pe} PE</span>
+                      <span className="text-xs text-amber-400 font-bold">{per} PER · {pe} PE</span>
                     </div>
-                    <div className="text-[10px] text-muted-foreground mt-0.5">{opt.description}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{opt.description}</div>
                   </div>
                 </button>
               );

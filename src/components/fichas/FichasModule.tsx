@@ -255,7 +255,7 @@ export function FichasModule() {
                   className={cn(nameDuplicate && 'border-destructive focus-visible:ring-destructive/60')}
                 />
                 {nameDuplicate && (
-                  <span className="text-[10px] text-destructive pl-1">Nome já em uso.</span>
+                  <span className="text-xs text-destructive pl-1">Nome já em uso.</span>
                 )}
               </div>
               <select

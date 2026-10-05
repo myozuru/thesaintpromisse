@@ -345,21 +345,21 @@ function ChestCard({
               </div>
 
               <div className="space-y-1.5">
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Cadeado (visual)</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Cadeado (visual)</p>
                 <LockSpritePicker
                   value={chest.lockSpriteId}
                   onChange={(id) => updateChest(chest.id, { lockSpriteId: id })}
                 />
               </div>
               <div className="space-y-1.5">
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Chave (visual)</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Chave (visual)</p>
                 <KeySpritePicker
                   value={chest.keySpriteId}
                   onChange={(id) => updateChest(chest.id, { keySpriteId: id })}
                 />
               </div>
 
-              <p className="text-[11px] text-muted-foreground italic">
+              <p className="text-xs text-muted-foreground italic">
                 Se trancado e sem chave definida, apenas o mestre pode destrancar.
               </p>
             </div>
@@ -385,7 +385,7 @@ function ChestCard({
                             {item?.name ?? <span className="italic text-destructive">Item removido</span>}
                           </div>
                           {item?.description && (
-                            <div className="text-[11px] text-muted-foreground truncate">{item.description}</div>
+                            <div className="text-xs text-muted-foreground truncate">{item.description}</div>
                           )}
                         </div>
                         <div className="flex items-center gap-1">
@@ -471,7 +471,7 @@ function ChestCard({
                           <div className="flex-1 min-w-0">
                             <div className="text-sm text-foreground truncate">{it.name}</div>
                             {it.description && (
-                              <div className="text-[11px] text-muted-foreground truncate">{it.description}</div>
+                              <div className="text-xs text-muted-foreground truncate">{it.description}</div>
                             )}
                           </div>
                         </button>
@@ -507,7 +507,7 @@ function ChestCard({
                 >
                   <PackageOpen className="h-4 w-4" /> Entregar tudo
                 </button>
-                <span className="text-[11px] text-muted-foreground italic">
+                <span className="text-xs text-muted-foreground italic">
                   Após entregar, o baú é esvaziado.
                 </span>
               </div>

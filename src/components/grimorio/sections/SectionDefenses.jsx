@@ -135,7 +135,7 @@ export default function SectionDefenses({ draft, actions }) {
         const exceeded = count > limit;
         return (
           <div key={key}>
-            <h3 className={`text-[10px] uppercase tracking-widest font-bold mb-2 flex items-center gap-1.5 ${accent}`}>
+            <h3 className={`text-xs uppercase tracking-widest font-bold mb-2 flex items-center gap-1.5 ${accent}`}>
               <Icon className="w-3 h-3" /> {label}
               <span className={`ml-auto font-mono tabular-nums ${exceeded ? "text-red-400" : "text-slate-400"}`}>
                 ({count}/{limit})
@@ -157,13 +157,13 @@ export default function SectionDefenses({ draft, actions }) {
 
       {/* Condições imunes */}
       <div>
-        <h3 className="text-[10px] uppercase tracking-widest text-amber-400 font-bold mb-1.5 flex items-center gap-1.5">
+        <h3 className="text-xs uppercase tracking-widest text-amber-400 font-bold mb-1.5 flex items-center gap-1.5">
           <AlertTriangle className="w-3 h-3" /> Imunidade a Condições
           <span className={`ml-auto font-mono tabular-nums ${condExceeded ? "text-red-500" : "text-slate-400"}`}>
             ({condCount}/{condTotalLimit})
           </span>
         </h3>
-        <div className="flex gap-3 mb-2 text-[10px] font-mono">
+        <div className="flex gap-3 mb-2 text-xs font-mono">
           <span className={extremaExceeded ? "text-red-400" : "text-slate-400"}>
             Extrema: ({extremaCount}/1)
           </span>
@@ -217,7 +217,7 @@ export default function SectionDefenses({ draft, actions }) {
               if (available.length === 0) return null;
               return (
                 <div key={key}>
-                  <h4 className={`text-[10px] uppercase tracking-widest font-bold mb-1.5 ${accent}`}>
+                  <h4 className={`text-xs uppercase tracking-widest font-bold mb-1.5 ${accent}`}>
                     {label}
                   </h4>
                   <div className="flex flex-wrap gap-1.5">
@@ -289,7 +289,7 @@ export default function SectionDefenses({ draft, actions }) {
 
       {/* Formulário de dano */}
       <div className="pt-3 border-t border-slate-800">
-        <h3 className="text-[10px] uppercase tracking-widest text-slate-500 mb-2 font-bold">
+        <h3 className="text-xs uppercase tracking-widest text-slate-500 mb-2 font-bold">
           Adicionar Resistência / Imunidade / Vulnerabilidade a Dano
         </h3>
         <div className="flex flex-wrap gap-2 items-center">
@@ -338,7 +338,7 @@ export default function SectionDefenses({ draft, actions }) {
           <div className="border border-slate-800 rounded-lg p-4 bg-slate-900/30 mt-3 space-y-3">
             {DAMAGE_GROUPS.map(({ key, label, accent, types }) => (
               <div key={key}>
-                <h4 className={`text-[10px] uppercase tracking-widest font-bold mb-1.5 ${accent}`}>
+                <h4 className={`text-xs uppercase tracking-widest font-bold mb-1.5 ${accent}`}>
                   {label}
                 </h4>
                 <div className="flex flex-wrap gap-1.5">

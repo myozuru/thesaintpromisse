@@ -54,7 +54,7 @@ export function GolpeEspecialSection({
               >
                 <span className="font-bold">{p.name}</span>{' '}
                 <span className={unit < 0 ? 'text-emerald-400' : 'text-primary'}>{unit > 0 ? `+${unit}` : unit} PE</span>
-                <span className="block text-[11px] text-muted-foreground leading-tight">{detail ?? p.summary}</span>
+                <span className="block text-xs text-muted-foreground leading-tight">{detail ?? p.summary}</span>
               </button>
               {p.max > 1 && (
                 <div className="flex items-center gap-1">
@@ -81,7 +81,7 @@ export function GolpeEspecialSection({
           </select>
         </label>
       )}
-      {custo > 0 && <p className="text-[11px] text-muted-foreground">Custo mínimo de 1 PE. Pago só quando o ataque é confirmado.</p>}
+      {custo > 0 && <p className="text-xs text-muted-foreground">Custo mínimo de 1 PE. Pago só quando o ataque é confirmado.</p>}
     </div>
   );
 }

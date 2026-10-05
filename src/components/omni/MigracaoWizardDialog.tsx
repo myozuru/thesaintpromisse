@@ -145,7 +145,7 @@ export function MigracaoWizardDialog({ aberto, onClose }: Props) {
                       <Package className="h-4 w-4 text-primary/60 shrink-0" />
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-medium truncate">{i.name}</div>
-                        <div className="text-[11px] text-muted-foreground truncate">
+                        <div className="text-xs text-muted-foreground truncate">
                           {i.category} · {i.slotType}
                           {i.bonusHP ? ` · +${i.bonusHP} HP` : ''}
                           {i.bonusPE ? ` · +${i.bonusPE} PE` : ''}
@@ -189,7 +189,7 @@ export function MigracaoWizardDialog({ aberto, onClose }: Props) {
                       <Wand2 className="h-4 w-4 text-primary/60 shrink-0" />
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-medium truncate">{r.spell.name}</div>
-                        <div className="text-[11px] text-muted-foreground truncate">
+                        <div className="text-xs text-muted-foreground truncate">
                           {r.charName} · {r.spell.spellType} · custo {r.spell.costPE} PE
                           {r.spell.damageDice ? ` · ${r.spell.damageDice}` : ''}
                         </div>

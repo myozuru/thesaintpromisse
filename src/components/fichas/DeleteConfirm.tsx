@@ -43,7 +43,7 @@ export function DeleteConfirm({ onConfirm, label }: Props) {
   return (
     <button onClick={handleClick} className="flex items-center gap-1 rounded p-1 text-muted-foreground hover:bg-destructive/20 hover:text-destructive transition-colors" title="Excluir">
       <Trash2 className="h-3.5 w-3.5" />
-      {countdown !== null && <span className="text-[10px] text-destructive font-mono">{countdown}s</span>}
+      {countdown !== null && <span className="text-xs text-destructive font-mono">{countdown}s</span>}
     </button>
   );
 }

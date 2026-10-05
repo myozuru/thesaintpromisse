@@ -96,7 +96,7 @@ export function ApoioAvancadoSection({ character: c }: { character: Character })
           </button>
         </div>
       )}
-      <p className="text-[10px] text-muted-foreground">
+      <p className="text-xs text-muted-foreground">
         Ao usar Apoiar, escolha um dos efeitos conhecidos no seletor ao lado do botão.
       </p>
     </div>

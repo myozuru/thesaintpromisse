@@ -109,12 +109,12 @@ export function OmniDetalhesDialog({ open, onOpenChange, entidade }: Props) {
           <DialogTitle className="flex items-center gap-2 flex-wrap">
             <span>{entidade.icone ?? '✨'}</span>
             <span>{entidade.nome}</span>
-            <Badge variant="outline" className="text-[10px]">{CATEGORIA_LABEL[entidade.categoria] ?? entidade.categoria}</Badge>
+            <Badge variant="outline" className="text-xs">{CATEGORIA_LABEL[entidade.categoria] ?? entidade.categoria}</Badge>
           </DialogTitle>
           {entidade.tags.length > 0 && (
             <DialogDescription className="flex flex-wrap gap-1 pt-1">
               {entidade.tags.map((t) => (
-                <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-muted/60 text-muted-foreground">#{t}</span>
+                <span key={t} className="text-xs px-1.5 py-0.5 rounded bg-muted/60 text-muted-foreground">#{t}</span>
               ))}
             </DialogDescription>
           )}
@@ -131,24 +131,24 @@ export function OmniDetalhesDialog({ open, onOpenChange, entidade }: Props) {
 
             <section className="grid grid-cols-2 gap-2">
               <div className="rounded border border-border/60 bg-background/40 p-2">
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Duração</div>
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">Duração</div>
                 <div className="text-sm">{dur.tipo}{dur.valor ? ` (${fmtValor(dur.valor)})` : ''}</div>
               </div>
               {entidade.alcance && (
                 <div className="rounded border border-border/60 bg-background/40 p-2">
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Alcance</div>
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">Alcance</div>
                   <div className="text-sm">{fmtValor(entidade.alcance)} m</div>
                 </div>
               )}
               {entidade.areaRaio && (
                 <div className="rounded border border-border/60 bg-background/40 p-2">
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Raio de Área</div>
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">Raio de Área</div>
                   <div className="text-sm">{fmtValor(entidade.areaRaio)} m</div>
                 </div>
               )}
               {entidade.usos && (
                 <div className="rounded border border-border/60 bg-background/40 p-2">
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Usos</div>
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">Usos</div>
                   <div className="text-sm">{entidade.usos.total} / recarga {entidade.usos.recarga}</div>
                 </div>
               )}
@@ -215,8 +215,8 @@ export function OmniDetalhesDialog({ open, onOpenChange, entidade }: Props) {
                         <li key={eff.id ?? i} className="text-xs rounded border border-sky-500/30 bg-sky-500/5 px-2 py-1">
                           <span className="text-sky-200">#{i + 1}</span>{' '}
                           <span className="text-foreground">{frasePlanoExecucao(eff)}</span>
-                          {eff.condition && <div className="text-[10px] text-muted-foreground">se {eff.condition}</div>}
-                          {eff.watcher && <div className="text-[10px] text-amber-300">⚡ {humanizarWatcher(eff.watcher)}</div>}
+                          {eff.condition && <div className="text-xs text-muted-foreground">se {eff.condition}</div>}
+                          {eff.watcher && <div className="text-xs text-amber-300">⚡ {humanizarWatcher(eff.watcher)}</div>}
                         </li>
                       ))}
                     </ul>
@@ -230,14 +230,14 @@ export function OmniDetalhesDialog({ open, onOpenChange, entidade }: Props) {
                         <li key={eff.id ?? i} className="text-xs rounded border border-emerald-500/30 bg-emerald-500/5 px-2 py-1">
                           <span className="text-emerald-200">#{i + 1}</span>{' '}
                           <span className="text-foreground">{frasePlanoExecucao(eff)}</span>
-                          {eff.condition && <div className="text-[10px] text-muted-foreground">se {eff.condition}</div>}
-                          {eff.watcher && <div className="text-[10px] text-amber-300">⚡ {humanizarWatcher(eff.watcher)}</div>}
+                          {eff.condition && <div className="text-xs text-muted-foreground">se {eff.condition}</div>}
+                          {eff.watcher && <div className="text-xs text-amber-300">⚡ {humanizarWatcher(eff.watcher)}</div>}
                         </li>
                       ))}
                     </ul>
                   </div>
                 )}
-                <div className="text-[10px] text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   Crítico: {cd.critRange}+ (×{cd.critMultiplier}){cd.actionCost ? ` • Custo: ${cd.actionCost}` : ''}
                 </div>
               </section>
@@ -269,3 +269,4 @@ export function OmniDetalhesDialog({ open, onOpenChange, entidade }: Props) {
     </Dialog>
   );
 }
+

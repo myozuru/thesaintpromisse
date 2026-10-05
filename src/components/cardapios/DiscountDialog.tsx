@@ -260,7 +260,7 @@ export function DiscountDialog({
           {hasWindow && (
             <div className="space-y-2 rounded-md bg-background/40 p-2 border border-border/40">
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
                   Início (dia / mês / ano)
                 </div>
                 <div className="grid grid-cols-3 gap-1.5">
@@ -270,7 +270,7 @@ export function DiscountDialog({
                 </div>
               </div>
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
                   Fim (dia / mês / ano)
                 </div>
                 <div className="grid grid-cols-3 gap-1.5">
@@ -279,7 +279,7 @@ export function DiscountDialog({
                   <Input type="number" value={endYear} onChange={(e) => setEndYear(e.target.value)} className="h-7 text-xs" />
                 </div>
               </div>
-              <p className="text-[10px] italic text-muted-foreground">
+              <p className="text-xs italic text-muted-foreground">
                 Hoje no Chronos: {day}/{month}/{year}.
               </p>
             </div>
