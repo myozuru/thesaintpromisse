@@ -119,12 +119,13 @@ describe('custos genéricos de ações', () => {
 
 describe('sustentação e interface reais', () => {
   const sustentada = () => cfg({ efeitos: [{ tipo: 'condicao', condicao: 'caido', rodadas: 1 }], custo_recursos: { tipo_acao: 'sustentada', pe_por_turno: '3' } });
-  it('mantém condições, paga por turno e encerra apenas suas próprias instâncias', async () => {
+  it('mantém uma condição sem acumular e encerra sua instância ao dissipar', async () => {
     const r = await executarAcaoAtiva('u', sustentada(), 'a'); expect(r.ok).toBe(true);
     const s = pegarFicha('u').omniSustentacoes![0]; expect(s.condicoes).toHaveLength(1); expect(pegarFicha('a').activeConditions[0].remainingRounds).toBe(-1);
     useCharacterStore.getState().addCondition('a', { ...pegarFicha('a').activeConditions[0], id: 'outra' });
+    expect(pegarFicha('a').activeConditions.map(c => c.id)).toEqual([s.condicoes[0].id]);
     inicioTurnoSustentacoesAtivas('u'); expect(pegarFicha('u').peCurrent).toBe(15);
-    encerrarSustentacaoAtiva('u', s.id); expect(pegarFicha('a').activeConditions.map(c => c.id)).toEqual(['outra']); expect(pegarFicha('u').omniSustentacoes).toEqual([]);
+    encerrarSustentacaoAtiva('u', s.id); expect(pegarFicha('a').activeConditions).toEqual([]); expect(pegarFicha('u').omniSustentacoes).toEqual([]);
   });
   it('falta de PE encerra manutenção sem saldo negativo', async () => {
     mesa({ peCurrent: 4 }); await executarAcaoAtiva('u', sustentada(), 'a'); inicioTurnoSustentacoesAtivas('u'); expect(pegarFicha('u').peCurrent).toBe(2); expect(pegarFicha('u').omniSustentacoes).toEqual([]); expect(pegarFicha('a').activeConditions).toEqual([]);
@@ -158,4 +159,3 @@ describe('sustentação e interface reais', () => {
     await executarAcaoAtiva('u', sustentada(), 'a'); render(<AcoesAtivasSection charId="u" />); fireEvent.click(screen.getByLabelText('Encerrar Escalar')); expect(pegarFicha('a').activeConditions).toEqual([]);
   });
 });
-

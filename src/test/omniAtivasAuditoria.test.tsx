@@ -131,8 +131,8 @@ describe('condições visuais convergem com a ficha',()=>{
   it('aplicação fica visível aos predicados e registra a origem',()=>{
     visual('APLICAR_CONDICAO');expect(avaliarPredicadoEstado({tipo:'tem_condicao',nome:'Caído'},pegarFicha('a'),pegarFicha('u'))).toBe(true);expect(pegarFicha('a').activeConditions[0].sourceCharId).toBe('u');
   });
-  it('expiração remove só a instância vinculada, preservando condição de outra fonte',()=>{
-    visual('APLICAR_CONDICAO');const own=pegarFicha('a').activeConditions[0];useCharacterStore.getState().addCondition('a',{...own,id:'outra'});useChronosStore.getState().tick(13);useOmniRuntimeStore.getState().podarExpirados();expect(pegarFicha('a').activeConditions.map(c=>c.id)).toEqual(['outra']);
+  it('reaplicar a mesma condição por outra fonte não cria uma segunda instância',()=>{
+    visual('APLICAR_CONDICAO');const own=pegarFicha('a').activeConditions[0];useCharacterStore.getState().addCondition('a',{...own,id:'outra'});expect(pegarFicha('a').activeConditions.map(c=>c.id)).toEqual([own.id]);useChronosStore.getState().tick(13);useOmniRuntimeStore.getState().podarExpirados();expect(pegarFicha('a').activeConditions).toEqual([]);
   });
   it('remoção visual também remove condição criada por ação ativa',async()=>{
     await executarAcaoAtiva('u',cfg({efeitos:[{tipo:'condicao',condicao:'caido',rodadas:2}]}),'a');visual('REMOVER_CONDICAO');expect(pegarFicha('a').activeConditions).toEqual([]);

@@ -101,6 +101,44 @@ function scaledEconomiaDie(level: number, baseDie: number): number {
   return d;
 }
 
+function normalizeConditionIdentity(value: string | undefined): string {
+  return (value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+}
+
+function conditionSeverity(condition: Pick<ActiveCondition, 'conditionId' | 'name'>): number {
+  const key = normalizeConditionIdentity(condition.conditionId || condition.name);
+  if (key === 'amedrontado') return 2;
+  if (key === 'abalado') return 1;
+  return 0;
+}
+
+function sameConditionKind(a: ActiveCondition, b: ActiveCondition): boolean {
+  const aId = normalizeConditionIdentity(a.conditionId);
+  const bId = normalizeConditionIdentity(b.conditionId);
+  const aName = normalizeConditionIdentity(a.name);
+  const bName = normalizeConditionIdentity(b.name);
+  return (aId && bId && aId === bId)
+    || (!!aName && aName === bName);
+}
+
+function normalizeActiveConditions(conditions: ActiveCondition[] | undefined): ActiveCondition[] {
+  const unique: ActiveCondition[] = [];
+  for (const condition of conditions ?? []) {
+    const severity = conditionSeverity(condition);
+    const alreadyCovered = unique.some((active) =>
+      sameConditionKind(active, condition)
+      || (severity > 0 && conditionSeverity(active) >= severity),
+    );
+    if (alreadyCovered) continue;
+    const kept = unique.filter((active) =>
+      !(severity > 0 && conditionSeverity(active) > 0 && conditionSeverity(active) < severity),
+    );
+    kept.push(condition);
+    unique.splice(0, unique.length, ...kept);
+  }
+  return unique;
+}
+
 // ============================================================================
 //  FAH (Feto Amaldiçoado Híbrido) — fórmulas data-driven
 // ============================================================================
@@ -1217,6 +1255,7 @@ export const useCharacterStore = create<CharacterStore>()(
             updates = rest as Partial<Character>;
           }
           let merged: Character = { ...c, ...updates };
+          merged.activeConditions = normalizeActiveConditions(merged.activeConditions);
           if (typeof updates.escCurrent === 'number' && updates.protecoesOmni === undefined && c.protecoesOmni?.length) {
             merged.protecoesOmni = consumirProtecoesOmni(ajustarProtecoesOmni(c), Math.max(0, (c.escCurrent ?? 0) - updates.escCurrent));
           }
@@ -4330,8 +4369,27 @@ export const useCharacterStore = create<CharacterStore>()(
             return;
           }
         }
+        const incomingSeverity = conditionSeverity(condition);
+        const currentConditions = target.activeConditions ?? [];
+        const existingCondition = currentConditions.find((active) => sameConditionKind(active, condition))
+          ?? (incomingSeverity > 0
+            ? currentConditions.find((active) => conditionSeverity(active) >= incomingSeverity)
+            : undefined);
+        if (existingCondition) {
+          const existingSeverity = conditionSeverity(existingCondition);
+          if (sameConditionKind(existingCondition, condition) || existingSeverity >= incomingSeverity) {
+            useLogStore.getState().addLog('system', `ℹ️ ${target.name} já está sob a condição ${existingCondition.name}; ela não se acumula.`);
+            return;
+          }
+        }
         set((state) => ({
-          characters: state.characters.map((c) => c.id === charId ? { ...c, activeConditions: [...(c.activeConditions || []), { ...condition, elapsedRounds: 0 }] } : c),
+          characters: state.characters.map((c) => {
+            if (c.id !== charId) return c;
+            const conditions = (c.activeConditions || []).filter((active) =>
+              !(incomingSeverity > 0 && conditionSeverity(active) > 0 && conditionSeverity(active) < incomingSeverity),
+            );
+            return { ...c, activeConditions: [...conditions, { ...condition, elapsedRounds: 0 }] };
+          }),
         }));
         // ─── Omni-Engine: gatilho de condição recebida ─────────────────────
         import('@/lib/omni/eventBus').then(({ emitirEvento }) => {
@@ -5481,6 +5539,7 @@ export const useCharacterStore = create<CharacterStore>()(
         const creatureIds = readGrimorioLinkedIds();
         state.characters = state.characters.map((c) => {
           let migrated = migrateSavingThrowNames(finalizeFAH(c));
+          migrated.activeConditions = normalizeActiveConditions(migrated.activeConditions);
           if (migrated.isGrimorioCreature || creatureIds.has(migrated.id)) {
             migrated = stripCreatureProgression({ ...migrated, isGrimorioCreature: true });
           }
