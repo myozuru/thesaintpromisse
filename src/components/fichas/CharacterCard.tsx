@@ -383,6 +383,7 @@ function DamageHealPanel({ sourceId, sourceName }: { sourceId: string; sourceNam
 
 export function CharacterCard({ character: c, hideAttackPanel, compactHeader = false }: Props) {
   const isPlayer = useRoleStore((s) => s.role) === 'PLAYER';
+  const canSeeCombatDefense = !isPlayer || c.category === 'PLAYER';
   const activeProfileId = useProfileStore((s) => s.activeProfileId);
   const combatInProgress = useCombatStore((s) => s.inCombat);
   const activeTurnCharId = useCombatStore((s) => s.initiativeOrder[s.currentTurnIndex]?.charId);
@@ -737,6 +738,9 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     }),
     { hp: 0, pe: 0, esc: 0, slots: 0, rd: 0, ca: 0, actions: 0, bonusActions: 0, reactions: 0, opportunity: 0 }
   );
+  const effectiveActionsMax = c.isGrimorioCreature
+    ? Math.min(2, c.actionsMax + itemBonuses.actions)
+    : c.actionsMax + itemBonuses.actions;
 
   // Omni-Engine: instâncias de inventário e equipados.
   const inventoryItems = useInventoryStore((s) => s.items);
@@ -1351,7 +1355,6 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
 
   const handleResetActions = () => {
     playClickSound();
-    const effectiveActionsMax = c.actionsMax + itemBonuses.actions;
     const effectiveBonusActionsMax = c.bonusActionsMax + itemBonuses.bonusActions;
     const effectiveReactionsMax = c.reactionsMax + itemBonuses.reactions;
     const effectiveOpportunityMax = c.opportunityMax + itemBonuses.opportunity;
@@ -1465,7 +1468,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
           </div>
         </div>
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-          <div
+          {canSeeCombatDefense && <div
             className="flex flex-col items-center justify-center rounded-xl border-2 border-primary/50 bg-gradient-to-br from-primary/20 to-primary/5 px-3 py-1.5 shadow-[0_0_20px_-5px_hsl(var(--primary)/0.4)]"
             title={`CA base ${c.ca} + DES ${desModCC >= 0 ? '+' : ''}${desModCC} + ½ Nv ${halfLevelCC}${passiveBonuses.ca ? ` + Passivas ${passiveBonuses.ca}` : ''}${itemBonuses.ca ? ` + Itens ${itemBonuses.ca}` : ''}${buffCA ? ` + Buffs ${buffCA}` : ''}${conditionMods.defense ? ` ${conditionMods.defense >= 0 ? '+' : ''}${conditionMods.defense} Condições` : ''}${hasDirectionalDef ? `\n— Direcionais (aplicados pelo motor):\n  vs CaC: ${caVsMelee + buffCA} (${conditionMods.defenseMelee >= 0 ? '+' : ''}${conditionMods.defenseMelee})\n  vs Distância: ${caVsRanged + buffCA} (${conditionMods.defenseRanged >= 0 ? '+' : ''}${conditionMods.defenseRanged})` : ''}`}
           >
@@ -1487,7 +1490,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                 <span title="Defesa contra ataques à distância">Dist {caVsRanged + buffCA}</span>
               </div>
             )}
-          </div>
+          </div>}
           {/* CD — mesmo visual da CA, com atributo configurável travado uma vez */}
           <div
             className="flex flex-col items-center justify-center rounded-xl border-2 border-neon-yellow/50 bg-gradient-to-br from-neon-yellow/20 to-neon-yellow/5 px-3 py-1.5 shadow-[0_0_20px_-5px_hsl(var(--neon-yellow)/0.4)]"
@@ -1896,7 +1899,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
             className={cn('rounded px-1.5 py-0.5 text-xs font-bold border transition-colors', c.actionsCurrent > 0 ? 'bg-primary/20 text-primary border-primary/40' : 'bg-secondary/30 text-muted-foreground/50 border-border')}
             title="Ação Comum"
           >
-            AC {c.actionsCurrent}/{c.actionsMax + itemBonuses.actions}
+            AC {c.actionsCurrent}/{effectiveActionsMax}
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); if (c.bonusActionsCurrent > 0) updateCharacter(c.id, { bonusActionsCurrent: c.bonusActionsCurrent - 1 }); }}

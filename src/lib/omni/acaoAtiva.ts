@@ -34,6 +34,7 @@ import { avaliarFormula } from './parser';
 import { ajustarProtecoesOmni } from './protecoesAtivas';
 import { lerCaminhoOmni, montarVariaveisDoPersonagem } from './resolvedor';
 import { useCharacterStore } from '@/stores/useCharacterStore';
+import { useRoleStore } from '@/stores/useRoleStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
@@ -525,7 +526,9 @@ async function executarAcaoAtivaInterna(
       critico = r.critical;
       aplicaEfeitos = r.hit;
       armaDano = cfg.incluirArma && !/@ARMA\.DANO/i.test(cfg.dano ?? '') ? r.damageTotal : 0;
-      cabecalho = `ataque ${r.attackTotal} vs Defesa ${def} → ${r.critical ? 'CRÍTICO' : r.hit ? 'ACERTOU' : 'ERROU'}${critExtra ? ` (margem −${critExtra})` : ''}`;
+      const podeVerDefesa = useRoleStore.getState().role !== 'PLAYER' || t.category === 'PLAYER';
+      const defesaLabel = podeVerDefesa ? `Defesa ${def}` : 'Defesa do alvo';
+      cabecalho = `ataque ${r.attackTotal} vs ${defesaLabel} → ${r.critical ? 'CRÍTICO' : r.hit ? 'ACERTOU' : 'ERROU'}${critExtra ? ` (margem −${critExtra})` : ''}`;
       if (r.cancelled) { log(`⛔ ${cfg.nome}: ataque interrompido.`); continue; }
       const tipoDeclarado = resolverTipoDano(cfg.tipoDano) ?? (cfg.incluirArma || /@ARMA\./i.test([cfg.dano, ...mods.danos].join('+')) ? resolverTipoDano(arma!.omniDamageType ?? arma!.damageType ?? undefined) : undefined);
       if (r.hit) notificarResultadoAtaque(u.id, t.id, arma!, r, metadadosAtaque, 'omni', tipoDeclarado ?? null);

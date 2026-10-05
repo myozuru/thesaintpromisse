@@ -580,9 +580,9 @@ export function useMultiplayerSync() {
         }));
       } else if (msg.tipo === 'fechar' && msg.perfilId && podeResponderReacao(msg.perfilId)) {
         void import('@/lib/omni/reacoesAtivas').then(({ useReacoesAtivasStore }) => useReacoesAtivasStore.getState().fecharOfertaRemota(msg.janelaId!));
-      } else if ((msg.tipo === 'resultado' || msg.tipo === 'passar' || msg.tipo === 'indisponivel' || msg.tipo === 'disponivel') && msg.clienteOrigem === clientId && msg.perfilId) {
+      } else if ((msg.tipo === 'resultado' || msg.tipo === 'passar' || msg.tipo === 'indisponivel' || msg.tipo === 'disponivel' || msg.tipo === 'processando') && msg.clienteOrigem === clientId && msg.perfilId) {
         void import('@/lib/omni/reacoesAtivas').then(({ receberRespostaRemota }) => receberRespostaRemota({
-          tipo: msg.tipo as 'resultado' | 'passar' | 'indisponivel' | 'disponivel', janelaId: msg.janelaId!, perfilId: msg.perfilId!, clienteOrigem: msg.clienteOrigem!, resultado: msg.resultado as never,
+          tipo: msg.tipo as 'resultado' | 'passar' | 'indisponivel' | 'disponivel' | 'processando', janelaId: msg.janelaId!, perfilId: msg.perfilId!, clienteOrigem: msg.clienteOrigem!, resultado: msg.resultado as never,
         }, clientId));
       }
     });

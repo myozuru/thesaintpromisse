@@ -214,6 +214,30 @@ describe('controlador remoto e confirmação de entrega', () => {
       expect(useReacoesAtivasStore.getState().janelas).toHaveLength(0);
     } finally { window.removeEventListener('omni-reaction:send',onSend); }
   });
+  it('mostra feitiços de reação das fichas do Mestre mesmo sem gatilho OMNI configurado', async () => {
+    const ev = mesaRemota();
+    const spell: Spell = { id: 'reac-sp', name: 'Barreira Arcana', costPE: 2, description: '', damageDice: '', damageBonus: 0, fixedDamage: 0, damageType: 'DQ', spellType: 'buff', actionType: 'reaction', buffs: [], conditions: [], spellLevel: '1', durationRounds: 0, range: 'Toque' };
+    useCharacterStore.getState().updateCharacter('a', { spells: [spell] });
+    const enviados: CustomEvent[] = [];
+    const onSend = (e: Event) => enviados.push(e as CustomEvent);
+    window.addEventListener('omni-reaction:send', onSend);
+    try {
+      const p = abrirJanelaReacaoAtiva(ev);
+      const sondagem = enviados.find(e => e.detail.tipo === 'sondar')!.detail;
+      comoTela({ role: 'MASTER', profileId: 'perfil-mestre' });
+      receberSondagemRemota({ ...sondagem, clienteOrigem: 'origem' });
+      expect(enviados.some(e => e.detail.tipo === 'disponivel')).toBe(true);
+      render(<ReacoesAtivasOverlay />);
+      fireEvent.click(screen.getAllByRole('button', { name: /Barreira Arcana/ })[1]);
+      await waitFor(() => expect(enviados.some(e => e.detail.tipo === 'processando')).toBe(true));
+      await waitFor(() => expect(enviados.some(e => e.detail.tipo === 'passar')).toBe(true));
+      const passou = enviados.find(e => e.detail.tipo === 'passar')!.detail;
+      await receberRespostaRemota({ tipo: 'passar', janelaId: sondagem.janelaId, perfilId: sondagem.perfilId, clienteOrigem: 'origem' }, 'origem');
+      expect(await p).toEqual({ cancelado: false, defesaBonus: 0 });
+      expect(passou.perfilId).toBe(DESTINATARIO_MESTRE);
+      expect(pegarFicha('a').peCurrent).toBe(18);
+    } finally { window.removeEventListener('omni-reaction:send', onSend); }
+  });
   it('destinatário que não confirma não deixa promessa presa', async () => {
     const ev=mesaRemota();vi.useFakeTimers();
     try {

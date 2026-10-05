@@ -966,7 +966,8 @@ export function AttackPanel({ character: cProp }: Props) {
     recordAttackResult(c.id, r.hit);
     revelarPara(c.id, alvo.id);
     const verdict = r.criticalFail ? '💀 falha crítica' : r.critical ? '💥 CRÍTICO' : r.hit ? '✅ acerto' : '❌ erro';
-    addLog('combat', `🗡️ ${c.name} ataca ${alvo.name} com ${arma.name}: d20 ${r.natural} · total ${r.attackTotal} vs Def ${def} → ${verdict}${r.hit ? ` · dano ${r.damageTotal} (${r.damageDice})` : ''}`);
+    const defesaLabel = !isMaster && alvo.category !== 'PLAYER' ? 'Defesa do alvo' : `Def ${def}`;
+    addLog('combat', `🗡️ ${c.name} ataca ${alvo.name} com ${arma.name}: d20 ${r.natural} · total ${r.attackTotal} vs ${defesaLabel} → ${verdict}${r.hit ? ` · dano ${r.damageTotal} (${r.damageDice})` : ''}`);
     if (r.hit && r.damageTotal > 0) {
       await applyDamage(alvo.id, r.damageTotal, (r.damageType ?? undefined) as never, {
         attackerId: c.id, source: 'arma', isMelee: arma.range === 'melee', rdIgnore: arremessosRdIgnorada(eu, arma, turnInfo),

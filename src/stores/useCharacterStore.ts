@@ -192,8 +192,11 @@ export function migrateFAHFields<T extends Character>(c: T): T {
  */
 /** Criaturas do Grimório: remove progressão de classe/especialização e pendências de nível. */
 function stripCreatureProgression<T extends Character>(c: T): T {
+  const actionsMax = Math.min(2, Math.max(0, Number.isFinite(c.actionsMax) ? c.actionsMax : 1));
   return {
     ...c,
+    actionsMax,
+    actionsCurrent: Math.min(actionsMax, Math.max(0, Number.isFinite(c.actionsCurrent) ? c.actionsCurrent : actionsMax)),
     tecnicaFundamentos: undefined,
     tecnicaFoco: undefined,
     keyAttribute: undefined,

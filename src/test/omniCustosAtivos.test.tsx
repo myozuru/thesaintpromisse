@@ -18,13 +18,23 @@ import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { useReactionStore } from '@/stores/useReactionStore';
 import { useMapStore } from '@/stores/useMapStore';
+import { useLogStore } from '@/stores/useLogStore';
 import { PacoteOmniSchema } from '@/lib/omni/validacao';
 const cfg = (p: Partial<AcaoAtivaConfig> = {}): AcaoAtivaConfig => ({ id: 'c', nome: 'Escalar', acao: 'comum', custoPE: '2', alcanceM: 18, teste: 'nenhum', ...p });
 const mesa = (extra = {}) => montarMesa([ficha('u', { actionsCurrent: 1, hpCurrent: 30, hpMax: 30, omniCounters: { foco: 5 }, ...extra }), ficha('a', { category: 'INIMIGO', hpCurrent: 100, hpMax: 100, escCurrent: 0 }), ficha('b', { category: 'INIMIGO', hpCurrent: 100, hpMax: 100, escCurrent: 0 })], { u: [0, 0], a: [2, 0], b: [3, 0] });
-beforeEach(() => { comoTela({ profileId: null, role: 'MASTER' }); useInventoryStore.setState({ items: {} }); useMapStore.setState({ walls: [] }); useCombatStore.setState({ inCombat: false }); mesa(); });
+beforeEach(() => { comoTela({ profileId: null, role: 'MASTER' }); useInventoryStore.setState({ items: {} }); useMapStore.setState({ walls: [] }); useCombatStore.setState({ inCombat: false }); useLogStore.getState().clearLogs(); mesa(); });
 afterEach(async () => { cleanup(); await import('@/lib/omni/eventBus'); await import('@/lib/omni/observadores'); await esperar(); useCombatStore.setState({ inCombat: false }); limparMesa(); });
 
 describe('custos genéricos de ações', () => {
+  it('não revela o valor numérico da Defesa do inimigo no registro visto pelo jogador', async () => {
+    mesa({ mainHandWeaponName: 'Espada Curta', attributes: [{ id: 'FOR', name: 'Força', value: 14 }], trainingBonus: 2 });
+    comoTela({ profileId: 'perfil-u', role: 'PLAYER' });
+    forcarDados(15, 4, 4);
+    await executarAcaoAtiva('u', cfg({ teste: 'ataque', dano: '1d4', incluirArma: true }), 'a');
+    const mensagem = useLogStore.getState().logs[0]?.message ?? '';
+    expect(mensagem).toContain('Defesa do alvo');
+    expect(mensagem).not.toMatch(/vs Defesa \d+/);
+  });
   it('intensifica dano e cobra uma vez para múltiplos alvos', async () => {
     forcarDados(3, 3, 3, 3);
     const r = await executarAcaoAtiva('u', cfg({ tipo_alvo: 'multiplo', max_alvos: '2', dano: '1d6', custo_recursos: { pe_base: '2', pe_por_intensificacao: '1', max_intensificacoes: '4', dano_por_intensificacao: '1d6' } }), ['a', 'b'], undefined, { intensificacoes: 1 });

@@ -1,4 +1,4 @@
-import { destinatarioReacao, podeResponderReacao } from './destinatarioReacao';
+import { DESTINATARIO_MESTRE, destinatarioReacao, podeResponderReacao } from './destinatarioReacao';
 import { resolverTokenDaFicha } from '@/lib/mapa/tokenDaFicha';
 import { exemplarEstaEmpunhado } from './exemplarArma';
 import { create } from 'zustand';
@@ -64,6 +64,7 @@ const janelaExpirations = new Map<string, ReturnType<typeof setTimeout>>();
 const remoteExpirations = new Map<string, ReturnType<typeof setTimeout>>();
 export const PRAZO_SONDAGEM_REACAO_MS = 12000;
 export const PRAZO_ESCOLHA_REACAO_MS = 12000;
+const PRAZO_RESOLUCAO_REACAO_MANUAL_MS = 120000;
 function scheduleRemoteExpiry(janelaId: string, expiresAt: number) {
   clearTimeout(remoteExpirations.get(janelaId));
   remoteExpirations.set(janelaId, setTimeout(() => {
@@ -209,6 +210,42 @@ export function abrirJanelaReacaoAtiva(evento: EventoReacaoAtiva): Promise<Resul
     publicarParaPerfis('sondar', id, evento, destinatarios, expiresAt);
   });
 }
+
+/** Ao escolher um feitiço de reação, mantém a interrupção enquanto a ficha o resolve. */
+export function declararReacaoManual(janelaId: string, remoto?: { perfilId: string; clienteOrigem: string }): boolean {
+  const limite = Date.now() + PRAZO_RESOLUCAO_REACAO_MANUAL_MS;
+  if (remoto) {
+    const oferta = useReacoesAtivasStore.getState().ofertasRemotas.find(x => x.janelaId === janelaId);
+    if (!oferta || oferta.busy || Date.now() > oferta.expiresAt || !podeResponderReacao(remoto.perfilId)) return false;
+    clearTimeout(remoteExpirations.get(janelaId));
+    remoteExpirations.delete(janelaId);
+    useReacoesAtivasStore.setState(s => ({ ofertasRemotas: s.ofertasRemotas.map(x => x.janelaId === janelaId ? { ...x, busy: true, expiresAt: limite } : x) }));
+    scheduleRemoteExpiry(janelaId, limite);
+    window.dispatchEvent(new CustomEvent('omni-reaction:send', { detail: { tipo: 'processando', janelaId, perfilId: remoto.perfilId, clienteOrigem: remoto.clienteOrigem } }));
+    return true;
+  }
+  const janela = useReacoesAtivasStore.getState().janelas.find(x => x.id === janelaId);
+  if (!janela || janela.busy || Date.now() > janela.expiresAt) return false;
+  clearTimeout(janelaExpirations.get(janelaId));
+  janelaExpirations.set(janelaId, setTimeout(() => {
+    const atual = useReacoesAtivasStore.getState().janelas.find(x => x.id === janelaId);
+    if (atual) fechar(janelaId, atual.resultado);
+  }, PRAZO_RESOLUCAO_REACAO_MANUAL_MS));
+  useReacoesAtivasStore.setState(s => ({ janelas: s.janelas.map(x => x.id === janelaId ? { ...x, busy: true, expiresAt: limite } : x) }));
+  return true;
+}
+
+export function concluirReacaoManual(janelaId: string, remoto?: { perfilId: string; clienteOrigem: string }): void {
+  if (remoto) {
+    const oferta = useReacoesAtivasStore.getState().ofertasRemotas.find(x => x.janelaId === janelaId);
+    if (!oferta) return;
+    window.dispatchEvent(new CustomEvent('omni-reaction:send', { detail: { tipo: 'passar', janelaId, perfilId: remoto.perfilId, clienteOrigem: remoto.clienteOrigem } }));
+    useReacoesAtivasStore.getState().fecharOfertaRemota(janelaId);
+    return;
+  }
+  useReacoesAtivasStore.setState(s => ({ janelas: s.janelas.map(x => x.id === janelaId ? { ...x, busy: false } : x) }));
+  void responderReacaoAtiva(janelaId);
+}
 function fechar(id: string, resultado: ResultadoJanelaAtiva) {
   clearTimeout(janelaExpirations.get(id)); janelaExpirations.delete(id);
   useCombatStore.getState().resumeTurnTimerForReaction(`omni-active:${id}`);
@@ -268,24 +305,38 @@ export function passarOfertaRemota(janelaId: string, perfilId: string) {
 }
 
 /** Respostas remotas só são aceitas para perfil e cliente de origem correspondentes. */
-export async function receberRespostaRemota(msg: { tipo: 'resultado' | 'passar' | 'indisponivel' | 'disponivel'; janelaId: string; perfilId: string; clienteOrigem: string; resultado?: ResultadoJanelaAtiva }, clienteLocal: string) {
+export async function receberRespostaRemota(msg: { tipo: 'resultado' | 'passar' | 'indisponivel' | 'disponivel' | 'processando'; janelaId: string; perfilId: string; clienteOrigem: string; resultado?: ResultadoJanelaAtiva }, clienteLocal: string) {
   if (msg.clienteOrigem !== clienteLocal || !msg.perfilId) return;
   const j = useReacoesAtivasStore.getState().janelas.find(x => x.id === msg.janelaId);
   if (!j || !j.pendentes.includes(msg.perfilId)) return;
   limparSondagem(msg.janelaId, msg.perfilId);
+  if (msg.tipo === 'processando') {
+    if (j.busy) return;
+    const expiresAt = Date.now() + PRAZO_RESOLUCAO_REACAO_MANUAL_MS;
+    clearTimeout(janelaExpirations.get(j.id));
+    janelaExpirations.set(j.id, setTimeout(() => {
+      const atual = useReacoesAtivasStore.getState().janelas.find(x => x.id === j.id);
+      if (atual) fechar(j.id, atual.resultado);
+    }, PRAZO_RESOLUCAO_REACAO_MANUAL_MS));
+    useReacoesAtivasStore.setState(s => ({ janelas: s.janelas.map(x => x.id === j.id ? { ...x, busy: true, expiresAt } : x) }));
+    return;
+  }
   if (msg.tipo === 'disponivel') return;
   const resultado = msg.tipo === 'resultado' ? { cancelado: j.resultado.cancelado || !!msg.resultado?.cancelado, defesaBonus: j.resultado.defesaBonus + (msg.resultado?.defesaBonus ?? 0) } : j.resultado;
   if (resultado.cancelado) { fechar(j.id, resultado); return; }
   const pendentes = j.pendentes.filter(x => x !== msg.perfilId);
   if (!pendentes.length && !j.ofertas.length) { fechar(j.id, resultado); return; }
-  useReacoesAtivasStore.setState(s => ({ janelas: s.janelas.map(x => x.id === j.id ? { ...x, pendentes, resultado } : x) }));
+  useReacoesAtivasStore.setState(s => ({ janelas: s.janelas.map(x => x.id === j.id ? { ...x, pendentes, resultado, busy: false } : x) }));
 }
 
 /** Executa a sondagem na sessão do perfil: o inventário pessoal não é replicado entre navegadores. */
 export function receberSondagemRemota(msg: { janelaId: string; perfilId: string; clienteOrigem: string; evento: EventoReacaoAtiva; expiresAt?: number }) {
   if (!podeResponderReacao(msg.perfilId)) return;
   const ofertas = ofertasReacaoAtiva(msg.evento).filter(o => destinatarioDaOferta(o) === msg.perfilId);
-  if (!ofertas.length) {
+  const fichasMestre = useCharacterStore.getState().characters.filter(c => c.category !== 'PLAYER');
+  const temReacaoManual = msg.perfilId === DESTINATARIO_MESTRE
+    && fichasMestre.some(ficha => (ficha.spells ?? []).some(spell => spell.actionType === 'reaction'));
+  if (!ofertas.length && !temReacaoManual) {
     window.dispatchEvent(new CustomEvent('omni-reaction:send', { detail: { tipo: 'indisponivel', janelaId: msg.janelaId, perfilId: msg.perfilId, clienteOrigem: msg.clienteOrigem } }));
     return;
   }

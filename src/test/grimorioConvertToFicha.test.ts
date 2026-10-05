@@ -65,6 +65,20 @@ describe('importCreatureToFichas — Calamidade ND 15', () => {
     expect(c.peCurrent).toBe(45);
   });
 
+  it('limita criaturas do Grimório a duas ações comuns, inclusive em fichas antigas reidratadas/atualizadas', () => {
+    const criatura = makeCalamidade();
+    criatura.actions.total.comum = 4;
+    const res = importCreatureToFichas(criatura);
+    const c = useCharacterStore.getState().characters.find((x) => x.id === res!.id)!;
+    expect(c.actionsMax).toBe(2);
+    expect(c.actionsCurrent).toBe(2);
+
+    useCharacterStore.getState().updateCharacter(c.id, { actionsMax: 4, actionsCurrent: 4 });
+    const atualizada = useCharacterStore.getState().characters.find((x) => x.id === c.id)!;
+    expect(atualizada.actionsMax).toBe(2);
+    expect(atualizada.actionsCurrent).toBe(2);
+  });
+
   it('aplica nível clampado a 20 e atributos com clamp 1..30', () => {
     const res = importCreatureToFichas(makeCalamidade());
     const c = useCharacterStore.getState().characters.find((x) => x.id === res!.id)!;
