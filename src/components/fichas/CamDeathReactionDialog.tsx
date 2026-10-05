@@ -42,13 +42,12 @@ export function CamDeathReactionDialog({ character: c, onClose }: Props) {
       addLog('system', `❌ ${c.name} sem Reação disponível.`);
       return;
     }
-    const ok = switchCore(c.id, target as CoreId);
-    if (!ok) {
-      addLog('system', `❌ Reação falhou — núcleo indisponível.`);
-      return;
-    }
-    if (!useReactionStore.getState().consumeReaction(c.id)) {
-      addLog('system', `❌ ${c.name} sem Reação disponível.`);
+    const result = useReactionStore.getState().runReaction(c.id, () => {
+      const switched = switchCore(c.id, target as CoreId);
+      return switched ? { ok: true } : { ok: false, reason: 'núcleo indisponível' };
+    });
+    if (!result.ok) {
+      addLog('system', `❌ ${c.name}: Reação falhou — ${result.reason}.`);
       return;
     }
     addLog('combat', `⚡ ${c.name} usou Reação — trocou para ${target.toUpperCase()}.`);
