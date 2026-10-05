@@ -54,6 +54,6 @@ Portanto, a restrição backend aprovada é um requisito ainda não satisfeito p
 
 Etapa 1 concluída no escopo de contrato e diagnóstico: 345 entradas classificadas, nomes simples sondados e oito modelos examinados, com lacunas e responsáveis registrados. Isso não certifica 345 entradas executáveis. Validação semântica de todos os cenários e implementação das lacunas pertencem às etapas responsáveis e à integração final.
 
-Etapa 2 iniciada: `contextoNatural.ts` define papéis separados, IDs explícitos, validação de ficha/token e mapa nominal de gastos. Ainda não está conectado ao parser nem ao fluxo de combate; não altera o comportamento atual.
+Etapa 2 concluída no escopo da base de contexto e consultas: `contextoNatural.ts` e `consultasNaturais.ts` conectam papéis explícitos ao resolvedor da ficha. A gramática textual e os produtores de eventos serão integrados nas etapas 3–6; o terminal e o combate atuais mantêm os caminhos legados. Detalhes em etapa-2-contexto.md.
 
 Validação desta entrega: 5 arquivos, 483 testes aprovados. Inclui os oito casos parametrizados e testes do novo contexto para vítima/atacante distintos, token ambíguo ou divergente, ausência de alvo, exclusão do próprio usuário da relação de outro aliado e isolamento dos gastos.

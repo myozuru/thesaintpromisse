@@ -1,6 +1,6 @@
 # OMNI natural — contrato e entregas
 
-Estado: etapa 1 de contrato e diagnóstico concluída; etapa 2 iniciada. Este documento descreve requisitos; não afirma que a linguagem natural já seja executável. Base inicial examinada: main d2ef673b0e2a92918fa9fd7fac0095733c5b1d68, especificação Texto colado(4) e correções aprovadas na conversa de 05/10/2026. Evidências complementares em inventario-natural.md e diagnostico-execucao.md.
+Estado: etapas 1 (contrato/diagnóstico) e 2 (base de contexto/consultas) concluídas. Este documento descreve requisitos; não afirma que a linguagem natural já seja executável. Base inicial examinada: main d2ef673b0e2a92918fa9fd7fac0095733c5b1d68, especificação Texto colado(4) e correções aprovadas na conversa de 05/10/2026. Evidências complementares em inventario-natural.md, diagnostico-execucao.md e etapa-2-contexto.md.
 
 ## Fontes de verdade
 
