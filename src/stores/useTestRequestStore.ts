@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useCombatStore } from '@/stores/useCombatStore';
 
 /**
  * Pedidos de teste do Mestre → Jogador.
@@ -108,3 +109,20 @@ export const useTestRequestStore = create<TestRequestState>()(
     { name: 'rpg-test-requests' }
   )
 );
+
+// Reconcile pending tests because multiplayer applies requests with setState
+// directly instead of passing through enqueue/setResult actions.
+const pedidosComPausa = new Set<string>();
+useTestRequestStore.subscribe((state) => {
+  const pendentes = new Set(state.requests.filter((request) => !request.result).map((request) => request.id));
+  for (const id of pendentes) {
+    if (pedidosComPausa.has(id)) continue;
+    pedidosComPausa.add(id);
+    useCombatStore.getState().pauseTurnTimerForReaction(`test-request:${id}`);
+  }
+  for (const id of pedidosComPausa) {
+    if (pendentes.has(id)) continue;
+    pedidosComPausa.delete(id);
+    useCombatStore.getState().resumeTurnTimerForReaction(`test-request:${id}`);
+  }
+});

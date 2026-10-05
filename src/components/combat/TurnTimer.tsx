@@ -33,7 +33,13 @@ export function TurnTimer({ className, layout = 'compact' }: Props) {
   const enabled = useCombatStore((s) => s.turnTimerEnabled);
   const duration = useCombatStore((s) => s.turnDurationSec);
   const paused = useCombatStore((s) => s.turnPaused);
-  const pausedForReaction = useCombatStore((s) => s.reactionPauseIds.length > 0);
+  const reactionPauseIds = useCombatStore((s) => s.reactionPauseIds);
+  const pausedForReaction = reactionPauseIds.length > 0;
+  const pauseLabel = reactionPauseIds.some((id) => id.startsWith('test-request:'))
+    ? 'aguardando teste'
+    : reactionPauseIds.some((id) => id.startsWith('dice-roll:'))
+      ? 'rolando dados'
+      : 'aguardando reação';
   const effectivelyPaused = paused || pausedForReaction;
   // dependências para recomputar a cada mudança
   const startedAt = useCombatStore((s) => s.turnStartedAt);
@@ -104,7 +110,7 @@ export function TurnTimer({ className, layout = 'compact' }: Props) {
       </span>
       {effectivelyPaused && enabled && (
         <span className="text-[9px] uppercase tracking-wider text-muted-foreground">
-          {pausedForReaction ? 'aguardando reação' : 'pausado'}
+          {pausedForReaction ? pauseLabel : 'pausado'}
         </span>
       )}
     </div>
