@@ -12,6 +12,7 @@ import { useMemo, useState } from 'react';
 import type { Character, CoreId } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLogStore } from '@/stores/useLogStore';
+import { useReactionStore } from '@/stores/useReactionStore';
 import { Skull, RefreshCw, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getReactionsAvailable } from '@/lib/reactionBudget';
@@ -22,7 +23,7 @@ interface Props {
 }
 
 export function CamDeathReactionDialog({ character: c, onClose }: Props) {
-  const { switchCore, markActiveCoreFallen, updateCharacter } = useCharacterStore();
+  const { switchCore, markActiveCoreFallen } = useCharacterStore();
   const addLog = useLogStore(s => s.addLog);
   const [target, setTarget] = useState<CoreId | ''>('');
   const reactionsAvailable = getReactionsAvailable(c);
@@ -46,7 +47,10 @@ export function CamDeathReactionDialog({ character: c, onClose }: Props) {
       addLog('system', `❌ Reação falhou — núcleo indisponível.`);
       return;
     }
-    updateCharacter(c.id, { reactionsCurrent: reactionsAvailable - 1 });
+    if (!useReactionStore.getState().consumeReaction(c.id)) {
+      addLog('system', `❌ ${c.name} sem Reação disponível.`);
+      return;
+    }
     addLog('combat', `⚡ ${c.name} usou Reação — trocou para ${target.toUpperCase()}.`);
     onClose();
   };

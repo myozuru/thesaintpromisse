@@ -16,6 +16,7 @@ import { AcoesAtivasSection } from '@/components/fichas/AcoesAtivasSection';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useCombatStore } from '@/stores/useCombatStore';
+import { useReactionStore } from '@/stores/useReactionStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { PacoteOmniSchema } from '@/lib/omni/validacao';
 const cfg = (p: Partial<AcaoAtivaConfig> = {}): AcaoAtivaConfig => ({ id: 'c', nome: 'Escalar', acao: 'comum', custoPE: '2', alcanceM: 18, teste: 'nenhum', ...p });
@@ -114,6 +115,7 @@ describe('custos genéricos de ações', () => {
   it.each(['bonus', 'reacao', 'livre'] as const)('custo sobrescreve ação como %s', async tipo_acao => {
     mesa({ bonusActionsCurrent: 1, reactionsCurrent: 1 }); await executarAcaoAtiva('u', cfg({ custo_recursos: { tipo_acao } }), 'a'); const u = pegarFicha('u');
     expect(u.actionsCurrent).toBe(1); expect(u.bonusActionsCurrent).toBe(tipo_acao === 'bonus' ? 0 : 1); expect(u.reactionsCurrent).toBe(tipo_acao === 'reacao' ? 0 : 1);
+    if (tipo_acao === 'reacao') expect(useReactionStore.getState().reactionsUsedByChar.u).toBe(1);
   });
 });
 

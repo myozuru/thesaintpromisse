@@ -6,6 +6,7 @@ import { notificarAtualizacaoContadores } from './atualizacaoContadores';
 import { notificarResultadoAtaque } from './resultadoAtaque';
 import { armaDoPersonagem, armaEstaEmpunhada } from './armaDoPersonagem';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
+import { useReactionStore } from '@/stores/useReactionStore';
 import { planejarCustosAtivos, validarRecursosAtivos, patchCustosAtivos, consumirUsosItemAtivo, type ContextoCustosAtivos } from './custosAtivos';
 import { prepararMovimentosAtivos, aplicarMovimentoAtivo, validarPlanoMovimento, type PlanoMovimentoAtivo, type OpcoesMovimentoAtivo } from './movimentosAtivos';
 import { avaliarCondicionaisAtivos } from './condicionaisAtivos';
@@ -452,7 +453,14 @@ async function executarAcaoAtivaInterna(
   if (!consumirUsosItemAtivo(p)) return { ok: false, reason: 'Os usos do item mudaram antes de a ação ser concluída.' };
   const cargas = p.cargas;
   const patchPago = patchCustosAtivos(u, p);
-  store.updateCharacter(u.id, patchPago);
+  if (p.acao === 'reacao') {
+    delete patchPago.reactionsCurrent;
+    if (!useReactionStore.getState().consumeReaction(u.id, patchPago)) {
+      return { ok: false, reason: 'Sem Reação disponível.' };
+    }
+  } else {
+    store.updateCharacter(u.id, patchPago);
+  }
   if (patchPago.omniCounters) notificarAtualizacaoContadores(u.id, u.omniCounters, patchPago.omniCounters);
   const fonte = ent?.nome ?? cfg.nome;
   if (ent?.categoria === 'feitico') notificarEventoPersonagem('aoConjurarFeitico', u.id, fonte, { custoPE: p.pe });

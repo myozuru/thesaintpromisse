@@ -13,6 +13,7 @@ import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { useItemStore } from '@/stores/useItemStore';
 import { useLogStore } from '@/stores/useLogStore';
+import { useReactionStore } from '@/stores/useReactionStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useInventoryStore, type InventoryItem } from '@/stores/useInventoryStore';
 import { avaliarFormula } from '@/lib/omni/parser';
@@ -1886,7 +1887,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
             AB {c.bonusActionsCurrent}/{c.bonusActionsMax + itemBonuses.bonusActions}
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); const available = getReactionsAvailable(c); if (available > 0) updateCharacter(c.id, { reactionsCurrent: available - 1 }); }}
+            onClick={(e) => { e.stopPropagation(); useReactionStore.getState().consumeReaction(c.id); }}
             className={cn('rounded px-1.5 py-0.5 text-xs font-bold border transition-colors', getReactionsAvailable(c) > 0 ? 'bg-neon-yellow/20 text-neon-yellow border-neon-yellow/40' : 'bg-secondary/30 text-muted-foreground/50 border-border')}
             title="Reação"
           >

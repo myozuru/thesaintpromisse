@@ -8,6 +8,7 @@ import { useItemStore } from '@/stores/useItemStore';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { useTestRequestStore } from '@/stores/useTestRequestStore';
+import { useReactionStore } from '@/stores/useReactionStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { X, Shield, Target, Dice6, Send } from 'lucide-react';
 import { Spell, DAMAGE_TYPE_LABELS, ALL_CONDITIONS } from '@/types';
@@ -420,7 +421,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
       if (!montadoRef.current) return;
       if (janela.cancelado || !canCast()) { onClose(); return; }
       const updates: Partial<typeof source> = { peCurrent: (useCharacterStore.getState().characters.find(c => c.id === sourceCharId)?.peCurrent ?? 0) - effectiveCostPE };
-      consumeActionUpdates(updates);
+      if (!consumeActionUpdates(updates)) { onClose(); return; }
       updateCharacter(sourceCharId, withTecnicaMaximaCooldown(updates));
       emitFundLogLines();
       applySpecPostCast();
@@ -773,13 +774,16 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
 
   // (effectiveActionType já declarado acima, antes de canCast.)
 
-  const consumeActionUpdates = (updates: Partial<typeof source>) => {
+  const consumeActionUpdates = (updates: Partial<typeof source>): boolean => {
     const source = useCharacterStore.getState().characters.find(c => c.id === sourceCharId)!;
     if (effectiveActionType === 'bonus') updates.bonusActionsCurrent = source.bonusActionsCurrent - 1;
     else if (effectiveActionType === 'action') updates.actionsCurrent = source.actionsCurrent - 1;
-    else if (effectiveActionType === 'reaction') updates.reactionsCurrent = (source.reactionsCurrent ?? source.reactionsMax ?? 1) - 1;
+    else if (effectiveActionType === 'reaction') {
+      delete updates.reactionsCurrent;
+      if (!useReactionStore.getState().consumeReaction(sourceCharId)) return false;
+    }
     else if (effectiveActionType === 'full') { updates.actionsCurrent = 0; updates.bonusActionsCurrent = 0; }
-    return updates;
+    return true;
   };
 
   const emitFundLogLines = () => {
@@ -821,7 +825,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
     if (!canCast()) return;
     // Consume PE and actions
     const updates: Partial<typeof source> = { peCurrent: (useCharacterStore.getState().characters.find(c => c.id === sourceCharId)?.peCurrent ?? 0) - effectiveCostPE };
-    consumeActionUpdates(updates);
+    if (!consumeActionUpdates(updates)) return;
     updateCharacter(sourceCharId, withTecnicaMaximaCooldown(updates));
     emitFundLogLines();
     applySpecPostCast();
@@ -990,7 +994,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
     if (!canCast()) return;
     // Consume action slot
     const updates: Partial<typeof source> = { peCurrent: (useCharacterStore.getState().characters.find(c => c.id === sourceCharId)?.peCurrent ?? 0) - effectiveCostPE };
-    consumeActionUpdates(updates);
+    if (!consumeActionUpdates(updates)) return;
     updateCharacter(sourceCharId, withTecnicaMaximaCooldown(updates));
     emitFundLogLines();
     applySpecPostCast();
@@ -1201,7 +1205,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
     if (selectedIds.length === 0 || !canCast()) return;
 
     const updates: Partial<typeof source> = { peCurrent: (useCharacterStore.getState().characters.find(c => c.id === sourceCharId)?.peCurrent ?? 0) - effectiveCostPE };
-    consumeActionUpdates(updates);
+    if (!consumeActionUpdates(updates)) return;
     updateCharacter(sourceCharId, withTecnicaMaximaCooldown(updates));
     emitFundLogLines();
     applySpecPostCast();
