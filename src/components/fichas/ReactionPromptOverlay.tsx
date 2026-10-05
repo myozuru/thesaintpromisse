@@ -153,7 +153,7 @@ export function ReactionPromptOverlay() {
               remainingRounds: 1,
               sourceCharName: p.charName,
             });
-            addLog('combat', `💀 Presença Nefasta de ${p.charName} → ${enemy.name}: TR Vontade ${total} vs CD ${dc} ${failed ? '❌ Amedrontado' : '✅ Abalado'} (1 rodada).`);
+            addLog('combat', `💀 Presença Nefasta de ${p.charName} → ${enemy.name}: TR Vontade ${total} vs CD ${dc} ${failed ? '❌ Amedrontado' : '✅ Abalado'} (1 rodada).`, `💀 Presença Nefasta de ${p.charName} → ${enemy.name}: ${failed ? 'Amedrontado' : 'Abalado'} (1 rodada).`);
             playClickSound();
           }}
           onLua={(useIt) => {

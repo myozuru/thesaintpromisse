@@ -304,6 +304,7 @@ export function TestRequestOverlay() {
         useLogStore.getState().addLog(
           'combat',
           `🔁 ${rollerChar.name} — Outra Chance (${req.testName}): nova rolagem d20 ${newD20} (antes ${prev.d20}) → melhor total ${best.total}${dcTxt}`,
+          rollerChar.category === 'INIMIGO' ? `${rollerChar.name} — Outra Chance: teste realizado.` : `${rollerChar.name} — Outra Chance (${req.testName}): total ${best.total}${!req.hideDcFromPlayer && req.dc != null ? ` vs CD ${req.dc}` : ''}${!req.hideOutcomeFromPlayer && req.dc != null ? (best.total >= req.dc ? ' → SUCESSO' : ' → FALHA') : ''}`,
         );
       })();
     };
@@ -436,7 +437,8 @@ export function TestRequestOverlay() {
         : '';
       addLog(
         'combat',
-        `🎲 ${char.name} — ${kindLabel} (${current.testName}): d20 ${d20}${advTxt} ${totalBonus >= 0 ? '+' : ''}${totalBonus} = ${total}${flatTxt}${forcedTxt}${dcTxt}`
+        `🎲 ${char.name} — ${kindLabel} (${current.testName}): d20 ${d20}${advTxt} ${totalBonus >= 0 ? '+' : ''}${totalBonus} = ${total}${flatTxt}${forcedTxt}${dcTxt}`,
+        char.category === 'INIMIGO' ? `🎲 ${char.name} — ${kindLabel} (${current.testName}): teste realizado.` : `🎲 ${char.name} — ${kindLabel} (${current.testName}): d20 ${d20} ${totalBonus >= 0 ? '+' : ''}${totalBonus} = ${total}${!current.hideDcFromPlayer && current.dc != null ? ` vs CD ${current.dc}` : ''}${!current.hideOutcomeFromPlayer && current.dc != null ? (passedFinal ? ' → SUCESSO' : ' → FALHA') : ''}`
       );
       // Recompensa pelo Sucesso: rolagem sob Comando reduzido → +2 PE.
       // Com CD conhecida exige sucesso; sem CD (CD oculta) o Mestre confirma

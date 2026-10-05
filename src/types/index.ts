@@ -1222,4 +1222,6 @@ export interface LogEntry {
   message: string;
   sourceRole?: 'MASTER' | 'PLAYER' | null;
   sourceName?: string;
+  /** Texto seguro para o histórico compartilhado; detalhes ficam no cliente de origem. */
+  publicMessage?: string;
 }

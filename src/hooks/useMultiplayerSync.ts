@@ -1,3 +1,4 @@
+import { publicLogEntry, mergePublicLogs } from '@/lib/logPrivacy';
 import { podeResponderReacao } from '@/lib/omni/destinatarioReacao';
 import { entidadeSyncValida, efeitoSyncValido, posicaoSyncValida } from '@/lib/omni/validarSnapshot';
 import { pacoteDicionario, mergeDicionario } from '@/lib/omni/dicionarioSync';
@@ -223,7 +224,7 @@ function pickChronos(s: ReturnType<typeof useChronosStore.getState>) {
 }
 function pickLogs(s: ReturnType<typeof useLogStore.getState>) {
   return {
-    logs: s.logs,
+    logs: s.logs.map(publicLogEntry),
     playerVisibility: s.playerVisibility,
   };
 }
@@ -389,9 +390,10 @@ function aplicarRemoteInterno(slice: WorldSlice, data: unknown) {
     } else if (slice === 'chronos' && typeof data === 'object') {
       useChronosStore.getState().replaceFromRemote(data as never);
     } else if (slice === 'logs' && Array.isArray(data)) {
-      useLogStore.setState({ logs: data as never });
-    } else if (slice === 'logs' && typeof data === 'object') {
-      useLogStore.setState(data as never);
+      useLogStore.setState({ logs: mergePublicLogs(useLogStore.getState().logs, data as never, useRoleStore.getState().role === 'MASTER') });
+    } else if (slice === 'logs' && data && typeof data === 'object') {
+      const incoming = data as ReturnType<typeof pickLogs>;
+      if (Array.isArray(incoming.logs)) useLogStore.setState({ ...incoming, logs: mergePublicLogs(useLogStore.getState().logs, incoming.logs, useRoleStore.getState().role === 'MASTER') });
     } else if (slice === 'profiles' && Array.isArray(data)) {
       useProfileStore.setState({ profiles: data as never });
     } else if (slice === 'money' && data && typeof data === 'object') {

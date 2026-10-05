@@ -1,3 +1,4 @@
+import { playerLogMessage } from '@/lib/logPrivacy';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { LogEntry, LogType } from '@/types';
@@ -12,7 +13,7 @@ interface LogStore {
   playerVisibility: PlayerLogVisibility;
   showGameTime: boolean;
   panelCollapsed: boolean;
-  addLog: (type: LogType, message: string) => void;
+  addLog: (type: LogType, message: string, publicMessage?: string) => void;
   clearLogs: () => void;
   setPlayerVisibility: (visibility: PlayerLogVisibility) => void;
   toggleTimeMode: () => void;
@@ -28,7 +29,7 @@ export const useLogStore = create<LogStore>()(
       playerVisibility: 'full',
       showGameTime: false,
       panelCollapsed: false,
-      addLog: (type, message) => {
+      addLog: (type, message, publicMessage) => {
         const cs = useChronosStore.getState();
         const sourceRole = useRoleStore.getState().role;
         const { activeProfileId, profiles } = useProfileStore.getState();
@@ -36,7 +37,7 @@ export const useLogStore = create<LogStore>()(
           ?? (sourceRole === 'MASTER' ? 'Mestre' : 'Jogador');
         const gameTime = `${fmt(cs.hours)}:${fmt(cs.minutes)}:${fmt(cs.seconds)} — Dia ${cs.day}, Mês ${cs.month}, Ano ${cs.year}`;
         set((state) => ({
-          logs: [{ id: crypto.randomUUID(), timestamp: Date.now(), gameTime, type, message, sourceRole, sourceName }, ...state.logs].slice(0, 200),
+          logs: [{ id: crypto.randomUUID(), timestamp: Date.now(), gameTime, type, message, sourceRole, sourceName, publicMessage: publicMessage ?? playerLogMessage({ type, message, sourceRole }) }, ...state.logs].slice(0, 200),
         }));
       },
       clearLogs: () => set({ logs: [] }),

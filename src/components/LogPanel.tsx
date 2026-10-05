@@ -1,3 +1,4 @@
+import { playerLogMessage } from '@/lib/logPrivacy';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useLogStore } from '@/stores/useLogStore';
 import { Scroll, Trash2, Dice1, Swords, Clock, Zap, Settings, ChevronLeft, ChevronRight, Globe, Gamepad2, Flag, Eye, EyeOff, ScanEye } from 'lucide-react';
@@ -28,7 +29,7 @@ const LOG_COLORS: Record<LogType, string> = {
 const VISIBILITY_SEQUENCE: PlayerLogVisibility[] = ['full', 'hide-master', 'hide-roll-results'];
 
 const VISIBILITY_META: Record<PlayerLogVisibility, { label: string; title: string; icon: React.ElementType }> = {
-  full: { label: 'Players veem tudo', title: 'Players veem todos os logs', icon: Eye },
+  full: { label: 'Logs públicos', title: 'Players veem os logs públicos; CDs e bônus privados ficam com o Mestre', icon: Eye },
   'hide-master': { label: 'Ocultar Mestre', title: 'Players não veem nenhum log feito pelo Mestre', icon: EyeOff },
   'hide-roll-results': { label: 'Ocultar resultados', title: 'Players veem rolagens do Mestre sem resultados', icon: ScanEye },
 };
@@ -47,6 +48,7 @@ export function LogPanel() {
   const visibleLogs = role === 'PLAYER'
     ? logs
       .filter((log) => playerVisibility !== 'hide-master' || log.sourceRole !== 'MASTER')
+      .map((log) => ({ ...log, message: playerLogMessage(log) }))
       .map((log) => playerVisibility === 'hide-roll-results' && log.sourceRole === 'MASTER' && log.type === 'roll'
         ? { ...log, message: hideRollResult(log.message) }
         : log)

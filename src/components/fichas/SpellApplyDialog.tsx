@@ -667,7 +667,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
     if (d20 === 20) result = 'crit_success';
     if (d20 === 1 && !consumeCritNegated(target.id)) result = 'crit_fail';
     setTargetSaves(prev => prev.map(ts => ts.id === targetId ? { ...ts, saveRoll: String(total), result } : ts));
-    addLog('spell', `🎲 TR ${attr} de ${target.name}: d20(${d20}) + ${stBonus} = ${total} vs CD ${totalDC} → ${result === 'crit_success' ? '✨ SUC.CRÍT' : result === 'success' ? '✅ Sucesso' : result === 'crit_fail' ? '💀 FAL.CRÍT' : '❌ Falha'}`);
+    addLog('spell', `🎲 TR ${attr} de ${target.name}: d20(${d20}) + ${stBonus} = ${total} vs CD ${totalDC} → ${result === 'crit_success' ? '✨ SUC.CRÍT' : result === 'success' ? '✅ Sucesso' : result === 'crit_fail' ? '💀 FAL.CRÍT' : '❌ Falha'}`, target.category === 'INIMIGO' ? `🎲 TR ${attr} de ${target.name}: teste realizado.` : source.category === 'INIMIGO' ? `🎲 TR ${attr} de ${target.name}: total ${total} → ${result === 'success' || result === 'crit_success' ? 'Sucesso' : 'Falha'}` : undefined);
   };
 
   // ===== Pedido de TR ao Jogador (overlay full-screen) =====
@@ -701,6 +701,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
         kind: 'save',
         testName: trName,
         dc: totalDC,
+        hideDcFromPlayer: source.category === 'INIMIGO',
         note: `${source.name} lança "${spell.name}" — role TR.`,
         bonusOverride: bonus,
         bonusBreakdownOverride: `TR ${raw} (calc. pelo feitiço)`,
@@ -1694,8 +1695,8 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
                   'border-border bg-secondary/30'
                 )}>
                   <span className="font-medium text-foreground text-sm min-w-[80px]">{ts.name}</span>
-                  <span className="inline-flex items-center gap-1 rounded-md border border-primary/40 bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary" title={`TR de ${spell.saveAttr || 'DES'} — bônus do alvo: +${getTargetSaveBonus(ts.id).bonus}`}>
-                    TR {spell.saveAttr || 'DES'} (+{getTargetSaveBonus(ts.id).bonus})
+                  <span className="inline-flex items-center gap-1 rounded-md border border-primary/40 bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary" title={isMaster || target?.category === 'PLAYER' ? `TR de ${spell.saveAttr || 'DES'} — bônus do alvo: +${getTargetSaveBonus(ts.id).bonus}` : 'Teste do inimigo — bônus reservado ao mestre'}>
+                    TR {spell.saveAttr || 'DES'}{(isMaster || target?.category === 'PLAYER') && ` (+${getTargetSaveBonus(ts.id).bonus})`}
                   </span>
                   {ts.result === 'pending' ? (
                     <span className="ml-auto inline-flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
@@ -1705,7 +1706,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
                   ) : (
                     <>
                       <span className="h-7 px-2 inline-flex items-center justify-center rounded border border-input bg-background text-sm text-foreground font-mono">
-                        {ts.saveRoll || '—'}
+                        {!isMaster && target?.category !== 'PLAYER' ? 'Rolado' : ts.saveRoll || '—'}
                       </span>
                       <span className={cn("text-xs font-bold ml-auto",
                         ts.result === 'crit_fail' ? 'text-hp' :
