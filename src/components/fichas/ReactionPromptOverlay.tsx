@@ -12,7 +12,7 @@
  * O overlay é montado no shell global da aplicação, para continuar visível
  * enquanto o jogador está no mapa ou em qualquer outra aba.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useReactionStore, type ReactionPrompt, kindConsumesReaction } from '@/stores/useReactionStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLogStore } from '@/stores/useLogStore';
@@ -287,6 +287,13 @@ function PromptCard({
 }: PromptCardProps) {
   const [tier, setTier] = useState<'fraca' | 'media' | 'forte' | 'extrema'>('fraca');
   const [cobrirPe, setCobrirPe] = useState<number>(1);
+  const [secondsLeft, setSecondsLeft] = useState(() => Math.max(0, Math.ceil(((p.expiresAt ?? Date.now() + 12000) - Date.now()) / 1000)));
+  useEffect(() => {
+    const update = () => setSecondsLeft(Math.max(0, Math.ceil(((p.expiresAt ?? Date.now()) - Date.now()) / 1000)));
+    update();
+    const timer = window.setInterval(update, 200);
+    return () => window.clearInterval(timer);
+  }, [p.expiresAt]);
 
   const Icon =
     p.kind === 'nullify_offer' ? Shield :
@@ -322,6 +329,9 @@ function PromptCard({
         >
           <X className="h-3 w-3" />
         </button>
+      </div>
+      <div className={cn('text-[10px] font-semibold tabular-nums', secondsLeft <= 3 ? 'text-destructive' : 'text-muted-foreground')}>
+        {secondsLeft > 0 ? `Tempo para reagir: ${secondsLeft}s` : 'Encerrando reação…'}
       </div>
 
       {p.kind === 'nullify_offer' && (

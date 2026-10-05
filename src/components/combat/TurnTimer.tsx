@@ -33,6 +33,8 @@ export function TurnTimer({ className, layout = 'compact' }: Props) {
   const enabled = useCombatStore((s) => s.turnTimerEnabled);
   const duration = useCombatStore((s) => s.turnDurationSec);
   const paused = useCombatStore((s) => s.turnPaused);
+  const pausedForReaction = useCombatStore((s) => s.reactionPauseIds.length > 0);
+  const effectivelyPaused = paused || pausedForReaction;
   // dependências para recomputar a cada mudança
   const startedAt = useCombatStore((s) => s.turnStartedAt);
   const remainingAtStart = useCombatStore((s) => s.turnRemainingAtStart);
@@ -60,7 +62,7 @@ export function TurnTimer({ className, layout = 'compact' }: Props) {
         isMaster &&
         enabled &&
         inCombat &&
-        !paused &&
+        !effectivelyPaused &&
         r <= 0 &&
         !advancedRef.current
       ) {
@@ -71,7 +73,7 @@ export function TurnTimer({ className, layout = 'compact' }: Props) {
       }
     }, 200);
     return () => window.clearInterval(id);
-  }, [isMaster, enabled, inCombat, paused, startedAt, remainingAtStart, nextTurn, resetActions, addLog]);
+  }, [isMaster, enabled, inCombat, effectivelyPaused, startedAt, remainingAtStart, nextTurn, resetActions, addLog]);
 
   if (!inCombat) return null;
 
@@ -88,21 +90,21 @@ export function TurnTimer({ className, layout = 'compact' }: Props) {
       <Timer
         className={cn(
           'h-3.5 w-3.5 shrink-0',
-          paused ? 'text-muted-foreground' : 'text-primary',
+          effectivelyPaused ? 'text-muted-foreground' : 'text-primary',
         )}
       />
       <span
         className={cn(
           'font-mono tabular-nums font-bold',
           layout === 'full' ? 'text-base' : 'text-xs',
-          remaining <= 5 && !paused ? 'text-destructive animate-pulse' : 'text-foreground',
+          remaining <= 5 && !effectivelyPaused ? 'text-destructive animate-pulse' : 'text-foreground',
         )}
       >
         {enabled ? fmt(remaining) : '—'}
       </span>
-      {paused && enabled && (
+      {effectivelyPaused && enabled && (
         <span className="text-[9px] uppercase tracking-wider text-muted-foreground">
-          pausado
+          {pausedForReaction ? 'aguardando reação' : 'pausado'}
         </span>
       )}
     </div>
@@ -167,10 +169,10 @@ export function TurnTimer({ className, layout = 'compact' }: Props) {
             type="button"
             className={btn}
             onClick={() => (paused ? resume() : pause())}
-            disabled={!enabled}
-            title={paused ? 'Retomar' : 'Pausar'}
+            disabled={!enabled || pausedForReaction}
+            title={pausedForReaction ? 'Aguardando a reação ser resolvida' : paused ? 'Retomar' : 'Pausar'}
           >
-            {paused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
+            {effectivelyPaused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
           </button>
           <button
             type="button"

@@ -7,7 +7,8 @@ vi.mock('@/integrations/supabase/safeClient', async () => ({ hasWorkspaceCloud: 
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
-import { requestReactionDecision, useReactionStore } from '@/stores/useReactionStore';
+import { useCombatStore } from '@/stores/useCombatStore';
+import { requestReactionDecision, completeReactionDecision, useReactionStore, REACTION_DECISION_TIMEOUT_MS } from '@/stores/useReactionStore';
 import { parseOmniScript } from '@/lib/omni/omniScript';
 import { novaEntidade } from '@/lib/omni/tipos';
 import type { EntidadeOmni } from '@/lib/omni/tipos';
@@ -101,18 +102,55 @@ describe('Cobrir-se antes da aplicação do dano', () => {
     expect(useReactionStore.getState().reactionsUsedByChar.alvo ?? 0).toBe(0);
   });
 
-  it('encerra a espera no prazo e segue sem a reação quando não há resposta', async () => {
+  it('encerra a espera após 12 segundos e segue sem a reação quando não há resposta', async () => {
     vi.useFakeTimers();
     try {
       montarMesa([char('alvo')], {});
+      useCombatStore.setState({ turnTimerEnabled: true, turnDurationSec: 60, turnRemainingAtStart: 40, turnStartedAt: Date.now() - 5000, turnPaused: false, reactionPauseIds: [] });
       const pending = requestReactionDecision({
         charId: 'alvo', charName: 'alvo', kind: 'cobrir_se_offer', message: 'Decisão pendente',
-      }, 250);
+      });
       expect(useReactionStore.getState().prompts).toHaveLength(1);
-      await vi.advanceTimersByTimeAsync(250);
+      expect(useCombatStore.getState().reactionPauseIds).toHaveLength(1);
+      const remainingAtPause = useCombatStore.getState().getTurnRemaining();
+      await vi.advanceTimersByTimeAsync(REACTION_DECISION_TIMEOUT_MS);
       await expect(pending).resolves.toBeNull();
       expect(useReactionStore.getState().prompts).toHaveLength(0);
+      expect(useCombatStore.getState().reactionPauseIds).toHaveLength(0);
+      expect(useCombatStore.getState().getTurnRemaining()).toBeCloseTo(remainingAtPause);
     } finally { vi.useRealTimers(); }
+  });
+
+  it('mantém a pausa enquanto houver mais de uma reação e respeita pausa manual prévia', () => {
+    useCombatStore.setState({ turnTimerEnabled: true, turnDurationSec: 60, turnRemainingAtStart: 35, turnStartedAt: Date.now(), turnPaused: true, reactionPauseIds: [] });
+    useCombatStore.getState().pauseTurnTimerForReaction('r1');
+    useCombatStore.getState().pauseTurnTimerForReaction('r2');
+    useCombatStore.getState().resumeTurnTimerForReaction('r1');
+    expect(useCombatStore.getState().getTurnRemaining()).toBe(35);
+    expect(useCombatStore.getState().reactionPauseIds).toEqual(['r2']);
+    useCombatStore.getState().resumeTurnTimerForReaction('r2');
+    expect(useCombatStore.getState().turnPaused).toBe(true);
+    expect(useCombatStore.getState().getTurnRemaining()).toBe(35);
+  });
+
+  it('mantém a pausa da origem até receber a resposta remota', async () => {
+    const anterior = (window as unknown as { __worldBus?: unknown }).__worldBus;
+    (window as unknown as { __worldBus?: unknown }).__worldBus = { send: vi.fn() };
+    try {
+      montarMesa([char('alvo', { profileId: 'perfil-alvo' })], {});
+      comoTela({ profileId: null, role: 'MASTER' });
+      useCombatStore.setState({ turnTimerEnabled: true, turnDurationSec: 60, turnRemainingAtStart: 25, turnStartedAt: Date.now(), turnPaused: false, reactionPauseIds: [] });
+      const enviados = capturarEnvios('reaction-prompt');
+      const pending = requestReactionDecision({ charId: 'alvo', charName: 'alvo', kind: 'cobrir_se_offer', message: 'Remota' });
+      const id = enviados.enviados[0].requestId as string;
+      expect(useCombatStore.getState().reactionPauseIds).toContain(id);
+      completeReactionDecision(id, 2);
+      await expect(pending).resolves.toBe(2);
+      expect(useCombatStore.getState().reactionPauseIds).not.toContain(id);
+      enviados.parar();
+    } finally {
+      (window as unknown as { __worldBus?: unknown }).__worldBus = anterior;
+    }
   });
 });
 

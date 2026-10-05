@@ -15,6 +15,7 @@ import { create } from 'zustand';
 import type { DamageType } from '@/types';
 import { destinatarioReacao, podeResponderReacao } from '@/lib/omni/destinatarioReacao';
 import { useCharacterStore } from '@/stores/useCharacterStore';
+import { useCombatStore } from '@/stores/useCombatStore';
 
 export type ReactionKind =
   | 'absorption_offer'         // Absorção Elemental — perguntar se quer armar com o elemento recebido
@@ -120,6 +121,7 @@ export function kindConsumesReaction(kind: ReactionKind): boolean {
 
 /** Limite de reações por personagem/token por rodada. */
 export const REACTIONS_PER_ROUND = 1;
+export const REACTION_DECISION_TIMEOUT_MS = 12000;
 
 interface ReactionStoreState {
   prompts: ReactionPrompt[];
@@ -143,37 +145,40 @@ export const useReactionStore = create<ReactionStoreState>((set, get) => ({
   prompts: [],
   reactionsUsedByChar: {},
   enqueue: (p) => {
-    const prompt = buildPrompt(p);
+    const prompt = buildPrompt({ ...p, expiresAt: p.expiresAt ?? Date.now() + REACTION_DECISION_TIMEOUT_MS });
     const character = useCharacterStore.getState().characters.find((c) => c.id === p.charId);
     const destinatario = character ? destinatarioReacao(character) : null;
     const hasBus = typeof window !== 'undefined' && !!(window as unknown as { __worldBus?: { send?: unknown } }).__worldBus?.send;
     if (!destinatario || podeResponderReacao(destinatario) || !hasBus) {
       set((state) => ({ prompts: [...state.prompts, prompt] }));
+      schedulePromptExpiry(prompt);
       return;
     }
+    schedulePromptExpiry(prompt, destinatario);
     window.dispatchEvent(new CustomEvent('reaction-prompt:send', {
       detail: { tipo: 'prompt', requestId: prompt.id, destinatario, prompt },
     }));
   },
-  receiveRemote: (prompt, requesterClientId) => set((state) => ({
-    prompts: [...state.prompts.filter((x) => x.id !== prompt.id), { ...prompt, remoteClientId: requesterClientId }],
-  })),
+  receiveRemote: (prompt, requesterClientId) => {
+    const remotePrompt = { ...prompt, remoteClientId: requesterClientId };
+    set((state) => ({ prompts: [...state.prompts.filter((x) => x.id !== prompt.id), remotePrompt] }));
+    schedulePromptExpiry(remotePrompt);
+  },
   resolveDecision: (id, answer) => {
     const prompt = get().prompts.find((entry) => entry.id === id);
     const awaited = !!prompt?.remoteClientId || pendingReactionDecisions.has(id);
-    if (prompt?.remoteClientId && typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('reaction-prompt:send', {
-        detail: { tipo: 'resposta', requestId: id, clienteOrigem: prompt.remoteClientId, answer },
-      }));
-    } else if (awaited) {
-      completeReactionDecision(id, answer);
-    }
-    get().dismiss(id);
+    if (prompt?.remoteClientId && typeof window !== 'undefined') sendPromptMessage({ tipo: 'resposta', requestId: id, clienteOrigem: prompt.remoteClientId, answer });
+    finalizePrompt(id, answer);
     return awaited;
   },
-  dismiss: (id) => set((state) => ({ prompts: state.prompts.filter((x) => x.id !== id) })),
-  clearForChar: (charId) =>
-    set((state) => ({ prompts: state.prompts.filter((x) => x.charId !== charId) })),
+  dismiss: (id) => {
+    const prompt = get().prompts.find((entry) => entry.id === id);
+    if (prompt?.remoteClientId) sendPromptMessage({ tipo: 'resposta', requestId: id, clienteOrigem: prompt.remoteClientId, answer: null });
+    finalizePrompt(id, null);
+  },
+  clearForChar: (charId) => {
+    for (const prompt of get().prompts.filter((entry) => entry.charId === charId)) get().dismiss(prompt.id);
+  },
   reactionsLeft: (charId) =>
     Math.max(0, REACTIONS_PER_ROUND - (get().reactionsUsedByChar[charId] ?? 0)),
   hasReactionAvailable: (charId) =>
@@ -193,32 +198,58 @@ function buildPrompt(p: Omit<ReactionPrompt, 'id' | 'createdAt'>): ReactionPromp
 }
 
 const pendingReactionDecisions = new Map<string, (answer: number | null) => void>();
-export const REACTION_DECISION_TIMEOUT_MS = 12000;
+const activePromptTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const remotePromptRecipients = new Map<string, string>();
+const promptPauseKeys = new Map<string, string>();
+
+function sendPromptMessage(detail: Record<string, unknown>) {
+  if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('reaction-prompt:send', { detail }));
+}
+
+function clearPromptTimer(id: string) {
+  const timer = activePromptTimers.get(id);
+  if (timer) clearTimeout(timer);
+  activePromptTimers.delete(id);
+  remotePromptRecipients.delete(id);
+  useCombatStore.getState().resumeTurnTimerForReaction(promptPauseKeys.get(id) ?? id);
+  promptPauseKeys.delete(id);
+}
+
+function finalizePrompt(id: string, answer: number | null) {
+  clearPromptTimer(id);
+  useReactionStore.setState((state) => ({ prompts: state.prompts.filter((entry) => entry.id !== id) }));
+  const resolve = pendingReactionDecisions.get(id);
+  if (resolve) {
+    pendingReactionDecisions.delete(id);
+    resolve(answer);
+  }
+}
+
+function schedulePromptExpiry(prompt: ReactionPrompt, remoteRecipient?: string) {
+  clearPromptTimer(prompt.id);
+  if (remoteRecipient) remotePromptRecipients.set(prompt.id, remoteRecipient);
+  const pauseKey = prompt.remoteClientId ? `reaction-ui:${prompt.id}` : prompt.id;
+  promptPauseKeys.set(prompt.id, pauseKey);
+  useCombatStore.getState().pauseTurnTimerForReaction(pauseKey);
+  const remaining = Math.max(0, (prompt.expiresAt ?? Date.now() + REACTION_DECISION_TIMEOUT_MS) - Date.now());
+  activePromptTimers.set(prompt.id, setTimeout(() => {
+    if (remoteRecipientById(prompt.id)) {
+      sendPromptMessage({ tipo: 'fechar', requestId: prompt.id, destinatario: remoteRecipientById(prompt.id) });
+    }
+    if (prompt.remoteClientId) sendPromptMessage({ tipo: 'resposta', requestId: prompt.id, clienteOrigem: prompt.remoteClientId, answer: null });
+    finalizePrompt(prompt.id, null);
+  }, remaining));
+}
+
+function remoteRecipientById(id: string): string | undefined { return remotePromptRecipients.get(id); }
 
 /** Abre a decisão no controlador da ficha e só então deixa o dano prosseguir. */
 export async function requestReactionDecision(
   p: Omit<ReactionPrompt, 'id' | 'createdAt'>,
-  timeoutMs = REACTION_DECISION_TIMEOUT_MS,
 ): Promise<number | null> {
-  const prompt = buildPrompt({ ...p, expiresAt: Date.now() + timeoutMs });
-  let remoteRecipient: string | null = null;
+  const prompt = buildPrompt({ ...p, expiresAt: Date.now() + REACTION_DECISION_TIMEOUT_MS });
   const answer = new Promise<number | null>((resolve) => {
-    const timer = setTimeout(() => {
-      if (!pendingReactionDecisions.has(prompt.id)) return;
-      pendingReactionDecisions.delete(prompt.id);
-      useReactionStore.getState().dismiss(prompt.id);
-      if (typeof window !== 'undefined' && remoteRecipient) {
-        window.dispatchEvent(new CustomEvent('reaction-prompt:send', {
-          detail: { tipo: 'fechar', requestId: prompt.id, destinatario: remoteRecipient },
-        }));
-      }
-      resolve(null);
-    }, timeoutMs);
-    pendingReactionDecisions.set(prompt.id, (result) => {
-      clearTimeout(timer);
-      pendingReactionDecisions.delete(prompt.id);
-      resolve(result);
-    });
+    pendingReactionDecisions.set(prompt.id, resolve);
   });
 
   const character = useCharacterStore.getState().characters.find((c) => c.id === p.charId);
@@ -230,18 +261,17 @@ export async function requestReactionDecision(
   const hasBus = typeof window !== 'undefined' && !!(window as unknown as { __worldBus?: { send?: unknown } }).__worldBus?.send;
   if (podeResponderReacao(destinatario) || !hasBus) {
     useReactionStore.setState((state) => ({ prompts: [...state.prompts, prompt] }));
+    schedulePromptExpiry(prompt);
   } else {
-    remoteRecipient = destinatario;
-    window.dispatchEvent(new CustomEvent('reaction-prompt:send', {
-      detail: { tipo: 'prompt', requestId: prompt.id, destinatario, prompt },
-    }));
+    schedulePromptExpiry(prompt, destinatario);
+    sendPromptMessage({ tipo: 'prompt', requestId: prompt.id, destinatario, prompt });
   }
   return answer;
 }
 
 /** Resposta do overlay local ou de outro cliente multiplayer. */
 export function completeReactionDecision(requestId: string, answer: number | null) {
-  pendingReactionDecisions.get(requestId)?.(answer);
+  finalizePrompt(requestId, answer);
 }
 
 /** Helper de uso externo (combate): notifica que um ataque à distância ERROU

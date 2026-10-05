@@ -201,6 +201,8 @@ interface CombatStore {
   turnStartedAt: number;
   /** Se o cronômetro está pausado. */
   turnPaused: boolean;
+  /** Reações em resolução; ids impedem que uma delas retome o relógio antes das demais. */
+  reactionPauseIds: string[];
   /**
    * Modo Livre (freeform): quando true, o mapa NÃO limita movimento por turno
    * e a hotbar do player fica oculta. Usado para mestrar fora do sistema
@@ -225,6 +227,8 @@ interface CombatStore {
   pauseTurnTimer: () => void;
   /** Retoma a contagem. */
   resumeTurnTimer: () => void;
+  pauseTurnTimerForReaction: (id: string) => void;
+  resumeTurnTimerForReaction: (id: string) => void;
   /** Soma `delta` segundos ao tempo restante (pode ser negativo). */
   adjustTurnTime: (deltaSec: number) => void;
   /** Reinicia o tempo do turno atual para `turnDurationSec`. */
@@ -247,6 +251,7 @@ export const useCombatStore = create<CombatStore>()(
       turnRemainingAtStart: 60,
       turnStartedAt: 0,
       turnPaused: true,
+      reactionPauseIds: [],
       freeformMode: false,
       setFreeformMode: (v) => set({ freeformMode: !!v }),
       setTurnTimerEnabled: (v) =>
@@ -271,6 +276,24 @@ export const useCombatStore = create<CombatStore>()(
       },
       resumeTurnTimer: () =>
         set({ turnPaused: false, turnStartedAt: Date.now() }),
+      pauseTurnTimerForReaction: (id) => set((s) => {
+        if (s.reactionPauseIds.includes(id)) return s;
+        const remaining = s.reactionPauseIds.length ? s.turnRemainingAtStart : get().getTurnRemaining();
+        return {
+          reactionPauseIds: [...s.reactionPauseIds, id],
+          turnRemainingAtStart: s.turnTimerEnabled ? remaining : s.turnRemainingAtStart,
+          turnStartedAt: Date.now(),
+        };
+      }),
+      resumeTurnTimerForReaction: (id) => set((s) => {
+        if (!s.reactionPauseIds.includes(id)) return s;
+        const reactionPauseIds = s.reactionPauseIds.filter((x) => x !== id);
+        return {
+          reactionPauseIds,
+          // O cronômetro só volta a contar quando também não estiver pausado manualmente.
+          turnStartedAt: !reactionPauseIds.length && !s.turnPaused ? Date.now() : s.turnStartedAt,
+        };
+      }),
       adjustTurnTime: (deltaSec) => {
         const remaining = get().getTurnRemaining();
         const next = Math.max(0, Math.min(3600, remaining + deltaSec));
@@ -287,7 +310,7 @@ export const useCombatStore = create<CombatStore>()(
       getTurnRemaining: () => {
         const s = get();
         if (!s.turnTimerEnabled) return 0;
-        if (s.turnPaused) return Math.max(0, s.turnRemainingAtStart);
+        if (s.turnPaused || s.reactionPauseIds.length > 0) return Math.max(0, s.turnRemainingAtStart);
         const elapsed = (Date.now() - s.turnStartedAt) / 1000;
         return Math.max(0, s.turnRemainingAtStart - elapsed);
       },

@@ -205,6 +205,7 @@ function pickCombat(s: ReturnType<typeof useCombatStore.getState>) {
     turnRemainingAtStart: s.turnRemainingAtStart,
     turnStartedAt: s.turnStartedAt,
     turnPaused: s.turnPaused,
+    reactionPauseIds: s.reactionPauseIds,
     freeformMode: s.freeformMode,
   };
 }
@@ -563,11 +564,11 @@ export function useMultiplayerSync() {
       });
     });
     worldBus.on('broadcast', { event: 'omni-reaction' }, ({ payload }) => {
-      const msg = payload as { clientId?: string; tipo?: string; janelaId?: string; perfilId?: string; evento?: unknown; clienteOrigem?: string; resultado?: unknown } | null;
+      const msg = payload as { clientId?: string; tipo?: string; janelaId?: string; perfilId?: string; evento?: unknown; expiresAt?: number; clienteOrigem?: string; resultado?: unknown } | null;
       if (!msg || msg.clientId === clientId || !msg.tipo || !msg.janelaId) return;
       if (msg.tipo === 'sondar' && msg.perfilId && podeResponderReacao(msg.perfilId) && msg.evento) {
         void import('@/lib/omni/reacoesAtivas').then(({ receberSondagemRemota }) => receberSondagemRemota({
-          janelaId: msg.janelaId!, clienteOrigem: msg.clientId!, perfilId: msg.perfilId!, evento: msg.evento as never,
+          janelaId: msg.janelaId!, clienteOrigem: msg.clientId!, perfilId: msg.perfilId!, evento: msg.evento as never, expiresAt: msg.expiresAt,
         }));
       } else if (msg.tipo === 'fechar' && msg.perfilId && podeResponderReacao(msg.perfilId)) {
         void import('@/lib/omni/reacoesAtivas').then(({ useReacoesAtivasStore }) => useReacoesAtivasStore.getState().fecharOfertaRemota(msg.janelaId!));

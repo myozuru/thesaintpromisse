@@ -10,6 +10,7 @@ import { useLogStore } from '@/stores/useLogStore';
 import { touchDistanceMeters } from '@/lib/touchRange';
 import { aceitaAlvoAtivo } from './alvosAtivos';
 import { useReactionStore } from '@/stores/useReactionStore';
+import { useCombatStore } from '@/stores/useCombatStore';
 import { useProfileStore } from '@/stores/useProfileStore';
 import { planejarCustosAtivos, validarRecursosAtivos } from './custosAtivos';
 import { armaDoPersonagem, armaEstaEmpunhada } from './armaDoPersonagem';
@@ -25,13 +26,14 @@ export interface EventoReacaoAtiva {
 }
 export interface ResultadoJanelaAtiva { cancelado: boolean; defesaBonus: number }
 export interface OfertaReacaoAtiva { id: string; usuarioId: string; nomeUsuario: string; instanceId: string; cfg: AcaoAtivaConfig; ent: EntidadeOmni; alvoId: string }
-interface Janela { id: string; evento: EventoReacaoAtiva; ofertas: OfertaReacaoAtiva[]; destinatarios: string[]; pendentes: string[]; resultado: ResultadoJanelaAtiva; busy: boolean; erro?: string }
+interface Janela { id: string; evento: EventoReacaoAtiva; ofertas: OfertaReacaoAtiva[]; destinatarios: string[]; pendentes: string[]; resultado: ResultadoJanelaAtiva; busy: boolean; expiresAt: number; erro?: string }
 export interface OfertaRemotaReacao {
   janelaId: string;
   clienteOrigem: string;
   perfilId: string;
   ofertas: OfertaReacaoAtiva[];
   evento: EventoReacaoAtiva;
+  expiresAt: number;
   erro?: string;
   busy?: boolean;
 }
@@ -44,13 +46,30 @@ interface Estado {
 }
 export const useReacoesAtivasStore = create<Estado>((set) => ({
   janelas: [], ofertasRemotas: [],
-  receberOfertaRemota: (oferta) => set(s => ({ ofertasRemotas: [...s.ofertasRemotas.filter(x => x.janelaId !== oferta.janelaId), { ...oferta, busy: false }] })),
-  fecharOfertaRemota: (janelaId) => set(s => ({ ofertasRemotas: s.ofertasRemotas.filter(x => x.janelaId !== janelaId) })),
+  receberOfertaRemota: (oferta) => {
+    set(s => ({ ofertasRemotas: [...s.ofertasRemotas.filter(x => x.janelaId !== oferta.janelaId), { ...oferta, busy: false }] }));
+    useCombatStore.getState().pauseTurnTimerForReaction(`omni-active-ui:${oferta.janelaId}`);
+    scheduleRemoteExpiry(oferta.janelaId, oferta.expiresAt);
+  },
+  fecharOfertaRemota: (janelaId) => {
+    clearTimeout(remoteExpirations.get(janelaId)); remoteExpirations.delete(janelaId);
+    useCombatStore.getState().resumeTurnTimerForReaction(`omni-active-ui:${janelaId}`);
+    set(s => ({ ofertasRemotas: s.ofertasRemotas.filter(x => x.janelaId !== janelaId) }));
+  },
   marcarOfertaRemotaBusy: (janelaId, busy, erro) => set(s => ({ ofertasRemotas: s.ofertasRemotas.map(x => x.janelaId === janelaId ? { ...x, busy, erro } : x) })),
 }));
 const resolvers = new Map<string, (r: ResultadoJanelaAtiva) => void>();
 const sondagens = new Map<string, ReturnType<typeof setTimeout>>();
-export const PRAZO_SONDAGEM_REACAO_MS = 3000;
+const janelaExpirations = new Map<string, ReturnType<typeof setTimeout>>();
+const remoteExpirations = new Map<string, ReturnType<typeof setTimeout>>();
+export const PRAZO_SONDAGEM_REACAO_MS = 12000;
+export const PRAZO_ESCOLHA_REACAO_MS = 12000;
+function scheduleRemoteExpiry(janelaId: string, expiresAt: number) {
+  clearTimeout(remoteExpirations.get(janelaId));
+  remoteExpirations.set(janelaId, setTimeout(() => {
+    useReacoesAtivasStore.getState().fecharOfertaRemota(janelaId);
+  }, Math.max(0, expiresAt - Date.now())));
+}
 function limparSondagem(janelaId: string, perfilId: string) {
   const key = `${janelaId}:${perfilId}`;
   clearTimeout(sondagens.get(key)); sondagens.delete(key);
@@ -63,11 +82,11 @@ function destinatariosReacoes(): string[] {
   return [...new Set(useCharacterStore.getState().characters.map(destinatarioReacao))]
     .filter(id => !podeResponderReacao(id));
 }
-function publicarParaPerfis(tipo: 'sondar' | 'fechar', janelaId: string, evento: EventoReacaoAtiva, destinatarios: string[]) {
+function publicarParaPerfis(tipo: 'sondar' | 'fechar', janelaId: string, evento: EventoReacaoAtiva, destinatarios: string[], expiresAt?: number) {
   if (typeof window === 'undefined') return;
   for (const perfilId of destinatarios) {
     if (podeResponderReacao(perfilId)) continue;
-    window.dispatchEvent(new CustomEvent('omni-reaction:send', { detail: { tipo, janelaId, evento, perfilId } }));
+    window.dispatchEvent(new CustomEvent('omni-reaction:send', { detail: { tipo, janelaId, evento, perfilId, expiresAt } }));
   }
 }
 
@@ -167,22 +186,33 @@ export function abrirJanelaReacaoAtiva(evento: EventoReacaoAtiva): Promise<Resul
   const destinatarios = destinatariosReacoes();
   if (!ofertas.length && !destinatarios.length) return Promise.resolve(vazio());
   const id = crypto.randomUUID();
+  const expiresAt = Date.now() + PRAZO_ESCOLHA_REACAO_MS;
   return new Promise(resolve => {
     resolvers.set(id, resolve);
-    useReacoesAtivasStore.setState(s => ({ janelas: [...s.janelas, { id, evento, ofertas, destinatarios, pendentes: [...destinatarios], resultado: vazio(), busy: false }] }));
+    useCombatStore.getState().pauseTurnTimerForReaction(`omni-active:${id}`);
+    janelaExpirations.set(id, setTimeout(() => {
+      const atual = useReacoesAtivasStore.getState().janelas.find(x => x.id === id);
+      if (atual) {
+        useLogStore.getState().addLog('combat', 'Reação: prazo de 12 segundos expirou; continuando sem reação.');
+        fechar(id, atual.resultado);
+      }
+    }, Math.max(0, expiresAt - Date.now())));
+    useReacoesAtivasStore.setState(s => ({ janelas: [...s.janelas, { id, evento, ofertas, destinatarios, pendentes: [...destinatarios], resultado: vazio(), busy: false, expiresAt }] }));
     for (const perfilId of destinatarios) {
       const key = `${id}:${perfilId}`;
       sondagens.set(key, setTimeout(() => {
         sondagens.delete(key);
-        useLogStore.getState().addLog('combat', 'Reação: controlador não confirmou o recebimento; continuando sem sua reação.');
+        useLogStore.getState().addLog('combat', 'Reação: prazo de 12 segundos expirou; continuando sem essa reação.');
         publicarParaPerfis('fechar', id, evento, [perfilId]);
         passarOfertaRemota(id, perfilId);
       }, PRAZO_SONDAGEM_REACAO_MS));
     }
-    publicarParaPerfis('sondar', id, evento, destinatarios);
+    publicarParaPerfis('sondar', id, evento, destinatarios, expiresAt);
   });
 }
 function fechar(id: string, resultado: ResultadoJanelaAtiva) {
+  clearTimeout(janelaExpirations.get(id)); janelaExpirations.delete(id);
+  useCombatStore.getState().resumeTurnTimerForReaction(`omni-active:${id}`);
   const j = useReacoesAtivasStore.getState().janelas.find(x => x.id === id);
   if (j) for (const perfilId of j.destinatarios) limparSondagem(id, perfilId);
   if (j) publicarParaPerfis('fechar', id, j.evento, j.destinatarios);
@@ -254,7 +284,7 @@ export async function receberRespostaRemota(msg: { tipo: 'resultado' | 'passar' 
 }
 
 /** Executa a sondagem na sessão do perfil: o inventário pessoal não é replicado entre navegadores. */
-export function receberSondagemRemota(msg: { janelaId: string; perfilId: string; clienteOrigem: string; evento: EventoReacaoAtiva }) {
+export function receberSondagemRemota(msg: { janelaId: string; perfilId: string; clienteOrigem: string; evento: EventoReacaoAtiva; expiresAt?: number }) {
   if (!podeResponderReacao(msg.perfilId)) return;
   const ofertas = ofertasReacaoAtiva(msg.evento).filter(o => destinatarioDaOferta(o) === msg.perfilId);
   if (!ofertas.length) {
@@ -262,7 +292,7 @@ export function receberSondagemRemota(msg: { janelaId: string; perfilId: string;
     return;
   }
   window.dispatchEvent(new CustomEvent('omni-reaction:send', { detail: { tipo: 'disponivel', janelaId: msg.janelaId, perfilId: msg.perfilId, clienteOrigem: msg.clienteOrigem } }));
-  useReacoesAtivasStore.getState().receberOfertaRemota({ ...msg, ofertas, evento: msg.evento });
+  useReacoesAtivasStore.getState().receberOfertaRemota({ ...msg, expiresAt: msg.expiresAt ?? Date.now() + PRAZO_ESCOLHA_REACAO_MS, ofertas, evento: msg.evento });
 }
 
 function destinatarioDaOferta(oferta: OfertaReacaoAtiva): string | undefined {
@@ -283,4 +313,3 @@ export function continuarSemReacoesPendentes(id: string): void {
 export function cancelarJanelasReacoesAtivas(): void {
   for (const j of useReacoesAtivasStore.getState().janelas) fechar(j.id, { cancelado: true, defesaBonus: 0 });
 }
-

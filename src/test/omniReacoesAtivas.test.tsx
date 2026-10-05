@@ -221,13 +221,26 @@ describe('controlador remoto e confirmação de entrega', () => {
       expect(useReacoesAtivasStore.getState().janelas).toHaveLength(0);
     } finally {vi.useRealTimers();}
   });
-  it('confirmação preserva o tempo de escolha; continuar libera uma sessão que parou de responder', async () => {
+  it('pausa o cronômetro durante a janela e retoma após 12 segundos sem resposta', async () => {
+    const ev=mesaRemota();vi.useFakeTimers();
+    useCombatStore.setState({ turnTimerEnabled: true, turnDurationSec: 60, turnRemainingAtStart: 42, turnStartedAt: Date.now() - 5000, turnPaused: false, reactionPauseIds: [] });
+    try {
+      const p=abrirJanelaReacaoAtiva(ev);
+      expect(useCombatStore.getState().reactionPauseIds).toHaveLength(1);
+      const remaining=useCombatStore.getState().getTurnRemaining();
+      await vi.advanceTimersByTimeAsync(PRAZO_SONDAGEM_REACAO_MS);
+      expect(await p).toEqual({cancelado:false,defesaBonus:0});
+      expect(useCombatStore.getState().reactionPauseIds).toHaveLength(0);
+      expect(useCombatStore.getState().getTurnRemaining()).toBeCloseTo(remaining);
+    } finally {vi.useRealTimers();}
+  });
+  it('confirmação mantém a janela ativa; continuar libera uma sessão que parou de responder', async () => {
     const ev=mesaRemota();vi.useFakeTimers();
     try {
       const p=abrirJanelaReacaoAtiva(ev);
       const j=useReacoesAtivasStore.getState().janelas[0];
       await receberRespostaRemota({tipo:'disponivel',janelaId:j.id,perfilId:DESTINATARIO_MESTRE,clienteOrigem:'origem'},'origem');
-      await vi.advanceTimersByTimeAsync(PRAZO_SONDAGEM_REACAO_MS*2);
+      await vi.advanceTimersByTimeAsync(PRAZO_SONDAGEM_REACAO_MS / 2);
       expect(useReacoesAtivasStore.getState().janelas).toHaveLength(1);
       render(<ReacoesAtivasOverlay />);
       fireEvent.click(screen.getByText('Passar e continuar'));
