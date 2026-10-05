@@ -55,7 +55,7 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
           <div className="grid grid-cols-3 gap-2">
             <div><Label className="text-xs">Ação</Label>
               <select className={sel} value={a.acao} onChange={(e) => set(i, { acao: e.target.value as AcaoAtivaConfig['acao'] })}>
-                <option value="comum">Comum</option><option value="bonus">Bônus</option><option value="reacao">Reação</option><option value="livre">Livre</option>
+                <option value="comum">Comum</option><option value="bonus">Bônus</option><option value="reacao">Reação</option><option value="movimento">Movimento</option><option value="livre">Livre</option>
               </select></div>
             <div><Label className="text-xs">Custo PE (fórmula)</Label><Input value={a.custoPE} onChange={(e) => set(i, { custoPE: e.target.value })} /></div>
             <div><Label className="text-xs">Alcance (m, 0 = livre)</Label><Input type="number" step={1.5} value={a.alcanceM} onChange={(e) => set(i, { alcanceM: Math.max(0, parseFloat(e.target.value) || 0) })} /></div>
@@ -200,4 +200,3 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
     </div>
   );
 }
-

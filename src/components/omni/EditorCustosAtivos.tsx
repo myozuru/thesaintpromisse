@@ -7,7 +7,7 @@ export function EditorCustosAtivos({ acao, onChange }: { acao: AcaoAtivaConfig; 
   return <div className="space-y-2 rounded border p-2">
     <label className="flex gap-2 text-xs"><input type="checkbox" checked={!!c} onChange={e => onChange({ custo_recursos: e.target.checked ? { pe_base: acao.custoPE, max_intensificacoes: '0' } : undefined })} />Custos flexíveis</label>
     {c && <>
-      <p className="text-xs text-muted-foreground">Fórmulas sem dados aleatórios. Cargas aqui substituem o contador legado. Custo em PV deixa ao menos 1 PV. Munição vem da arma da ação; usos vêm desta instância do item.</p>
+      <p className="text-xs text-muted-foreground">Fórmulas sem dados aleatórios. Cargas aqui substituem o contador legado. Custo em PV deixa ao menos 1 PV. Munição vem da arma da ação; usos vêm desta instância do item. Remover condições exige Ação Comum, Bônus, Reação ou Movimento; a opção Livre é recusada.</p>
       <div className="grid grid-cols-2 gap-2">
         {([
           ['pe_base', 'PE base', acao.custoPE], ['pe_por_intensificacao', 'PE por intensificação', '0'],
@@ -17,7 +17,7 @@ export function EditorCustosAtivos({ acao, onChange }: { acao: AcaoAtivaConfig; 
         <label className="text-xs">Munição consumida<Input aria-label="Munição consumida" type="number" min={0} step={1} value={c.municao ?? 0} onChange={e => set({ municao: Math.max(0, Math.floor(Number(e.target.value) || 0)) })} /></label>
         <label className="text-xs">Usos do item consumidos<Input aria-label="Usos do item consumidos" type="number" min={0} step={1} value={c.usos_item ?? 0} onChange={e => set({ usos_item: Math.max(0, Math.floor(Number(e.target.value) || 0)) })} /></label>
         <label className="text-xs">Tipo de ação<select aria-label="Tipo de ação do custo" className="h-9 w-full rounded border bg-background" value={c.tipo_acao ?? acao.acao} onChange={e => set({ tipo_acao: e.target.value as CustoRecursosAtivo['tipo_acao'] })}>
-          <option value="comum">Comum</option><option value="bonus">Bônus</option><option value="reacao">Reação</option><option value="livre">Livre</option><option value="sustentada">Sustentada por turno</option>
+          <option value="comum">Comum</option><option value="bonus">Bônus</option><option value="reacao">Reação</option><option value="movimento">Movimento</option><option value="livre">Livre</option><option value="sustentada">Sustentada por turno</option>
         </select></label>
         {c.tipo_acao === 'sustentada' && <label className="text-xs">PE por turno<Input aria-label="PE por turno" value={c.pe_por_turno ?? ''} onChange={e => set({ pe_por_turno: e.target.value })} /></label>}
         <label className="text-xs">Contador de cargas<Input aria-label="Contador de cargas" value={c.gastar_cargas?.nome ?? ''} onChange={e => set({ gastar_cargas: e.target.value ? { ...c.gastar_cargas, nome: e.target.value, quantidade: c.gastar_cargas?.quantidade ?? '1' } : undefined })} /></label>

@@ -15,7 +15,7 @@ import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { acoesAtivasDe, armaDaAcao, executarAcaoAtiva } from '@/lib/omni/acaoAtiva';
 
-const ACAO_ROT = { comum: 'Ação Comum', bonus: 'Ação Bônus', reacao: 'Reação', livre: 'Livre' } as const;
+const ACAO_ROT = { comum: 'Ação Comum', bonus: 'Ação Bônus', reacao: 'Reação', movimento: 'Ação de Movimento', livre: 'Livre' } as const;
 const TR_ROT: Record<string, string> = { astucia: 'Astúcia', fortitude: 'Fortitude', integridade: 'Integridade', reflexos: 'Reflexos', vontade: 'Vontade' };
 const chip = 'rounded border px-1.5 py-0.5 text-xs font-semibold whitespace-nowrap';
 
@@ -27,6 +27,7 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
   const [intensificacoes, setIntensificacoes] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [erro, setErro] = useState<Record<string, string>>({});
+  const [resultado, setResultado] = useState<Record<string, string>>({});
   const u = chars.find((c) => c.id === charId);
   const lista = agruparAcoesAtivas(acoesAtivasDe(charId));
   const sust = u?.omniSustentacoes ?? [];
@@ -126,7 +127,7 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
                 title={!proprio && !area ? 'Selecionar alvos no alcance pelo mapa' : undefined}
                 className="ml-auto h-8 shrink-0 rounded bg-primary px-3 text-xs font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
                 onClick={async () => {
-                  setBusy(key); setErro({ ...erro, [key]: '' });
+                  setBusy(key); setErro({ ...erro, [key]: '' }); setResultado(s => { const next = { ...s }; delete next[key]; return next; });
                   try {
                     let alvoSel: string | string[] = '';
                     if (!proprio && !area) {
@@ -142,15 +143,16 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
                     }
                     const r = await executarAcaoAtiva(charId, cfg, alvoSel, ent, { intensificacoes: intensidade, instanciaId: instanceId });
                     if (!r.ok) { useLogStore.getState().addLog('combat', `❌ ${cfg.nome}: ${r.reason}`); setErro((e) => ({ ...e, [key]: r.reason ?? 'Falhou' })); }
+                    else setResultado((s) => ({ ...s, [key]: r.detalhe || 'Ação concluída.' }));
                   } catch (e) { setErro(s => ({ ...s, [key]: e instanceof Error ? e.message : 'Não foi possível selecionar o alvo.' })); } finally { setBusy(null); }
                 }}
               >{busy === key ? 'Usando…' : 'Usar'}</button>
             </div>
             {erro[key] && <div className="text-xs text-destructive">❌ {erro[key]}</div>}
+            {resultado[key] && <div role="status" aria-label={`Resultado de ${cfg.nome}`} className={`whitespace-pre-wrap rounded border px-2 py-1.5 text-xs leading-relaxed ${resultado[key].includes('→ ERROU') ? 'border-destructive/40 bg-destructive/10 text-destructive' : 'border-emerald-600/40 bg-emerald-600/10 text-foreground'}`}>{resultado[key]}</div>}
           </div>
         );
       })}
     </div>
   );
 }
-

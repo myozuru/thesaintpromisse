@@ -140,6 +140,23 @@ describe('custos genéricos de ações', () => {
     expect(u.actionsCurrent).toBe(1); expect(u.bonusActionsCurrent).toBe(tipo_acao === 'bonus' ? 0 : 1); expect(u.reactionsCurrent).toBe(tipo_acao === 'reacao' ? 0 : 1);
     if (tipo_acao === 'reacao') expect(useReactionStore.getState().reactionsUsedByChar.u).toBe(1);
   });
+  it('exige uma ação determinada para purificação manual', async () => {
+    const purificar = cfg({ acao: 'livre', efeitos: [{ tipo: 'remover_condicao', condicao: 'caido' }] });
+    const antes = pegarFicha('u');
+    expect((await executarAcaoAtiva('u', purificar, 'a')).ok).toBe(false);
+    expect(pegarFicha('u')).toEqual(antes);
+    const r = await executarAcaoAtiva('u', { ...purificar, acao: 'bonus' }, 'a');
+    expect(r.ok).toBe(true);
+    expect(pegarFicha('u').bonusActionsCurrent).toBe(0);
+  });
+  it('ação de movimento de uma ativa só pode ser paga no turno e uma vez', async () => {
+    useCombatStore.setState({ inCombat: true, currentTurnIndex: 0, initiativeOrder: [{ charId: 'u' }, { charId: 'a' }] } as never);
+    const acao = cfg({ acao: 'movimento', custoPE: '0' });
+    expect((await executarAcaoAtiva('u', acao, 'a')).ok).toBe(true);
+    expect(useCombatStore.getState().movementActionUsedByChar.u).toBe(true);
+    useCharacterStore.getState().updateCharacter('u', { actionsCurrent: 1 });
+    expect((await executarAcaoAtiva('u', acao, 'a')).ok).toBe(false);
+  });
 });
 
 describe('sustentação e interface reais', () => {
@@ -169,7 +186,8 @@ describe('sustentação e interface reais', () => {
     fireEvent.change(screen.getByLabelText('Quantidade de cargas'), { target: { value: '2' } });
     fireEvent.change(screen.getByLabelText('Munição consumida'), { target: { value: '2' } });
     fireEvent.change(screen.getByLabelText('Usos do item consumidos'), { target: { value: '1' } });
-    expect(salvo!.acoesAtivas![0].custo_recursos).toMatchObject({ max_intensificacoes: '4', custo_pv: '5', municao: 2, usos_item: 1, gastar_cargas: { nome: 'foco', quantidade: '2' } });
+    fireEvent.change(screen.getByLabelText('Tipo de ação do custo'), { target: { value: 'movimento' } });
+    expect(salvo!.acoesAtivas![0].custo_recursos).toMatchObject({ max_intensificacoes: '4', custo_pv: '5', municao: 2, usos_item: 1, tipo_acao: 'movimento', gastar_cargas: { nome: 'foco', quantidade: '2' } });
     const parsed = PacoteOmniSchema.parse({ formato: 'omni-engine.v1', nome: 'Teste', geradoEm: 0, entidades: [salvo!] }); expect(parsed.entidades[0].acoesAtivas![0]).toEqual(salvo!.acoesAtivas![0]);
   });
   it('jogador escolhe intensificação e usa a ação pelo painel', async () => {

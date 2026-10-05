@@ -6,6 +6,7 @@ import { calcularContador } from './contadores';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
+import { useCombatStore } from '@/stores/useCombatStore';
 import { capacidadePorNome, tirosRestantes } from '@/lib/recargaRapida';
 
 export interface ContextoCustosAtivos { armaNome?: string; instanciaId?: string; entidadeId?: string }
@@ -88,7 +89,9 @@ export function planejarCustosAtivos(cfg: AcaoAtivaConfig, u: Character, intensi
     if (c?.tipo_acao === 'sustentada' && ![...(cfg.efeitos ?? []), ...Object.values(cfg.desfechosTR ?? {}).flatMap(r => r?.efeitos ?? [])].some(e => e.tipo === 'condicao')) throw new Error('Ação sustentada exige ao menos uma condição para manter.');
     if (c?.tipo_acao === 'sustentada' && pePorTurno < 1) throw new Error('Ação sustentada exige PE por turno maior que zero.');
     const acao = c?.tipo_acao && c.tipo_acao !== 'sustentada' ? c.tipo_acao : cfg.acao;
-    if (!['comum', 'bonus', 'reacao', 'livre'].includes(acao)) throw new Error('Tipo de ação inválido.');
+    const efeitos = [...(cfg.efeitos ?? []), ...Object.values(cfg.desfechosTR ?? {}).flatMap(r => r?.efeitos ?? [])];
+    if (efeitos.some(e => e.tipo === 'remover_condicao') && acao === 'livre') return { ok: false, reason: 'Remover condições exige uma ação: escolha Comum, Bônus, Reação ou Movimento.' };
+    if (!['comum', 'bonus', 'reacao', 'movimento', 'livre'].includes(acao)) throw new Error('Tipo de ação inválido.');
     return { ok: true, plano: { pe, pv, cargas, contador, municao, armaMunicao, usosItem, instanciaItemId, acao, intensificacoes, maxIntensificacoes: max, pePorTurno } };
   } catch (e) { return { ok: false, reason: e instanceof Error ? e.message : 'Custos inválidos.' }; }
 }
@@ -101,6 +104,11 @@ export function validarRecursosAtivos(u: Character, p: PlanoCustosAtivos): { ok:
   if (p.acao === 'bonus' && (!Number.isFinite(u.bonusActionsCurrent ?? 1) || (u.bonusActionsCurrent ?? 1) < 1)) return { ok: false, reason: 'Sem Ação Bônus disponível.' };
   const reacoesDisponiveis = u.reactionsCurrent ?? u.reactionsMax ?? 1;
   if (p.acao === 'reacao' && (!Number.isFinite(reacoesDisponiveis) || reacoesDisponiveis < 1)) return { ok: false, reason: 'Sem Reação disponível.' };
+  if (p.acao === 'movimento') {
+    const combate = useCombatStore.getState();
+    if (combate.inCombat && combate.initiativeOrder[combate.currentTurnIndex]?.charId !== u.id) return { ok: false, reason: 'A Ação de Movimento só pode ser usada no turno do personagem.' };
+    if (combate.inCombat && combate.movementActionUsedByChar?.[u.id]) return { ok: false, reason: 'A Ação de Movimento deste turno já foi usada.' };
+  }
   return { ok: true };
 }
 

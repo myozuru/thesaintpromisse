@@ -185,6 +185,7 @@ it('Usar com Teste Ataque rola acerto e dispara Rancor; erro não aplica dano', 
   fireEvent.click(screen.getByRole('button', { name: 'Usar' }));
   act(() => clicarAlvoMapa('e-bruno'));
   await waitFor(() => expect(spy.mock.calls.filter(([e]) => e === 'aoAcertarAtaque')).toHaveLength(1));
+  await waitFor(() => expect(screen.getByRole('status', { name: 'Resultado de Golpe de Rancor' }).textContent).toMatch(/d20 20 \+ \d+ = .*→ ACERTOU/));
   expect(vi.mocked(rollD20Com)).toHaveBeenCalled();
   expect(pegarFicha('bruno').hpCurrent).toBeLessThan(97);
   await waitFor(() => expect((screen.getByRole('button', { name: 'Usar' }) as HTMLButtonElement).disabled).toBe(false));
@@ -193,6 +194,7 @@ it('Usar com Teste Ataque rola acerto e dispara Rancor; erro não aplica dano', 
   fireEvent.click(screen.getByRole('button', { name: 'Usar' }));
   act(() => clicarAlvoMapa('e-bruno'));
   await waitFor(() => expect(spy.mock.calls.filter(([e]) => e === 'aoErrarAtaque')).toHaveLength(1));
+  await waitFor(() => expect(screen.getByRole('status', { name: 'Resultado de Golpe de Rancor' }).textContent).toMatch(/d20 1 \+ .*ERROU/));
   expect(pegarFicha('bruno').hpCurrent).toBe(hp);
   expect(spy.mock.calls.filter(([e]) => e === 'aoAcertarAtaque')).toHaveLength(1);
 });

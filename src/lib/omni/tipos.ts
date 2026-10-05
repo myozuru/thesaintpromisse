@@ -286,7 +286,7 @@ export interface CustoRecursosAtivo {
   usos_item?: number;
   gastar_cargas?: { nome: string; quantidade: 'todas' | string; minimo?: number };
   custo_pv?: string;
-  tipo_acao?: 'comum' | 'bonus' | 'reacao' | 'livre' | 'sustentada';
+  tipo_acao?: 'comum' | 'bonus' | 'reacao' | 'movimento' | 'livre' | 'sustentada';
   pe_por_turno?: string;
 }
 
@@ -310,7 +310,7 @@ export interface AcaoAtivaConfig {
   desfechosTR?: { falha?: DesfechoTRAtivo; sucesso?: DesfechoTRAtivo; falha_critica?: DesfechoTRAtivo };
   id: string;
   nome: string;
-  acao: 'comum' | 'bonus' | 'reacao' | 'livre';
+  acao: 'comum' | 'bonus' | 'reacao' | 'movimento' | 'livre';
   /** Fórmula do custo em PE. */
   custoPE: string;
   /** 0 = sem limite. */

@@ -72,21 +72,21 @@ describe('proteção e purificação por ação ativa', () => {
     await executarAcaoAtiva('u', proteger('-4'), 'a'); expect(pegarFicha('a').escCurrent).toBe(16);
   });
   it('purificação específica remove todas as instâncias daquele tipo e preserva as demais', async () => {
-    await executarAcaoAtiva('u', cfg({ efeitos: [{ tipo: 'remover_condicao', condicao: 'Caído' }] }), 'a');
+    await executarAcaoAtiva('u', cfg({ acao: 'bonus', efeitos: [{ tipo: 'remover_condicao', condicao: 'Caído' }] }), 'a');
     expect(pegarFicha('a').activeConditions.map(c => c.conditionId)).toEqual(['exposto']);
   });
   it('cura e purificação funcionam juntas mesmo quando PV já estão completos', async () => {
     useCharacterStore.getState().updateCharacter('a', { hpCurrent: 25 });
-    const r = await executarAcaoAtiva('u', cfg({ tipo_efeito: 'cura', cura: '8', efeitos: [{ tipo: 'remover_condicao', condicao: 'todas' }, { tipo: 'escudo', valor: '3', rodadas: 1 }] }), 'a');
+    const r = await executarAcaoAtiva('u', cfg({ acao: 'bonus', tipo_efeito: 'cura', cura: '8', efeitos: [{ tipo: 'remover_condicao', condicao: 'todas' }, { tipo: 'escudo', valor: '3', rodadas: 1 }] }), 'a');
     expect(r.ok && r.cura).toBe(0); expect(r.ok && r.efeitoAplicado).toBe(true); expect(pegarFicha('a').activeConditions).toEqual([]); expect(pegarFicha('a').escCurrent).toBe(8);
   });
   it('área de apoio não concede proteção nem remove condições de inimigos', async () => {
-    const r = await executarAcaoAtiva('u', cfg({ tipo_alvo: 'area', area: { forma: 'raio_em_si', tamanho_m: 10 }, efeitos: [{ tipo: 'escudo', valor: '5', rodadas: 1 }, { tipo: 'remover_condicao', condicao: 'todas' }] }), { ponto: { x: 0, y: 0 } });
+    const r = await executarAcaoAtiva('u', cfg({ acao: 'bonus', tipo_alvo: 'area', area: { forma: 'raio_em_si', tamanho_m: 10 }, efeitos: [{ tipo: 'escudo', valor: '5', rodadas: 1 }, { tipo: 'remover_condicao', condicao: 'todas' }] }), { ponto: { x: 0, y: 0 } });
     expect(r.ok).toBe(true); expect(pegarFicha('b').escCurrent).toBe(5); expect(pegarFicha('a').activeConditions).toEqual([]); expect(pegarFicha('i').escCurrent).toBe(0);
   });
   it('efeitos de suporte dos graus de TR substituem os padrões e multiplicam duração', async () => {
     forcarDados(1);
-    await executarAcaoAtiva('u', cfg({ teste: 'tr', cd: '10', efeitos: [{ tipo: 'escudo', valor: '100', rodadas: 1 }], desfechosTR: { falha_critica: { multiplicador_duracao: 2, efeitos: [{ tipo: 'pv_temporarios', valor: '4', rodadas: 2 }, { tipo: 'remover_condicao', condicao: 'todas' }] } } }), 'a');
+    await executarAcaoAtiva('u', cfg({ acao: 'bonus', teste: 'tr', cd: '10', efeitos: [{ tipo: 'escudo', valor: '100', rodadas: 1 }], desfechosTR: { falha_critica: { multiplicador_duracao: 2, efeitos: [{ tipo: 'pv_temporarios', valor: '4', rodadas: 2 }, { tipo: 'remover_condicao', condicao: 'todas' }] } } }), 'a');
     expect(pegarFicha('a').escCurrent).toBe(9); expect(pegarFicha('a').protecoesOmni?.[0].rodadas).toBe(4); expect(pegarFicha('a').activeConditions).toEqual([]);
   });
   it.each([{ tipo: 'escudo', valor: '1 / 0', rodadas: 1 }, { tipo: 'escudo', valor: '5', rodadas: -1 }, { tipo: 'escudo', valor: '5', rodadas: 1.5 }, { tipo: 'remover_condicao', condicao: 'inexistente' }] as const)('configuração inválida não gasta recursos: %j', async ef => {

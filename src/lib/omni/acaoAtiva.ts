@@ -7,6 +7,7 @@ import { notificarResultadoAtaque } from './resultadoAtaque';
 import { armaDoPersonagem, armaEstaEmpunhada } from './armaDoPersonagem';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useReactionStore } from '@/stores/useReactionStore';
+import { useCombatStore } from '@/stores/useCombatStore';
 import { planejarCustosAtivos, validarRecursosAtivos, patchCustosAtivos, consumirUsosItemAtivo, type ContextoCustosAtivos } from './custosAtivos';
 import { prepararMovimentosAtivos, aplicarMovimentoAtivo, validarPlanoMovimento, type PlanoMovimentoAtivo, type OpcoesMovimentoAtivo } from './movimentosAtivos';
 import { avaliarCondicionaisAtivos } from './condicionaisAtivos';
@@ -462,7 +463,15 @@ async function executarAcaoAtivaInterna(
     });
     if (!pagamento.ok) return pagamento;
   } else {
-    if (!consumirUsosItemAtivo(p)) return { ok: false, reason: 'Os usos do item mudaram antes de a ação ser concluída.' };
+    if (p.acao === 'movimento' && !useCombatStore.getState().spendMovementAction(u.id)) return { ok: false, reason: 'A Ação de Movimento deste turno já foi usada ou não está disponível.' };
+    if (!consumirUsosItemAtivo(p)) {
+      if (p.acao === 'movimento') useCombatStore.setState(s => {
+        const movementActionUsedByChar = { ...(s.movementActionUsedByChar ?? {}) };
+        delete movementActionUsedByChar[u.id];
+        return { movementActionUsedByChar };
+      });
+      return { ok: false, reason: 'Os usos do item mudaram antes de a ação ser concluída.' };
+    }
     store.updateCharacter(u.id, patchPago);
   }
   if (patchPago.omniCounters) notificarAtualizacaoContadores(u.id, u.omniCounters, patchPago.omniCounters);
@@ -528,7 +537,12 @@ async function executarAcaoAtivaInterna(
       armaDano = cfg.incluirArma && !/@ARMA\.DANO/i.test(cfg.dano ?? '') ? r.damageTotal : 0;
       const podeVerDefesa = useRoleStore.getState().role !== 'PLAYER' || t.category === 'PLAYER';
       const defesaLabel = podeVerDefesa ? `Defesa ${def}` : 'Defesa do alvo';
-      cabecalho = `ataque ${r.attackTotal} vs ${defesaLabel} → ${r.critical ? 'CRÍTICO' : r.hit ? 'ACERTOU' : 'ERROU'}${critExtra ? ` (margem −${critExtra})` : ''}`;
+      const bonusAcerto = r.attackTotal - r.natural;
+      const dadoAcerto = r.attackRolls.length > 1
+        ? `d20 [${r.attackRolls.join(', ')}] (usado ${r.natural})`
+        : `d20 ${r.natural}`;
+      const resultadoAcerto = r.hit ? (r.critical ? 'ACERTOU · CRÍTICO' : 'ACERTOU') : 'ERROU';
+      cabecalho = `ataque ${dadoAcerto} ${bonusAcerto >= 0 ? '+' : '−'} ${Math.abs(bonusAcerto)} = ${r.attackTotal} vs ${defesaLabel} → ${resultadoAcerto}${critExtra ? ` (margem −${critExtra})` : ''}`;
       if (r.cancelled) { log(`⛔ ${cfg.nome}: ataque interrompido.`); continue; }
       const tipoDeclarado = resolverTipoDano(cfg.tipoDano) ?? (cfg.incluirArma || /@ARMA\./i.test([cfg.dano, ...mods.danos].join('+')) ? resolverTipoDano(arma!.omniDamageType ?? arma!.damageType ?? undefined) : undefined);
       if (r.hit) notificarResultadoAtaque(u.id, t.id, arma!, r, metadadosAtaque, 'omni', tipoDeclarado ?? null);
