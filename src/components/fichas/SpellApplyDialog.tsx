@@ -11,6 +11,7 @@ import { useTestRequestStore } from '@/stores/useTestRequestStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { X, Shield, Target, Dice6, Send } from 'lucide-react';
 import { Spell, DAMAGE_TYPE_LABELS, ALL_CONDITIONS } from '@/types';
+import { normalizeConditionExpiry } from '@/types/conditions';
 import { rollDiceCom, rollD20Com } from '@/lib/dice';
 import { cn } from '@/lib/utils';
 import { getSustainedPEPerRound } from '@/lib/spellAuxiliaryTables';
@@ -947,7 +948,8 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
           spell.conditions.forEach(sc => {
             const condDef = ALL_CONDITIONS.find(c => c.id === sc.conditionId);
             if (!condDef) return;
-            const mode = sc.durationMode ?? 'ate_acabar';
+            const expiry = normalizeConditionExpiry({ conditionId: condDef.id, ...sc });
+            const mode = expiry.durationMode ?? 'ate_acabar';
             const isAtePassar = mode === 'ate_passar_tr';
             addCondition(ta.id, {
               id: crypto.randomUUID(),
@@ -959,8 +961,8 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
               sourceCharName: source.name,
               sourceCharId: source.id,
               durationMode: mode,
-              endCD: sc.endCD,
-              endTrType: sc.endTrType,
+              endCD: expiry.endCD,
+              endTrType: expiry.endTrType,
             });
             appliedConditions.push(`${condDef.icon} ${condDef.name}`);
           });
@@ -1162,7 +1164,8 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
           const condDef = ALL_CONDITIONS.find(c => c.id === sc.conditionId);
           if (!condDef) return;
           const extraRounds = ts.result === 'crit_fail' ? 1 : 0;
-          const mode = sc.durationMode ?? 'ate_acabar';
+          const expiry = normalizeConditionExpiry({ conditionId: condDef.id, ...sc });
+          const mode = expiry.durationMode ?? 'ate_acabar';
           const isAtePassar = mode === 'ate_passar_tr';
           const baseTurns = sc.durationTurns > 0 ? sc.durationTurns : -1;
           addCondition(ts.id, {
@@ -1175,8 +1178,8 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
             sourceCharName: source.name,
               sourceCharId: source.id,
             durationMode: mode,
-            endCD: sc.endCD,
-            endTrType: sc.endTrType,
+            endCD: expiry.endCD,
+            endTrType: expiry.endTrType,
           });
           appliedConditions.push(`${condDef.icon} ${condDef.name}`);
           const dur = sc.durationTurns > 0 ? `${sc.durationTurns} turnos` : `${sc.durationRounds + extraRounds} rodadas`;
@@ -1288,7 +1291,8 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
         spell.conditions.forEach((sc) => {
           const condDef = ALL_CONDITIONS.find(c => c.id === sc.conditionId);
           if (!condDef) return;
-          const mode = sc.durationMode ?? 'ate_acabar';
+          const expiry = normalizeConditionExpiry({ conditionId: condDef.id, ...sc });
+          const mode = expiry.durationMode ?? 'ate_acabar';
           const isAtePassar = mode === 'ate_passar_tr';
           addCondition(id, {
             id: crypto.randomUUID(),
@@ -1300,8 +1304,8 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
             sourceCharName: source.name,
               sourceCharId: source.id,
             durationMode: mode,
-            endCD: sc.endCD,
-            endTrType: sc.endTrType,
+            endCD: expiry.endCD,
+            endTrType: expiry.endTrType,
           });
           const dur = sc.durationTurns > 0 ? `${sc.durationTurns} turnos` : `${sc.durationRounds} rodadas`;
           addLog('spell', `⚠️ ${target.name} recebeu condição: ${condDef.icon} ${condDef.name} por ${dur}`);

@@ -14,6 +14,7 @@ import {
   createDefaultCursedAptitudes,
 } from '@/types';
 import type { SpellCondition } from '@/types/conditions';
+import { normalizeConditionExpiry } from '@/types/conditions';
 
 type Creature = any;
 
@@ -331,17 +332,26 @@ function buildPatch(creature: Creature, current: Character): Partial<Character> 
     const spellConditions: SpellCondition[] = rawConds
       .filter((c: any) => c?.name || c?.id || c?.nameKey)
       .map((c: any) => {
-        const mode = (c.durationMode === 'tr_todo_round' || c.durationMode === 'ate_passar_tr' || c.durationMode === 'ate_acabar')
+        const requestedMode = (c.durationMode === 'tr_todo_round' || c.durationMode === 'ate_passar_tr' || c.durationMode === 'ate_acabar')
           ? c.durationMode
           : 'ate_acabar';
+        const conditionId = conditionIdFromName(c.id || c.name || c.nameKey);
+        const usesEndTR = requestedMode === 'tr_todo_round' || requestedMode === 'ate_passar_tr';
+        const expiry = normalizeConditionExpiry({
+          conditionId,
+          durationMode: requestedMode,
+          endCD: usesEndTR && typeof act.cd === 'number' ? act.cd : undefined,
+          endTrType: usesEndTR ? (c.removeTrType || c.applyTrType || act.trType) || undefined : undefined,
+        });
+        const mode = expiry.durationMode ?? requestedMode;
         const turns = typeof c.durationTurns === 'number' && c.durationTurns > 0 ? c.durationTurns : 1;
         return {
-          conditionId: conditionIdFromName(c.id || c.name || c.nameKey),
+          conditionId,
           durationTurns: mode === 'ate_passar_tr' ? 0 : turns,
           durationRounds: typeof c.durationRounds === 'number' ? c.durationRounds : 0,
           durationMode: mode,
-          endCD: typeof act.cd === 'number' ? act.cd : undefined,
-          endTrType: (c.removeTrType || c.applyTrType || act.trType) || undefined,
+          endCD: expiry.endCD,
+          endTrType: expiry.endTrType,
           applyTrType: c.applyTrType || undefined,
         };
       });

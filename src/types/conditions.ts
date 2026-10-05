@@ -94,6 +94,28 @@ export interface SpellCondition {
   applyTrType?: string;
 }
 
+/**
+ * Condições que não podem ser encerradas por um TR usam esta normalização
+ * compartilhada. Caído termina por ação de movimento; TRs de aplicação (ou
+ * valores antigos gravados como TR de remoção) não devem gerar um prompt para
+ * se levantar.
+ */
+export function normalizeConditionExpiry<T extends {
+  conditionId: string;
+  durationMode?: ConditionDurationMode;
+  endCD?: number;
+  endTrType?: string;
+}>(condition: T): Pick<T, 'durationMode' | 'endCD' | 'endTrType'> {
+  if (condition.conditionId.trim().toLowerCase() === 'caido') {
+    return { durationMode: 'ate_acabar', endCD: undefined, endTrType: undefined } as Pick<T, 'durationMode' | 'endCD' | 'endTrType'>;
+  }
+  return {
+    durationMode: condition.durationMode,
+    endCD: condition.endCD,
+    endTrType: condition.endTrType,
+  } as Pick<T, 'durationMode' | 'endCD' | 'endTrType'>;
+}
+
 // ===== ÁREA PERSISTENTE (dano/condição contínua em zona) =====
 // Quando uma ação em área é lançada com `persistentArea.enabled`, o template
 // AoE fica fixo no mapa por `durationTurns` rodadas e re-aplica seu efeito

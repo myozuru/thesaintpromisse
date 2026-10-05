@@ -184,6 +184,21 @@ describe('Forense — mapeamentos e descrições completas', () => {
     expect(get(r!.id).spells[0].conditions?.[0].conditionId).toBe('caido');
   });
 
+  it('Caído preserva o TR de aplicação, mas nunca vira condição removida por TR', () => {
+    const r = importCreatureToFichas(creature({
+      actions: { total: { comum: 1, bonus: 1, reacao: 1 }, list: [
+        {
+          name: 'Derrubar', type: 'comum', attackType: 'tr_individual', cd: 18, trType: 'fortitude',
+          conditions: [{ name: 'Caído', durationMode: 'ate_passar_tr', applyTrType: 'fortitude' }], damage: {},
+        },
+      ]},
+    }));
+    const caido = get(r!.id).spells[0].conditions?.[0];
+    expect(caido).toMatchObject({ conditionId: 'caido', durationMode: 'ate_acabar', applyTrType: 'fortitude' });
+    expect(caido?.endCD).toBeUndefined();
+    expect(caido?.endTrType).toBeUndefined();
+  });
+
   it('tipo de dano com hífen/espaço é normalizado', () => {
     const r = importCreatureToFichas(creature({
       defenses: { vulnerabilidades: [{ tipo: 'energia-reversa' }], imunidades: [], resistencias: [], condicoesImunes: [] },
