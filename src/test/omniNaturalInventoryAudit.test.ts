@@ -12,6 +12,7 @@ import { canonicalizarChave } from '@/lib/omni/keyAliases';
 import { aplicarEfeitoNoPersonagem } from '@/lib/omni/aplicarEfeito';
 import { parseOmniScript } from '@/lib/omni/omniScript';
 import { resolverTipoDano } from '@/lib/omni/contextoDano';
+import { executarCombatEffect } from '@/lib/omni/executarSubEfeito';
 
 afterEach(limparMesa);
 
@@ -75,5 +76,41 @@ describe('inventário natural: sondagem da implementação existente', () => {
     expect(resolverTipoDano('energia_amaldicoada')).toBeUndefined();
     expect(resolverTipoDano('energia_reversa')).toBeUndefined();
     expect(resolverTipoDano('forca')).toBeUndefined();
+  });
+
+  it('contador_<nome>: lê e consome a instância nominal sem alterar outra', () => {
+    const c = ficha('templates', { omniCounters: { rancor: 3, foco: 2 } });
+    montarMesa([c], {});
+    aplicarEfeitoNoPersonagem(c.id, 'SUBTRAIR', 'contador_rancor', 1);
+    expect(pegarFicha(c.id).omniCounters).toMatchObject({ rancor: 2, foco: 2 });
+  });
+
+  it('flag_<nome>: persiste e consulta a instância', () => {
+    const c = ficha('templates'); montarMesa([c], {});
+    aplicarEfeitoNoPersonagem(c.id, 'MODIFICADOR', 'flag_audit', 1);
+    expect(avaliarFormula('@USUARIO.flag_audit', montarVariaveisDoPersonagem(pegarFicha(c.id))).valor).toBe(1);
+  });
+
+  it.each(['rodadas_com_condenado', 'turnos_com_cego', 'esta_sob_condenado'])('%s: o modelo do rascunho ainda não é um alias validado', key => {
+    const c = ficha('templates', { activeConditions: [{ id: 'condenado-audit', name: 'Condenado', icon: '⛓', conditionId: 'condenado', remainingTurns: -1, remainingRounds: 2, elapsedRounds: 4 }, { id: 'cego-audit', name: 'Cego', icon: '🙈', conditionId: 'cego', remainingRounds: -1, remainingTurns: 1 }] });
+    expect(avaliarFormula(`@USUARIO.${key}`, montarVariaveisDoPersonagem(c)).diagnosticos.length).toBeGreaterThan(0);
+    expect(avaliarFormula('@USUARIO.tem_condicao_condenado', montarVariaveisDoPersonagem(c)).valor).toBe(1);
+  });
+
+  it.each(['aplicar', 'remover'])('%s <id>: executa a condição canônica via ponte legada', verb => {
+    const c = ficha('templates', { activeConditions: verb === 'remover' ? [{ id: 'condenado-audit', name: 'Condenado', icon: '⛓', conditionId: 'condenado', remainingTurns: -1, remainingRounds: -1 }] : [] });
+    montarMesa([c], {});
+    const parsed = parseOmniScript(`${verb} condenado`, { defaultTarget: 'USUARIO' });
+    expect(parsed.erros).toEqual([]);
+    executarCombatEffect(parsed.efeitos[0], { usuarioId: c.id, usuarioVars: montarVariaveisDoPersonagem(c) });
+    expect(pegarFicha(c.id).activeConditions.some(condition => condition.conditionId === 'condenado')).toBe(verb === 'aplicar');
+  });
+
+  it('imune <id>: concede imunidade na instância do usuário', () => {
+    const c = ficha('templates'); montarMesa([c], {});
+    const parsed = parseOmniScript('imune condenado', { defaultTarget: 'USUARIO' });
+    expect(parsed.erros).toEqual([]);
+    executarCombatEffect(parsed.efeitos[0], { usuarioId: c.id, usuarioVars: montarVariaveisDoPersonagem(c) });
+    expect(pegarFicha(c.id).omniImmunities).toContain('condicao:condenado');
   });
 });

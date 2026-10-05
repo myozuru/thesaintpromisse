@@ -29,6 +29,31 @@ Comando: `OMNI_AUDIT_REPORT=1 npx vitest run src/test/omniNaturalInventoryAudit.
 
 Resultado: 4 arquivos, 465 testes aprovados. Os testes novos verificam resultados da sondagem e comportamento legado; não afirmam que as lacunas estão corrigidas. Para regenerar o inventário estático, fornecer o TXT original ao script `scripts/auditar_catalogo_natural.py`; depois regenerar esta sondagem com a variável indicada.
 
-## Estado da etapa 1
+## Complemento: oito modelos e comandos parametrizados
 
-Contrato, inventário de 345 entradas e sondagem individual legada publicados. Ainda falta certificar contexto/semântica com fixtures específicas, escrita via executor além desta ponte, catálogo composto, permissões backend e decisões de ordem de modificadores/medição espacial. Não encerrar etapa 1 nem anunciar 345 entradas executáveis com base nesta sondagem.
+Os oito casos restantes receberam fixtures específicas em `omniNaturalInventoryAudit.test.ts`:
+
+| Modelo | Resultado observado |
+|---|---|
+| contador_<nome> | Consome Rancor sem modificar Foco |
+| flag_<nome> | Persiste flag e permite consulta da instância |
+| rodadas_com_<id> | Nome do rascunho gera diagnóstico; não é alias validado |
+| turnos_com_<id> | Nome do rascunho gera diagnóstico; não é alias validado |
+| esta_sob_<id> | Nome do rascunho gera diagnóstico; tem_condicao_<id> é a consulta legada |
+| aplicar <id> | Aplica Condenado via executor legado ao usuário explícito |
+| remover <id> | Remove Condenado via executor legado |
+| imune <id> | Concede imunidade nominal ao usuário |
+
+## Autorização versionada
+
+A migration `20260925235722_afacf0c1-767e-4f01-b1e7-0a5871ad75f8.sql` concede INSERT/UPDATE de realtime_world e realtime_assets a anon/authenticated com políticas permissivas (`USING (true)`/`WITH CHECK (true)`). As outras migrations versionadas criam perfis e user_roles, mas não substituem essas políticas por verificação de Mestre nas tabelas compartilhadas.
+
+Portanto, a restrição backend aprovada é um requisito ainda não satisfeito pelas migrations examinadas. Não foi consultado o banco em produção. A etapa 22 precisa tratar a arquitetura de sincronização e autorização; simplesmente confiar na role enviada pelo cliente ou bloquear toda escrita PLAYER não é solução, pois jogadores precisam persistir alterações permitidas de suas fichas.
+
+## Estado das entregas
+
+Etapa 1 concluída no escopo de contrato e diagnóstico: 345 entradas classificadas, nomes simples sondados e oito modelos examinados, com lacunas e responsáveis registrados. Isso não certifica 345 entradas executáveis. Validação semântica de todos os cenários e implementação das lacunas pertencem às etapas responsáveis e à integração final.
+
+Etapa 2 iniciada: `contextoNatural.ts` define papéis separados, IDs explícitos, validação de ficha/token e mapa nominal de gastos. Ainda não está conectado ao parser nem ao fluxo de combate; não altera o comportamento atual.
+
+Validação desta entrega: 5 arquivos, 483 testes aprovados. Inclui os oito casos parametrizados e testes do novo contexto para vítima/atacante distintos, token ambíguo ou divergente, ausência de alvo, exclusão do próprio usuário da relação de outro aliado e isolamento dos gastos.

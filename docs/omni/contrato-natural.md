@@ -1,6 +1,6 @@
 # OMNI natural — contrato e entregas
 
-Estado: consolidação inicial da etapa 1. Este documento descreve requisitos; não afirma que a linguagem natural já seja executável. Base examinada: main d2ef673b0e2a92918fa9fd7fac0095733c5b1d68, especificação Texto colado(4) e correções aprovadas na conversa de 05/10/2026.
+Estado: etapa 1 de contrato e diagnóstico concluída; etapa 2 iniciada. Este documento descreve requisitos; não afirma que a linguagem natural já seja executável. Base inicial examinada: main d2ef673b0e2a92918fa9fd7fac0095733c5b1d68, especificação Texto colado(4) e correções aprovadas na conversa de 05/10/2026. Evidências complementares em inventario-natural.md e diagnostico-execucao.md.
 
 ## Fontes de verdade
 
@@ -111,4 +111,4 @@ Cinco riscos anteriores: colisão de aliases (3/5), precedência (4), unidades (
 - `planejarDano` em `acaoAtiva.ts` agrupa dados e valores fixos; não representa sozinho parcelas com tipos distintos.
 - `triggerEfeitos.ts` registra um consumido genérico; a nova linguagem exige mapa nominal por execução.
 
-Etapa 1 ainda aberta: elaborar inventário entrada a entrada contra registro/parser/leitura/escrita/guia; verificar seletores persistidos e regras de autorização backend; definir ordem e momentos a partir das regras reais, medição espacial, semântica de penalidades e recuperação técnica. Não anunciar essas garantias como implementadas antes de evidência e testes.
+Inventário individual e sondagens publicados. As lacunas estão explicitadas em diagnostico-execucao.md, incluindo políticas backend permissivas nas migrations versionadas. Seletores persistidos, ordem e momentos de modificadores, medição espacial, penalidades e recuperação técnica serão aprofundados nas etapas responsáveis. Não anunciar essas garantias como implementadas antes de evidência e testes.
