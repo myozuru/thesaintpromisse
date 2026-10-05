@@ -102,7 +102,7 @@ export interface ReactionPrompt {
   createdAt: number;
 }
 
-/** Kinds que CONSOMEM a reação da rodada (1 por personagem/token).
+/** Kinds cujo uso consome uma unidade do saldo de reações da ficha.
  *  Os "*_tr_offer", "fah_presenca_nefasta" e "fah_devorador_energia_offer" são
  *  testes de resistência / acknowledgements e NÃO contam como reação. */
 const REACTION_CONSUMING_KINDS: ReadonlySet<ReactionKind> = new Set<ReactionKind>([
@@ -119,13 +119,12 @@ export function kindConsumesReaction(kind: ReactionKind): boolean {
   return REACTION_CONSUMING_KINDS.has(kind);
 }
 
-/** Limite de reações por personagem/token por rodada. */
-export const REACTIONS_PER_ROUND = 1;
+/** Prazo para decidir uma reação (em milissegundos). */
 export const REACTION_DECISION_TIMEOUT_MS = 12000;
 
 interface ReactionStoreState {
   prompts: ReactionPrompt[];
-  /** charId → quantas reações já gastou na rodada atual (limite = 1). */
+  /** charId → reações gastas nesta rodada (telemetria/compatibilidade; a disponibilidade vem da ficha). */
   reactionsUsedByChar: Record<string, number>;
   enqueue: (p: Omit<ReactionPrompt, 'id' | 'createdAt'>) => void;
   receiveRemote: (p: ReactionPrompt, requesterClientId: string) => void;
@@ -135,9 +134,9 @@ interface ReactionStoreState {
   /** Quantas reações o personagem ainda pode usar nesta rodada. */
   reactionsLeft: (charId: string) => number;
   hasReactionAvailable: (charId: string) => boolean;
-  /** Marca consumo (chamado pelo overlay ao executar uma reação). */
-  consumeReaction: (charId: string) => void;
-  /** Reset no início de cada rodada (chamado pelo useCombatStore). */
+  /** Debita atomicamente a reação da ficha e registra o consumo. */
+  consumeReaction: (charId: string) => boolean;
+  /** Limpa apenas a telemetria no início da rodada; saldo da ficha é reposto pelo motor de turnos. */
   resetRoundReactions: () => void;
 }
 
@@ -179,17 +178,25 @@ export const useReactionStore = create<ReactionStoreState>((set, get) => ({
   clearForChar: (charId) => {
     for (const prompt of get().prompts.filter((entry) => entry.charId === charId)) get().dismiss(prompt.id);
   },
-  reactionsLeft: (charId) =>
-    Math.max(0, REACTIONS_PER_ROUND - (get().reactionsUsedByChar[charId] ?? 0)),
-  hasReactionAvailable: (charId) =>
-    (get().reactionsUsedByChar[charId] ?? 0) < REACTIONS_PER_ROUND,
-  consumeReaction: (charId) =>
+  reactionsLeft: (charId) => {
+    const c = useCharacterStore.getState().characters.find((character) => character.id === charId);
+    return Math.max(0, c?.reactionsCurrent ?? c?.reactionsMax ?? 1);
+  },
+  hasReactionAvailable: (charId) => get().reactionsLeft(charId) > 0,
+  consumeReaction: (charId) => {
+    const character = useCharacterStore.getState().characters.find((c) => c.id === charId);
+    if (!character) return false;
+    const available = character.reactionsCurrent ?? character.reactionsMax ?? 1;
+    if (available <= 0) return false;
+    useCharacterStore.getState().updateCharacter(charId, { reactionsCurrent: available - 1 });
     set((state) => ({
       reactionsUsedByChar: {
         ...state.reactionsUsedByChar,
         [charId]: (state.reactionsUsedByChar[charId] ?? 0) + 1,
       },
-    })),
+    }));
+    return true;
+  },
   resetRoundReactions: () => set({ reactionsUsedByChar: {} }),
 }));
 

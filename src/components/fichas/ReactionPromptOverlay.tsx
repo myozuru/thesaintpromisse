@@ -25,7 +25,7 @@ import { playSuccessSound, playErrorSound, playClickSound } from '@/lib/sounds';
 export function ReactionPromptOverlay() {
   const prompts = useReactionStore(s => s.prompts);
   const dismiss = useReactionStore(s => s.dismiss);
-  const reactionsUsedByChar = useReactionStore(s => s.reactionsUsedByChar);
+  useCharacterStore(s => s.characters);
   const consumeReaction = useReactionStore(s => s.consumeReaction);
   const addLog = useLogStore(s => s.addLog);
   const tryNullifyCondition = useCharacterStore(s => s.tryNullifyCondition);
@@ -38,12 +38,12 @@ export function ReactionPromptOverlay() {
 
   if (prompts.length === 0) return null;
 
-  /** Bloqueia ação se a reação da rodada já foi gasta. */
+  /** O saldo da ficha é a única fonte de disponibilidade para todas as reações. */
   const canReact = (charId: string, kind: ReactionPrompt['kind']): boolean => {
     if (!kindConsumesReaction(kind)) return true;
-    if ((reactionsUsedByChar[charId] ?? 0) >= 1) {
+    if (!useReactionStore.getState().hasReactionAvailable(charId)) {
       playErrorSound();
-      addLog('system', 'Reação já usada nesta rodada (limite: 1 por personagem).');
+      addLog('system', 'Sem reações disponíveis na ficha.');
       return false;
     }
     return true;
@@ -56,7 +56,7 @@ export function ReactionPromptOverlay() {
         <PromptCard
           key={p.id}
           prompt={p}
-          reactionLocked={kindConsumesReaction(p.kind) && (reactionsUsedByChar[p.charId] ?? 0) >= 1}
+          reactionLocked={kindConsumesReaction(p.kind) && useReactionStore.getState().reactionsLeft(p.charId) <= 0}
           onDismiss={() => {
             if (p.kind === 'cobrir_se_offer' || p.kind === 'fah_anatomia_incompr_offer') useReactionStore.getState().resolveDecision(p.id, null);
             else if (p.kind === 'lua_reacao_offer' || p.kind === 'fah_alma_maldita_offer') useReactionStore.getState().resolveDecision(p.id, 0);
@@ -158,7 +158,7 @@ export function ReactionPromptOverlay() {
           }}
           onLua={(useIt) => {
             const c = useCharacterStore.getState().characters.find((x) => x.id === p.charId);
-            const use = useIt && !!c && (c.reactionsCurrent ?? 0) > 0 && canReact(p.charId, p.kind);
+            const use = useIt && !!c && canReact(p.charId, p.kind);
             const awaited = useReactionStore.getState().resolveDecision(p.id, use ? 1 : 0);
             if (!awaited) {
               const opts = (p.payload?.luaOpts ?? {}) as Parameters<typeof applyDamage>[3] & { tags?: string[] };

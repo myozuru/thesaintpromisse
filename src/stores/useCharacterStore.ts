@@ -2165,15 +2165,15 @@ export const useCharacterStore = create<CharacterStore>()(
                 const reduced = Math.max(0, rawDamage - red);
                 const used = useCombatStore.getState().movementUsedByChar[id] ?? 0;
                 get().updateCharacter(id, {
-                  reactionsCurrent: Math.max(0, (current.reactionsCurrent ?? 0) - 1),
                   mobilidadeReacaoM: effectiveMovement(current),
                   mobilidadeReacaoBase: used,
                   desengajado: true,
                 });
-                useReactionStore.getState().consumeReaction(id);
-                rawDamage = reduced;
-                try { useLogStore.getState().addLog('combat', `🌙 Postura da Lua: ${current.name} reduz o golpe para ${reduced} e pode Andar e Desengajar.`); } catch { /* noop */ }
-                if (rawDamage <= 0) return;
+                if (useReactionStore.getState().consumeReaction(id)) {
+                  rawDamage = reduced;
+                  try { useLogStore.getState().addLog('combat', `🌙 Postura da Lua: ${current.name} reduz o golpe para ${reduced} e pode Andar e Desengajar.`); } catch { /* noop */ }
+                  if (rawDamage <= 0) return;
+                }
               }
             }
             }

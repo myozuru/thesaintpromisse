@@ -356,7 +356,7 @@ export const useCombatStore = create<CombatStore>()(
           turnStartedAt: Date.now(),
           turnPaused: !s.turnTimerEnabled,
         }));
-        // 🆕 Reset do orçamento de reações ao iniciar combate.
+        // Limpa a telemetria de reações ao iniciar combate.
         import('@/stores/useReactionStore').then(({ useReactionStore }) =>
           useReactionStore.getState().resetRoundReactions(),
         );
@@ -488,7 +488,7 @@ export const useCombatStore = create<CombatStore>()(
               }
             }
           });
-          // 🆕 Reset do orçamento de reações (1 por personagem/rodada).
+          // Limpa a telemetria; o saldo autorizado por personagem vem da ficha e é restaurado junto às ações.
           import('@/stores/useReactionStore').then(({ useReactionStore }) =>
             useReactionStore.getState().resetRoundReactions(),
           );
