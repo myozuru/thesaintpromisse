@@ -1,6 +1,6 @@
 # OMNI natural — contrato e entregas
 
-Estado: etapas 1–2 concluídas; Etapa 3 (lexer) implementada. Este documento descreve requisitos; não afirma que a linguagem natural já seja executável. Base inicial examinada: main d2ef673b0e2a92918fa9fd7fac0095733c5b1d68, especificação Texto colado(4) e correções aprovadas na conversa de 05/10/2026. Evidências complementares em inventario-natural.md, diagnostico-execucao.md, etapa-2-contexto.md e etapa-3-lexer.md.
+Estado: etapas 1–3 concluídas; Etapa 4 (gramática/AST) implementada em analisador puro. A linguagem natural ainda não executa no jogo. Base inicial examinada: main d2ef673b0e2a92918fa9fd7fac0095733c5b1d68, especificação Texto colado(4) e correções aprovadas na conversa de 05/10/2026. Evidências complementares em inventario-natural.md, diagnostico-execucao.md, etapa-2-contexto.md, etapa-3-lexer.md e etapa-4-gramatica.md.
 
 ## Fontes de verdade
 

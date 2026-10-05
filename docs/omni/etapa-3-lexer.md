@@ -1,6 +1,6 @@
 # Etapa 3 — lexer da sintaxe natural
 
-Estado: lexer implementado e isolado. A Etapa 4 vai consumir esses tokens para montar a gramática; por enquanto, o parser/combat continuam inalterados.
+Estado: lexer implementado. A gramática da Etapa 4 agora consome seus tokens para formar a AST; o parser legado e o combate continuam inalterados.
 
 ## Contrato lexical entregue
 
