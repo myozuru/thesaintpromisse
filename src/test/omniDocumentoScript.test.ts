@@ -11,6 +11,7 @@ describe('versão e migração sem perda de scripts OMNI', () => {
     expect(r.documento).toEqual({ formato:'omni.script', versao:1, fonte:source });
     expect(r.linguagem).toBe('legada');
     expect(r.executavel).toBe(true);
+    if (r.linguagem !== 'legada') return;
     expect(r.parse.erros).toEqual([]);
     expect(preservarDocumentoOmni(source)?.fonte).toBe(source);
   });
@@ -67,7 +68,7 @@ describe('versão e migração sem perda de scripts OMNI', () => {
   });
   it('não adivinha formato novo para versão ausente, desconhecida ou documento truncado', () => {
     expect(normalizarDocumentoOmni('ao acertar então aplicar cego')).toMatchObject({ linguagem:'legada', executavel:false });
-    expect(normalizarDocumentoOmni({ formato:'omni.script', versao:3, fonte:'sem sobrescrever' })).toMatchObject({ ok:false, diagnosticos:[{ codigo:'VERSAO_DESCONHECIDA' }] });
+    expect(normalizarDocumentoOmni({ formato:'omni.script', versao:3, fonte:'sem sobrescrever' } as never)).toMatchObject({ ok:false, diagnosticos:[{ codigo:'VERSAO_DESCONHECIDA' }] });
     expect(normalizarDocumentoOmni({ formato:'outro', versao:1, fonte:'x' } as never)).toMatchObject({ ok:false, diagnosticos:[{ codigo:'DOCUMENTO_INVALIDO' }] });
   });
 });

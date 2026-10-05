@@ -1,4 +1,4 @@
-import { parseOmniScript, type OmniScriptParseOpts, type OmniScriptParseResult } from './omniScript';
+import { parseOmniScript, type OmniScriptParseOpts, type OmniScriptResultado } from './omniScript';
 import { analisarFraseNatural, type FraseNatural, type ErroGramaticaNatural } from './gramaticaNatural';
 
 export const FORMATO_DOCUMENTO_OMNI = 'omni.script' as const;
@@ -11,7 +11,7 @@ export interface DocumentoScriptOmni {
 }
 export interface DiagnosticoDocumentoOmni { codigo: string; mensagem: string; inicio?: number; fim?: number }
 export type ResultadoLeituraScriptOmni =
-  | { ok:true; documento: DocumentoScriptOmni; linguagem:'legada'; executavel:boolean; parse:OmniScriptParseResult; diagnosticos: DiagnosticoDocumentoOmni[] }
+  | { ok:true; documento: DocumentoScriptOmni; linguagem:'legada'; executavel:boolean; parse:OmniScriptResultado; diagnosticos: DiagnosticoDocumentoOmni[] }
   | { ok:true; documento: DocumentoScriptOmni; linguagem:'natural'; executavel:false; ast?:FraseNatural; diagnosticos:DiagnosticoDocumentoOmni[] }
   | { ok:false; diagnosticos:DiagnosticoDocumentoOmni[] };
 
@@ -46,7 +46,7 @@ export function preservarDocumentoOmni(valor: string | DocumentoScriptOmni): Doc
 }
 
 /** Chamada explícita do runtime legado; documentos naturais não podem cair no parser antigo. */
-export function executarParseLegadoOmni(documento: DocumentoScriptOmni, opcoes?: OmniScriptParseOpts): OmniScriptParseResult | DiagnosticoDocumentoOmni {
+export function executarParseLegadoOmni(documento: DocumentoScriptOmni, opcoes?: OmniScriptParseOpts): OmniScriptResultado | DiagnosticoDocumentoOmni {
   if (documento.formato !== FORMATO_DOCUMENTO_OMNI || documento.versao !== 1) {
     return { codigo:'LINGUAGEM_NAO_EXECUTAVEL', mensagem:'Somente documento OMNI versão 1 pode ser enviado ao executor legado.' };
   }
