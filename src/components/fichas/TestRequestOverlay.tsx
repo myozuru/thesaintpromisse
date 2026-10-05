@@ -42,6 +42,7 @@ import { canViewerRollTestRequest, isPlayerOwnedTestRequest } from '@/lib/testRe
 import { guardaEstudadaTrBonus } from '@/lib/guardaEstudada';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { selectOmniModifiers } from '@/lib/omni/omniBridge';
+import { resolveAuraTurnTest } from '@/lib/auraTurnResolution';
 
 /** Modificadores externos de combate que valem para qualquer teste pedido. */
 function bonusDeCombate(c: Character, req: TestRequest): { bonus: number; parts: string[] } {
@@ -249,6 +250,15 @@ export function TestRequestOverlay() {
   const addLog = useLogStore((s) => s.addLog);
 
   const isMaster = role === 'MASTER';
+
+  useEffect(() => {
+    if (!isMaster) return;
+    for (const request of requests) {
+      if (request.auraResolution && request.result && !request.resolutionApplied) {
+        resolveAuraTurnTest(request);
+      }
+    }
+  }, [isMaster, requests]);
 
   // Somente o perfil vinculado à ficha recebe o botão de rolagem.
   // Fichas sem perfil e NPCs permanecem sob controle do Mestre.
@@ -828,4 +838,3 @@ export function TestRequestOverlay() {
     </div>
   );
 }
-

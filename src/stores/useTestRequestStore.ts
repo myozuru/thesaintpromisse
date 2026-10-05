@@ -49,6 +49,16 @@ export interface TestRequest {
   bonusBreakdownOverride?: string;
   /** Tag para correlacionar resultado com a origem (ex.: feitiço.id + targetId). */
   sourceTag?: string;
+  /** Efeito automático a resolver após a rolagem do TR. */
+  auraResolution?: {
+    type: 'enemy_turn_aura';
+    ownerId: string;
+    auraId: 'aura_macabra';
+    conditionId: string;
+    conditionName: string;
+    conditionIcon: string;
+  };
+  resolutionApplied?: boolean;
   createdAt: number;
   /**
    * Preenchido quando o JOGADOR fecha o resultado na tela dele.
@@ -77,6 +87,7 @@ interface TestRequestState {
   requests: TestRequest[];
   enqueue: (r: Omit<TestRequest, 'id' | 'createdAt' | 'result'>) => void;
   setResult: (id: string, result: NonNullable<TestRequest['result']>) => void;
+  markResolutionApplied: (id: string) => void;
   /** Jogador confirma que viu o resultado (não remove — o mestre ainda vê). */
   ackResult: (id: string) => void;
   dismiss: (id: string) => void;
@@ -98,6 +109,8 @@ export const useTestRequestStore = create<TestRequestState>()(
         set((s) => ({
           requests: s.requests.map((x) => (x.id === id ? { ...x, result } : x)),
         })),
+      markResolutionApplied: (id) =>
+        set((s) => ({ requests: s.requests.map((x) => x.id === id ? { ...x, resolutionApplied: true } : x) })),
       ackResult: (id) =>
         set((s) => ({
           requests: s.requests.map((x) => (x.id === id ? { ...x, playerAckedAt: Date.now() } : x)),

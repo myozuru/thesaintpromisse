@@ -15,6 +15,7 @@ import { useRoleStore } from '@/stores/useRoleStore';
 import { rollD20Com } from '@/lib/dice';
 import { useTestRequestStore } from '@/stores/useTestRequestStore';
 import { playDiceSound } from '@/lib/sounds';
+import { enqueueAuraMacabraTestsForEnemy } from '@/lib/auraTurnTests';
 import { getAttrModifier } from '@/components/fichas/CharacterCard';
 import { Button } from '@/components/ui/button';
 import { TurnTimer } from './TurnTimer';
@@ -178,13 +179,15 @@ export function CombatBar({ className, variant = 'bar' }: Props) {
     if (current) {
       addLog('initiative', `▶️ Turno de ${current.charName}`);
       const currentChar = allCharacters.find((c) => c.id === current.charId);
-      if (currentChar?.category === 'INIMIGO') {
-        const players = allCharacters.filter((c) => c.category === 'PLAYER');
-        for (const pc of players) {
-          import('@/lib/auraEffects').then(({ getEnemyTurnAuraPrompts }) => {
-            const prompts = getEnemyTurnAuraPrompts(pc);
-            for (const p of prompts) {
-              addLog(
+        if (currentChar?.category === 'INIMIGO' || currentChar?.category === 'NPC') {
+          const players = allCharacters.filter((c) => c.category === 'PLAYER');
+          enqueueAuraMacabraTestsForEnemy(current.charId);
+          for (const pc of players) {
+            import('@/lib/auraEffects').then(({ getEnemyTurnAuraPrompts }) => {
+              const prompts = getEnemyTurnAuraPrompts(pc);
+              for (const p of prompts) {
+                if (p.auraId === 'aura_macabra') continue;
+                addLog(
                 'system',
                 `✨ ${p.auraName} de ${p.ownerName} → se ${current.charName} estiver em ${p.radiusM}m, faça TR de ${p.saveType}. Em falha: ${p.onFailText}`,
               );
