@@ -253,9 +253,14 @@ export function ReactionPromptOverlay() {
           }}
           onCobrirSe={(peSpent) => {
             if (!canReact(p.charId, p.kind)) return;
+            const maxPe = Math.max(0, Math.min(p.payload?.maxPe ?? 0, p.payload?.peAvailable ?? 0));
+            if (!Number.isInteger(peSpent) || peSpent < 1 || peSpent > maxPe) {
+              playErrorSound();
+              addLog('system', `${p.charName}: gasto de Cobrir-se fora do limite disponível.`);
+              return;
+            }
             useReactionStore.getState().resolveDecision(p.id, peSpent);
             playSuccessSound();
-            addLog('combat', `🛡️ ${p.charName}: confirmou Cobrir-se antes da aplicação do dano.`);
           }}
         />
       ))}
@@ -287,6 +292,7 @@ function PromptCard({
 }: PromptCardProps) {
   const [tier, setTier] = useState<'fraca' | 'media' | 'forte' | 'extrema'>('fraca');
   const [cobrirPe, setCobrirPe] = useState<number>(1);
+  const maxCobrirPe = Math.max(0, Math.min(p.payload?.maxPe ?? 0, p.payload?.peAvailable ?? 0));
   const [secondsLeft, setSecondsLeft] = useState(() => Math.max(0, Math.ceil(((p.expiresAt ?? Date.now() + 12000) - Date.now()) / 1000)));
   useEffect(() => {
     const update = () => setSecondsLeft(Math.max(0, Math.ceil(((p.expiresAt ?? Date.now()) - Date.now()) / 1000)));
@@ -511,9 +517,9 @@ function PromptCard({
             <input
               type="number"
               min={1}
-              max={Math.min(p.payload?.maxPe ?? 1, p.payload?.peAvailable ?? 1)}
-              value={cobrirPe}
-              onChange={(e) => setCobrirPe(Math.max(1, parseInt(e.target.value || '1', 10)))}
+              max={maxCobrirPe}
+              value={Math.min(cobrirPe, maxCobrirPe)}
+              onChange={(e) => setCobrirPe(Math.min(maxCobrirPe, Math.max(1, parseInt(e.target.value || '1', 10))))}
               className="w-14 text-xs bg-secondary/40 border border-border rounded px-1.5 py-1 text-foreground"
             />
             <span className="text-xs text-muted-foreground">
@@ -521,7 +527,8 @@ function PromptCard({
             </span>
             <button
               onClick={() => onCobrirSe(cobrirPe)}
-              className="ml-auto text-xs px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
+              disabled={maxCobrirPe <= 0 || cobrirPe > maxCobrirPe}
+              className="ml-auto text-xs px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold disabled:cursor-not-allowed disabled:opacity-50"
             >
               🛡️ Cobrir-se
             </button>

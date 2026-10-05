@@ -18,6 +18,7 @@ import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { grantAdvantage } from '@/lib/omni/rollAdvantage';
 import { rollD20Com } from '@/lib/dice';
+import { getReactionsAvailable } from '@/lib/reactionBudget';
 
 export const TIRO_FALSO_ID = 'ec-tiro-falso';
 
@@ -47,7 +48,7 @@ export function tiroFalsoPodeUsar(
   if (aliadoId === espId) return { ok: false, reason: 'O tiro falso auxilia outro aliado.' };
   if (!cs.find((x) => x.id === aliadoId)) return { ok: false, reason: 'Escolha o aliado que vai atacar.' };
   if (!cs.find((x) => x.id === inimigoId)) return { ok: false, reason: 'Escolha o inimigo atacado.' };
-  if ((esp.reactionsCurrent ?? 0) <= 0) return { ok: false, reason: 'Sem reação disponível.' };
+  if (getReactionsAvailable(esp) <= 0) return { ok: false, reason: 'Sem reação disponível.' };
   const alcance = tiroFalsoAlcanceM(esp);
   if (alcance === null) {
     return { ok: false, reason: 'Empunhe uma arma à distância ou de fogo.' };
@@ -81,7 +82,7 @@ export async function tiroFalsoExecutar(
   const ini = cs.find((x) => x.id === inimigoId)!;
 
   useCharacterStore.getState().updateCharacter(espId, {
-    reactionsCurrent: Math.max(0, (esp!.reactionsCurrent ?? 0) - 1),
+    reactionsCurrent: getReactionsAvailable(esp!) - 1,
   });
 
   const cd = specDCFor(esp!);

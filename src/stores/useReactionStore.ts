@@ -13,8 +13,10 @@ import type { OpcoesDano } from '@/lib/omni/contextoDano';
  */
 import { create } from 'zustand';
 import type { DamageType } from '@/types';
+import type { Character } from '@/types';
 import { destinatarioReacao, podeResponderReacao } from '@/lib/omni/destinatarioReacao';
 import { useCharacterStore } from '@/stores/useCharacterStore';
+import { getReactionsAvailable } from '@/lib/reactionBudget';
 import { useCombatStore } from '@/stores/useCombatStore';
 
 export type ReactionKind =
@@ -135,7 +137,7 @@ interface ReactionStoreState {
   reactionsLeft: (charId: string) => number;
   hasReactionAvailable: (charId: string) => boolean;
   /** Debita atomicamente a reação da ficha e registra o consumo. */
-  consumeReaction: (charId: string) => boolean;
+  consumeReaction: (charId: string, updates?: Partial<Character>) => boolean;
   /** Limpa apenas a telemetria no início da rodada; saldo da ficha é reposto pelo motor de turnos. */
   resetRoundReactions: () => void;
 }
@@ -180,15 +182,15 @@ export const useReactionStore = create<ReactionStoreState>((set, get) => ({
   },
   reactionsLeft: (charId) => {
     const c = useCharacterStore.getState().characters.find((character) => character.id === charId);
-    return Math.max(0, c?.reactionsCurrent ?? c?.reactionsMax ?? 1);
+    return Math.max(0, c ? getReactionsAvailable(c) : 0);
   },
   hasReactionAvailable: (charId) => get().reactionsLeft(charId) > 0,
-  consumeReaction: (charId) => {
+  consumeReaction: (charId, updates = {}) => {
     const character = useCharacterStore.getState().characters.find((c) => c.id === charId);
     if (!character) return false;
-    const available = character.reactionsCurrent ?? character.reactionsMax ?? 1;
+    const available = getReactionsAvailable(character);
     if (available <= 0) return false;
-    useCharacterStore.getState().updateCharacter(charId, { reactionsCurrent: available - 1 });
+    useCharacterStore.getState().updateCharacter(charId, { ...updates, reactionsCurrent: available - 1 });
     set((state) => ({
       reactionsUsedByChar: {
         ...state.reactionsUsedByChar,

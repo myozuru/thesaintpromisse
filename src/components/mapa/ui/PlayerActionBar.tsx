@@ -22,6 +22,7 @@ import { isEspecialistaCombate, getAdeptoCombatStyle } from '@/lib/combateEstilo
 import { useRoleStore } from '@/stores/useRoleStore';
 import { useProfileStore } from '@/stores/useProfileStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
+import { getReactionsAvailable } from '@/lib/reactionBudget';
 import { findMyCharacter } from '@/lib/myCharacter';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
@@ -151,7 +152,7 @@ export function PlayerActionBar() {
     const ac = activeChar as any;
     const actions = ac.actionsCurrent ?? 0;
     const bonus = ac.bonusActionsCurrent ?? 0;
-    const reactions = ac.reactionsCurrent ?? 0;
+    const reactions = getReactionsAvailable(ac);
     const pe = ac.peCurrent ?? 0;
     const actionLabel: Record<string, string> = {
       action: 'Ação Comum',

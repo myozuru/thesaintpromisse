@@ -116,8 +116,7 @@ export async function responderOfertaRemota(janelaId: string, ofertaId?: string,
     const cfg = { ...oferta.cfg, tipo_alvo: oferta.alvoId === oferta.usuarioId ? 'proprio' as const : 'unico' as const, ...(remoto.evento.movimento ? { alcanceM: 0 } : {}) };
     const r = await executarAcaoAtiva(oferta.usuarioId, cfg, oferta.alvoId, oferta.ent, { ignorarReacoes: true, instanciaId: oferta.instanceId });
     if (!r.ok) throw new Error(r.reason);
-    const tipoAcao = oferta.cfg.custo_recursos?.tipo_acao ?? oferta.cfg.acao;
-    if (tipoAcao === 'reacao' || tipoAcao === 'sustentada' && oferta.cfg.acao === 'reacao') useReactionStore.getState().consumeReaction(oferta.usuarioId);
+    // executarAcaoAtiva já debita a reação no mesmo patch dos outros custos.
     const resultado = { cancelado: !!r.efeitoAplicado && !!oferta.cfg.reacao?.cancelar_evento, defesaBonus: r.efeitoAplicado ? oferta.cfg.reacao?.defesa_bonus ?? 0 : 0 };
     useLogStore.getState().addLog('combat', `↪ ${oferta.nomeUsuario} reagiu com ${oferta.cfg.nome}${resultado.cancelado ? ' e interrompeu o evento' : ''}.`);
     window.dispatchEvent(new CustomEvent('omni-reaction:send', { detail: { tipo: 'resultado', janelaId, perfilId, clienteOrigem, resultado } }));
@@ -241,8 +240,7 @@ export async function responderReacaoAtiva(id: string, ofertaId?: string): Promi
     const cfg = { ...oferta.cfg, tipo_alvo: oferta.alvoId === oferta.usuarioId ? 'proprio' as const : 'unico' as const, ...(j.evento.movimento ? { alcanceM: 0 } : {}) };
     const r = await executarAcaoAtiva(oferta.usuarioId, cfg, oferta.alvoId, oferta.ent, { ignorarReacoes: true, instanciaId: oferta.instanceId });
     if (!r.ok) throw new Error(r.reason);
-    const tipoAcao = oferta.cfg.custo_recursos?.tipo_acao ?? oferta.cfg.acao;
-    if (tipoAcao === 'reacao' || tipoAcao === 'sustentada' && oferta.cfg.acao === 'reacao') useReactionStore.getState().consumeReaction(oferta.usuarioId);
+    // executarAcaoAtiva já debita a reação no mesmo patch dos outros custos.
     if (r.efeitoAplicado) {
       resultado.defesaBonus += oferta.cfg.reacao?.defesa_bonus ?? 0;
       resultado.cancelado ||= !!oferta.cfg.reacao?.cancelar_evento;

@@ -42,6 +42,7 @@ import { PRE_ANALISE_ATENCAO, PRE_ANALISE_ID } from '@/lib/suportePreAnaliseReco
 import { consumeAdvantageFor, consumeFlatBonusFor, applyAdvantageToD20 } from '@/lib/omni/rollAdvantage';
 import { maybeApplyRecompensa } from '@/lib/suportePreAnaliseRecompensa';
 import { cn } from '@/lib/utils';
+import { getReactionsAvailable } from '@/lib/reactionBudget';
 import { Eye, EyeOff, Dice1, ChevronDown, ChevronUp, Zap, Plus, X, Heart, Sparkles, Shield, Backpack, Star, Crosshair, RotateCcw, Gem, ScrollText, ShieldAlert, AlertTriangle, HelpCircle, Wand2, Moon, Wallet, Sword, Trash2 } from 'lucide-react';
 import { playDiceSound, playClickSound, playToggleSound, playSuccessSound, playErrorSound, playFichaToggleSound } from '@/lib/sounds';
 import { NullSafeInput } from './NullSafeInput';
@@ -1885,11 +1886,11 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
             AB {c.bonusActionsCurrent}/{c.bonusActionsMax + itemBonuses.bonusActions}
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); if (c.reactionsCurrent > 0) updateCharacter(c.id, { reactionsCurrent: c.reactionsCurrent - 1 }); }}
-            className={cn('rounded px-1.5 py-0.5 text-xs font-bold border transition-colors', c.reactionsCurrent > 0 ? 'bg-neon-yellow/20 text-neon-yellow border-neon-yellow/40' : 'bg-secondary/30 text-muted-foreground/50 border-border')}
+            onClick={(e) => { e.stopPropagation(); const available = getReactionsAvailable(c); if (available > 0) updateCharacter(c.id, { reactionsCurrent: available - 1 }); }}
+            className={cn('rounded px-1.5 py-0.5 text-xs font-bold border transition-colors', getReactionsAvailable(c) > 0 ? 'bg-neon-yellow/20 text-neon-yellow border-neon-yellow/40' : 'bg-secondary/30 text-muted-foreground/50 border-border')}
             title="Reação"
           >
-            RÇ {c.reactionsCurrent}/{c.reactionsMax + itemBonuses.reactions}
+            RÇ {getReactionsAvailable(c)}/{c.reactionsMax + itemBonuses.reactions}
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); if (c.opportunityCurrent > 0) updateCharacter(c.id, { opportunityCurrent: c.opportunityCurrent - 1 }); }}

@@ -319,7 +319,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
     if (source.peCurrent < effectiveCostPE) return false;
     if (effectiveActionType === 'bonus' && source.bonusActionsCurrent <= 0) return false;
     if (effectiveActionType === 'action' && source.actionsCurrent <= 0) return false;
-    if (effectiveActionType === 'reaction' && source.reactionsCurrent <= 0) return false;
+    if (effectiveActionType === 'reaction' && (source.reactionsCurrent ?? source.reactionsMax ?? 1) <= 0) return false;
     if (effectiveActionType === 'full' && (source.actionsCurrent < source.actionsMax || source.bonusActionsCurrent < source.bonusActionsMax)) return false;
     return true;
   };
@@ -334,7 +334,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
     }
     if (effectiveActionType === 'bonus' && source.bonusActionsCurrent <= 0) return fundOutcome.asBonusAction ? 'Sem Ação Bônus (Feitiço Rápido)' : 'Sem Ação Bônus';
     if (effectiveActionType === 'action' && source.actionsCurrent <= 0) return 'Sem Ação Comum';
-    if (effectiveActionType === 'reaction' && source.reactionsCurrent <= 0) return 'Sem Reação';
+    if (effectiveActionType === 'reaction' && (source.reactionsCurrent ?? source.reactionsMax ?? 1) <= 0) return 'Sem Reação';
     if (effectiveActionType === 'full') return 'Precisa de todas as ações (AC+AB)';
     return '';
   };
@@ -776,7 +776,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
     const source = useCharacterStore.getState().characters.find(c => c.id === sourceCharId)!;
     if (effectiveActionType === 'bonus') updates.bonusActionsCurrent = source.bonusActionsCurrent - 1;
     else if (effectiveActionType === 'action') updates.actionsCurrent = source.actionsCurrent - 1;
-    else if (effectiveActionType === 'reaction') updates.reactionsCurrent = source.reactionsCurrent - 1;
+    else if (effectiveActionType === 'reaction') updates.reactionsCurrent = (source.reactionsCurrent ?? source.reactionsMax ?? 1) - 1;
     else if (effectiveActionType === 'full') { updates.actionsCurrent = 0; updates.bonusActionsCurrent = 0; }
     return updates;
   };
@@ -1901,4 +1901,3 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
     </div>
   );
 }
-

@@ -10,6 +10,7 @@
 import type { Character } from '@/types';
 import { isEspecialistaCombate } from '@/lib/combateEstilos';
 import { getTrainingBonusByLevel } from '@/lib/levelEngine';
+import { getReactionsAvailable } from '@/lib/reactionBudget';
 
 export const ASSUMIR_POSTURA_ID = 'ec-assumir-postura';
 
@@ -136,7 +137,7 @@ export function terraPvtPatch(c: Character): Partial<Character> | null {
 
 /** Lua: reação que reduz o dano de um ataque pelo nível. */
 export function luaReducao(c: Character): number {
-  return posturaAtiva(c) === 'lua' && (c.reactionsCurrent ?? 0) > 0 ? (c.level ?? 1) : 0;
+  return posturaAtiva(c) === 'lua' && getReactionsAvailable(c) > 0 ? (c.level ?? 1) : 0;
 }
 
 /** Dragão: TR de Fortitude de quem está perto do alvo. */

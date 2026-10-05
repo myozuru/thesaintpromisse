@@ -14,6 +14,7 @@ import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { Skull, RefreshCw, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getReactionsAvailable } from '@/lib/reactionBudget';
 
 interface Props {
   character: Character;
@@ -24,6 +25,7 @@ export function CamDeathReactionDialog({ character: c, onClose }: Props) {
   const { switchCore, markActiveCoreFallen, updateCharacter } = useCharacterStore();
   const addLog = useLogStore(s => s.addLog);
   const [target, setTarget] = useState<CoreId | ''>('');
+  const reactionsAvailable = getReactionsAvailable(c);
 
   const switchable = useMemo(
     () =>
@@ -35,7 +37,7 @@ export function CamDeathReactionDialog({ character: c, onClose }: Props) {
 
   const handleAccept = () => {
     if (!target) return;
-    if (c.reactionsCurrent <= 0) {
+    if (reactionsAvailable <= 0) {
       addLog('system', `❌ ${c.name} sem Reação disponível.`);
       return;
     }
@@ -44,7 +46,7 @@ export function CamDeathReactionDialog({ character: c, onClose }: Props) {
       addLog('system', `❌ Reação falhou — núcleo indisponível.`);
       return;
     }
-    updateCharacter(c.id, { reactionsCurrent: c.reactionsCurrent - 1 });
+    updateCharacter(c.id, { reactionsCurrent: reactionsAvailable - 1 });
     addLog('combat', `⚡ ${c.name} usou Reação — trocou para ${target.toUpperCase()}.`);
     onClose();
   };
@@ -127,11 +129,11 @@ export function CamDeathReactionDialog({ character: c, onClose }: Props) {
           </button>
           <button
             onClick={handleAccept}
-            disabled={!target || c.reactionsCurrent <= 0}
+            disabled={!target || reactionsAvailable <= 0}
             className="flex-[2] rounded-lg bg-pe/30 border border-pe text-pe px-3 py-2 text-xs font-bold hover:bg-pe/50 disabled:opacity-40 flex items-center justify-center gap-2"
           >
             <RefreshCw className="h-3.5 w-3.5" />
-            Usar Reação ({c.reactionsCurrent} disp.)
+            Usar Reação ({reactionsAvailable} disp.)
           </button>
         </div>
       </div>

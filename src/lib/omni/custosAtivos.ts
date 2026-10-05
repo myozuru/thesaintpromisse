@@ -99,7 +99,8 @@ export function validarRecursosAtivos(u: Character, p: PlanoCustosAtivos): { ok:
   if (p.pv > 0 && (!Number.isFinite(u.hpCurrent) || (u.hpCurrent ?? 0) <= p.pv)) return { ok: false, reason: `PV insuficiente: o custo de ${p.pv} deve deixar ao menos 1 PV.` };
   if (p.acao === 'comum' && (!Number.isFinite(u.actionsCurrent ?? 1) || (u.actionsCurrent ?? 1) < 1)) return { ok: false, reason: 'Sem Ação Comum disponível.' };
   if (p.acao === 'bonus' && (!Number.isFinite(u.bonusActionsCurrent ?? 1) || (u.bonusActionsCurrent ?? 1) < 1)) return { ok: false, reason: 'Sem Ação Bônus disponível.' };
-  if (p.acao === 'reacao' && (!Number.isFinite(u.reactionsCurrent ?? 1) || (u.reactionsCurrent ?? 1) < 1)) return { ok: false, reason: 'Sem Reação disponível.' };
+  const reacoesDisponiveis = u.reactionsCurrent ?? u.reactionsMax ?? 1;
+  if (p.acao === 'reacao' && (!Number.isFinite(reacoesDisponiveis) || reacoesDisponiveis < 1)) return { ok: false, reason: 'Sem Reação disponível.' };
   return { ok: true };
 }
 
@@ -109,7 +110,7 @@ export function patchCustosAtivos(u: Character, p: PlanoCustosAtivos): Partial<C
   if (p.pv) patch.hpCurrent = u.hpCurrent - p.pv;
   if (p.acao === 'comum') patch.actionsCurrent = Math.max(0, (u.actionsCurrent ?? 1) - 1);
   if (p.acao === 'bonus') patch.bonusActionsCurrent = Math.max(0, (u.bonusActionsCurrent ?? 1) - 1);
-  if (p.acao === 'reacao') patch.reactionsCurrent = Math.max(0, (u.reactionsCurrent ?? 1) - 1);
+  if (p.acao === 'reacao') patch.reactionsCurrent = Math.max(0, (u.reactionsCurrent ?? u.reactionsMax ?? 1) - 1);
   if (p.contador && p.cargas > 0) patch.omniCounters = calcularContador(u.omniCounters ?? {}, p.contador, 'CONSUMIR_CONTADOR', { valor: p.cargas }).counters;
   if (p.armaMunicao && p.municao > 0) patch.weaponAmmo = { ...(u.weaponAmmo ?? {}), [p.armaMunicao.nome]: p.armaMunicao.restanteAntes - p.municao };
   return patch;

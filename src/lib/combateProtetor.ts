@@ -11,6 +11,7 @@ import { useLogStore } from '@/stores/useLogStore';
 import { charsDistanceMeters, fmtM, TOUCH_RANGE_M } from '@/lib/touchRange';
 import { grantAdvantage } from '@/lib/omni/rollAdvantage';
 import { hasCombatStyle } from '@/lib/combateEstilos';
+import { getReactionsAvailable } from '@/lib/reactionBudget';
 
 export const PROTETOR_RANGE_M = TOUCH_RANGE_M;
 
@@ -33,7 +34,7 @@ function baseCheck(protectorId: string, allyId: string): R {
   const p = chars().find((c) => c.id === protectorId);
   if (!p || !hasCombatStyle(p, 'protetor')) return { ok: false, reason: 'Sem Estilo do Protetor.' };
   if (allyId === protectorId) return { ok: false, reason: 'O Protetor protege outro alvo, não você mesmo.' };
-  if ((p.reactionsCurrent ?? 0) <= 0) return { ok: false, reason: 'Sem reação disponível.' };
+  if (getReactionsAvailable(p) <= 0) return { ok: false, reason: 'Sem reação disponível.' };
   const d = protetorDistance(protectorId, allyId);
   if (d === null) return { ok: false, reason: 'Aliado sem peça no mapa — não dá para medir 1,5 m.' };
   if (d > PROTETOR_RANGE_M + 0.05) return { ok: false, reason: `Aliado a ${fmtM(d)} m — falta ${fmtM(d - PROTETOR_RANGE_M)} m para 1,5 m.` };
@@ -42,7 +43,7 @@ function baseCheck(protectorId: string, allyId: string): R {
 
 function spendReaction(id: string) {
   const p = chars().find((c) => c.id === id)!;
-  useCharacterStore.getState().updateCharacter(id, { reactionsCurrent: Math.max(0, (p.reactionsCurrent ?? 0) - 1) });
+  useCharacterStore.getState().updateCharacter(id, { reactionsCurrent: getReactionsAvailable(p) - 1 });
 }
 
 export function protetorProteger(protectorId: string, allyId: string, attackerId: string): R {

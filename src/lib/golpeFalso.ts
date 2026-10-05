@@ -22,6 +22,7 @@ import { useMapStore } from '@/stores/useMapStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { grantAdvantage } from '@/lib/omni/rollAdvantage';
 import { rollD20Com } from '@/lib/dice';
+import { getReactionsAvailable } from '@/lib/reactionBudget';
 
 export const GOLPE_FALSO_ID = 'ec-golpe-falso';
 
@@ -85,7 +86,7 @@ export function golpeFalsoPodeUsar(espId: string, aliadoId: string, inimigoId: s
   if (!cs.find((x) => x.id === aliadoId)) return { ok: false, reason: 'Escolha o aliado que vai atacar.' };
   const ini = cs.find((x) => x.id === inimigoId);
   if (!ini) return { ok: false, reason: 'Escolha o inimigo atacado.' };
-  if ((esp.reactionsCurrent ?? 0) <= 0) return { ok: false, reason: 'Sem reação disponível.' };
+  if (getReactionsAvailable(esp) <= 0) return { ok: false, reason: 'Sem reação disponível.' };
   const alcance = golpeFalsoAlcanceM(esp);
   if (alcance === null) return { ok: false, reason: 'Empunhe uma arma para medir o alcance.' };
   const d = golpeFalsoDistancia(espId, inimigoId);
@@ -117,7 +118,7 @@ export async function golpeFalsoExecutar(
   const ini = cs.find((x) => x.id === inimigoId)!;
 
   useCharacterStore.getState().updateCharacter(espId, {
-    reactionsCurrent: Math.max(0, (esp!.reactionsCurrent ?? 0) - 1),
+    reactionsCurrent: getReactionsAvailable(esp!) - 1,
   });
 
   const cd = specDCFor(esp!);

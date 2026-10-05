@@ -470,7 +470,7 @@ export function SpecAbilitiesPanel({ character: c, editMode = false }: Props) {
                             (max !== null && used >= max) ||
                             (ability.activation === 'action' && c.actionsCurrent <= 0) ||
                             (ability.activation === 'bonus' && c.bonusActionsCurrent <= 0) ||
-                            (ability.activation === 'reaction' && c.reactionsCurrent <= 0) ||
+                            (ability.activation === 'reaction' && (c.reactionsCurrent ?? c.reactionsMax ?? 1) <= 0) ||
                             (ability.id === 'tec-economia-de-energia' && (c.economiaPEReserve ?? 0) <= 0)
                           }
                           className={cn(

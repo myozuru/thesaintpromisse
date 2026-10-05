@@ -16,6 +16,7 @@ import { isEspecialistaCombate } from '@/lib/combateEstilos';
 import { getPreparoAtual, spendPreparo } from '@/lib/artesCombate';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLogStore } from '@/stores/useLogStore';
+import { getReactionsAvailable } from '@/lib/reactionBudget';
 
 export const PREPARO_IMEDIATO_ID = 'ec-preparo-imediato';
 export const CUSTO_BONUS = 3;
@@ -95,13 +96,13 @@ export function dispararPreparada(charId: string, opts: { meuTurno: boolean }): 
   const store = useCharacterStore.getState();
   const c = store.characters.find((x) => x.id === charId);
   if (!c?.prontidaoPreparada) return { ok: false, reason: 'Nenhuma ação preparada.' };
-  if (!opts.meuTurno && (c.reactionsCurrent ?? 0) <= 0) {
+  if (!opts.meuTurno && getReactionsAvailable(c) <= 0) {
     return { ok: false, reason: 'Sem reação disponível para disparar fora do seu turno.' };
   }
   const { tipo } = c.prontidaoPreparada;
   store.updateCharacter(charId, {
     prontidaoPreparada: null,
-    ...(opts.meuTurno ? {} : { reactionsCurrent: Math.max(0, (c.reactionsCurrent ?? 0) - 1) }),
+    ...(opts.meuTurno ? {} : { reactionsCurrent: getReactionsAvailable(c) - 1 }),
     ...(tipo === 'action'
       ? { actionsCurrent: (c.actionsCurrent ?? 0) + 1 }
       : { bonusActionsCurrent: (c.bonusActionsCurrent ?? 0) + 1 }),

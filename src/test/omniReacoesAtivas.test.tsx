@@ -94,8 +94,10 @@ describe('janelas de reação', () => {
     fireEvent.click(screen.getByText('Passar e continuar')); const r = await promessa; expect(r.attackRolls).toEqual([12]); expect(pegarFicha('u').reactionsCurrent).toBe(1);
   });
   it('defesa se aplica antes do dado, cobra uma vez e não vaza para outro ataque', async () => {
+    useCharacterStore.getState().updateCharacter('u', { reactionsCurrent: 2, reactionsMax: 2 });
     add(config({ defesa_bonus: 5 })); render(<ReacoesAtivasOverlay />); forcarDados(12, 3);
-    const p = ataque(); fireEvent.click(await screen.findByText('u: Responder')); const r = await p; expect(r.hit).toBe(false); expect(pegarFicha('u').peCurrent).toBe(18); expect(pegarFicha('u').reactionsCurrent).toBe(0); expect(useReactionStore.getState().hasReactionAvailable('u')).toBe(false);
+    const p = ataque(); fireEvent.click(await screen.findByText('u: Responder')); const r = await p; expect(r.hit).toBe(false); expect(pegarFicha('u').peCurrent).toBe(18); expect(pegarFicha('u').reactionsCurrent).toBe(1); expect(useReactionStore.getState().hasReactionAvailable('u')).toBe(true);
+    useCharacterStore.getState().updateCharacter('u', { reactionsCurrent: 0 });
     forcarDados(12, 3); expect((await ataque()).hit).toBe(true);
   });
   it('cancelamento impede qualquer d20 e dano do ataque', async () => {

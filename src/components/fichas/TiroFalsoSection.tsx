@@ -17,6 +17,7 @@ import {
   tiroFalsoExecutar,
   tiroFalsoPodeUsar,
 } from '@/lib/tiroFalso';
+import { getReactionsAvailable } from '@/lib/reactionBudget';
 
 const fmt = (n: number) => n.toFixed(1).replace('.', ',');
 
@@ -72,7 +73,7 @@ export function TiroFalsoSection({ character: c, target }: { character: Characte
   return (
     <div className="space-y-1.5 rounded-md border border-primary/40 bg-primary/5 p-2" data-testid="tiro-falso-secao">
       <p className="text-xs font-bold text-primary">
-        🔫 Tiro Falso — reação ({c.reactionsCurrent ?? 0} disp.)
+        🔫 Tiro Falso — reação ({getReactionsAvailable(c)} disp.)
         {alcance !== null
           ? <span className="ml-1 font-normal text-muted-foreground">· alcance {alcance} m</span>
           : <span className="ml-1 font-normal text-destructive">· empunhe uma arma à distância ou de fogo</span>}

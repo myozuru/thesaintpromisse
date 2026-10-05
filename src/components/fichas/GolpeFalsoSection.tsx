@@ -18,6 +18,7 @@ import {
   golpeFalsoPodeUsar,
   hasGolpeFalso,
 } from '@/lib/golpeFalso';
+import { getReactionsAvailable } from '@/lib/reactionBudget';
 
 const fmt = (n: number) => n.toFixed(1).replace('.', ',');
 
@@ -76,7 +77,7 @@ export function GolpeFalsoSection({ character: c, target }: { character: Charact
       data-testid="golpe-falso-secao"
     >
       <p className="text-xs font-bold text-primary">
-        🎭 Golpe Falso — reação ({c.reactionsCurrent ?? 0} disp.)
+        🎭 Golpe Falso — reação ({getReactionsAvailable(c)} disp.)
         {alcance !== null && <span className="ml-1 font-normal text-muted-foreground">· alcance {alcance} m</span>}
       </p>
       <select aria-label="Aliado que vai atacar" className={sel} value={aliadoId} onChange={(e) => setAliadoId(e.target.value)}>

@@ -1982,7 +1982,7 @@ export const useCharacterStore = create<CharacterStore>()(
         if (ab.activation === 'bonus' && c.bonusActionsCurrent <= 0) {
           return { ok: false, reason: 'Ação Bônus insuficiente.' };
         }
-        if (ab.activation === 'reaction' && c.reactionsCurrent <= 0) {
+        if (ab.activation === 'reaction' && (c.reactionsCurrent ?? c.reactionsMax ?? 1) <= 0) {
           return { ok: false, reason: 'Reação insuficiente.' };
         }
 
@@ -2061,7 +2061,7 @@ export const useCharacterStore = create<CharacterStore>()(
                 : (x.sacrificioCooldownRounds ?? 0),
               actionsCurrent: ab.activation === 'action' ? x.actionsCurrent - 1 : x.actionsCurrent,
               bonusActionsCurrent: ab.activation === 'bonus' ? x.bonusActionsCurrent - 1 : x.bonusActionsCurrent,
-              reactionsCurrent: ab.activation === 'reaction' ? x.reactionsCurrent - 1 : x.reactionsCurrent,
+              reactionsCurrent: ab.activation === 'reaction' ? (x.reactionsCurrent ?? x.reactionsMax ?? 1) - 1 : x.reactionsCurrent,
               specAbilityUsage: {
                 ...(x.specAbilityUsage ?? {}),
                 [abilityId]: (x.specAbilityUsage?.[abilityId] ?? 0) + 1,
@@ -2146,7 +2146,7 @@ export const useCharacterStore = create<CharacterStore>()(
         // ─── Especialista — Postura da Lua (reação reduz dano de ataque pelo nível) ─
         if (beforeChar && opts?.attackerId && totalDamage > 0 && !opts?.tags?.includes('__lua')) {
           const red = luaReducao(beforeChar);
-          if (red > 0 && (beforeChar.reactionsCurrent ?? 0) > 0) {
+          if (red > 0 && (beforeChar.reactionsCurrent ?? beforeChar.reactionsMax ?? 1) > 0) {
             const { useReactionStore, requestReactionDecision } = await import('@/stores/useReactionStore');
             if (!useReactionStore.getState().hasReactionAvailable(id)) {
               // A reação da rodada já foi gasta; aplica o dano sem abrir outra oferta.
@@ -2161,7 +2161,7 @@ export const useCharacterStore = create<CharacterStore>()(
             if (!reservarContinuidadeReacao()) return;
             if (answer === 1) {
               const current = get().characters.find((c) => c.id === id);
-              if (current && (current.reactionsCurrent ?? 0) > 0 && useReactionStore.getState().hasReactionAvailable(id)) {
+              if (current && (current.reactionsCurrent ?? current.reactionsMax ?? 1) > 0 && useReactionStore.getState().hasReactionAvailable(id)) {
                 const reduced = Math.max(0, rawDamage - red);
                 const used = useCombatStore.getState().movementUsedByChar[id] ?? 0;
                 get().updateCharacter(id, {
@@ -2369,17 +2369,18 @@ export const useCharacterStore = create<CharacterStore>()(
               if (!reservarContinuidadeReacao()) return;
               if (peSpent != null) {
                 const current = get().characters.find((c) => c.id === id);
-                if (current && peSpent > 0 && peSpent <= maxPe && peSpent <= (current.peCurrent ?? 0)) {
+                if (current && peSpent > 0 && peSpent <= maxPe && peSpent <= (current.peCurrent ?? 0) && useReactionStore.getState().hasReactionAvailable(id)) {
                   const calc = calcularCobrirSe(current, { peSpent, hasCoberturaAvancada: hasAdvancedCover });
                   if (calc.ok && calc.shieldGranted && calc.peSpent) {
-                    get().updateCharacter(id, {
+                    const spent = useReactionStore.getState().consumeReaction(id, {
                       peCurrent: Math.max(0, (current.peCurrent ?? 0) - calc.peSpent),
                       escCurrent: (current.escCurrent ?? 0) + calc.shieldGranted,
                     });
-                    useReactionStore.getState().consumeReaction(id);
-                    try {
-                      useLogStore.getState().addLog('combat', `🛡️ ${current.name}: Cobrir-se antes do impacto — ${calc.peSpent} PE geram ${calc.shieldGranted} PVTs.`);
-                    } catch { /* noop */ }
+                    if (spent) {
+                      try {
+                        useLogStore.getState().addLog('combat', `🛡️ ${current.name}: Cobrir-se antes do impacto — ${calc.peSpent} PE geram ${calc.shieldGranted} PVTs.`);
+                      } catch { /* noop */ }
+                    }
                   }
                 }
               }
@@ -3416,6 +3417,9 @@ export const useCharacterStore = create<CharacterStore>()(
         if (!c) return { ok: false, reason: 'Personagem não encontrado.' };
         const owned = new Set(c.chosenClAptitudes ?? []);
         if (!owned.has(clId)) return { ok: false, reason: 'Aptidão não adquirida.' };
+        if ((clId === 'cl-cobrir-se' || clId === 'cl-cobertura-avancada') && (c.reactionsCurrent ?? c.reactionsMax ?? 1) <= 0) {
+          return { ok: false, reason: 'Reação insuficiente.' };
+        }
 
         // Pré-rola d20s na bandeja 3D para aptidões que exigem teste.
         // Cada calc* recebe `rollFn` consumindo a fila pré-rolada.
@@ -3514,7 +3518,13 @@ export const useCharacterStore = create<CharacterStore>()(
         set((s) => ({
           characters: s.characters.map((cc) => {
             if (cc.id !== charId) return cc;
-            const next = { ...cc, peCurrent: Math.max(0, cc.peCurrent - calc!.peSpent) };
+            const next = {
+              ...cc,
+              peCurrent: Math.max(0, cc.peCurrent - calc!.peSpent),
+              ...((clId === 'cl-cobrir-se' || clId === 'cl-cobertura-avancada')
+                ? { reactionsCurrent: Math.max(0, (cc.reactionsCurrent ?? cc.reactionsMax ?? 1) - 1) }
+                : {}),
+            };
             if (calc!.shieldGranted) next.escCurrent = (next.escCurrent ?? 0) + calc!.shieldGranted;
             if (calc!.omniFlagPatch) {
               next.omniFlags = { ...(next.omniFlags ?? {}), ...calc!.omniFlagPatch };
@@ -3759,6 +3769,13 @@ export const useCharacterStore = create<CharacterStore>()(
             if (c.id !== charId) return c;
             const apt = getAuraAptitudeById(auraId);
             if (!apt) { result = { ok: false, reason: 'Aptidão inexistente.' }; return c; }
+            if (apt.activation === 'reaction' && !(c.chosenAuraAptitudes ?? []).includes(auraId)) {
+              result = { ok: false, reason: 'Aptidão não adquirida.' }; return c;
+            }
+            if (apt.activation === 'reaction') {
+              result = { ok: false, reason: 'Esta reação só pode ser resolvida quando o gatilho correspondente acontecer.' };
+              return c;
+            }
             const peCost = resolveFixedPeCost(apt.peCost);
             if (peCost > 0 && c.peCurrent < peCost) {
               result = { ok: false, reason: `PE insuficiente (${c.peCurrent}/${peCost}).` }; return c;

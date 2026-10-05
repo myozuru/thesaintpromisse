@@ -1099,7 +1099,11 @@ function ChosenCard({
             </span>
           )}
         </button>
-        {isToggleable ? (
+        {apt.activation === 'reaction' ? (
+          <span className="text-xs px-2 py-1 rounded text-muted-foreground" title="Será oferecida quando o gatilho da reação ocorrer">
+            No gatilho
+          </span>
+        ) : isToggleable ? (
           <button
             onClick={onTogglePower}
             disabled={toggleDisabled}

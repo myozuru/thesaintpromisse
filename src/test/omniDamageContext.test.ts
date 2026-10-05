@@ -85,6 +85,42 @@ describe('Cobrir-se antes da aplicação do dano', () => {
     expect(useReactionStore.getState().reactionsUsedByChar.alvo).toBe(1);
   });
 
+  it('rejeita gasto acima do máximo informado e aplica o dano sem cobrar recursos', async () => {
+    montarMesa([char('alvo', {
+      hpCurrent: 100, escCurrent: 0, peCurrent: 3, reactionsCurrent: 2, reactionsMax: 2,
+      cursedAptitudes: { CL: 1 } as never,
+      chosenClAptitudes: ['cl-cobrir-se'],
+    })], {});
+
+    const damage = useCharacterStore.getState().applyDamage('alvo', 10, 'DCO');
+    await waitFor(() => expect(useReactionStore.getState().prompts.some((p) => p.kind === 'cobrir_se_offer')).toBe(true));
+    const prompt = useReactionStore.getState().prompts.find((p) => p.kind === 'cobrir_se_offer')!;
+    expect(prompt.payload?.maxPe).toBe(3);
+    useReactionStore.getState().resolveDecision(prompt.id, 4);
+    await damage;
+
+    expect(pegarFicha('alvo')).toMatchObject({ hpCurrent: 90, escCurrent: 0, peCurrent: 3, reactionsCurrent: 2 });
+    expect(useReactionStore.getState().reactionsUsedByChar.alvo ?? 0).toBe(0);
+  });
+
+  it('não cobra PE nem reação se o saldo mudar e ficar abaixo da decisão pendente', async () => {
+    montarMesa([char('alvo', {
+      hpCurrent: 100, escCurrent: 0, peCurrent: 3, reactionsCurrent: 2, reactionsMax: 2,
+      cursedAptitudes: { CL: 1 } as never,
+      chosenClAptitudes: ['cl-cobrir-se'],
+    })], {});
+
+    const damage = useCharacterStore.getState().applyDamage('alvo', 10, 'DCO');
+    await waitFor(() => expect(useReactionStore.getState().prompts.some((p) => p.kind === 'cobrir_se_offer')).toBe(true));
+    const prompt = useReactionStore.getState().prompts.find((p) => p.kind === 'cobrir_se_offer')!;
+    useCharacterStore.getState().updateCharacter('alvo', { peCurrent: 1, reactionsCurrent: 0 });
+    useReactionStore.getState().resolveDecision(prompt.id, 2);
+    await damage;
+
+    expect(pegarFicha('alvo')).toMatchObject({ hpCurrent: 90, escCurrent: 0, peCurrent: 1, reactionsCurrent: 0 });
+    expect(useReactionStore.getState().reactionsUsedByChar.alvo ?? 0).toBe(0);
+  });
+
   it('aplica o dano normal quando o jogador recusa', async () => {
     montarMesa([char('alvo', {
       hpCurrent: 100, escCurrent: 0, peCurrent: 3,

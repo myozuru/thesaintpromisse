@@ -18,6 +18,7 @@ import { mesclarDados, projetarDadosLegados } from './componentes/legado';
  */
 import type { Character, Attribute } from '@/types';
 import { getMasteryBonus } from '@/types';
+import { getReactionsAvailable } from '@/lib/reactionBudget';
 import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import { aggregateTalentBonuses } from '@/lib/talentEffects';
 import { aggregateAuraEffects } from '@/lib/auraEffects';
@@ -279,13 +280,13 @@ export function montarVariaveisDoPersonagem(
     ACAO_BONUS: c.bonusActionsCurrent ?? 0,
     ADO_MAX: c.opportunityMax ?? 0,
     ADO_RESTANTES: c.opportunityCurrent ?? 0,
-    REACAO_DISPONIVEL: (c.reactionsCurrent ?? 0) > 0 ? 1 : 0,
+    REACAO_DISPONIVEL: getReactionsAvailable(c) > 0 ? 1 : 0,
     MOVIMENTO_RESTANTE: movimentoRestante,
 
     // ─── ⚡ PR-1: AdO & Reações ─────────────────────────────────────────
     REACOES_MAX: c.reactionsMax ?? 1,
-    REACOES_RESTANTES: c.reactionsCurrent ?? 0,
-    REACAO_USADA_NESTA_RODADA: (c.reactionsCurrent ?? 0) < (c.reactionsMax ?? 1) ? 1 : 0,
+    REACOES_RESTANTES: getReactionsAvailable(c),
+    REACAO_USADA_NESTA_RODADA: getReactionsAvailable(c) < (c.reactionsMax ?? 1) ? 1 : 0,
     ...(() => {
       let grant: { mode?: string; consumed?: boolean; restrictToCharId?: string } | undefined;
       try { grant = useOpportunityStore.getState().grants[c.id]; } catch { grant = undefined; }
@@ -651,7 +652,7 @@ export function montarVariaveisDoPersonagem(
       const bonusDef = totalCob ? 999 : (tresQuartos ? 5 : (meiaCob ? 2 : 0));
 
       const reacMax = c.reactionsMax ?? 1;
-      const reacAtu = c.reactionsCurrent ?? 0;
+      const reacAtu = getReactionsAvailable(c);
 
       return {
         TEM_VANTAGEM: qtdAdv > 0 ? 1 : 0,

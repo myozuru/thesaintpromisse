@@ -23,6 +23,7 @@ import { protetorProteger, protetorResguardarTR, protetorDistance, PROTETOR_RANG
 import { fmtM } from '@/lib/touchRange';
 import { interceptadorInterceptar, interceptadorDice, interceptadorMod } from '@/lib/combateInterceptador';
 import { useMapStore } from '@/stores/useMapStore';
+import { getReactionsAvailable } from '@/lib/reactionBudget';
 
 function ProtetorSection({ character: c }: { character: Character }) {
   const characters = useCharacterStore((s) => s.characters);
@@ -41,7 +42,7 @@ function ProtetorSection({ character: c }: { character: Character }) {
   const btn = 'rounded-md border border-primary bg-primary/25 px-2 py-1.5 text-sm font-bold text-primary hover:bg-primary/45 disabled:opacity-40';
   return (
     <div className="space-y-1.5 border-t border-border/50 pt-2" onClick={(e) => e.stopPropagation()}>
-      <p className="text-sm font-bold text-foreground">Protetor — reação ({c.reactionsCurrent ?? 0} disp.)</p>
+      <p className="text-sm font-bold text-foreground">Protetor — reação ({getReactionsAvailable(c)} disp.)</p>
       <select aria-label="Aliado protegido" className={sel} value={allyId} onChange={(e) => setAllyId(e.target.value)}>
         <option value="">Aliado a até 1,5 m…</option>
         {others.map((x) => <option key={x.id} value={x.id}>{x.name}{tag(x.id)}</option>)}
@@ -51,9 +52,9 @@ function ProtetorSection({ character: c }: { character: Character }) {
         {others.filter((x) => x.id !== allyId).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
       </select>
       <div className="grid grid-cols-2 gap-1.5">
-        <button type="button" className={btn} disabled={!allyId || !attackerId || (c.reactionsCurrent ?? 0) <= 0}
+        <button type="button" className={btn} disabled={!allyId || !attackerId || getReactionsAvailable(c) <= 0}
           onClick={() => run(protetorProteger(c.id, allyId, attackerId))}>Impor desvantagem</button>
-        <button type="button" className={btn} disabled={!allyId || (c.reactionsCurrent ?? 0) <= 0}
+        <button type="button" className={btn} disabled={!allyId || getReactionsAvailable(c) <= 0}
           onClick={() => run(protetorResguardarTR(c.id, allyId))}>Vantagem no TR</button>
       </div>
       {msg && <p className="text-sm text-muted-foreground">{msg}</p>}
@@ -80,13 +81,13 @@ function InterceptadorSection({ character: c }: { character: Character }) {
   const n = interceptadorDice(c.level ?? 1); const mod = interceptadorMod(c);
   return (
     <div className="space-y-1.5 border-t border-border/50 pt-2" onClick={(e) => e.stopPropagation()}>
-      <p className="text-sm font-bold text-foreground">Interceptador — reação ({c.reactionsCurrent ?? 0} disp.) · {n}d10{mod >= 0 ? '+' : ''}{mod}</p>
+      <p className="text-sm font-bold text-foreground">Interceptador — reação ({getReactionsAvailable(c)} disp.) · {n}d10{mod >= 0 ? '+' : ''}{mod}</p>
       <select aria-label="Aliado interceptado" className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground" value={allyId} onChange={(e) => setAllyId(e.target.value)}>
         <option value="">Aliado a até 1,5 m…</option>
         {others.map((x) => <option key={x.id} value={x.id}>{x.name}{tag(x.id)}</option>)}
       </select>
       <button type="button" className="w-full rounded-md border border-primary bg-primary/25 px-2 py-1.5 text-sm font-bold text-primary hover:bg-primary/45 disabled:opacity-40"
-        disabled={!allyId || (c.reactionsCurrent ?? 0) <= 0}
+        disabled={!allyId || getReactionsAvailable(c) <= 0}
         onClick={() => { const r = interceptadorInterceptar(c.id, allyId); setMsg(r.ok ? `Reação usada: −${r.amount} no próximo dano do aliado.` : r.reason); }}>Interceptar</button>
       {msg && <p className="text-sm text-muted-foreground">{msg}</p>}
     </div>

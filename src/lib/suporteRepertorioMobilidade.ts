@@ -11,6 +11,7 @@ import { useProfileStore } from '@/stores/useProfileStore';
 import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import { hasSpecAbility } from '@/lib/suporteNivel2';
 import { effectiveMovement, MOBILIDADE_ID } from '@/lib/movementBudget';
+import { getReactionsAvailable } from '@/lib/reactionBudget';
 
 export const REPERTORIO_ID = 'sup-expandir-repertorio';
 export { MOBILIDADE_ID };
@@ -86,7 +87,7 @@ export function findMobilidadeReactors(fallenId: string, all: Character[]): Char
       c.category === 'PLAYER' &&
       hasSpecAbility(c, MOBILIDADE_ID) &&
       (c.hpCurrent ?? 0) > 0 &&
-      (c.reactionsCurrent ?? 0) > 0,
+      getReactionsAvailable(c) > 0,
   );
 }
 
@@ -99,10 +100,11 @@ export function aceitarMobilidade(supporterId: string, movementUsed: number): { 
   const store = useCharacterStore.getState();
   const c = store.characters.find((x) => x.id === supporterId);
   if (!c) return { ok: false, reason: 'Ficha não encontrada.', meters: 0 };
-  if ((c.reactionsCurrent ?? 0) <= 0) return { ok: false, reason: 'sem reação disponível', meters: 0 };
+  const reactionsAvailable = getReactionsAvailable(c);
+  if (reactionsAvailable <= 0) return { ok: false, reason: 'sem reação disponível', meters: 0 };
   const meters = getMobilidadeReacaoMeters(c);
   store.updateCharacter(c.id, {
-    reactionsCurrent: (c.reactionsCurrent ?? 0) - 1,
+    reactionsCurrent: reactionsAvailable - 1,
     mobilidadeReacaoM: meters,
     mobilidadeReacaoBase: movementUsed,
   });
