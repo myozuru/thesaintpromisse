@@ -9,7 +9,8 @@
  *   - fah_devorador_energia_offer   (informativo, +1 tempPE confirmado)
  *   - fah_presenca_nefasta          (rolagem por inimigo no início do combate)
  *
- * O overlay é montado uma única vez no FichasModule.
+ * O overlay é montado no shell global da aplicação, para continuar visível
+ * enquanto o jogador está no mapa ou em qualquer outra aba.
  */
 import { useState } from 'react';
 import { useReactionStore, type ReactionPrompt, kindConsumesReaction } from '@/stores/useReactionStore';

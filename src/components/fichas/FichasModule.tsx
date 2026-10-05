@@ -11,7 +11,6 @@ import { CharacterCategory, Character } from '@/types';
 import { CharacterCard, getAttrModifier } from './CharacterCard';
 import { TemporaryCharacterCard } from './TemporaryCharacterCard';
 import { CharacterWizard } from './CharacterWizard';
-import { ReactionPromptOverlay } from './ReactionPromptOverlay';
 import { FortunaPrompt } from './FortunaPrompt';
 import { IndomavelPrompt } from './IndomavelPrompt';
 import { ZonaRiscoPrompt } from './ZonaRiscoPrompt';
@@ -197,8 +196,6 @@ export function FichasModule() {
 
   return (
     <div className="space-y-4">
-      {/* Fase 9 — Overlay global de prompts de reação (Anuladora/Absorção/Redirecionadora) */}
-      <ReactionPromptOverlay />
       <FortunaPrompt />
       <IndomavelPrompt />
       <ZonaRiscoPrompt />

@@ -7,6 +7,7 @@ import { DataHub } from "@/components/fab/DataHub";
 import { GlobalClockTicker } from "@/components/chronos/GlobalClockTicker";
 import { JjkSwirl } from "@/components/JjkSwirl";
 import { TestRequestOverlay } from "@/components/fichas/TestRequestOverlay";
+import { ReactionPromptOverlay } from "@/components/fichas/ReactionPromptOverlay";
 import { TestRequestPanel } from "@/components/testes/TestRequestPanel";
 import { Dice6, ZoomIn, ZoomOut } from "lucide-react";
 import { playOpeningSound, playTabSound } from "@/lib/sounds";
@@ -290,6 +291,7 @@ export default function Index() {
         <DataHub open={hubOpen} onClose={() => setHubOpen(false)} />
         {role === 'MASTER' && <TestRequestPanel open={testsOpen} onClose={() => setTestsOpen(false)} />}
         <TestRequestOverlay />
+        <ReactionPromptOverlay />
 
     </div>
   );
