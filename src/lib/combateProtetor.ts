@@ -66,8 +66,8 @@ export function protetorResguardarTR(protectorId: string, allyId: string): R {
   const p = chars().find((c) => c.id === protectorId);
   if (!chk.ok) { log('combat', `🛡️ ${p?.name ?? '?'}: Protetor falhou — ${chk.reason}`); return chk; }
   const ally = chars().find((c) => c.id === allyId)!;
+  if (!spendReaction(protectorId)) return { ok: false, reason: 'Sem reação disponível.' };
   grantAdvantage(allyId, 'advantage', 'next_save', { expires: 'use', source: `Estilo do Protetor (${p!.name})`, grantedBy: protectorId });
-  spendReaction(protectorId);
   log('combat', `🛡️ ${p!.name} usa a reação (Estilo do Protetor): ${ally.name} tem vantagem no próximo Teste de Resistência.`);
   return { ok: true };
 }

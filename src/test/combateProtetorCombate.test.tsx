@@ -13,6 +13,8 @@ import { CombateEstilosPanel } from '@/components/fichas/CombateEstilosPanel';
 import { AttackPanel } from '@/components/fichas/AttackPanel';
 import { useLogStore } from '@/stores/useLogStore';
 import { peekAdvantageFor } from '@/lib/omni/rollAdvantage';
+import { protetorResguardarTR } from '@/lib/combateProtetor';
+import { useReactionStore } from '@/stores/useReactionStore';
 import { ficha, montarMesa, limparMesa, comoTela, pegarFicha, forcarDados } from './helpers/mesaReal';
 
 const prot = () => ficha('ana', {
@@ -31,7 +33,7 @@ function abrir(pos: Record<string, [number, number]>) {
 }
 
 beforeEach(async () => comoTela({ profileId: 'p-ana', role: 'PLAYER' }));
-afterEach(() => { cleanup(); limparMesa(); });
+afterEach(() => { cleanup(); limparMesa(); vi.restoreAllMocks(); });
 
 describe('Estilo do Protetor em combate', () => {
   it('aliado a 1,5 m: impõe desvantagem, gasta reação e o ataque real do inimigo sai com 2d20 (menor)', async () => {
@@ -72,5 +74,14 @@ describe('Estilo do Protetor em combate', () => {
     render(<CombateEstilosPanel character={pegarFicha('ana')} />);
     fireEvent.change(screen.getByLabelText('Aliado protegido'), { target: { value: 'caio' } });
     expect((screen.getByRole('button', { name: 'Vantagem no TR' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('não concede vantagem no TR se o consumo da reação falhar', () => {
+    montarMesa([prot(), aliado(), inimigo()], { ana: [0, 0], caio: [0, 1], bruno: [5, 0] });
+    vi.spyOn(useReactionStore.getState(), 'consumeReaction').mockReturnValue(false);
+
+    expect(protetorResguardarTR('ana', 'caio')).toEqual({ ok: false, reason: 'Sem reação disponível.' });
+    expect(peekAdvantageFor('caio', { kind: 'save', name: 'Reflexos' })).toBe('normal');
+    expect(pegarFicha('ana').reactionsCurrent).toBe(1);
   });
 });
