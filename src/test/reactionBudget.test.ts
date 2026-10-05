@@ -53,6 +53,13 @@ describe('orçamento de reação unificado com o saldo da ficha', () => {
     expect(useReactionStore.getState().reactionsUsedByChar.alvo).toBe(1);
   });
 
+  it('runReaction devolve reação e telemetria se o efeito lançar exceção', () => {
+    placeFicha(1);
+    expect(() => useReactionStore.getState().runReaction('alvo', () => { throw new Error('falha inesperada'); })).toThrow('falha inesperada');
+    expect(useCharacterStore.getState().characters[0].reactionsCurrent).toBe(1);
+    expect(useReactionStore.getState().reactionsUsedByChar.alvo ?? 0).toBe(0);
+  });
+
   it('reconhece consumo manual feito na ficha sem liberar reação pelo contador auxiliar', () => {
     placeFicha(1);
     useCharacterStore.getState().updateCharacter('alvo', { reactionsCurrent: 0 });

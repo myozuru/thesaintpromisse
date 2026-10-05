@@ -203,24 +203,31 @@ export const useReactionStore = create<ReactionStoreState>((set, get) => ({
   },
   runReaction: (charId, effect) => {
     if (!get().consumeReaction(charId)) return { ok: false, reason: 'Sem reação disponível.' };
-    const result = effect();
-    if (result.ok) return result;
-
-    // `effect` é síncrono; se sua própria validação falhou, desfaz apenas o
-    // débito feito acima e mantém intactos os recursos e usos da habilidade.
-    const character = useCharacterStore.getState().characters.find((c) => c.id === charId);
-    if (character) {
-      useCharacterStore.getState().updateCharacter(charId, {
-        reactionsCurrent: getReactionsAvailable(character) + 1,
+    const refund = () => {
+      // `effect` é síncrono; falha ou exceção devolve apenas o débito acima.
+      const character = useCharacterStore.getState().characters.find((c) => c.id === charId);
+      if (character) {
+        useCharacterStore.getState().updateCharacter(charId, {
+          reactionsCurrent: getReactionsAvailable(character) + 1,
+        });
+      }
+      set((state) => {
+        const used = state.reactionsUsedByChar[charId] ?? 0;
+        const reactionsUsedByChar = { ...state.reactionsUsedByChar };
+        if (used <= 1) delete reactionsUsedByChar[charId];
+        else reactionsUsedByChar[charId] = used - 1;
+        return { reactionsUsedByChar };
       });
+    };
+    let result: T;
+    try {
+      result = effect();
+    } catch (error) {
+      refund();
+      throw error;
     }
-    set((state) => {
-      const used = state.reactionsUsedByChar[charId] ?? 0;
-      const reactionsUsedByChar = { ...state.reactionsUsedByChar };
-      if (used <= 1) delete reactionsUsedByChar[charId];
-      else reactionsUsedByChar[charId] = used - 1;
-      return { reactionsUsedByChar };
-    });
+    if (result.ok) return result;
+    refund();
     return result;
   },
   resetRoundReactions: () => set({ reactionsUsedByChar: {} }),
