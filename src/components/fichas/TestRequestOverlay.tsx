@@ -204,7 +204,7 @@ function MasterWatchPanel() {
                         </span>
                       )}
                     </div>
-                    <div className="text-[10px] text-muted-foreground">
+                    <div className="font-mono text-[12px] text-muted-foreground">
                       d20 {r.result.d20} {r.result.bonus >= 0 ? '+' : ''}{r.result.bonus}
                     </div>
                     {r.result.forced && (
