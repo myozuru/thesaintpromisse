@@ -205,7 +205,12 @@ function pickCombat(s: ReturnType<typeof useCombatStore.getState>) {
     turnRemainingAtStart: s.turnRemainingAtStart,
     turnStartedAt: s.turnStartedAt,
     turnPaused: s.turnPaused,
-    reactionPauseIds: s.reactionPauseIds,
+    // Só sincroniza os bloqueios do fluxo que originou a reação. O bloqueio
+    // local da UI remota termina quando o jogador clica, mas a pausa global
+    // deve durar até o cliente de origem concluir a resolução pendente.
+    reactionPauseIds: s.reactionPauseIds.filter(
+      (id) => !id.startsWith("reaction-ui:") && !id.startsWith("omni-active-ui:"),
+    ),
     freeformMode: s.freeformMode,
   };
 }
