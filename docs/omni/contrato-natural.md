@@ -1,6 +1,6 @@
 # OMNI natural — contrato e entregas
 
-Estado: etapas 1–10 concluídas no escopo documentado em cada etapa. A linguagem natural ainda não executa no jogo nem está conectada ao salvamento de habilidades. Base inicial examinada: main d2ef673b0e2a92918fa9fd7fac0095733c5b1d68, especificação Texto colado(4) e correções aprovadas na conversa de 05/10/2026. Evidências complementares em inventario-natural.md, diagnostico-execucao.md e etapa-2-contexto.md a etapa-10-estados-auras.md.
+Estado: etapas 1–11 concluídas no escopo documentado em cada etapa. A linguagem natural ainda não executa no jogo nem está conectada ao salvamento de habilidades. Base inicial examinada: main d2ef673b0e2a92918fa9fd7fac0095733c5b1d68, especificação Texto colado(4) e correções aprovadas na conversa de 05/10/2026. Evidências complementares em inventario-natural.md, diagnostico-execucao.md e etapa-2-contexto.md a etapa-11-contadores.md.
 
 ## Fontes de verdade
 
@@ -32,7 +32,7 @@ Em modificadores numéricos temporários, todo efeito cujo escopo corresponda à
 
 ## Contadores
 
-`contador_<nome>` mantém namespace próprio. `até treino` limita o total. Escala exige contador nominal: `por contador_rancor` ou `por contador_rancor gasto`, com equivalentes unificados.
+`contador_<nome>` mantém namespace próprio. `até treino` limita o total, mesmo quando `por_fonte` divide o histórico entre contribuintes. Quotas por fonte são independentes do saldo e exigem periodicidade explícita: `teto_aliado 1 por rodada` ou `teto_aliado 1 por descanso`. Gastar cargas não reinicia a quota. Escala exige contador nominal: `por contador_rancor` ou `por contador_rancor gasto`, com equivalentes unificados.
 
 `teto_aliado 1 por rodada` reinicia na virada global da rodada. `teto_aliado 1 por descanso` reinicia em descanso curto/longo concluído para o participante. Gastar cargas não reinicia contribuições do ciclo. Registrar saldo e histórico de contribuição separadamente.
 
@@ -115,7 +115,7 @@ Cinco riscos anteriores: colisão de aliases (3/5), precedência (4), unidades (
 
 - `componentes/lexer.ts` já normaliza componentes e preserva posições; isso não constitui parser completo de eventos naturais.
 - `componentes/contexto.ts` transporta escopos compostos efêmeros; persistência e papéis do evento exigem contrato adicional.
-- `contadores.ts` distingue teto global de teto por fonte. O novo limite por ciclo deve ser independente do saldo consumível.
+- `contadores.ts` mantém teto global, parcelas auditáveis por fonte e quota independente por ciclo; o contrato de implementação está em `etapa-11-contadores.md`.
 - `planejarDano` em `acaoAtiva.ts` agrupa dados e valores fixos; não representa sozinho parcelas com tipos distintos.
 - `triggerEfeitos.ts` registra um consumido genérico; a nova linguagem exige mapa nominal por execução.
 
