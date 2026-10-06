@@ -74,6 +74,10 @@ describe('alcances e seleção',()=>{
     useMapStore.setState({entities:{}});
     expect((await selecionarAlvosAtivos('u',cfg(),'a')).ok).toBe(false);
   });
+  it('a validação de execução usa o alcance da arma quando o alcance OMNI herda esse valor',async()=>{
+    expect((await selecionarAlvosAtivos('u',cfg({alcanceM:0}), 'a', 3)).ok).toBe(false);
+    expect((await selecionarAlvosAtivos('u',cfg({alcanceM:0}), 'a', 12)).ok).toBe(true);
+  });
   it.each([NaN,Infinity,-1])('rejeita alcance inválido %s',async alcanceM=>expect((await selecionarAlvosAtivos('u',cfg({alcanceM}),'a')).ok).toBe(false));
   it('não transforma variável desconhecida nem dados em teto válido',async()=>{
     for(const max_alvos of ['@USUARIO.inexistente + 3','1d4']) expect((await selecionarAlvosAtivos('u',cfg({tipo_alvo:'multiplo',max_alvos,alcanceM:0}),['a'])).ok).toBe(false);

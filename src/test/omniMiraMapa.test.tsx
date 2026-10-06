@@ -8,6 +8,7 @@ import { ficha, montarMesa } from './helpers/mesaReal';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useMapStore } from '@/stores/useMapStore';
+import { useCharacterStore } from '@/stores/useCharacterStore';
 import { resolverTokenDaFicha } from '@/lib/mapa/tokenDaFicha';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { novaEntidade, type AcaoAtivaConfig } from '@/lib/omni/tipos';
@@ -36,6 +37,41 @@ it('clique fora do círculo mantém a seleção; cancelar limpa a mira',async()=
   expect(useAlvoMapaStore.getState().erro).toBeTruthy();
   terminarAlvoMapa(null);
   expect(await p).toBeNull();
+});
+it('alcance zero configurado como livre não vira um círculo de raio zero na mira',()=>{
+  expect(alvosNoAlcance({usuarioId:'u',label:'Sem limite',maxRangeMeters:0}).map(c=>c.id).sort()).toEqual(['a','b']);
+});
+it('seleção e validação usam qualquer token válido da ficha, sem aceitar o token distante',async()=>{
+  useMapStore.setState(s=>{
+    const distante={...s.entities['e-a'],x:700,y:0};
+    const perto={...s.entities['e-a'],id:'z-a',x:210,y:0};
+    return {entities:{...s.entities,'e-a':distante,'z-a':perto}};
+  });
+  expect(alvosNoAlcance({usuarioId:'u',label:'Teste',maxRangeMeters:4.5}).map(c=>c.id)).toContain('a');
+  expect((await selecionarAlvosAtivos('u',cfg,'a')).ok).toBe(true);
+  const p=pedirAlvoMapa({usuarioId:'u',label:'Teste',maxRangeMeters:4.5});
+  act(()=>{ clicarAlvoMapa('e-a'); });
+  expect(useAlvoMapaStore.getState().erro).toBeTruthy();
+  act(()=>{ clicarAlvoMapa('z-a'); });
+  expect(await p).toEqual(['a']);
+});
+it('ataque mede borda a borda para peças grandes tanto na mira quanto na validação',async()=>{
+  useMapStore.setState(s=>({entities:{...s.entities,'e-a':{...s.entities['e-a'],x:140,w:210,h:210}}}));
+  expect(alvosNoAlcance({usuarioId:'u',label:'Arma',maxRangeMeters:1.5,medicao:'borda'}).map(c=>c.id)).toContain('a');
+  expect(alvosNoAlcance({usuarioId:'u',label:'Ação circular',maxRangeMeters:1.5,medicao:'circular'}).map(c=>c.id)).not.toContain('a');
+  expect((await selecionarAlvosAtivos('u',{...cfg,alcanceM:1.5}, 'a', undefined, 'borda')).ok).toBe(true);
+  expect((await selecionarAlvosAtivos('u',{...cfg,alcanceM:1.5}, 'a')).ok).toBe(false);
+});
+it('recusa token vinculado somente a um perfil compartilhado por fichas diferentes',()=>{
+  useCharacterStore.getState().updateCharacter('a',{profileId:'compartilhado'});
+  useCharacterStore.getState().updateCharacter('b',{profileId:'compartilhado'});
+  useMapStore.setState(s=>({entities:Object.fromEntries(Object.entries(s.entities).map(([id,e])=>[
+    id, id==='e-a'||id==='e-b' ? {...e,characterId:undefined,ownerProfileId:'compartilhado'} : e,
+  ]))}));
+  pedirAlvoMapa({usuarioId:'u',label:'Perfil ambíguo',maxRangeMeters:0,aceita:c=>c.id==='a'});
+  act(()=>{ clicarAlvoMapa('e-a'); });
+  expect(useAlvoMapaStore.getState().pending).not.toBeNull();
+  expect(useAlvoMapaStore.getState().erro).toBeTruthy();
 });
 it.each(['direto', 'avatarProfileId', 'ownerProfileId'] as const)('Usar executa sem abrir ficha com vínculo %s',async vinculo=>{
   if (vinculo !== 'direto') {

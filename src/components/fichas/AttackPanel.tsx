@@ -1399,6 +1399,7 @@ export function AttackPanel({ character: cProp }: Props) {
     try {
       const ids = await pedirAlvoMapa({ usuarioId: c.id, label: mainWeapon.name,
         maxRangeMeters: (weaponRangeM ?? 0) + longoM + (temArtes && arteInvestida ? investidaMoveMeters(c) : 0),
+        medicao: 'borda',
         aceita: alvo => alvo.id !== c.id });
       if (ids) {
         const atual = useCharacterStore.getState().characters.find(ch => ch.id === c.id);

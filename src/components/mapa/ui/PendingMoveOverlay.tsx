@@ -84,6 +84,7 @@ export function PendingMoveOverlay() {
         moving: ent,
         prevX: pending.startX,
         prevY: pending.startY,
+        trajetoria: movimento.trajetoria,
         entities,
         grants: oppState.grants,
         charNames,
@@ -165,4 +166,3 @@ export function PendingMoveOverlay() {
     </div>
   );
 }
-

@@ -132,7 +132,8 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
                     let alvoSel: string | string[] = '';
                     if (!proprio && !area) {
                       const ids = await pedirAlvoMapa({ usuarioId: charId, label: cfg.nome,
-                        maxRangeMeters: cfg.alcanceM > 0 ? cfg.alcanceM : (arma ? weaponMaxRangeMeters(arma) ?? 0 : 0),
+                        maxRangeMeters: cfg.alcanceM > 0 ? cfg.alcanceM : (arma && (ent.categoria === 'arma' || cfg.teste === 'ataque') ? weaponMaxRangeMeters(arma) ?? 0 : 0),
+                        medicao: ent.categoria === 'arma' || cfg.teste === 'ataque' ? 'borda' : 'circular',
                         maxAlvos: multiplo ? limiteAlvosAtivos(cfg, u) : 1, aceita: alvo => aceitaAlvoAtivo(u, alvo, cfg) });
                       if (!ids) return;
                       alvoSel = multiplo ? ids : ids[0];

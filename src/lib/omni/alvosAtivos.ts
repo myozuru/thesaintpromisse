@@ -6,7 +6,7 @@ import { montarVariaveisDoPersonagem } from './resolvedor';
 import { useMapStore } from '@/stores/useMapStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { resolverTokenDaFicha } from '@/lib/mapa/tokenDaFicha';
-import { distanciaCircularMetros } from '@/lib/mapa/alcanceCircular';
+import { distanciaBordaEntreFichas, distanciaCircularEntreFichas } from '@/lib/mapa/alcanceCircular';
 import { findEntitiesInTemplate } from '@/lib/mapAoE';
 import type { MapTemplate } from '@/components/mapa/TemplateEngine';
 
@@ -39,10 +39,11 @@ export function limiteAlvosAtivos(cfg: AcaoAtivaConfig, u: Character): number {
   return !r.diagnosticos.length && !r.rolagens.length && Number.isFinite(r.valor) ? Math.max(0, Math.floor(r.valor)) : 0;
 }
 
-export async function selecionarAlvosAtivos(usuarioId: string, cfg: AcaoAtivaConfig, selecao: SelecaoAtiva): Promise<SelecaoResultado> {
+export async function selecionarAlvosAtivos(usuarioId: string, cfg: AcaoAtivaConfig, selecao: SelecaoAtiva, alcanceArmaM?: number | null, medicao: 'circular' | 'borda' = 'circular'): Promise<SelecaoResultado> {
   let u = useCharacterStore.getState().characters.find(c => c.id === usuarioId);
   if (!u) return { ok: false, reason: 'Personagem não encontrado.' };
   if (!Number.isFinite(cfg.alcanceM) || cfg.alcanceM < 0) return { ok: false, reason: 'Configure um alcance válido em metros.' };
+  const alcanceM = cfg.alcanceM > 0 ? cfg.alcanceM : alcanceArmaM ?? 0;
   const tipo = cfg.tipo_alvo ?? 'unico';
   let ids: string[];
   let selecaoValidada: SelecaoAtiva | undefined;
@@ -71,7 +72,7 @@ export async function selecionarAlvosAtivos(usuarioId: string, cfg: AcaoAtivaCon
       const colocado = await ms.requestAoEPlacement({
         kind, sizeMeters: area.tamanho_m, widthMeters: area.largura_m ?? 1.5,
         sourceLabel: `${u.name} · ${cfg.nome}`, originWorld: origem,
-        maxRangeMeters: area.forma === 'raio_no_ponto' && cfg.alcanceM > 0 ? cfg.alcanceM : undefined,
+        maxRangeMeters: area.forma === 'raio_no_ponto' && alcanceM > 0 ? alcanceM : undefined,
       });
       if (!colocado) return { ok: false, reason: 'Posicionamento da área cancelado.' };
       ponto = colocado; rotacao = colocado.rotation;
@@ -83,7 +84,7 @@ export async function selecionarAlvosAtivos(usuarioId: string, cfg: AcaoAtivaCon
     if (!u || !origem) return { ok: false, reason: 'Usuário removido do mapa.' };
     if (![ponto.x, ponto.y, rotacao].every(Number.isFinite)) return { ok: false, reason: 'Ponto ou direção inválidos.' };
     const pxM = (ms.gridConfig.dpi || 70) / (ms.gridConfig.metersPerCell || 1.5);
-    if (area.forma === 'raio_no_ponto' && cfg.alcanceM > 0 && Math.hypot(ponto.x - origem.x, ponto.y - origem.y) / pxM > cfg.alcanceM + 0.05) {
+    if (area.forma === 'raio_no_ponto' && alcanceM > 0 && Math.hypot(ponto.x - origem.x, ponto.y - origem.y) / pxM > alcanceM + 0.05) {
       return { ok: false, reason: 'Centro da área fora de alcance.' };
     }
     selecaoValidada = { ponto: { x: ponto.x, y: ponto.y }, rotacao };
@@ -106,10 +107,13 @@ export async function selecionarAlvosAtivos(usuarioId: string, cfg: AcaoAtivaCon
     if (!a) return { ok: false, reason: 'Alvo não encontrado.' };
     if (!aceitaAlvoAtivo(u, a, cfg)) return { ok: false, reason: `${a.name} não atende ao filtro de alvos.` };
     if (!cfg.tipo_alvo && a.id === u.id) return { ok: false, reason: 'O alvo deve ser outra criatura.' };
-    if (tipo !== 'area' && tipo !== 'proprio' && cfg.alcanceM > 0) {
-      const ms = useMapStore.getState(), origem = resolverTokenDaFicha(u, ms.entities, ms.layerVisible), alvo = resolverTokenDaFicha(a, ms.entities, ms.layerVisible);
-      if (!origem || !alvo) return { ok: false, reason: 'Usuário e alvo precisam estar no mapa para medir o alcance.' };
-      if (origem && alvo && distanciaCircularMetros(origem, alvo, ms.gridConfig) > cfg.alcanceM + 0.05) return { ok: false, reason: `${a.name} está fora de alcance.` };
+    if (tipo !== 'area' && tipo !== 'proprio' && alcanceM > 0) {
+      const ms = useMapStore.getState();
+      const distancia = medicao === 'borda'
+        ? distanciaBordaEntreFichas(u, a, ms.entities, ms.layerVisible, ms.gridConfig)
+        : distanciaCircularEntreFichas(u, a, ms.entities, ms.layerVisible, ms.gridConfig);
+      if (distancia === null) return { ok: false, reason: 'Usuário e alvo precisam estar no mapa para medir o alcance.' };
+      if (distancia > alcanceM + 0.05) return { ok: false, reason: `${a.name} está fora de alcance.` };
     }
   }
   return { ok: true, ids, ...(selecaoValidada ? { selecaoValidada } : {}) };

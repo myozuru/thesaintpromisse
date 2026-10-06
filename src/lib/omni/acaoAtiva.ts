@@ -42,8 +42,7 @@ import { useInventoryStore } from '@/stores/useInventoryStore';
 import { selectOmniModifiers } from '@/lib/omni/omniBridge';
 import { type ActiveCondition } from '@/types/conditions';
 import type { TouchGrid } from '@/lib/touchRange';
-import { resolverTokenDaFicha } from '@/lib/mapa/tokenDaFicha';
-import { distanciaCircularMetros } from '@/lib/mapa/alcanceCircular';
+import { distanciaBordaEntreFichas, distanciaCircularEntreFichas } from '@/lib/mapa/alcanceCircular';
 import { penalidadeTRFlanqueado } from '@/lib/flanqueadorSuperior';
 import { specDCFor } from '@/lib/golpeEspecial';
 import { rollD20Com, rollDiceGroups } from '@/lib/dice';
@@ -52,6 +51,7 @@ import { buildAttackContext, rollAttack } from '@/lib/combatEngine';
 import { computeTotalDefense } from '@/lib/defenseCalc';
 import { replicaWeaponName } from '@/lib/replicas';
 import { getSkillModFromConditions } from '@/lib/conditionEffects';
+import { weaponMaxRangeMeters } from '@/lib/weaponRange';
 
 // ─── Regras puras ────────────────────────────────────────────────────
 
@@ -238,7 +238,7 @@ export function custoPEDe(cfg: AcaoAtivaConfig, u: Character, intensificacoes = 
 
 export type ResultadoAtiva = { ok: false; reason: string } | { ok: true; dano: number; cura?: number; detalhe: string; efeitoAplicado?: boolean };
 
-export function podeUsarAtiva(u: Character, alvo: Character | undefined, cfg: AcaoAtivaConfig, intensificacoes = 0, arma?: Weapon, contexto?: ContextoCustosAtivos): { ok: true } | { ok: false; reason: string } {
+export function podeUsarAtiva(u: Character, alvo: Character | undefined, cfg: AcaoAtivaConfig, intensificacoes = 0, arma?: Weapon, contexto?: ContextoCustosAtivos, medicao: 'circular' | 'borda' = 'circular'): { ok: true } | { ok: false; reason: string } {
   if (!alvo) return { ok: false, reason: 'Escolha um alvo.' };
   if (!Number.isFinite(cfg.alcanceM) || cfg.alcanceM < 0) return { ok: false, reason: 'Alcance inválido.' };
   if (!['ataque', 'tr', 'disputa', 'nenhum'].includes(cfg.teste)) return { ok: false, reason: 'Teste inválido.' };
@@ -300,12 +300,11 @@ export function podeUsarAtiva(u: Character, alvo: Character | undefined, cfg: Ac
   if (!recursos.ok) return recursos;
   if (cfg.alcanceM > 0 && cfg.tipo_alvo !== 'area' && cfg.tipo_alvo !== 'proprio') {
     const ms = useMapStore.getState();
-    const a = resolverTokenDaFicha(u, ms.entities, ms.layerVisible), b = resolverTokenDaFicha(alvo, ms.entities, ms.layerVisible);
-    if (!a || !b) return { ok: false, reason: 'Usuário e alvo precisam estar no mapa para medir o alcance.' };
-    if (a && b) {
-      const d = distanciaCircularMetros(a, b, ms.gridConfig);
-      if (d > cfg.alcanceM + 0.05) return { ok: false, reason: `Fora de alcance (${d.toFixed(1).replace('.', ',')} m de ${cfg.alcanceM.toString().replace('.', ',')} m).` };
-    }
+    const d = medicao === 'borda'
+      ? distanciaBordaEntreFichas(u, alvo, ms.entities, ms.layerVisible, ms.gridConfig)
+      : distanciaCircularEntreFichas(u, alvo, ms.entities, ms.layerVisible, ms.gridConfig);
+    if (d === null) return { ok: false, reason: 'Usuário e alvo precisam estar no mapa para medir o alcance.' };
+    if (d > cfg.alcanceM + 0.05) return { ok: false, reason: `Fora de alcance (${d.toFixed(1).replace('.', ',')} m de ${cfg.alcanceM.toString().replace('.', ',')} m).` };
   }
   return { ok: true };
 }
@@ -379,7 +378,13 @@ async function executarAcaoAtivaInterna(
   ent?: EntidadeOmni,
   opcoes: OpcoesMovimentoAtivo & { intensificacoes?: number; ignorarReacoes?: boolean; instanciaId?: string } = {},
 ): Promise<ResultadoAtiva> {
-  const escolhidos = await selecionarAlvosAtivos(usuarioId, cfg, selecao);
+  const inicio = useCharacterStore.getState().characters.find(c => c.id === usuarioId);
+  const armaInicial = inicio ? armaDaAcao(inicio, ent, opcoes.instanciaId) : undefined;
+  const alcanceArma = cfg.alcanceM === 0 && armaInicial && (ent?.categoria === 'arma' || cfg.teste === 'ataque')
+    ? weaponMaxRangeMeters(armaInicial)
+    : undefined;
+  const medicaoAlcance = ent?.categoria === 'arma' || cfg.teste === 'ataque' ? 'borda' : 'circular';
+  const escolhidos = await selecionarAlvosAtivos(usuarioId, cfg, selecao, alcanceArma, medicaoAlcance);
   if (!escolhidos.ok) return escolhidos;
   let store = useCharacterStore.getState();
   const log = (m: string) => useLogStore.getState().addLog('combat', m);
@@ -404,7 +409,7 @@ async function executarAcaoAtivaInterna(
   const contextoCustos: ContextoCustosAtivos = { armaNome: arma?.name, armaInstanciaId, instanciaId: opcoes.instanciaId, entidadeId: ent?.id };
   let alvos = escolhidos.ids.map(id => store.characters.find(c => c.id === id)!);
   for (const alvo of alvos) {
-    const chk = podeUsarAtiva(u, alvo, cfg, opcoes.intensificacoes ?? 0, arma, contextoCustos);
+    const chk = podeUsarAtiva(u, alvo, cfg, opcoes.intensificacoes ?? 0, arma, contextoCustos, medicaoAlcance);
     if (!chk.ok) return chk;
   }
   if (cfg.teste === 'ataque' && !arma) return { ok: false, reason: 'Nenhuma arma empunhada para o ataque.' };
@@ -423,7 +428,7 @@ async function executarAcaoAtivaInterna(
   u = store.characters.find(c => c.id === usuarioId);
   if (!u) return { ok: false, reason: 'Personagem removido durante a seleção.' };
   alvos = escolhidos.ids.map(id => store.characters.find(c => c.id === id)!);
-  for (const alvo of alvos) { const chk = podeUsarAtiva(u, alvo, cfg, opcoes.intensificacoes ?? 0, arma, contextoCustos); if (!chk.ok) return chk; }
+  for (const alvo of alvos) { const chk = podeUsarAtiva(u, alvo, cfg, opcoes.intensificacoes ?? 0, arma, contextoCustos, medicaoAlcance); if (!chk.ok) return chk; }
 
   if (!opcoes.ignorarReacoes && ent?.categoria === 'feitico') {
     const { abrirJanelaReacaoAtiva } = await import('./reacoesAtivas');
@@ -432,9 +437,14 @@ async function executarAcaoAtivaInterna(
     store = useCharacterStore.getState();
     u = store.characters.find(c => c.id === usuarioId);
     if (!u || (u.hpCurrent ?? 1) <= 0) return { ok: false, reason: 'Conjurador indisponível.' };
-    for (const alvo of alvos) { const chk = podeUsarAtiva(u, store.characters.find(c => c.id === alvo.id), cfg, opcoes.intensificacoes ?? 0, arma, contextoCustos); if (!chk.ok) return chk; }
+    for (const alvo of alvos) { const chk = podeUsarAtiva(u, store.characters.find(c => c.id === alvo.id), cfg, opcoes.intensificacoes ?? 0, arma, contextoCustos, medicaoAlcance); if (!chk.ok) return chk; }
   }
-  const reescolhidos = await selecionarAlvosAtivos(usuarioId, cfg, escolhidos.selecaoValidada ?? escolhidos.ids);
+  const personagemAntesDeRevalidar = useCharacterStore.getState().characters.find(c => c.id === usuarioId);
+  const armaAntesDeRevalidar = personagemAntesDeRevalidar ? armaDaAcao(personagemAntesDeRevalidar, ent, opcoes.instanciaId) : undefined;
+  const alcanceArmaAtual = cfg.alcanceM === 0 && armaAntesDeRevalidar && (ent?.categoria === 'arma' || cfg.teste === 'ataque')
+    ? weaponMaxRangeMeters(armaAntesDeRevalidar)
+    : undefined;
+  const reescolhidos = await selecionarAlvosAtivos(usuarioId, cfg, escolhidos.selecaoValidada ?? escolhidos.ids, alcanceArmaAtual, medicaoAlcance);
   if (!reescolhidos.ok) return reescolhidos;
   if (reescolhidos.ids.length !== escolhidos.ids.length || reescolhidos.ids.some(id => !escolhidos.ids.includes(id))) return { ok: false, reason: 'Os alvos da área mudaram. Selecione novamente.' };
   store = useCharacterStore.getState();
@@ -445,7 +455,7 @@ async function executarAcaoAtivaInterna(
   if (JSON.stringify(arma) !== armaDeclarada || ent?.categoria === 'arma' && !armaEstaEmpunhada(u, ent.replica ? replicaWeaponName(ent) ?? ent.nome : ent.nome)) return { ok: false, reason: 'A arma mudou durante a seleção. Use a ação novamente.' };
   alvos = escolhidos.ids.map(id => store.characters.find(c => c.id === id)!);
   for (const alvo of alvos) {
-    const chk = podeUsarAtiva(u, alvo, cfg, opcoes.intensificacoes ?? 0, arma, contextoCustos); if (!chk.ok) return chk;
+    const chk = podeUsarAtiva(u, alvo, cfg, opcoes.intensificacoes ?? 0, arma, contextoCustos, medicaoAlcance); if (!chk.ok) return chk;
     for (const plano of movimentos.planos.get(alvo.id) ?? []) { const erro = validarPlanoMovimento(u.id, alvo.id, plano); if (erro) return { ok: false, reason: erro }; }
   }
   // Snapshot por alvo antes do consumo: cargas e PV são os da declaração.

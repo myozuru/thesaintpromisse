@@ -35,6 +35,23 @@ function isAdjacent(
   return dx <= tol && dy <= tol;
 }
 
+/** Linha exata contra o retângulo de posições adjacentes (Minkowski). */
+function segmentoCruzaAdjacencia(a: { x: number; y: number }, b: { x: number; y: number }, moving: Entity, candidate: Entity, cellPx: number): boolean {
+  const rx = (moving.w + candidate.w) / 2 + cellPx * 1.05;
+  const ry = (moving.h + candidate.h) / 2 + cellPx * 1.05;
+  const dx = b.x - a.x, dy = b.y - a.y;
+  let t0 = 0, t1 = 1;
+  const clip = (p: number, q: number) => {
+    if (p === 0) return q >= 0;
+    const t = q / p;
+    if (p < 0) { if (t > t1) return false; t0 = Math.max(t0, t); }
+    else { if (t < t0) return false; t1 = Math.min(t1, t); }
+    return true;
+  };
+  return clip(-dx, a.x - (candidate.x - rx)) && clip(dx, candidate.x + rx - a.x)
+    && clip(-dy, a.y - (candidate.y - ry)) && clip(dy, candidate.y + ry - a.y);
+}
+
 export interface DetectOpts {
   moving: Entity;
   prevX: number;
@@ -44,6 +61,8 @@ export interface DetectOpts {
   /** charId → name (para preencher rótulo). */
   charNames: Record<string, string>;
   grid: GridLike;
+  /** Waypoints do arraste confirmado; pode incluir curvas no percurso. */
+  trajetoria?: { x: number; y: number }[];
 }
 
 export function detectOpportunityCandidates(opts: DetectOpts): AdoCandidate[] {
@@ -51,6 +70,11 @@ export function detectOpportunityCandidates(opts: DetectOpts): AdoCandidate[] {
   const movingCharId = moving.characterId;
   if (!movingCharId) return [];
   const cellPx = grid.dpi || 70;
+  const waypoints = [
+    { x: prevX, y: prevY },
+    ...(opts.trajetoria ?? []),
+    { x: moving.x, y: moving.y },
+  ];
 
   const out: AdoCandidate[] = [];
   for (const ent of Object.values(entities)) {
@@ -63,9 +87,15 @@ export function detectOpportunityCandidates(opts: DetectOpts): AdoCandidate[] {
     // Mesmo charId não dispara contra si.
     if (cid === movingCharId) continue;
 
-    const wasAdj = isAdjacent(prevX, prevY, moving, ent, cellPx);
-    const nowAdj = isAdjacent(moving.x, moving.y, moving, ent, cellPx);
-    if (wasAdj && !nowAdj) {
+    let withinThreat = isAdjacent(prevX, prevY, moving, ent, cellPx);
+    let leftReach = false;
+    for (let i = 1; i < waypoints.length; i++) {
+      const from = waypoints[i - 1], point = waypoints[i];
+      const nextWithinThreat = isAdjacent(point.x, point.y, moving, ent, cellPx);
+      if ((withinThreat && !nextWithinThreat) || (!withinThreat && !nextWithinThreat && segmentoCruzaAdjacencia(from, point, moving, ent, cellPx))) leftReach = true;
+      withinThreat = nextWithinThreat;
+    }
+    if (leftReach) {
       out.push({
         charId: cid,
         charName: charNames[cid] ?? ent.label ?? 'Personagem',

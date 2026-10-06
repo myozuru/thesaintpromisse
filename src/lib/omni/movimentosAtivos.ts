@@ -8,7 +8,8 @@ import { useFogStore } from '@/stores/fogStore';
 import { WallsEngine } from '@/components/mapa/WallsEngine';
 import { buildSegments } from '@/lib/fog/visibility';
 import { firstFootprintHit, placementBlocked, tokenFootprintSegments, type MapCollisionToken } from '@/lib/mapCollision';
-import { findCharEntity, touchDistanceMeters } from '@/lib/touchRange';
+import { touchDistanceMeters } from '@/lib/touchRange';
+import { resolverTokenDaFicha } from '@/lib/mapa/tokenDaFicha';
 import { imuneMovimentoForcado } from '@/lib/posturas';
 import { avaliarFormula } from './parser';
 import { montarVariaveisDoPersonagem } from './resolvedor';
@@ -19,7 +20,10 @@ export interface PlanoMovimentoAtivo { indice: number; tipo: TipoMovimentoAtivo;
 export interface OpcoesMovimentoAtivo { /** Chave `${alvoId}:${índice do efeito}`; coordenadas-mundo. */ destinosMovimento?: Record<string, Ponto> }
 type Resultado = { ok: true; planos: Map<string, PlanoMovimentoAtivo[]> } | { ok: false; reason: string };
 const ficha = (id: string) => useCharacterStore.getState().characters.find(c => c.id === id);
-const token = (id: string) => findCharEntity(useMapStore.getState().entities, id);
+const token = (id: string) => {
+  const c = ficha(id), ms = useMapStore.getState();
+  return c ? resolverTokenDaFicha(c, ms.entities, ms.layerVisible) : undefined;
+};
 const pxM = () => { const g = useMapStore.getState().gridConfig; return (g.dpi || 70) / (g.metersPerCell || 1.5); };
 const distancia = (a: Ponto, b: Ponto) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)) / pxM();
 const normalizar = (e: Entity): Entity => ({ ...e, rotation: e.rotation || 0, shape: e.shape || 'RECT' });
