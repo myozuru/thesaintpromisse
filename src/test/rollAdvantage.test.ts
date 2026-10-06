@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
-  grantAdvantage, consumeAdvantageFor, peekAdvantageFor,
+  grantAdvantage, grantFlatBonus, consumeAdvantageFor, consumeFlatBonusFor, peekAdvantageFor,
   expireEndOfTurnFor, clearAllAdvantage, applyAdvantageToD20,
 } from '@/lib/omni/rollAdvantage';
 import { useCharacterStore } from '@/stores/useCharacterStore';
@@ -107,6 +107,24 @@ describe('Vantagem/Desvantagem — expiração', () => {
     clearAllAdvantage('adv-test-1');
     expect(peekAdvantageFor('adv-test-1', { kind: 'attack', subtype: 'melee' })).toBe('normal');
     expect(peekAdvantageFor('adv-test-1', { kind: 'save', name: 'X' })).toBe('normal');
+  });
+
+  it('bônus concorrentes do mesmo teste usam o maior, mas penalidades continuam somando', () => {
+    grantFlatBonus('adv-test-1', 'next_skill', 4, { source: 'Bênção' });
+    grantFlatBonus('adv-test-1', 'next_any', 2, { source: 'Inspiração' });
+    grantFlatBonus('adv-test-1', 'next_skill', -1, { source: 'Ferimento' });
+
+    const result = consumeFlatBonusFor('adv-test-1', { kind: 'skill', name: 'Atletismo' });
+    expect(result.bonus).toBe(3);
+    expect(result.notes).toContain('↳ +2 (next_any · Inspiração) — não acumula com o maior bônus');
+    expect(consumeFlatBonusFor('adv-test-1', { kind: 'skill', name: 'Atletismo' }).bonus).toBe(0);
+  });
+
+  it('bônus fixo com duração de turno expira no fechamento do turno', () => {
+    grantFlatBonus('adv-test-1', 'attack_all', 3, { expires: 'turn' });
+    expect(consumeFlatBonusFor('adv-test-1', { kind: 'attack', subtype: 'melee' }).bonus).toBe(3);
+    expireEndOfTurnFor('adv-test-1');
+    expect(consumeFlatBonusFor('adv-test-1', { kind: 'attack', subtype: 'melee' }).bonus).toBe(0);
   });
 });
 
