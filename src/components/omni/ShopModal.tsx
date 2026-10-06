@@ -36,7 +36,7 @@ export function ShopModal({ aberto, onClose, shopId, characterId }: Props) {
   const entidades = useOmniEntidadesStore((s) => s.entidades);
   const character = useCharacterStore((s) => s.characters.find((c) => c.id === characterId));
   const invItems = useInventoryStore((s) => s.items);
-  const inventory = useMemo(() => Object.values(invItems).filter((i) => i.ownerId === characterId), [invItems, characterId]);
+  const inventory = useMemo(() => useInventoryStore.getState().listByOwner(characterId), [invItems, characterId]);
   const addItem = useInventoryStore((s) => s.add);
   const removeItem = useInventoryStore((s) => s.remove);
   const ensurePersonal = useMoneyStore((s) => s.ensurePersonalWallet);
