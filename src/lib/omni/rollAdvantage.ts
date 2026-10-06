@@ -256,7 +256,7 @@ export function grantFlatBonus(
   return id;
 }
 
-/** Soma e consome os bônus fixos aplicáveis ao contexto. */
+/** Resolve e consome os bônus fixos aplicáveis ao contexto. */
 export function consumeFlatBonusFor(charId: string, ctx: RollContext): { bonus: number; notes: string[] } {
   const c = useCharacterStore.getState().characters.find(x => x.id === charId);
   if (!c) return { bonus: 0, notes: [] };
@@ -269,9 +269,30 @@ export function consumeFlatBonusFor(charId: string, ctx: RollContext): { bonus: 
     for (const id of consumedIds) delete remaining[id];
     writeMods(charId, remaining);
   }
+  // Todos os bônus positivos que alcançam o mesmo teste concorrem na mesma
+  // categoria; aplica-se somente o maior. Penalidades não são bônus e seguem
+  // somadas. Os efeitos de uso único correspondentes são consumidos juntos,
+  // mesmo quando um bônus maior prevalece.
+  const maiorBonus = Math.max(0, ...matches.map((m) => m.bonus ?? 0));
+  let bonusPositivoAplicado = false;
+  const bonus = matches.reduce((total, modifier) => {
+    const value = modifier.bonus ?? 0;
+    if (value < 0) return total + value;
+    if (value > 0 && !bonusPositivoAplicado && value === maiorBonus) {
+      bonusPositivoAplicado = true;
+      return total + value;
+    }
+    return total;
+  }, 0);
+  const indexBonusAplicado = matches.findIndex((m) => (m.bonus ?? 0) > 0 && m.bonus === maiorBonus);
   return {
-    bonus: matches.reduce((s, m) => s + (m.bonus ?? 0), 0),
-    notes: matches.map(m => `➕ ${m.bonus! >= 0 ? '+' : ''}${m.bonus} (${m.scope}${m.source ? ` · ${m.source}` : ''})`),
+    bonus,
+    notes: matches.map((m, index) => {
+      const value = m.bonus ?? 0;
+      const aplicado = value < 0 || index === indexBonusAplicado;
+      const detalhe = `${value >= 0 ? '+' : ''}${value} (${m.scope}${m.source ? ` · ${m.source}` : ''})`;
+      return aplicado ? `➕ ${detalhe}` : `↳ ${detalhe} — não acumula com o maior bônus`;
+    }),
   };
 }
 
