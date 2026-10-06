@@ -1,3 +1,4 @@
+import { NpcInteracaoOverlay } from '@/components/economia/NpcInteracaoOverlay';
 import { comPreviaMovimento, confirmarMovimentoMapa } from '@/lib/mapa/movimentoConfirmado';
 import { ItemNoChaoOverlay } from './ui/ItemNoChaoOverlay';
 import { AlvoMapaOverlay } from './ui/AlvoMapaOverlay';
@@ -3057,6 +3058,7 @@ export function MapaModule() {
           <AlvoMapaOverlay />
           <PendingAoEOverlay />
           <ItemNoChaoOverlay />
+          <NpcInteracaoOverlay />
           <LootOverlay />
           <ChestOverlay />
 
