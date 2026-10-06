@@ -16,13 +16,14 @@ import { selecionarAlvosAtivos } from '@/lib/omni/alvosAtivos';
 import { iniciarEngineZonasTerreno } from '@/lib/mapa/engineZonasTerreno';
 import { confirmarMovimentoMapa, comPreviaMovimento, receberMovimentoConfirmado } from '@/lib/mapa/movimentoConfirmado';
 import { recalcularAuras } from '@/lib/omni/auras';
+import * as eventBus from '@/lib/omni/eventBus';
 import { segmentoEntraNaZona, zonaEstaAtiva } from '@/lib/mapa/zonaTerreno';
 const token = (p: Partial<Entity> = {}): Entity => ({ id:'t', x:0,y:0,w:100,h:100,rotation:0,shape:'RECT',layer:'tokens',...p } as Entity);
 const template = (p: Partial<MapTemplate> = {}): MapTemplate => ({ id:'a',kind:'circle',x:20,y:20,rotation:0,length:1,width:1,color:'#fff',opacity:1,...p });
 const cfg = (p: Partial<AcaoAtivaConfig> = {}): AcaoAtivaConfig => ({ id:'c',nome:'teste',acao:'comum',custoPE:'0',alcanceM:3,teste:'nenhum',...p } as AcaoAtivaConfig);
 beforeEach(() => {
   comoTela({ profileId:null,role:'MASTER' });
-  useOmniEntidadesStore.setState({ entidades:{} }); useOmniRuntimeStore.setState({ efeitos:{} }); useOmniSpatialStore.setState({ posicoes:{} });
+  useOmniEntidadesStore.setState({ entidades:{} }); useOmniRuntimeStore.setState({ efeitos:{} }); useOmniSpatialStore.setState({ posicoes:{}, aurasDentro:{} });
   useMapStore.setState({ entities:{},pendingMove:null,activeSceneId:crypto.randomUUID() });
   montarMesa(['u','a'].map(id=>ficha(id,{hpCurrent:50,hpMax:50,peCurrent:5,peMax:20,rd:0,escCurrent:0,attributes:[],trainingBonus:3,omniAtivos:[]})),{u:[0,0],a:[6,0]});
   iniciarEngineZonasTerreno();
@@ -121,5 +122,39 @@ describe('aura acompanha o dono no mapa',()=>{
     recalcularAuras(); expect(pegarFicha('a').peCurrent).toBe(5);
     useMapStore.getState().updateEntity('e-u',{x:350}); expect(pegarFicha('a').peCurrent).toBe(7);
     recalcularAuras(); expect(pegarFicha('a').peCurrent).toBe(7);
+  });
+
+  it('recalcula automaticamente quando um token de ficha é removido', () => {
+    const spy = vi.spyOn(eventBus, 'emitirEventoDaEntidade');
+    const e = novaEntidade('aura');
+    e.areaRaio = { tipo: 'fixo', valor: 10 };
+    useOmniEntidadesStore.setState({ entidades: { [e.id]: e } });
+    useCharacterStore.getState().updateCharacter('u', {
+      omniAtivos: [{ id: 'v', entidadeId: e.id, categoria: 'aura', instanceId: 'i', vinculadoEm: 0 }],
+    });
+
+    recalcularAuras();
+    expect(spy.mock.calls.filter((call) => call[1] === 'aoEntrarEmAura')).toHaveLength(2);
+
+    // A remoção do token dispara a nova varredura sem chamada manual à aura.
+    useMapStore.getState().removeEntities(['e-u']);
+    expect(spy.mock.calls.filter((call) => call[1] === 'aoSairDaAura')).toHaveLength(2);
+    expect(Object.values(useOmniSpatialStore.getState().aurasDentro)).toEqual([[]]);
+  });
+
+  it('emite saída automaticamente quando a aura é removida da ficha', () => {
+    const spy = vi.spyOn(eventBus, 'emitirEventoDaEntidade');
+    const e = novaEntidade('aura');
+    e.areaRaio = { tipo: 'fixo', valor: 10 };
+    useOmniEntidadesStore.setState({ entidades: { [e.id]: e } });
+    useCharacterStore.getState().updateCharacter('u', {
+      omniAtivos: [{ id: 'v', entidadeId: e.id, categoria: 'aura', instanceId: 'i', vinculadoEm: 0 }],
+    });
+    recalcularAuras();
+    expect(spy.mock.calls.filter((call) => call[1] === 'aoEntrarEmAura')).toHaveLength(2);
+
+    useCharacterStore.getState().updateCharacter('u', { omniAtivos: [] });
+    expect(spy.mock.calls.filter((call) => call[1] === 'aoSairDaAura')).toHaveLength(2);
+    expect(Object.keys(useOmniSpatialStore.getState().aurasDentro)).toHaveLength(0);
   });
 });
