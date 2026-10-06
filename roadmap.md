@@ -66,3 +66,12 @@
 - [x] Arremessos Potentes (+1 nível de dano; 1 PE ignora RD = treinamento) — dano do ataque agora desconta da vida do alvo
 - [x] Arsenal Cíclico
 - [x] Assumir Postura — base + 8 posturas (Sol, Lua com pergunta/Andar/Desengajar, Terra, Dragão, Fortuna, Devastação, Tempestade, Céu)
+
+## OMNI — Reações e Testes com Resistência
+- [x] Ataque com arma pode pedir TR do alvo ao acertar (TR e CD configuráveis; CD vazia usa a CD de Especialização)
+- [x] Reações em 15 gatilhos: entrar/sair do alcance, declarar ataque, errar, acertar, crítico, sofrer dano, causar dano, reduzido a 0 PV, derrubar inimigo, alvo/falhou/passou em TR, alvo de perícia, inimigo conjurando
+- [x] Proteção a aliados e janela única de reação (efeitos de uma reação nunca abrem outra reação)
+- [ ] Testar no navegador com peças no mapa: dentro/fora do alcance, casos inválidos, dano + TR + condição
+- [ ] Reações nos testes pedidos pelo Mestre (hoje não vêm de uma ficha, então não abrem reação)
+- [ ] Texto natural: aceitar "cac"/"corpo a corpo", "aplicar condição <nome>" e dano escalado por contador
+- [ ] Guia OMNI: janela redimensionável, abas por função, exemplos testados
