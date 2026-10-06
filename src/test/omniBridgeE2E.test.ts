@@ -23,6 +23,8 @@ import type { Character } from '@/types';
 import type { EntidadeOmni, CombatEffect } from '@/lib/omni/tipos';
 import { effectiveMovement, combatMoveBudget, reactionMoveBudget } from '@/lib/movementBudget';
 import { computeDefenseBreakdown } from '@/lib/defenseCalc';
+import { derivarPassivasContinuas } from '@/lib/omni/passivasDerivadas';
+import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { ORDEM_PERICIAS, SISTEMA_PERICIAS, ORDEM_TR, SISTEMA_TR } from '@/lib/omni/constantesDoSistema';
 
 // ─── Cobaia padronizada ──────────────────────────────────────────────────
@@ -358,5 +360,27 @@ describe('Fórmulas de bônus equipado para perícias, TRs e deslocamento', () =
     };
     const pacote = PacoteOmniSchema.parse({ formato: 'omni-engine.v1', nome: 'Teste', geradoEm: 1, entidades: [item] });
     expect(pacote.entidades[0].bonusEquipadoFormula).toEqual(item.bonusEquipadoFormula);
+  });
+});
+
+describe('Passivas contínuas condicionais', () => {
+  it('recalcula o bônus quando a condição muda e respeita acúmulo por perícia', () => {
+    const c = baseCobaia();
+    const base = novaEntidade('passiva', 'Postura');
+    const condicional = novaEntidade('aura', 'Aura de Foco');
+    const penalidade = novaEntidade('talento', 'Ferimento');
+    for (const ent of [base, condicional, penalidade]) {
+      ent.combatData = { critRange: 20, critMultiplier: 2, isActive: false, effects: [], effectsActive: [], effectsPassive: [] };
+    }
+    base.combatData!.effectsPassive = [{ id: 'base', type: 'ADICIONAR', target: 'USUARIO', resourcePath: 'pericia_atletismo', formula: '3' }];
+    condicional.combatData!.effectsPassive = [{ id: 'bonus', type: 'ADICIONAR', target: 'USUARIO', resourcePath: 'pericia_atletismo', formula: '5', condition: '@USUARIO.forca >= 4' }];
+    penalidade.combatData!.effectsPassive = [{ id: 'penalty', type: 'SUBTRAIR', target: 'USUARIO', resourcePath: 'pericia_atletismo', formula: '1' }];
+    useOmniEntidadesStore.setState({ entidades: Object.fromEntries([base, condicional, penalidade].map((ent) => [ent.id, ent])) });
+    const vinculo = (entidadeId: string) => ({ id: entidadeId, entidadeId, categoria: 'passiva' as const, instanceId: entidadeId, vinculadoEm: 0 });
+    const personagem = { ...c, omniAtivos: [vinculo(base.id), vinculo(condicional.id), vinculo(penalidade.id)] } as Character;
+
+    expect(derivarPassivasContinuas(personagem).skillBonuses.atletismo).toBe(4);
+    const forcaMenor = { ...personagem, attributes: personagem.attributes.map((attr) => attr.id === 'forca' ? { ...attr, value: 3 } : attr) };
+    expect(derivarPassivasContinuas(forcaMenor).skillBonuses.atletismo).toBe(2);
   });
 });
