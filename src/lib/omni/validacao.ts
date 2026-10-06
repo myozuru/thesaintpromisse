@@ -39,6 +39,8 @@ const AcaoLogicaSchema = z.object({
   valor: ValorDinamicoSchema.optional(),
   teto: ValorDinamicoSchema.optional(),
   escopoTeto: z.enum(['global', 'porFonte']).optional(),
+  limiteFonte: ValorDinamicoSchema.optional(),
+  periodoFonte: z.enum(['rodada', 'descanso']).optional(),
   condicao: z.string().optional(),
   duracao: z
     .object({
@@ -67,6 +69,8 @@ const CombatEffectSchema: z.ZodTypeAny = z.lazy(() => z.object({
   type: z.enum(['SUBTRAIR', 'ADICIONAR', 'MODIFICADOR']),
   counterCap: z.string().optional(),
   counterPerSource: z.boolean().optional(),
+  counterSourceLimit: z.string().min(1).optional(),
+  counterSourcePeriod: z.enum(['rodada', 'descanso']).optional(),
   target: z.enum(['ALVO', 'USUARIO', 'AREA']),
   damageType: z.string().optional(),
   resourcePath: z.string().optional(),
@@ -94,7 +98,10 @@ const CombatEffectSchema: z.ZodTypeAny = z.lazy(() => z.object({
     })),
   }).optional(),
   buttonOnly: z.object({ label: z.string().optional() }).optional(),
-}));
+}).refine(
+  (effect) => Boolean(effect.counterSourceLimit) === Boolean(effect.counterSourcePeriod),
+  { path: ['counterSourcePeriod'], message: 'Limite por fonte exige periodicidade explícita.' },
+));
 
 const CombatDataSchema = z.object({
   isActive: z.boolean().optional(),
