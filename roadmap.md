@@ -73,6 +73,6 @@
 - [x] Proteção a aliados e janela única de reação (efeitos de uma reação nunca abrem outra reação)
 - [x] Testar no navegador com peças no mapa: dentro/fora do alcance, casos inválidos, dano + TR + condição (`python tests/browser/omni_reacoes.py` — 10 casos: dentro/fora do alcance, protegido aliado vs próprio, sem reação, PE insuficiente, dano mínimo, passar a vez, TR ramificado)
 - [x] Corrigir a janela de reação, que ficava escondida sob a bandeja 3D de dados no canto inferior direito e não podia ser clicada enquanto houvesse rolagem na tela
-- [ ] Reações nos testes pedidos pelo Mestre (hoje não vêm de uma ficha, então não abrem reação)
+- [x] Reações nos testes pedidos pelo Mestre: campo "Quem força o teste" (TR/perícia); testado no navegador
 - [ ] Texto natural: aceitar "cac"/"corpo a corpo", "aplicar condição <nome>" e dano escalado por contador
 - [ ] Guia OMNI: janela redimensionável, abas por função, exemplos testados
