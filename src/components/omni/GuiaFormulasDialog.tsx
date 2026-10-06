@@ -21,6 +21,7 @@ import type { CombatEffect } from '@/lib/omni/tipos';
 import { GuiaComponentes } from './GuiaComponentes';
 import { FLUXOS_ACOES_GUIA } from '@/lib/omni/fluxosGuia';
 import { exemploCompostoDaChave } from '@/lib/omni/exemplosGuia';
+import { EXEMPLOS_NATURAIS } from '@/lib/omni/exemplosNaturais';
 import {
   extrairPrefixoNoCaret,
   sugerirNoCaret,
@@ -67,8 +68,9 @@ export function GuiaFormulasDialog({ aberto, onClose, modo = 'dialog', onAplicar
 
   const Conteudo = (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <Tabs defaultValue={onAplicarReceita ? 'receitas' : 'componentes'} className="flex min-h-0 flex-1 flex-col">
-        <TabsList className="grid h-auto w-full shrink-0 grid-cols-2 gap-1 sm:grid-cols-4">
+      <Tabs defaultValue={onAplicarReceita ? 'receitas' : 'natural'} className="flex min-h-0 flex-1 flex-col">
+        <TabsList className="grid h-auto w-full shrink-0 grid-cols-2 gap-1 sm:grid-cols-5">
+          <TabsTrigger value="natural" className="min-h-10 whitespace-normal text-xs leading-relaxed">📝 Texto simples</TabsTrigger>
           <TabsTrigger value="componentes" className="min-h-10 whitespace-normal text-xs leading-relaxed">🧩 Componentes</TabsTrigger>
           <TabsTrigger value="sintaxe" className="min-h-10 whitespace-normal text-xs leading-relaxed">⌨ Sintaxe</TabsTrigger>
           <TabsTrigger value="recursos" className="min-h-10 whitespace-normal text-xs leading-relaxed">🩺 Recursos</TabsTrigger>
@@ -79,6 +81,20 @@ export function GuiaFormulasDialog({ aberto, onClose, modo = 'dialog', onAplicar
           <TabsTrigger value="acoes" className="min-h-10 whitespace-normal text-xs leading-relaxed">🎯 Ações</TabsTrigger>
           <TabsTrigger value="receitas" className="min-h-10 whitespace-normal text-xs leading-relaxed">✦ Receitas</TabsTrigger>
         </TabsList>
+        <TabsContent value="natural" className="min-h-0 flex-1 space-y-5 overflow-y-auto pt-3 pr-2">
+          <section className="space-y-2">
+            <h2 className="text-base font-semibold text-primary">Como escrever</h2>
+            <p className="text-sm leading-relaxed text-muted-foreground">Uma regra por linha: <b className="text-foreground">quando acontece</b> + <b className="text-foreground">então</b> + <b className="text-foreground">o que fazer</b>. Sem @, sem setas, sem parênteses. Clique num exemplo para copiar ou inserir.</p>
+          </section>
+          {Array.from(new Set(EXEMPLOS_NATURAIS.map((e) => e.grupo))).map((grupo) => (
+            <section key={grupo} className="space-y-2">
+              <h2 className="text-base font-semibold text-primary">{grupo}</h2>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {EXEMPLOS_NATURAIS.filter((e) => e.grupo === grupo).map((e) => <ExemploCard key={e.titulo} titulo={e.titulo} formula={e.frase} explicacao={e.explicacao} onInsert={inserir} />)}
+              </div>
+            </section>
+          ))}
+        </TabsContent>
         <TabsContent value="componentes" className="min-h-0 flex-1 overflow-y-auto pt-3 pr-2"><GuiaComponentes inserir={inserir} /></TabsContent>
 
         <TabsContent value="sintaxe" className="min-h-0 flex-1 space-y-5 overflow-y-auto pt-3 pr-2">
