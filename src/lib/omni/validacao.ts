@@ -3,6 +3,7 @@
  * Defesa contra JSON corrompido / vindo de outro sistema.
  */
 import { z } from 'zod';
+import { GATILHOS_REACAO_IDS } from './tipos';
 import { DAMAGE_TYPES } from '@/types';
 import { ROTULOS_PERICIAS, SISTEMA_PERICIAS } from './constantesDoSistema';
 const DamageTypeSchema = z.enum(DAMAGE_TYPES);
@@ -165,6 +166,7 @@ const AcaoAtivaSchema = z.object({
     gatilho: z.enum(GATILHOS_REACAO_IDS),
     alcance_m: z.number().finite().positive(), protegido: z.enum(['usuario', 'aliados', 'todos']),
     alvo: z.enum(['origem', 'protegido', 'usuario']), cancelar_evento: z.boolean().optional(), defesa_bonus: z.number().finite().nonnegative().optional(),
+    bonus_teste: z.number().finite().optional(), dano_minimo: z.number().finite().nonnegative().optional(),
   }).optional(),
   id: z.string(), nome: z.string(), acao: z.enum(['comum', 'bonus', 'reacao', 'movimento', 'livre']),
   custo_recursos: z.object({

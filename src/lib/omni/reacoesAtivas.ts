@@ -17,6 +17,7 @@ import { armaDoPersonagem, armaEstaEmpunhada } from './armaDoPersonagem';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { replicaWeaponName } from '@/lib/replicas';
 import { segmentoCruzaAlcance } from './geometriaReacao';
+import { comReacaoEmCurso, reacaoEmCurso } from './reacaoEmCurso';
 
 export interface EventoReacaoAtiva {
   gatilho: GatilhoReacaoAtiva;
@@ -24,7 +25,7 @@ export interface EventoReacaoAtiva {
   protegidoId?: string;
   movimento?: { de: { x: number; y: number }; para: { x: number; y: number }; /** Amostras intermediárias do trajeto, na ordem do movimento. */ trajetoria?: { x: number; y: number }[] };
 }
-export interface ResultadoJanelaAtiva { cancelado: boolean; defesaBonus: number }
+export interface ResultadoJanelaAtiva { cancelado: boolean; defesaBonus: number; testeBonus: number }
 export interface OfertaReacaoAtiva { id: string; usuarioId: string; nomeUsuario: string; instanceId: string; cfg: AcaoAtivaConfig; ent: EntidadeOmni; alvoId: string }
 interface Janela { id: string; evento: EventoReacaoAtiva; ofertas: OfertaReacaoAtiva[]; destinatarios: string[]; pendentes: string[]; resultado: ResultadoJanelaAtiva; busy: boolean; expiresAt: number; erro?: string }
 export interface OfertaRemotaReacao {
@@ -75,7 +76,7 @@ function limparSondagem(janelaId: string, perfilId: string) {
   const key = `${janelaId}:${perfilId}`;
   clearTimeout(sondagens.get(key)); sondagens.delete(key);
 }
-const vazio = (): ResultadoJanelaAtiva => ({ cancelado: false, defesaBonus: 0 });
+const vazio = (): ResultadoJanelaAtiva => ({ cancelado: false, defesaBonus: 0, testeBonus: 0 });
 
 function destinatariosReacoes(): string[] {
   // Sem canal multiplayer não há sessão remota capaz de confirmar a sondagem.
@@ -115,10 +116,10 @@ export async function responderOfertaRemota(janelaId: string, ofertaId?: string,
     if (!item || item.ownerId !== oferta.usuarioId || JSON.stringify(atual) !== JSON.stringify(oferta.cfg) || !elegivel(oferta, remoto.evento)) throw new Error('Reação indisponível: ficha, alcance, recursos ou configuração mudaram.');
     const { executarAcaoAtiva } = await import('./acaoAtiva');
     const cfg = { ...oferta.cfg, tipo_alvo: oferta.alvoId === oferta.usuarioId ? 'proprio' as const : 'unico' as const, ...(remoto.evento.movimento ? { alcanceM: 0 } : {}) };
-    const r = await executarAcaoAtiva(oferta.usuarioId, cfg, oferta.alvoId, oferta.ent, { ignorarReacoes: true, instanciaId: oferta.instanceId });
+    const r = await comReacaoEmCurso(() => executarAcaoAtiva(oferta.usuarioId, cfg, oferta.alvoId, oferta.ent, { ignorarReacoes: true, instanciaId: oferta.instanceId }));
     if (!r.ok) throw new Error(r.reason);
     // executarAcaoAtiva já debita a reação no mesmo patch dos outros custos.
-    const resultado = { cancelado: !!r.efeitoAplicado && !!oferta.cfg.reacao?.cancelar_evento, defesaBonus: r.efeitoAplicado ? oferta.cfg.reacao?.defesa_bonus ?? 0 : 0 };
+    const resultado = { cancelado: !!r.efeitoAplicado && !!oferta.cfg.reacao?.cancelar_evento, defesaBonus: r.efeitoAplicado ? oferta.cfg.reacao?.defesa_bonus ?? 0 : 0, testeBonus: r.efeitoAplicado ? oferta.cfg.reacao?.bonus_teste ?? 0 : 0 };
     useLogStore.getState().addLog('combat', `↪ ${oferta.nomeUsuario} reagiu com ${oferta.cfg.nome}${resultado.cancelado ? ' e interrompeu o evento' : ''}.`);
     window.dispatchEvent(new CustomEvent('omni-reaction:send', { detail: { tipo: 'resultado', janelaId, perfilId, clienteOrigem, resultado } }));
     useReacoesAtivasStore.getState().fecharOfertaRemota(janelaId);
@@ -183,6 +184,8 @@ export function ofertasReacaoAtiva(evento: EventoReacaoAtiva): OfertaReacaoAtiva
 }
 
 export function abrirJanelaReacaoAtiva(evento: EventoReacaoAtiva): Promise<ResultadoJanelaAtiva> {
+  // Efeitos de uma reação (dano, TR...) não abrem novas reações.
+  if (reacaoEmCurso()) return Promise.resolve(vazio());
   const ofertas = ofertasReacaoAtiva(evento).filter(o => podeVerOfertaReacao(o, useProfileStore.getState().activeProfileId));
   const destinatarios = destinatariosReacoes();
   if (!ofertas.length && !destinatarios.length) return Promise.resolve(vazio());
@@ -276,11 +279,12 @@ export async function responderReacaoAtiva(id: string, ofertaId?: string): Promi
     if (!item || item.ownerId !== oferta.usuarioId || JSON.stringify(atual) !== JSON.stringify(oferta.cfg) || !elegivel(oferta, j.evento)) throw new Error('Reação indisponível: ficha, alcance, recursos ou configuração mudaram.');
     const { executarAcaoAtiva } = await import('./acaoAtiva');
     const cfg = { ...oferta.cfg, tipo_alvo: oferta.alvoId === oferta.usuarioId ? 'proprio' as const : 'unico' as const, ...(j.evento.movimento ? { alcanceM: 0 } : {}) };
-    const r = await executarAcaoAtiva(oferta.usuarioId, cfg, oferta.alvoId, oferta.ent, { ignorarReacoes: true, instanciaId: oferta.instanceId });
+    const r = await comReacaoEmCurso(() => executarAcaoAtiva(oferta.usuarioId, cfg, oferta.alvoId, oferta.ent, { ignorarReacoes: true, instanciaId: oferta.instanceId }));
     if (!r.ok) throw new Error(r.reason);
     // executarAcaoAtiva já debita a reação no mesmo patch dos outros custos.
     if (r.efeitoAplicado) {
       resultado.defesaBonus += oferta.cfg.reacao?.defesa_bonus ?? 0;
+      resultado.testeBonus += oferta.cfg.reacao?.bonus_teste ?? 0;
       resultado.cancelado ||= !!oferta.cfg.reacao?.cancelar_evento;
     }
     useLogStore.getState().addLog('combat', `↪ ${oferta.nomeUsuario} reagiu com ${oferta.cfg.nome}${resultado.cancelado ? ' e interrompeu o evento' : ''}.`);
@@ -288,6 +292,7 @@ export async function responderReacaoAtiva(id: string, ofertaId?: string): Promi
   const atualJanela = useReacoesAtivasStore.getState().janelas.find(x => x.id === id);
   if (!atualJanela) return;
   resultado.defesaBonus += atualJanela.resultado.defesaBonus - j.resultado.defesaBonus;
+  resultado.testeBonus += (atualJanela.resultado.testeBonus ?? 0) - (j.resultado.testeBonus ?? 0);
   resultado.cancelado ||= atualJanela.resultado.cancelado;
   const restantes = atualJanela.ofertas.filter(o => o.id !== oferta.id && elegivel(o, j.evento));
   if (resultado.cancelado || (!restantes.length && !erro && !atualJanela.pendentes.length)) { fechar(id, resultado); return; }
