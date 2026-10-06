@@ -15,6 +15,15 @@ function atomos(p: PredicadoNatural, out: Array<Extract<PredicadoNatural, { tipo
   return out;
 }
 
+function contemEvento(p: PredicadoNatural): boolean {
+  return p.tipo === 'atomo' ? p.classe === 'evento' : contemEvento(p.esquerda) || contemEvento(p.direita);
+}
+function eventoMisturadoComOu(p: PredicadoNatural): boolean {
+  if (p.tipo === 'atomo') return false;
+  if (p.tipo === 'ou' && (contemEvento(p.esquerda) || contemEvento(p.direita))) return true;
+  return eventoMisturadoComOu(p.esquerda) || eventoMisturadoComOu(p.direita);
+}
+
 function combinarLogica(p: PredicadoNatural, eventos: Map<string, EventoNaturalMapeado>): string | undefined {
   if (p.tipo === 'atomo') {
     if (p.classe === 'evento') return '1';
@@ -81,6 +90,7 @@ function acaoParaComando(a: AcaoNatural): { comando?: string; erro?: string; aft
 }
 
 function compilacaoDaFrase(ast: FraseNatural, fonteNatural: string, opcoes: OmniScriptParseOpts): ResultadoCompilacaoNatural {
+  if (eventoMisturadoComOu(ast.condicao)) return { efeitos:[], erros:[{ codigo:'EVENTO_EM_DISJUNCAO', mensagem:'Não combine um evento com "ou"; escreva regras separadas para cada evento ou use "e" para acrescentar condições.', ...ast.condicao.intervalo }] };
   const eventosPredicado = atomos(ast.condicao).filter(a => a.classe === 'evento');
   if (!eventosPredicado.length) return { efeitos: [], erros: [{ codigo:'EVENTO_OBRIGATORIO', mensagem:'A regra executável precisa indicar um evento de disparo (por exemplo: ao sofrer dano).', ...ast.condicao.intervalo }] };
   const eventos: EventoNaturalMapeado[] = [];
@@ -138,8 +148,33 @@ export function compilarScriptNatural(fonte: string, opcoes: OmniScriptParseOpts
 
 /** Adaptador de saída para o editor e o runtime legado do OMNI. */
 export function parseScriptOmni(fonte: string, opcoes: OmniScriptParseOpts = {}): OmniScriptResultado {
-  const natural = /\b(ent[aã]o)\b/i.test(fonte) && !/@|->/.test(fonte) && /\b(aplicar|remover|imune|desimune|acumular|somar|subtrair|reduzir|definir|anular|ignorar|gastar|causar|curar|conceder|receber|recuperar|drenar|empurrar|puxar|avancar|teleportar|trocar|transferir|marcar|criar|cancelar|maximizar|rerrolar|rolar|bot[aã]o)\b/i.test(fonte);
-  if (!natural) return parseOmniScript(fonte, opcoes);
-  const r = compilarScriptNatural(fonte, opcoes);
-  return { efeitos:r.efeitos, erros:r.erros.map(e => ({ posicao:e.inicio, trecho:fonte.slice(e.inicio,e.fim), mensagem:e.mensagem })) };
+  const partes: Array<{ texto:string; inicio:number }> = [];
+  const adicionarParte = (inicioParte:number, fimParte:number) => {
+    const bruto=fonte.slice(inicioParte,fimParte), deslocamento=bruto.length-bruto.trimStart().length, texto=bruto.trim();
+    if(texto)partes.push({texto,inicio:inicioParte+deslocamento});
+  };
+  let inicio=0,nivel=0,aspas='';
+  for(let i=0;i<fonte.length;i++){
+    const ch=fonte[i];
+    if(aspas){if(ch==='\\'){i++;continue;}if(ch===aspas)aspas='';continue;}
+    if(ch==='"'||ch==="'"){aspas=ch;continue;}
+    if(ch==='('){nivel++;continue;}if(ch===')'){nivel=Math.max(0,nivel-1);continue;}
+    if(nivel===0&&(ch==='\n'||ch===';')){adicionarParte(inicio,i);inicio=i+1;}
+  }
+  adicionarParte(inicio,fonte.length);
+  if(!partes.length)return parseOmniScript(fonte,opcoes);
+  const efeitos:CombatEffect[]=[],erros:OmniScriptResultado['erros']=[];
+  for(const parte of partes){
+    const natural=/^(?:(?:se\s+)?(?:ao|aos|quando|no|na)\b)[\s\S]*\bent[aã]o\b/i.test(parte.texto)&&!/@|->/.test(parte.texto);
+    if(natural){
+      const r=compilarScriptNatural(parte.texto,opcoes);efeitos.push(...r.efeitos);
+      erros.push(...r.erros.map(e=>({posicao:e.inicio+parte.inicio,trecho:fonte.slice(e.inicio+parte.inicio,e.fim+parte.inicio),mensagem:e.mensagem})));
+    }else{
+      const r=parseOmniScript(parte.texto,opcoes);efeitos.push(...r.efeitos);
+      erros.push(...r.erros.map(e=>({...e,posicao:e.posicao+parte.inicio})));
+    }
+  }
+  // Não deixe um script parcialmente instalado quando uma regra do mesmo
+  // documento é inválida: validar e publicar as regras é uma transação única.
+  return {efeitos:erros.length?[]:efeitos,erros};
 }
