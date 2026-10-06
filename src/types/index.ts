@@ -1005,6 +1005,10 @@ export interface Character {
    * pelo gatilho `aoAtualizarContador` (limiar disparável via predicado).
    */
   omniCounters?: Record<string, number>;
+  /** Uso dos limites por fonte dos contadores; independente do saldo consumível. */
+  omniCounterSourceUsage?: Record<string, Record<string, { ciclo: string; usados: number }>>;
+  /** Incrementado apenas quando um descanso curto/longo é concluído. */
+  omniCounterRestCycle?: number;
   /** Custos de manutenção e condições exclusivamente criadas por ações OMNI. */
   omniSustentacoes?: { id: string; nome: string; pePorTurno: number; condicoes: { charId: string; id: string }[] }[];
   /**
