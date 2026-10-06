@@ -112,7 +112,8 @@ async def main():
                 await dano(alvo, valor)
                 aberto = await dialog.count()
                 await pg.screenshot(path=S + re.sub(r"\W+", "_", nome) + "_janela.png")
-                print(f"[{nome}] janela={'SIM' if aberto else 'não'} texto={await dialog.first.inner_text() if aberto else '-'!r}"[:400] if aberto else f"[{nome}] janela=não")
+                texto = (await dialog.first.inner_text())[:180] if aberto else "-"
+                print(f"[{nome}] janela={'SIM' if aberto else 'não'} | {texto}")
                 if agir and aberto:
                     try:
                         await agir()
