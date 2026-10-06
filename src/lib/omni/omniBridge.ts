@@ -207,6 +207,8 @@ export interface OmniModifierContribution {
   source: string;
   /** Quanto somou (já com sinal). */
   delta: number;
+  /** Indica se esta contribuição entra no total após a regra de acúmulo. */
+  applied?: boolean;
 }
 
 /** Mapa final de modificadores e suas origens, indexado por chave de bônus. */
@@ -240,6 +242,46 @@ function vazio(): OmniModifierBag {
 
 function vazioPassivo(): OmniPassiveBonusBag {
   return { ...vazio(), rollTotals: {}, rollOrigins: {} };
+}
+
+/**
+ * Bônus positivos concorrentes na mesma chave não se acumulam: prevalece o
+ * maior. Penalidades continuam somando. Mantemos todas as fontes para que a
+ * ficha possa explicar quais valores foram aplicados e quais foram suprimidos.
+ */
+function resolverContribuicoes(contribuicoes: OmniModifierContribution[]): number {
+  const maiorBonus = Math.max(0, ...contribuicoes.map((item) => item.delta));
+  let bonusAplicado = false;
+  let total = 0;
+  for (const item of contribuicoes) {
+    if (item.delta < 0) {
+      item.applied = true;
+      total += item.delta;
+    } else if (item.delta > 0 && !bonusAplicado && item.delta === maiorBonus) {
+      item.applied = true;
+      bonusAplicado = true;
+      total += item.delta;
+    } else {
+      item.applied = false;
+    }
+  }
+  return total;
+}
+
+/** Reaplica a regra de acúmulo a fontes vindas de bags diferentes. */
+export function resolverAcumuloOmni(contribuicoes: OmniModifierContribution[]): number {
+  return resolverContribuicoes(contribuicoes);
+}
+
+function aplicarAcumulo(bag: OmniModifierBag): void {
+  for (const k of CHAVES_PASSIVAS) bag.totals[k] = resolverContribuicoes(bag.origins[k]);
+  for (const [key, contributions] of Object.entries(bag.periciaOrigins)) {
+    bag.pericias[key] = resolverContribuicoes(contributions);
+  }
+  for (const [key, contributions] of Object.entries(bag.trOrigins) as Array<[OmniRollBonusKey, OmniModifierContribution[]]>) {
+    bag.trs[key] = resolverContribuicoes(contributions);
+  }
+  bag.deslocamento = resolverContribuicoes(bag.deslocamentoOrigins);
 }
 
 function chaveRolagemDoRecurso(resourcePath?: string): OmniRollBonusKey | null {
@@ -357,6 +399,7 @@ export function selectOmniModifiers(
     }
   }
 
+  aplicarAcumulo(out);
   return out;
 }
 
@@ -411,6 +454,11 @@ export function selectOmniPassiveBonuses(
         (out.rollOrigins[k] ??= []).push({ source: `✦ ${ent.nome}`, delta: total });
       }
     }
+  }
+
+  aplicarAcumulo(out);
+  for (const [key, contributions] of Object.entries(out.rollOrigins) as Array<[OmniRollBonusKey, OmniModifierContribution[]]>) {
+    out.rollTotals[key] = resolverContribuicoes(contributions);
   }
 
   return out;
