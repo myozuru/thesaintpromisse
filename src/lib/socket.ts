@@ -71,4 +71,6 @@ export type WorldSlice =
   | 'fog'
   | 'worldMap'
   | 'worldBosses'
-  | 'worldBossesMaster';
+  | 'worldBossesMaster'
+  | 'economia'
+  | 'quests';
