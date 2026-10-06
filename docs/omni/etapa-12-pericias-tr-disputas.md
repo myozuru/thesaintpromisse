@@ -14,4 +14,4 @@ O seletor de TR também deriva da lista oficial de cinco testes (`astucia`, `for
 - `src/lib/omni/validacao.ts`: validação dos nomes de perícia em ações importadas e normalização de IDs para o rótulo canônico.
 - Testes em `omniPacoteRoundTrip.test.ts` e `omniAlvosUI.test.tsx`: IDs/rótulos aceitos, atributo/TR/chave inventada recusados e seleção do editor. Os testes existentes de `omniDisputaAtiva.test.ts` continuam cobrindo o cálculo e o desempate.
 
-Verificação focada: quatro arquivos de teste passaram (53 testes). O TypeScript continua apontando apenas quatro erros já existentes fora desta etapa: três propriedades `conditionId` duplicadas em `SpellApplyDialog.tsx` e o tipo `T` ausente em `useReactionStore.ts`.
+Verificação focada: quatro arquivos de teste passaram (52 testes). O TypeScript continua apontando apenas quatro erros já existentes fora desta etapa: três propriedades `conditionId` duplicadas em `SpellApplyDialog.tsx` e o tipo `T` ausente em `useReactionStore.ts`.
