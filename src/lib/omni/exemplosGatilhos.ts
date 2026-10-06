@@ -148,9 +148,9 @@ export const EXEMPLOS_GATILHOS: Record<
   },
   aoAliadoSofrerDano: {
     efeito:
-      "se @CENA.distancia <= 4.5 entao somar 1 em @USUARIO.contador rancor ate @USUARIO.treino",
+      "se @CENA.distancia <= 4.5 entao somar 1 em @USUARIO.contador rancor ate @USUARIO.treino por_fonte teto_aliado 1 por rodada",
     explicacao:
-      "O portador observa o aliado ferido; distância de 4,5 m ou menos acumula 1 Rancor no portador, com teto global Treino. A vítima aliada não recebe essa carga. Este exemplo aceita qualquer agressor; adicione filtro de inimigo quando a habilidade exigir.",
+      "Quando um aliado diferente do portador sofre dano a até 4,5 m, o portador ganha 1 Rancor. O total nunca passa do Treino; a mesma criatura só concede 1 carga por rodada e gastar Rancor não renova essa cota. A vítima não recebe a carga. Este exemplo aceita qualquer agressor; adicione filtro de inimigo quando a habilidade exigir.",
   },
   aoInimigoSofrerDano: {
     efeito:
