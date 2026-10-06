@@ -584,6 +584,10 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
   if (jammed) notes.push(`🔧 ${w.name} EMPERROU (d20 ${natural} ≤ margem ${margemEmperrar(w, pistoleiroOn)}) — ação comum para desemperrar.`);
 
   if (!hit && ctx.targetId && !ctx.ignorarReacoes) await abrirJanelaReacaoAtiva({ gatilho: 'quando_ataque_errar', origemId: ctx.attacker.id, protegidoId: ctx.targetId });
+  if (hit && ctx.targetId && !ctx.ignorarReacoes) {
+    await abrirJanelaReacaoAtiva({ gatilho: 'quando_ataque_acertar', origemId: ctx.attacker.id, protegidoId: ctx.targetId });
+    if (critical) await abrirJanelaReacaoAtiva({ gatilho: 'quando_sofrer_critico', origemId: ctx.attacker.id, protegidoId: ctx.targetId });
+  }
   return {
     semRecursao: !!ctx.semRecursao, d20: natural, attackRolls, rollMode, natural, attackTotal, hit, critical, criticalFail,
     emperrou: jammed,

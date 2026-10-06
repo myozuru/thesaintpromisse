@@ -532,13 +532,17 @@ async function executarAcaoAtivaInterna(
       const cd = cfg.cd?.trim() ? Math.round(avaliarFormulaAtiva(cfg.cd, u, t, arma).valor) : specDCFor(u);
       const adv = consumeAdvantageFor(t.id, { kind: 'save', name: TR_ROTULO[tr] }, { disadvantage: mods.desvantagemTR });
       const flat = consumeFlatBonusFor(t.id, { kind: 'save', name: TR_ROTULO[tr] });
-      const mod = modTR(t, tr) + mods.tr + flat.bonus;
+      const { abrirJanelaReacaoAtiva } = await import('./reacoesAtivas');
+      const preTR = opcoes.ignorarReacoes ? { cancelado: false, testeBonus: 0 } : await abrirJanelaReacaoAtiva({ gatilho: 'quando_alvo_de_tr', origemId: u.id, protegidoId: t.id });
+      if (preTR.cancelado) return { grau: 'sucesso' as GrauSucessoTR, texto: `TR ${TR_ROTULO[tr]} anulado por reação → SUCESSO` };
+      const mod = modTR(t, tr) + mods.tr + flat.bonus + (preTR.testeBonus ?? 0);
       const rolled = await applyAdvantageToD20(adv.net, () => rollD20Com(t.id, undefined, { label: `TR ${TR_ROTULO[tr]}` }));
       const d20 = rolled.d20;
       const totalTR = d20 + mod;
       const grau = classificarGrauTR(d20, totalTR, cd);
       const grauLabel = grau === 'falha_critica' ? 'FALHA CRÍTICA' : grau.toUpperCase();
-      return { grau, texto: `TR ${TR_ROTULO[tr]}${rolled.modeLabel} d20 ${d20}${mod >= 0 ? '+' : ''}${mod} = ${totalTR} vs CD ${cd} → ${grauLabel}` };
+      if (!opcoes.ignorarReacoes) await abrirJanelaReacaoAtiva({ gatilho: grau === 'sucesso' ? 'quando_passar_tr' : 'quando_falhar_tr', origemId: u.id, protegidoId: t.id });
+      return { grau, texto: `TR ${TR_ROTULO[tr]}${rolled.modeLabel} d20 ${d20}${mod >= 0 ? '+' : ''}${mod} = ${totalTR} vs CD ${cd} → ${grauLabel}${preTR.testeBonus ? ` (reação ${preTR.testeBonus > 0 ? '+' : ''}${preTR.testeBonus})` : ''}` };
     };
 
     if (cfg.teste === 'tr') {
