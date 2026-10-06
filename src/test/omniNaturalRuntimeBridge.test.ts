@@ -68,6 +68,42 @@ describe('ponte executável da sintaxe natural OMNI', () => {
     expect(r.erros[0]?.codigo).toBe('ACAO_NAO_SUPORTADA');
   });
 
+  it('rejeita evento misturado com disjunção para não tornar a regra incondicional', () => {
+    const r = compilarScriptNatural('ao acertar ou alvo tem condição caído então causar 1d6 de dano cortante no alvo');
+    expect(r.efeitos).toEqual([]);
+    expect(r.erros[0]?.codigo).toBe('EVENTO_EM_DISJUNCAO');
+  });
+
+  it('mantém regras naturais e scripts legados juntos em um round-trip executável', () => {
+    const fonte = [
+      'ao sofrer dano de inimigo então acumular 1 contador_rancor até treino',
+      '@acertar -> somar 1 em usuario.contador_bonus',
+    ].join('\n');
+    const primeira = parseScriptOmni(fonte);
+    expect(primeira.erros).toEqual([]);
+    expect(primeira.efeitos).toHaveLength(2);
+    expect(primeira.efeitos.map(e => e.naturalSource ?? e.trigger)).toEqual([
+      'ao sofrer dano de inimigo então acumular 1 contador_rancor até treino',
+      'aoAcertarAtaque',
+    ]);
+
+    const roundTrip = efeitosParaScript(primeira.efeitos);
+    expect(roundTrip).toContain('ao sofrer dano de inimigo então acumular 1 contador_rancor até treino');
+    expect(roundTrip).toContain('@acertar ->');
+    const segunda = parseScriptOmni(roundTrip);
+    expect(segunda.erros).toEqual([]);
+    expect(segunda.efeitos).toHaveLength(2);
+  });
+
+  it('não instala parcialmente regras mistas se uma linha natural falhar', () => {
+    const r = parseScriptOmni([
+      '@acertar -> somar 1 em usuario.contador_bonus',
+      'ao acertar então teleportar para o alvo',
+    ].join('\n'));
+    expect(r.erros).toHaveLength(1);
+    expect(r.efeitos).toEqual([]);
+  });
+
   it('resolve o alias natural preferido de todos os gatilhos canônicos', () => {
     const falhas = Object.entries(ALIASES_POR_EVENTO).flatMap(([id, aliases]) => {
       const mapped = mapearAtomoEventoNatural(aliases[0]);
