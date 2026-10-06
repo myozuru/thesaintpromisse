@@ -1,6 +1,6 @@
 # OMNI natural — contrato e entregas
 
-Estado: etapas 1–7 concluídas no escopo documentado em cada etapa. A linguagem natural ainda não executa no jogo nem está conectada ao salvamento de habilidades. Base inicial examinada: main d2ef673b0e2a92918fa9fd7fac0095733c5b1d68, especificação Texto colado(4) e correções aprovadas na conversa de 05/10/2026. Evidências complementares em inventario-natural.md, diagnostico-execucao.md e etapa-2-contexto.md a etapa-7-atributos-sobrevivencia.md.
+Estado: etapas 1–8 concluídas no escopo documentado em cada etapa. A linguagem natural ainda não executa no jogo nem está conectada ao salvamento de habilidades. Base inicial examinada: main d2ef673b0e2a92918fa9fd7fac0095733c5b1d68, especificação Texto colado(4) e correções aprovadas na conversa de 05/10/2026. Evidências complementares em inventario-natural.md, diagnostico-execucao.md e etapa-2-contexto.md a etapa-8-recursos-protecoes.md.
 
 ## Fontes de verdade
 
@@ -59,7 +59,7 @@ Esta descrição é referência funcional, não exemplo de script já suportado.
 | 5     | Compatibilidade                  | Scripts antigos preservados e conversão estruturada                                                         |
 | 6     | Eventos                          | Mapeamento explícito para gatilhos existentes, papéis e filtros; deduplicação de seletores iguais por regra |
 | 7     | Atributos e sobrevivência        | Seis atributos lidos pelo resolvedor; PV/PE e estados lidos das fontes atuais, inclusive tetos efetivos     |
-| 8     | Recursos e proteções             | Leitura/escrita e limites; derivados não editáveis                                                          |
+| 8     | Recursos e proteções             | Destinos apoiados, métricas somente leitura, tetos de fome/exaustão e canais protetivos distintos           |
 | 9     | Modificadores e ações            | Ordem definida, fontes, expiração e orçamento respeitados                                                   |
 | 10    | Estados e auras                  | Entrada/saída reversível, sem incremento ou evento persistente                                              |
 | 11    | Contadores                       | Teto global, ciclos independentes do saldo e gastos nominais                                                |
