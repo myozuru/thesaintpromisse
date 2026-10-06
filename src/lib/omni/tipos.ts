@@ -292,7 +292,12 @@ export interface CustoRecursosAtivo {
   pe_por_turno?: string;
 }
 
-export type GatilhoReacaoAtiva = 'quando_inimigo_entrar_alcance' | 'quando_inimigo_sair_alcance' | 'quando_alvo_declarar_ataque' | 'quando_ataque_errar' | 'quando_inimigo_conjurar';
+export const GATILHOS_REACAO_IDS = [
+  'quando_inimigo_entrar_alcance', 'quando_inimigo_sair_alcance', 'quando_alvo_declarar_ataque', 'quando_ataque_errar', 'quando_inimigo_conjurar',
+  'quando_ataque_acertar', 'quando_sofrer_critico', 'quando_sofrer_dano', 'quando_causar_dano', 'quando_reduzido_0_pv', 'quando_derrubar_inimigo',
+  'quando_alvo_de_tr', 'quando_passar_tr', 'quando_falhar_tr', 'quando_alvo_de_pericia',
+] as const;
+export type GatilhoReacaoAtiva = typeof GATILHOS_REACAO_IDS[number];
 export interface ReacaoAtivaConfig {
   gatilho: GatilhoReacaoAtiva;
   alcance_m: number;
@@ -300,6 +305,10 @@ export interface ReacaoAtivaConfig {
   alvo: 'origem' | 'protegido' | 'usuario';
   cancelar_evento?: boolean;
   defesa_bonus?: number;
+  /** Bônus no TR/perícia que o protegido está prestes a rolar (gatilhos de teste). */
+  bonus_teste?: number;
+  /** Dano mínimo efetivo para disparar gatilhos de dano. */
+  dano_minimo?: number;
 }
 
 export interface AcaoAtivaConfig {

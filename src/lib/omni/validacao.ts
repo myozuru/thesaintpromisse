@@ -162,7 +162,7 @@ const AcaoAtivaSchema = z.object({
   cura: z.string().optional(), recurso_cura: z.enum(['pv', 'pe']).optional(),
   desfechosTR: z.object({ falha: DesfechoTRSchema.optional(), sucesso: DesfechoTRSchema.optional(), falha_critica: DesfechoTRSchema.optional() }).optional(),
   reacao: z.object({
-    gatilho: z.enum(['quando_inimigo_entrar_alcance', 'quando_inimigo_sair_alcance', 'quando_alvo_declarar_ataque', 'quando_ataque_errar', 'quando_inimigo_conjurar']),
+    gatilho: z.enum(GATILHOS_REACAO_IDS),
     alcance_m: z.number().finite().positive(), protegido: z.enum(['usuario', 'aliados', 'todos']),
     alvo: z.enum(['origem', 'protegido', 'usuario']), cancelar_evento: z.boolean().optional(), defesa_bonus: z.number().finite().nonnegative().optional(),
   }).optional(),
