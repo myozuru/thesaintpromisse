@@ -373,6 +373,10 @@ export interface ComercioEntidade {
    * Bloqueia revenda comercial (regra Anti-Revenda).
    */
   isBought: boolean;
+  /** Moeda do preço (ID do useMoneyStore). Ausente = moeda da loja. */
+  currencyId?: string;
+  /** Categorias de estabelecimento que aceitam comprar este item (ex.: 'ferreiro'). */
+  categoriasAceitas?: string[];
 }
 
 /** Dados de combate para ataque direto / cálculo de dano. */
