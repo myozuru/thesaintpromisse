@@ -14,27 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      combat_character_owners: {
-        Row: {
-          assigned_at: string
-          assigned_by: string
-          character_id: string
-          owner_user_id: string
-        }
-        Insert: {
-          assigned_at?: string
-          assigned_by: string
-          character_id: string
-          owner_user_id: string
-        }
-        Update: {
-          assigned_at?: string
-          assigned_by?: string
-          character_id?: string
-          owner_user_id?: string
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
           avatar: string | null
