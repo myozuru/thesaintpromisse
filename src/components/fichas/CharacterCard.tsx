@@ -20,7 +20,7 @@ import { avaliarFormula } from '@/lib/omni/parser';
 import { montarVariaveisDoPersonagem } from '@/lib/omni/resolvedor';
 import { SYSTEM_ACTIONS } from '@/lib/omni/constantesDoSistema';
 import { normalizarCombatData } from '@/lib/omni/tipos';
-import { selectOmniModifiers, selectOmniPassiveBonuses } from '@/lib/omni/omniBridge';
+import { resolverAcumuloOmni, selectOmniModifiers, selectOmniPassiveBonuses } from '@/lib/omni/omniBridge';
 import { derivarPassivasContinuas } from '@/lib/omni/passivasDerivadas';
 import { aggregateSpecChoices } from '@/lib/specChoiceEffects';
 import { aggregateSpecAbilityEffects } from '@/lib/specAbilityEffects';
@@ -780,24 +780,42 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     () => selectOmniModifiers(c, equippedOmniInstances, omniEntidadesMap),
     [c, equippedOmniInstances, omniEntidadesMap],
   );
-  const omniBonuses = omniModifiers.totals;
+  // Fontes Omni vinculadas e equipamentos concorrem na mesma chave; combinar
+  // os arrays aqui evita somar os máximos de cada grupo novamente.
+  const omniOriginsCombinadas = {
+    hp: [...omniModifiers.origins.hp, ...omniPassivasBonus.origins.hp],
+    pe: [...omniModifiers.origins.pe, ...omniPassivasBonus.origins.pe],
+    ca: [...omniModifiers.origins.ca, ...omniPassivasBonus.origins.ca],
+    rd: [...omniModifiers.origins.rd, ...omniPassivasBonus.origins.rd],
+    esc: [...omniModifiers.origins.esc, ...omniPassivasBonus.origins.esc],
+    slots: [...omniModifiers.origins.slots, ...omniPassivasBonus.origins.slots],
+  };
+  const omniTotalsCombinados = {
+    hp: resolverAcumuloOmni(omniOriginsCombinadas.hp),
+    pe: resolverAcumuloOmni(omniOriginsCombinadas.pe),
+    ca: resolverAcumuloOmni(omniOriginsCombinadas.ca),
+    rd: resolverAcumuloOmni(omniOriginsCombinadas.rd),
+    esc: resolverAcumuloOmni(omniOriginsCombinadas.esc),
+    slots: resolverAcumuloOmni(omniOriginsCombinadas.slots),
+  };
 
-  // Soma os bônus Omni sobre os itemBonuses (sem mexer nas chaves de actions).
-  itemBonuses.hp += omniBonuses.hp;
-  itemBonuses.pe += omniBonuses.pe;
-  itemBonuses.ca += omniBonuses.ca;
-  itemBonuses.rd += omniBonuses.rd;
-  itemBonuses.esc += omniBonuses.esc;
-  itemBonuses.slots += omniBonuses.slots;
+  // passiveBonuses já contém as passivas Omni vinculadas. Somamos aos itens
+  // apenas a diferença necessária para chegar ao total Omni combinado.
+  itemBonuses.hp += omniTotalsCombinados.hp - omniPassivasBonus.totals.hp;
+  itemBonuses.pe += omniTotalsCombinados.pe - omniPassivasBonus.totals.pe;
+  itemBonuses.ca += omniTotalsCombinados.ca - omniPassivasBonus.totals.ca;
+  itemBonuses.rd += omniTotalsCombinados.rd - omniPassivasBonus.totals.rd;
+  itemBonuses.esc += omniTotalsCombinados.esc - omniPassivasBonus.totals.esc;
+  itemBonuses.slots += omniTotalsCombinados.slots - omniPassivasBonus.totals.slots;
 
   // Hook de Reatividade: mesma fonte alimenta os tooltips (Base / Modificador / Origem).
   const omniOrigensPorChave: Record<ChaveBonusEquipado, StatModifierOrigin[]> = {
-    hp: [...omniModifiers.origins.hp, ...omniPassivasBonus.origins.hp].map((o) => ({ nome: o.source, delta: o.delta })),
-    pe: [...omniModifiers.origins.pe, ...omniPassivasBonus.origins.pe].map((o) => ({ nome: o.source, delta: o.delta })),
-    ca: [...omniModifiers.origins.ca, ...omniPassivasBonus.origins.ca].map((o) => ({ nome: o.source, delta: o.delta })),
-    rd: [...omniModifiers.origins.rd, ...omniPassivasBonus.origins.rd].map((o) => ({ nome: o.source, delta: o.delta })),
-    esc: [...omniModifiers.origins.esc, ...omniPassivasBonus.origins.esc].map((o) => ({ nome: o.source, delta: o.delta })),
-    slots: [...omniModifiers.origins.slots, ...omniPassivasBonus.origins.slots].map((o) => ({ nome: o.source, delta: o.delta })),
+    hp: omniOriginsCombinadas.hp.map((o) => ({ nome: o.source, delta: o.delta, aplicado: o.applied })),
+    pe: omniOriginsCombinadas.pe.map((o) => ({ nome: o.source, delta: o.delta, aplicado: o.applied })),
+    ca: omniOriginsCombinadas.ca.map((o) => ({ nome: o.source, delta: o.delta, aplicado: o.applied })),
+    rd: omniOriginsCombinadas.rd.map((o) => ({ nome: o.source, delta: o.delta, aplicado: o.applied })),
+    esc: omniOriginsCombinadas.esc.map((o) => ({ nome: o.source, delta: o.delta, aplicado: o.applied })),
+    slots: omniOriginsCombinadas.slots.map((o) => ({ nome: o.source, delta: o.delta, aplicado: o.applied })),
   };
 
   const desAttrCC = (c.attributes || []).find(a => a.name?.toUpperCase() === 'DES');
@@ -1475,7 +1493,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
             <span className="text-xs font-bold uppercase tracking-wider text-primary/80 leading-none">CA</span>
             <span className="font-mono text-2xl font-black leading-none text-primary">
               <StatValue
-                valorBase={effectiveCA - omniBonuses.ca}
+                valorBase={effectiveCA - omniTotalsCombinados.ca}
                 valorAtual={effectiveCA}
                 origens={omniOrigensPorChave.ca}
               >
@@ -1555,7 +1573,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
         <div className="flex items-center gap-1">
           <div className="flex-1"><StatusBar
             label="HP" icon="♥" current={c.hpCurrent} max={effectiveHpMax} color="bg-hp"
-            baseMax={effectiveHpMax - omniBonuses.hp}
+            baseMax={effectiveHpMax - omniTotalsCombinados.hp}
             maxOrigens={omniOrigensPorChave.hp}
           /></div>
           <TalentBonusBadge bonuses={talentBonuses} prefix="HP máx" />
@@ -1563,14 +1581,14 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
         <div className="flex items-center gap-1">
           <div className="flex-1"><StatusBar
             label="PE" icon="♦" current={c.peCurrent} max={effectivePeMax} color="bg-primary"
-            baseMax={effectivePeMax - omniBonuses.pe}
+            baseMax={effectivePeMax - omniTotalsCombinados.pe}
             maxOrigens={omniOrigensPorChave.pe}
           /></div>
           <TalentBonusBadge bonuses={talentBonuses} prefix="PE máx" />
         </div>
         <StatusBar
           label="PVTs" icon="○" current={c.escCurrent} max={effectiveEscMax} color="bg-shield"
-          baseMax={effectiveEscMax - omniBonuses.esc}
+          baseMax={effectiveEscMax - omniTotalsCombinados.esc}
           maxOrigens={omniOrigensPorChave.esc}
         />
         {c.category === 'PLAYER' && <HungerBar character={c} />}
@@ -1856,7 +1874,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
       <div className="flex items-center justify-between px-4 pb-2 text-sm text-muted-foreground flex-wrap gap-1">
         <div className="flex items-center gap-1 flex-wrap">
           <span className="font-medium">RD:<StatValue
-            valorBase={totalRD - omniBonuses.rd}
+            valorBase={totalRD - omniTotalsCombinados.rd}
             valorAtual={totalRD}
             origens={omniOrigensPorChave.rd}
           >{totalRD}</StatValue></span>
@@ -1924,7 +1942,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
             {talentBonuses.opportunity > 0 && <span className="ml-0.5 text-primary/80">⚙</span>}
           </button>
           <span>📦 {c.slotsCurrent}/<StatValue
-            valorBase={effectiveSlotsMax - omniBonuses.slots}
+            valorBase={effectiveSlotsMax - omniTotalsCombinados.slots}
             valorAtual={effectiveSlotsMax}
             origens={omniOrigensPorChave.slots}
           >{effectiveSlotsMax}</StatValue></span>
