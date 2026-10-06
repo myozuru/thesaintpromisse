@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { forwardSupabaseFunctionAuth } from "@/integrations/supabase/forward-function-auth";
 import {
   combatActionIntentSchema,
   canControlCombatActor,
@@ -78,7 +79,7 @@ async function requesterIsMaster(context: AuthContext): Promise<boolean> {
  * `ownerUserId: null` remove o vínculo e bloqueia novas intenções do jogador.
  */
 export const assignCombatCharacterOwner = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([forwardSupabaseFunctionAuth, requireSupabaseAuth])
   .validator((input: unknown) => assignOwnerInputSchema.parse(input))
   .handler(async ({ data, context }) => {
     await requireMaster(context);
@@ -108,9 +109,25 @@ export const assignCombatCharacterOwner = createServerFn({ method: "POST" })
     return { characterId: data.characterId, ownerUserId: data.ownerUserId };
   });
 
+/** Somente o Mestre lê o mapeamento privado usado para autorizar atores. */
+export const listCombatCharacterOwners = createServerFn({ method: "GET" })
+  .middleware([forwardSupabaseFunctionAuth, requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireMaster(context);
+    const admin = await getAdminClient();
+    const { data, error } = await admin
+      .from("combat_character_owners")
+      .select("character_id,owner_user_id")
+      .order("character_id", { ascending: true });
+    if (error) throw new Error("Não foi possível carregar os vínculos das fichas.");
+    return Object.fromEntries(
+      (data ?? []).map((row) => [row.character_id, row.owner_user_id]),
+    );
+  });
+
 /** Cria uma intenção pendente; não cobra recursos nem modifica fichas. */
 export const submitCombatActionIntent = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([forwardSupabaseFunctionAuth, requireSupabaseAuth])
   .validator((input: unknown) => combatActionIntentSchema.parse(input))
   .handler(async ({ data, context }) => {
     const admin = await getAdminClient();
@@ -207,7 +224,7 @@ export const submitCombatActionIntent = createServerFn({ method: "POST" })
 
 /** Retorna ao Mestre somente intenções ainda pendentes e dentro do prazo. */
 export const listPendingCombatActionIntents = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([forwardSupabaseFunctionAuth, requireSupabaseAuth])
   .handler(async ({ context }) => {
     await requireMaster(context);
     const admin = await getAdminClient();
@@ -268,7 +285,7 @@ export const listPendingCombatActionIntents = createServerFn({ method: "GET" })
 
 /** Reivindica uma intenção com lease; duas telas de Mestre não a resolvem juntas. */
 export const claimCombatActionIntent = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([forwardSupabaseFunctionAuth, requireSupabaseAuth])
   .validator((input: unknown) => requestIdSchema.parse(input))
   .handler(async ({ data, context }) => {
     await requireMaster(context);
@@ -347,7 +364,7 @@ export const claimCombatActionIntent = createServerFn({ method: "POST" })
 
 /** Publica somente o DTO público e exige que a solicitação esteja reivindicada por este Mestre. */
 export const publishCombatActionResolution = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([forwardSupabaseFunctionAuth, requireSupabaseAuth])
   .validator((input: unknown) => resolutionInputSchema.parse(input))
   .handler(async ({ data, context }) => {
     await requireMaster(context);
@@ -389,7 +406,7 @@ export const publishCombatActionResolution = createServerFn({ method: "POST" })
 
 /** Player consulta apenas o estado e o resultado público das próprias intenções. */
 export const getMyCombatActionResult = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([forwardSupabaseFunctionAuth, requireSupabaseAuth])
   .validator((input: unknown) => requestIdSchema.parse(input))
   .handler(async ({ data, context }) => {
     const admin = await getAdminClient();
