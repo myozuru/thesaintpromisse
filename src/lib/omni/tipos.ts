@@ -69,11 +69,13 @@ export interface AcaoLogica {
    */
   teto?: ValorDinamico;
   /**
-   * 'global' (padrão): teto vale para o total. 'porFonte': cada criatura de
-   * origem (o ALVO do evento — ex.: o aliado ferido) tem seu próprio teto,
-   * e o total é a soma de todas as fontes.
+   * Campo legado. O executor mantém o teto efetivo global; porFonte apenas
+   * conserva a proveniência das contribuições para quotas e consultas.
    */
   escopoTeto?: 'global' | 'porFonte';
+  /** Limite por ficha de origem, independente do teto global e do saldo gasto. */
+  limiteFonte?: ValorDinamico;
+  periodoFonte?: 'rodada' | 'descanso';
 }
 
 /** Um bloco Se/Então completo. */
@@ -420,8 +422,11 @@ export interface CombatEffect {
   type: 'SUBTRAIR' | 'ADICIONAR' | 'MODIFICADOR';
   /** Contadores (`contador_<nome>`): teto em fórmula (`... ate @USUARIO.treino`). */
   counterCap?: string;
-  /** Contadores: teto vale por ficha de origem (`... por_fonte`). */
+  /** Contadores: separa a contribuição de cada fonte (`... por_fonte`). */
   counterPerSource?: boolean;
+  /** Limite adicional de contribuições de uma mesma fonte por ciclo explícito. */
+  counterSourceLimit?: string;
+  counterSourcePeriod?: 'rodada' | 'descanso';
   /** Quem recebe ESTE efeito. */
   target: 'ALVO' | 'USUARIO' | 'AREA';
   /** Tipo de dano / cura / efeito (ver DAMAGE_TYPES). Opcional. */
