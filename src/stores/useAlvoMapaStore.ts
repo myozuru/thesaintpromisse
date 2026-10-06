@@ -78,3 +78,8 @@ export function pedirAlvoMapa(pedido: PedidoAlvoMapa): Promise<string[] | null> 
   window.dispatchEvent(new CustomEvent('app:navigate', { detail: 'mapa' }));
   return promise;
 }
+
+// Dev-only hook for browser tests (never in production builds).
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  (window as unknown as Record<string, unknown>).__alvoMapa = { store: useAlvoMapaStore, alvosNoAlcance, terminar: terminarAlvoMapa };
+}
