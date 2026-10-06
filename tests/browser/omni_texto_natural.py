@@ -46,7 +46,8 @@ async def main():
     async def caso(nome,cargas,dist,arma):
       efs=await montar(cargas,dist,arma); print(f"\n[{nome}] efeitos:",efs)
       await pg.wait_for_timeout(1500)
-      await pg.get_by_text("TESTE Atacante").first.click(); await pg.wait_for_timeout(1500)
+      await pg.screenshot(path=S+"0_antes.png")
+      await pg.get_by_text("TESTE Atacante").first.click(timeout=8000); await pg.wait_for_timeout(1500)
       sel=pg.locator("select").filter(has=pg.locator("option[value='nat-ini']")).first
       await sel.select_option("nat-ini"); await pg.wait_for_timeout(500)
       await pg.get_by_role("button",name="Rolar Ataque").first.click(); await pg.wait_for_timeout(3000)
