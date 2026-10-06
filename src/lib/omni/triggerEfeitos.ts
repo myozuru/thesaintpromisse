@@ -230,8 +230,10 @@ export function dispararGatilhoEfeitosItens(
         continue;
       }
       const limite = eff.counterCap ? avaliarFormula(eff.counterCap, variaveis, undefined, { item: itemBag }) : undefined;
-      if (limite?.diagnosticos.length) {
-        log(`⛔ ${fresco.nome} (${evento}): teto inválido — ${limite.diagnosticos.map(d => d.mensagem).join('; ')}`);
+      const limiteFonte = eff.counterSourceLimit ? avaliarFormula(eff.counterSourceLimit, variaveis, undefined, { item: itemBag }) : undefined;
+      const diagnosticosDosTetos = [...(limite?.diagnosticos ?? []), ...(limiteFonte?.diagnosticos ?? [])];
+      if (diagnosticosDosTetos.length || (limite && !Number.isFinite(limite.valor)) || (limiteFonte && !Number.isFinite(limiteFonte.valor))) {
+        log(`⛔ ${fresco.nome} (${evento}): teto inválido — ${diagnosticosDosTetos.map(d => d.mensagem).join('; ') || 'valor não finito'}`);
         continue;
       }
       const targetId = eff.target === 'ALVO' ? (alvo?.id ?? usuario.id) : usuario.id;
@@ -245,6 +247,8 @@ export function dispararGatilhoEfeitosItens(
           teto: limite?.valor,
           porFonte: eff.counterPerSource,
           fonteId: fonteDoContador(evento, usuario.id, opts.alvoId),
+          limiteFonte: limiteFonte?.valor,
+          periodoFonte: eff.counterSourcePeriod,
         },
       });
       if (typeof res.consumido === 'number') cenaLocal.consumido = res.consumido;
