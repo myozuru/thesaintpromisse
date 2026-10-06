@@ -75,7 +75,7 @@ export function ReacoesAtivasOverlay() {
     setReacaoManual(null);
   };
   return <>
-    {j && <div role="dialog" aria-label="Reação OMNI" className="fixed bottom-4 right-4 z-[250] w-80 rounded-lg border border-primary bg-background p-4 shadow-xl space-y-3">
+    {j && <div role="dialog" aria-label="Reação OMNI" className={cn('fixed bottom-4 z-[10000] w-80 rounded-lg border border-primary bg-background p-4 shadow-xl space-y-3', bandejaAberta ? 'left-4' : 'right-4')}>
       <p className="font-bold">Janela de reação</p>
       <p className="text-xs">{ofertasLocais.length ? 'O cronômetro de combate está pausado. Escolha uma reação ou passe.' : 'Aguardando a resposta do controlador da ficha (jogador ou mestre).'}</p>
       <TempoReacao expiresAt={j.expiresAt} />
