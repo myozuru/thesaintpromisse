@@ -33,6 +33,13 @@ export function ReacoesAtivasOverlay() {
   const perfilId = useProfileStore(s => s.activeProfileId);
   const characters = useCharacterStore(s => s.characters);
   const [reacaoManual, setReacaoManual] = useState<ReacaoManualEmCurso | null>(null);
+  useEffect(() => {
+    if (!reacaoManual) return;
+    const janelaAtiva = reacaoManual.remoto
+      ? remotas.some(r => r.janelaId === reacaoManual.janelaId)
+      : j?.id === reacaoManual.janelaId;
+    if (!janelaAtiva) setReacaoManual(null);
+  }, [j?.id, remotas, reacaoManual]);
   if (!j && remotas.length === 0) return null;
   const ofertasLocais = j?.ofertas.filter(o => podeVerOfertaReacao(o, perfilId)) ?? [];
   const alvoDaMagia = (spell: Spell, evento: EventoReacaoAtiva, sourceCharId: string) => {

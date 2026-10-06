@@ -8,7 +8,7 @@ vi.mock('@/lib/sounds', async (original) => {
 });
 vi.mock('@/components/dice-physics/DiceTrayPanel', () => ({ DiceTrayPanel: () => null }));
 vi.mock('@/integrations/supabase/safeClient', async () => ({ hasWorkspaceCloud: false, supabase: (await import('./helpers/mesaReal')).nuvemFalsa }));
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { SpellApplyDialog } from '@/components/fichas/SpellApplyDialog';
 import { TestRequestOverlay } from '@/components/fichas/TestRequestOverlay';
 import { importCreatureToFichas } from '@/components/grimorio/convertToFicha';
@@ -21,6 +21,8 @@ import { useDice3DStore } from '@/stores/useDice3DStore';
 import * as eventBus from '@/lib/omni/eventBus';
 import { CODIGOS_TIPO_DANO, montarMetadadosDano, resolverTipoDano } from '@/lib/omni/contextoDano';
 import { executarAcaoAtiva } from '@/lib/omni/acaoAtiva';
+import { receberRespostaRemota } from '@/lib/omni/reacoesAtivas';
+import { DESTINATARIO_MESTRE } from '@/lib/omni/destinatarioReacao';
 import { aplicarEfeitoNoPersonagem } from '@/lib/omni/aplicarEfeito';
 import { parseOmniScript } from '@/lib/omni/omniScript';
 import { novaEntidade, type AcaoAtivaConfig } from '@/lib/omni/tipos';
@@ -48,7 +50,7 @@ beforeEach(() => {
   useTestRequestStore.getState().clearAll();
   for (const method of ['log', 'group', 'groupEnd'] as const) vi.spyOn(console, method).mockImplementation(() => {});
 });
-afterEach(() => { cleanup(); limparMesa(); useTestRequestStore.getState().clearAll(); useOmniEntidadesStore.setState({ entidades: {} }); useDice3DStore.setState({ requestRoll: originalRoll }); vi.restoreAllMocks(); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); limparMesa(); useTestRequestStore.getState().clearAll(); useOmniEntidadesStore.setState({ entidades: {} }); useDice3DStore.setState({ requestRoll: originalRoll }); vi.restoreAllMocks(); });
 
 async function resultadoCausado(spy: ReturnType<typeof vi.spyOn>) {
   await waitFor(() => expect(spy.mock.calls.some(([e]) => e === 'aoCausarDano')).toBe(true), { timeout: 4000 });
@@ -73,6 +75,29 @@ describe('Códigos estáveis de dano', () => {
 });
 
 describe('Feitiços reais pela UI', () => {
+  it('consulta o mestre por reação mesmo quando a sessão do conjurador não tem ofertas locais', async () => {
+    mesa();
+    vi.stubGlobal('__worldBus', { send: vi.fn() });
+    comoTela({ role: 'PLAYER', profileId: 'perfil-caster' });
+    useCharacterStore.getState().updateCharacter('caster', { profileId: 'perfil-caster' });
+    const enviados: CustomEvent[] = [];
+    const capturar = (e: Event) => enviados.push(e as CustomEvent);
+    window.addEventListener('omni-reaction:send', capturar);
+    try {
+      render(<SpellApplyDialog spell={spell()} sourceCharId="caster" initialTargetIds={['alvo']} onClose={() => {}} />);
+      await waitFor(() => expect(enviados.some(e => e.detail.tipo === 'sondar')).toBe(true));
+      const sondagem = enviados.find(e => e.detail.tipo === 'sondar')!.detail;
+      expect(sondagem.perfilId).toBe(DESTINATARIO_MESTRE);
+      await act(async () => receberRespostaRemota({
+        tipo: 'passar', janelaId: sondagem.janelaId, perfilId: DESTINATARIO_MESTRE,
+        clienteOrigem: 'origem',
+      }, 'origem'));
+      expect(await screen.findByRole('button', { name: /Lançar Dano/ })).toBeTruthy();
+    } finally {
+      window.removeEventListener('omni-reaction:send', capturar);
+    }
+  });
+
   it.each([20, 15])('ataque d20 %i identifica conjurador, tipo, fonte e crítico', async (natural) => {
     mesa(); forcarDados(natural, 4, 4, 4);
     const spy = vi.spyOn(eventBus, 'emitirEvento');

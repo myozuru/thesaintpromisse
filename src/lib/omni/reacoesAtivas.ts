@@ -64,7 +64,7 @@ const janelaExpirations = new Map<string, ReturnType<typeof setTimeout>>();
 const remoteExpirations = new Map<string, ReturnType<typeof setTimeout>>();
 export const PRAZO_SONDAGEM_REACAO_MS = 12000;
 export const PRAZO_ESCOLHA_REACAO_MS = 12000;
-const PRAZO_RESOLUCAO_REACAO_MANUAL_MS = 120000;
+const PRAZO_RESOLUCAO_REACAO_MANUAL_MS = PRAZO_ESCOLHA_REACAO_MS;
 function scheduleRemoteExpiry(janelaId: string, expiresAt: number) {
   clearTimeout(remoteExpirations.get(janelaId));
   remoteExpirations.set(janelaId, setTimeout(() => {

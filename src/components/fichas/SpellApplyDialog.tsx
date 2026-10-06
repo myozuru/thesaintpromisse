@@ -1,4 +1,4 @@
-import { abrirJanelaReacaoAtiva, ofertasReacaoAtiva } from '@/lib/omni/reacoesAtivas';
+import { abrirJanelaReacaoAtiva } from '@/lib/omni/reacoesAtivas';
 import { consumeCritNegated } from '@/lib/suporteNegacao';
 import { implementoMarcialBonus } from '@/lib/golpeEspecial';
 import { useState, useEffect, useRef } from 'react';
@@ -417,7 +417,12 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
     if (areaMode && selectedIds.length === 0) {
       void (async () => {
       const evento = { gatilho: 'quando_inimigo_conjurar' as const, origemId: sourceCharId };
-      const janela = ofertasReacaoAtiva(evento).length ? await abrirJanelaReacaoAtiva(evento) : { cancelado: false };
+      // A ausência de ofertas neste cliente não significa que ninguém possa
+      // reagir: os inventários dos outros perfis só são consultados após a
+      // sondagem remota da janela.
+      const janela = spell.actionType === 'reaction'
+        ? { cancelado: false }
+        : await abrirJanelaReacaoAtiva(evento);
       if (!montadoRef.current) return;
       if (janela.cancelado || !canCast()) { onClose(); return; }
       const updates: Partial<typeof source> = { peCurrent: (useCharacterStore.getState().characters.find(c => c.id === sourceCharId)?.peCurrent ?? 0) - effectiveCostPE };
@@ -450,13 +455,19 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
     janelaCastRef.current = true;
     try {
       const evento = { gatilho: 'quando_inimigo_conjurar' as const, origemId: sourceCharId };
-      const janela = ofertasReacaoAtiva(evento).length ? await abrirJanelaReacaoAtiva(evento) : { cancelado: false };
+      // Uma reação já está resolvendo uma interrupção; ela não abre outra
+      // janela de reação sobre si mesma.
+      const janela = spell.actionType === 'reaction'
+        ? { cancelado: false, defesaBonus: 0 }
+        : await abrirJanelaReacaoAtiva(evento);
       if (!montadoRef.current) return;
       if (janela.cancelado || !canCast()) { addLog('spell', `⛔ ${spell.name}: conjuração interrompida ou recursos indisponíveis.`); onClose(); return; }
       defesaReacaoRef.current = {};
       if (next === 'attacks') for (const id of selectedIds) {
         const eventoAtaque = { gatilho: 'quando_alvo_declarar_ataque' as const, origemId: sourceCharId, protegidoId: id };
-        const defesa = ofertasReacaoAtiva(eventoAtaque).length ? await abrirJanelaReacaoAtiva(eventoAtaque) : { cancelado: false, defesaBonus: 0 };
+        const defesa = spell.actionType === 'reaction'
+          ? { cancelado: false, defesaBonus: 0 }
+          : await abrirJanelaReacaoAtiva(eventoAtaque);
         if (!montadoRef.current) return;
         if (defesa.cancelado || !canCast()) { addLog('spell', `⛔ ${spell.name}: ataque mágico interrompido.`); onClose(); return; }
         defesaReacaoRef.current[id] = defesa.defesaBonus;
