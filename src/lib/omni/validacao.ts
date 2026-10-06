@@ -176,6 +176,7 @@ const AcaoAtivaSchema = z.object({
     tipo_acao: z.enum(['comum', 'bonus', 'reacao', 'movimento', 'livre', 'sustentada']).optional(), pe_por_turno: z.string().optional(),
   }).optional(),
   mod_acerto: z.number().finite().optional(),
+  tr_apos_acerto: z.boolean().optional(),
   custoPE: z.string(), alcanceM: z.number().finite().nonnegative(), teste: z.enum(['tr', 'ataque', 'disputa', 'nenhum']),
   pericia_usuario: PericiaAtivaSchema.optional(), pericias_alvo: z.array(PericiaAtivaSchema).optional(),
   tipo_alvo: z.enum(['unico', 'multiplo', 'area', 'proprio']).optional(),

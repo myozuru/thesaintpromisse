@@ -309,6 +309,8 @@ export interface AcaoAtivaConfig {
   reacao?: ReacaoAtivaConfig;
   custo_recursos?: CustoRecursosAtivo;
   mod_acerto?: number;
+  /** Com teste 'ataque': após acertar, o alvo rola o TR configurado; efeitos só na falha. */
+  tr_apos_acerto?: boolean;
   desfechosTR?: { falha?: DesfechoTRAtivo; sucesso?: DesfechoTRAtivo; falha_critica?: DesfechoTRAtivo };
   id: string;
   nome: string;

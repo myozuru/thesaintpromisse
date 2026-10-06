@@ -85,7 +85,12 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
               <select aria-label="Teste da ação" className={sel} value={a.teste} onChange={(e) => set(i, { teste: e.target.value as AcaoAtivaConfig['teste'] })}>
                 <option value="nenhum">Nenhum</option><option value="tr">TR do alvo</option><option value="ataque">Ataque com arma</option><option value="disputa">Disputa de perícias</option>
               </select></div>
-            {a.teste === 'tr' && <>
+            {a.teste === 'ataque' && (
+              <label className="flex items-center gap-2 text-xs col-span-2">
+                <input aria-label="TR após acerto" type="checkbox" checked={!!a.tr_apos_acerto} onChange={(e) => set(i, { tr_apos_acerto: e.target.checked })} /> Ao acertar, o alvo faz TR contra os efeitos (dano entra sempre)
+              </label>
+            )}
+            {(a.teste === 'tr' || (a.teste === 'ataque' && a.tr_apos_acerto)) && <>
               <div><Label className="text-xs">TR</Label>
                 <select className={sel} value={a.tr ?? 'fortitude'} onChange={(e) => set(i, { tr: e.target.value as TrNome })}>
                   {TRS.map(([v, r]) => <option key={v} value={v}>{r}</option>)}
@@ -106,7 +111,7 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
               {ORDEM_PERICIAS.map(key => <option key={key} value={ROTULOS_PERICIAS[key]}>{ROTULOS_PERICIAS[key]}</option>)}
             </select><span className="text-xs text-muted-foreground">Selecione uma ou mais opções; o alvo usa a perícia de maior bônus. Empate favorece o alvo.</span></label>
           </div>}
-          {a.teste === 'tr' && <EditorDesfechosTR acao={a} onChange={p => set(i, p)} />}
+          {(a.teste === 'tr' || (a.teste === 'ataque' && a.tr_apos_acerto)) && <EditorDesfechosTR acao={a} onChange={p => set(i, p)} />}
           {a.teste === 'tr' && (
             <label className="flex items-center gap-2 text-xs">
               <input type="checkbox" checked={!!a.metadeNoSucesso} onChange={(e) => set(i, { metadeNoSucesso: e.target.checked })} /> Metade do dano no sucesso por padrão legado (senão, nada)

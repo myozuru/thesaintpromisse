@@ -585,6 +585,15 @@ async function executarAcaoAtivaInterna(
         detalhes.push(msg);
         continue;
       }
+      // TR após acerto: o dano do golpe entra sempre; condições/efeitos só se o alvo falhar.
+      if (cfg.tr_apos_acerto) {
+        const resTR = await rolarTRAlvo();
+        grauTR = resTR.grau;
+        const ramo = cfg.desfechosTR?.[grauTR];
+        desfechoTR = ramo ? { ...ramo, dano: undefined } : undefined;
+        efeitosTR = ramo?.efeitos ?? (grauTR === 'sucesso' ? [] : cfg.efeitos ?? []);
+        cabecalho += ` · ${resTR.texto}`;
+      }
     }
 
     if (cfg.tipo_efeito === 'cura') {
