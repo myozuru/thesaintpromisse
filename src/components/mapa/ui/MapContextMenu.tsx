@@ -154,7 +154,6 @@ export function MapContextMenu({
   return createPortal(
     <div
       ref={rootRef}
-      className="fixed z-[1000] min-w-[200px] overflow-y-auto overscroll-contain rounded-md border p-1 text-xs shadow-2xl"
       onWheel={(e) => e.stopPropagation()}
       style={{
         left: x, top: y,
