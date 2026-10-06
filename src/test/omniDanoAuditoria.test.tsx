@@ -59,8 +59,19 @@ it('tipo da arma OMNI respeita RD do tipo aplicado', async () => {
   useCharacterStore.getState().updateCharacter('a', { rdByType: { ...createEmptyRdByType(), DCO: 30, DQ: 1 } });
   await ataque(); await waitFor(() => expect(pegarFicha('a').hpCurrent).toBe(97));
 });
-async function ativa(cfg: Partial<AcaoAtivaConfig>) {
-  const ent = arma('2d6', 'Psíquico', 3);
+it('ação ativa mitiga arma e dano adicional pelo tipo próprio em uma ocorrência', async () => {
+  useCharacterStore.getState().updateCharacter('a', { rdByType: { ...createEmptyRdByType(), DCO: 30, DQ: 1 } });
+  const events = vi.spyOn(eventBus, 'emitirEvento');
+  await ativa({ incluirArma: true, dano: '1d8', tipoDano: 'DQ' }, 'Cortante');
+  await waitFor(() => expect(pegarFicha('a').hpCurrent).toBe(95));
+  await waitFor(() => expect(events.mock.calls.some(([nome]) => nome === 'aoCausarDano')).toBe(true));
+  const dano = events.mock.calls.find(([nome]) => nome === 'aoCausarDano')![1]!.dano!;
+  expect(dano).toMatchObject({ valor_final: 5, vida_perdida: 5 });
+  expect(dano).not.toHaveProperty('tipo');
+  expect(events.mock.calls.filter(([nome]) => nome === 'aoSofrerDano')).toHaveLength(1);
+});
+async function ativa(cfg: Partial<AcaoAtivaConfig>, tipoArma = 'Psíquico') {
+  const ent = arma('2d6', tipoArma, 3);
   ent.acoesAtivas = [{ id: 'ativo', nome: 'Corte', acao: 'livre', custoPE: '2', alcanceM: 3, teste: 'ataque', dano: '(@ARMA.DANO) + @USUARIO.treino', efeitos: [], ...cfg }];
   const inst = useInventoryStore.getState().listByOwner('u')[0];
   useInventoryStore.setState({ items: { [inst.instanceId]: { ...inst, entity: ent } } });

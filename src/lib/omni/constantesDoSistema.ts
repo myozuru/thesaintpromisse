@@ -695,6 +695,7 @@ const DANO_CTX_OMNI: ChaveOmniOpcao[] = [
   // ── PR-1: Contexto de dano expandido ─────────────────────────────────
   { id: 'DANO.valor_inicial',      label: '@DANO.valor_inicial',      hint: 'Dano recebido por applyDamage antes do pre-hook e da mitigação desta resolução.' },
   { id: 'DANO.valor_final',        label: '@DANO.valor_final',        hint: 'Dano resolvido após RD/imunidade/vulnerabilidade, incluindo PVT. Disponível após resolução.' },
+  { id: 'DANO.vida_perdida',       label: '@DANO.vida_perdida',       hint: 'PV realmente removidos do alvo após proteções. Zero quando escudo/PVT absorvem todo o golpe.' },
   { id: 'DANO.absorvido',          label: '@DANO.absorvido',          hint: 'max(0, inicial - final). Disponível após resolução; não representa a RD isolada.' },
   { id: 'DANO.tem_atacante',          label: '@DANO.tem_atacante',          hint: '1 se o golpe informa um atacante; 0 caso contrário.' },
   { id: 'DANO.tem_alvo',            label: '@DANO.tem_alvo',            hint: '1 se a ficha do alvo existe; 0 caso contrário.' },

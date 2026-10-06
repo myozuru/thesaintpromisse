@@ -20,6 +20,12 @@ export const CODIGOS_TIPO_DANO = Object.freeze({
 export const CODIGOS_FONTE_DANO = Object.freeze({ arma: 1, feitico: 2, omni: 3, ambiente: 4 });
 export type FonteDano = keyof typeof CODIGOS_FONTE_DANO;
 
+/** Parcela independente de uma ocorrência de dano composta. */
+export interface ParcelaDano {
+  valor: number;
+  tipo?: DamageType;
+}
+
 const normalizarNome = (valor: string) => valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
 const NOMES_TIPO_DANO: Record<string, DamageType> = {
   ...Object.fromEntries(Object.entries(DAMAGE_TYPE_LABELS).map(([id, label]) => [normalizarNome(label), id as DamageType])),
@@ -50,6 +56,8 @@ export interface OpcoesDano {
   rdIgnore?: number;
   attack?: MetadadosAtaqueDano;
   source?: FonteDano;
+  /** Componentes tipados mitigados separadamente dentro da mesma ocorrência. */
+  parcelas?: ParcelaDano[];
 }
 
 /** Converte somente informações conhecidas para o namespace numérico DANO. */

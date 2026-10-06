@@ -33,7 +33,7 @@ function contexto() {
       // Campos que pertencem a uma execução específica, não à ficha.
       cena: { dt: 19, distancia: 4.5, no_mapa: 1, sujeito_eh_aliado: 1, outro_eh_inimigo: 0, outro_eh_aliado: 1, outro_eh_voce: 0, consumido: 2, dano: 11 },
       item: { usos_restantes: 2, usos_totais: 5 },
-      dano: { tipo: 7, fonte: 3, foi_critico: 0, foi_falha_critica: 0, valor_inicial: 11, valor_final: 8, absorvido: 3, id_origem: 1, id_alvo: 1, alcance: 4.5, foi_ataque_oportunidade: 0, foi_furtivo: 0, tipo_ataque: 1 },
+      dano: { tipo: 7, fonte: 3, foi_critico: 0, foi_falha_critica: 0, valor_inicial: 11, valor_final: 8, vida_perdida: 6, absorvido: 3, id_origem: 1, id_alvo: 1, alcance: 4.5, foi_ataque_oportunidade: 0, foi_furtivo: 0, tipo_ataque: 1 },
     },
   };
 }

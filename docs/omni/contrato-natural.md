@@ -116,7 +116,7 @@ Cinco riscos anteriores: colisão de aliases (3/5), precedência (4), unidades (
 - `componentes/lexer.ts` já normaliza componentes e preserva posições; isso não constitui parser completo de eventos naturais.
 - `componentes/contexto.ts` transporta escopos compostos efêmeros; persistência e papéis do evento exigem contrato adicional.
 - `contadores.ts` mantém teto global, parcelas auditáveis por fonte e quota independente por ciclo; o contrato de implementação está em `etapa-11-contadores.md`.
-- `planejarDano` em `acaoAtiva.ts` agrupa dados e valores fixos; não representa sozinho parcelas com tipos distintos.
+- `planejarDano` em `acaoAtiva.ts` agrupa dados e valores fixos, mas não cria parcelas tipadas por si só. Ações ativas que combinam arma e dano adicional agora transportam essas parcelas até `applyDamage`; fórmulas naturais arbitrárias ainda não declaram uma lista de tipos por parcela.
 - `triggerEfeitos.ts` registra um consumido genérico; a nova linguagem exige mapa nominal por execução.
 
 Inventário individual e sondagens publicados. As lacunas estão explicitadas em diagnostico-execucao.md, incluindo políticas backend permissivas nas migrations versionadas. Seletores persistidos, ordem e momentos de modificadores, medição espacial, penalidades e recuperação técnica serão aprofundados nas etapas responsáveis. Não anunciar essas garantias como implementadas antes de evidência e testes.

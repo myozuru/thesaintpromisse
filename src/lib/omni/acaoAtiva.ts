@@ -640,9 +640,18 @@ async function executarAcaoAtivaInterna(
     const dano = cfg.tipo_efeito === 'buff' ? 0 : cfg.teste === 'tr' && grauTR ? danoDoGrauTR(bruto, grauTR, desfechoTR, !!cfg.metadeNoSucesso) : bruto;
     if (dano > 0) {
       const tipoArma: Partial<Record<NonNullable<Weapon['damageType']>, DamageType>> = { Ct: 'DCO', Pf: 'DP', Im: 'DI' };
-      useCharacterStore.getState().applyDamage(t.id, dano, resolverTipoDano(cfg.tipoDano) ?? (tipoHerdado ? resolverTipoDano(arma?.omniDamageType) : undefined) ?? (tipoHerdado && arma?.damageType ? tipoArma[arma.damageType] : undefined), {
+      const tipoExtra = resolverTipoDano(cfg.tipoDano) ?? (tipoHerdado ? resolverTipoDano(arma?.omniDamageType) : undefined) ?? (tipoHerdado && arma?.damageType ? tipoArma[arma.damageType] : undefined);
+      const tipoBaseArma = resolverTipoDano(arma?.omniDamageType) ?? (arma?.damageType ? tipoArma[arma.damageType] : undefined);
+      const parcelas = [
+        ...(danoArmaAplicado > 0 ? [{ valor: Math.min(dano, danoArmaAplicado), tipo: tipoBaseArma }] : []),
+        ...(dano - Math.min(dano, danoArmaAplicado) > 0 ? [{ valor: dano - Math.min(dano, danoArmaAplicado), tipo: tipoExtra }] : []),
+      ];
+      const tiposParcela = new Set(parcelas.map((p) => p.tipo));
+      const tipoOcorrencia = tiposParcela.size === 1 ? parcelas[0]?.tipo : undefined;
+      useCharacterStore.getState().applyDamage(t.id, dano, tipoOcorrencia, {
         attackerId: u.id, source: 'omni', attack: metadadosAtaque,
         isMelee: metadadosAtaque ? metadadosAtaque.kind === 'melee' : undefined,
+        parcelas,
       });
     }
     efeitoAplicado ||= aplicaEfeitos;

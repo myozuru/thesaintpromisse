@@ -2524,6 +2524,24 @@ export const useCharacterStore = create<CharacterStore>()(
         const preEsc = preSet?.escCurrent ?? 0;
         const preHp = preSet?.hpCurrent ?? 0;
         const entidadesOmniAtuais = useOmniEntidadesStore.getState().entidades;
+        const parcelasOriginais = (opts?.parcelas?.length ? opts.parcelas : [{ valor: rawDamage, tipo: damageType }])
+          .map((p) => ({ valor: Math.max(0, Math.floor(p.valor)), tipo: resolverTipoDano(p.tipo) }));
+        const totalParcelasOriginais = parcelasOriginais.reduce((soma, p) => soma + p.valor, 0);
+        // Um gatilho legado pode reduzir/anular o golpe como total. Distribuímos
+        // esse novo total proporcionalmente sem perder os tipos das parcelas.
+        const parcelasDesteGolpe = (valorTotal: number) => {
+          if (!parcelasOriginais.length) return [{ valor: Math.max(0, valorTotal), tipo: damageType }];
+          if (totalParcelasOriginais <= 0) return [{ valor: Math.max(0, valorTotal), tipo: damageType }];
+          let restante = Math.max(0, Math.floor(valorTotal));
+          return parcelasOriginais.map((p, i) => {
+            const valor = i === parcelasOriginais.length - 1
+              ? restante
+              : Math.min(restante, Math.floor(valorTotal * p.valor / totalParcelasOriginais));
+            restante -= valor;
+            return { valor, tipo: p.tipo };
+          });
+        };
+        let perdaPvReal = 0;
         const mitigacoesOmni = useInventoryStore.getState().listEquipped(id)
           .filter((item) => item.entity.slotType && item.entity.slotType !== 'nenhum')
           .map((item) => entidadesOmniAtuais[item.entity.id] ?? item.entity);
@@ -2532,52 +2550,52 @@ export const useCharacterStore = create<CharacterStore>()(
           characters: state.characters.map((c) => {
             if (c.id !== id) return c;
             const immunes = [...(c.immunities || []), ...mitigacoesOmni.flatMap((item) => item.imunidades_dano ?? [])];
-            if (damageType && immunes.includes(damageType) && !opts?.ignoresResistance) {
-              damageResolved = true;
-              return c;
-            }
             // CAM: dano DAL (na alma) é absorvido pela Integridade da Alma e reduz
             // o hpMax dos 3 núcleos simultaneamente. Não usa RD comum.
-            if (damageType === 'DAL' && isCamActive(c)) {
+            if (parcelasOriginais.length === 1 && parcelasOriginais[0]?.tipo === 'DAL' && !(c.immunities ?? []).includes('DAL') && !mitigacoesOmni.some((item) => item.imunidades_dano?.includes('DAL')) && isCamActive(c)) {
               const soulPatch = applySoulDamagePure(c, rawDamage);
               finalDamage = rawDamage;
               damageResolved = true;
               const perdaVida = Math.max(0, Math.max(0, c.hpCurrent) - Math.max(0, soulPatch.hpCurrent ?? c.hpCurrent));
+              perdaPvReal = perdaVida;
               return { ...c, ...soulPatch, omniCounters: registrarHistorico(c.omniCounters, 'dano', perdaVida, useCombatStore.getState().round) };
             }
             const activeBuffs = c.activeBuffs || [];
             const buffRD = activeBuffs.filter(b => b.type === 'rd').reduce((s, b) => s + b.value, 0);
             const negacaoRD = activeBuffs.filter(b => b.type === 'negacaoRd').reduce((s, b) => s + b.value, 0);
 
-            // tec-revestimento-constante: RD geral exceto dano na alma.
+            // RD e resistências são avaliadas parcela a parcela. Escudos e PV
+            // continuam sendo debitados uma única vez sobre a soma mitigada.
             const specChoiceAgg = aggregateSpecChoices(c);
-            const revestimentoRD = damageType === 'DAL' ? 0 : (specChoiceAgg.rdAllExceptSoul ?? 0);
-
-            // Escudo equipado: RD base do escudo (Mestre Defensivo amplifica se já proficiente).
-            // Não aplica a Dano de Alma (DAL).
             const equippedShield = getShieldById(c.equippedShieldId);
             const tBonusesForRd = aggregateTalentBonuses(c);
-            const shieldRD = (equippedShield && damageType !== 'DAL')
+            const shieldRD = (equippedShield)
               ? effectiveShieldRD(equippedShield, { mestreDefensivo: tBonusesForRd.shieldProficient })
               : 0;
-
             const rdByType = ensureRdByType(c);
-            const typeRd = damageType ? (rdByType[damageType] || 0) : 0;
-            // RD geral + RD por tipo somam (não se substituem).
-            const baseRd = (c.rd || 0) + typeRd;
-            const effectiveRd = opts?.ignoresRD ? 0 : Math.max(0, baseRd + buffRD + negacaoRD + revestimentoRD + shieldRD - Math.max(0, opts?.rdIgnore ?? 0));
-
-            let damageFinal = Math.max(0, rawDamage - effectiveRd);
-            rdApplied = Math.min(rawDamage, effectiveRd);
             const vulns = [...(c.vulnerabilities || []), ...mitigacoesOmni.flatMap((item) => item.vulnerabilidades ?? [])];
             const resistencias = mitigacoesOmni.flatMap((item) => item.resistencias ?? []);
-            const vulneravel = !!damageType && vulns.includes(damageType);
-            const resistente = !!damageType && resistencias.includes(damageType);
-            // Resistência e vulnerabilidade do mesmo tipo se anulam. Caso contrário,
-            // aplicam metade ou ×1,5 após RD, com arredondamento para baixo.
-            if (!opts?.ignoresResistance && vulneravel !== resistente) {
-              if (resistente) damageFinal = Math.floor(damageFinal / 2);
-              else damageFinal = Math.floor(damageFinal * 1.5);
+            let damageFinal = 0;
+            const parcelas = parcelasDesteGolpe(rawDamage);
+            for (const parcela of parcelas) {
+              if (parcela.valor <= 0) continue;
+              if (parcela.tipo && immunes.includes(parcela.tipo) && !opts?.ignoresResistance) {
+                continue;
+              }
+              const revestimentoRD = parcela.tipo === 'DAL' ? 0 : (specChoiceAgg.rdAllExceptSoul ?? 0);
+              const parcelaShieldRD = parcela.tipo === 'DAL' ? 0 : shieldRD;
+              const typeRd = parcela.tipo ? (rdByType[parcela.tipo] || 0) : 0;
+              const baseRd = (c.rd || 0) + typeRd;
+              const effectiveRd = opts?.ignoresRD ? 0 : Math.max(0, baseRd + buffRD + negacaoRD + revestimentoRD + parcelaShieldRD - Math.max(0, opts?.rdIgnore ?? 0));
+              let mitigado = Math.max(0, parcela.valor - effectiveRd);
+              rdApplied += Math.min(parcela.valor, effectiveRd);
+              const vulneravel = !!parcela.tipo && vulns.includes(parcela.tipo);
+              const resistente = !!parcela.tipo && resistencias.includes(parcela.tipo);
+              if (!opts?.ignoresResistance && vulneravel !== resistente) {
+                if (resistente) mitigado = Math.floor(mitigado / 2);
+                else mitigado = Math.floor(mitigado * 1.5);
+              }
+              damageFinal += mitigado;
             }
             finalDamage = damageFinal;
             damageResolved = true;
@@ -2588,6 +2606,7 @@ export const useCharacterStore = create<CharacterStore>()(
             const protecoesOmni = consumirProtecoesOmni(ajustarProtecoesOmni(c), Math.max(0, c.escCurrent - newEsc));
             const danoTemporario = Math.max(0, (c.escCurrent ?? 0) - newEsc);
             const perdaVida = Math.max(0, Math.max(0, c.hpCurrent) - Math.max(0, newHp));
+            perdaPvReal = perdaVida;
             const omniCounters = registrarHistorico(c.omniCounters, 'dano', perdaVida + danoTemporario, useCombatStore.getState().round, danoTemporario);
             // CAM: sincroniza HP do snapshot do núcleo ativo.
             if (isCamActive(c) && c.activeCoreId) {
@@ -2668,6 +2687,7 @@ export const useCharacterStore = create<CharacterStore>()(
         const contextoDano = Object.freeze({
           ...contextoDanoInicial,
           valor_final: finalDamage,
+          vida_perdida: perdaPvReal,
           // Vulnerabilidade pode elevar o dano final acima do inicial.
           absorvido: Math.max(0, totalDamage - finalDamage),
         });

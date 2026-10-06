@@ -277,6 +277,16 @@ describe('Contexto DANO do combate real', () => {
     expect(100 - pegarFicha('alvo').hpCurrent + ('escCurrent' in patch ? patch.escCurrent : 0) - pegarFicha('alvo').escCurrent).toBe(final);
   });
 
+  it('distingue dano mitigado de PV realmente perdidos quando a proteção absorve o golpe', async () => {
+    montarMesa([char('atacante'), char('alvo', { escCurrent: 12 })], {});
+    const spy = vi.spyOn(eventBus, 'emitirEvento');
+    useCharacterStore.getState().applyDamage('alvo', 10, 'DCO', { attackerId: 'atacante' });
+    await waitFor(() => expect(spy.mock.calls.some(([e]) => e === 'aoCausarDano')).toBe(true));
+    const dano = spy.mock.calls.find(([e]) => e === 'aoCausarDano')![1]!.dano!;
+    expect(dano).toMatchObject({ valor_final: 10, vida_perdida: 0 });
+    expect(pegarFicha('alvo')).toMatchObject({ hpCurrent: 100, escCurrent: 2 });
+  });
+
   it('pre-hook usa valor inicial para reduzir o golpe; resultado inclui essa redução e RD', async () => {
     const pre = script('pre', '@sofrer_dano -> reduzir (@DANO.valor_inicial/2) em dano_recebido');
     const spy = vi.spyOn(triggers, 'dispararGatilhoEfeitosItens');
@@ -321,7 +331,7 @@ describe('Contexto DANO do combate real', () => {
     const spy = vi.spyOn(eventBus, 'emitirEvento');
     useCharacterStore.getState().applyDamage('alvo', 10, 'DCO', { attackerId: 'atacante' });
     await waitFor(() => expect(spy.mock.calls.some(([e]) => e === 'aoMorrer')).toBe(true));
-    expect(spy.mock.calls.find(([e]) => e === 'aoMorrer')![1]?.dano).toEqual({ tipo: 1, valor_inicial: 10, valor_final: 8, absorvido: 2, id_origem: 1, id_alvo: 1 });
+    expect(spy.mock.calls.find(([e]) => e === 'aoMorrer')![1]?.dano).toEqual({ tipo: 1, valor_inicial: 10, valor_final: 8, vida_perdida: 5, absorvido: 2, id_origem: 1, id_alvo: 1 });
   });
 
   it('dois golpes consecutivos mantêm snapshots separados', async () => {
