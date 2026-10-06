@@ -41,10 +41,10 @@ disponível no estado e no tráfego de rede.
 
 ## Contrato necessário para a correção
 
-1. Definir projeções por audiência: ficha completa no cliente Mestre; ficha
-   pública de jogador para a mesa; ficha do jogador dono com seus próprios
-   dados privados; e dados públicos mínimos de inimigos/NPCs para mapa e
-   combate. IDs, PV atual e outros campos públicos precisam ter regra explícita.
+1. **Definido na Etapa 26:** projeções por audiência, regra conservadora de
+   allowlist, vínculo do dono por identidade autenticada, tratamento de
+   `hideName`/`hideStats` e dados permitidos no payload público. Ver
+   `etapa-26-matriz-privacidade-fichas.md`.
 2. Mover o cálculo de acerto, TR, dano, mitigação, condições, consumo de
    recursos e efeitos OMNI que dependem de dados secretos para uma autoridade
    confiável. O cliente envia uma intenção validável (ator, ação, alvo e
@@ -77,8 +77,9 @@ disponível no estado e no tráfego de rede.
 
 ## Limite desta etapa
 
-Esta etapa é o diagnóstico da fronteira de fichas. Nenhum campo de `Character`
-foi removido do transporte porque os cálculos atuais dependem deles no cliente.
-O fechamento da falha exige alterar ou disponibilizar o serviço Socket.IO que
-autoriza a resolução; apenas mudanças neste frontend não conseguem manter os
-resultados corretos e esconder com segurança os valores usados pelo cálculo.
+Esta etapa foi o diagnóstico da fronteira de fichas. A Etapa 26 documentou a
+matriz e a projeção pública proposta. Nenhum campo de `Character` foi removido
+do transporte porque os cálculos atuais dependem deles no cliente. O fechamento
+da falha exige alterar ou disponibilizar o serviço Socket.IO que autoriza a
+resolução; apenas mudanças neste frontend não conseguem manter os resultados
+corretos e esconder com segurança os valores usados pelo cálculo.
