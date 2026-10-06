@@ -14,6 +14,7 @@ import { destinoComposto } from "./componentes/escrita";
  */
 import { calcularContador } from "./contadores";
 import { useCharacterStore } from "@/stores/useCharacterStore";
+import { useCombatStore } from "@/stores/useCombatStore";
 import type { CombatEffect } from "./tipos";
 import { canonicalizarChave } from "./keyAliases";
 import {
@@ -82,7 +83,7 @@ export function aplicarEfeitoNoPersonagem(
     /** Dono do efeito que produziu este dano, inclusive autoaplicações. */
     attackerId?: string;
     /** Contadores: teto já avaliado, escopo e ficha de origem. */
-    contador?: { teto?: number; porFonte?: boolean; fonteId?: string };
+    contador?: { teto?: number; porFonte?: boolean; fonteId?: string; limiteFonte?: number; periodoFonte?: 'rodada' | 'descanso' };
   },
 ): { aplicado: number; absorvidoPorBloqueio?: boolean; consumido?: number } {
   if (!Number.isFinite(valor)) return { aplicado: 0 };
@@ -128,7 +129,7 @@ export function aplicarEfeitoNoPersonagem(
   if (!c) return { aplicado: 0 };
 
   // ─── 🔢 Contadores livres: contador_<nome> ───────────────────────────
-  // somar → acumula (com teto global ou por fonte); subtrair → consome
+  // somar → acumula (teto total e quota de fonte independentes); subtrair → consome
   // (valor ≤ 0 = tudo); definir → fixa. Ver contadores.ts.
   {
     const bruto = (resourcePath ?? "")
@@ -144,17 +145,26 @@ export function aplicarEfeitoNoPersonagem(
           : tipo === "SUBTRAIR"
             ? "CONSUMIR_CONTADOR"
             : "DEFINIR_CONTADOR";
+      const limiteFonte = extras?.contador?.limiteFonte;
+      const periodoFonte = extras?.contador?.periodoFonte;
+      const combate = useCombatStore.getState();
+      const cicloFonte = periodoFonte === 'rodada'
+        ? `rodada:${combate.inCombat ? combate.combatId ?? 'combate' : 'fora'}:${combate.inCombat ? combate.round : 0}`
+        : periodoFonte === 'descanso'
+          ? `descanso:${c.omniCounterRestCycle ?? 0}`
+          : undefined;
       const res = calcularContador(c.omniCounters ?? {}, nome, acao, {
         valor,
         teto: extras?.contador?.teto,
-        escopoTeto:
-          destino?.contador?.fonte || extras?.contador?.porFonte
-            ? "porFonte"
-            : "global",
+        escopoTeto: "global",
+        rastrearFonte: Boolean(destino?.contador?.fonte || extras?.contador?.porFonte || limiteFonte !== undefined),
+        limiteFonte,
+        cicloFonte,
+        usoPorFonte: c.omniCounterSourceUsage,
         fonteId: destino?.contador?.fonte ?? extras?.contador?.fonteId,
         fonteExata: Boolean(destino?.contador?.fonte),
       });
-      store.updateCharacter(charId, { omniCounters: res.counters });
+      store.updateCharacter(charId, { omniCounters: res.counters, omniCounterSourceUsage: res.usoPorFonte });
       notificarAtualizacaoContadores(charId, c.omniCounters, res.counters);
       return { aplicado: res.counters[nome] ?? 0, consumido: res.consumido };
     }
