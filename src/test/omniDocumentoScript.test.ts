@@ -38,13 +38,13 @@ describe('versão e migração sem perda de scripts OMNI', () => {
     expect(parsed.efeitos[0].target).toBe('USUARIO');
     expect(migrarScriptLegadoOmni(source)).not.toHaveProperty('opcoes');
   });
-  it('mantém documentos naturais versionados fora do runtime antigo', () => {
+  it('compila documentos naturais versionados para efeitos do runtime', () => {
     const source = 'ao acertar então aplicar condenado por 2 rodadas';
     const doc = { formato:'omni.script' as const, versao:2 as const, fonte:source };
     const lido = normalizarDocumentoOmni(doc);
-    expect(lido).toMatchObject({ ok:true, linguagem:'natural', executavel:false, ast:{ tipo:'regra' } });
+    expect(lido).toMatchObject({ ok:true, linguagem:'natural', executavel:true, ast:{ tipo:'regra' }, parse:{ erros:[] } });
     if (lido.ok) expect(lido.documento).toEqual(doc);
-    expect(executarParseLegadoOmni(doc)).toMatchObject({ codigo:'LINGUAGEM_NAO_EXECUTAVEL' });
+    expect(executarParseLegadoOmni(doc)).toMatchObject({ efeitos:[{ trigger:'aoAcertarAtaque', resourcePath:'condition_apply' }], erros:[] });
     expect(preservarDocumentoOmni(doc)).toEqual(doc);
   });
   it('preserva texto natural inválido para correção, com diagnóstico e sem converter', () => {

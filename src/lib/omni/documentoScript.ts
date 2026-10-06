@@ -1,5 +1,6 @@
 import { parseOmniScript, type OmniScriptParseOpts, type OmniScriptResultado } from './omniScript';
 import { analisarFraseNatural, type FraseNatural, type ErroGramaticaNatural } from './gramaticaNatural';
+import { compilarScriptNatural } from './compilarNatural';
 
 export const FORMATO_DOCUMENTO_OMNI = 'omni.script' as const;
 export type VersaoDocumentoOmni = 1 | 2;
@@ -12,7 +13,7 @@ export interface DocumentoScriptOmni {
 export interface DiagnosticoDocumentoOmni { codigo: string; mensagem: string; inicio?: number; fim?: number }
 export type ResultadoLeituraScriptOmni =
   | { ok:true; documento: DocumentoScriptOmni; linguagem:'legada'; executavel:boolean; parse:OmniScriptResultado; diagnosticos: DiagnosticoDocumentoOmni[] }
-  | { ok:true; documento: DocumentoScriptOmni; linguagem:'natural'; executavel:false; ast?:FraseNatural; diagnosticos:DiagnosticoDocumentoOmni[] }
+  | { ok:true; documento: DocumentoScriptOmni; linguagem:'natural'; executavel:boolean; ast?:FraseNatural; parse:OmniScriptResultado; diagnosticos:DiagnosticoDocumentoOmni[] }
   | { ok:false; diagnosticos:DiagnosticoDocumentoOmni[] };
 
 /** Encapsula um script antigo sem mudar um único caractere nem inferir sintaxe nova. */
@@ -33,8 +34,12 @@ export function normalizarDocumentoOmni(valor: string | DocumentoScriptOmni): Re
   }
   if (documento.versao === 2) {
     const resultado = analisarFraseNatural(documento.fonte);
-    return { ok:true, documento:{ ...documento }, linguagem:'natural', executavel:false, ast:resultado.ast,
-      diagnosticos:resultado.erros.map(e => ({ codigo:'NATURAL_INVALIDO', mensagem:e.mensagem, inicio:e.inicio, fim:e.fim })) };
+    const compilado = resultado.ast
+      ? compilarScriptNatural(documento.fonte)
+      : { efeitos:[], erros:resultado.erros.map(e => ({ codigo:'GRAMATICA_INVALIDA', mensagem:e.mensagem, inicio:e.inicio, fim:e.fim })) };
+    const parse: OmniScriptResultado = { efeitos:compilado.efeitos, erros:compilado.erros.map(e => ({ posicao:e.inicio, trecho:documento.fonte.slice(e.inicio,e.fim), mensagem:e.mensagem })) };
+    return { ok:true, documento:{ ...documento }, linguagem:'natural', executavel:parse.erros.length === 0 && parse.efeitos.length > 0, ast:resultado.ast, parse,
+      diagnosticos:parse.erros.map(e => ({ codigo:'NATURAL_NAO_EXECUTAVEL', mensagem:e.mensagem, inicio:e.posicao, fim:e.posicao + e.trecho.length })) };
   }
   return { ok:false, diagnosticos:[{ codigo:'VERSAO_DESCONHECIDA', mensagem:'Versão de script OMNI não reconhecida; a fonte original deve permanecer intacta.' }] };
 }
@@ -45,10 +50,14 @@ export function preservarDocumentoOmni(valor: string | DocumentoScriptOmni): Doc
   return leitura.ok ? { ...leitura.documento } : undefined;
 }
 
-/** Chamada explícita do runtime legado; documentos naturais não podem cair no parser antigo. */
+/** Compila o formato versionado correto sem reenviar texto natural ao parser legado. */
 export function executarParseLegadoOmni(documento: DocumentoScriptOmni, opcoes?: OmniScriptParseOpts): OmniScriptResultado | DiagnosticoDocumentoOmni {
-  if (documento.formato !== FORMATO_DOCUMENTO_OMNI || documento.versao !== 1) {
-    return { codigo:'LINGUAGEM_NAO_EXECUTAVEL', mensagem:'Somente documento OMNI versão 1 pode ser enviado ao executor legado.' };
+  if (documento.formato !== FORMATO_DOCUMENTO_OMNI || (documento.versao !== 1 && documento.versao !== 2)) {
+    return { codigo:'LINGUAGEM_NAO_EXECUTAVEL', mensagem:'Versão de documento OMNI não executável.' };
+  }
+  if (documento.versao === 2) {
+    const compilado = compilarScriptNatural(documento.fonte, opcoes);
+    return { efeitos:compilado.efeitos, erros:compilado.erros.map(e => ({ posicao:e.inicio, trecho:documento.fonte.slice(e.inicio,e.fim), mensagem:e.mensagem })) };
   }
   return parseOmniScript(documento.fonte, opcoes);
 }

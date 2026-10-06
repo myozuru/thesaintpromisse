@@ -444,6 +444,10 @@ export interface CombatEffect {
    * que este efeito só roda em resposta ao evento nomeado.
    */
   trigger?: string;
+  /** Scripts do novo formato que dependem do dano efetivamente aplicado rodam após mitigação. */
+  triggerAfterDamage?: boolean;
+  /** Texto de origem natural preservado para reabrir/editar sem perder semântica. */
+  naturalSource?: string;
   /**
    * Condição lógica opcional avaliada antes da execução
    * (ex.: `usos_restantes > 0`, `@USUARIO.vida_atual <= 10`). String é

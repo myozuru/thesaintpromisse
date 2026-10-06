@@ -15,6 +15,7 @@ import {
   humanizarWatcher,
   type OmniToken,
 } from '@/lib/omni/omniScript';
+import { parseScriptOmni } from '@/lib/omni/compilarNatural';
 import { avaliarFormula } from '@/lib/omni/parser';
 import { montarVariaveisDoPersonagem } from '@/lib/omni/resolvedor';
 import {
@@ -57,7 +58,7 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
   onChangeRef.current = onChange;
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [analise, setAnalise] = useState(() => ({ texto: valor, alvo: defaultTarget,
-    compilado: parseOmniScript(valor || '', { defaultTarget }), tokens: tokenizarOmniScript(valor || '') }));
+    compilado: parseScriptOmni(valor || '', { defaultTarget }), tokens: tokenizarOmniScript(valor || '') }));
   const analiseRef = useRef(analise);
   const atualizar = (novo: string) => {
     rascunhoRef.current = novo;
@@ -73,7 +74,7 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
     const novo = rascunhoRef.current;
     let a = analiseRef.current;
     if (a.texto !== novo || a.alvo !== defaultTarget) {
-      a = { texto: novo, alvo: defaultTarget, compilado: parseOmniScript(novo || '', { defaultTarget }), tokens: tokenizarOmniScript(novo || '') };
+      a = { texto: novo, alvo: defaultTarget, compilado: parseScriptOmni(novo || '', { defaultTarget }), tokens: tokenizarOmniScript(novo || '') };
       analiseRef.current = a;
       setAnalise(a);
     }
@@ -108,7 +109,7 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
     if (!opcoesRef.current.adiarEdicao || enviadoRef.current === novo) return;
     const a = analiseRef.current;
     const compilado = a.texto === novo && a.alvo === opcoesRef.current.defaultTarget
-      ? a.compilado : parseOmniScript(novo || '', { defaultTarget: opcoesRef.current.defaultTarget });
+      ? a.compilado : parseScriptOmni(novo || '', { defaultTarget: opcoesRef.current.defaultTarget });
     enviadoRef.current = novo;
     onChangeRef.current(novo, compilado);
   }, []);
@@ -135,7 +136,7 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
     return () => { worker.terminate(); if (workerRef.current === worker) workerRef.current = null; };
   }, [adiarEdicao, defaultTarget, concluirEdicao]);
   const tokens = useMemo(() => adiarEdicao || analise.texto === valor ? analise.tokens : tokenizarOmniScript(valor || ''), [adiarEdicao, analise, valor]);
-  const compilado = useMemo(() => adiarEdicao || analise.texto === valor && analise.alvo === defaultTarget ? analise.compilado : parseOmniScript(valor || '', { defaultTarget }), [adiarEdicao, analise, valor, defaultTarget]);
+  const compilado = useMemo(() => adiarEdicao || analise.texto === valor && analise.alvo === defaultTarget ? analise.compilado : parseScriptOmni(valor || '', { defaultTarget }), [adiarEdicao, analise, valor, defaultTarget]);
   const pendente = adiarEdicao && texto !== analise.texto;
 
   const variaveisPreview = useMemo(() => personagemPreview ? montarVariaveisDoPersonagem(personagemPreview, 'USUARIO') : undefined, [personagemPreview]);

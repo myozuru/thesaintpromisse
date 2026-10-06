@@ -90,7 +90,9 @@ export async function emitirObservadores(tipo: TipoObservado, op: OpcoesObservar
       cena,
       dano: op.contextoDano,
       origemNome: tipo === 'sofrerDano' ? 'Dano Observado' : tipo === 'causarDano' ? 'Ataque Observado' : 'Queda Observada',
-      incluirPassivas: false,
+      // O evento observado já ocorre depois do dano. Entrega às passivas de
+      // equipamento do observador (ex.: rancor acumulado por aliado ferido).
+      incluirPassivas: true,
     });
   }
   return total;

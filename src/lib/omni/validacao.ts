@@ -87,6 +87,8 @@ const CombatEffectSchema: z.ZodTypeAny = z.lazy(() => z.object({
   damageType: z.string().optional(),
   resourcePath: z.string().optional(),
   trigger: z.string().optional(),
+  triggerAfterDamage: z.boolean().optional(),
+  naturalSource: z.string().optional(),
   condition: z.string().optional(),
   absoluteVerb: z.enum(['anular', 'ignorar']).optional(),
   watcher: z.object({

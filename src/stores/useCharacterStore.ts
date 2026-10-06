@@ -2405,11 +2405,18 @@ export const useCharacterStore = create<CharacterStore>()(
           get().updateCharacter(id, { omniFlags: flagsSeed });
         }
         try {
+          const atacanteAntesId = opts?.attackerId;
+          const atacanteAntes = atacanteAntesId ? get().characters.find((c) => c.id === atacanteAntesId) : undefined;
           dispararGatilhoEfeitosItens('aoSofrerDano', {
             usuarioId: id,
             alvoId: opts?.attackerId,
-            cena: { dano: rawDamage, dano_pendente: rawDamage, dano_recebido: rawDamage },
+            cena: {
+              dano: rawDamage, dano_pendente: rawDamage, dano_recebido: rawDamage,
+              outro_eh_inimigo: atacanteAntes?.category === 'INIMIGO' ? 1 : 0,
+              outro_eh_aliado: atacanteAntes && atacanteAntes.category !== 'INIMIGO' ? 1 : 0,
+            },
             dano: contextoDanoInicial,
+            somenteAposDano: false,
           });
         } catch (err) {
           console.warn('[applyDamage] erro no disparador:', err);
@@ -2691,6 +2698,25 @@ export const useCharacterStore = create<CharacterStore>()(
           // Vulnerabilidade pode elevar o dano final acima do inicial.
           absorvido: Math.max(0, totalDamage - finalDamage),
         });
+        // A sintaxe natural marca passivas de acúmulo como pós-mitigação:
+        // dano totalmente absorvido não representa dano recebido e não gera carga.
+        if (finalDamage > 0) {
+          const atacanteId = opts?.attackerId;
+          const atacante = atacanteId ? get().characters.find((c) => c.id === atacanteId) : undefined;
+          void import('@/lib/omni/triggerEfeitos').then(({ dispararGatilhoEfeitosItens }) => {
+            dispararGatilhoEfeitosItens('aoSofrerDano', {
+              usuarioId: id,
+              alvoId: opts?.attackerId,
+              cena: {
+                dano: finalDamage, dano_pendente: 0, dano_recebido: finalDamage,
+                outro_eh_inimigo: atacante?.category === 'INIMIGO' ? 1 : 0,
+                outro_eh_aliado: atacante && atacante.category !== 'INIMIGO' ? 1 : 0,
+              },
+              dano: contextoDano,
+              somenteAposDano: true,
+            });
+          }).catch(() => {});
+        }
         import('@/lib/omni/eventBus').then(({ emitirEvento }) => {
           emitirEvento('aoSofrerDano', {
             cadeia,
@@ -2716,11 +2742,11 @@ export const useCharacterStore = create<CharacterStore>()(
             });
           }
           // Observação espacial: todas as outras fichas "veem" o dano.
-          if (rawDamage > 0) {
+          if (finalDamage > 0) {
             void import('@/lib/omni/observadores').then(async (m) => {
-              await m.emitirObservadores('sofrerDano', { sujeitoId: id, outroId: opts?.attackerId, dano: rawDamage, contextoDano, cadeia });
+              await m.emitirObservadores('sofrerDano', { sujeitoId: id, outroId: opts?.attackerId, dano: finalDamage, contextoDano, cadeia });
               if (opts?.attackerId) {
-                await m.emitirObservadores('causarDano', { sujeitoId: opts.attackerId, outroId: id, dano: rawDamage, contextoDano, cadeia });
+                await m.emitirObservadores('causarDano', { sujeitoId: opts.attackerId, outroId: id, dano: finalDamage, contextoDano, cadeia });
               }
             }).catch(() => {});
           }

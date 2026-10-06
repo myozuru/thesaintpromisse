@@ -849,6 +849,12 @@ export function efeitosParaScript(
   efeitos: CombatEffect[],
   opts: OmniScriptParseOpts = {},
 ): string {
+  const fontesNaturais = [...new Set(efeitos.map(e => e.naturalSource).filter((s): s is string => Boolean(s)))];
+  if (fontesNaturais.length) {
+    const legados = efeitos.filter(e => !e.naturalSource);
+    const fonteLegada = legados.length ? efeitosParaScript(legados, opts) : '';
+    return [...fontesNaturais, fonteLegada].filter(Boolean).join('\n');
+  }
   const inverso: Record<CombatEffect['type'], string> = {
     ADICIONAR: 'somar',
     SUBTRAIR: 'subtrair',

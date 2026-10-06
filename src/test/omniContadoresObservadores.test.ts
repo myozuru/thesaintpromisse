@@ -15,6 +15,7 @@ import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { parseOmniScript, efeitosParaScript } from '@/lib/omni/omniScript';
+import { compilarScriptNatural } from '@/lib/omni/compilarNatural';
 import { dispararGatilhoEfeitosItens } from '@/lib/omni/triggerEfeitos';
 import { montarVariaveisDoPersonagem } from '@/lib/omni/resolvedor';
 import { executarGatilho } from '@/lib/omni/executor';
@@ -95,6 +96,13 @@ describe('Regras puras', () => {
     expect(p.consumido).toBe(2); expect(p.counters.foco).toBe(1);
     const t = calcularContador(p.counters, 'foco', 'CONSUMIR_CONTADOR', { valor: 0 });
     expect(t.consumido).toBe(1); expect(t.counters.foco).toBe(0);
+  });
+  it('preserva saldo antigo ao iniciar rastreio por fonte', () => {
+    const inicial = calcularContador({}, 'rancor', 'INCREMENTAR_CONTADOR', { valor:2 });
+    const rastreado = calcularContador(inicial.counters, 'rancor', 'INCREMENTAR_CONTADOR', { valor:1, teto:4, rastrearFonte:true, fonteId:'aliado-b' });
+    expect(rastreado.counters.rancor).toBe(3);
+    expect(rastreado.counters['rancor__fonte__geral']).toBe(2);
+    expect(rastreado.counters['rancor__fonte__aliado-b']).toBe(1);
   });
   it('dados com quantidade dinâmica (@X)dY', () => {
     expect(avaliarFormula('(@USUARIO.rancor)d1', { USUARIO_RANCOR: 4 }).valor).toBe(4);
@@ -220,6 +228,24 @@ describe('Rancor na arma empunhada pelo painel', () => {
     await danoEm('bia', 2, 'inim');
     expect(pegarFicha('ana').omniCounters?.rancor).toBe(2);
   });
+});
+
+it('executa gramática natural na arma: dano próprio e aliado próximo geram uma carga pós-mitigação', async () => {
+  const proprio = compilarScriptNatural('ao sofrer dano de inimigo então acumular 1 contador_rancor até treino');
+  const observado = compilarScriptNatural('quando aliado até 4.5m sofrer dano de inimigo então acumular 1 contador_rancor até treino por_fonte teto_aliado 1 por rodada');
+  expect([...proprio.erros, ...observado.erros]).toEqual([]);
+  const ent = { ...novaEntidade('arma'), id:'lamina_rancor_natural', nome:'Lâmina do Rancor', tags:['modelo:katana'], combatData:{ effects:[], effectsPassive:[...proprio.efeitos, ...observado.efeitos] } } as unknown as EntidadeOmni;
+  montarMesa([aliado('ana', { trainingBonus:3, escCurrent:10, omniAtivos:[vincular(ent)] }), aliado('bia'), inimigo('inim')], { ana:[0,0], bia:[3,0], inim:[1,0] });
+  expect(treinoDe('ana')).toBe(3);
+  await danoEm('ana', 2, 'inim');
+  expect(pegarFicha('ana').omniCounters?.rancor ?? 0).toBe(0);
+  useCharacterStore.getState().updateCharacter('ana', { escCurrent:0 });
+  await danoEm('ana', 2, 'inim');
+  expect(pegarFicha('ana').omniCounters?.rancor).toBe(1);
+  await danoEm('bia', 2, 'inim');
+  expect(pegarFicha('ana').omniCounters?.rancor).toBe(2);
+  await danoEm('bia', 2, 'ana');
+  expect(pegarFicha('ana').omniCounters?.rancor).toBe(2);
 });
 
 

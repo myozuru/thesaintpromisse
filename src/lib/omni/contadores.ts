@@ -63,7 +63,10 @@ export function calcularContador(
   const temFontes = Object.keys(c).some(k => k.startsWith(prefixoFonte(nome)));
   const rastrearFonte = temFontes || op.rastrearFonte || op.fonteExata || op.escopoTeto === 'porFonte';
   // Preserva cargas globais ao passar a contar por fonte.
-  if (temFontes || op.fonteExata || op.escopoTeto === 'porFonte') {
+  // Ao introduzir rastreio por fonte em um contador que já tinha saldo
+  // global, preserva esse saldo como contribuição geral antes de recalcular
+  // o total. Sem isso, a primeira carga rastreada apagava as cargas antigas.
+  if (temFontes || op.fonteExata || op.escopoTeto === 'porFonte' || rastrearFonte) {
     const semFonte = Math.max(0, anterior - somarFontes(c, nome));
     if (semFonte > 0) c[`${prefixoFonte(nome)}geral`] = (c[`${prefixoFonte(nome)}geral`] ?? 0) + semFonte;
   }

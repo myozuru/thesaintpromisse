@@ -57,6 +57,8 @@ export interface DispararOpts {
   cena?: Record<string, number>;
   /** Snapshot numérico do golpe; valores finais existem somente após resolução. */
   dano?: Readonly<Record<string, number>>;
+  /** Isola passivas naturais que exigem o valor de dano pós-mitigação. */
+  somenteAposDano?: boolean;
 }
 
 /**
@@ -120,7 +122,7 @@ export function dispararGatilhoEfeitosItens(
 
     // Considera tanto efeitos ativos quanto passivos com trigger.
     const candidatos: CombatEffect[] = [...ativos, ...passivos].filter((eff) =>
-      triggerCasa(evento, eff.trigger),
+      triggerCasa(evento, eff.trigger) && (opts.somenteAposDano === undefined || (opts.somenteAposDano ? eff.triggerAfterDamage === true : eff.triggerAfterDamage !== true)),
     );
 
     if (candidatos.length === 0) {
