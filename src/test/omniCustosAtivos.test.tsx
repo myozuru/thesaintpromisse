@@ -86,6 +86,23 @@ describe('custos genéricos de ações', () => {
     expect((await executarAcaoAtiva('u', cfg({ custo_recursos: { municao: 1 } }), 'a')).ok).toBe(false);
     expect(pegarFicha('u').peCurrent).toBe(20);
   });
+  it('não cobra nenhum recurso quando falta apenas munição num custo combinado', async () => {
+    mesa({ mainHandWeaponName: 'Pistola', weaponAmmo: { Pistola: 2 }, hpCurrent: 30, peCurrent: 20, actionsCurrent: 1 });
+    const acao = cfg({ custoPE: '0', custo_recursos: {
+      pe_base: '10', custo_pv: '5', municao: 3, usos_item: 1,
+      gastar_cargas: { nome: 'foco', quantidade: '1' },
+    } });
+    const ent = { ...novaEntidade('item'), usos: { total: 2, recarga: 'diaria' as const }, acoesAtivas: [acao] } as EntidadeOmni;
+    const item = useInventoryStore.getState().add('u', ent);
+    const fichaAntes = pegarFicha('u');
+
+    const resultado = await executarAcaoAtiva('u', acao, 'a', item.entity, { instanciaId: item.instanceId });
+
+    expect(resultado.ok).toBe(false);
+    expect(pegarFicha('u')).toEqual(fichaAntes);
+    expect(useInventoryStore.getState().items[item.instanceId].usosRestantes).toBe(2);
+    expect(pegarFicha('u').weaponAmmo?.Pistola).toBe(2);
+  });
   it('consome usos da instância do item ativo, sem afetar outra cópia', async () => {
     const acao = cfg({ custo_recursos: { usos_item: 2 } });
     const ent = { ...novaEntidade('item'), usos: { total: 3, recarga: 'diaria' as const }, acoesAtivas: [acao] } as EntidadeOmni;
