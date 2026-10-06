@@ -4,7 +4,7 @@
  * Renderiza em coords de tela. Posiciona-se evitando overflow da viewport.
  * Fecha em clique fora, Esc ou scroll.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   ArrowUpToLine, ArrowDownToLine, ArrowUp, ArrowDown,
@@ -154,6 +154,7 @@ export function MapContextMenu({
   return createPortal(
     <div
       ref={rootRef}
+      className="fixed z-[1000] min-w-[200px] overflow-y-auto overscroll-contain rounded-md border p-1 text-xs shadow-2xl"
       onWheel={(e) => e.stopPropagation()}
       style={{
         left: x, top: y,
