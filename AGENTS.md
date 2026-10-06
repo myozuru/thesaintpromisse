@@ -25,3 +25,4 @@
 - Dice keeps one scene while resizing; cinematic camera targets the live die and smooths only distance/FOV. Final face is upright. Drama alters vertical bounce only; armed bodies launch in batches.
 - Attack damage is applied to the target automatically via `applyDamage(..., { attackerId, rdIgnore })`; RD-ignoring abilities pass `rdIgnore` instead of only logging — abilities like Penetrante/Arremessos Potentes/Dragão need the real damage taken.
 - Réplicas materializáveis: o Mestre configura `EntidadeOmni.replica` (porte, PE de invocação/sustentação); materializar, sustentar no início do turno e desintegrar ao soltar ficam em src/lib/replicas.ts — o jogador nunca monta a cópia, só escolhe qual materializar.
+- Reações OMNI: gatilhos listados em `GATILHOS_REACAO_IDS` (tipos.ts); efeitos de uma reação rodam sob `comReacaoEmCurso` (reacaoEmCurso.ts) para nunca abrir reações em cadeia.

@@ -184,7 +184,7 @@ describe('movimento e conjuração', () => {
   it('encerrar janelas libera promessas como canceladas', async () => { add(); const p = abrirJanelaReacaoAtiva(evento); cancelarJanelasReacoesAtivas(); expect((await p).cancelado).toBe(true); });
   it('editor e JSON preservam gatilho, defesa e interrupção', () => {
     let salvo: EntidadeOmni; function Editor() { const [e, set] = useState<EntidadeOmni>({ ...novaEntidade('item'), acoesAtivas: [{ ...config(), reacao: undefined }] }); return <EditorAcoesAtivas ent={e} setEnt={n => { salvo = n; set(n); }} />; }
-    render(<Editor />); fireEvent.click(screen.getByLabelText('Oferecer como reação automática')); fireEvent.change(screen.getByLabelText('Gatilho da reação'), { target: { value: 'quando_inimigo_conjurar' } }); fireEvent.click(screen.getByLabelText('Cancelar evento se a reação tiver efeito'));
+    render(<Editor />); fireEvent.click(screen.getByLabelText('Oferecer como reação automática')); fireEvent.change(screen.getByLabelText('Gatilho da reação'), { target: { value: 'quando_inimigo_conjurar' } }); fireEvent.click(screen.getByLabelText('Anular o evento se a reação tiver efeito'));
     const p = PacoteOmniSchema.parse({ formato: 'omni-engine.v1', nome: 'Reações', geradoEm: 0, entidades: [salvo!] }); expect(p.entidades[0].acoesAtivas![0].reacao).toMatchObject({ gatilho: 'quando_inimigo_conjurar', cancelar_evento: true });
   });
 });
@@ -243,7 +243,7 @@ describe('controlador remoto e confirmação de entrega', () => {
       await waitFor(() => expect(enviados.some(e => e.detail.tipo === 'passar')).toBe(true));
       const passou = enviados.find(e => e.detail.tipo === 'passar')!.detail;
       await receberRespostaRemota({ tipo: 'passar', janelaId: sondagem.janelaId, perfilId: sondagem.perfilId, clienteOrigem: 'origem' }, 'origem');
-      expect(await p).toEqual({ cancelado: false, defesaBonus: 0 });
+      expect(await p).toEqual({ cancelado: false, defesaBonus: 0, testeBonus: 0 });
       expect(passou.perfilId).toBe(DESTINATARIO_MESTRE);
       expect(pegarFicha('a').peCurrent).toBe(18);
     } finally { window.removeEventListener('omni-reaction:send', onSend); }
@@ -253,7 +253,7 @@ describe('controlador remoto e confirmação de entrega', () => {
     try {
       const p=abrirJanelaReacaoAtiva(ev);
       await vi.advanceTimersByTimeAsync(PRAZO_SONDAGEM_REACAO_MS);
-      expect(await p).toEqual({cancelado:false,defesaBonus:0});
+      expect(await p).toEqual({cancelado:false,defesaBonus:0,testeBonus:0});
       expect(useReacoesAtivasStore.getState().janelas).toHaveLength(0);
     } finally {vi.useRealTimers();}
   });
@@ -265,7 +265,7 @@ describe('controlador remoto e confirmação de entrega', () => {
       expect(useCombatStore.getState().reactionPauseIds).toHaveLength(1);
       const remaining=useCombatStore.getState().getTurnRemaining();
       await vi.advanceTimersByTimeAsync(PRAZO_SONDAGEM_REACAO_MS);
-      expect(await p).toEqual({cancelado:false,defesaBonus:0});
+      expect(await p).toEqual({cancelado:false,defesaBonus:0,testeBonus:0});
       expect(useCombatStore.getState().reactionPauseIds).toHaveLength(0);
       expect(useCombatStore.getState().getTurnRemaining()).toBeCloseTo(remaining);
     } finally {vi.useRealTimers();}
@@ -295,7 +295,7 @@ it('sem transporte multiplayer resolve sem aguardar controlador remoto', async()
   comoTela({role:'PLAYER',profileId:'perfil-u'});
   useCharacterStore.getState().updateCharacter('u',{profileId:'perfil-u'});
   const p=abrirJanelaReacaoAtiva({gatilho:'quando_alvo_declarar_ataque',origemId:'u',protegidoId:'a'});
-  expect(await p).toEqual({cancelado:false,defesaBonus:0});
+  expect(await p).toEqual({cancelado:false,defesaBonus:0,testeBonus:0});
   expect(useReacoesAtivasStore.getState().janelas).toHaveLength(0);
 });
 
@@ -310,10 +310,37 @@ it('resposta remota durante a reação local não deixa janela vazia presa', asy
     const p=abrirJanelaReacaoAtiva(evento), j=useReacoesAtivasStore.getState().janelas[0];
     const local=responderReacaoAtiva(j.id,j.ofertas[0].id);
     await waitFor(()=>expect(spy).toHaveBeenCalled());
-    await receberRespostaRemota({tipo:'resultado',janelaId:j.id,perfilId:'perfil-b',clienteOrigem:'origem',resultado:{cancelado:false,defesaBonus:3}},'origem');
+    await receberRespostaRemota({tipo:'resultado',janelaId:j.id,perfilId:'perfil-b',clienteOrigem:'origem',resultado:{cancelado:false,defesaBonus:3,testeBonus:0}},'origem');
     liberar({ok:true,efeitoAplicado:false,dano:0,detalhe:''} as Awaited<ReturnType<typeof mod.executarAcaoAtiva>>);
     await local;
-    expect(await p).toEqual({cancelado:false,defesaBonus:3});
+    expect(await p).toEqual({cancelado:false,defesaBonus:3,testeBonus:0});
     expect(useReacoesAtivasStore.getState().janelas).toHaveLength(0);
   } finally {spy.mockRestore();}
+});
+
+describe('novos momentos de reação', () => {
+  it('sofrer dano de inimigo abre a janela depois do dano, com dano mínimo', async () => {
+    add(config({ gatilho: 'quando_sofrer_dano', dano_minimo: 5 }));
+    await useCharacterStore.getState().applyDamage('u', 3, 'DCO', { attackerId: 'a' });
+    await esperar();
+    expect(useReacoesAtivasStore.getState().janelas).toHaveLength(0);
+    await useCharacterStore.getState().applyDamage('u', 8, 'DCO', { attackerId: 'a' });
+    await waitFor(() => expect(useReacoesAtivasStore.getState().janelas[0]?.evento.gatilho).toBe('quando_sofrer_dano'));
+  });
+  it('causar dano oferece reação ao atacante e efeitos da reação não encadeiam', async () => {
+    add(config({ gatilho: 'quando_causar_dano' }, { dano: '5', tipoDano: 'DCO' }));
+    await useCharacterStore.getState().applyDamage('a', 6, 'DCO', { attackerId: 'u' });
+    await waitFor(() => expect(useReacoesAtivasStore.getState().janelas).toHaveLength(1));
+    const j = useReacoesAtivasStore.getState().janelas[0];
+    await responderReacaoAtiva(j.id, j.ofertas[0].id);
+    await esperar();
+    expect(useReacoesAtivasStore.getState().janelas).toHaveLength(0);
+  });
+  it('TR forçado por inimigo recebe o bônus da reação', async () => {
+    add(config({ gatilho: 'quando_alvo_de_tr', bonus_teste: 4 }));
+    const p = abrirJanelaReacaoAtiva({ gatilho: 'quando_alvo_de_tr', origemId: 'a', protegidoId: 'u' });
+    const j = useReacoesAtivasStore.getState().janelas[0];
+    await responderReacaoAtiva(j.id, j.ofertas[0].id);
+    expect((await p).testeBonus).toBe(4);
+  });
 });

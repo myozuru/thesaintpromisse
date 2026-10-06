@@ -1,4 +1,5 @@
 import { notificarEventoPersonagem } from '@/lib/omni/notificarEvento';
+import { reacaoEmCurso } from '@/lib/omni/reacaoEmCurso';
 import { armaDoPersonagem } from '@/lib/omni/armaDoPersonagem';
 import { reservarPassoOmni, executarNaCadeiaOmni, capturarCadeiaOmni } from '@/lib/omni/cadeiaEventos';
 import { ajustarProtecoesOmni, consumirProtecoesOmni, expirarProtecoesOmni } from '@/lib/omni/protecoesAtivas';
@@ -2688,6 +2689,20 @@ export const useCharacterStore = create<CharacterStore>()(
           setTimeout(() => {
             void import('@/lib/suporteRepertorioMobilidade').then((m) => m.sendMobilidadeOffers(fallenId)).catch(() => {});
           }, 0);
+        }
+
+        // ─── Reações OMNI pós-dano (sofrer/causar dano, cair a 0 PV) ───────
+        if (postSet && protDealt > 0 && opts?.attackerId && opts.attackerId !== id && !reacaoEmCurso()) {
+          const atkId = opts.attackerId, alvoId = id, dano = protDealt;
+          const caiu = preHp > 0 && (postSet.hpCurrent ?? 0) <= 0;
+          void import('@/lib/omni/reacoesAtivas').then(async ({ abrirJanelaReacaoAtiva }) => {
+            await abrirJanelaReacaoAtiva({ gatilho: 'quando_sofrer_dano', origemId: atkId, protegidoId: alvoId, dano });
+            await abrirJanelaReacaoAtiva({ gatilho: 'quando_causar_dano', origemId: alvoId, protegidoId: atkId, dano });
+            if (caiu) {
+              await abrirJanelaReacaoAtiva({ gatilho: 'quando_reduzido_0_pv', origemId: atkId, protegidoId: alvoId, dano });
+              await abrirJanelaReacaoAtiva({ gatilho: 'quando_derrubar_inimigo', origemId: alvoId, protegidoId: atkId, dano });
+            }
+          }).catch(() => {});
         }
 
         // ─── Omni-Engine: emite gatilhos de dano ─────────────────────────────
