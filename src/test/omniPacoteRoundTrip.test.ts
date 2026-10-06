@@ -6,6 +6,7 @@ describe('round-trip de pacotes OMNI', () => {
     const effect = {
       id: 'effect-main', formula: '2d6', type: 'SUBTRAIR', target: 'ALVO',
       damageType: 'Fogo', resourcePath: 'vida_atual', counterCap: '3', counterPerSource: true,
+      counterSourceLimit: '1', counterSourcePeriod: 'rodada',
       trigger: 'aoReceberDano', condition: '@USUARIO.vida_atual > 0', absoluteVerb: 'ignorar',
       watcher: { resource: 'vida_atual', op: '<=', threshold: 0.25, percent: true, percentBase: 'vida_max' },
       peSpellReduction: { filtro: 'tipo:damage', min: 1 },
@@ -53,5 +54,20 @@ describe('round-trip de pacotes OMNI', () => {
       replica: pacote.entidades[0].replica,
       gatilhos: pacote.entidades[0].gatilhos,
     });
+  });
+
+  it('rejeita quota por fonte sem periodicidade declarada', () => {
+    const pacote = {
+      formato: 'omni-engine.v1', nome: 'Quota incompleta', geradoEm: 1,
+      entidades: [{
+        id: 'item-test', versao: 1, nome: 'Item de teste', categoria: 'item',
+        descricao: '', tags: [], duracao: { tipo: 'permanente' }, custos: [], gatilhos: [],
+        combatData: {
+          effects: [{ id: 'e', formula: '1', type: 'ADICIONAR', target: 'USUARIO', counterSourceLimit: '1' }],
+          critRange: 20, critMultiplier: 2,
+        },
+      }],
+    };
+    expect(() => PacoteOmniSchema.parse(pacote)).toThrow(/periodicidade explícita/i);
   });
 });
