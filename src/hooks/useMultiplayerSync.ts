@@ -7,6 +7,7 @@ import { comPreviaMovimento, receberMovimentoConfirmado, previaDepoisDaConfirmac
 import { mergeInventory } from '@/lib/omni/inventorySync';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { mergeIncomingCharacters, pickNewestPerCharacter, stampLocalChanges, withStamps } from '@/lib/charSyncStamps';
+import { mergeSyncedProfiles, projectProfilesForSync } from '@/lib/profileSync';
 import { useEffect } from 'react';
 import { getSocket, type WorldSlice } from '@/lib/socket';
 import { useCharacterStore } from '@/stores/useCharacterStore';
@@ -230,7 +231,7 @@ function pickLogs(s: ReturnType<typeof useLogStore.getState>) {
   };
 }
 function pickProfiles(s: ReturnType<typeof useProfileStore.getState>) {
-  return s.profiles;
+  return projectProfilesForSync(s.profiles);
 }
 function pickMoney(s: ReturnType<typeof useMoneyStore.getState>) {
   return {
@@ -396,7 +397,7 @@ function aplicarRemoteInterno(slice: WorldSlice, data: unknown) {
       const incoming = data as ReturnType<typeof pickLogs>;
       if (Array.isArray(incoming.logs)) useLogStore.setState({ ...incoming, logs: mergePublicLogs(useLogStore.getState().logs, incoming.logs, useRoleStore.getState().role === 'MASTER') });
     } else if (slice === 'profiles' && Array.isArray(data)) {
-      useProfileStore.setState({ profiles: data as never });
+      useProfileStore.setState({ profiles: mergeSyncedProfiles(useProfileStore.getState().profiles, data) });
     } else if (slice === 'money' && data && typeof data === 'object') {
       const m = data as { currencies?: unknown; wallets?: unknown; invites?: unknown; transactions?: unknown };
       const patch: Record<string, unknown> = {};
@@ -955,7 +956,7 @@ export function useMultiplayerSync() {
       // replace para os agregados). O servidor faz broadcast aos demais.
       try {
         if (mergedChars.length > 0) socket.emit('state:update', { slice: 'characters', data: withStamps(mergedChars as never[]), mode: 'merge' });
-        if (mergedProfiles.length > 0) socket.emit('state:update', { slice: 'profiles', data: mergedProfiles, mode: 'merge' });
+        if (mergedProfiles.length > 0) socket.emit('state:update', { slice: 'profiles', data: projectProfilesForSync(mergedProfiles), mode: 'merge' });
         if (mergedItems.length > 0) socket.emit('state:update', { slice: 'items', data: mergedItems, mode: 'merge' });
         if (mergedEvents.length > 0) socket.emit('state:update', { slice: 'calendar', data: mergedEvents, mode: 'merge' });
         if (mergedSpellProps.length > 0) socket.emit('state:update', { slice: 'spellProposals', data: mergedSpellProps, mode: 'merge' });
