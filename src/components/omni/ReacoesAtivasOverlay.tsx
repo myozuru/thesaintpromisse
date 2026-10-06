@@ -85,7 +85,7 @@ export function ReacoesAtivasOverlay() {
       {j.erro && <p role="alert" className="text-xs text-destructive">{j.erro}</p>}
       <button disabled={j.busy} className="rounded border px-3 py-1" onClick={() => ofertasLocais.length ? responderReacaoAtiva(j.id) : continuarSemReacoesPendentes(j.id)}>Passar e continuar</button>
     </div>}
-    {remotas.map(r => <div key={r.janelaId} role="dialog" aria-label="Reação OMNI" className="fixed bottom-4 left-4 z-[250] w-80 rounded-lg border border-primary bg-background p-4 shadow-xl space-y-3">
+    {remotas.map(r => <div key={r.janelaId} role="dialog" aria-label="Reação OMNI" className={cn('fixed bottom-4 z-[10000] w-80 rounded-lg border border-primary bg-background p-4 shadow-xl space-y-3', bandejaAberta ? 'left-[21rem]' : 'left-4')}>
       <p className="font-bold">Reação disponível</p><p className="text-xs">O cronômetro de combate está pausado enquanto você decide.</p>
       <TempoReacao expiresAt={r.expiresAt} />
       {opcoesFeitico(r.janelaId, r.evento, { perfilId: r.perfilId, clienteOrigem: r.clienteOrigem })}
