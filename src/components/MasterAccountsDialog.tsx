@@ -2,16 +2,19 @@ import { useEffect, useState } from 'react';
 import { Shield, User } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { authDb, type CloudProfile } from '@/lib/auth';
+import { assignCombatCharacterOwner, listCombatCharacterOwners } from '@/lib/combat/actionRequests.functions';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 
 export function MasterAccountsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const [profiles, setProfiles] = useState<CloudProfile[]>([]);
   const [masters, setMasters] = useState<Set<string>>(new Set());
   const [me, setMe] = useState<string | null>(null);
+  const [owners, setOwners] = useState<Record<string, string>>({});
+  const [savingCharacterId, setSavingCharacterId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const characters = useCharacterStore((s) => s.characters);
   const updateCharacter = useCharacterStore((s) => s.updateCharacter);
-  const fichas = characters.filter((c) => !c.isGrimorioCreature);
+  const fichas = characters.filter((c) => !c.isGrimorioCreature && c.category === 'PLAYER' && c.createdBy !== 'MASTER');
 
   const load = async () => {
     const [{ data: p }, { data: m }, { data: u }] = await Promise.all([
@@ -22,6 +25,13 @@ export function MasterAccountsDialog({ open, onOpenChange }: { open: boolean; on
     setProfiles((p as CloudProfile[]) ?? []);
     setMasters(new Set(((m as string[] | null) ?? []).map((x) => (typeof x === 'string' ? x : (x as { list_masters: string }).list_masters))));
     setMe(u.user?.id ?? null);
+    try {
+      setOwners(await listCombatCharacterOwners());
+      setError('');
+    } catch (loadError) {
+      setOwners({});
+      setError(loadError instanceof Error ? loadError.message : 'Não foi possível carregar os donos das fichas.');
+    }
   };
 
   useEffect(() => { if (open) void load(); }, [open]);
@@ -31,6 +41,28 @@ export function MasterAccountsDialog({ open, onOpenChange }: { open: boolean; on
     const { error: err } = await authDb.rpc('set_master', { _target: id, _make: make });
     if (err) setError(err.message);
     void load();
+  };
+
+  const changeOwner = async (characterId: string, ownerUserId: string) => {
+    setError('');
+    setSavingCharacterId(characterId);
+    try {
+      const nextOwner = ownerUserId || null;
+      await assignCombatCharacterOwner({ data: { characterId, ownerUserId: nextOwner } });
+      setOwners((current) => {
+        const next = { ...current };
+        if (nextOwner) next[characterId] = nextOwner;
+        else delete next[characterId];
+        return next;
+      });
+      // Mantém a associação visual que outras partes do mapa ainda consomem.
+      // A autorização da fila usa a tabela privada, nunca este campo do snapshot.
+      updateCharacter(characterId, { profileId: nextOwner ?? undefined });
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Não foi possível salvar o dono da ficha.');
+    } finally {
+      setSavingCharacterId(null);
+    }
   };
 
   return (
@@ -65,8 +97,9 @@ export function MasterAccountsDialog({ open, onOpenChange }: { open: boolean; on
                 <div key={c.id} className="flex items-center gap-2 rounded-lg border border-border bg-card p-2">
                   <span className="flex-1 truncate text-sm text-foreground">{c.name || 'Sem nome'}</span>
                   <select
-                    value={c.profileId ?? ''}
-                    onChange={(ev) => updateCharacter(c.id, { profileId: ev.target.value || undefined })}
+                    value={owners[c.id] ?? ''}
+                    disabled={savingCharacterId === c.id}
+                    onChange={(ev) => void changeOwner(c.id, ev.target.value)}
                     className="h-8 max-w-[45%] rounded-md border border-border bg-background px-2 text-xs text-foreground"
                   >
                     <option value="">Sem dono</option>
