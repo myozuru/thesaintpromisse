@@ -35,7 +35,7 @@ async def main():
             attributes:[{id:'a1',name:'Força',value:30},{id:'a2',name:'Destreza',value:30}]}),
           mk('nat-ini',{name:'TESTE Inimigo',category:'INIMIGO',hpCurrent:300,hpMax:300,defense:1})]});
         ms.setState({entities:{e1:{id:'e1',characterId:'nat-at',type:'character',x:0,y:0,w:D,h:D},e2:{id:'e2',characterId:'nat-ini',type:'character',x:p.dist*D,y:0,w:D,h:D}}});
-        cb.setState({inCombat:true,round:1,initiativeOrder:[{charId:'nat-at'},{charId:'nat-ini'}],currentTurnIndex:0});
+        cb.setState({turnTimerEnabled:false,inCombat:true,round:1,initiativeOrder:[{charId:'nat-at'},{charId:'nat-ini'}],currentTurnIndex:0});
         return efs.map(e=>[e.trigger,e.condition,e.formula,e.damageType||'',e.conditionApply?.id||'']);
       }""", {"frases":FRASES,"cargas":cargas,"dist":distancia_cells,"arma":arma})
     async def dados(n):
@@ -47,11 +47,15 @@ async def main():
       efs=await montar(cargas,dist,arma); print(f"\n[{nome}] efeitos:",efs)
       await pg.wait_for_timeout(1500)
       await pg.screenshot(path=S+"0_antes.png")
+      fic=pg.get_by_text("Fichas",exact=True)
+      if await fic.count(): await fic.first.click(force=True); await pg.wait_for_timeout(1200)
       await pg.get_by_text("TESTE Atacante").first.click(timeout=8000); await pg.wait_for_timeout(1500)
       await pg.screenshot(path=S+"0_depois.png")
       await pg.get_by_role("button",name="Selecionar alvo no mapa").first.click(force=True); await pg.wait_for_timeout(500)
       print("   mira:", await pg.evaluate("async()=>{const m=await import('/src/stores/useAlvoMapaStore.ts');const ok=!!m.useAlvoMapaStore.getState().pending;m.clicarAlvoMapa('e2');await new Promise(r=>setTimeout(r,300));return {abriu:ok,pendente:!!m.useAlvoMapaStore.getState().pending}}"))
-      await pg.wait_for_timeout(800)
+      await pg.wait_for_timeout(1500)
+      com=pg.get_by_role("button",name="Começar")
+      if await com.count(): await com.first.click(force=True); await pg.wait_for_timeout(600)
       ra=pg.get_by_role("button",name="Rolar Ataque")
       if await ra.count() and await ra.first.is_visible(): await ra.first.click(); await pg.wait_for_timeout(3000)
       await dados(3)
