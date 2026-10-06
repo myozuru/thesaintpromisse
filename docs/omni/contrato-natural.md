@@ -1,10 +1,10 @@
 # OMNI natural — contrato e entregas
 
-Estado: etapas 1–6 concluídas no escopo documentado em cada etapa. A linguagem natural ainda não executa no jogo nem está conectada ao salvamento de habilidades. Base inicial examinada: main d2ef673b0e2a92918fa9fd7fac0095733c5b1d68, especificação Texto colado(4) e correções aprovadas na conversa de 05/10/2026. Evidências complementares em inventario-natural.md, diagnostico-execucao.md e etapa-2-contexto.md a etapa-6-eventos.md.
+Estado: etapas 1–7 concluídas no escopo documentado em cada etapa. A linguagem natural ainda não executa no jogo nem está conectada ao salvamento de habilidades. Base inicial examinada: main d2ef673b0e2a92918fa9fd7fac0095733c5b1d68, especificação Texto colado(4) e correções aprovadas na conversa de 05/10/2026. Evidências complementares em inventario-natural.md, diagnostico-execucao.md e etapa-2-contexto.md a etapa-7-atributos-sobrevivencia.md.
 
 ## Fontes de verdade
 
-- Atributos: `projetarPersonagemParaOmni` e `somaAtr` em `src/lib/omni/resolvedor.ts`. Preservar o valor resolvido; não introduzir fórmula de modificador de outro sistema.
+- Atributos: `projetarPersonagemParaOmni` e `somaAtr` em `src/lib/omni/resolvedor.ts`. Preservar o valor resolvido; não introduzir fórmula de modificador de outro sistema. Tetos atuais usam `shownHpMax`/`shownPeMax`, os auxiliares existentes da ficha.
 - Condições: `src/types/conditions.ts` e implementação dos efeitos. Não substituir regras por descrições do rascunho.
 - Danos: `DAMAGE_TYPES` e `DAMAGE_TYPE_LABELS` em `src/types/index.ts`.
 - Perícias e TRs: `src/lib/omni/constantesDoSistema.ts`. TRs: Astúcia, Fortitude, Integridade, Reflexos e Vontade. Perícias nunca viram TRs.
@@ -50,56 +50,56 @@ Esta descrição é referência funcional, não exemplo de script já suportado.
 
 ## Entregas e critérios mínimos
 
-| Etapa | Entrega | Evidência de conclusão |
-|---|---|---|
-| 1 | Contrato e inventário individual | Cada entrada classificada; lacunas e decisões abertas explicitadas |
-| 2 | Papéis e contexto | Usuário, vítima e atacante diferentes; falta de contexto rejeitada |
-| 3 | Lexer | Acentos, compostos, unidades e posições de erros sem corromper IDs |
-| 4 | Gramática e AST | Precedência, condições e ações sem interpretações conflitantes |
-| 5 | Compatibilidade | Scripts antigos preservados e conversão estruturada |
-| 6 | Eventos | Mapeamento explícito para gatilhos existentes, papéis e filtros; deduplicação de seletores iguais por regra |
-| 7 | Atributos e sobrevivência | Mesmos valores e regras das fichas atuais |
-| 8 | Recursos e proteções | Leitura/escrita e limites; derivados não editáveis |
-| 9 | Modificadores e ações | Ordem definida, fontes, expiração e orçamento respeitados |
-| 10 | Estados e auras | Entrada/saída reversível, sem incremento ou evento persistente |
-| 11 | Contadores | Teto global, ciclos independentes do saldo e gastos nominais |
-| 12 | Perícias e TRs | Catálogo real; disputa e resistência distintos |
-| 13 | Armas e custos | IDs, mãos, munição, usos e pagamento completo ou nenhum |
-| 14 | Condições | Proveniência, idade, renovação, término e remoção canônicos |
-| 15 | Dano e cura | Parcelas, multiplicador, proteções e ocorrência consolidada |
-| 16 | Espaço e movimento | Tokens inequívocos; seleção e execução usam mesma geometria |
-| 17 | Reações | Uma janela; cancelamento/interceptação altera execução pendente |
-| 18 | Históricos, economia e tempo | Reinícios válidos, transferências autorizadas e unidades |
-| 19 | Ataques adicionais | Sem geração recursiva; demais efeitos continuam válidos |
-| 20 | Magias | Custos, concentração e sustentação conforme regras existentes |
-| 21 | Áreas e efeitos diferidos | Fonte, duração e retomada sem reaplicar efeitos concluídos |
-| 22 | Mestre e autorização | Cliente e backend verificados; informação oculta protegida |
-| 23 | Editor e guia | Catálogo com suporte real, exemplos específicos, texto mínimo 13px |
-| 24 | Integração | Combate, multiplayer, reconexão, concorrência e desempenho |
+| Etapa | Entrega                          | Evidência de conclusão                                                                                      |
+| ----- | -------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| 1     | Contrato e inventário individual | Cada entrada classificada; lacunas e decisões abertas explicitadas                                          |
+| 2     | Papéis e contexto                | Usuário, vítima e atacante diferentes; falta de contexto rejeitada                                          |
+| 3     | Lexer                            | Acentos, compostos, unidades e posições de erros sem corromper IDs                                          |
+| 4     | Gramática e AST                  | Precedência, condições e ações sem interpretações conflitantes                                              |
+| 5     | Compatibilidade                  | Scripts antigos preservados e conversão estruturada                                                         |
+| 6     | Eventos                          | Mapeamento explícito para gatilhos existentes, papéis e filtros; deduplicação de seletores iguais por regra |
+| 7     | Atributos e sobrevivência        | Seis atributos lidos pelo resolvedor; PV/PE e estados lidos das fontes atuais, inclusive tetos efetivos     |
+| 8     | Recursos e proteções             | Leitura/escrita e limites; derivados não editáveis                                                          |
+| 9     | Modificadores e ações            | Ordem definida, fontes, expiração e orçamento respeitados                                                   |
+| 10    | Estados e auras                  | Entrada/saída reversível, sem incremento ou evento persistente                                              |
+| 11    | Contadores                       | Teto global, ciclos independentes do saldo e gastos nominais                                                |
+| 12    | Perícias e TRs                   | Catálogo real; disputa e resistência distintos                                                              |
+| 13    | Armas e custos                   | IDs, mãos, munição, usos e pagamento completo ou nenhum                                                     |
+| 14    | Condições                        | Proveniência, idade, renovação, término e remoção canônicos                                                 |
+| 15    | Dano e cura                      | Parcelas, multiplicador, proteções e ocorrência consolidada                                                 |
+| 16    | Espaço e movimento               | Tokens inequívocos; seleção e execução usam mesma geometria                                                 |
+| 17    | Reações                          | Uma janela; cancelamento/interceptação altera execução pendente                                             |
+| 18    | Históricos, economia e tempo     | Reinícios válidos, transferências autorizadas e unidades                                                    |
+| 19    | Ataques adicionais               | Sem geração recursiva; demais efeitos continuam válidos                                                     |
+| 20    | Magias                           | Custos, concentração e sustentação conforme regras existentes                                               |
+| 21    | Áreas e efeitos diferidos        | Fonte, duração e retomada sem reaplicar efeitos concluídos                                                  |
+| 22    | Mestre e autorização             | Cliente e backend verificados; informação oculta protegida                                                  |
+| 23    | Editor e guia                    | Catálogo com suporte real, exemplos específicos, texto mínimo 13px                                          |
+| 24    | Integração                       | Combate, multiplayer, reconexão, concorrência e desempenho                                                  |
 
 ## Rastreabilidade dos 19 riscos adicionais
 
-| Risco | Etapas responsáveis |
-|---|---|
-| 1 IDs das fontes | 2, 13 |
-| 2 Sujeitos do evento | 2, 6, 24 |
-| 3 Relações entre criaturas | 6, 16, 24 |
-| 4 Vários tokens por ficha | 2, 16, 24 |
-| 5 Medição espacial | 16 |
-| 6 Ordem de modificadores | 9, 15, 20 |
-| 7 Momento de leitura | 2, 11, 15, 17 |
-| 8 PV e proteções | 8, 15 |
-| 9 Fontes das condições | 14 |
-| 10 Renovação por condição | 14 |
-| 11 Descanso válido | 11, 18 |
-| 12 Recursão seletiva | 19 |
-| 13 Reações alteram execução | 17 |
-| 14 Informação secreta | 22, 23 |
-| 15 Carteiras autorizadas | 18, 22 |
-| 16 Limites técnicos | 3, 4, 24 |
-| 17 Migração | 5 |
-| 18 Persistência e retomada | 11, 14, 21, 24 |
-| 19 Catálogo verificável | 1, 23 |
+| Risco                       | Etapas responsáveis |
+| --------------------------- | ------------------- |
+| 1 IDs das fontes            | 2, 13               |
+| 2 Sujeitos do evento        | 2, 6, 24            |
+| 3 Relações entre criaturas  | 6, 16, 24           |
+| 4 Vários tokens por ficha   | 2, 16, 24           |
+| 5 Medição espacial          | 16                  |
+| 6 Ordem de modificadores    | 9, 15, 20           |
+| 7 Momento de leitura        | 2, 11, 15, 17       |
+| 8 PV e proteções            | 8, 15               |
+| 9 Fontes das condições      | 14                  |
+| 10 Renovação por condição   | 14                  |
+| 11 Descanso válido          | 11, 18              |
+| 12 Recursão seletiva        | 19                  |
+| 13 Reações alteram execução | 17                  |
+| 14 Informação secreta       | 22, 23              |
+| 15 Carteiras autorizadas    | 18, 22              |
+| 16 Limites técnicos         | 3, 4, 24            |
+| 17 Migração                 | 5                   |
+| 18 Persistência e retomada  | 11, 14, 21, 24      |
+| 19 Catálogo verificável     | 1, 23               |
 
 Cinco riscos anteriores: colisão de aliases (3/5), precedência (4), unidades (3/18), idempotência e concorrência (24), cancelamento e recuperação (13/17/24). A etapa 6 deduplica descritores iguais numa regra, mas não garante disparo único no combate; isso exige IDs de ocorrência estáveis e integração idempotente no barramento na etapa 24.
 
