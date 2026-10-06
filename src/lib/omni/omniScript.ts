@@ -467,7 +467,7 @@ function parsearComando(
   }
 
   // Forma padrão: aceita prefixos no recurso (`usuario.X`, `@alvo.Y`).
-  // Sufixos opcionais de contador: `ate <teto>` e `por_fonte`.
+  // Sufixos opcionais de contador: teto global, rastreio por fonte e limite da fonte por ciclo.
   // Tipo do novo golpe. Aspas preservam também valores legados sem equivalência.
   let damageType: string | undefined;
   const mTipo = txt.match(/\s+tipo\s+("(?:\\.|[^"\\])*"|[A-Za-zÀ-ÿ_][\w-]*)\s*$/i);
@@ -478,7 +478,7 @@ function parsearComando(
     if (!quoted && !resolverTipoDano(damageType)) return { erro: { posicao, trecho: raw, mensagem: `Tipo de dano desconhecido: ${damageType}. Use um código do motor (ex.: DQ).` } };
     txt = txt.slice(0, mTipo.index).trim();
   }
-  const m = txt.match(/^(somar|subtrair|reduzir|definir)\s+(.+?)\s+em\s+(.+?)(?:\s+at[eé]\s+(.+?))?(\s+por_fonte)?\s*$/i);
+  const m = txt.match(/^(somar|subtrair|reduzir|definir)\s+(.+?)\s+em\s+(.+?)(?:\s+at[eé]\s+(.+?))?(\s+por_fonte)?(?:\s+teto_aliado\s+(.+?)\s+por\s+(rodada|descanso))?\s*$/i);
   if (!m) {
     return {
       erro: {
@@ -512,6 +512,10 @@ function parsearComando(
       ...(damageType ? { damageType } : {}),
       ...(m[4] ? { counterCap: autoArrobaExpressao(m[4].trim()) } : {}),
       ...(m[5] ? { counterPerSource: true } : {}),
+      ...(m[6] && m[7] ? {
+        counterSourceLimit: autoArrobaExpressao(m[6].trim()),
+        counterSourcePeriod: m[7].toLowerCase() as 'rodada' | 'descanso',
+      } : {}),
     },
   };
 }
@@ -872,8 +876,11 @@ export function efeitosParaScript(
     const formula = (e.formula || '0').replace(/@USUARIO\./gi, '');
     const cap = e.counterCap ? ` ate ${e.counterCap.replace(/@USUARIO\./gi, '')}` : '';
     const pf = e.counterPerSource ? ' por_fonte' : '';
+    const tetoAliado = e.counterSourceLimit && e.counterSourcePeriod
+      ? ` teto_aliado ${e.counterSourceLimit.replace(/@USUARIO\./gi, '')} por ${e.counterSourcePeriod}`
+      : '';
     const tipo = e.damageType ? ` tipo ${JSON.stringify(e.damageType)}` : '';
-    return `${inverso[e.type]} ${formula} em ${prefixo}${recursoBase}${cap}${pf}${tipo}`;
+    return `${inverso[e.type]} ${formula} em ${prefixo}${recursoBase}${cap}${pf}${tetoAliado}${tipo}`;
   };
 
   // Reemite o cabeçalho do segmento (gatilho dinâmico, trigger nomeado e condição).
