@@ -1,12 +1,12 @@
-import { idadeCondicao } from './condicionaisAtivos';
-import { anexarDadosCompostos } from './componentes/contexto';
-import { dadosRecursos } from './componentes/recursos';
-import { dadosEquipamento } from './componentes/equipamento';
-import { dadosCena, dadosTurnos } from './componentes/cena';
-import { dadosMagia } from './componentes/magia';
-import { dadosHistorico } from './componentes/eventos';
-import { avaliarFormula, resolverChavePtBr } from './parser';
-import { mesclarDados, projetarDadosLegados } from './componentes/legado';
+import { idadeCondicao } from "./condicionaisAtivos";
+import { anexarDadosCompostos } from "./componentes/contexto";
+import { dadosRecursos } from "./componentes/recursos";
+import { dadosEquipamento } from "./componentes/equipamento";
+import { dadosCena, dadosTurnos } from "./componentes/cena";
+import { dadosMagia } from "./componentes/magia";
+import { dadosHistorico } from "./componentes/eventos";
+import { avaliarFormula, resolverChavePtBr } from "./parser";
+import { mesclarDados, projetarDadosLegados } from "./componentes/legado";
 /**
  * Resolvedor de Caminhos (ponte Omni ↔ sistema existente).
  *
@@ -16,32 +16,35 @@ import { mesclarDados, projetarDadosLegados } from './componentes/legado';
  * entidades no-code podem ler/gravar no personagem existente sem
  * tocar no schema legado.
  */
-import type { Character, Attribute } from '@/types';
-import { getMasteryBonus } from '@/types';
-import { getReactionsAvailable } from '@/lib/reactionBudget';
-import { getTrainingBonusByLevel } from '@/lib/levelEngine';
-import { aggregateTalentBonuses } from '@/lib/talentEffects';
-import { aggregateAuraEffects } from '@/lib/auraEffects';
-import { useCombatStore } from '@/stores/useCombatStore';
-import { useOpportunityStore } from '@/stores/useOpportunityStore';
-import { useMoneyStore } from '@/stores/useMoneyStore';
-import { useChronosStore } from '@/stores/useChronosStore';
-import { useCalendarStore } from '@/stores/useCalendarStore';
-import { useInventoryStore } from '@/stores/useInventoryStore';
-import { useMapStore } from '@/stores/useMapStore';
-import { useCharacterStore } from '@/stores/useCharacterStore';
-import { armaDoPersonagem } from './armaDoPersonagem';
-import { weaponMaxRangeMeters } from '@/lib/weaponRange';
-import { ALL_CONDITIONS } from '@/types/conditions';
-import { canonicalizarChave, expandirParaCaminhoLegado } from './keyAliases';
-import { effectiveMovement } from '@/lib/movementBudget';
-
-
+import type { Character, Attribute } from "@/types";
+import { getMasteryBonus } from "@/types";
+import { getReactionsAvailable } from "@/lib/reactionBudget";
+import { getTrainingBonusByLevel } from "@/lib/levelEngine";
+import { aggregateTalentBonuses } from "@/lib/talentEffects";
+import { aggregateAuraEffects } from "@/lib/auraEffects";
+import { useCombatStore } from "@/stores/useCombatStore";
+import { useOpportunityStore } from "@/stores/useOpportunityStore";
+import { useMoneyStore } from "@/stores/useMoneyStore";
+import { useChronosStore } from "@/stores/useChronosStore";
+import { useCalendarStore } from "@/stores/useCalendarStore";
+import { useInventoryStore } from "@/stores/useInventoryStore";
+import { useMapStore } from "@/stores/useMapStore";
+import { useCharacterStore } from "@/stores/useCharacterStore";
+import { armaDoPersonagem } from "./armaDoPersonagem";
+import { weaponMaxRangeMeters } from "@/lib/weaponRange";
+import { ALL_CONDITIONS } from "@/types/conditions";
+import { canonicalizarChave, expandirParaCaminhoLegado } from "./keyAliases";
+import { effectiveMovement } from "@/lib/movementBudget";
+import { shownHpMax, shownPeMax } from "@/lib/peDisplay";
 
 // Leitura de caminho "dot.path" em um objeto qualquer.
 function lerCaminho(obj: unknown, caminho: string): unknown {
-  return caminho.split('.').reduce<unknown>((acc, part) => {
-    if (acc && typeof acc === 'object' && part in (acc as Record<string, unknown>)) {
+  return caminho.split(".").reduce<unknown>((acc, part) => {
+    if (
+      acc &&
+      typeof acc === "object" &&
+      part in (acc as Record<string, unknown>)
+    ) {
       return (acc as Record<string, unknown>)[part];
     }
     return undefined;
@@ -52,15 +55,15 @@ function lerCaminho(obj: unknown, caminho: string): unknown {
 function chaveAtr(s: string): string {
   const n = s
     .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
-  if (n.startsWith('for')) return 'forca';
-  if (n.startsWith('des')) return 'destreza';
-  if (n.startsWith('con')) return 'constituicao';
-  if (n.startsWith('int')) return 'inteligencia';
-  if (n.startsWith('sab')) return 'sabedoria';
-  if (n.startsWith('pre')) return 'presenca';
-  if (n.startsWith('car')) return 'presenca'; // alias D&D
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (n.startsWith("for")) return "forca";
+  if (n.startsWith("des")) return "destreza";
+  if (n.startsWith("con")) return "constituicao";
+  if (n.startsWith("int")) return "inteligencia";
+  if (n.startsWith("sab")) return "sabedoria";
+  if (n.startsWith("pre")) return "presenca";
+  if (n.startsWith("car")) return "presenca"; // alias D&D
   // Astúcia e Vontade NÃO são atributos — são Testes de Resistência.
   return n;
 }
@@ -70,10 +73,10 @@ function chaveAtr(s: string): string {
 function chavePericia(s: string): string {
   return s
     .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, '')
-    .replace(/[^a-z0-9_]/g, '');
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "")
+    .replace(/[^a-z0-9_]/g, "");
 }
 
 function somaAtr(a: Attribute, level: number): number {
@@ -87,19 +90,27 @@ function somaAtr(a: Attribute, level: number): number {
  * Normaliza um Character do sistema atual para o shape esperado pelos
  * caminhos Omni ("atributos.forca", "status.vida.atual", etc.).
  */
-export function projetarPersonagemParaOmni(c: Character): Record<string, unknown> {
+export function projetarPersonagemParaOmni(
+  c: Character,
+): Record<string, unknown> {
   const level = c.level ?? 1;
   const atributos: Record<string, number> = {
-    forca: 0, destreza: 0, constituicao: 0,
-    inteligencia: 0, sabedoria: 0, presenca: 0,
+    forca: 0,
+    destreza: 0,
+    constituicao: 0,
+    inteligencia: 0,
+    sabedoria: 0,
+    presenca: 0,
   };
   for (const a of c.attributes ?? []) {
-    const key = chaveAtr(a.name || a.id || '');
+    const key = chaveAtr(a.name || a.id || "");
     if (key in atributos) atributos[key] = somaAtr(a, level);
   }
   const status = {
-    vida: { atual: c.hpCurrent ?? 0, max: c.hpMax ?? 0 },
-    energiaAmaldicoada: { atual: c.peCurrent ?? 0, max: c.peMax ?? 0 },
+    // Use os mesmos tetos efetivos já gravados e apresentados pela ficha;
+    // não recalcular bônus de passivas/equipamentos no resolvedor do OMNI.
+    vida: { atual: c.hpCurrent ?? 0, max: shownHpMax(c) },
+    energiaAmaldicoada: { atual: c.peCurrent ?? 0, max: shownPeMax(c) },
     deslocamento: c.movement ?? 0,
     defesa: c.ca ?? 0,
     bonusTreinamento: c.trainingBonus ?? getTrainingBonusByLevel(level),
@@ -108,13 +119,13 @@ export function projetarPersonagemParaOmni(c: Character): Record<string, unknown
   };
   const pericias: Record<string, number> = {};
   for (const s of c.skills ?? []) {
-    const key = chavePericia(s.name || s.id || '');
+    const key = chavePericia(s.name || s.id || "");
     pericias[key] = somaAtr(s, level);
   }
   // Testes de Resistência (TR) — mesma normalização das perícias.
   const tr: Record<string, number> = {};
   for (const s of c.savingThrows ?? []) {
-    const key = chavePericia(s.name || s.id || '');
+    const key = chavePericia(s.name || s.id || "");
     if (key) tr[key] = somaAtr(s, level);
   }
   // Valores configurados na ficha. O acerto genérico corresponde ao
@@ -129,18 +140,21 @@ export function projetarPersonagemParaOmni(c: Character): Record<string, unknown
 
 /** Lê um caminho Omni diretamente do Character. */
 export function lerCaminhoOmni(c: Character, caminho: string): number {
-  if (/\s/.test(caminho)) return avaliarFormula(caminho, montarVariaveisDoPersonagem(c)).valor;
+  if (/\s/.test(caminho))
+    return avaliarFormula(caminho, montarVariaveisDoPersonagem(c)).valor;
   const chave = canonicalizarChave(caminho);
   if (!chave) return 0;
   let legado = expandirParaCaminhoLegado(chave);
-  if (chave.startsWith('pericia_')) legado = `pericias.${chave.slice('pericia_'.length)}`;
-  if (/^(fortitude|reflexos|integridade|astucia|vontade)$/.test(chave)) legado = `tr.${chave}`;
+  if (chave.startsWith("pericia_"))
+    legado = `pericias.${chave.slice("pericia_".length)}`;
+  if (/^(fortitude|reflexos|integridade|astucia|vontade)$/.test(chave))
+    legado = `tr.${chave}`;
   const proj = projetarPersonagemParaOmni(c);
   const v = lerCaminho(proj, legado);
-  if (typeof v === 'number') return v;
-  if (v && typeof v === 'object' && 'value' in (v as Record<string, unknown>)) {
+  if (typeof v === "number") return v;
+  if (v && typeof v === "object" && "value" in (v as Record<string, unknown>)) {
     const inner = (v as Record<string, unknown>).value;
-    if (typeof inner === 'number') return inner;
+    if (typeof inner === "number") return inner;
   }
   // Keys derivadas, flags e contadores usam a mesma fonte das fórmulas.
   const variaveis = montarVariaveisDoPersonagem(c);
@@ -154,7 +168,7 @@ export function lerCaminhoOmni(c: Character, caminho: string): number {
  */
 export function montarVariaveisDoPersonagem(
   c: Character,
-  escopo: 'USUARIO' | 'ALVO' | 'CENA' = 'USUARIO'
+  escopo: "USUARIO" | "ALVO" | "CENA" = "USUARIO",
 ): Record<string, number> {
   const proj = projetarPersonagemParaOmni(c);
   const atributos = proj.atributos as Record<string, number>;
@@ -165,9 +179,17 @@ export function montarVariaveisDoPersonagem(
 
   // ─── Bônus derivados de talentos/aptidões/auras (com fallback seguro) ─
   let talentos: ReturnType<typeof aggregateTalentBonuses> | null = null;
-  try { talentos = aggregateTalentBonuses(c); } catch { talentos = null; }
+  try {
+    talentos = aggregateTalentBonuses(c);
+  } catch {
+    talentos = null;
+  }
   let auras: ReturnType<typeof aggregateAuraEffects> | null = null;
-  try { auras = aggregateAuraEffects(c); } catch { auras = null; }
+  try {
+    auras = aggregateAuraEffects(c);
+  } catch {
+    auras = null;
+  }
 
   const tempPE = c.tempPE ?? 0;
   const tempVida = c.escCurrent ?? 0;
@@ -180,24 +202,42 @@ export function montarVariaveisDoPersonagem(
   const peFaltante = Math.max(0, ea.max - ea.atual);
   const exaustao = c.exhaustionLevel ?? 0;
   const fome = c.hunger ?? 0;
-  const morto = (vida.atual <= 0 && c.exhaustionLevel === 6) ? 1 : 0;
+  const morto = vida.atual <= 0 && c.exhaustionLevel === 6 ? 1 : 0;
   const morrendo = c.dying ? 1 : 0;
   const inconsciente = c.unconsciousFromExhaustion ? 1 : 0;
-  const tamanhoMap: Record<string, number> = { 'Pequeno': 1, 'Médio': 2, 'Grande': 3 };
-  const tamanho = tamanhoMap[c.sizeCategory ?? 'Médio'] ?? 2;
+  const tamanhoMap: Record<string, number> = {
+    Pequeno: 1,
+    Médio: 2,
+    Grande: 3,
+  };
+  const tamanho = tamanhoMap[c.sizeCategory ?? "Médio"] ?? 2;
   const empolgacao = c.empolgacaoLevel ?? 0;
-  const categoriaMap: Record<string, number> = { 'PLAYER': 1, 'NPC': 2, 'INIMIGO': 3 };
+  const categoriaMap: Record<string, number> = {
+    PLAYER: 1,
+    NPC: 2,
+    INIMIGO: 3,
+  };
   const categoria = categoriaMap[c.category as unknown as string] ?? 0;
-  const round = (() => { try { return useCombatStore.getState().round ?? 0; } catch { return 0; } })();
+  const round = (() => {
+    try {
+      return useCombatStore.getState().round ?? 0;
+    } catch {
+      return 0;
+    }
+  })();
   const movimentoRestante = (() => {
     const total = effectiveMovement(c);
     const combate = useCombatStore.getState();
-    const usado = combate.inCombat ? Math.max(0, combate.movementUsedByChar[c.id] ?? 0) : 0;
+    const usado = combate.inCombat
+      ? Math.max(0, combate.movementUsedByChar[c.id] ?? 0)
+      : 0;
     return Math.max(0, total - usado);
   })();
 
   // Contadores por tipo (talentos/aptidões/habilidades)
-  const qtdTalentosCombate = (c.chosenTalents ?? []).filter((t) => /combate|arma|ataque|defes/i.test(t.id)).length;
+  const qtdTalentosCombate = (c.chosenTalents ?? []).filter((t) =>
+    /combate|arma|ataque|defes/i.test(t.id),
+  ).length;
   const qtdAptidoesAura = (c.chosenAuraAptitudes ?? []).length;
   const qtdHabilidadesSpec = (c.chosenSpecAbilities ?? []).length;
 
@@ -239,7 +279,8 @@ export function montarVariaveisDoPersonagem(
     // ─── 🩺 RECURSOS & POOLS ────────────────────────────────────────────
     VIDA_TEMP: tempVida,
     VIDA_TEMP_MAX: tempVidaMax,
-    VIDA_TEMP_PCT: tempVidaMax > 0 ? Math.round((tempVida / tempVidaMax) * 100) : 0,
+    VIDA_TEMP_PCT:
+      tempVidaMax > 0 ? Math.round((tempVida / tempVidaMax) * 100) : 0,
     VIDA_TOTAL: vida.atual + tempVida,
     VIDA_PCT: vida.max > 0 ? Math.round((vida.atual / vida.max) * 100) : 0,
     ENERGIA_PCT: ea.max > 0 ? Math.round((ea.atual / ea.max) * 100) : 0,
@@ -267,8 +308,8 @@ export function montarVariaveisDoPersonagem(
     FOME_NIVEL: fome,
 
     // ─── ⚔️ COMBATE AVANÇADO — Defesa & Iniciativa ──────────────────────
-    DEFESA_CAC: ((status.defesa as number) ?? 0),
-    DEFESA_DIST: ((status.defesa as number) ?? 0),
+    DEFESA_CAC: (status.defesa as number) ?? 0,
+    DEFESA_DIST: (status.defesa as number) ?? 0,
     INICIATIVA: c.initiativeBonus ?? 0,
     ATENCAO: c.attention ?? 0,
 
@@ -286,14 +327,25 @@ export function montarVariaveisDoPersonagem(
     // ─── ⚡ PR-1: AdO & Reações ─────────────────────────────────────────
     REACOES_MAX: c.reactionsMax ?? 1,
     REACOES_RESTANTES: getReactionsAvailable(c),
-    REACAO_USADA_NESTA_RODADA: getReactionsAvailable(c) < (c.reactionsMax ?? 1) ? 1 : 0,
+    REACAO_USADA_NESTA_RODADA:
+      getReactionsAvailable(c) < (c.reactionsMax ?? 1) ? 1 : 0,
     ...(() => {
-      let grant: { mode?: string; consumed?: boolean; restrictToCharId?: string } | undefined;
-      try { grant = useOpportunityStore.getState().grants[c.id]; } catch { grant = undefined; }
-      const modoMap: Record<string, number> = { reaction: 1, action: 2, either: 3 };
+      let grant:
+        | { mode?: string; consumed?: boolean; restrictToCharId?: string }
+        | undefined;
+      try {
+        grant = useOpportunityStore.getState().grants[c.id];
+      } catch {
+        grant = undefined;
+      }
+      const modoMap: Record<string, number> = {
+        reaction: 1,
+        action: 2,
+        either: 3,
+      };
       return {
         ADO_CONCEDIDA: grant ? 1 : 0,
-        ADO_MODO: grant ? (modoMap[grant.mode ?? ''] ?? 0) : 0,
+        ADO_MODO: grant ? (modoMap[grant.mode ?? ""] ?? 0) : 0,
         ADO_CONSUMIDA: grant?.consumed ? 1 : 0,
         ADO_RESTRITA: grant?.restrictToCharId ? 1 : 0,
       };
@@ -303,7 +355,8 @@ export function montarVariaveisDoPersonagem(
     VISAO_NORMAL: c.omniFlags?.visao_normal ?? 0,
     VISAO_PENUMBRA: c.omniFlags?.visao_penumbra ?? 0,
     VISAO_ESCURIDAO: c.omniFlags?.visao_escuridao ?? 0,
-    NA_ESCURIDAO: c.omniFlags?.na_escuridao ?? c.omniFlags?.visao_escuridao ?? 0,
+    NA_ESCURIDAO:
+      c.omniFlags?.na_escuridao ?? c.omniFlags?.visao_escuridao ?? 0,
     NA_PENUMBRA: c.omniFlags?.na_penumbra ?? c.omniFlags?.visao_penumbra ?? 0,
     ESTA_ILUMINADO: c.omniFlags?.esta_iluminado ?? 0,
     ESTA_OCULTO: c.omniFlags?.esta_oculto ?? 0,
@@ -331,12 +384,12 @@ export function montarVariaveisDoPersonagem(
     CENA_TERRENO: c.omniFlags?.cena_terreno ?? 0,
 
     // ─── 🩹 PR-2: Recursos Detalhados (thresholds) ─────────────────────
-    VIDA_PCT_ABAIXO_50: vida.max > 0 && (vida.atual / vida.max) <= 0.5 ? 1 : 0,
-    VIDA_PCT_ABAIXO_25: vida.max > 0 && (vida.atual / vida.max) <= 0.25 ? 1 : 0,
-    BLOODIED: vida.max > 0 && (vida.atual / vida.max) <= 0.5 ? 1 : 0,
-    CRITICAMENTE_FERIDO: vida.max > 0 && (vida.atual / vida.max) <= 0.25 ? 1 : 0,
-    PE_PCT_ABAIXO_50: ea.max > 0 && (ea.atual / ea.max) <= 0.5 ? 1 : 0,
-    PE_PCT_ABAIXO_25: ea.max > 0 && (ea.atual / ea.max) <= 0.25 ? 1 : 0,
+    VIDA_PCT_ABAIXO_50: vida.max > 0 && vida.atual / vida.max <= 0.5 ? 1 : 0,
+    VIDA_PCT_ABAIXO_25: vida.max > 0 && vida.atual / vida.max <= 0.25 ? 1 : 0,
+    BLOODIED: vida.max > 0 && vida.atual / vida.max <= 0.5 ? 1 : 0,
+    CRITICAMENTE_FERIDO: vida.max > 0 && vida.atual / vida.max <= 0.25 ? 1 : 0,
+    PE_PCT_ABAIXO_50: ea.max > 0 && ea.atual / ea.max <= 0.5 ? 1 : 0,
+    PE_PCT_ABAIXO_25: ea.max > 0 && ea.atual / ea.max <= 0.25 ? 1 : 0,
 
     // ─── 🗡️ PR-2: Empunhadura ──────────────────────────────────────────
     ...(() => {
@@ -346,19 +399,21 @@ export function montarVariaveisDoPersonagem(
       const duasMaos = main && off && main === off ? 1 : 0;
       const dualWield = main && off && main !== off ? 1 : 0;
       const mainW = main ? armaDoPersonagem(c.id, main) : undefined;
-      const offW = off && off !== main ? armaDoPersonagem(c.id, off) : undefined;
+      const offW =
+        off && off !== main ? armaDoPersonagem(c.id, off) : undefined;
 
-      const hasProp = (kind: string) => mainW?.properties?.some((p) => p.kind === kind) ? 1 : 0;
+      const hasProp = (kind: string) =>
+        mainW?.properties?.some((p) => p.kind === kind) ? 1 : 0;
       return {
         DESARMADO: desarmado,
         DUAS_MAOS: duasMaos,
         DUAL_WIELD: dualWield,
-        ARMA_PRINCIPAL_EH_CAC: mainW?.range === 'melee' ? 1 : 0,
-        ARMA_PRINCIPAL_EH_DISTANCIA: mainW?.range === 'ranged' ? 1 : 0,
-        ARMA_PRINCIPAL_LEVE: hasProp('leve'),
-        ARMA_PRINCIPAL_VERSATIL: hasProp('versatil'),
-        ARMA_PRINCIPAL_FINEZA: hasProp('fineza'),
-        ARMA_PRINCIPAL_PESADA: hasProp('pesada'),
+        ARMA_PRINCIPAL_EH_CAC: mainW?.range === "melee" ? 1 : 0,
+        ARMA_PRINCIPAL_EH_DISTANCIA: mainW?.range === "ranged" ? 1 : 0,
+        ARMA_PRINCIPAL_LEVE: hasProp("leve"),
+        ARMA_PRINCIPAL_VERSATIL: hasProp("versatil"),
+        ARMA_PRINCIPAL_FINEZA: hasProp("fineza"),
+        ARMA_PRINCIPAL_PESADA: hasProp("pesada"),
         ESCUDO_ID_EQUIPADO: c.equippedShieldId ? 1 : 0,
         SWAPS_ARMAS_NESTE_TURNO: c.weaponSwapsThisTurn ?? 0,
         ATAQUES_NESTE_TURNO: c.attacksThisTurn ?? 0,
@@ -368,13 +423,15 @@ export function montarVariaveisDoPersonagem(
     })(),
 
     // ─── 🪪 PR-3: Identidade ───────────────────────────────────────────
-    EH_PLAYER: c.category === 'PLAYER' ? 1 : 0,
-    EH_NPC: c.category === 'NPC' ? 1 : 0,
-    EH_INIMIGO: c.category === 'INIMIGO' ? 1 : 0,
+    EH_PLAYER: c.category === "PLAYER" ? 1 : 0,
+    EH_NPC: c.category === "NPC" ? 1 : 0,
+    EH_INIMIGO: c.category === "INIMIGO" ? 1 : 0,
 
     // ─── 🤕 PR-3: Condições Ativas ────────────────────────────────────
     ...(() => {
-      const ativas = (c.activeConditions ?? []) as Array<{ conditionId?: string }>;
+      const ativas = (c.activeConditions ?? []) as Array<{
+        conditionId?: string;
+      }>;
       // Inicializa todas as categorias com 0 para que as chaves declaradas no
       // dicionário sempre existam na bag (evita resolução silenciosa para 0
       // por "chave ausente" — agora é 0 explícito).
@@ -392,7 +449,11 @@ export function montarVariaveisDoPersonagem(
         if (!a.conditionId) continue;
         const def = byId.get(a.conditionId);
         if (def) {
-          const catKey = def.category.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9_]/g, '_');
+          const catKey = def.category
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9_]/g, "_");
           const k = `QTD_CONDICOES_${catKey.toUpperCase()}`;
           out[k] = (out[k] ?? 0) + 1;
         }
@@ -402,8 +463,13 @@ export function montarVariaveisDoPersonagem(
 
     // ─── 🌀 PR-3: Concentração & Sustentados ──────────────────────────
     ...(() => {
-      const buffs = (c.activeBuffs ?? []) as Array<{ isSustained?: boolean; durationRounds?: number }>;
-      const qtdSust = buffs.filter((b) => b.isSustained === true || b.durationRounds === -1).length;
+      const buffs = (c.activeBuffs ?? []) as Array<{
+        isSustained?: boolean;
+        durationRounds?: number;
+      }>;
+      const qtdSust = buffs.filter(
+        (b) => b.isSustained === true || b.durationRounds === -1,
+      ).length;
       const qtdConc = c.lastSpellUsedId ? 1 : 0;
       const maxConc = c.maxConcentrationSlots ?? 1;
       const maxSust = c.maxSustainedSpells ?? 1;
@@ -417,13 +483,22 @@ export function montarVariaveisDoPersonagem(
 
     // ─── 💰 PR-4: Economia (carteiras / moedas) ────────────────────────
     ...(() => {
-      let wallets: Array<{ id: string; members: string[]; balances: Record<string, number>; isPersonal?: boolean }> = [];
-      let defaultCurrencyId = 'yen';
+      let wallets: Array<{
+        id: string;
+        members: string[];
+        balances: Record<string, number>;
+        isPersonal?: boolean;
+      }> = [];
+      let defaultCurrencyId = "yen";
       try {
         const ms = useMoneyStore.getState();
         wallets = ms.wallets as typeof wallets;
-        defaultCurrencyId = (ms.currencies.find((c) => c.isDefault) ?? ms.currencies[0])?.id ?? 'yen';
-      } catch { /* test sem store */ }
+        defaultCurrencyId =
+          (ms.currencies.find((c) => c.isDefault) ?? ms.currencies[0])?.id ??
+          "yen";
+      } catch {
+        /* test sem store */
+      }
       const minhas = wallets.filter((w) => w.members?.includes(c.id));
       const totaisPorMoeda: Record<string, number> = {};
       for (const w of minhas) {
@@ -431,10 +506,15 @@ export function montarVariaveisDoPersonagem(
           totaisPorMoeda[cid] = (totaisPorMoeda[cid] ?? 0) + (val ?? 0);
         }
       }
-      const saldoTotal = Object.values(totaisPorMoeda).reduce((a, b) => a + b, 0);
+      const saldoTotal = Object.values(totaisPorMoeda).reduce(
+        (a, b) => a + b,
+        0,
+      );
       const saldoPadrao = totaisPorMoeda[defaultCurrencyId] ?? 0;
       const pessoal = minhas.find((w) => w.isPersonal);
-      const saldoPessoal = pessoal ? (pessoal.balances?.[defaultCurrencyId] ?? 0) : 0;
+      const saldoPessoal = pessoal
+        ? (pessoal.balances?.[defaultCurrencyId] ?? 0)
+        : 0;
       const out: Record<string, number> = {
         SALDO_TOTAL: saldoTotal,
         SALDO_PADRAO: saldoPadrao,
@@ -444,7 +524,7 @@ export function montarVariaveisDoPersonagem(
         TEM_CARTEIRA_PESSOAL: pessoal ? 1 : 0,
       };
       for (const [cid, val] of Object.entries(totaisPorMoeda)) {
-        const norm = cid.toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+        const norm = cid.toUpperCase().replace(/[^A-Z0-9_]/g, "_");
         out[`SALDO_${norm}`] = val;
         out[`TEM_MOEDA_${norm}`] = val > 0 ? 1 : 0;
       }
@@ -453,32 +533,67 @@ export function montarVariaveisDoPersonagem(
 
     // ─── 🕰️ PR-4: Tempo & Calendário (CENA) ───────────────────────────
     ...(() => {
-      let ch: { hours: number; minutes: number; seconds: number; day: number; month: number; year: number; isRunning: boolean; multiplier: number } | null = null;
+      let ch: {
+        hours: number;
+        minutes: number;
+        seconds: number;
+        day: number;
+        month: number;
+        year: number;
+        isRunning: boolean;
+        multiplier: number;
+      } | null = null;
       try {
         const s = useChronosStore.getState();
-        ch = { hours: s.hours, minutes: s.minutes, seconds: s.seconds, day: s.day, month: s.month, year: s.year, isRunning: s.isRunning, multiplier: s.multiplier };
-      } catch { ch = null; }
+        ch = {
+          hours: s.hours,
+          minutes: s.minutes,
+          seconds: s.seconds,
+          day: s.day,
+          month: s.month,
+          year: s.year,
+          isRunning: s.isRunning,
+          multiplier: s.multiplier,
+        };
+      } catch {
+        ch = null;
+      }
       let eventosHoje = 0;
       try {
         const cs = useCalendarStore.getState();
-        eventosHoje = (cs.events ?? []).filter((e: { day?: number; month?: number; year?: number }) =>
-          ch && e.day === ch.day && e.month === ch.month && e.year === ch.year
+        eventosHoje = (cs.events ?? []).filter(
+          (e: { day?: number; month?: number; year?: number }) =>
+            ch &&
+            e.day === ch.day &&
+            e.month === ch.month &&
+            e.year === ch.year,
         ).length;
-      } catch { /* */ }
+      } catch {
+        /* */
+      }
       if (!ch) {
         return {
-          CENA_HORA: 0, CENA_MINUTO: 0, CENA_SEGUNDO: 0,
-          CENA_DIA: 0, CENA_MES: 0, CENA_ANO: 0,
-          CENA_EH_DIA: 0, CENA_EH_NOITE: 0, CENA_EH_AMANHECER: 0, CENA_EH_ANOITECER: 0,
-          CENA_RELOGIO_ATIVO: 0, CENA_MULTIPLICADOR_TEMPO: 1,
-          CENA_TIMESTAMP_SEGUNDOS: 0, CENA_EVENTOS_HOJE: 0,
+          CENA_HORA: 0,
+          CENA_MINUTO: 0,
+          CENA_SEGUNDO: 0,
+          CENA_DIA: 0,
+          CENA_MES: 0,
+          CENA_ANO: 0,
+          CENA_EH_DIA: 0,
+          CENA_EH_NOITE: 0,
+          CENA_EH_AMANHECER: 0,
+          CENA_EH_ANOITECER: 0,
+          CENA_RELOGIO_ATIVO: 0,
+          CENA_MULTIPLICADOR_TEMPO: 1,
+          CENA_TIMESTAMP_SEGUNDOS: 0,
+          CENA_EVENTOS_HOJE: 0,
         };
       }
       const h = ch.hours;
       const ehAmanhecer = h >= 5 && h < 7 ? 1 : 0;
       const ehDia = h >= 7 && h < 18 ? 1 : 0;
       const ehAnoitecer = h >= 18 && h < 20 ? 1 : 0;
-      const ehNoite = (h >= 20 || h < 5) ? 1 : 0;
+      const ehNoite = h >= 20 || h < 5 ? 1 : 0;
       const tsSeg = h * 3600 + ch.minutes * 60 + ch.seconds;
       return {
         CENA_HORA: h,
@@ -500,13 +615,16 @@ export function montarVariaveisDoPersonagem(
 
     // ─── 🎒 PR-4: Inventário ──────────────────────────────────────────
     ...(() => {
-      let total = 0, equip = 0;
+      let total = 0,
+        equip = 0;
       try {
         const inv = useInventoryStore.getState();
         const minhas = inv.listByOwner(c.id);
         total = minhas.length;
         equip = minhas.filter((i) => i.isEquipped).length;
-      } catch { /* */ }
+      } catch {
+        /* */
+      }
       return {
         QTD_ITENS_INVENTARIO: total,
         QTD_ITENS_EQUIPADOS: equip,
@@ -537,15 +655,39 @@ export function montarVariaveisDoPersonagem(
         const map = useMapStore.getState();
         // As entidades usam pixels de mundo; dpi define pixels por célula.
         const { dpi, metersPerCell } = map.gridConfig;
-        const metrosPorPixel = (metersPerCell > 0 ? metersPerCell : 1) / (dpi > 0 ? dpi : 70);
-        const entitiesObj = (map as unknown as { entities?: Record<string, { id: string; x: number; y: number; w: number; h: number; characterId?: string; layer?: string; hidden?: boolean }> }).entities ?? {};
-        const entities = Object.values(entitiesObj).filter((e) => !e.hidden && e.layer !== 'gm');
+        const metrosPorPixel =
+          (metersPerCell > 0 ? metersPerCell : 1) / (dpi > 0 ? dpi : 70);
+        const entitiesObj =
+          (
+            map as unknown as {
+              entities?: Record<
+                string,
+                {
+                  id: string;
+                  x: number;
+                  y: number;
+                  w: number;
+                  h: number;
+                  characterId?: string;
+                  layer?: string;
+                  hidden?: boolean;
+                }
+              >;
+            }
+          ).entities ?? {};
+        const entities = Object.values(entitiesObj).filter(
+          (e) => !e.hidden && e.layer !== "gm",
+        );
         const chars = useCharacterStore.getState().characters;
         const catById = new Map(chars.map((ch) => [ch.id, ch.category]));
         const meuToken = entities.find((e) => e.characterId === c.id);
         out.CENA_QTD_TOKENS = entities.length;
-        out.CENA_QTD_ALIADOS = entities.filter((e) => e.characterId && catById.get(e.characterId) === 'PLAYER').length;
-        out.CENA_QTD_INIMIGOS = entities.filter((e) => e.characterId && catById.get(e.characterId) === 'INIMIGO').length;
+        out.CENA_QTD_ALIADOS = entities.filter(
+          (e) => e.characterId && catById.get(e.characterId) === "PLAYER",
+        ).length;
+        out.CENA_QTD_INIMIGOS = entities.filter(
+          (e) => e.characterId && catById.get(e.characterId) === "INIMIGO",
+        ).length;
         if (!meuToken) return out;
         out.ESTA_NO_MAPA = 1;
         const mx = meuToken.x + meuToken.w / 2;
@@ -553,22 +695,32 @@ export function montarVariaveisDoPersonagem(
         out.CENA_TOKEN_X = Math.round(mx * metrosPorPixel * 100) / 100;
         out.CENA_TOKEN_Y = Math.round(my * metrosPorPixel * 100) / 100;
         const minhaCategoria = c.category;
-        let alAdj = 0, alPx = 0, inAdj = 0, inPx = 0;
+        let alAdj = 0,
+          alPx = 0,
+          inAdj = 0,
+          inPx = 0;
         for (const e of entities) {
-          if (e.id === meuToken.id || !e.characterId || e.characterId === c.id) continue;
+          if (e.id === meuToken.id || !e.characterId || e.characterId === c.id)
+            continue;
           const ex = e.x + e.w / 2;
           const ey = e.y + e.h / 2;
           // Mantém o desconto de tamanho dos tokens antes de converter para metros.
-          const distPx = Math.max(0, Math.hypot(ex - mx, ey - my) - (Math.max(meuToken.w, meuToken.h) + Math.max(e.w, e.h)) / 4);
+          const distPx = Math.max(
+            0,
+            Math.hypot(ex - mx, ey - my) -
+              (Math.max(meuToken.w, meuToken.h) + Math.max(e.w, e.h)) / 4,
+          );
           const distM = distPx * metrosPorPixel;
           const cat = catById.get(e.characterId);
           // PLAYER & NPC = aliados de PLAYER; INIMIGO oposto. NPC neutro p/ INIMIGO.
-          const ehAliado = minhaCategoria === 'INIMIGO'
-            ? cat === 'INIMIGO'
-            : (cat === 'PLAYER' || cat === 'NPC');
-          const ehInimigo = minhaCategoria === 'INIMIGO'
-            ? (cat === 'PLAYER' || cat === 'NPC')
-            : cat === 'INIMIGO';
+          const ehAliado =
+            minhaCategoria === "INIMIGO"
+              ? cat === "INIMIGO"
+              : cat === "PLAYER" || cat === "NPC";
+          const ehInimigo =
+            minhaCategoria === "INIMIGO"
+              ? cat === "PLAYER" || cat === "NPC"
+              : cat === "INIMIGO";
           if (distM <= 1.5) {
             if (ehAliado) alAdj++;
             if (ehInimigo) inAdj++;
@@ -588,15 +740,19 @@ export function montarVariaveisDoPersonagem(
         out.FLANQUEADO = inAdj >= 2 ? 1 : 0;
         out.SOZINHO = alAdj === 0 && alPx === 0 ? 1 : 0;
         out.NA_LINHA_DE_FRENTE = inAdj > 0 ? 1 : 0;
-      } catch { /* sem mapa/personagens — defaults */ }
+      } catch {
+        /* sem mapa/personagens — defaults */
+      }
       return out;
     })(),
 
     // ─── 🩹 PR-6: Cura / Recursos Avançados ────────────────────────────
     ...(() => {
       const faltante = Math.max(0, vida.max - vida.atual);
-      const faltantePct = vida.max > 0 ? Math.round((faltante / vida.max) * 100) : 0;
-      const podeSerCurado = (vida.atual < vida.max && !morto && !morrendo) ? 1 : 0;
+      const faltantePct =
+        vida.max > 0 ? Math.round((faltante / vida.max) * 100) : 0;
+      const podeSerCurado =
+        vida.atual < vida.max && !morto && !morrendo ? 1 : 0;
       const curaReceb = c.omniCounters?.cura_recebida ?? 0;
       const curaRodada = c.omniCounters?.cura_recebida_nesta_rodada ?? 0;
       const ultimoDano = c.omniCounters?.ultimo_dano_recebido ?? 0;
@@ -620,36 +776,56 @@ export function montarVariaveisDoPersonagem(
         MOVIMENTO_DISPONIVEL: movimentoRestante > 0 ? 1 : 0,
         SLOTS_DESCANSO_CURTO: hdAtual,
         SLOTS_DESCANSO_CURTO_MAX: hdMax,
-        SLOTS_DESCANSO_CURTO_PCT: hdMax > 0 ? Math.round((hdAtual / hdMax) * 100) : 0,
+        SLOTS_DESCANSO_CURTO_PCT:
+          hdMax > 0 ? Math.round((hdAtual / hdMax) * 100) : 0,
         VIGOR_MALDITO_USOS: vmUsos,
         VIGOR_MALDITO_MAX: vmMax,
         VIGOR_MALDITO_DISPONIVEL: vmUsos > 0 ? 1 : 0,
         HP_SACRIFICADO: hpSacr,
-        SACRIFICIO_PCT: vida.max > 0 ? Math.round((hpSacr / vida.max) * 100) : 0,
+        SACRIFICIO_PCT:
+          vida.max > 0 ? Math.round((hpSacr / vida.max) * 100) : 0,
       };
     })(),
 
     // ─── ⚔️ PR-7: Combate Avançado (vantagem, cobertura, alcance, crítico) ─
     ...(() => {
-      const mods = (c as unknown as { omniAdvMods?: Record<string, { kind: string; scope: string }> }).omniAdvMods ?? {};
+      const mods =
+        (
+          c as unknown as {
+            omniAdvMods?: Record<string, { kind: string; scope: string }>;
+          }
+        ).omniAdvMods ?? {};
       const arr = Object.values(mods);
-      const qtdAdv = arr.filter((m) => m.kind === 'advantage').length;
-      const qtdDis = arr.filter((m) => m.kind === 'disadvantage').length;
-      const atkScopes = new Set(['next_attack','next_any','attack_melee','attack_ranged','attack_cursed','attack_all','attack_weapon_group','attack_weapon_name']);
-      const trScopes  = new Set(['next_save','next_any','save_specific']);
-      const skScopes  = new Set(['next_skill','next_any','skill_specific']);
-      const has = (kind: string, set: Set<string>) => arr.some((m) => m.kind === kind && set.has(m.scope)) ? 1 : 0;
+      const qtdAdv = arr.filter((m) => m.kind === "advantage").length;
+      const qtdDis = arr.filter((m) => m.kind === "disadvantage").length;
+      const atkScopes = new Set([
+        "next_attack",
+        "next_any",
+        "attack_melee",
+        "attack_ranged",
+        "attack_cursed",
+        "attack_all",
+        "attack_weapon_group",
+        "attack_weapon_name",
+      ]);
+      const trScopes = new Set(["next_save", "next_any", "save_specific"]);
+      const skScopes = new Set(["next_skill", "next_any", "skill_specific"]);
+      const has = (kind: string, set: Set<string>) =>
+        arr.some((m) => m.kind === kind && set.has(m.scope)) ? 1 : 0;
 
-      const mainW = c.mainHandWeaponName ? armaDoPersonagem(c.id, c.mainHandWeaponName) : undefined;
+      const mainW = c.mainHandWeaponName
+        ? armaDoPersonagem(c.id, c.mainHandWeaponName)
+        : undefined;
       const critRange = mainW?.critRange ?? 20;
-      const reach = mainW?.range === 'melee' ? weaponMaxRangeMeters(mainW) ?? 0 : 0;
+      const reach =
+        mainW?.range === "melee" ? (weaponMaxRangeMeters(mainW) ?? 0) : 0;
       const rs = mainW?.rangeShort ?? 0;
       const rl = mainW?.rangeLong ?? 0;
 
       const meiaCob = c.omniFlags?.cobertura_meia ?? 0;
       const tresQuartos = c.omniFlags?.cobertura_tres_quartos ?? 0;
       const totalCob = c.omniFlags?.cobertura_total ?? 0;
-      const bonusDef = totalCob ? 999 : (tresQuartos ? 5 : (meiaCob ? 2 : 0));
+      const bonusDef = totalCob ? 999 : tresQuartos ? 5 : meiaCob ? 2 : 0;
 
       const reacMax = c.reactionsMax ?? 1;
       const reacAtu = getReactionsAvailable(c);
@@ -659,12 +835,12 @@ export function montarVariaveisDoPersonagem(
         TEM_DESVANTAGEM: qtdDis > 0 ? 1 : 0,
         QTD_VANTAGENS: qtdAdv,
         QTD_DESVANTAGENS: qtdDis,
-        VANTAGEM_PROXIMO_ATAQUE: has('advantage', atkScopes),
-        DESVANTAGEM_PROXIMO_ATAQUE: has('disadvantage', atkScopes),
-        VANTAGEM_PROXIMO_TR: has('advantage', trScopes),
-        DESVANTAGEM_PROXIMO_TR: has('disadvantage', trScopes),
-        VANTAGEM_PROXIMA_PERICIA: has('advantage', skScopes),
-        DESVANTAGEM_PROXIMA_PERICIA: has('disadvantage', skScopes),
+        VANTAGEM_PROXIMO_ATAQUE: has("advantage", atkScopes),
+        DESVANTAGEM_PROXIMO_ATAQUE: has("disadvantage", atkScopes),
+        VANTAGEM_PROXIMO_TR: has("advantage", trScopes),
+        DESVANTAGEM_PROXIMO_TR: has("disadvantage", trScopes),
+        VANTAGEM_PROXIMA_PERICIA: has("advantage", skScopes),
+        DESVANTAGEM_PROXIMA_PERICIA: has("disadvantage", skScopes),
 
         COBERTURA_MEIA: meiaCob,
         COBERTURA_TRES_QUARTOS: tresQuartos,
@@ -684,41 +860,74 @@ export function montarVariaveisDoPersonagem(
 
     // ─── 🔮 PR-8: Magia / Técnicas ─────────────────────────────────────
     ...(() => {
-      const spells = ((c.spells ?? []) as unknown) as Array<{ id: string; name?: string; spellType?: string; costPE?: number; isPrepared?: boolean; damageType?: string }>;
-      const buffs = (c.activeBuffs ?? []) as Array<{ spellName?: string; peCostPerRound?: number; isSustained?: boolean }>;
+      const spells = (c.spells ?? []) as unknown as Array<{
+        id: string;
+        name?: string;
+        spellType?: string;
+        costPE?: number;
+        isPrepared?: boolean;
+        damageType?: string;
+      }>;
+      const buffs = (c.activeBuffs ?? []) as Array<{
+        spellName?: string;
+        peCostPerRound?: number;
+        isSustained?: boolean;
+      }>;
       const out: Record<string, number> = {
         QTD_FEITICOS: spells.length,
-        QTD_FEITICOS_DANO: spells.filter((s) => s.spellType === 'damage').length,
-        QTD_FEITICOS_CURA: spells.filter((s) => s.spellType === 'heal').length,
-        QTD_FEITICOS_BUFF: spells.filter((s) => s.spellType === 'buff').length,
-        QTD_FEITICOS_CONDICAO: spells.filter((s) => s.spellType === 'condition').length,
+        QTD_FEITICOS_DANO: spells.filter((s) => s.spellType === "damage")
+          .length,
+        QTD_FEITICOS_CURA: spells.filter((s) => s.spellType === "heal").length,
+        QTD_FEITICOS_BUFF: spells.filter((s) => s.spellType === "buff").length,
+        QTD_FEITICOS_CONDICAO: spells.filter((s) => s.spellType === "condition")
+          .length,
         QTD_FEITICOS_PRONTOS: spells.filter((s) => s.isPrepared).length,
         TEM_FEITICO_PRONTO: spells.some((s) => s.isPrepared) ? 1 : 0,
-        PE_MINIMO_FEITICO: spells.length ? Math.min(...spells.map((s) => s.costPE ?? 0)) : 0,
-        PE_MAXIMO_FEITICO: spells.length ? Math.max(...spells.map((s) => s.costPE ?? 0)) : 0,
+        PE_MINIMO_FEITICO: spells.length
+          ? Math.min(...spells.map((s) => s.costPE ?? 0))
+          : 0,
+        PE_MAXIMO_FEITICO: spells.length
+          ? Math.max(...spells.map((s) => s.costPE ?? 0))
+          : 0,
         QTD_BUFFS_ATIVOS: buffs.length,
         QTD_BUFFS_SUSTENTADOS: buffs.filter((b) => b.isSustained).length,
-        PE_POR_RODADA_SUSTENTADO: buffs.reduce((acc, b) => acc + (b.peCostPerRound ?? 0), 0),
+        PE_POR_RODADA_SUSTENTADO: buffs.reduce(
+          (acc, b) => acc + (b.peCostPerRound ?? 0),
+          0,
+        ),
         TEM_ULTIMO_FEITICO: c.lastSpellUsedId ? 1 : 0,
         SPELL_ATTACK_BONUS: c.spellAttackBonus ?? 0,
         TECNICA_AMALDICOADA_DEFINIDA: c.tecnicaAmaldicoada ? 1 : 0,
         QTD_FUNDAMENTOS_TECNICA: (c.tecnicaFundamentos ?? []).length,
-        FOCO_DESTRUICAO: c.tecnicaFoco === 'Destruição' ? 1 : 0,
-        FOCO_ECONOMIA: c.tecnicaFoco === 'Economia' ? 1 : 0,
-        FOCO_REFINO: c.tecnicaFoco === 'Refino' ? 1 : 0,
+        FOCO_DESTRUICAO: c.tecnicaFoco === "Destruição" ? 1 : 0,
+        FOCO_ECONOMIA: c.tecnicaFoco === "Economia" ? 1 : 0,
+        FOCO_REFINO: c.tecnicaFoco === "Refino" ? 1 : 0,
         IMBUIR_ARMADO: c.imbuedSpell ? 1 : 0,
-        ABSORCAO_ARMADA: (c as unknown as { pendingAbsorbedElement?: unknown }).pendingAbsorbedElement ? 1 : 0,
-        AU_CONCENTRADA: (c as unknown as { concentratedAura?: { au?: number } }).concentratedAura?.au ?? 0,
+        ABSORCAO_ARMADA: (c as unknown as { pendingAbsorbedElement?: unknown })
+          .pendingAbsorbedElement
+          ? 1
+          : 0,
+        AU_CONCENTRADA:
+          (c as unknown as { concentratedAura?: { au?: number } })
+            .concentratedAura?.au ?? 0,
       };
       // Predicates por id de feitiço e por elemento
       const elementos: Record<string, number> = {};
       for (const s of spells) {
         if (s.id) {
-          const norm = String(s.id).toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9_]/g, '_');
+          const norm = String(s.id)
+            .toUpperCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^A-Z0-9_]/g, "_");
           out[`TEM_FEITICO_${norm}`] = 1;
         }
         if (s.damageType) {
-          const dn = String(s.damageType).toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9_]/g, '_');
+          const dn = String(s.damageType)
+            .toUpperCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^A-Z0-9_]/g, "_");
           elementos[dn] = (elementos[dn] ?? 0) + 1;
         }
       }
@@ -728,7 +937,11 @@ export function montarVariaveisDoPersonagem(
       // Predicates por buff ativo (spellName)
       for (const b of buffs) {
         if (!b.spellName) continue;
-        const norm = String(b.spellName).toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9_]/g, '_');
+        const norm = String(b.spellName)
+          .toUpperCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^A-Z0-9_]/g, "_");
         out[`TEM_BUFF_${norm}`] = 1;
       }
       return out;
@@ -772,7 +985,7 @@ export function montarVariaveisDoPersonagem(
           out.INICIATIVA_BONUS = entry.bonus ?? 0;
           out.INICIATIVA_ROLAGEM = entry.roll ?? 0;
           const cur = cs.currentTurnIndex ?? 0;
-          out.TURNOS_ATE_MEU = ((idx - cur) + ordem.length) % ordem.length;
+          out.TURNOS_ATE_MEU = (idx - cur + ordem.length) % ordem.length;
           out.PROXIMO_NO_TURNO = out.TURNOS_ATE_MEU === 1 ? 1 : 0;
           out.ULTIMO_NO_TURNO = idx === ordem.length - 1 ? 1 : 0;
         }
@@ -782,31 +995,18 @@ export function montarVariaveisDoPersonagem(
         out.TURNO_PAUSADO = cs.turnPaused ? 1 : 0;
         if (cs.turnTimerEnabled && !cs.turnPaused && cs.turnStartedAt > 0) {
           const elapsed = Math.floor((Date.now() - cs.turnStartedAt) / 1000);
-          out.TURNO_SEGUNDOS_RESTANTES = Math.max(0, (cs.turnRemainingAtStart ?? 0) - elapsed);
+          out.TURNO_SEGUNDOS_RESTANTES = Math.max(
+            0,
+            (cs.turnRemainingAtStart ?? 0) - elapsed,
+          );
         } else {
           out.TURNO_SEGUNDOS_RESTANTES = cs.turnRemainingAtStart ?? 0;
         }
-      } catch { /* fora de store */ }
+      } catch {
+        /* fora de store */
+      }
       return out;
     })(),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     // ─── 🧍 ESTADO FÍSICO ───────────────────────────────────────────────
     TAMANHO: tamanho,
@@ -870,7 +1070,8 @@ export function montarVariaveisDoPersonagem(
     QTD_APTIDOES_AURA: qtdAptidoesAura,
     QTD_HABILIDADES_SPEC: qtdHabilidadesSpec,
     QTD_TALENTOS: (c.chosenTalents ?? []).length,
-    QTD_APTIDOES: (c.chosenAuraAptitudes ?? []).length + (c.chosenClAptitudes ?? []).length,
+    QTD_APTIDOES:
+      (c.chosenAuraAptitudes ?? []).length + (c.chosenClAptitudes ?? []).length,
     QTD_HABILIDADES: (c.chosenSpecAbilities ?? []).length,
   };
 
@@ -906,13 +1107,19 @@ export function montarVariaveisDoPersonagem(
 
   // Predicates: tem_talento_<id>, tem_aptidao_<id>, tem_habilidade_<id>
   for (const t of c.chosenTalents ?? []) {
-    base[`TEM_TALENTO_${t.id.toUpperCase().replace(/[^A-Z0-9_]/g, '_')}`] = 1;
+    base[`TEM_TALENTO_${t.id.toUpperCase().replace(/[^A-Z0-9_]/g, "_")}`] = 1;
   }
-  for (const a of [...(c.chosenAuraAptitudes ?? []), ...(c.chosenClAptitudes ?? []), ...(c.chosenAptitudes ?? [])]) {
-    base[`TEM_APTIDAO_${a.toUpperCase().replace(/[^A-Z0-9_]/g, '_')}`] = 1;
+  for (const a of [
+    ...(c.chosenAuraAptitudes ?? []),
+    ...(c.chosenClAptitudes ?? []),
+    ...(c.chosenAptitudes ?? []),
+  ]) {
+    base[`TEM_APTIDAO_${a.toUpperCase().replace(/[^A-Z0-9_]/g, "_")}`] = 1;
   }
   for (const h of c.chosenSpecAbilities ?? []) {
-    base[`TEM_HABILIDADE_${h.abilityId.toUpperCase().replace(/[^A-Z0-9_]/g, '_')}`] = 1;
+    base[
+      `TEM_HABILIDADE_${h.abilityId.toUpperCase().replace(/[^A-Z0-9_]/g, "_")}`
+    ] = 1;
   }
 
   // PR-2: Predicate arma_grupo_<grupo> — 1 se main ou off é desse grupo.
@@ -922,14 +1129,22 @@ export function montarVariaveisDoPersonagem(
     if (!name) continue;
     const w = armaDoPersonagem(c.id, name);
     if (w?.group) {
-      const g = w.group.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9_]/g, '_');
+      const g = w.group
+        .toUpperCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^A-Z0-9_]/g, "_");
       base[`ARMA_GRUPO_${g}`] = 1;
     }
   }
 
   // Idade registrada: -1 indica ausência ou histórico desconhecido.
   for (const def of ALL_CONDITIONS) {
-    const norm = def.id.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9_]/g, '_');
+    const norm = def.id
+      .toUpperCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^A-Z0-9_]/g, "_");
     const idade = idadeCondicao(c, def.id);
     base[`CONDICAO_IDADE_RODADAS_${norm}`] = idade ?? -1;
     base[`CONDICAO_IDADE_CONHECIDA_${norm}`] = idade === undefined ? 0 : 1;
@@ -938,55 +1153,97 @@ export function montarVariaveisDoPersonagem(
   // PR-3: Predicate tem_condicao_<id> — 1 por condição ativa.
   // + condicao_rodadas_<id> — rodadas restantes (maior entre turnos/rodadas;
   //   -1 indefinido vira 999 para comparações "mais de X rodadas").
-  for (const a of (c.activeConditions ?? []) as Array<{ conditionId?: string; remainingRounds?: number; remainingTurns?: number; elapsedRounds?: number }>) {
+  for (const a of (c.activeConditions ?? []) as Array<{
+    conditionId?: string;
+    remainingRounds?: number;
+    remainingTurns?: number;
+    elapsedRounds?: number;
+  }>) {
     if (!a.conditionId) continue;
-    const norm = a.conditionId.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9_]/g, '_');
+    const norm = a.conditionId
+      .toUpperCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^A-Z0-9_]/g, "_");
     base[`TEM_CONDICAO_${norm}`] = 1;
     const idade = idadeCondicao(c, a.conditionId);
     base[`CONDICAO_IDADE_RODADAS_${norm}`] = idade ?? -1;
     base[`CONDICAO_IDADE_CONHECIDA_${norm}`] = idade === undefined ? 0 : 1;
     const r = Math.max(a.remainingRounds ?? -1, a.remainingTurns ?? -1);
-    const rod = (a.remainingRounds === -1 && a.remainingTurns === -1) ? 999 : Math.max(0, r);
-    base[`CONDICAO_RODADAS_${norm}`] = Math.max(base[`CONDICAO_RODADAS_${norm}`] ?? 0, rod);
+    const rod =
+      a.remainingRounds === -1 && a.remainingTurns === -1
+        ? 999
+        : Math.max(0, r);
+    base[`CONDICAO_RODADAS_${norm}`] = Math.max(
+      base[`CONDICAO_RODADAS_${norm}`] ?? 0,
+      rod,
+    );
   }
-
 
   // A ficha atual usa nomes textuais; dados legados podem usar { id }.
   const exporIdentidade = (prefixo: string, valor: unknown) => {
-    const id = typeof valor === 'string' ? valor
-      : valor && typeof valor === 'object' ? (valor as { id?: string }).id : undefined;
+    const id =
+      typeof valor === "string"
+        ? valor
+        : valor && typeof valor === "object"
+          ? (valor as { id?: string }).id
+          : undefined;
     if (!id) return;
-    const legado = id.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9_]/g, '_');
-    const canonico = legado.replace(/_+/g, '_').replace(/^_+|_+$/g, '');
+    const legado = id
+      .toUpperCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^A-Z0-9_]/g, "_");
+    const canonico = legado.replace(/_+/g, "_").replace(/^_+|_+$/g, "");
     base[`${prefixo}_${legado}`] = 1;
     base[`${prefixo}_${canonico}`] = 1;
   };
-  exporIdentidade('ORIGEM_ID', c.origin);
-  exporIdentidade('ESPECIALIZACAO_ID', c.specialization);
+  exporIdentidade("ORIGEM_ID", c.origin);
+  exporIdentidade("ESPECIALIZACAO_ID", c.specialization);
   // PR-4: Predicate tem_item_<entityId> — 1 por item no inventário.
   try {
     const inv = useInventoryStore.getState();
     for (const it of inv.listByOwner(c.id)) {
       const id = it.entity?.id;
       if (!id) continue;
-      const norm = String(id).toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9_]/g, '_');
+      const norm = String(id)
+        .toUpperCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^A-Z0-9_]/g, "_");
       base[`TEM_ITEM_${norm}`] = 1;
       if (it.isEquipped) base[`EQUIPADO_${norm}`] = 1;
     }
-  } catch { /* */ }
-
+  } catch {
+    /* */
+  }
 
   // Mesmo bag também disponível sob o prefixo de escopo (USUARIO_FOR, ALVO_VIDA, ...).
   const prefixado: Record<string, number> = {};
   for (const [k, v] of Object.entries(base)) {
     prefixado[`${escopo}_${k}`] = v;
   }
-  const composto = mesclarDados(projetarDadosLegados(base, escopo, resolverChavePtBr), { selecoes: {
-    ...dadosRecursos(base).selecoes, ...dadosEquipamento(c, base).selecoes,
-    ...dadosTurnos(base).selecoes,
-    ...dadosMagia(c, base).selecoes,
-    ...dadosHistorico(c, round).selecoes,
-  } });
+  const composto = mesclarDados(
+    projetarDadosLegados(base, escopo, resolverChavePtBr),
+    {
+      selecoes: {
+        ...dadosRecursos(base).selecoes,
+        ...dadosEquipamento(c, base).selecoes,
+        ...dadosTurnos(base).selecoes,
+        ...dadosMagia(c, base).selecoes,
+        ...dadosHistorico(c, round).selecoes,
+      },
+    },
+  );
   const bag = anexarDadosCompostos({ ...base, ...prefixado }, escopo, composto);
-  return escopo === 'ALVO' ? bag : anexarDadosCompostos(bag, 'CENA', mesclarDados(projetarDadosLegados(base, 'CENA', resolverChavePtBr), dadosCena(base)));
+  return escopo === "ALVO"
+    ? bag
+    : anexarDadosCompostos(
+        bag,
+        "CENA",
+        mesclarDados(
+          projetarDadosLegados(base, "CENA", resolverChavePtBr),
+          dadosCena(base),
+        ),
+      );
 }
