@@ -195,3 +195,8 @@ export const useDice3DStore = create<Dice3DState>((set, get) => ({
 if (typeof window !== 'undefined') {
   setTimeout(() => { try { ensureSettingsChannel(); } catch {} }, 0);
 }
+
+// Dev-only hook for browser tests (never in production builds).
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  (window as unknown as Record<string, unknown>).__dice3DStore = useDice3DStore;
+}
