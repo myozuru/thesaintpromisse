@@ -104,6 +104,10 @@ function compilacaoDaFrase(ast: FraseNatural, fonteNatural: string, opcoes: Omni
   const eventoToken = mapped.evento;
   const filtros = expressaoFiltro(mapped);
   const estados = combinarLogica(ast.condicao, new Map());
+  if (estados === undefined && atomos(ast.condicao).some(a => a.classe === 'condicao')) {
+    const predicado = atomos(ast.condicao).find(a => a.classe === 'condicao' && combinarLogica(a, new Map()) === undefined);
+    return { efeitos:[], erros:[{ codigo:'PREDICADO_NAO_SUPORTADO', mensagem:`Condição natural ainda sem tradução segura: "${predicado?.texto ?? 'condição'}". A regra não foi ativada.`, ...(predicado?.intervalo ?? ast.condicao.intervalo) }] };
+  }
   const comandos: string[] = [];
   let afterDamage = false;
   let acumulaContador = false;
