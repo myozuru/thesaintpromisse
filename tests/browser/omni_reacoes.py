@@ -101,19 +101,24 @@ async def main():
         resultados = []
 
         async def caso(nome, cfg, pos, patch=None, alvo='r-aliado', valor=12, agir=None):
-            await limpar()
-            await pg.evaluate(SETUP, {"cfg": cfg, "patch": patch, **pos})
-            await pg.wait_for_timeout(800)
-            antes = await estado(nome + " (antes)")
-            await dano(alvo, valor)
-            aberto = await dialog.count()
-            if agir and aberto:
-                await agir()
-            depois = await estado(nome + " (depois)")
-            await pg.screenshot(path=S + re.sub(r"\W+", "_", nome) + ".png")
-            resultados.append({"caso": nome, "antes": antes, "depois": depois, "janela_apareceu": bool(aberto)})
-            print(f"[{nome}] janela={'SIM' if aberto else 'não'} | antes {antes} | depois {depois}")
-            await limpar()
+            try:
+                await limpar()
+                await pg.evaluate(SETUP, {"cfg": cfg, "patch": patch, **pos})
+                await pg.wait_for_timeout(800)
+                antes = await estado(nome + " (antes)")
+                await dano(alvo, valor)
+                aberto = await dialog.count()
+                if agir and aberto:
+                    await agir()
+                depois = await estado(nome + " (depois)")
+                await pg.screenshot(path=S + re.sub(r"\W+", "_", nome) + ".png")
+                resultados.append({"caso": nome, "antes": antes, "depois": depois, "janela_apareceu": bool(aberto)})
+                print(f"[{nome}] janela={'SIM' if aberto else 'não'} | antes {antes} | depois {depois}")
+            except Exception as e:
+                resultados.append({"caso": nome, "erro": str(e)[:200]})
+                print(f"[{nome}] ERRO {str(e)[:160]}")
+            finally:
+                await limpar()
 
         # A — aliado a 1m sofre dano: reação deve abrir e, ao clicar, gastar PE+reação, ferir o agressor e aplicá-lo Abalado.
         async def clicar():
