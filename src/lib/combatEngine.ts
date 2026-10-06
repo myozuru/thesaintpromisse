@@ -105,6 +105,8 @@ export interface AttackContext {
   targetId?: string;
   alcanceM?: number;
   ignorarReacoes?: boolean;
+  /** Ataque gerado por outro ataque; não pode habilitar novos ataques adicionais. */
+  semRecursao?: boolean;
   attacker: Character;
   weapon: Weapon;
   /** Modificador de atributo já calculado (FOR ou DES). */
@@ -120,6 +122,8 @@ export interface AttackContext {
 
 export interface AttackResult {
   cancelled?: boolean;
+  /** Espelha o contexto para que qualquer follow-up possa barrar nova recursão. */
+  semRecursao?: boolean;
   d20: number;
   /** Todos os d20 rolados no ataque. Em vantagem/desvantagem contém 2 valores. */
   attackRolls: number[];
@@ -367,7 +371,7 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
       foraDeAlcance = ctx.alcanceM !== undefined ? ctx.alcanceM > 0 && (d === null || d > ctx.alcanceM + 0.05) : !!checkWeaponRange(atacante.id, alvo.id, ctx.weapon, ms.entities, ms.gridConfig, (atacante.meleeRangeBonus ?? 0) + extensaoAlcanceBonus(atacante), { casterProfileId: atacante.profileId, targetProfileId: alvo.profileId }, posturaAlcanceMult(atacante));
     }
     if (janela.cancelado || foraDeAlcance || !atacante || !alvo || (atacante.hpCurrent ?? 1) <= 0 || (alvo.hpCurrent ?? 1) <= 0) return {
-      cancelled: true, d20: 0, attackRolls: [], rollMode: 'normal', natural: 0, attackTotal: 0, hit: false, critical: false, criticalFail: false,
+      cancelled: true, semRecursao: !!ctx.semRecursao, d20: 0, attackRolls: [], rollMode: 'normal', natural: 0, attackTotal: 0, hit: false, critical: false, criticalFail: false,
       damageDice: '', damageRolls: [], damageTotal: 0, damageType: null, modifiers: [], notes: ['Ataque interrompido antes da rolagem.'], canRerollDamage: false,
     };
     ctx = { ...ctx, attacker: atacante, abilityMod: getAbilityMod(atacante, ctx.situation.preferredAbility ?? pickAttackAbility(atacante, ctx.weapon)), trainingBonus: atacante.trainingBonus ?? 0,
@@ -383,7 +387,7 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
       baseDice = plano.grupos; fixoArma = plano.fixo;
     } else baseDice = parseDamage(dmgNotation);
   } catch (e) {
-    return { cancelled: true, d20: 0, attackRolls: [], rollMode: 'normal', natural: 0, attackTotal: 0, hit: false, critical: false, criticalFail: false, damageDice: '', damageRolls: [], damageTotal: 0, damageType: null, modifiers: [], notes: [e instanceof Error ? e.message : 'Dano de arma inválido.'], canRerollDamage: false };
+    return { cancelled: true, semRecursao: !!ctx.semRecursao, d20: 0, attackRolls: [], rollMode: 'normal', natural: 0, attackTotal: 0, hit: false, critical: false, criticalFail: false, damageDice: '', damageRolls: [], damageTotal: 0, damageType: null, modifiers: [], notes: [e instanceof Error ? e.message : 'Dano de arma inválido.'], canRerollDamage: false };
   }
 
   // Bônus contextuais (talentos + propriedades)
@@ -581,7 +585,7 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
 
   if (!hit && ctx.targetId && !ctx.ignorarReacoes) await abrirJanelaReacaoAtiva({ gatilho: 'quando_ataque_errar', origemId: ctx.attacker.id, protegidoId: ctx.targetId });
   return {
-    d20: natural, attackRolls, rollMode, natural, attackTotal, hit, critical, criticalFail,
+    semRecursao: !!ctx.semRecursao, d20: natural, attackRolls, rollMode, natural, attackTotal, hit, critical, criticalFail,
     emperrou: jammed,
 
     damageDice: `${formatDamage(finalDice)}${fixoArma ? `${fixoArma > 0 ? '+' : ''}${fixoArma}` : ''}`,
@@ -688,6 +692,7 @@ export function buildAttackContext(opts: {
   targetId?: string;
   alcanceM?: number;
   ignorarReacoes?: boolean;
+  semRecursao?: boolean;
   attacker: Character;
   weapon: Weapon;
   targetDefense: number;
@@ -702,7 +707,7 @@ export function buildAttackContext(opts: {
     (opts.trainedGroups?.includes(opts.weapon.group) ?? false) ||
     (opts.trainedRanges?.includes(opts.weapon.range) ?? false);
   return {
-    targetId: opts.targetId, alcanceM: opts.alcanceM, ignorarReacoes: opts.ignorarReacoes,
+    targetId: opts.targetId, alcanceM: opts.alcanceM, ignorarReacoes: opts.ignorarReacoes, semRecursao: opts.semRecursao,
     attacker: opts.attacker,
     weapon: opts.weapon,
     abilityMod,

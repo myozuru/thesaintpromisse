@@ -168,6 +168,7 @@ describe('Arremesso Rápido', () => {
     const dano = screen.queryAllByRole('button', { name: /Rolar Dano/ });
     if (dano.length) fireEvent.click(dano[0]);
     await waitFor(() => expect(textoLog()).toMatch(/💥 Dano:/), { timeout: 15000 });
+    expect(useArremessoRapidoStore.getState().ataque).toBeNull();
     expect(pegarFicha('bruno').hpCurrent ?? 0).toBeLessThan(300);
   }, 25000);
 });

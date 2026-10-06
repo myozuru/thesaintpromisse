@@ -498,7 +498,8 @@ export function AttackPanel({ character: cProp }: Props) {
       }
     }
     // ─── Golpe Especial: validações (sem gastar ainda) ──────────────────────
-    const golpeUsado = golpeAtivo && !isReroll;
+    const ataqueConcedidoSemRecursao = !!arremessoAtaque;
+    const golpeUsado = golpeAtivo && !isReroll && !ataqueConcedidoSemRecursao;
     const amploTarget = golpeUsado && golpeSel.amplo ? characters.find((x) => x.id === amploTargetId) : undefined;
     if (golpeUsado) {
       if ((c.peCurrent ?? 0) < golpeCusto) {
@@ -612,6 +613,7 @@ export function AttackPanel({ character: cProp }: Props) {
       attacker: c,
       weapon: mainWeapon,
       targetDefense: targetDef, targetId: isReroll ? undefined : target?.id,
+      semRecursao: ataqueConcedidoSemRecursao,
       situation: {
         pistoleiro: pistoleiroUsado,
         precisaoPe: temPrecisao ? precisaoPe : 0,
@@ -653,6 +655,7 @@ export function AttackPanel({ character: cProp }: Props) {
       return;
     } finally {
       rollInFlightRef.current = false;
+      if (arremessoAtaque) useArremessoRapidoStore.getState().setAtaque(null);
     }
     // Emperrou: trava a arma até uma Ação Comum de desemperrar.
     if (result.emperrou) {
@@ -703,7 +706,7 @@ export function AttackPanel({ character: cProp }: Props) {
         setArteInvestida(false);
       }
       // Golpe Especial: efeitos no acerto + ataque extra do Amplo.
-    const g = golpeRollRef.current;
+    const g = result.semRecursao ? null : golpeRollRef.current;
       if (g) {
         if (result.hit && g.target && g.sel.sanguinario) aplicarSangramento(g.target, g.sel.sanguinario);
         setGolpeSel({});
@@ -713,6 +716,7 @@ export function AttackPanel({ character: cProp }: Props) {
           const def2 = computeTotalDefense(alvo2, { items, omniInventory: omniInventoryList, omniEntidadesMap, omniRuntimeEffects: omniRuntimeEffectsList }, attackKind);
           const ctx2 = buildAttackContext({
             attacker: c, weapon: mainWeapon, targetDefense: def2, targetId: alvo2.id,
+            semRecursao: true,
             situation: { ...ctx.situation, targetUnaware: false, arteExecucao: false, devastacaoHit: 0 },
             trainedRanges: [
               ...(c.meleeTrained ? (['melee'] as const) : []),
@@ -954,6 +958,7 @@ export function AttackPanel({ character: cProp }: Props) {
     const unaware = ids.has('desprevenido') || ids.has('agarrado') || ids.has('atordoado') || escondidoDe(eu, alvo.id);
     const ctx = buildAttackContext({
       attacker: eu, weapon: arma, targetDefense: def, targetId: alvo.id,
+      semRecursao: true,
       situation: {
         previousAttacksThisTurn: eu.attacksThisTurn ?? 0, previousMissed: eu.lastAttackHit === false,
         targetUnaware: unaware, targetProne: ids.has('caido'), preferredAbility: pickAttackAbility(eu, arma),
@@ -1115,6 +1120,7 @@ export function AttackPanel({ character: cProp }: Props) {
     );
     const ctx2 = buildAttackContext({
       attacker: c, weapon: arma, targetDefense: def2, targetId: alvo2.id,
+      semRecursao: true,
       situation: { preferredAbility: ability2, attackerIsGrappled },
       trainedRanges: [
         ...(c.meleeTrained ? (['melee'] as const) : []),
@@ -1166,6 +1172,7 @@ export function AttackPanel({ character: cProp }: Props) {
       for (const arma of [mainWeapon, offWeapon]) {
         const ctxT = buildAttackContext({
           attacker: c, weapon: arma, targetDefense: targetDef, targetId: target?.id,
+          semRecursao: tiros.length > 0,
           situation: { ...base, preferredAbility: pickAttackAbility(c, arma) },
           trainedRanges: trained,
         });

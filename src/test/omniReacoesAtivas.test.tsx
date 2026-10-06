@@ -40,6 +40,11 @@ beforeEach(() => {
 afterEach(async () => { vi.unstubAllGlobals(); cancelarJanelasReacoesAtivas(); useReacoesAtivasStore.setState({ janelas: [], ofertasRemotas: [] }); cleanup(); await import('@/lib/omni/eventBus'); await import('@/lib/omni/observadores'); await esperar(); useCombatStore.setState({ inCombat: false }); limparMesa(); });
 
 describe('janelas de reação', () => {
+  it('preserva a barreira sem_recursao no contexto de um ataque adicional', () => {
+    const context = buildAttackContext({ attacker: pegarFicha('u'), weapon: findWeaponByName('Espada Curta')!, targetDefense: 10, semRecursao: true });
+    expect(context.semRecursao).toBe(true);
+  });
+
   it('encaminha a oferta ao perfil dono e devolve a escolha à sessão de origem', async () => {
     vi.stubGlobal('__worldBus', {send: vi.fn()});
     useCharacterStore.getState().updateCharacter('u', { profileId: 'perfil-u' });
