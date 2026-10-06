@@ -200,6 +200,7 @@ function processarPersonagemNaCadeia(c: Character, apenasSnapshot: boolean) {
       }
       let valor = 0;
       let teto: number | undefined;
+      let limiteFonte: number | undefined;
       try {
         const r = avaliarFormula(eff.formula || '0', variaveis, undefined, { item: itemBag });
         if (r.diagnosticos.length || !Number.isFinite(r.valor)) {
@@ -208,7 +209,10 @@ function processarPersonagemNaCadeia(c: Character, apenasSnapshot: boolean) {
         }
         const limite = eff.counterCap ? avaliarFormula(eff.counterCap, variaveis, undefined, { item: itemBag }) : undefined;
         if (limite?.diagnosticos.length || (limite && !Number.isFinite(limite.valor))) continue;
+        const limiteFonteAvaliado = eff.counterSourceLimit ? avaliarFormula(eff.counterSourceLimit, variaveis, undefined, { item: itemBag }) : undefined;
+        if (limiteFonteAvaliado?.diagnosticos.length || (limiteFonteAvaliado && !Number.isFinite(limiteFonteAvaliado.valor))) continue;
         teto = limite?.valor;
+        limiteFonte = limiteFonteAvaliado?.valor;
         valor = r.valor;
       } catch {
         continue;
@@ -220,7 +224,7 @@ function processarPersonagemNaCadeia(c: Character, apenasSnapshot: boolean) {
         sourceName: fresco.nome,
         damageType: eff.damageType,
         attackerId: c.id,
-        contador: { teto, porFonte: eff.counterPerSource, fonteId: c.id },
+        contador: { teto, porFonte: eff.counterPerSource, fonteId: c.id, limiteFonte, periodoFonte: eff.counterSourcePeriod },
       });
       consumiuUso = true;
       useLogStore.getState().addLog(
