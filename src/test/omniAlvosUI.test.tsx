@@ -66,9 +66,11 @@ describe('editor e execução por cliques reais', () => {
     render(<Tela />);
     fireEvent.change(screen.getByLabelText('Teste da ação'), { target: { value: 'disputa' } });
     fireEvent.change(screen.getByLabelText('Perícia do usuário'), { target: { value: 'Enganação' } });
-    fireEvent.change(screen.getByLabelText('Perícias possíveis do alvo'), { target: { value: 'Percepção, Intuição' } });
+    const periciasAlvo = screen.getByLabelText('Perícias possíveis do alvo') as HTMLSelectElement;
+    Array.from(periciasAlvo.options).forEach(option => { option.selected = ['Percepção', 'Intuição'].includes(option.value); });
+    fireEvent.change(periciasAlvo);
     expect(save.mock.lastCall![0].acoesAtivas[0]).toMatchObject({
-      teste: 'disputa', pericia_usuario: 'Enganação', pericias_alvo: ['Percepção', 'Intuição'],
+      teste: 'disputa', pericia_usuario: 'Enganação', pericias_alvo: ['Intuição', 'Percepção'],
     });
   });
   it('seleciona dois alvos e executa uma única ação', async () => {
