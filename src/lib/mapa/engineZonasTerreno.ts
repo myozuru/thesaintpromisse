@@ -5,9 +5,11 @@ import { useMapStore, type Entity, type GatilhoZonaTerreno, type ZonaTerreno } f
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { useRoleStore } from '@/stores/useRoleStore';
+import { useReactionStore } from '@/stores/useReactionStore';
 import { montarVariaveisDoPersonagem } from '@/lib/omni/resolvedor';
 import { avaliarFormula } from '@/lib/omni/parser';
 import { executarCombatEffect } from '@/lib/omni/executarSubEfeito';
+import { findEntitiesInTemplate } from '@/lib/mapAoE';
 import { avancarDuracaoZona, pontoDentroDaZona, segmentoEntraNaZona, zonaEstaAtiva } from './zonaTerreno';
 
 let iniciado = false;
@@ -61,13 +63,60 @@ function processarMovimento(atual: ReturnType<typeof useMapStore.getState>, ante
 
 function processarConfirmacao(m: MovimentoConfirmadoMapa) {
   if (useRoleStore.getState().role === 'PLAYER') return;
-  const entities = useMapStore.getState().entities;
+  const store = useMapStore.getState();
+  const entities = store.entities;
   const caminho = [m.de, ...m.trajetoria, m.para];
   for (const zona of Object.values(entities)) {
     if (!zona.terrainZone) continue;
     const entrou = m.teleporte ? !pontoDentroDaZona(zona, m.de) && pontoDentroDaZona(zona, m.para)
       : caminho.slice(0, -1).some((p, i) => segmentoEntraNaZona(zona, p, caminho[i + 1]));
     if (entrou) executarEfeitos(zona, m.characterId, 'entrada');
+  }
+  const entidadeMovida = entities[m.entityId];
+  const personagem = useCharacterStore.getState().characters.find((c) => c.id === m.characterId);
+  if (entidadeMovida && personagem) {
+    const combate = useCombatStore.getState();
+    const round = combate.round;
+    for (const template of store.templates) {
+      const pz = template.persistent;
+      if (!pz || !zonaEstaAtiva({ duracaoRodadas: pz.remainingTurns, rodadasRestantes: pz.remainingTurns, gatilhos: [], efeitos: [] }) || !pz.config.enabled || !pz.config.applyOnEnter) continue;
+      const startInside = findEntitiesInTemplate(template, { ...entities, [entidadeMovida.id]: { ...entidadeMovida, x: m.de.x, y: m.de.y } }).includes(entidadeMovida.id);
+      let wasInside = startInside;
+      let entered = false;
+      const pontos = m.teleporte ? [m.para] : caminho.slice(1);
+      for (const ponto of pontos) {
+        const snapshot = { ...entities, [entidadeMovida.id]: { ...entidadeMovida, x: ponto.x, y: ponto.y } };
+        const inside = findEntitiesInTemplate(template, snapshot).includes(entidadeMovida.id);
+        if (!wasInside && inside) { entered = true; break; }
+        wasInside = inside;
+      }
+      if (!entered) continue;
+      const state = pz.affected[entidadeMovida.id] ?? {};
+      if (state.lastEntryId === m.id || pz.config.trMode === 'uma_vez' && (state.checkedOnce || state.immune)) continue;
+      const nextPersistent = {
+        ...pz,
+        affected: {
+          ...pz.affected,
+          [entidadeMovida.id]: { ...state, lastEntryId: m.id, lastTriggerKey: `${round}:${combate.currentTurnIndex}:${m.characterId}` },
+        },
+      };
+      store.updateTemplate(template.id, { persistent: nextPersistent });
+      useReactionStore.getState().enqueue({
+        charId: m.characterId,
+        charName: personagem.name,
+        kind: 'persistent_area_tr_offer',
+        message: `${personagem.name}: entrou em ${pz.sourceLabel} — role TR ${pz.zoneTRType.toUpperCase()} ou sofre o efeito.`,
+        payload: {
+          zoneTemplateId: template.id,
+          targetEntityId: entidadeMovida.id,
+          zoneLabel: pz.sourceLabel,
+          zoneTRMode: pz.config.trMode,
+          zoneTrigger: 'entrada',
+          endTrType: pz.zoneTRType,
+          endCD: pz.zoneCD,
+        },
+      });
+    }
   }
   recalcularAuras(m.characterId);
 }

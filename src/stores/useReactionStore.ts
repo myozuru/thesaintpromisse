@@ -76,6 +76,8 @@ export interface ReactionPrompt {
     zoneLabel?: string;
     /** persistent_area_tr_offer — modo do TR ('uma_vez' | 'todo_round' | 'todo_turno'). */
     zoneTRMode?: 'uma_vez' | 'todo_round' | 'todo_turno';
+    /** persistent_area_tr_offer — se o gatilho foi entrada ou início do turno. */
+    zoneTrigger?: 'entrada' | 'turno';
     /** cobrir_se_offer — dano efetivamente sofrido (Esc+HP), para refund. */
     damageDealt?: number;
     /** cobrir_se_offer — dano subtraído do HP. */

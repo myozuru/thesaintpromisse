@@ -105,7 +105,37 @@ function tickPersistentAreasFor(charId: string, opts: { decrementRound?: boolean
               if (inside) {
                 pz.affected[ent.id] = { ...state, lastInsideRound: round, residualLeft: undefined };
                 if (!pz.config.applyOnTurn) continue;
+                const turnIndex = useCombatStore.getState().currentTurnIndex;
+                const triggerKey = `${round}:${turnIndex}:${charId}`;
+                if (state.lastTriggerKey === triggerKey) continue;
+                pz.affected[ent.id] = { ...pz.affected[ent.id], lastTriggerKey: triggerKey };
                 if (state.immune) continue;
+                const alreadyChecked = pz.config.trMode === 'uma_vez' && state.checkedOnce;
+                const failedThisRound = pz.config.trMode === 'todo_round' && state.failedRound === round;
+                if (alreadyChecked || failedThisRound) {
+                  if ((pz.config.effectMode === 'dano' || pz.config.effectMode === 'ambos') && pz.damage) {
+                    const avg = pz.damage.numDice * Math.ceil((pz.damage.dieSize + 1) / 2) + pz.damage.mod;
+                    charStore.applyDamage(charId, avg, pz.damage.type as any, { tags: ['__persistent_area_tick'] });
+                  }
+                  if ((pz.config.effectMode === 'condicao' || pz.config.effectMode === 'ambos') && pz.condition) {
+                    charStore.addCondition(charId, {
+                      id: `pz_${tpl.id}_${ent.id}`,
+                      conditionId: pz.condition.conditionId,
+                      name: pz.condition.name,
+                      icon: pz.condition.icon,
+                      remainingTurns: pz.condition.turns,
+                      remainingRounds: 0,
+                      sourceCharName: pz.ownerCharName,
+                      sourceCharId: pz.ownerCharId,
+                      sourceEntityId: tpl.id,
+                      sourceInstanceId: `zona:${tpl.id}:${ent.id}`,
+                      durationMode: pz.condition.durationMode,
+                      endCD: pz.condition.endCD,
+                      endTrType: pz.condition.endTrType,
+                    } as any);
+                  }
+                  continue;
+                }
                 // TR?
                 if (pz.config.trMode !== 'todo_round' || !state.immune) {
                   if (pz.config.trMode === 'uma_vez' && state.immune) continue;
@@ -148,6 +178,9 @@ function tickPersistentAreasFor(charId: string, opts: { decrementRound?: boolean
                     remainingTurns: 1,
                     remainingRounds: 0,
                     sourceCharName: pz.ownerCharName,
+                    sourceCharId: pz.ownerCharId,
+                    sourceEntityId: tpl.id,
+                    sourceInstanceId: `zona:${tpl.id}:${ent.id}`,
                     durationMode: pz.condition.durationMode,
                     endCD: pz.condition.endCD,
                     endTrType: pz.condition.endTrType,
@@ -156,8 +189,12 @@ function tickPersistentAreasFor(charId: string, opts: { decrementRound?: boolean
                 cur.residualLeft -= 1;
               }
             }
-            // Persiste mutações (zona atualiza in-place; força re-render).
-            mp.updateTemplate(zones[0]?.id ?? '__noop__', {});
+            // Persiste cada zona mutada/decrescida, sem depender de um template
+            // arbitrário para disparar atualização do estado.
+            for (const zona of zones) {
+              if (!mp.templates.some((atual) => atual.id === zona.id) || !zona.persistent) continue;
+              mp.updateTemplate(zona.id, { persistent: { ...zona.persistent, affected: { ...zona.persistent.affected } } });
+            }
           });
         });
       });

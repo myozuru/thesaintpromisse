@@ -15,6 +15,7 @@
 import { useEffect, useState } from 'react';
 import { useReactionStore, type ReactionPrompt, kindConsumesReaction } from '@/stores/useReactionStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
+import { useCombatStore } from '@/stores/useCombatStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { DAMAGE_TYPE_LABELS, type DamageType } from '@/types';
 import { rollDiceCom } from '@/lib/dice';
@@ -199,7 +200,7 @@ export function ReactionPromptOverlay() {
             }
             dismiss(p.id);
           }}
-          onPersistentAreaTR={async () => {
+          onPersistentAreaTR={async (acceptEffect = false) => {
             const c = useCharacterStore.getState().characters.find((x) => x.id === p.charId);
             if (!c) { dismiss(p.id); return; }
             const trType = (p.payload?.endTrType || 'reflexos').toLowerCase();
@@ -209,19 +210,30 @@ export function ReactionPromptOverlay() {
             const linked = linkedAttr ? (c.attributes || []).find((a) => a.name === linkedAttr) : undefined;
             const attrMod = linked ? Math.floor((linked.value - 10) / 2) : 0;
             const bonus = (stEntry?.value || 0) + attrMod;
-            const r = await rollDiceCom(p.charId, '1d20');
-            const passed = (r.total + bonus) >= dc;
+            const r = acceptEffect ? null : await rollDiceCom(p.charId, '1d20');
+            const passed = r ? (r.total + bonus) >= dc : false;
             // Resolve via map store: aplica dano/condição se falhou, marca imune se passou.
             const { useMapStore } = await import('@/stores/useMapStore');
             const mp = useMapStore.getState();
             const tpl = mp.templates.find((t) => t.id === p.payload?.zoneTemplateId);
             const pz = tpl?.persistent;
             if (!pz) { dismiss(p.id); return; }
+            const targetEntityId = p.payload?.targetEntityId;
+            if (!targetEntityId) { dismiss(p.id); return; }
+            const round = useCombatStore.getState().round;
+            const previous = pz.affected[targetEntityId] || {};
+            const affected = {
+              ...pz.affected,
+              [targetEntityId]: {
+                ...previous,
+                ...(passed && (p.payload?.zoneTRMode === 'uma_vez' || p.payload?.zoneTRMode === 'todo_round') ? { immune: true, immuneRound: round } : {}),
+                ...(p.payload?.zoneTRMode === 'uma_vez' ? { checkedOnce: true } : {}),
+                ...(p.payload?.zoneTRMode === 'todo_round' && !passed ? { failedRound: round } : {}),
+              },
+            };
+            mp.updateTemplate(tpl.id, { persistent: { ...pz, affected } });
             if (passed) {
               playSuccessSound();
-              if (p.payload?.zoneTRMode === 'uma_vez' || p.payload?.zoneTRMode === 'todo_round') {
-                pz.affected[p.payload.targetEntityId!] = { ...(pz.affected[p.payload.targetEntityId!] || {}), immune: true };
-              }
               addLog('combat', `✅ ${c.name}: TR vs ${p.payload?.zoneLabel} — SUCESSO.`);
             } else {
               playErrorSound();
@@ -239,6 +251,9 @@ export function ReactionPromptOverlay() {
                   remainingTurns: pz.condition.turns,
                   remainingRounds: 0,
                   sourceCharName: pz.ownerCharName,
+                  sourceCharId: pz.ownerCharId,
+                  sourceEntityId: tpl.id,
+                  sourceInstanceId: `zona:${tpl.id}:${targetEntityId}`,
                   durationMode: pz.condition.durationMode,
                   endCD: pz.condition.endCD,
                   endTrType: pz.condition.endTrType,
@@ -246,6 +261,7 @@ export function ReactionPromptOverlay() {
               }
               addLog('combat', `❌ ${c.name}: TR vs ${p.payload?.zoneLabel} — FALHA. Sofre o efeito.`);
             }
+            if (acceptEffect) addLog('combat', `${c.name}: aceitou o efeito de ${p.payload?.zoneLabel} sem rolar TR.`);
             dismiss(p.id);
           }}
           onCobrirSe={(peSpent) => {
@@ -278,7 +294,7 @@ interface PromptCardProps {
   onDevoradorAck: () => void;
   onLua: (useIt: boolean) => void;
   onConditionEndTR: () => void;
-  onPersistentAreaTR: () => void;
+  onPersistentAreaTR: (acceptEffect?: boolean) => void;
   onCobrirSe: (peSpent: number) => void;
 }
 
@@ -487,13 +503,13 @@ function PromptCard({
           </div>
           <div className="flex items-center gap-1.5">
             <button
-              onClick={onPersistentAreaTR}
+              onClick={() => onPersistentAreaTR()}
               className="flex-1 text-xs px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
             >
               ⏳ Rolar TR vs zona
             </button>
             <button
-              onClick={onDismiss}
+              onClick={() => onPersistentAreaTR(true)}
               className="text-xs px-2 py-1 rounded border border-border bg-secondary/40 hover:bg-secondary"
               title="Aceitar efeito sem rolar"
             >

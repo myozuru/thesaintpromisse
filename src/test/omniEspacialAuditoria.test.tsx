@@ -9,6 +9,7 @@ import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useOmniRuntimeStore } from '@/stores/useOmniRuntimeStore';
 import { useOmniSpatialStore } from '@/stores/useOmniSpatialStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
+import { useReactionStore } from '@/stores/useReactionStore';
 import { novaEntidade, type AcaoAtivaConfig } from '@/lib/omni/tipos';
 import { findEntitiesInTemplate, resolveAreaTargetCharacters } from '@/lib/mapAoE';
 import { TemplateEngine, type MapTemplate } from '@/components/mapa/TemplateEngine';
@@ -23,6 +24,7 @@ const template = (p: Partial<MapTemplate> = {}): MapTemplate => ({ id:'a',kind:'
 const cfg = (p: Partial<AcaoAtivaConfig> = {}): AcaoAtivaConfig => ({ id:'c',nome:'teste',acao:'comum',custoPE:'0',alcanceM:3,teste:'nenhum',...p } as AcaoAtivaConfig);
 beforeEach(() => {
   comoTela({ profileId:null,role:'MASTER' });
+  useReactionStore.setState({ prompts:[] });
   useOmniEntidadesStore.setState({ entidades:{} }); useOmniRuntimeStore.setState({ efeitos:{} }); useOmniSpatialStore.setState({ posicoes:{}, aurasDentro:{} });
   useMapStore.setState({ entities:{},pendingMove:null,activeSceneId:crypto.randomUUID() });
   montarMesa(['u','a'].map(id=>ficha(id,{hpCurrent:50,hpMax:50,peCurrent:5,peMax:20,rd:0,escCurrent:0,attributes:[],trainingBonus:3,omniAtivos:[]})),{u:[0,0],a:[6,0]});
@@ -105,6 +107,21 @@ describe('zonas e movimento confirmado',()=>{
   });
   it('condição com variável inválida não vira comparação verdadeira contra zero',()=>{
     zone({efeitos:[{id:'e',type:'ADICIONAR',target:'ALVO',resourcePath:'pe',formula:'1',condition:'@ALVO.inexistente == 0'}]}); move(200); expect(pegarFicha('a').peCurrent).toBe(5);
+  });
+  it('entrada em área persistente abre um TR uma vez por movimento confirmado',()=>{
+    const area = template({ id:'area-persistente', x:200, y:0, length:40, persistent:{
+      ownerCharId:'u', ownerCharName:'u', sourceLabel:'Névoa', remainingTurns:3,
+      config:{enabled:true,durationTurns:3,effectMode:'dano',applyOnEnter:true,applyOnTurn:true,trMode:'todo_turno',residual:{mode:'nenhum',turns:0,keepDamage:false,keepCondition:false}},
+      damage:{numDice:1,dieSize:6,mod:0,type:'DQ'}, condition:null, zoneCD:12, zoneTRType:'reflexos', affected:{},
+    }});
+    useMapStore.setState({templates:[area]});
+    const tokenAntes=useMapStore.getState().entities['e-a'];
+    const movimento={id:'mov-persistente',sceneId:useMapStore.getState().activeSceneId,entityId:tokenAntes.id,characterId:'a',de:{x:tokenAntes.x,y:tokenAntes.y},para:{x:200,y:0},trajetoria:[],teleporte:false};
+    comPreviaMovimento(()=>useMapStore.getState().updateEntity(tokenAntes.id,{x:200,y:0}));
+    expect(receberMovimentoConfirmado(movimento)).toBe(true);
+    expect(receberMovimentoConfirmado(movimento)).toBe(false);
+    expect(useReactionStore.getState().prompts.filter(p=>p.kind==='persistent_area_tr_offer')).toHaveLength(1);
+    expect(useReactionStore.getState().prompts[0].payload?.zoneTrigger).toBe('entrada');
   });
   it('fórmula usa o autor configurado em USUARIO e o atingido em ALVO',()=>{
     useCharacterStore.getState().updateCharacter('u',{peCurrent:3});

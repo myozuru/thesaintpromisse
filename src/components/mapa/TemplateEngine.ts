@@ -60,6 +60,10 @@ export interface PersistentZoneState {
   affected: Record<string, {
     immune?: boolean;            // passou TR (modos uma_vez/todo_round)
     immuneRound?: number;        // rodada em que se tornou imune (todo_round reseta a cada rodada)
+    checkedOnce?: boolean;       // uma_vez: a primeira rolagem já aconteceu, mesmo se falhou
+    failedRound?: number;        // todo_round: evita repetir o TR na mesma rodada após falha
+    lastEntryId?: string;        // ID do movimento confirmado já processado
+    lastTriggerKey?: string;     // impede duplicar o mesmo tick/turno
     lastInsideRound?: number;    // última rodada em que esteve dentro
     residualLeft?: number;       // turnos residuais ainda devidos após sair
   }>;
