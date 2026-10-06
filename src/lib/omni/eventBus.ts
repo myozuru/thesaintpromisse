@@ -49,6 +49,14 @@ function pegarChar(id?: string) {
 export function emitirEvento(evento: GatilhoId, opts: EmitirOpts = {}): number {
   const cadeia = reservarPassoOmni(opts.cadeia);
   if (!cadeia) return 0;
+  // O descanso já foi concluído quando o chamador emite este evento. O ciclo
+  // fica na ficha para quotas de contador e independe do saldo consumível.
+  if (evento === 'aoDescansar' && opts.usuarioId) {
+    const ficha = pegarChar(opts.usuarioId);
+    if (ficha) useCharacterStore.getState().updateCharacter(ficha.id, {
+      omniCounterRestCycle: (ficha.omniCounterRestCycle ?? 0) + 1,
+    });
+  }
   return executarNaCadeiaOmni(cadeia, () => emitirEventoNaCadeia(evento, opts));
 }
 
