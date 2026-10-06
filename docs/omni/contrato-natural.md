@@ -1,6 +1,6 @@
 # OMNI natural — contrato e entregas
 
-Estado: etapas 1–8 concluídas no escopo documentado em cada etapa. A linguagem natural ainda não executa no jogo nem está conectada ao salvamento de habilidades. Base inicial examinada: main d2ef673b0e2a92918fa9fd7fac0095733c5b1d68, especificação Texto colado(4) e correções aprovadas na conversa de 05/10/2026. Evidências complementares em inventario-natural.md, diagnostico-execucao.md e etapa-2-contexto.md a etapa-8-recursos-protecoes.md.
+Estado: etapas 1–9 concluídas no escopo documentado em cada etapa. A linguagem natural ainda não executa no jogo nem está conectada ao salvamento de habilidades. Base inicial examinada: main d2ef673b0e2a92918fa9fd7fac0095733c5b1d68, especificação Texto colado(4) e correções aprovadas na conversa de 05/10/2026. Evidências complementares em inventario-natural.md, diagnostico-execucao.md e etapa-2-contexto.md a etapa-9-modificadores.md.
 
 ## Fontes de verdade
 
@@ -21,6 +21,14 @@ Cada entrada do catálogo deve declarar: nome canônico, aliases, consulta/coman
 Contexto deve separar usuário, atacante, vítima, alvo, item de origem, arma do ataque e tokens. Ausência de contexto obrigatório é erro, não zero. IDs persistentes identificam fontes; nomes são apresentação. Aliado exclui o próprio usuário e depende da relação na cena, não da categoria da ficha.
 
 Campos derivados são somente leitura. Benefícios têm validade explícita; `enquanto_equipado` é condicional, não duração finita. Auras concedem modificadores reversíveis, nunca incrementos repetidos. Maior valor vale para bônus concorrentes conforme categoria; não aplicar essa política indiscriminadamente a penalidades, custos ou dano. Substituição temporal requer declaração explícita.
+
+## Modificadores e duração
+
+Para uma mesma chave passiva de ficha ou categoria de rolagem, bônus numéricos positivos concorrentes usam somente o maior valor. Penalidades numéricas permanecem cumulativas. O maior bônus não apaga as demais origens: elas continuam disponíveis para auditoria e a interface identifica quais não entraram no total. Vantagem e desvantagem mantêm a regra própria de cancelamento mútuo.
+
+Em modificadores numéricos temporários, todo efeito cujo escopo corresponda à rolagem é resolvido antes do dado: o bônus positivo aplicado é o maior; penalidades aplicáveis são somadas. Os efeitos de uso único que corresponderam à rolagem são consumidos juntos, inclusive um bônus suprimido por outro maior, para não deixar um recurso declarado como “próximo teste” aguardando uma segunda rolagem. O log indica quais bônus não acumularam.
+
+`use` expira após a primeira rolagem compatível; `turn` expira pelo encerramento de turno existente; `persistent` não expira por inferência. `grantedBy` registra quem concedeu o efeito e permite removê-lo quando o turno desse concedente se encerra. Bônus derivados de equipamento/passiva são recalculados a partir das fontes ativas, sem mutação permanente da ficha. A ordem não altera custos, parcelas de dano ou outras regras fora do cálculo numérico do modificador.
 
 ## Contadores
 
