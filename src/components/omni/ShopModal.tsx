@@ -94,8 +94,8 @@ export function ShopModal({ aberto, onClose, shopId, characterId }: Props) {
     setRolando(true);
     try {
       const bonus = bonusPericia(character, nome);
-      const total = await rollD20Com(character.id, bonus, { label: `Pechinchar (${nome}) — ${shop.name}` });
-      const natural = total - bonus;
+      const natural = await rollD20Com(character.id, bonus, { label: `Pechinchar (${nome}) — ${shop.name}` });
+      const total = natural + bonus;
       const f = faixaPechincha(natural, total, cdEfetiva(cfg, estadoP));
       const novo = registrarTentativa(cfg, estadoP, dia, f);
       setPechincha(shop.id, character.id, novo);
