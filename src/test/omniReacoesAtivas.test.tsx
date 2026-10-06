@@ -317,3 +317,30 @@ it('resposta remota durante a reação local não deixa janela vazia presa', asy
     expect(useReacoesAtivasStore.getState().janelas).toHaveLength(0);
   } finally {spy.mockRestore();}
 });
+
+describe('novos momentos de reação', () => {
+  it('sofrer dano de inimigo abre a janela depois do dano, com dano mínimo', async () => {
+    add(config({ gatilho: 'quando_sofrer_dano', dano_minimo: 5 }));
+    await useCharacterStore.getState().applyDamage('u', 3, 'DCO', { attackerId: 'a' });
+    await esperar();
+    expect(useReacoesAtivasStore.getState().janelas).toHaveLength(0);
+    await useCharacterStore.getState().applyDamage('u', 8, 'DCO', { attackerId: 'a' });
+    await waitFor(() => expect(useReacoesAtivasStore.getState().janelas[0]?.evento.gatilho).toBe('quando_sofrer_dano'));
+  });
+  it('causar dano oferece reação ao atacante e efeitos da reação não encadeiam', async () => {
+    add(config({ gatilho: 'quando_causar_dano' }, { dano: '5', tipoDano: 'DCO' }));
+    await useCharacterStore.getState().applyDamage('a', 6, 'DCO', { attackerId: 'u' });
+    await waitFor(() => expect(useReacoesAtivasStore.getState().janelas).toHaveLength(1));
+    const j = useReacoesAtivasStore.getState().janelas[0];
+    await responderReacaoAtiva(j.id, j.ofertas[0].id);
+    await esperar();
+    expect(useReacoesAtivasStore.getState().janelas).toHaveLength(0);
+  });
+  it('TR forçado por inimigo recebe o bônus da reação', async () => {
+    add(config({ gatilho: 'quando_alvo_de_tr', bonus_teste: 4 }));
+    const p = abrirJanelaReacaoAtiva({ gatilho: 'quando_alvo_de_tr', origemId: 'a', protegidoId: 'u' });
+    const j = useReacoesAtivasStore.getState().janelas[0];
+    await responderReacaoAtiva(j.id, j.ofertas[0].id);
+    expect((await p).testeBonus).toBe(4);
+  });
+});
