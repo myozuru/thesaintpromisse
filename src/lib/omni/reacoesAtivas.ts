@@ -369,5 +369,5 @@ export function continuarSemReacoesPendentes(id: string): void {
 
 /** Encerramento de combate cancela as resoluções ainda aguardando escolha. */
 export function cancelarJanelasReacoesAtivas(): void {
-  for (const j of useReacoesAtivasStore.getState().janelas) fechar(j.id, { cancelado: true, defesaBonus: 0 });
+  for (const j of useReacoesAtivasStore.getState().janelas) fechar(j.id, { cancelado: true, defesaBonus: 0 , testeBonus: 0 });
 }
