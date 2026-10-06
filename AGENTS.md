@@ -11,6 +11,8 @@
 
 # Project architecture
 
+- Draggable map HUD panels share a pointer-capture hook and screen-local coordinates so moving controls never moves map entities or changes multiplayer state.
+
 - Keep the TP Fichas experience client-rendered inside the TanStack `/` route because its stores, 3D dice, audio, and local persistence depend on browser APIs.
 - Cloud clients must use only this workspace's environment configuration; without it, use the offline stub so the copy cannot reach another project's data.
 

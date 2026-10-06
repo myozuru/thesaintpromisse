@@ -10,6 +10,9 @@ import { touchDistanceMeters } from '@/lib/touchRange';
 import { recolherItemDoChao, invocarItemNoChao } from '@/lib/omni/itensNoChao';
 import { screenToWorld } from '@/components/mapa/GridEngine';
 import { OmniItemImagem } from '@/components/omni/OmniItemImagem';
+import { GripVertical } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useDraggableMapPanel } from '@/hooks/useDraggableMapPanel';
 
 export function ItemNoChaoOverlay() {
   const ms = useMapStore(), chars = useCharacterStore(s => s.characters);
@@ -18,6 +21,7 @@ export function ItemNoChaoOverlay() {
   const [erro, setErro] = useState<string | null>(null);
   const [invocando, setInvocando] = useState(false);
   const [escolha, setEscolha] = useState('');
+  const panel = useDraggableMapPanel();
   const items = Object.values(ms.entities).filter(e => !!e.groundItem && !e.hidden);
   const catalogo = Object.values(entidades).filter(e => e.categoria === 'arma' || e.categoria === 'item').sort((a, b) => a.nome.localeCompare(b.nome));
   if (!items.length && !master) return null;
@@ -29,8 +33,8 @@ export function ItemNoChaoOverlay() {
       invocarItemNoChao(escolha, centro); setErro(null); setInvocando(false); setEscolha('');
     } catch (e) { setErro(e instanceof Error ? e.message : 'Não foi possível invocar.'); }
   };
-  return <div data-item-chao className="absolute bottom-20 left-3 z-40 max-h-72 max-w-80 overflow-y-auto rounded-lg border border-border bg-card/95 p-2 pointer-events-auto">
-    <div className="flex items-center gap-2"><b className="text-xs">Itens no chão</b>
+  return <div ref={panel.ref} style={panel.style} data-item-chao className="absolute bottom-20 left-3 z-40 max-h-72 max-w-80 overflow-y-auto rounded-lg border border-border bg-card/95 p-2 pointer-events-auto">
+    <div className="flex items-center gap-2"><Button type="button" variant="ghost" size="icon" className="h-6 w-5 shrink-0 touch-none cursor-grab active:cursor-grabbing" aria-label="Mover itens no chão" title="Arrastar itens no chão" {...panel.handleProps}><GripVertical /></Button><b className="text-xs">Itens no chão</b>
       {master && <button type="button" className="ml-auto rounded border border-primary/50 px-2 py-0.5 text-xs text-primary" onClick={() => setInvocando(v => !v)}>{invocando ? 'Fechar' : '+ Invocar item'}</button>}
     </div>
     {master && invocando && <div className="mt-2 flex items-center gap-1">

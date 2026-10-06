@@ -79,6 +79,7 @@
 - [x] Ferimentos Complexos: desvantagens (olho/perna/braço) e ferida interna (TR no turno, tratamento) funcionando
 
 ## Itens, baús e mapa (out/2026)
+- [x] Permitir arrastar os painéis Itens no chão e Lojas e murais; navegador confirmou movimento independente e botões funcionando.
 - [x] Item solto no chão não é mais tratado como token da ficha
 - [x] Imagem de arma/item no OMNI (inventário, chão, selo no token ao empunhar)
 - [x] Mestre invoca arma/item do catálogo no chão
