@@ -32,7 +32,7 @@ SETUP = """(p) => {
   const foe=mk('r-ini',{...base,name:'TESTE Inimigo',category:'INIMIGO',characterClass:'Bandido',level:5,
     hpCurrent:200,hpMax:200,peCurrent:20,peMax:20});
   cs.setState({characters:[guard,ally,foe]});
-  inv.setState({items:{}});
+  inv.setState({items:{},deleted:{}});
   const ent={id:'ent-reacao',versao:1,nome:'Corrente do Guardião',categoria:'item',descricao:'',tags:[],
     duracao:{tipo:'permanente'},custos:[],gatilhos:[],criadoEm:0,atualizadoEm:0,acoesAtivas:[p.cfg]};
   inv.getState().add('r-guard',ent,{instanceId:'inst-reacao'});
