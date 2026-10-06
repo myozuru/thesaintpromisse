@@ -399,7 +399,7 @@ function PainelLateral({
 
   useEffect(() => {
     if (!mounted || typeof window === 'undefined') return;
-    setPosicao({ x: Math.max(12, window.innerWidth - 444), y: 80 });
+    setPosicao({ x: Math.max(12, window.innerWidth - Math.min(860, window.innerWidth * 0.96) - 12), y: 80 });
   }, [mounted]);
 
   const moverPainel = useCallback((clientX: number, clientY: number) => {
