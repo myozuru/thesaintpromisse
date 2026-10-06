@@ -526,7 +526,8 @@ async function executarAcaoAtivaInterna(
     let armaDano = 0;
     let cabecalho = '';
 
-    if (cfg.teste === 'tr') {
+    /** TR do alvo contra a CD; reutilizado como teste principal ou como TR após acerto. */
+    const rolarTRAlvo = async () => {
       const tr = cfg.tr ?? 'fortitude';
       const cd = cfg.cd?.trim() ? Math.round(avaliarFormulaAtiva(cfg.cd, u, t, arma).valor) : specDCFor(u);
       const adv = consumeAdvantageFor(t.id, { kind: 'save', name: TR_ROTULO[tr] }, { disadvantage: mods.desvantagemTR });
@@ -535,7 +536,14 @@ async function executarAcaoAtivaInterna(
       const rolled = await applyAdvantageToD20(adv.net, () => rollD20Com(t.id, undefined, { label: `TR ${TR_ROTULO[tr]}` }));
       const d20 = rolled.d20;
       const totalTR = d20 + mod;
-      grauTR = classificarGrauTR(d20, totalTR, cd);
+      const grau = classificarGrauTR(d20, totalTR, cd);
+      const grauLabel = grau === 'falha_critica' ? 'FALHA CRÍTICA' : grau.toUpperCase();
+      return { grau, texto: `TR ${TR_ROTULO[tr]}${rolled.modeLabel} d20 ${d20}${mod >= 0 ? '+' : ''}${mod} = ${totalTR} vs CD ${cd} → ${grauLabel}` };
+    };
+
+    if (cfg.teste === 'tr') {
+      const resTR = await rolarTRAlvo();
+      grauTR = resTR.grau;
       passouTR = grauTR === 'sucesso';
       const ramo = cfg.desfechosTR?.[grauTR];
       desfechoTR = ramo;
@@ -543,8 +551,7 @@ async function executarAcaoAtivaInterna(
       if (grauTR === 'sucesso' && ramo?.dano === undefined && ramo?.dano_extra === undefined && !ramo?.dano_maximizado && !ramo?.efeitos?.length) efeitosTR = [];
       if (grauTR !== 'sucesso' && ramo?.efeitos === undefined && (cfg.efeitos?.length ?? 0) > 0) efeitosTR = cfg.efeitos!;
       aplicaEfeitos = grauTR !== 'sucesso' || efeitosTR.length > 0 || !!ramo?.dano_extra || !!ramo?.dano_maximizado || !!ramo?.dano && ramo.dano !== 'nenhum';
-      const grauLabel = grauTR === 'falha_critica' ? 'FALHA CRÍTICA' : grauTR.toUpperCase();
-      cabecalho = `TR ${TR_ROTULO[tr]}${rolled.modeLabel} d20 ${d20}${mod >= 0 ? '+' : ''}${mod} = ${totalTR} vs CD ${cd} → ${grauLabel}`;
+      cabecalho = resTR.texto;
     } else if (cfg.teste === 'ataque') {
       const def = computeTotalDefense(t, {}, arma!.range === 'melee' ? 'melee' : 'ranged');
       const ctx = buildAttackContext({
@@ -577,6 +584,15 @@ async function executarAcaoAtivaInterna(
         log(msg);
         detalhes.push(msg);
         continue;
+      }
+      // TR após acerto: o dano do golpe entra sempre; condições/efeitos só se o alvo falhar.
+      if (cfg.tr_apos_acerto) {
+        const resTR = await rolarTRAlvo();
+        grauTR = resTR.grau;
+        const ramo = cfg.desfechosTR?.[grauTR];
+        desfechoTR = ramo ? { ...ramo, dano: undefined } : undefined;
+        efeitosTR = ramo?.efeitos ?? (grauTR === 'sucesso' ? [] : cfg.efeitos ?? []);
+        cabecalho += ` · ${resTR.texto}`;
       }
     }
 
