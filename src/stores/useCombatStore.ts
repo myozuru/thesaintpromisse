@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { aplicarUltimoSegundo } from '@/lib/portasDaMorte';
 import { terraPvtPatch, ceuPreparoPatch, TEMPESTADE_IMOVEL_PREFIX } from '@/lib/posturas';
 
 /** Posturas no começo do turno: Terra (PVT), Céu (preparo temporário) e fim do Imóvel da Tempestade. */
@@ -544,7 +545,17 @@ export const useCombatStore = create<CombatStore>()(
           import('@/stores/useReactionStore').then(({ useReactionStore }) =>
             useReactionStore.getState().resetRoundReactions(),
           );
+          // No Último Segundo (Suporte nv4): +5 na iniciativa atual e benefício da rodada.
+          for (const ch of charStore.characters) if (ch.ultimoSegundoAtivo) charStore.updateCharacter(ch.id, { ultimoSegundoAtivo: false });
+          const us = aplicarUltimoSegundo(initiativeOrder, useCharacterStore.getState().characters);
+          for (const id of us.impulsionados) {
+            const nome = initiativeOrder.find((e) => e.charId === id)?.charName ?? 'Suporte';
+            const ganhou = us.beneficiados.includes(id);
+            if (ganhou) charStore.updateCharacter(id, { ultimoSegundoAtivo: true });
+            import('@/stores/useLogStore').then(({ useLogStore }) => useLogStore.getState().addLog('combat', `⏱️ ${nome} — No Último Segundo: +5 de iniciativa${ganhou ? '; age antes do aliado nas Portas: anula terreno difícil, +4,5 m de movimento e +5 de Defesa contra Ataques de Oportunidade nesta rodada.' : '.'}`));
+          }
           set((s) => ({
+            initiativeOrder: us.ordem,
             currentTurnIndex: 0,
             round: newRound,
             movementUsedByChar: {},
@@ -554,7 +565,7 @@ export const useCombatStore = create<CombatStore>()(
             turnPaused: !s.turnTimerEnabled,
           }));
           import('@/stores/useMapStore').then(({ useMapStore }) => useMapStore.getState().setPendingMove(null));
-          const firstEntry = initiativeOrder[0];
+          const firstEntry = us.ordem[0];
           if (firstEntry) {
             charStore.updateCharacter(firstEntry.charId, { weaponSwapsThisTurn: 0, attacksThisTurn: 0, lastAttackHit: undefined, mobilidadeReacaoM: 0, mobilidadeReacaoBase: 0, arteGolpeDescendente: null });
             // Assumir Postura: termina após 1 minuto (10 rodadas).

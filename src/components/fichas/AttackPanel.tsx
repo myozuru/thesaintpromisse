@@ -612,7 +612,7 @@ export function AttackPanel({ character: cProp }: Props) {
     const ctx = buildAttackContext({
       attacker: c,
       weapon: mainWeapon,
-      targetDefense: targetDef, targetId: isReroll ? undefined : target?.id,
+      targetDefense: targetDef + (ataqueOportunidade && target?.ultimoSegundoAtivo ? 5 : 0), targetId: isReroll ? undefined : target?.id,
       semRecursao: ataqueConcedidoSemRecursao,
       situation: {
         pistoleiro: pistoleiroUsado,

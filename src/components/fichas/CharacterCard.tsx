@@ -1,4 +1,5 @@
 import { EmpunharArmaButton } from './EmpunharArmaButton';
+import { PortasDaMorteCard } from './PortasDaMorteCard';
 import { SoltarItemButton } from './SoltarItemButton';
 import { ContadoresEquipamento } from '@/components/omni/ContadoresEquipamento';
 import { consumeCritNegated } from '@/lib/suporteNegacao';
@@ -1570,6 +1571,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
       </div>
       </div>
 
+      <PortasDaMorteCard c={c} />
       {/* ─── Status bars ─── */}
       <div className="px-4 pb-2 space-y-1.5">
         <div className="flex items-center gap-1">
