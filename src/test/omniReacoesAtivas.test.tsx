@@ -184,7 +184,7 @@ describe('movimento e conjuração', () => {
   it('encerrar janelas libera promessas como canceladas', async () => { add(); const p = abrirJanelaReacaoAtiva(evento); cancelarJanelasReacoesAtivas(); expect((await p).cancelado).toBe(true); });
   it('editor e JSON preservam gatilho, defesa e interrupção', () => {
     let salvo: EntidadeOmni; function Editor() { const [e, set] = useState<EntidadeOmni>({ ...novaEntidade('item'), acoesAtivas: [{ ...config(), reacao: undefined }] }); return <EditorAcoesAtivas ent={e} setEnt={n => { salvo = n; set(n); }} />; }
-    render(<Editor />); fireEvent.click(screen.getByLabelText('Oferecer como reação automática')); fireEvent.change(screen.getByLabelText('Gatilho da reação'), { target: { value: 'quando_inimigo_conjurar' } }); fireEvent.click(screen.getByLabelText('Cancelar evento se a reação tiver efeito'));
+    render(<Editor />); fireEvent.click(screen.getByLabelText('Oferecer como reação automática')); fireEvent.change(screen.getByLabelText('Gatilho da reação'), { target: { value: 'quando_inimigo_conjurar' } }); fireEvent.click(screen.getByLabelText('Anular o evento se a reação tiver efeito'));
     const p = PacoteOmniSchema.parse({ formato: 'omni-engine.v1', nome: 'Reações', geradoEm: 0, entidades: [salvo!] }); expect(p.entidades[0].acoesAtivas![0].reacao).toMatchObject({ gatilho: 'quando_inimigo_conjurar', cancelar_evento: true });
   });
 });
