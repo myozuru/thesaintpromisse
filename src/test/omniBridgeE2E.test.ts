@@ -13,6 +13,7 @@ import { describe, it, expect } from 'vitest';
 import {
   selectOmniPassiveBonuses,
   selectOmniModifiers,
+  resolverAcumuloOmni,
   resolveOmniKey,
   avaliarFormulaNaFicha,
 } from '@/lib/omni/omniBridge';
@@ -21,6 +22,7 @@ import { PacoteOmniSchema } from '@/lib/omni/validacao';
 import type { Character } from '@/types';
 import type { EntidadeOmni, CombatEffect } from '@/lib/omni/tipos';
 import { effectiveMovement, combatMoveBudget, reactionMoveBudget } from '@/lib/movementBudget';
+import { computeDefenseBreakdown } from '@/lib/defenseCalc';
 import { ORDEM_PERICIAS, SISTEMA_PERICIAS, ORDEM_TR, SISTEMA_TR } from '@/lib/omni/constantesDoSistema';
 
 // ─── Cobaia padronizada ──────────────────────────────────────────────────
@@ -120,13 +122,55 @@ describe('🌉 OmniBridge E2E — Recursos passivos via passiva vinculada', () =
     expect(bag.totals.hp).toBe(6);
   });
 
-  it('Múltiplas passivas somam no mesmo recurso', () => {
+  it('Múltiplas fontes usam o maior bônus concorrente e mantêm todas as origens', () => {
     const c = baseCobaia();
     const a = fazerPassiva({ nome: 'A', resourcePath: 'vida_max', formula: '4' });
     const b = fazerPassiva({ nome: 'B', resourcePath: 'hp_max',   formula: '6' });
     const bag = selectOmniPassiveBonuses(c, [a, b]);
-    expect(bag.totals.hp).toBe(10);
+    expect(bag.totals.hp).toBe(6);
     expect(bag.origins.hp).toHaveLength(2);
+    expect(bag.origins.hp.map((origin) => origin.applied)).toEqual([false, true]);
+  });
+
+  it('penalidades de fontes distintas continuam somando ao maior bônus', () => {
+    const c = baseCobaia();
+    const bonus = fazerPassiva({ nome: 'Amuleto', resourcePath: 'defesa', formula: '5' });
+    const penalty = fazerPassiva({ nome: 'Maldição', resourcePath: 'ca', formula: '2', type: 'SUBTRAIR' });
+    const bag = selectOmniPassiveBonuses(c, [bonus, penalty]);
+    expect(bag.totals.ca).toBe(3);
+    expect(bag.origins.ca.map((origin) => origin.applied)).toEqual([true, true]);
+  });
+
+  it('mantém o máximo ao combinar equipamentos e passivas calculados em bags separados', () => {
+    const c = baseCobaia();
+    const linked = fazerPassiva({ nome: 'Postura', resourcePath: 'defesa', formula: '3' });
+    const gear = novaEntidade('item', 'Broche');
+    gear.slotType = 'anel';
+    gear.bonusEquipado = { ca: 5 };
+    const linkedBag = selectOmniPassiveBonuses(c, [linked]);
+    const gearBag = selectOmniModifiers(c, [{ instanceId: 'broche', equippedSlot: 'anel:0', entity: gear }]);
+    const contributions = [...linkedBag.origins.ca, ...gearBag.origins.ca];
+
+    expect(resolverAcumuloOmni(contributions)).toBe(5);
+    expect(contributions.map((origin) => origin.applied)).toEqual([false, true]);
+  });
+
+  it('a defesa real combina passiva vinculada e equipamento sem somar os bônus concorrentes', () => {
+    const linked = fazerPassiva({ nome: 'Postura', resourcePath: 'defesa', formula: '3' });
+    const gear = novaEntidade('item', 'Broche');
+    gear.slotType = 'anel';
+    gear.bonusEquipado = { ca: 5 };
+    const c = {
+      ...baseCobaia(),
+      omniAtivos: [{ categoria: 'passiva', entidadeId: linked.id }],
+    } as Character;
+    const result = computeDefenseBreakdown(c, {
+      omniEntidadesMap: { [linked.id]: linked },
+      omniInventory: [{ instanceId: 'broche', ownerId: c.id, isEquipped: true, entity: gear }],
+    });
+
+    expect(result.omniPassivesCA + result.omniItemsCA).toBe(5);
+    expect(result.total).toBe(12 + 2 + 5);
   });
 
   it('Watcher NÃO entra como bônus passivo (é reação)', () => {
