@@ -35,7 +35,8 @@ SETUP = """(p) => {
   inv.setState({items:{},deleted:{}});
   const ent={id:'ent-reacao',versao:1,nome:'Corrente do Guardião',categoria:'item',descricao:'',tags:[],
     duracao:{tipo:'permanente'},custos:[],gatilhos:[],criadoEm:0,atualizadoEm:0,acoesAtivas:[p.cfg]};
-  inv.getState().add('r-guard',ent,{instanceId:'inst-reacao'});
+  const instId='inst-reacao-'+Math.random().toString(36).slice(2,9);
+  inv.getState().add('r-guard',ent,{instanceId:instId});
   ms.setState({entities:{
     eg:{id:'eg',characterId:'r-guard',type:'character',x:p.gx*D,y:0,w:D,h:D},
     ea:{id:'ea',characterId:'r-aliado',type:'character',x:p.ax*D,y:0,w:D,h:D},
