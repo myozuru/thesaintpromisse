@@ -100,6 +100,34 @@ function expirarZonas() {
   }
 }
 
+function mudaramTokensDeFicha(atual: ReturnType<typeof useMapStore.getState>, anterior: ReturnType<typeof useMapStore.getState>): boolean {
+  const ids = new Set([...Object.keys(atual.entities), ...Object.keys(anterior.entities)]);
+  for (const id of ids) {
+    const depois = atual.entities[id];
+    const antes = anterior.entities[id];
+    if (!depois?.characterId && !antes?.characterId) continue;
+    if (!depois || !antes || depois.characterId !== antes.characterId || depois.x !== antes.x || depois.y !== antes.y || depois.carriedBy !== antes.carriedBy) return true;
+  }
+  return false;
+}
+
+function idsAurasVinculadas(personagem: { omniAtivos?: Array<{ categoria?: string; entidadeId: string }> } | undefined): string[] {
+  return (personagem?.omniAtivos ?? [])
+    .filter((vinculo) => vinculo.categoria === 'aura')
+    .map((vinculo) => vinculo.entidadeId)
+    .sort();
+}
+
+function mudaramVinculosDeAura(atual: ReturnType<typeof useCharacterStore.getState>, anterior: ReturnType<typeof useCharacterStore.getState>): boolean {
+  const atuais = new Map(atual.characters.map((personagem) => [personagem.id, idsAurasVinculadas(personagem)]));
+  const anteriores = new Map(anterior.characters.map((personagem) => [personagem.id, idsAurasVinculadas(personagem)]));
+  const ids = new Set([...atuais.keys(), ...anteriores.keys()]);
+  for (const id of ids) {
+    if (JSON.stringify(atuais.get(id) ?? []) !== JSON.stringify(anteriores.get(id) ?? [])) return true;
+  }
+  return false;
+}
+
 /** Inicializa listeners idempotentes no bootstrap do aplicativo. Efeitos ficam autoritativos no Mestre. */
 export function iniciarEngineZonasTerreno() {
   if (iniciado) return;
@@ -107,7 +135,12 @@ export function iniciarEngineZonasTerreno() {
   observarMovimentoConfirmado(processarConfirmacao);
   useMapStore.subscribe((atual, anterior) => {
     processarMovimento(atual, anterior);
-    if (!estadoRemotoEmAplicacao() && !emPreviaMovimento() && !atual.pendingMove && atual.activeSceneId === anterior.activeSceneId && useRoleStore.getState().role !== 'PLAYER' && Object.values(atual.entities).some(e => e.characterId && (!anterior.entities[e.id] || e.x !== anterior.entities[e.id].x || e.y !== anterior.entities[e.id].y))) recalcularAuras();
+    const mudouEspaco = atual.activeSceneId !== anterior.activeSceneId || mudaramTokensDeFicha(atual, anterior);
+    if (!estadoRemotoEmAplicacao() && !emPreviaMovimento() && !atual.pendingMove && useRoleStore.getState().role !== 'PLAYER' && mudouEspaco) recalcularAuras();
+  });
+  useCharacterStore.subscribe((atual, anterior) => {
+    if (estadoRemotoEmAplicacao() || useRoleStore.getState().role === 'PLAYER' || !mudaramVinculosDeAura(atual, anterior)) return;
+    recalcularAuras();
   });
   useCombatStore.subscribe((atual, anterior) => {
     if (estadoRemotoEmAplicacao() || useRoleStore.getState().role === 'PLAYER' || !atual.inCombat || !anterior.inCombat) return;
@@ -119,4 +152,3 @@ export function iniciarEngineZonasTerreno() {
     if (atual.round > anterior.round) expirarZonas();
   });
 }
-
