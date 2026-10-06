@@ -12,7 +12,7 @@
  */
 import type { Character } from '@/types';
 import { isEspecialistaCombate } from '@/lib/combateEstilos';
-import { findWeaponByName } from '@/lib/weapons';
+import { armaDoPersonagem } from '@/lib/omni/armaDoPersonagem';
 import { charsDistanceMeters, type TouchEntity, type TouchGrid } from '@/lib/touchRange';
 
 export const POSICIONAMENTO_AMEACADOR_ID = 'ec-posicionamento-ameacador';
@@ -32,7 +32,7 @@ export function estaFurtivo(charId: string, entities: Record<string, Ent>): bool
 
 /** Primeiro alcance (em metros) da arma empunhada, se for à distância/de fogo. */
 export function primeiroAlcanceM(c: Character | null | undefined): number | null {
-  const w = findWeaponByName(c?.mainHandWeaponName ?? '');
+  const w = c?.mainHandWeaponName ? armaDoPersonagem(c.id, c.mainHandWeaponName, c.mainHandWeaponInstanceId ?? undefined) : undefined;
   if (!w || w.range === 'melee') return null;
   return w.rangeShort ?? null;
 }

@@ -500,6 +500,9 @@ export interface Character {
    */
   mainHandWeaponName?: string | null;
   offHandWeaponName?: string | null;
+  /** ID da cópia empunhada (`InventoryItem.instanceId` ou `legacy:<Item.id>`); ausente em fichas antigas. */
+  mainHandWeaponInstanceId?: string | null;
+  offHandWeaponInstanceId?: string | null;
   /** @deprecated mantido só por retrocompatibilidade (não use em código novo). */
   secondaryWeaponId?: string | null;
   /** @deprecated derivado de mainHand/offHand — use ambos slots. */
@@ -825,7 +828,7 @@ export interface Character {
   prontidaoPreparada?: { tipo: 'bonus' | 'action'; combatId: string; custo: number } | null;
   /** Preparo Imediato: combates em que a oferta na iniciativa já foi respondida. */
   preparoImediatoOferta?: string | null;
-  /** Munição carregada por arma (chave = nome da arma). */
+  /** @deprecated Munição legada por nome. Novos dados pertencem à instância no inventário. */
   weaponAmmo?: Record<string, number>;
   /** Uso Rápido: chave de turno em que o item adicional já foi usado. */
   usoRapidoTurnKey?: string;

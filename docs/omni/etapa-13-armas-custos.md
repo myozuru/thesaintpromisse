@@ -1,21 +1,40 @@
 # Etapa 13 — Armas e custos
 
-## Resultado da auditoria
+## Resultado
 
-O fluxo de ações ativas já identifica itens limitados por `instanceId`, impede o uso de uma arma OMNI que não esteja empunhada e confirma que uma arma de duas mãos ocupa as duas mãos. Munição, cargas, PE/PV e tipo de ação são planejados e validados antes dos débitos. O uso da instância é debitado primeiro; se ele falhar, os outros recursos permanecem intactos. Reações com pagamento recusado são estornadas pelo fluxo de reação.
+As cópias de armas agora são identificadas individualmente em ambos os espaços da ficha. `mainHandWeaponInstanceId` e `offHandWeaponInstanceId` identificam a arma Omni pelo `InventoryItem.instanceId`; armas que ainda vêm do inventário antigo usam `legacy:<Item.id>`. Os nomes continuam salvos e são usados na apresentação e como fallback para fichas anteriores.
 
-Adicionado um teste integrado de pagamento: uma ação que exige 10 PE, 5 PV, uma ação comum, três munições, um uso do item e uma carga falha quando há somente duas munições, sem alterar ficha, inventário ou contador.
+O painel deixou de agrupar cópias pelo nome. Cada cópia tem uma opção própria; uma mão só bloqueia a mesma instância na outra mão. Armas de duas mãos gravam o mesmo ID nos dois espaços. Duas cópias diferentes com o mesmo nome permanecem distintas, podem ser empunhadas separadamente e contam como duas armas. O descarte limpa apenas os espaços que apontam para aquela cópia.
 
-## Limitação de identidade aberta
+## Munição e compatibilidade
 
-O saldo de munição ainda vive em `Character.weaponAmmo`, indexado pelo nome da arma, e `equipWeapons` persiste os slots da ficha pelos nomes principal/secundário. Consequentemente, duas cópias de mesmo nome não têm saldo de munição independente e não são selecionadas pela ficha por ID de instância. Os usos limitados de itens já usam `instanceId`, mas isso não migra o estado de recarga. Resolver essa parte exige uma migração coordenada do modelo da ficha, seleção de arma, interface de recarga e compatibilidade com munição legada; a etapa não será marcada como concluída enquanto essa identidade não for definida.
+- Armas Omni guardam munição em `InventoryItem.municaoRestante`.
+- Armas do inventário legado usam a chave `weaponAmmo["legacy:<Item.id>"]`.
+- `weaponAmmo[<nome>]` permanece como compatibilidade para fichas antigas. Na primeira leitura de uma arma com IDs, o saldo antigo é movido a uma única cópia: prioriza a cópia atualmente empunhada; sem ela, escolhe a primeira ID em ordem estável. As outras cópias recebem zero. Isso preserva o saldo total antigo sem multiplicá-lo por cada cópia.
+- Ataques comuns, recarga rápida e custos de munição de ações ativas consultam e debitam a instância exata. Os custos continuam sendo validados antes do pagamento.
 
-## Evidências
+Fichas antigas sem os campos de ID continuam resolvendo a arma pelo nome até serem alteradas pelo seletor novo. O método antigo `equipWeapons({ mainHandName, offHandName })` continua aceito. Ao usar esse método em uma mão que já mantém o mesmo nome, a cópia atual é preservada; novas seleções enviam IDs.
 
-- `src/lib/omni/custosAtivos.ts`: planejamento e validação conjunta dos recursos.
-- `src/lib/omni/acaoAtiva.ts`: validação da instância e pagamento antes da rolagem.
-- `src/stores/useCharacterStore.ts`: regra de ocupação simultânea das duas mãos.
-- `src/lib/recargaRapida.ts`: saldo de munição atualmente indexado por nome.
-- Testes: `omniCustosAtivos.test.tsx`, `omniArmasMapa.test.tsx`, `omniEquipamentoAuditoria.test.tsx` e `omniAtivasAuditoria.test.tsx`.
+## Regras preservadas
 
-Verificação focada: quatro arquivos de teste passaram (92 testes). O tipo de identidade da munição continua pendente para fechar esta etapa.
+- Uma arma de duas mãos ocupa os dois espaços com a mesma instância.
+- A mesma instância de uma arma de uma mão não pode ocupar os dois espaços.
+- Empunhar duas cópias do mesmo nome exige as mesmas regras de empunhadura dupla aplicadas a duas armas distintas.
+- O orçamento de trocas continua valendo ao trocar entre cópias do mesmo nome.
+- Ações ativas de arma exigem que a instância da ação esteja empunhada. Munição e demais custos não são debitados se a validação falhar.
+
+## Arquivos envolvidos
+
+- `src/types/index.ts`: IDs dos dois espaços; `weaponAmmo` passa a estar marcado como campo legado.
+- `src/stores/useCharacterStore.ts`: resolução e gravação dos IDs, validação de duas mãos e custo de troca.
+- `src/stores/useInventoryStore.ts`: munição persistida por instância Omni.
+- `src/components/fichas/AttackPanel.tsx` e `EspecialistaNv4CSections.tsx`: seleção sem deduplicação por nome, ataque e recarga por cópia.
+- `src/lib/recargaRapida.ts` e `src/lib/omni/custosAtivos.ts`: migração, consulta e consumo de munição.
+- `src/lib/omni/acaoAtiva.ts`, `reacoesAtivas.ts`, `resolvedor.ts` e `componentes/equipamento.ts`: contexto exato da arma empunhada.
+- `src/lib/omni/itensNoChao.ts` e `replicas.ts`: descarte e réplicas ligados ao ID correto.
+
+## Verificação
+
+Foram aprovados 125 testes direcionados em 8 arquivos sobre instâncias Omni e legadas, seleção no painel, munição e recarga, custos ativos, combate duplo, estilo do arremessador, descarte, armas de duas mãos e réplicas. Mais 44 testes passaram em cinco arquivos de resolução de equipamento e Zona de Risco.
+
+`npx tsc --noEmit` ainda falha em quatro erros fora das alterações desta etapa: três avisos TS2783 de `conditionId` duplicado em `src/components/fichas/SpellApplyDialog.tsx` (linhas 955, 1171 e 1298), e o tipo `T` não declarado em `src/stores/useReactionStore.ts` (linha 222). Não apareceu erro TypeScript nos arquivos modificados.

@@ -979,7 +979,7 @@ interface CharacterStore {
    */
   equipWeapons: (
     charId: string,
-    payload: { mainHandName: string | null; offHandName?: string | null },
+    payload: { mainHandName: string | null; offHandName?: string | null; mainHandInstanceId?: string | null; offHandInstanceId?: string | null },
     ctx?: { round?: number; inCombat?: boolean },
   ) => { ok: boolean; reason?: string; actionUsed?: 'free' | 'bonus' | 'arremessador' | 'arsenal'; arsenalBonus?: boolean };
   /** Reseta usos de Talentos por escopo (round/scene/rest_short/rest_long/daily). */
@@ -5081,8 +5081,16 @@ export const useCharacterStore = create<CharacterStore>()(
 
         const mainName = (payload.mainHandName ?? '').trim() || null;
         const offName = (payload.offHandName ?? '').trim() || null;
-        const mainW = mainName ? armaDoPersonagem(charId, mainName) : null;
-        const offW = offName ? armaDoPersonagem(charId, offName) : null;
+        // Mantém a cópia já empunhada quando um chamador antigo só envia nomes.
+        // Novas chamadas enviam os IDs explicitamente, inclusive null para armas legadas.
+        const mainId = payload.mainHandInstanceId !== undefined
+          ? payload.mainHandInstanceId
+          : (mainName === c.mainHandWeaponName ? c.mainHandWeaponInstanceId ?? null : null);
+        const offId = payload.offHandInstanceId !== undefined
+          ? payload.offHandInstanceId
+          : (offName === c.offHandWeaponName ? c.offHandWeaponInstanceId ?? null : null);
+        const mainW = mainName ? armaDoPersonagem(charId, mainName, mainId ?? undefined) : null;
+        const offW = offName ? armaDoPersonagem(charId, offName, offId ?? undefined) : null;
 
         if (mainName && !mainW) return { ok: false, reason: `Arma "${mainName}" não encontrada no catálogo.` };
         if (offName && !offW) return { ok: false, reason: `Arma "${offName}" não encontrada no catálogo.` };
@@ -5090,11 +5098,15 @@ export const useCharacterStore = create<CharacterStore>()(
         // Resolve a configuração final
         let finalMain: string | null = null;
         let finalOff: string | null = null;
+        let finalMainId: string | null = null;
+        let finalOffId: string | null = null;
         let weaponsCount = 0;
 
         if (mainW && offW && mainW.name === offW.name && requiresTwoHands(mainW)) {
-          finalMain = mainW.name; finalOff = mainW.name; weaponsCount = 1;
+          if (mainId !== offId && (mainId || offId)) return { ok: false, reason: 'Uma arma de duas-mãos deve usar a mesma cópia nos dois espaços.' };
+          finalMain = mainW.name; finalOff = mainW.name; finalMainId = mainId; finalOffId = mainId; weaponsCount = 1;
         } else if (mainW && offW) {
+          if (mainId && mainId === offId) return { ok: false, reason: 'A mesma cópia da arma não pode ocupar duas mãos separadas.' };
           // 2 armas distintas
           if (requiresTwoHands(mainW) || requiresTwoHands(offW)) {
             return { ok: false, reason: 'Arma de duas-mãos ocupa AMBOS os slots — não pode coexistir com outra.' };
@@ -5106,16 +5118,22 @@ export const useCharacterStore = create<CharacterStore>()(
           }
           finalMain = mainW.name;
           finalOff = offW.name;
+          finalMainId = mainId;
+          finalOffId = offId;
           weaponsCount = 2;
         } else if (mainW) {
           finalMain = mainW.name;
+          finalMainId = mainId;
           // Duas-mãos ocupa o slot off também (mesmo nome) — sinaliza ocupação total.
           finalOff = requiresTwoHands(mainW) ? mainW.name : null;
+          finalOffId = requiresTwoHands(mainW) ? mainId : null;
           weaponsCount = 1;
         } else if (offW) {
           // Nada na principal mas algo na secundária = move pra principal.
           finalMain = offW.name;
+          finalMainId = offId;
           finalOff = requiresTwoHands(offW) ? offW.name : null;
+          finalOffId = requiresTwoHands(offW) ? offId : null;
           weaponsCount = 1;
         } else {
           // Desequipar tudo é sempre livre.
@@ -5124,8 +5142,8 @@ export const useCharacterStore = create<CharacterStore>()(
 
         // Custo por TROCA: cada chamada de equipWeapons que mude a config
         // conta como 1 swap. 1ª swap do turno = livre; 2ª+ = Ação Bônus.
-        const sameMain = (c.mainHandWeaponName ?? null) === finalMain;
-        const sameOff = (c.offHandWeaponName ?? null) === finalOff;
+        const sameMain = (c.mainHandWeaponName ?? null) === finalMain && (c.mainHandWeaponInstanceId ?? null) === finalMainId;
+        const sameOff = (c.offHandWeaponName ?? null) === finalOff && (c.offHandWeaponInstanceId ?? null) === finalOffId;
         const noChange = sameMain && sameOff;
 
         let actionUsed: 'free' | 'bonus' | 'arremessador' | 'arsenal' = 'free';
@@ -5133,9 +5151,13 @@ export const useCharacterStore = create<CharacterStore>()(
         let nextSwapCount = c.weaponSwapsThisTurn ?? 0;
 
         // Estilo do Arremessador: sacar arma de arremesso faz parte do ataque (não conta troca).
-        const drawn = [finalMain, finalOff].filter((n): n is string => !!n && n !== c.mainHandWeaponName && n !== c.offHandWeaponName);
+        const drawn = [
+          { name: finalMain, id: finalMainId, oldName: c.mainHandWeaponName, oldId: c.mainHandWeaponInstanceId },
+          { name: finalOff, id: finalOffId, oldName: c.offHandWeaponName, oldId: c.offHandWeaponInstanceId },
+        ].filter((w): w is { name: string; id: string | null; oldName: string | null | undefined; oldId: string | null | undefined } =>
+          !!w.name && (w.id ? w.id !== w.oldId : w.name !== w.oldName));
         const arremessadorDraw = !noChange && drawn.length > 0 && hasCombatStyle(c, 'arremessador')
-          && drawn.every((n) => { const w = findWeaponByName(n); return !!w && isThrownWeapon(w); });
+          && drawn.every((item) => { const w = armaDoPersonagem(charId, item.name, item.id ?? undefined); return !!w && isThrownWeapon(w); });
 
         if (arremessadorDraw) {
           actionUsed = 'arremessador';
@@ -5153,7 +5175,7 @@ export const useCharacterStore = create<CharacterStore>()(
           nextSwapCount = swapsSoFar + 1;
         }
 
-        const newArsBonus = arsRound !== null && !noChange && finalMain !== c.mainHandWeaponName
+        const newArsBonus = arsRound !== null && !noChange && (finalMain !== c.mainHandWeaponName || finalMainId !== (c.mainHandWeaponInstanceId ?? null))
           ? arsenalBonusAoTrocar(c, finalMain, arsRound) : null;
         set((s) => ({
           characters: s.characters.map((x) => {
@@ -5164,6 +5186,8 @@ export const useCharacterStore = create<CharacterStore>()(
               ...(newArsBonus ? { arsenalBonus: newArsBonus } : {}),
               mainHandWeaponName: finalMain,
               offHandWeaponName: finalOff,
+              mainHandWeaponInstanceId: finalMainId,
+              offHandWeaponInstanceId: finalOffId,
               dualWielding: weaponsCount === 2,
               weaponSwapsThisTurn: nextSwapCount,
               bonusActionsCurrent: actionUsed === 'bonus'

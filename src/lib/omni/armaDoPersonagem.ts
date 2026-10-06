@@ -1,20 +1,30 @@
 import { exemplarArma, entidadeDoExemplar } from './exemplarArma';
 import { ALL_WEAPONS, findWeaponByName, requiresTwoHands, resolveWeaponDamage, type Weapon, type WeaponPropertyKind } from '@/lib/weapons';
 import { useInventoryStore } from '@/stores/useInventoryStore';
+import { useItemStore } from '@/stores/useItemStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { resolverTipoDano } from './contextoDano';
 import { getWeaponMeta, efeitoDanoDaArma } from './weaponModel';
 
 /** Resolve também armas OMNI renomeadas e a empunhadura configurada no construtor. */
 export function armaDoPersonagem(charId: string, nome: string, instanciaId?: string): Weapon | undefined {
+  if (instanciaId?.startsWith('legacy:')) {
+    const legacyId = instanciaId.slice('legacy:'.length);
+    const owned = useItemStore.getState().items.find(i => i.id === legacyId && i.assignedTo?.includes(charId));
+    return owned && owned.name.trim().toLowerCase() === nome.trim().toLowerCase() ? findWeaponByName(owned.name) : undefined;
+  }
   const item = instanciaId ? useInventoryStore.getState().items[instanciaId] : exemplarArma(charId, nome);
-  if (instanciaId && (!item || item.ownerId !== charId || entidadeDoExemplar(item).categoria !== 'arma' || entidadeDoExemplar(item).nome.trim().toLowerCase() !== nome.trim().toLowerCase())) return undefined;
+  if (instanciaId && (!item || item.ownerId !== charId || entidadeDoExemplar(item).categoria !== 'arma' ||
+    (entidadeDoExemplar(item).replica
+      ? item.replicaArma?.trim().toLowerCase() !== nome.trim().toLowerCase()
+      : entidadeDoExemplar(item).nome.trim().toLowerCase() !== nome.trim().toLowerCase()))) return undefined;
   const ent = item && entidadeDoExemplar(item);
   if (!ent) return findWeaponByName(nome);
+  const nomeArma = ent.replica ? item?.replicaArma ?? ent.nome : ent.nome;
   const meta = getWeaponMeta(ent);
-  const base = ALL_WEAPONS.find(w => w.id === meta.modeloId) ?? findWeaponByName(nome);
-  const weapon: Weapon = base ? { ...base, name: ent.nome, properties: [...base.properties] } : {
-    id: ent.id, name: ent.nome, category: 'complexa', range: 'melee', group: 'Espada',
+  const base = ALL_WEAPONS.find(w => w.id === meta.modeloId) ?? findWeaponByName(nomeArma);
+  const weapon: Weapon = base ? { ...base, name: nomeArma, properties: [...base.properties] } : {
+    id: ent.id, name: nomeArma, category: 'complexa', range: 'melee', group: 'Espada',
     damage: meta.dano ?? '1d6', damageType: 'Ct', critRange: 20, properties: [], spaces: meta.espacos ?? 1, cost: ent.comercio?.basePrice ?? 0,
   };
   // Tags do OMNI podem descrever uma arma sem modelo. Não inventa parâmetros

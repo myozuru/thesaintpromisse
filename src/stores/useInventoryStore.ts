@@ -40,6 +40,8 @@ export interface InventoryItem {
   sustentacaoPendente?: boolean;
   /** Réplica: nome da arma do catálogo colocada na mão. */
   replicaArma?: string;
+  /** Munição carregada nesta cópia específica da arma. undefined = ainda não personalizada. */
+  municaoRestante?: number;
 }
 
 interface InventoryState {
@@ -68,6 +70,8 @@ interface InventoryState {
   consumirUso: (instanceId: string, n?: number) => boolean;
   /** Recarrega uma instância para o total. */
   recargaInstancia: (instanceId: string) => void;
+  /** Define munição carregada de uma instância de arma. */
+  definirMunicao: (instanceId: string, amount: number) => void;
   /**
    * Recarrega todas as instâncias cujo `entity.usos.recarga` corresponda
    * ao tipo. Usado por hooks (virada de dia, fim de cena, descanso).
@@ -209,6 +213,13 @@ export const useInventoryStore = create<InventoryState>()(
               [instanceId]: { ...cur, usosRestantes: cur.usosTotais },
             },
           };
+        }),
+
+      definirMunicao: (instanceId, amount) =>
+        set((s) => {
+          const item = s.items[instanceId];
+          if (!item || item.entity.categoria !== 'arma') return s;
+          return { items: { ...s.items, [instanceId]: { ...item, municaoRestante: Math.max(0, amount) } } };
         }),
 
       recargaPorTipo: (tipo) => {

@@ -3367,7 +3367,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                             )}
                           </div>
                         ) : categoriaOmni === 'arma' ? (
-                          <EmpunharArmaButton charId={c.id} nome={inv.entity.nome} />
+                          <EmpunharArmaButton charId={c.id} nome={inv.entity.nome} instanceId={inv.instanceId} />
                         ) : isEquippable ? (
                           <div className="ml-auto flex items-center gap-1.5">
                             {(() => {

@@ -1,6 +1,6 @@
 # OMNI natural — contrato e entregas
 
-Estado: etapas 1–11 concluídas no escopo documentado em cada etapa. A linguagem natural ainda não executa no jogo nem está conectada ao salvamento de habilidades. Base inicial examinada: main d2ef673b0e2a92918fa9fd7fac0095733c5b1d68, especificação Texto colado(4) e correções aprovadas na conversa de 05/10/2026. Evidências complementares em inventario-natural.md, diagnostico-execucao.md e etapa-2-contexto.md a etapa-11-contadores.md.
+Estado: etapas 1–13 concluídas no escopo documentado em cada etapa. A linguagem natural ainda não executa no jogo nem está conectada ao salvamento de habilidades. Base inicial examinada: main d2ef673b0e2a92918fa9fd7fac0095733c5b1d68, especificação Texto colado(4) e correções aprovadas na conversa de 05/10/2026. Evidências complementares em inventario-natural.md, diagnostico-execucao.md e documentação das etapas 2–13.
 
 ## Fontes de verdade
 

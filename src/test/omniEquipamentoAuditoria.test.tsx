@@ -32,7 +32,8 @@ it('equipar e guardar uma arma renomeada pelo painel atualiza as keys novas e an
   ent.nome = 'Dente Lunar'; ent.combatData!.critRange = 17;
   useInventoryStore.getState().add('u', ent);
   const view = render(<AttackPanel character={pegarFicha('u')} />);
-  fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: ent.nome } });
+  const inst = useInventoryStore.getState().listByOwner('u')[0];
+  fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: `omni:${inst.instanceId}` } });
   expect(pegarFicha('u').mainHandWeaponName).toBe(ent.nome);
   expect(ler('quantidade itens equipados')).toMatchObject({ valor: 1, diagnosticos: [] });
   for (const key of ['arma_principal corpo_a_corpo', 'arma_principal leve', 'arma_principal grupo Faca', 'arma_principal_eh_cac', 'arma_principal_leve']) {

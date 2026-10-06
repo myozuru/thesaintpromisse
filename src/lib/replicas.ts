@@ -78,8 +78,14 @@ export function materializarReplica(instanceId: string): ReplicaResultado {
   if (weaponName) {
     const w = findWeaponByName(weaponName)!;
     updates.mainHandWeaponName = weaponName;
-    if (requiresTwoHands(w)) updates.offHandWeaponName = weaponName;
-    else if (c.offHandWeaponName === c.mainHandWeaponName) updates.offHandWeaponName = undefined;
+    updates.mainHandWeaponInstanceId = instanceId;
+    if (requiresTwoHands(w)) {
+      updates.offHandWeaponName = weaponName;
+      updates.offHandWeaponInstanceId = instanceId;
+    } else if ((!!c.mainHandWeaponInstanceId && c.offHandWeaponInstanceId === c.mainHandWeaponInstanceId) || (!c.offHandWeaponInstanceId && c.offHandWeaponName === c.mainHandWeaponName)) {
+      updates.offHandWeaponName = undefined;
+      updates.offHandWeaponInstanceId = null;
+    }
   }
   store.updateCharacter(c.id, updates);
   patchInst(instanceId, { materializada: true, sustentacaoPendente: false, replicaArma: weaponName ?? undefined });
@@ -96,8 +102,12 @@ export function desfazerReplica(instanceId: string, motivo = 'desfeita'): void {
   const arma = inst.replicaArma;
   if (c && arma) {
     const upd: Parameters<typeof store.updateCharacter>[1] = {};
-    if (c.mainHandWeaponName === arma) upd.mainHandWeaponName = undefined;
-    if (c.offHandWeaponName === arma) upd.offHandWeaponName = undefined;
+    if (c.mainHandWeaponInstanceId === instanceId || (!c.mainHandWeaponInstanceId && c.mainHandWeaponName === arma)) {
+      upd.mainHandWeaponName = undefined; upd.mainHandWeaponInstanceId = null;
+    }
+    if (c.offHandWeaponInstanceId === instanceId || (!c.offHandWeaponInstanceId && c.offHandWeaponName === arma)) {
+      upd.offHandWeaponName = undefined; upd.offHandWeaponInstanceId = null;
+    }
     if (Object.keys(upd).length) store.updateCharacter(c.id, upd);
   }
   patchInst(instanceId, { materializada: false, sustentacaoPendente: false, replicaArma: undefined });

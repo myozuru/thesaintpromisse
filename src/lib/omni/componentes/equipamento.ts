@@ -9,8 +9,8 @@ import { recursoComposto } from './recursos';
 
 export function dadosEquipamento(c: Character, bag: Record<string, number>): DadosComposicao {
   const n = (k: string) => bag[k] ?? 0;
-  function arma(nome?: string | null): RegistroComposto {
-    const w = nome ? armaDoPersonagem(c.id, nome) : undefined;
+  function arma(nome?: string | null, instanceId?: string | null): RegistroComposto {
+    const w = nome ? armaDoPersonagem(c.id, nome, instanceId ?? undefined) : undefined;
     return { valor: Boolean(w), id: w?.id, propriedades: [
       ...(w?.properties.map(p => p.kind) ?? []),
       ...(w ? [w.range === 'melee' ? 'corpo_a_corpo' : 'distancia'] : []),
@@ -19,14 +19,16 @@ export function dadosEquipamento(c: Character, bag: Record<string, number>): Dad
         campos: { curto: w?.rangeShort ?? 0, longo: w?.rangeLong ?? 0 } } } };
   }
   const selecoes: Record<string, DadoComposto> = {
-    arma_principal: arma(c.mainHandWeaponName),
+    arma_principal: arma(c.mainHandWeaponName, c.mainHandWeaponInstanceId),
     escudo: { registros: c.equippedShieldId ? { [c.equippedShieldId]: { campos: { equipado: true, proficiente: n('ESCUDO_PROFICIENTE') } } } : {},
       padrao: { campos: { equipado: false, proficiente: false } }, campos: { equipado: Boolean(c.equippedShieldId), proficiente: n('ESCUDO_PROFICIENTE'),
       id: { registros: c.equippedShieldId ? { [c.equippedShieldId]: true } : {} } } },
     inventario: { campos: { slots: recursoComposto(c.slotsCurrent ?? 0, c.slotsMax ?? 0) } },
     desarmado: !c.mainHandWeaponName && !c.offHandWeaponName,
-    duas_maos: Boolean(c.mainHandWeaponName && c.mainHandWeaponName === c.offHandWeaponName),
-    duas_armas: Boolean(c.mainHandWeaponName && c.offHandWeaponName && c.mainHandWeaponName !== c.offHandWeaponName),
+    duas_maos: Boolean(c.mainHandWeaponName && c.offHandWeaponName && (c.mainHandWeaponInstanceId && c.offHandWeaponInstanceId
+      ? c.mainHandWeaponInstanceId === c.offHandWeaponInstanceId : c.mainHandWeaponName === c.offHandWeaponName)),
+    duas_armas: Boolean(c.mainHandWeaponName && c.offHandWeaponName && (c.mainHandWeaponInstanceId && c.offHandWeaponInstanceId
+      ? c.mainHandWeaponInstanceId !== c.offHandWeaponInstanceId : c.mainHandWeaponName !== c.offHandWeaponName)),
   };
   const itens = useInventoryStore.getState().listByOwner(c.id);
   const catalogo = useOmniEntidadesStore.getState().entidades;

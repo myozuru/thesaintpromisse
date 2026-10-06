@@ -166,8 +166,10 @@ export function getArremessadorDamage(level: number): number {
 // Parte pronta: +1 dano (+1 nos níveis 4, 8, 12 e 16) em todo ataque enquanto empunha duas armas.
 // PENDENTE: somar atributo no dano do ataque com a segunda arma (ataque com a 2ª arma ainda não existe).
 
-export function isDualWielding(c: Pick<Character, 'mainHandWeaponName' | 'offHandWeaponName'>): boolean {
-  return !!c.mainHandWeaponName && !!c.offHandWeaponName && c.mainHandWeaponName !== c.offHandWeaponName;
+export function isDualWielding(c: Pick<Character, 'mainHandWeaponName' | 'offHandWeaponName' | 'mainHandWeaponInstanceId' | 'offHandWeaponInstanceId'>): boolean {
+  if (!c.mainHandWeaponName || !c.offHandWeaponName) return false;
+  if (c.mainHandWeaponInstanceId && c.offHandWeaponInstanceId) return c.mainHandWeaponInstanceId !== c.offHandWeaponInstanceId;
+  return c.mainHandWeaponName !== c.offHandWeaponName;
 }
 export function duploApplies(c: Character): boolean {
   return hasCombatStyle(c, 'duplo') && isDualWielding(c);

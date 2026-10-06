@@ -12,7 +12,7 @@ import {
   hasPreparoImediato, temPreparada, dispararPreparada, rotuloDe,
 } from '@/lib/preparoImediato';
 import {
-  hasRecargaRapida, capacidadePorNome, tirosRestantes, custoRecarga, recarregar, rotuloCusto,
+  hasRecargaRapida, capacidadeDaReferencia, tirosRestantes, custoRecarga, recarregar, rotuloCusto,
 } from '@/lib/recargaRapida';
 import {
   hasUsoRapido, isConsumivel, podeUsarItemAdicional, pagarItemAdicional,
@@ -64,30 +64,33 @@ function PreparoImediatoSection({ character: c }: { character: Character }) {
 /** Munição e recarga — aparece para qualquer arma com Recarga [X] empunhada. */
 function RecargaSection({ character: c }: { character: Character }) {
   const [msg, setMsg] = useState<string | null>(null);
-  const nomes = [c.mainHandWeaponName, c.offHandWeaponName].filter(
-    (n): n is string => !!n && capacidadePorNome(n) !== null,
-  );
-  if (nomes.length === 0) return null;
+  const armas = [
+    { nome: c.mainHandWeaponName, id: c.mainHandWeaponInstanceId ?? undefined },
+    { nome: c.offHandWeaponName, id: c.offHandWeaponInstanceId ?? undefined },
+  ].filter((a, index, all): a is { nome: string; id: string | undefined } => !!a.nome &&
+    (index === 0 || a.id !== all[0].id || a.nome !== all[0].nome) && capacidadeDaReferencia(c, a.nome, a.id) !== null);
+  if (armas.length === 0) return null;
   return (
     <div className={box} data-testid="recarga-section">
       <div className="text-xs font-bold text-amber-300">
         🔃 Munição {hasRecargaRapida(c) && <span className="text-xs">(Recarga Rápida)</span>}
       </div>
-      {nomes.map((nome) => {
-        const cap = capacidadePorNome(nome)!;
-        const rest = tirosRestantes(c, nome) ?? cap;
-        const custo = custoRecarga(c, nome);
+      {armas.map(({ nome, id }) => {
+        const cap = capacidadeDaReferencia(c, nome, id)!;
+        const rest = tirosRestantes(c, nome, id) ?? cap;
+        const custo = custoRecarga(c, nome, id);
+        const key = id ?? nome;
         return (
-          <div key={nome} className="flex items-center gap-2 text-xs">
-            <span data-testid={`ammo-${nome}`}>
+          <div key={key} className="flex items-center gap-2 text-xs">
+            <span data-testid={`ammo-${key}`}>
               {nome}: {rest}/{cap} tiros
             </span>
             <button
               className={btn}
-              data-testid={`recarregar-${nome}`}
+              data-testid={`recarregar-${key}`}
               disabled={rest >= cap}
               onClick={() => {
-                const r = recarregar(c.id, nome);
+                const r = recarregar(c.id, nome, id);
                 setMsg(r.ok ? `${nome} recarregada (${rotuloCusto(custo)}).` : r.reason ?? 'Não foi possível.');
               }}
             >

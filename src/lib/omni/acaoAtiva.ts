@@ -8,7 +8,7 @@ import { armaDoPersonagem, armaEstaEmpunhada } from './armaDoPersonagem';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useReactionStore } from '@/stores/useReactionStore';
 import { useCombatStore } from '@/stores/useCombatStore';
-import { planejarCustosAtivos, validarRecursosAtivos, patchCustosAtivos, consumirUsosItemAtivo, type ContextoCustosAtivos } from './custosAtivos';
+import { planejarCustosAtivos, validarRecursosAtivos, patchCustosAtivos, consumirUsosItemAtivo, consumirMunicaoAtiva, type ContextoCustosAtivos } from './custosAtivos';
 import { prepararMovimentosAtivos, aplicarMovimentoAtivo, validarPlanoMovimento, type PlanoMovimentoAtivo, type OpcoesMovimentoAtivo } from './movimentosAtivos';
 import { avaliarCondicionaisAtivos } from './condicionaisAtivos';
 import { applyAdvantageToD20, consumeAdvantageFor, consumeFlatBonusFor } from './rollAdvantage';
@@ -181,7 +181,10 @@ export function melhorPericiaDaDisputa(char: Character, opcoes: string[]): { nom
 
 function danoArmaBase(arma?: Weapon, u?: Character) {
   if (!arma) return undefined;
-  const dano = arma.omniDamageFormula ?? resolveWeaponDamage(arma, requiresTwoHands(arma) || Boolean(u?.mainHandWeaponName && u.mainHandWeaponName === u.offHandWeaponName)) ?? undefined;
+  const duasMaos = !!u && (u.mainHandWeaponInstanceId && u.offHandWeaponInstanceId
+    ? u.mainHandWeaponInstanceId === u.offHandWeaponInstanceId
+    : !!u.mainHandWeaponName && u.mainHandWeaponName === u.offHandWeaponName);
+  const dano = arma.omniDamageFormula ?? resolveWeaponDamage(arma, requiresTwoHands(arma) || duasMaos) ?? undefined;
   const grupos = dano && u ? planejarFormulaDano(dano, expr => avaliarFormula(expr, montarVariaveisDoPersonagem(u, 'USUARIO'), () => 0.5)).grupos : [...(dano ?? '').matchAll(/(\d*)d(\d+)/gi)].map(m => ({ count: Number(m[1] || 1), sides: Number(m[2]) }));
   return {
     ...(dano ? { dano } : {}),
@@ -350,7 +353,8 @@ function aplicarEfeitos(u: Character, alvo: Character, efeitos: EfeitoSecundario
 /** Arma usada pela ação: a própria entidade (se for arma do catálogo) ou a da mão principal. */
 export function armaDaAcao(u: Character, ent?: EntidadeOmni, instanciaId?: string) {
   const nome = (ent?.categoria === 'arma' && !ent.replica ? ent.nome : ent && replicaWeaponName(ent)) || u.mainHandWeaponName || '';
-  return nome ? armaDoPersonagem(u.id, nome, ent?.categoria === 'arma' && !ent.replica ? instanciaId : undefined) : undefined;
+  return nome ? armaDoPersonagem(u.id, nome,
+    ent?.categoria === 'arma' ? instanciaId : u.mainHandWeaponInstanceId ?? undefined) : undefined;
 }
 
 const acoesEmCurso = new Set<string>();
@@ -384,11 +388,17 @@ async function executarAcaoAtivaInterna(
     if (!opcoes.instanciaId) return true;
     const item = useInventoryStore.getState().items[opcoes.instanciaId];
     const usuario = useCharacterStore.getState().characters.find(c => c.id === usuarioId);
-    return !!item && !!usuario && item.ownerId === usuarioId && (!ent || item.entity.id === ent.id) && (ent?.categoria !== 'arma' || armaEstaEmpunhada(usuario, ent.replica ? item.replicaArma ?? '' : ent.nome) && (!ent.replica || item.materializada));
+    return !!item && !!usuario && item.ownerId === usuarioId && (!ent || item.entity.id === ent.id) && (ent?.categoria !== 'arma' ||
+      (usuario.mainHandWeaponInstanceId || usuario.offHandWeaponInstanceId
+        ? usuario.mainHandWeaponInstanceId === item.instanceId || usuario.offHandWeaponInstanceId === item.instanceId
+        : armaEstaEmpunhada(usuario, ent.replica ? item.replicaArma ?? '' : ent.nome)) && (!ent.replica || item.materializada));
   };
   if (!validarInstancia()) return { ok: false, reason: 'A instância desta ação não está disponível.' };
-  if (ent?.categoria === 'arma' && !armaEstaEmpunhada(u, ent.replica ? replicaWeaponName(ent) ?? ent.nome : ent.nome)) return { ok: false, reason: 'Empunhe a arma antes de usar a ação.' };
-  const contextoCustos: ContextoCustosAtivos = { armaNome: arma?.name, instanciaId: opcoes.instanciaId, entidadeId: ent?.id };
+  if (ent?.categoria === 'arma' && (u.mainHandWeaponInstanceId || u.offHandWeaponInstanceId
+    ? u.mainHandWeaponInstanceId !== opcoes.instanciaId && u.offHandWeaponInstanceId !== opcoes.instanciaId
+    : !armaEstaEmpunhada(u, ent.replica ? replicaWeaponName(ent) ?? ent.nome : ent.nome))) return { ok: false, reason: 'Empunhe a arma antes de usar a ação.' };
+  const armaInstanciaId = ent?.categoria === 'arma' ? opcoes.instanciaId : u.mainHandWeaponInstanceId ?? undefined;
+  const contextoCustos: ContextoCustosAtivos = { armaNome: arma?.name, armaInstanciaId, instanciaId: opcoes.instanciaId, entidadeId: ent?.id };
   let alvos = escolhidos.ids.map(id => store.characters.find(c => c.id === id)!);
   for (const alvo of alvos) {
     const chk = podeUsarAtiva(u, alvo, cfg, opcoes.intensificacoes ?? 0, arma, contextoCustos);
@@ -458,6 +468,7 @@ async function executarAcaoAtivaInterna(
     delete patchPago.reactionsCurrent;
     const pagamento = useReactionStore.getState().runReaction(u.id, () => {
       if (!consumirUsosItemAtivo(p)) return { ok: false, reason: 'Os usos do item mudaram antes de a ação ser concluída.' };
+      if (!consumirMunicaoAtiva(p)) return { ok: false, reason: 'A munição mudou antes de a ação ser concluída.' };
       useCharacterStore.getState().updateCharacter(u.id, patchPago);
       return { ok: true };
     });
@@ -472,6 +483,7 @@ async function executarAcaoAtivaInterna(
       });
       return { ok: false, reason: 'Os usos do item mudaram antes de a ação ser concluída.' };
     }
+    if (!consumirMunicaoAtiva(p)) return { ok: false, reason: 'A munição mudou antes de a ação ser concluída.' };
     store.updateCharacter(u.id, patchPago);
   }
   if (patchPago.omniCounters) notificarAtualizacaoContadores(u.id, u.omniCounters, patchPago.omniCounters);
@@ -524,7 +536,7 @@ async function executarAcaoAtivaInterna(
       const def = computeTotalDefense(t, {}, arma!.range === 'melee' ? 'melee' : 'ranged');
       const ctx = buildAttackContext({
         attacker: u, weapon: arma!, targetDefense: def, targetId: t.id, alcanceM: cfg.alcanceM, ignorarReacoes: opcoes.ignorarReacoes,
-        situation: { twoHanded: requiresTwoHands(arma!) || Boolean(u.mainHandWeaponName && u.mainHandWeaponName === u.offHandWeaponName), rolarDano: cfg.tipo_efeito !== 'buff' && !!cfg.incluirArma && !/@ARMA\.DANO/i.test([cfg.dano, ...mods.danos].filter(Boolean).join('+')), hitBonusExtra: cfg.mod_acerto, critBonusExtra: critExtra || undefined, advantageExtra: mods.vantagemAcerto, critMultiplierExtra: mods.multiplicador },
+        situation: { twoHanded: requiresTwoHands(arma!) || Boolean(u.mainHandWeaponInstanceId && u.offHandWeaponInstanceId ? u.mainHandWeaponInstanceId === u.offHandWeaponInstanceId : u.mainHandWeaponName && u.mainHandWeaponName === u.offHandWeaponName), rolarDano: cfg.tipo_efeito !== 'buff' && !!cfg.incluirArma && !/@ARMA\.DANO/i.test([cfg.dano, ...mods.danos].filter(Boolean).join('+')), hitBonusExtra: cfg.mod_acerto, critBonusExtra: critExtra || undefined, advantageExtra: mods.vantagemAcerto, critMultiplierExtra: mods.multiplicador },
         trainedRanges: [
           ...(u.meleeTrained ? (['melee'] as const) : []),
           ...(u.rangedTrained ? (['ranged', 'thrown'] as const) : []),

@@ -28,6 +28,9 @@ export function soltarItemNoChao(charId: string, id: string, legado = false): st
   const ms = useMapStore.getState(), dpi = ms.gridConfig.dpi || 70;
   const nome = legado ? legacy!.name : item.entity.nome;
   const naMao = !legado && exemplarEstaEmpunhado(char, item);
+  const handId = legado ? `legacy:${id}` : id;
+  const maoPrincipalExata = char.mainHandWeaponInstanceId === handId;
+  const maoSecundariaExata = char.offHandWeaponInstanceId === handId;
   const groundItem: ItemNoChao = legado ? { legacy: { ...legacy!, assignedTo: [] }, droppedByCharId: charId } : { item: { ...item, isEquipped: false, equippedSlot: undefined, materializada: false, sustentacaoPendente: false }, droppedByCharId: charId };
   const entityId = ms.addEntity({ shape: 'RECT', x: token.x + dpi * .65, y: token.y + dpi * .65, w: dpi * .4, h: dpi * .4, rotation: 0,
     color: '#c084fc', locked: true, layer: 'tokens', label: `📦 ${nome}`, nameplate: true, groundItem });
@@ -35,9 +38,9 @@ export function soltarItemNoChao(charId: string, id: string, legado = false): st
   else inv.remove(id);
   const restantes = Object.values(useInventoryStore.getState().items).some(i => i.ownerId === charId && i.entity.nome === nome) ||
     useItemStore.getState().items.some(i => i.name === nome && i.assignedTo.includes(charId));
-  if (!restantes || item?.isEquipped || naMao) useCharacterStore.getState().updateCharacter(charId, {
-    ...(char.mainHandWeaponName === nome ? { mainHandWeaponName: null } : {}),
-    ...(char.offHandWeaponName === nome ? { offHandWeaponName: null } : {}),
+  if (maoPrincipalExata || maoSecundariaExata || (!restantes && (item?.isEquipped || naMao))) useCharacterStore.getState().updateCharacter(charId, {
+    ...(maoPrincipalExata || (!char.mainHandWeaponInstanceId && char.mainHandWeaponName === nome && !restantes) ? { mainHandWeaponName: null, mainHandWeaponInstanceId: null } : {}),
+    ...(maoSecundariaExata || (!char.offHandWeaponInstanceId && char.offHandWeaponName === nome && !restantes) ? { offHandWeaponName: null, offHandWeaponInstanceId: null } : {}),
   });
   useLogStore.getState().addLog('system', `📦 ${char.name} soltou ${nome} no chão.`);
   return entityId;

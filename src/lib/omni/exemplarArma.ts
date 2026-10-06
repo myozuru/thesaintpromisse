@@ -31,10 +31,11 @@ export function exemplarArma(
     )[0];
 }
 export function exemplarEstaEmpunhado(
-  u: Pick<Character, "id" | "mainHandWeaponName" | "offHandWeaponName">,
+  u: Pick<Character, "id" | "mainHandWeaponName" | "offHandWeaponName" | "mainHandWeaponInstanceId" | "offHandWeaponInstanceId">,
   i: InventoryItem,
 ): boolean {
-  return [u.mainHandWeaponName, u.offHandWeaponName].some(
+  if ([u.mainHandWeaponInstanceId, u.offHandWeaponInstanceId].some(id => id === i.instanceId)) return true;
+  return ([u.mainHandWeaponInstanceId ? null : u.mainHandWeaponName, u.offHandWeaponInstanceId ? null : u.offHandWeaponName]).some(
     (n) => !!n && exemplarArma(u.id, n)?.instanceId === i.instanceId,
   );
 }

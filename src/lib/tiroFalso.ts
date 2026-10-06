@@ -10,7 +10,7 @@
  */
 import type { Character } from '@/types';
 import { isEspecialistaCombate } from '@/lib/combateEstilos';
-import { findWeaponByName } from '@/lib/weapons';
+import { armaDoPersonagem } from '@/lib/omni/armaDoPersonagem';
 import { weaponMaxRangeMeters } from '@/lib/weaponRange';
 import { specDCFor } from '@/lib/golpeEspecial';
 import { astuciaMod, golpeFalsoDistancia } from '@/lib/golpeFalso';
@@ -33,7 +33,7 @@ export function hasTiroFalso(c: Character | null | undefined): boolean {
  * null = sem arma válida (corpo a corpo não serve para o Tiro Falso).
  */
 export function tiroFalsoAlcanceM(c: Character): number | null {
-  const w = c.mainHandWeaponName ? findWeaponByName(c.mainHandWeaponName) : null;
+  const w = c.mainHandWeaponName ? armaDoPersonagem(c.id, c.mainHandWeaponName, c.mainHandWeaponInstanceId ?? undefined) : null;
   if (!w || w.range === 'melee') return null;
   return weaponMaxRangeMeters(w);
 }

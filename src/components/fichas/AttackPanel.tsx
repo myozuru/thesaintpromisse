@@ -146,16 +146,14 @@ export function AttackPanel({ character: cProp }: Props) {
   //   (b) Instâncias Omni no inventário do personagem (`useInventoryStore`),
   //       cujo nome casa com uma arma do catálogo (`ALL_WEAPONS`).
   const inventoryWeapons = useMemo(() => {
-    const out: { item: { id: string; name: string }; weapon: Weapon }[] = [];
-    const seenNames = new Set<string>();
+    const out: { item: { id: string; key: string; name: string }; weapon: Weapon }[] = [];
 
     // (a) Banco de Itens (legado)
     const owned = items.filter(i => i.assignedTo?.includes(c.id));
     for (const it of owned) {
       const w = findWeaponByName(it.name);
       if (w) {
-        out.push({ item: it, weapon: w });
-        seenNames.add(w.name);
+        out.push({ item: { ...it, key: `legacy:${it.id}` }, weapon: w });
       }
     }
 
@@ -164,29 +162,28 @@ export function AttackPanel({ character: cProp }: Props) {
       if (inv.ownerId !== c.id) continue;
       // Réplicas só aparecem nas mãos enquanto materializadas.
       if (inv.entity.replica && !inv.materializada) continue;
-      const w = inv.entity.replica ? (inv.replicaArma ? findWeaponByName(inv.replicaArma) : undefined) : armaDoPersonagem(c.id, inv.entity.nome);
-      if (w && !seenNames.has(w.name)) {
-        out.push({ item: { id: inv.entity.id, name: inv.entity.nome }, weapon: w });
-        seenNames.add(w.name);
-      }
+      const w = inv.entity.replica ? (inv.replicaArma ? findWeaponByName(inv.replicaArma) : undefined) : armaDoPersonagem(c.id, inv.entity.nome, inv.instanceId);
+      if (w) out.push({ item: { id: inv.instanceId, key: `omni:${inv.instanceId}`, name: inv.entity.nome }, weapon: w });
     }
 
     return out;
   }, [items, c.id, omniInventoryList, omniEntidadesMap]);
 
-  const mainWeapon = c.mainHandWeaponName ? armaDoPersonagem(c.id, c.mainHandWeaponName) : null;
+  const mainWeapon = c.mainHandWeaponName ? armaDoPersonagem(c.id, c.mainHandWeaponName, c.mainHandWeaponInstanceId ?? undefined) : null;
   const offWeapon =
-    c.offHandWeaponName && c.offHandWeaponName !== c.mainHandWeaponName
-      ? armaDoPersonagem(c.id, c.offHandWeaponName)
+    c.offHandWeaponName && (c.offHandWeaponInstanceId !== c.mainHandWeaponInstanceId || c.offHandWeaponName !== c.mainHandWeaponName)
+      ? armaDoPersonagem(c.id, c.offHandWeaponName, c.offHandWeaponInstanceId ?? undefined)
       : null;
-  const usingTwoHanded = !!mainWeapon && (requiresTwoHands(mainWeapon) || c.mainHandWeaponName === c.offHandWeaponName);
+  const usingTwoHanded = !!mainWeapon && (requiresTwoHands(mainWeapon) || (!!c.mainHandWeaponInstanceId && c.mainHandWeaponInstanceId === c.offHandWeaponInstanceId) || (!c.mainHandWeaponInstanceId && c.mainHandWeaponName === c.offHandWeaponName));
 
   // ─── AoE detection (forma de área da arma Omni equipada) ───────────────────
   const mainOmniEntity = useMemo(() => {
     if (!c.mainHandWeaponName) return null;
-    const inv = exemplarArma(c.id, c.mainHandWeaponName);
+    const inv = c.mainHandWeaponInstanceId
+      ? omniInventoryList.find(i => i.instanceId === c.mainHandWeaponInstanceId)
+      : exemplarArma(c.id, c.mainHandWeaponName);
     return inv ? entidadeDoExemplar(inv) : null;
-  }, [omniInventoryList, c.id, c.mainHandWeaponName]);
+  }, [omniInventoryList, c.id, c.mainHandWeaponName, c.mainHandWeaponInstanceId]);
   const weaponAoE: AoEDef | null = useMemo(
     () => getAoEFromOmniEntity(mainOmniEntity),
     [mainOmniEntity],
@@ -424,20 +421,26 @@ export function AttackPanel({ character: cProp }: Props) {
   }, [c.chosenTalents]);
 
   // ─── Equipar/desequipar ────────────────────────────────────────────────────
-  const handleEquip = (slot: 'main' | 'off', weaponName: string | null) => {
+  const handleEquip = (slot: 'main' | 'off', weaponKey: string | null) => {
     // Caso especial: arma de duas-mãos ocupa ambos os slots (mesmo nome em main e off).
     // "Guardar" em qualquer slot deve limpar os DOIS, senão o store re-equipa a mesma arma.
-    const isTwoHandedEquipped =
-      !!c.mainHandWeaponName &&
-      c.mainHandWeaponName === c.offHandWeaponName;
+    const isTwoHandedEquipped = usingTwoHanded;
     if (slot === 'off' && (usingTwoHanded || (twoHanded && !!mainWeapon && isVersatile(mainWeapon)))) return;
-    const novaArma = weaponName ? armaDoPersonagem(c.id, weaponName) : null;
+    const selected = weaponKey ? inventoryWeapons.find(({ item }) => item.key === weaponKey) : null;
+    const weaponName = selected?.weapon.name ?? null;
+    const weaponInstanceId = selected?.item.key.startsWith('omni:') ? selected.item.id
+      : selected?.item.key.startsWith('legacy:') ? selected.item.key : null;
+    const novaArma = selected?.weapon ?? null;
+    const mainCurrentId = c.mainHandWeaponInstanceId ?? null;
+    const offCurrentId = c.offHandWeaponInstanceId ?? null;
     const payload =
       weaponName === null && isTwoHandedEquipped
-        ? { mainHandName: null, offHandName: null }
+        ? { mainHandName: null, offHandName: null, mainHandInstanceId: null, offHandInstanceId: null }
         : slot === 'main'
-          ? { mainHandName: weaponName, offHandName: isTwoHandedEquipped || (novaArma && requiresTwoHands(novaArma)) ? null : c.offHandWeaponName ?? null }
-          : { mainHandName: c.mainHandWeaponName ?? null, offHandName: weaponName };
+          ? { mainHandName: weaponName, offHandName: isTwoHandedEquipped || (novaArma && requiresTwoHands(novaArma)) ? null : c.offHandWeaponName ?? null,
+              mainHandInstanceId: weaponInstanceId, offHandInstanceId: isTwoHandedEquipped || (novaArma && requiresTwoHands(novaArma)) ? null : offCurrentId }
+          : { mainHandName: c.mainHandWeaponName ?? null, offHandName: weaponName,
+              mainHandInstanceId: mainCurrentId, offHandInstanceId: weaponInstanceId };
     const res = equipWeapons(c.id, payload, { inCombat, round: combatRound });
     if (!res.ok) {
       addLog('combat', `❌ ${res.reason}`);
@@ -463,7 +466,7 @@ export function AttackPanel({ character: cProp }: Props) {
     }
     // ─── Munição: armas com Recarga [X] gastam 1 tiro por ataque ────────────
     if (!isReroll) {
-      const tiro = consumirTiro(c.id, mainWeapon.name);
+      const tiro = consumirTiro(c.id, mainWeapon.name, c.mainHandWeaponInstanceId ?? undefined);
       if (!tiro.ok) { addLog('combat', `🚫 ${tiro.reason}`); return; }
       if (tiro.restante !== undefined) {
         addLog('combat', `🔫 ${mainWeapon.name}: ${tiro.restante} tiro(s) restante(s).`);
@@ -1466,22 +1469,22 @@ export function AttackPanel({ character: cProp }: Props) {
                 label="Mão Principal"
                 ocupacaoDuasMaos={usingTwoHanded || (twoHanded && !!mainWeapon && isVersatile(mainWeapon))}
                 rodape={contadoresArma(c.mainHandWeaponName)}
-                currentName={c.mainHandWeaponName ?? null}
+                currentName={equippedWeaponKey(c, 'main', inventoryWeapons)}
                 inventory={inventoryWeapons}
                 disabledForOther={null}
-                onChange={(name) => handleEquip('main', name)}
+                onChange={(key) => handleEquip('main', key)}
               />
               <HandSlot
                 label="Mão Secundária"
                 rodape={usingTwoHanded ? null : contadoresArma(c.offHandWeaponName)}
                 currentName={
                   // se duas-mãos, mostra a mesma arma "ocupando" mas sem permitir alterar
-                  usingTwoHanded || (twoHanded && !!mainWeapon && isVersatile(mainWeapon)) ? c.mainHandWeaponName ?? null : (offWeapon?.name ?? null)
+                  usingTwoHanded || (twoHanded && !!mainWeapon && isVersatile(mainWeapon)) ? equippedWeaponKey(c, 'main', inventoryWeapons) : equippedWeaponKey(c, 'off', inventoryWeapons)
                 }
                 inventory={inventoryWeapons}
-                disabledForOther={c.mainHandWeaponName ?? null}
+                disabledForOther={c.mainHandWeaponInstanceId ? `omni:${c.mainHandWeaponInstanceId}` : equippedWeaponKey(c, 'main', inventoryWeapons)}
                 lockedReason={usingTwoHanded || (twoHanded && !!mainWeapon && isVersatile(mainWeapon)) ? 'Arma de duas-mãos ocupa ambos os slots' : null}
-                onChange={(name) => handleEquip('off', name)}
+                onChange={(key) => handleEquip('off', key)}
               />
             </div>
           )}
@@ -2083,20 +2086,33 @@ export function AttackPanel({ character: cProp }: Props) {
   );
 }
 
+function equippedWeaponKey(
+  character: Character,
+  hand: 'main' | 'off',
+  inventory: { item: { id: string; key: string; name: string }; weapon: Weapon }[],
+): string | null {
+  const instanceId = hand === 'main' ? character.mainHandWeaponInstanceId : character.offHandWeaponInstanceId;
+  const weaponName = hand === 'main' ? character.mainHandWeaponName : character.offHandWeaponName;
+  if (!weaponName) return null;
+  if (instanceId) return instanceId.startsWith('legacy:') ? instanceId : `omni:${instanceId}`;
+  return inventory.find(({ weapon }) => weapon.name === weaponName)?.item.key ?? `legacy-name:${weaponName}`;
+}
+
 function HandSlot({
   label, currentName, inventory, onChange, disabledForOther, lockedReason, rodape, ocupacaoDuasMaos,
 }: {
   label: string;
   currentName: string | null;
-  inventory: { item: { id: string; name: string }; weapon: Weapon }[];
+  inventory: { item: { id: string; key: string; name: string }; weapon: Weapon }[];
   onChange: (name: string | null) => void;
-  /** Nome de arma já equipada na outra mão (não pode aparecer aqui se for o mesmo item). */
+  /** Identidade já equipada na outra mão (ou nome estável legado). */
   disabledForOther: string | null;
   lockedReason?: string | null;
   rodape?: ReactNode;
   ocupacaoDuasMaos?: boolean;
 }) {
   const locked = !!lockedReason;
+  const currentLabel = inventory.find(({ item }) => item.key === currentName)?.weapon.name ?? currentName;
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-xs uppercase tracking-wider text-muted-foreground">
@@ -2112,7 +2128,7 @@ function HandSlot({
           </button>
         )}
       </div>
-      {locked ? <div className="rounded border border-primary/40 bg-primary/10 px-2 py-1 text-sm text-foreground">🤲 {currentName} · duas mãos</div> : <select
+      {locked ? <div className="rounded border border-primary/40 bg-primary/10 px-2 py-1 text-sm text-foreground">🤲 {currentLabel} · duas mãos</div> : <select
         value={currentName ?? ''}
         disabled={locked}
         onChange={(e) => onChange(e.target.value || null)}
@@ -2124,17 +2140,15 @@ function HandSlot({
       >
         <option value="">— vazia —</option>
         {inventory.map(({ item, weapon }) => {
-          // Permite a MESMA arma duas vezes só se houver duas instâncias no inventário,
-          // mas o filtro mais simples (e suficiente) é desabilitar quando o nome casa com a outra mão.
-          const isDuplicate = disabledForOther && weapon.name === disabledForOther;
+          const isDuplicate = disabledForOther === item.key;
           return (
-            <option key={item.id} value={weapon.name} disabled={!!isDuplicate}>
+            <option key={item.key} value={item.key} disabled={!!isDuplicate}>
               {weapon.name} ({weapon.group}){isDuplicate ? ' — em uso' : ''}
             </option>
           );
         })}
       </select>}
-      {ocupacaoDuasMaos && <div className="text-xs text-primary">🤲 {currentName} · duas mãos</div>}
+      {ocupacaoDuasMaos && <div className="text-xs text-primary">🤲 {currentLabel} · duas mãos</div>}
       {rodape}
       {locked && <div className="text-xs text-muted-foreground italic">{lockedReason}</div>}
     </div>

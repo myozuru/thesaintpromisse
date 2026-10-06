@@ -11,7 +11,7 @@
  */
 import type { Character } from '@/types';
 import { isEspecialistaCombate } from '@/lib/combateEstilos';
-import { findWeaponByName } from '@/lib/weapons';
+import { armaDoPersonagem } from '@/lib/omni/armaDoPersonagem';
 import { weaponMaxRangeMeters, distanceBetweenChars } from '@/lib/weaponRange';
 import { extensaoAlcanceBonus } from '@/lib/extensaoCorpo';
 import { penalidadeTRFlanqueado } from '@/lib/flanqueadorSuperior';
@@ -34,7 +34,7 @@ export function hasGolpeFalso(c: Character | null | undefined): boolean {
 
 /** Alcance de ataque em metros da arma empunhada (null = sem arma/alcance). */
 export function golpeFalsoAlcanceM(c: Character): number | null {
-  const w = c.mainHandWeaponName ? findWeaponByName(c.mainHandWeaponName) : null;
+  const w = c.mainHandWeaponName ? armaDoPersonagem(c.id, c.mainHandWeaponName, c.mainHandWeaponInstanceId ?? undefined) : null;
   if (!w) return null;
   const bonus = w.range === 'melee'
     ? ((c as { meleeRangeBonus?: number }).meleeRangeBonus ?? 0) + extensaoAlcanceBonus(c)

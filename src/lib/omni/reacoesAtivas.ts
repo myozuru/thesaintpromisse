@@ -158,8 +158,9 @@ function elegivel(oferta: OfertaReacaoAtiva, evento: EventoReacaoAtiva): boolean
     if (!centro || touchDistanceMeters(ut, centro, ms.gridConfig) > r.alcance_m + 0.05) return false;
   }
   const nomeArma = replicaWeaponName(oferta.ent) || (oferta.ent.categoria === 'arma' ? oferta.ent.nome : u.mainHandWeaponName) || undefined;
-  const arma = nomeArma ? armaDoPersonagem(u.id, nomeArma) : undefined;
-  const custos = planejarCustosAtivos(oferta.cfg, u, 0, { armaNome: arma?.name, instanciaId: oferta.instanceId, entidadeId: oferta.ent.id });
+  const armaInstanciaId = oferta.ent.categoria === 'arma' ? oferta.instanceId : u.mainHandWeaponInstanceId ?? undefined;
+  const arma = nomeArma ? armaDoPersonagem(u.id, nomeArma, armaInstanciaId) : undefined;
+  const custos = planejarCustosAtivos(oferta.cfg, u, 0, { armaNome: arma?.name, armaInstanciaId, instanciaId: oferta.instanceId, entidadeId: oferta.ent.id });
   return custos.ok && validarRecursosAtivos(u, custos.plano).ok && (custos.plano.acao !== 'reacao' || useReactionStore.getState().hasReactionAvailable(u.id));
 }
 

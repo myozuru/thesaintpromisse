@@ -14,7 +14,8 @@
 import { create } from 'zustand';
 import type { Character } from '@/types';
 import { isEspecialistaCombate } from '@/lib/combateEstilos';
-import { findWeaponByName, hasProperty } from '@/lib/weapons';
+import { hasProperty } from '@/lib/weapons';
+import { armaDoPersonagem } from '@/lib/omni/armaDoPersonagem';
 import { golpeFalsoAlcanceM, golpeFalsoDistancia } from '@/lib/golpeFalso';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useCombatStore } from '@/stores/useCombatStore';
@@ -30,7 +31,7 @@ export function hasZonaRisco(c: Character | null | undefined): boolean {
 
 /** Arma corpo a corpo com Estendida na mão principal. */
 export function zonaRiscoArmaOk(c: Character): boolean {
-  const w = c.mainHandWeaponName ? findWeaponByName(c.mainHandWeaponName) : null;
+  const w = c.mainHandWeaponName ? armaDoPersonagem(c.id, c.mainHandWeaponName, c.mainHandWeaponInstanceId ?? undefined) : null;
   return !!w && w.range === 'melee' && hasProperty(w, 'estendida');
 }
 

@@ -7,13 +7,13 @@ import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useCombatStore } from '@/stores/useCombatStore';
-import { capacidadePorNome, tirosRestantes } from '@/lib/recargaRapida';
+import { capacidadeDaReferencia, tirosRestantes } from '@/lib/recargaRapida';
 
-export interface ContextoCustosAtivos { armaNome?: string; instanciaId?: string; entidadeId?: string }
+export interface ContextoCustosAtivos { armaNome?: string; armaInstanciaId?: string; instanciaId?: string; entidadeId?: string }
 
 export interface PlanoCustosAtivos {
   pe: number; pv: number; cargas: number; contador?: string;
-  municao: number; armaMunicao?: { nome: string; restanteAntes: number };
+  municao: number; armaMunicao?: { charId: string; nome: string; restanteAntes: number; instanceId?: string };
   usosItem: number; instanciaItemId?: string;
   acao: AcaoAtivaConfig['acao']; intensificacoes: number; maxIntensificacoes: number;
   pePorTurno: number;
@@ -54,11 +54,11 @@ export function planejarCustosAtivos(cfg: AcaoAtivaConfig, u: Character, intensi
     let armaMunicao: PlanoCustosAtivos['armaMunicao'];
     if (municao > 0) {
       if (!contexto.armaNome) throw new Error('Munição exige uma arma identificada para a ação.');
-      const capacidade = capacidadePorNome(contexto.armaNome);
+      const capacidade = capacidadeDaReferencia(u, contexto.armaNome, contexto.armaInstanciaId);
       if (capacidade === null) throw new Error(`${contexto.armaNome} não usa munição configurada.`);
-      const restanteAntes = tirosRestantes(u, contexto.armaNome) ?? capacidade;
+      const restanteAntes = tirosRestantes(u, contexto.armaNome, contexto.armaInstanciaId) ?? capacidade;
       if (!Number.isSafeInteger(restanteAntes) || restanteAntes < municao) throw new Error(`Munição insuficiente em ${contexto.armaNome} (tem ${restanteAntes}, precisa de ${municao}).`);
-      armaMunicao = { nome: contexto.armaNome, restanteAntes };
+      armaMunicao = { charId: u.id, nome: contexto.armaNome, restanteAntes, instanceId: contexto.armaInstanciaId };
     }
     let instanciaItemId: string | undefined;
     if (usosItem > 0) {
@@ -120,8 +120,34 @@ export function patchCustosAtivos(u: Character, p: PlanoCustosAtivos): Partial<C
   if (p.acao === 'bonus') patch.bonusActionsCurrent = Math.max(0, (u.bonusActionsCurrent ?? 1) - 1);
   if (p.acao === 'reacao') patch.reactionsCurrent = Math.max(0, (u.reactionsCurrent ?? u.reactionsMax ?? 1) - 1);
   if (p.contador && p.cargas > 0) patch.omniCounters = calcularContador(u.omniCounters ?? {}, p.contador, 'CONSUMIR_CONTADOR', { valor: p.cargas }).counters;
-  if (p.armaMunicao && p.municao > 0) patch.weaponAmmo = { ...(u.weaponAmmo ?? {}), [p.armaMunicao.nome]: p.armaMunicao.restanteAntes - p.municao };
   return patch;
+}
+
+/** Consome munição da cópia exata validada no plano de custos. */
+export function consumirMunicaoAtiva(p: PlanoCustosAtivos): boolean {
+  const ammo = p.armaMunicao;
+  if (!ammo || p.municao <= 0) return true;
+  if (!ammo.instanceId) {
+    const fresh = useCharacterStore.getState().characters.find(c => c.id === ammo.charId);
+    if (!fresh) return false;
+    const current = fresh.weaponAmmo?.[ammo.nome] ?? ammo.restanteAntes;
+    if (current < p.municao) return false;
+    useCharacterStore.getState().updateCharacter(fresh.id, { weaponAmmo: { ...(fresh.weaponAmmo ?? {}), [ammo.nome]: current - p.municao } });
+    return true;
+  }
+  if (ammo.instanceId.startsWith('legacy:')) {
+    const fresh = useCharacterStore.getState().characters.find(c => c.id === ammo.charId);
+    const current = fresh?.weaponAmmo?.[ammo.instanceId];
+    if (!fresh || current === undefined || current < p.municao) return false;
+    useCharacterStore.getState().updateCharacter(fresh.id, { weaponAmmo: { ...(fresh.weaponAmmo ?? {}), [ammo.instanceId]: current - p.municao } });
+    return true;
+  }
+  const inventory = useInventoryStore.getState(), item = inventory.items[ammo.instanceId];
+  if (!item) return false;
+  const remaining = item.municaoRestante ?? ammo.restanteAntes;
+  if (remaining < p.municao) return false;
+  inventory.definirMunicao(ammo.instanceId, remaining - p.municao);
+  return true;
 }
 
 /** Consome usos no inventário; chamadas devem validar o plano antes de alterar outros recursos. */

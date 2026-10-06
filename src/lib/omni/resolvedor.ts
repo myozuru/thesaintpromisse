@@ -395,12 +395,15 @@ export function montarVariaveisDoPersonagem(
     ...(() => {
       const main = c.mainHandWeaponName ?? null;
       const off = c.offHandWeaponName ?? null;
+      const mesmaInstancia = c.mainHandWeaponInstanceId && c.offHandWeaponInstanceId
+        ? c.mainHandWeaponInstanceId === c.offHandWeaponInstanceId
+        : main === off;
       const desarmado = !main && !off ? 1 : 0;
-      const duasMaos = main && off && main === off ? 1 : 0;
-      const dualWield = main && off && main !== off ? 1 : 0;
-      const mainW = main ? armaDoPersonagem(c.id, main) : undefined;
+      const duasMaos = main && off && mesmaInstancia ? 1 : 0;
+      const dualWield = main && off && !mesmaInstancia ? 1 : 0;
+      const mainW = main ? armaDoPersonagem(c.id, main, c.mainHandWeaponInstanceId ?? undefined) : undefined;
       const offW =
-        off && off !== main ? armaDoPersonagem(c.id, off) : undefined;
+        off && !mesmaInstancia ? armaDoPersonagem(c.id, off, c.offHandWeaponInstanceId ?? undefined) : undefined;
 
       const hasProp = (kind: string) =>
         mainW?.properties?.some((p) => p.kind === kind) ? 1 : 0;
@@ -814,7 +817,7 @@ export function montarVariaveisDoPersonagem(
         arr.some((m) => m.kind === kind && set.has(m.scope)) ? 1 : 0;
 
       const mainW = c.mainHandWeaponName
-        ? armaDoPersonagem(c.id, c.mainHandWeaponName)
+        ? armaDoPersonagem(c.id, c.mainHandWeaponName, c.mainHandWeaponInstanceId ?? undefined)
         : undefined;
       const critRange = mainW?.critRange ?? 20;
       const reach =
@@ -1125,9 +1128,9 @@ export function montarVariaveisDoPersonagem(
   // PR-2: Predicate arma_grupo_<grupo> — 1 se main ou off é desse grupo.
   const mhName = c.mainHandWeaponName ?? null;
   const ohName = c.offHandWeaponName ?? null;
-  for (const name of [mhName, ohName]) {
+  for (const [name, instanceId] of [[mhName, c.mainHandWeaponInstanceId], [ohName, c.offHandWeaponInstanceId]] as const) {
     if (!name) continue;
-    const w = armaDoPersonagem(c.id, name);
+    const w = armaDoPersonagem(c.id, name, instanceId ?? undefined);
     if (w?.group) {
       const g = w.group
         .toUpperCase()
