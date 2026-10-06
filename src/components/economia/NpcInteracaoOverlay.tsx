@@ -17,6 +17,9 @@ import { processarQuestsMestre } from '@/lib/economia/acoesQuest';
 import { ShopModal } from '@/components/omni/ShopModal';
 import { MuralQuestsDialog } from './MuralQuests';
 import { GerenciadorQuests } from './GerenciadorQuests';
+import { GripVertical } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useDraggableMapPanel } from '@/hooks/useDraggableMapPanel';
 
 export const ALCANCE_INTERACAO_M = 1.5;
 
@@ -34,6 +37,7 @@ export function NpcInteracaoOverlay() {
   const [gerenciar, setGerenciar] = useState<{ id: string | null } | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [aberto, setAberto] = useState(true);
+  const panel = useDraggableMapPanel();
 
   const me = findMyCharacter(chars, profile);
   const token = me ? tokenDaFicha(me) : null;
@@ -76,8 +80,9 @@ export function NpcInteracaoOverlay() {
   if (!pontos.length && !master) return null;
   return (
     <>
-      <div data-npc-overlay className="absolute top-16 right-3 z-40 w-64 rounded-lg border border-border bg-card/95 p-2 pointer-events-auto text-sm">
+      <div ref={panel.ref} style={panel.style} data-npc-overlay className="absolute top-16 right-3 z-40 w-64 rounded-lg border border-border bg-card/95 p-2 pointer-events-auto text-sm">
         <div className="flex items-center gap-2">
+          <Button type="button" variant="ghost" size="icon" className="h-6 w-5 shrink-0 touch-none cursor-grab active:cursor-grabbing" aria-label="Mover lojas e murais" title="Arrastar lojas e murais" {...panel.handleProps}><GripVertical /></Button>
           <button type="button" onClick={() => setAberto((v) => !v)} className="font-semibold text-xs">{aberto ? '▾' : '▸'} Lojas e murais</button>
           {master && <button type="button" className="ml-auto rounded border border-primary/50 px-2 py-0.5 text-xs text-primary" onClick={() => setGerenciar({ id: null })}>📜 Quests</button>}
           {master && <button type="button" className="rounded border border-border px-2 py-0.5 text-xs" onClick={() => setMural({ id: null })}>📌 Ver</button>}
