@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { useMemo, useState } from 'react';
 import type { Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
@@ -10,7 +11,7 @@ import { charsDistanceMeters } from '@/lib/touchRange';
 import { rollD20Com } from '@/lib/dice';
 import { Button } from '@/components/ui/button';
 import {
-  FERIMENTOS, aplicarFerimento, cdEstabilizar, curarFerimento, estabilizar, naPorta, registrarTesteMorte,
+  FERIMENTOS, aplicarFerimento, cdEstabilizar, curarFerimento, estabilizar, tratarFeridaInterna, naPorta, registrarTesteMorte,
 } from '@/lib/portasDaMorte';
 
 // Resolve pedidos de Medicina "estabilizar:<id>" quando o resultado chega (idempotente).
@@ -92,6 +93,12 @@ export function PortasDaMorteCard({ c }: { c: Character }) {
       {(c.ferimentosComplexos ?? []).map((f) => (
         <div key={f.id} className="flex items-start justify-between gap-2 text-xs">
           <span><b>🦴 {f.nome}</b> — {FERIMENTOS[f.resultado]?.efeito}</span>
+          {f.resultado === 7 && (f.tratada
+            ? <span className="text-xs text-muted-foreground">Tratada (CD 10)</span>
+            : chars.filter((h) => h.id !== c.id && controla(h) && (h.skills ?? []).some((sk) => sk.name === 'Medicina' && sk.mastery)).map((h) => (
+              <Button key={h.id} size="sm" variant="outline" onClick={() => { const r = tratarFeridaInterna(c.id, h.id); if (!r.ok) toast.error(r.reason); }}>Tratar ({h.name})</Button>
+            )))}
+          {f.resultado === 7 && c.feridaInternaBloqueada && <span className="text-xs text-destructive">Sem ação e reações neste turno</span>}
           {isMaster && <Button size="sm" variant="ghost" onClick={() => curarFerimento(c.id, f.id)}>Curar</Button>}
         </div>
       ))}

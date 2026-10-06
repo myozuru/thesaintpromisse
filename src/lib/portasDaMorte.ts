@@ -5,6 +5,7 @@
 import type { Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLogStore } from '@/stores/useLogStore';
+import { temFeridaInterna, cdFeridaInterna } from '@/lib/ferimentosEfeitos';
 
 export const ULTIMO_SEGUNDO_ID = 'sup-no-ultimo-segundo';
 export const ULTIMO_SEGUNDO_MOV_M = 4.5;
