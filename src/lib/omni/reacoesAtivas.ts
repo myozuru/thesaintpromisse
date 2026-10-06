@@ -23,6 +23,8 @@ export interface EventoReacaoAtiva {
   gatilho: GatilhoReacaoAtiva;
   origemId: string;
   protegidoId?: string;
+  /** Dano efetivo (gatilhos de dano). */
+  dano?: number;
   movimento?: { de: { x: number; y: number }; para: { x: number; y: number }; /** Amostras intermediárias do trajeto, na ordem do movimento. */ trajetoria?: { x: number; y: number }[] };
 }
 export interface ResultadoJanelaAtiva { cancelado: boolean; defesaBonus: number; testeBonus: number }
@@ -140,6 +142,7 @@ function elegivel(oferta: OfertaReacaoAtiva, evento: EventoReacaoAtiva): boolean
   }
   const r = oferta.cfg.reacao;
   if (!u || !origem || !r || u.id === origem.id || (u.hpCurrent ?? 1) <= 0 || !aceitaAlvoAtivo(u, origem, { ...oferta.cfg, filtro_alvo: 'inimigos' })) return false;
+  if (r.dano_minimo && (evento.dano ?? 0) < r.dano_minimo) return false;
   const protegido = chars.find(c => c.id === evento.protegidoId);
   if (evento.protegidoId) {
     if (!protegido || (r.protegido === 'usuario' && protegido.id !== u.id) || (r.protegido === 'aliados' && !aceitaAlvoAtivo(u, protegido, { ...oferta.cfg, filtro_alvo: 'aliados' }))) return false;
