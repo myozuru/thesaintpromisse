@@ -83,7 +83,8 @@ describe('round-trip de pacotes OMNI', () => {
       }],
     });
 
-    expect(PacoteOmniSchema.safeParse(criarPacote('atletismo', ['atletismo', 'acrobacia'])).success).toBe(true);
+    const legado = PacoteOmniSchema.parse(criarPacote('atletismo', ['atletismo', 'oficio1']));
+    expect(legado.entidades[0].acoesAtivas?.[0]).toMatchObject({ pericia_usuario: 'Atletismo', pericias_alvo: ['Atletismo', 'Ofício 1'] });
     expect(PacoteOmniSchema.safeParse(criarPacote('Atletismo', ['Acrobacia'])).success).toBe(true);
     expect(PacoteOmniSchema.safeParse(criarPacote('destreza', ['atletismo'])).success).toBe(false);
     expect(PacoteOmniSchema.safeParse(criarPacote('atletismo', ['tr_fortitude'])).success).toBe(false);
