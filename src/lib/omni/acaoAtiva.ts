@@ -631,10 +631,13 @@ async function executarAcaoAtivaInterna(
       const flatU = consumeFlatBonusFor(u.id, { kind: 'skill', name: periciaUsuario });
       const advT = consumeAdvantageFor(t.id, { kind: 'skill', name: periciaAlvo.nome });
       const flatT = consumeFlatBonusFor(t.id, { kind: 'skill', name: periciaAlvo.nome });
+      const { abrirJanelaReacaoAtiva: janelaPericia } = await import('./reacoesAtivas');
+      const prePericia = opcoes.ignorarReacoes ? { cancelado: false, testeBonus: 0 } : await janelaPericia({ gatilho: 'quando_alvo_de_pericia', origemId: u.id, protegidoId: t.id });
+      if (prePericia.cancelado) { const msg = `⛔ ${cfg.nome}: disputa contra ${t.name} anulada por reação.`; log(msg); detalhes.push(msg); continue; }
       const rollU = await applyAdvantageToD20(advU.net, () => rollD20Com(u.id, undefined, { label: `Disputa ${periciaUsuario}` }));
       const rollT = await applyAdvantageToD20(advT.net, () => rollD20Com(t.id, undefined, { label: `Disputa ${periciaAlvo.nome}` }));
       const totalU = rollU.d20 + modificadorPericiaAtiva(u, periciaUsuario)! + flatU.bonus;
-      const totalT = rollT.d20 + periciaAlvo.bonus + flatT.bonus;
+      const totalT = rollT.d20 + periciaAlvo.bonus + flatT.bonus + (prePericia.testeBonus ?? 0);
       const venceu = usuarioVenceDisputa(totalU, totalT);
       aplicaEfeitos = venceu;
       cabecalho = `disputa ${periciaUsuario} ${rollU.d20}+${totalU - rollU.d20}=${totalU} vs ${periciaAlvo.nome} ${rollT.d20}+${totalT - rollT.d20}=${totalT} → ${venceu ? 'VENCEU' : totalU === totalT ? 'EMPATE (alvo vence)' : 'PERDEU'}`;
