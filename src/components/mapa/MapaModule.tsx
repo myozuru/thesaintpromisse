@@ -3325,7 +3325,7 @@ export function MapaModule() {
       {pendingAssets.length > 0 && (() => {
         const item = pendingAssets[0];
         const consume = () => setPendingAssets((prev) => prev.slice(1));
-        const onChoose = (kind: AssetKind) => {
+        const onChoose = (kind: AssetKind, chestId?: string) => {
           const st = useMapStore.getState();
           const cfg = st.gridConfig;
           const ratio = item.dims.h > 0 ? item.dims.w / item.dims.h : 1;
@@ -3345,21 +3345,23 @@ export function MapaModule() {
             });
             st.setEntityLayer(id, 'map');
           } else {
-            const heightCells = kind === 'character' ? 1 : (cfg.defaultImageHeightM ?? 1.8);
+            const heightCells = kind === 'character' ? 1 : kind === 'chest' ? 1 : (cfg.defaultImageHeightM ?? 1.8);
             const h = Math.max(20, heightCells * cfg.dpi);
             const w = Math.max(20, h * ratio);
             const center = snapBypassRef.current
               ? item.world
               : GridEngine.snapToGrid(item.world, cfg);
+            const chest = chestId ? useChestStore.getState().chests[chestId] : undefined;
             const id = st.addEntity({
               shape: kind === 'character' ? 'ELLIPSE' : 'RECT',
               x: center.x, y: center.y,
               w: kind === 'character' ? h : w, h,
               rotation: 0,
               color: '#ffffff',
-              locked: false,
+              locked: kind === 'chest',
               assetId: item.assetId,
-              label: item.name.slice(0, 24),
+              label: (chest?.name ?? item.name).slice(0, 24),
+              ...(kind === 'chest' && chestId ? { chestId, nameplate: true } : {}),
               tokenCrop: kind === 'character' ? { zoom: 1, offsetX: 0, offsetY: 0 } : undefined,
             });
             st.setSelected([id]);
