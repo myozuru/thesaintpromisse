@@ -18,6 +18,7 @@
  */
 import type { Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
+import { desvantagensFerimentos } from '@/lib/ferimentosEfeitos';
 
 // ─── Modelo ────────────────────────────────────────────────────────────
 export type AdvKind = 'advantage' | 'disadvantage';
@@ -196,8 +197,9 @@ export function consumeAdvantageFor(charId: string, ctx: RollContext, extra: { a
   if (!c) return { net: 'normal', consumedIds: [], notes: [] };
   const mods = readMods(c);
   const matches: AdvModifier[] = Object.values(mods).filter(m => matchesScope(m, ctx) && m.bonus == null);
+  const ferimentos = desvantagensFerimentos(c, ctx);
   const advCount = matches.filter(m => m.kind === 'advantage').length + (extra.advantage ? 1 : 0);
-  const disCount = matches.filter(m => m.kind === 'disadvantage').length + (extra.disadvantage ? 1 : 0);
+  const disCount = matches.filter(m => m.kind === 'disadvantage').length + (extra.disadvantage ? 1 : 0) + ferimentos.length;
   let net: ResolveResult['net'] = 'normal';
   if (advCount > 0 && disCount === 0) net = 'advantage';
   else if (disCount > 0 && advCount === 0) net = 'disadvantage';
