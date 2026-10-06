@@ -6,6 +6,8 @@ import { useCharacterStore } from '@/stores/useCharacterStore';
 import { SpellApplyDialog } from '@/components/fichas/SpellApplyDialog';
 import type { Spell } from '@/types';
 import { declararReacaoManual, concluirReacaoManual, type EventoReacaoAtiva } from '@/lib/omni/reacoesAtivas';
+import { useDice3DStore } from '@/stores/useDice3DStore';
+import { cn } from '@/lib/utils';
 
 interface ReacaoManualEmCurso {
   janelaId: string;
