@@ -100,10 +100,10 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
           </div>
           {a.teste === 'disputa' && <div className="grid grid-cols-2 gap-2">
             <label className="text-xs">Perícia do usuário<select aria-label="Perícia do usuário" className={sel} value={a.pericia_usuario ?? 'atletismo'} onChange={e => set(i, { pericia_usuario: e.target.value })}>
-              {ORDEM_PERICIAS.map(key => <option key={key} value={key.toLocaleLowerCase()}>{ROTULOS_PERICIAS[key]}</option>)}
+              {ORDEM_PERICIAS.map(key => <option key={key} value={ROTULOS_PERICIAS[key]}>{ROTULOS_PERICIAS[key]}</option>)}
             </select></label>
             <label className="text-xs">Perícias possíveis do alvo<select aria-label="Perícias possíveis do alvo" className={sel} multiple value={a.pericias_alvo ?? ['atletismo', 'acrobacia']} onChange={e => set(i, { pericias_alvo: Array.from(e.target.selectedOptions, option => option.value) })}>
-              {ORDEM_PERICIAS.map(key => <option key={key} value={key.toLocaleLowerCase()}>{ROTULOS_PERICIAS[key]}</option>)}
+              {ORDEM_PERICIAS.map(key => <option key={key} value={ROTULOS_PERICIAS[key]}>{ROTULOS_PERICIAS[key]}</option>)}
             </select><span className="text-xs text-muted-foreground">Selecione uma ou mais opções; o alvo usa a perícia de maior bônus. Empate favorece o alvo.</span></label>
           </div>}
           {a.teste === 'tr' && <EditorDesfechosTR acao={a} onChange={p => set(i, p)} />}
