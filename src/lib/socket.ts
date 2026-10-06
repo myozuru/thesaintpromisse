@@ -70,5 +70,5 @@ export type WorldSlice =
   | 'tempTemplates'
   | 'fog'
   | 'worldMap'
-  | 'worldBosses';
-
+  | 'worldBosses'
+  | 'worldBossesMaster';

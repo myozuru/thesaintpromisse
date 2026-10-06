@@ -9,11 +9,13 @@
 - A auditoria de responsividade separa `qtd_concentrando` das chaves implementadas, pois o modelo ainda não persiste concentração. O hint continua declarando a lacuna; concentração não é inferida de `lastSpellUsedId` ou de sustentação.
 - O slice compartilhado `profiles` agora publica apenas `id`, `name`, `avatar` e `createdAt`. Senhas permanecem locais; payloads antigos que ainda tragam `password` não sobrescrevem a senha local nem importam uma senha remota.
 - A migration `20261006020000_remove_profile_passwords_from_shared_snapshot.sql` remove o campo `password` do snapshot antigo já persistido na tabela compartilhada.
+- O sync de Chefes separa a ficha completa (`worldBossesMaster`) da projeção pública (`worldBosses`). A projeção remove Chefes não publicados, marcadores correspondentes, atributos sem revelação, resistências/fragilidades ocultas, habilidades não reveladas, tática, segredos e recompensas. O estado local do Mestre continua completo.
+- A migration `20261006030000_split_world_boss_visibility.sql` copia a linha antiga para `worldBossesMaster`, limpa a linha pública e limita leitura/escrita da fatia privada a contas Master; somente Mestres podem escrever qualquer uma das duas fatias de Chefes.
 
 ## Validação
 
-- Suíte completa: 213 arquivos e 4.716 testes aprovados após a correção de sincronização de perfis.
-- Testes focados de privacidade de perfis e privacidade de logs: 2 arquivos e 5 testes aprovados.
+- Suíte completa: 214 arquivos e 4.718 testes aprovados após as correções de privacidade de perfil e Chefes.
+- Testes focados de privacidade de perfil, ficha de Chefe e logs: 3 arquivos e 7 testes aprovados.
 - Typecheck e revisão final do diff executados antes do commit.
 
 ## Privacidade de inimigos ainda não corrigida
@@ -23,9 +25,12 @@ O teste de papel protege o que os componentes exibem, mas não remove dados do n
 Para fechar essa exposição sem quebrar ataques e TRs executados nos clientes, ainda é necessário separar projeções públicas e dados completos do Mestre, mover a avaliação de combate que depende de valores secretos para um fluxo autorizado, aplicar a política no banco e remover/atualizar o servidor Socket.IO externo. A implementação desse servidor não está neste repositório. Portanto, **a Etapa 24 não certifica privacidade de NPCs** e a limitação da Etapa 22 continua aberta.
 
 Também não houve aplicação da migration ao Supabase nem teste real de RLS neste ambiente: `supabase` CLI e `psql` não estão instalados.
+O teste de integração com Supabase precisa confirmar que um Player não consegue selecionar, inserir ou atualizar `worldBossesMaster`, enquanto um Master lê a cópia completa e os jogadores recebem somente a fatia `worldBosses` projetada.
 
-## Outra fronteira de privacidade corrigida
+## Fronteiras de privacidade corrigidas
 
 Antes, `pickProfiles` devolvia objetos completos do armazenamento local. Como `PlayerProfile` contém a senha usada para proteger o perfil local, esse valor seguia para Socket.IO, broadcast e persistência em `realtime_world`. A projeção agora remove a senha em todos os emits derivados de `pickProfiles`; a recepção valida os campos públicos e preserva apenas a senha que já existia naquele navegador. A migration limpa o valor legado da linha `profiles` quando aplicada.
 
-Esta correção não protege contra cópias antigas ainda retidas em memória por um servidor Socket.IO externo que não está neste repositório. A exposição principal de CD/bônus de inimigos pelo slice `characters` também permanece aberta e exige transporte privado mais resolução de combate autorizada.
+O mesmo princípio agora se aplica às fichas do Mapa do Mundo: os campos já marcados como ocultos são retirados antes do broadcast, da chamada Socket.IO e da persistência pública. Contas Player também filtram dados antigos que ainda cheguem ao estado da aplicação.
+
+Estas migrations ainda precisam ser aplicadas no Supabase. Cópias antigas retidas em memória por um servidor Socket.IO externo que não está neste repositório exigem atualização/reinício desse servidor. A exposição principal de CD/bônus de inimigos pelo slice `characters` continua aberta e ainda exige transporte privado mais resolução de combate autorizada.

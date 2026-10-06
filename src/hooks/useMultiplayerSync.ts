@@ -8,6 +8,7 @@ import { mergeInventory } from '@/lib/omni/inventorySync';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { mergeIncomingCharacters, pickNewestPerCharacter, stampLocalChanges, withStamps } from '@/lib/charSyncStamps';
 import { mergeSyncedProfiles, projectProfilesForSync } from '@/lib/profileSync';
+import { projectBossesForPlayers } from '@/lib/bosses';
 import { useEffect } from 'react';
 import { getSocket, type WorldSlice } from '@/lib/socket';
 import { useCharacterStore } from '@/stores/useCharacterStore';
@@ -398,6 +399,11 @@ function aplicarRemoteInterno(slice: WorldSlice, data: unknown) {
       if (Array.isArray(incoming.logs)) useLogStore.setState({ ...incoming, logs: mergePublicLogs(useLogStore.getState().logs, incoming.logs, useRoleStore.getState().role === 'MASTER') });
     } else if (slice === 'profiles' && Array.isArray(data)) {
       useProfileStore.setState({ profiles: mergeSyncedProfiles(useProfileStore.getState().profiles, data) });
+    } else if (slice === 'worldBossesMaster' && data && typeof data === 'object') {
+      const d = data as { bosses?: unknown; worldMarkers?: unknown };
+      if (d.bosses && typeof d.bosses === 'object' && Array.isArray(d.worldMarkers)) {
+        useBossStore.setState({ bosses: d.bosses as never, worldMarkers: d.worldMarkers as never });
+      }
     } else if (slice === 'money' && data && typeof data === 'object') {
       const m = data as { currencies?: unknown; wallets?: unknown; invites?: unknown; transactions?: unknown };
       const patch: Record<string, unknown> = {};
@@ -505,13 +511,13 @@ function aplicarRemoteInterno(slice: WorldSlice, data: unknown) {
       useBossStore.setState({ worldMap: d.worldMap ?? null, ...(d.worldBackgroundColor ? { worldBackgroundColor: d.worldBackgroundColor } : {}) });
     }
     else if (slice === 'worldBosses' && data && typeof data === 'object') {
-      // Jogadores precisam dos marcadores e das fichas para abrir os chefes no mapa;
-      // BossSheet aplica a revelação individual de cada informação.
+      // O payload público já vem projetado. Falha fechado também para snapshots
+      // antigos recebidos pelo cliente; Mestres usam a fatia privada separada.
+      if (useRoleStore.getState().role === 'MASTER') return;
       const d = data as { bosses?: unknown; worldMarkers?: unknown };
-      useBossStore.setState({
-        ...(d.bosses && typeof d.bosses === 'object' ? { bosses: d.bosses as never } : {}),
-        ...(Array.isArray(d.worldMarkers) ? { worldMarkers: d.worldMarkers as never } : {}),
-      });
+      if (d.bosses && typeof d.bosses === 'object' && Array.isArray(d.worldMarkers)) {
+        useBossStore.setState(projectBossesForPlayers(d.bosses as never, d.worldMarkers as never[]) as never);
+      }
     }
     else if (slice === 'fog' && data && typeof data === 'object') {
       const d = data as { walls?: unknown; doors?: unknown; lights?: unknown };
@@ -561,7 +567,7 @@ export function useMultiplayerSync() {
     });
     worldBus.on('broadcast', { event: 'slice' }, ({ payload }) => {
       const p = payload as { clientId?: string; slice?: WorldSlice; data?: unknown } | null;
-      if (!p || p.clientId === clientId || !p.slice) return;
+      if (!p || p.clientId === clientId || !p.slice || p.slice === 'worldBossesMaster') return;
       applyRemote(p.slice, p.data);
     });
     worldBus.on('broadcast', { event: 'amizade' }, ({ payload }) => {
@@ -818,11 +824,22 @@ export function useMultiplayerSync() {
     (socket as unknown as { emit: typeof socket.emit }).emit = ((event: string, ...args: unknown[]) => {
       if (event === 'state:update' && args[0] && typeof args[0] === 'object') {
         const a = args[0] as { slice?: WorldSlice; data?: unknown };
+        if (a.slice === 'worldBossesMaster') return socket;
         if (a.slice) {
+          let outgoing = a;
+          if (a.slice === 'worldBosses') {
+            if (useRoleStore.getState().role === 'MASTER') persistSlice('worldBossesMaster', a.data);
+            const source = a.data as { bosses?: unknown; worldMarkers?: unknown } | null;
+            const projected = source?.bosses && typeof source.bosses === 'object' && Array.isArray(source.worldMarkers)
+              ? projectBossesForPlayers(source.bosses as never, source.worldMarkers as never[])
+              : { bosses: {}, worldMarkers: [] };
+            outgoing = { ...a, data: projected };
+          }
           try {
-            void worldBus.send({ type: 'broadcast', event: 'slice', payload: { clientId, slice: a.slice, data: a.data } });
+            void worldBus.send({ type: 'broadcast', event: 'slice', payload: { clientId, slice: outgoing.slice, data: outgoing.data } });
           } catch (err) { /* ignore */ }
-          persistSlice(a.slice, a.data);
+          persistSlice(outgoing.slice!, outgoing.data);
+          if (outgoing !== a) args[0] = outgoing;
         }
       }
       return origEmit(event as never, ...(args as never[]));
@@ -837,9 +854,29 @@ export function useMultiplayerSync() {
       const migrationKey = 'rpg-temp-templates-cloud-migrated-v1';
       const shouldMigrateLocal = localStorage.getItem(migrationKey) !== 'true';
       const mergedTemplates = shouldMigrateLocal ? mergeTempTemplates(localTemplates, remoteTemplates) : remoteTemplates;
+      const publicBossRow = (data ?? []).find((row) => row.slice === 'worldBosses');
+      const privateBossRow = (data ?? []).find((row) => row.slice === 'worldBossesMaster');
       for (const row of data ?? []) {
-        if (row.slice === 'tempTemplates') continue;
+        if (row.slice === 'tempTemplates' || row.slice === 'worldBosses' || row.slice === 'worldBossesMaster') continue;
         if (row.data !== null) applyRemote(row.slice as WorldSlice, row.data);
+      }
+      if (privateBossRow?.data) {
+        applyRemote('worldBossesMaster', privateBossRow.data);
+        const masterBossState = useBossStore.getState();
+        socket.emit('state:update', {
+          slice: 'worldBosses',
+          data: { bosses: masterBossState.bosses, worldMarkers: masterBossState.worldMarkers },
+        });
+      } else if (useRoleStore.getState().role !== 'MASTER' && publicBossRow?.data) {
+        applyRemote('worldBosses', publicBossRow.data);
+      } else if (useRoleStore.getState().role === 'MASTER') {
+        const masterBossState = useBossStore.getState();
+        if (Object.keys(masterBossState.bosses).length) {
+          socket.emit('state:update', {
+            slice: 'worldBosses',
+            data: { bosses: masterBossState.bosses, worldMarkers: masterBossState.worldMarkers },
+          });
+        }
       }
       const inventory = useInventoryStore.getState();
       if (Object.keys(inventory.items).length || Object.keys(inventory.deleted).length) {
@@ -979,6 +1016,7 @@ export function useMultiplayerSync() {
 
 
     const onUpdate = ({ slice, data }: { slice: WorldSlice; data: unknown }) => {
+      if (slice === 'worldBossesMaster') return;
       applyRemote(slice, data);
     };
 
@@ -1007,6 +1045,15 @@ export function useMultiplayerSync() {
         const next = (payload.new as { data?: unknown } | null)?.data;
         if (shouldIgnoreRemoteMapScene()) return;
         if (isMapSceneSync(next) && !sameMapScene(next, pickMapScene())) applyRemote('mapScene', next);
+      })
+      .subscribe();
+
+    // O RLS da tabela entrega esta linha somente a contas com papel Master.
+    const cloudMasterBossChannel = supabase
+      .channel('private-master-world-bosses')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'realtime_world', filter: 'slice=eq.worldBossesMaster' }, (payload) => {
+        const next = (payload.new as { data?: unknown } | null)?.data;
+        if (next && useRoleStore.getState().role === 'MASTER') applyRemote('worldBossesMaster', next);
       })
       .subscribe();
 
@@ -1121,9 +1168,19 @@ export function useMultiplayerSync() {
       socket.emit('state:update', { slice: 'items', data: next });
     });
 
-    // Mapa do mundo, marcadores e fichas vão para todos; a ficha filtra cada campo revelado aos jogadores.
+    // Mapa do mundo é público; fichas de chefes são projetadas para jogadores,
+    // enquanto o snapshot completo fica na fatia privada worldBossesMaster.
     const pickWorldMap = (st: ReturnType<typeof useBossStore.getState>) => ({ worldMap: st.worldMap, worldBackgroundColor: st.worldBackgroundColor });
     const pickWorldBosses = (st: ReturnType<typeof useBossStore.getState>) => ({ bosses: st.bosses, worldMarkers: st.worldMarkers });
+    const sanitizeLocalBossesForPlayer = () => {
+      if (useRoleStore.getState().role !== 'PLAYER') return;
+      const state = useBossStore.getState();
+      applyRemote('worldBosses', { bosses: state.bosses, worldMarkers: state.worldMarkers });
+    };
+    sanitizeLocalBossesForPlayer();
+    const unsubRole = useRoleStore.subscribe((state) => {
+      if (state.role === 'PLAYER') sanitizeLocalBossesForPlayer();
+    });
     let lastWorldMap = JSON.stringify(pickWorldMap(useBossStore.getState()));
     let lastWorldBosses = JSON.stringify(pickWorldBosses(useBossStore.getState()));
     const unsubWorld = useBossStore.subscribe((state) => {
@@ -1366,6 +1423,7 @@ export function useMultiplayerSync() {
       (socket as unknown as { emit: typeof socket.emit }).emit = origEmit as typeof socket.emit;
       void supabase.removeChannel(cloudMapChannel);
       void supabase.removeChannel(cloudAssetChannel);
+      void supabase.removeChannel(cloudMasterBossChannel);
       window.removeEventListener('amizade:send', onAmizadeSend);
       window.removeEventListener('omni-reaction:send', onOmniReactionSend);
       window.removeEventListener('reaction-prompt:send', onReactionPromptSend);
@@ -1387,6 +1445,7 @@ export function useMultiplayerSync() {
       unsubItems();
       unsubCalendar();
       unsubWorld();
+      unsubRole();
       unsubProposals();
       unsubEsts();
       unsubDiscounts();

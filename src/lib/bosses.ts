@@ -205,3 +205,82 @@ export function canSeeField(boss: Boss, field: BossRevealField, isMaster: boolea
   if (isMaster) return true;
   return boss.revelado[field] === true;
 }
+
+export interface BossWorldMarkerProjection {
+  id: string;
+  bossId: string;
+  x: number;
+  y: number;
+}
+
+/** Projeta a ficha exatamente no que o contrato de revelação permite ao player. */
+export function projectBossForPlayers(boss: Boss): Boss | null {
+  if (!boss.visivel) return null;
+
+  const revealed = (field: BossRevealField) => canSeeField(boss, field, false);
+  const revealedItems = Object.fromEntries(
+    Object.entries(boss.itemRevelado ?? {}).filter(([, isRevealed]) => isRevealed === true),
+  );
+  const revealedRdTypes = Object.fromEntries(
+    Object.entries(boss.rdTipoRevelado ?? {}).filter(([, isRevealed]) => isRevealed === true),
+  ) as Partial<Record<DamageType, boolean>>;
+  const revealedItemsOf = (items: string[], prefix: string) =>
+    items.filter((item) => revealedItems[`${prefix}:${item}`] === true);
+  const publicItemFlags: Record<string, boolean> = {};
+  for (const [key, value] of Object.entries(revealedItems)) publicItemFlags[key] = value === true;
+
+  return {
+    id: boss.id,
+    nome: boss.nome,
+    titulo: boss.titulo,
+    retrato: revealed('retrato') ? boss.retrato : '',
+    ...(revealed('retrato') ? {
+      retratoZoom: boss.retratoZoom,
+      retratoX: boss.retratoX,
+      retratoY: boss.retratoY,
+    } : {}),
+    nd: revealed('nd') ? boss.nd : 0,
+    patamar: revealed('patamar') ? boss.patamar : 'Lacaio',
+    estado: revealed('estado') ? boss.estado : 'ATIVO',
+    pv: revealed('pv') ? boss.pv : 0,
+    pvMax: revealed('pvMax') ? boss.pvMax : 0,
+    defesa: revealed('defesa') ? boss.defesa : 0,
+    rdGeral: revealed('rd') ? boss.rdGeral : 0,
+    rdPorTipo: Object.fromEntries(
+      Object.entries(boss.rdPorTipo ?? {}).filter(([type]) => revealedRdTypes[type as DamageType] === true),
+    ),
+    rdTipoRevelado: revealedRdTypes,
+    fraquezas: revealed('fraquezas') ? revealedItemsOf(boss.fraquezas, 'fraq') as DamageType[] : [],
+    resistencias: revealed('resistencias') ? revealedItemsOf(boss.resistencias, 'res') as DamageType[] : [],
+    imunidades: revealed('imunidades') ? revealedItemsOf(boss.imunidades ?? [], 'imu') : [],
+    itemRevelado: publicItemFlags,
+    descricao: revealed('descricao') ? boss.descricao : '',
+    tamanho: revealed('tamanho') ? boss.tamanho : '',
+    tipo: revealed('tipo') ? boss.tipo : '',
+    tatica: '',
+    habilidades: boss.habilidades.filter((ability) => ability.revelada === true),
+    segredos: '',
+    recompensas: '',
+    visivel: true,
+    revelado: { ...boss.revelado },
+    createdAt: boss.createdAt,
+    updatedAt: boss.updatedAt,
+  };
+}
+
+/** Remove fichas não publicadas e marcadores que apontam para elas. */
+export function projectBossesForPlayers(
+  bosses: Record<string, Boss>,
+  markers: readonly BossWorldMarkerProjection[],
+): { bosses: Record<string, Boss>; worldMarkers: BossWorldMarkerProjection[] } {
+  const publicBosses: Record<string, Boss> = {};
+  for (const [id, boss] of Object.entries(bosses)) {
+    const projected = projectBossForPlayers(boss);
+    if (projected) publicBosses[id] = projected;
+  }
+  const publicIds = new Set(Object.keys(publicBosses));
+  return {
+    bosses: publicBosses,
+    worldMarkers: markers.filter((marker) => publicIds.has(marker.bossId)).map((marker) => ({ ...marker })),
+  };
+}
