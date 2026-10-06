@@ -21,6 +21,8 @@ import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { avaliarFormula } from './parser';
 import { montarVariaveisDoPersonagem } from './resolvedor';
 import { canonicalizarChave } from './keyAliases';
+import { resolverAcumuloOmni } from './omniBridge';
+import type { OmniModifierContribution } from './omniBridge';
 
 export interface PassivaDerivada {
   skillBonuses: Record<string, number>;
@@ -39,6 +41,7 @@ export function derivarPassivasContinuas(c: Character | null | undefined): Passi
     peReductions: [],
     immunities: [],
   };
+  const bonusPericiaPorFonte: Record<string, OmniModifierContribution[]> = {};
 
   // Bag de variáveis com flags como `descoberto`, `vendado`, atributos, etc.
   let variaveis: Record<string, number> | null = null;
@@ -112,13 +115,20 @@ export function derivarPassivasContinuas(c: Character | null | undefined): Passi
           eff.type === 'SUBTRAIR' ? -Math.round(valor) :
           eff.type === 'ADICIONAR' ? Math.round(valor) :
           Math.round(valor); // DEFINIR: trata como bônus absoluto
-        out.skillBonuses[sub] = (out.skillBonuses[sub] ?? 0) + delta;
+        (bonusPericiaPorFonte[sub] ??= []).push({ source: `✦ ${sourceName}`, delta });
         continue;
       }
 
       // Outros caminhos (hp/pe/ca/fadiga/exaustão/etc.) NÃO viram passiva
       // contínua — recursos persistentes só mudam via gatilho ou ação.
     }
+  }
+
+  // A condição de cada passiva foi reavaliada acima em toda consulta. Entre
+  // as fontes ainda ativas, bônus da mesma perícia usam o maior e penalidades
+  // continuam cumulativas.
+  for (const [pericia, contribuicoes] of Object.entries(bonusPericiaPorFonte)) {
+    out.skillBonuses[pericia] = resolverAcumuloOmni(contribuicoes);
   }
 
   return out;
