@@ -69,7 +69,7 @@ function acaoParaComando(a: AcaoNatural): { comando?: string; erro?: string; aft
   if (m) return { comando: `somar ${m[1]} em contador_${m[2]}${m[3] ? ` ate ${m[3]}` : ''}${m[4] ? ' por_fonte' : ''}${m[5] ? ` teto_aliado ${m[5]} por ${m[6]}` : ''}`, afterDamage: true, contador:true };
   // Dano escalonado: "causar 1d4 de dano psíquico por contador_rancor" → (N × cargas)dM.
   m = n.match(/^causar\s+(\d*)d(\d+)\s+(?:de\s+)?dano\s+([a-z_]+)\s+por\s+contador_([a-z0-9_]+)(?:\s+(?:em|no|na)\s+(usuario|alvo))?$/);
-  if (m) { const q = Number(m[1] || 1); return { comando: `subtrair (${q === 1 ? '' : `${q}*`}usuario.contador_${m[4]})d${m[2]} em ${m[5] ?? 'alvo'}.vida tipo ${m[3]}` }; }
+  if (m) { const q = Number(m[1] || 1); return { comando: `subtrair (${q === 1 ? '' : `${q}*`}@USUARIO.contador_${m[4]})d${m[2]} em ${m[5] ?? 'alvo'}.vida tipo ${m[3]}` }; }
   m = n.match(/^causar\s+(.+?)\s+(?:de\s+)?dano\s+([a-z_]+)(?:\s+(?:em|no|na)\s+(usuario|alvo))?$/);
   if (m) return { comando: `subtrair ${m[1]} em ${m[3] ?? 'alvo'}.vida tipo ${m[2]}` };
   m = n.match(/^curar\s+(.+?)\s+(?:de\s+)?(vida|pv|pe)(?:\s+(?:em|no|na))?\s+(usuario|alvo)$/);

@@ -11,3 +11,4 @@
 - Chaves genéricas do OMNI (gatilho "aliado sofre dano" com distância, contador com teto por aliado, consumo em dano, condicao_rodadas): `python tests/browser/omni_contadores.py` — passivas/fichas/peças só no navegador, gravações bloqueadas.
 - Ações ativas OMNI (TR ramificado, puxão, condição, consumo de cargas): `python tests/browser/acoes_ativas.py` cria ficha/item só no navegador e usa Vingança Agulhada e Corte da Injustiça pelo painel de ataque.
 - Reações em testes do Mestre: `python tests/browser/omni_reacoes_testes.py` — pedido de TR com "quem força o teste", reação dá bônus, anula (sucesso garantido) ou passa; sem origem não abre.
+- Frases naturais em ataque real: `python tests/browser/omni_texto_natural.py` — "ao acertar cac então aplicar condição…" e "causar 1d4 de dano psíquico por contador_rancor" (3 cargas → 3d4; à distância não dispara).
