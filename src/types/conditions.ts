@@ -63,6 +63,17 @@ export const ALL_CONDITIONS: ConditionDef[] = [
 //  - 'ate_passar_tr'   → não tem prazo; só sai quando o alvo passar no TR.
 export type ConditionDurationMode = 'ate_acabar' | 'tr_todo_round' | 'ate_passar_tr';
 
+/** Uma fonte ativa de aplicação; guarda sua duração própria para renovação e remoção exatas. */
+export interface ConditionSourceApplication {
+  applicationId: string;
+  sourceCharId?: string;
+  sourceCharName?: string;
+  sourceEntityId?: string;
+  sourceInstanceId?: string;
+  remainingTurns: number;
+  remainingRounds: number;
+}
+
 export interface ActiveCondition {
   id: string;
   conditionId: string;
@@ -75,6 +86,12 @@ export interface ActiveCondition {
   sourceCharName?: string;
   /** Origem identificada para gatilhos; não é inferida pelo nome. */
   sourceCharId?: string;
+  /** ID da entidade que aplicou a condição (arma, item, talento ou feitiço). */
+  sourceEntityId?: string;
+  /** ID da cópia específica da fonte no inventário, quando houver. */
+  sourceInstanceId?: string;
+  /** Aplicações ativas individuais; dados antigos continuam válidos sem este campo. */
+  sourceApplications?: ConditionSourceApplication[];
   // === Sistema de duração estruturada (opcional para compat com fichas antigas) ===
   durationMode?: ConditionDurationMode;
   /** CD do teste de fim de condição (modos *_tr). */

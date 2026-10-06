@@ -161,7 +161,10 @@ export function encerrarSustentacaoAtiva(charId: string, id: string): void {
   const store = useCharacterStore.getState(), u = store.characters.find(c => c.id === charId);
   const ativo = u?.omniSustentacoes?.find(s => s.id === id);
   if (!u || !ativo) return;
-  for (const c of ativo.condicoes) store.removeCondition(c.charId, c.id);
+  for (const c of ativo.condicoes) {
+    if (c.sourceEntityId) store.removeConditionsFromSource(c.charId, c.sourceEntityId, c.sourceInstanceId);
+    else store.removeCondition(c.charId, c.id);
+  }
   store.updateCharacter(charId, { omniSustentacoes: u.omniSustentacoes!.filter(s => s.id !== id) });
   useLogStore.getState().addLog('combat', `⏳ ${u.name}: ${ativo.nome} deixou de ser sustentada.`);
 }
@@ -173,7 +176,12 @@ export function inicioTurnoSustentacoesAtivas(charId: string): void {
     const store = useCharacterStore.getState(), u = store.characters.find(c => c.id === charId);
     if (!u) return;
     if (!u.omniSustentacoes?.some(s => s.id === ativo.id)) continue;
-    if (!ativo.condicoes.some(c => store.characters.find(x => x.id === c.charId)?.activeConditions?.some(a => a.id === c.id)) || !Number.isSafeInteger(ativo.pePorTurno) || ativo.pePorTurno < 1) { encerrarSustentacaoAtiva(charId, ativo.id); continue; }
+    if (!ativo.condicoes.some(c => store.characters.find(x => x.id === c.charId)?.activeConditions?.some(a => {
+      if (a.id !== c.id) return false;
+      if (!c.sourceEntityId) return true;
+      return a.sourceApplications?.some(source => source.sourceEntityId === c.sourceEntityId
+        && (!c.sourceInstanceId || source.sourceInstanceId === c.sourceInstanceId)) ?? false;
+    })) || !Number.isSafeInteger(ativo.pePorTurno) || ativo.pePorTurno < 1) { encerrarSustentacaoAtiva(charId, ativo.id); continue; }
     if ((u.peCurrent ?? 0) + (u.tempPE ?? 0) < ativo.pePorTurno) { encerrarSustentacaoAtiva(charId, ativo.id); continue; }
     const temp = Math.min(u.tempPE ?? 0, ativo.pePorTurno);
     store.updateCharacter(charId, { tempPE: (u.tempPE ?? 0) - temp, peCurrent: (u.peCurrent ?? 0) - (ativo.pePorTurno - temp) });

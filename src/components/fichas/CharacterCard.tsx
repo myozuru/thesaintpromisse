@@ -644,6 +644,8 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
           itemVars,
           resultados,
           sourceName: nome,
+          sourceEntityId: instance?.entity.id,
+          sourceInstanceId: instance?.instanceId,
         });
         resultados.push(r.aplicado);
         const recipiente =

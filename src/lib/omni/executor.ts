@@ -72,6 +72,9 @@ export interface ContextoRuntime {
   profundidade?: number;
   /** Origem do disparo (para log). */
   origemNome?: string;
+  /** Identidade persistente da entidade e da cópia que originaram a condição. */
+  sourceEntityId?: string;
+  sourceInstanceId?: string;
   /**
    * Scratchpad por bloco — id do último redutor de PE criado via REDUZIR_PE
    * dentro deste bloco, para que ESCOPO_* subsequentes anexem filtros a ele.
@@ -290,7 +293,7 @@ function executarAcao(a: AcaoLogica, ctx: ContextoRuntime, log: (m: string) => v
         const def = resolverCondicaoOmni(a.condicao);
         const conditionId = def?.id ?? a.condicao;
         const instanceId = crypto.randomUUID();
-        useCharacterStore.getState().addCondition(alvoChar.id, { id: instanceId, conditionId, name: def?.name ?? a.condicao, icon: def?.icon ?? '✨', remainingTurns: -1, remainingRounds: -1, sourceCharId: ctx.usuario?.id, sourceCharName: nomeOrigem });
+        useCharacterStore.getState().addCondition(alvoChar.id, { id: instanceId, conditionId, name: def?.name ?? a.condicao, icon: def?.icon ?? '✨', remainingTurns: -1, remainingRounds: -1, sourceCharId: ctx.usuario?.id, sourceCharName: nomeOrigem, sourceEntityId: ctx.sourceEntityId, sourceInstanceId: ctx.sourceInstanceId });
         if (!useCharacterStore.getState().characters.find(c => c.id === alvoChar.id)?.activeConditions.some(c => c.id === instanceId)) break;
         // Registra como efeito ativo no runtime (visualização + expiração).
         const fakeEnt: EntidadeOmni = {
@@ -681,6 +684,7 @@ export function executarGatilho(
     ...ctx,
     evento,
     origemNome: ctx.origemNome ?? entidade.nome,
+    sourceEntityId: entidade.id,
     profundidade: profundidade + 1,
   };
 

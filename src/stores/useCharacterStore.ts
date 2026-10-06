@@ -13,7 +13,7 @@ import { luaReducao, quebraPostura } from '@/lib/posturas';
 import { arsenalTrocaLivreDisponivel, arsenalBonusAoTrocar } from '@/lib/arsenalCiclico';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { normalizeConditionExpiry } from '@/types/conditions';
+import { normalizeConditionExpiry, type ConditionSourceApplication } from '@/types/conditions';
 import { dispararGatilhoEfeitosItens } from '@/lib/omni/triggerEfeitos';
 import { temImunidade as omniTemImunidade } from '@/lib/omni/immunity';
 import { useLogStore } from '@/stores/useLogStore';
@@ -125,13 +125,36 @@ function sameConditionKind(a: ActiveCondition, b: ActiveCondition): boolean {
 function normalizeActiveConditions(conditions: ActiveCondition[] | undefined): ActiveCondition[] {
   const unique: ActiveCondition[] = [];
   for (const rawCondition of conditions ?? []) {
-    const condition = { ...rawCondition, ...normalizeConditionExpiry(rawCondition) };
+    const idadeValida = Number.isSafeInteger(rawCondition.elapsedRounds) && (rawCondition.elapsedRounds ?? -1) >= 0;
+    const condition = { ...rawCondition, elapsedRounds: idadeValida ? rawCondition.elapsedRounds : undefined,
+      ...normalizeConditionExpiry(rawCondition) };
     const severity = conditionSeverity(condition);
     const alreadyCovered = unique.some((active) =>
       sameConditionKind(active, condition)
       || (severity > 0 && conditionSeverity(active) >= severity),
     );
-    if (alreadyCovered) continue;
+    if (alreadyCovered) {
+      const sameIndex = unique.findIndex((active) => sameConditionKind(active, condition));
+      if (sameIndex >= 0 && normalizeConditionIdentity(condition.conditionId) === 'condenado') {
+        const existing = unique[sameIndex];
+        const sources = [...(existing.sourceApplications?.length ? existing.sourceApplications : [aplicacaoDaCondicao(existing)])];
+        const incomingSources = condition.sourceApplications?.length ? condition.sourceApplications : [aplicacaoDaCondicao(condition)];
+        for (const incoming of incomingSources) {
+          const sourceIndex = sources.findIndex((source) => chaveDaFonteCondicao(source) === chaveDaFonteCondicao(incoming));
+          if (sourceIndex < 0) sources.push(incoming);
+          else sources[sourceIndex] = {
+            ...sources[sourceIndex],
+            remainingTurns: maiorDuracaoCondicao(sources[sourceIndex].remainingTurns, incoming.remainingTurns),
+            remainingRounds: maiorDuracaoCondicao(sources[sourceIndex].remainingRounds, incoming.remainingRounds),
+          };
+        }
+        const merged = agregarFontesCondicao(existing, sources);
+        const idades = [existing.elapsedRounds, condition.elapsedRounds];
+        const idadeConhecida = idades.every((n) => typeof n === 'number' && Number.isSafeInteger(n) && n >= 0);
+        unique[sameIndex] = { ...merged, elapsedRounds: idadeConhecida ? Math.max(...idades as number[]) : undefined };
+      }
+      continue;
+    }
     const kept = unique.filter((active) =>
       !(severity > 0 && conditionSeverity(active) > 0 && conditionSeverity(active) < severity),
     );
@@ -139,6 +162,62 @@ function normalizeActiveConditions(conditions: ActiveCondition[] | undefined): A
     unique.splice(0, unique.length, ...kept);
   }
   return unique;
+}
+
+/** -1 representa duração indefinida e, portanto, prevalece sobre qualquer prazo finito. */
+function maiorDuracaoCondicao(atual: number, nova: number): number {
+  if (atual === -1 || nova === -1) return -1;
+  const a = Number.isFinite(atual) ? atual : 0;
+  const b = Number.isFinite(nova) ? nova : 0;
+  return Math.max(a, b);
+}
+
+function aplicacaoDaCondicao(condition: ActiveCondition): ConditionSourceApplication {
+  return {
+    applicationId: condition.id,
+    sourceCharId: condition.sourceCharId,
+    sourceCharName: condition.sourceCharName,
+    sourceEntityId: condition.sourceEntityId,
+    sourceInstanceId: condition.sourceInstanceId,
+    remainingTurns: condition.remainingTurns,
+    remainingRounds: condition.remainingRounds,
+  };
+}
+
+function chaveDaFonteCondicao(source: ConditionSourceApplication): string {
+  if (source.sourceInstanceId) return `instancia:${source.sourceInstanceId}`;
+  if (source.sourceEntityId) return `entidade:${source.sourceEntityId}:${source.sourceCharId ?? ''}`;
+  if (source.sourceCharId) return `personagem:${source.sourceCharId}`;
+  return `aplicacao:${source.applicationId}`;
+}
+
+function fonteCondicaoAtiva(source: ConditionSourceApplication): boolean {
+  return (source.remainingTurns === -1 || source.remainingTurns > 0)
+    && (source.remainingRounds === -1 || source.remainingRounds > 0);
+}
+
+function agregarFontesCondicao(condition: ActiveCondition, sources: ConditionSourceApplication[]): ActiveCondition {
+  const ultima = sources[sources.length - 1];
+  return {
+    ...condition,
+    remainingTurns: sources.reduce((max, source) => maiorDuracaoCondicao(max, source.remainingTurns), 0),
+    remainingRounds: sources.reduce((max, source) => maiorDuracaoCondicao(max, source.remainingRounds), 0),
+    sourceCharId: ultima.sourceCharId,
+    sourceCharName: ultima.sourceCharName,
+    sourceEntityId: ultima.sourceEntityId,
+    sourceInstanceId: ultima.sourceInstanceId,
+    sourceApplications: sources,
+  };
+}
+
+function tickAplicacoesCondicao(condition: ActiveCondition, unit: 'turn' | 'round'): ActiveCondition | null {
+  if (!condition.sourceApplications?.length) return null;
+  const sources = condition.sourceApplications.map((source) => {
+    if (unit === 'turn' && source.remainingTurns !== -1) return { ...source, remainingTurns: source.remainingTurns - 1 };
+    if (unit === 'round' && source.remainingRounds !== -1) return { ...source, remainingRounds: source.remainingRounds - 1 };
+    return source;
+  }).filter(fonteCondicaoAtiva);
+  return sources.length ? agregarFontesCondicao(condition, sources) : null;
 }
 
 // ============================================================================
@@ -872,8 +951,11 @@ interface CharacterStore {
   removeBuff: (charId: string, buffId: string) => void;
   /** Remove all sustained buffs cast by a given source character (across every target). */
   removeSustainedBuffsFrom: (sourceCharId: string) => void;
-  addCondition: (charId: string, condition: ActiveCondition) => void;
+  /** Adiciona ou renova uma condição; retorna a ID da instância canônica ativa. */
+  addCondition: (charId: string, condition: ActiveCondition) => string | undefined;
   removeCondition: (charId: string, conditionInstanceId: string) => void;
+  /** Remove somente as aplicações de uma fonte; a condição persiste se outra fonte ainda a sustenta. */
+  removeConditionsFromSource: (charId: string, sourceEntityId: string, sourceInstanceId?: string) => number;
   tickBuffs: (charId: string) => void;
   tickConditions: (charId: string) => void;
   tickAllBuffs: () => void;
@@ -4361,27 +4443,28 @@ export const useCharacterStore = create<CharacterStore>()(
           activeBuffs: (c.activeBuffs || []).filter(b => !(b.isSustained && b.sourceCharId === sourceCharId)),
         })),
       })),
-      addCondition: (charId, condition) => {
+      addCondition: (charId, rawCondition) => {
         const cadeia = capturarCadeiaOmni();
         const target = get().characters.find((c) => c.id === charId);
-        if (!target) return;
+        if (!target) return undefined;
+        const condition = { ...rawCondition, ...normalizeConditionExpiry(rawCondition) };
         // Talento "Atenção Infalível" / outros: bloqueia condições listadas em immunities.
         if (target) {
           if (isSurpresoCondition(condition) && isProtegidoPreAnalise(target, get().characters)) {
             useLogStore.getState().addLog('system', `🛡 ${target.name} não pode ser surpreendido (Pré-Análise).`);
-            return;
+            return undefined;
           }
           const immunities = aggregateTalentBonuses(target).immunities;
           const condNorm = (condition.name ?? '').trim().toLowerCase();
           if (immunities.some((i) => i.trim().toLowerCase() === condNorm)) {
             useLogStore.getState().addLog('system', `🛡 ${target.name} é imune a [${condition.name}] (talento).`);
-            return;
+            return undefined;
           }
           // 🛡 Imunidade Omni nativa (CONCEDER_IMUNIDADE).
           // Bloqueia por id, nome, categoria inteira ou "todas".
           if (omniTemImunidade(target, { id: condition.conditionId, name: condition.name })) {
             useLogStore.getState().addLog('system', `🛡 ${target.name} é imune a [${condition.name}] (Omni).`);
-            return;
+            return undefined;
           }
         }
         const incomingSeverity = conditionSeverity(condition);
@@ -4393,8 +4476,44 @@ export const useCharacterStore = create<CharacterStore>()(
         if (existingCondition) {
           const existingSeverity = conditionSeverity(existingCondition);
           if (sameConditionKind(existingCondition, condition) || existingSeverity >= incomingSeverity) {
+            if (sameConditionKind(existingCondition, condition) && normalizeConditionIdentity(condition.conditionId) === 'condenado') {
+              const sources = existingCondition.sourceApplications?.length
+                ? [...existingCondition.sourceApplications]
+                : [aplicacaoDaCondicao(existingCondition)];
+              const incoming = aplicacaoDaCondicao(condition);
+              const sourceKey = chaveDaFonteCondicao(incoming);
+              const sourceIndex = sources.findIndex((source) => chaveDaFonteCondicao(source) === sourceKey);
+              if (sourceIndex >= 0) {
+                sources[sourceIndex] = {
+                  ...sources[sourceIndex],
+                  applicationId: incoming.applicationId,
+                  remainingTurns: maiorDuracaoCondicao(sources[sourceIndex].remainingTurns, incoming.remainingTurns),
+                  remainingRounds: maiorDuracaoCondicao(sources[sourceIndex].remainingRounds, incoming.remainingRounds),
+                };
+              } else sources.push(incoming);
+              const remainingTurns = sources.reduce((max, source) => maiorDuracaoCondicao(max, source.remainingTurns), 0);
+              const remainingRounds = sources.reduce((max, source) => maiorDuracaoCondicao(max, source.remainingRounds), 0);
+              const estendeu = remainingTurns !== existingCondition.remainingTurns || remainingRounds !== existingCondition.remainingRounds;
+              const renovada: ActiveCondition = {
+                ...agregarFontesCondicao(existingCondition, sources),
+                ...(estendeu ? {
+                  durationMode: condition.durationMode ?? existingCondition.durationMode,
+                  endCD: condition.endCD ?? existingCondition.endCD,
+                  endTrType: condition.endTrType ?? existingCondition.endTrType,
+                } : {}),
+                // O ID e elapsedRounds da instância existente são preservados:
+                // renovar o prazo não reinicia a idade contínua da condição.
+              };
+              set((state) => ({ characters: state.characters.map((c) => c.id === charId
+                ? { ...c, activeConditions: (c.activeConditions ?? []).map((active) => active.id === existingCondition.id ? renovada : active) }
+                : c) }));
+              useLogStore.getState().addLog('system', estendeu
+                ? `⏳ ${target.name}: Condenado renovado; a idade da condição continua em ${existingCondition.elapsedRounds ?? 'desconhecida'} rodada(s).`
+                : `ℹ️ ${target.name} já está sob Condenado; a duração atual foi mantida.`);
+              return existingCondition.id;
+            }
             useLogStore.getState().addLog('system', `ℹ️ ${target.name} já está sob a condição ${existingCondition.name}; ela não se acumula.`);
-            return;
+            return existingCondition.id;
           }
         }
         set((state) => ({
@@ -4403,7 +4522,7 @@ export const useCharacterStore = create<CharacterStore>()(
             const conditions = (c.activeConditions || []).filter((active) =>
               !(incomingSeverity > 0 && conditionSeverity(active) > 0 && conditionSeverity(active) < incomingSeverity),
             );
-            return { ...c, activeConditions: [...conditions, { ...condition, elapsedRounds: 0 }] };
+          return { ...c, activeConditions: [...conditions, { ...condition, elapsedRounds: condition.elapsedRounds ?? 0, sourceApplications: [aplicacaoDaCondicao(condition)] }] };
           }),
         }));
         // ─── Omni-Engine: gatilho de condição recebida ─────────────────────
@@ -4435,10 +4554,31 @@ export const useCharacterStore = create<CharacterStore>()(
             });
           }, 0);
         }
+        return condition.id;
       },
       removeCondition: (charId, conditionInstanceId) => set((state) => ({
         characters: state.characters.map((c) => c.id === charId ? { ...c, activeConditions: (c.activeConditions || []).filter(cd => cd.id !== conditionInstanceId) } : c),
       })),
+      removeConditionsFromSource: (charId, sourceEntityId, sourceInstanceId) => {
+        let removed = 0;
+        set((state) => ({ characters: state.characters.map((c) => {
+          if (c.id !== charId) return c;
+          const activeConditions: ActiveCondition[] = [];
+          for (const condition of c.activeConditions ?? []) {
+            const applications = condition.sourceApplications?.length
+              ? condition.sourceApplications
+              : [aplicacaoDaCondicao(condition)];
+            const remaining = applications.filter((source) =>
+              !(source.sourceEntityId === sourceEntityId && (!sourceInstanceId || source.sourceInstanceId === sourceInstanceId)),
+            );
+            if (remaining.length === applications.length) { activeConditions.push(condition); continue; }
+            removed++;
+            if (remaining.length) activeConditions.push(agregarFontesCondicao(condition, remaining));
+          }
+          return { ...c, activeConditions };
+        }) }));
+        return removed;
+      },
       tickBuffs: (charId) => set((state) => ({
         characters: state.characters.map((c) => {
           if (c.id !== charId) return c;
@@ -4470,8 +4610,10 @@ export const useCharacterStore = create<CharacterStore>()(
         characters: state.characters.map((c) => {
           if (c.id !== charId) return c;
           const conditions = (c.activeConditions || [])
-            .map((cd) => ({ ...cd, remainingTurns: cd.remainingTurns === -1 ? -1 : cd.remainingTurns - 1 }))
-            .filter((cd) => cd.remainingTurns === -1 || cd.remainingTurns > 0);
+            .map((cd) => cd.sourceApplications?.length
+              ? tickAplicacoesCondicao(cd, 'turn')
+              : ({ ...cd, remainingTurns: cd.remainingTurns === -1 ? -1 : cd.remainingTurns - 1 }))
+            .filter((cd): cd is ActiveCondition => !!cd && (cd.remainingTurns === -1 || cd.remainingTurns > 0));
           return { ...c, activeConditions: conditions };
         }),
       })),
@@ -4496,9 +4638,13 @@ export const useCharacterStore = create<CharacterStore>()(
           ...c,
           ...expirarProtecoesOmni(c),
           activeConditions: (c.activeConditions || [])
-            .map((cd) => ({ ...cd, remainingRounds: cd.remainingRounds === -1 ? -1 : cd.remainingRounds - 1,
-              ...(typeof cd.elapsedRounds === 'number' && Number.isFinite(cd.elapsedRounds) && cd.elapsedRounds >= 0 ? { elapsedRounds: cd.elapsedRounds + 1 } : {}) }))
-            .filter((cd) => cd.remainingRounds === -1 || cd.remainingRounds > 0),
+            .map((cd) => {
+              const aged = Number.isSafeInteger(cd.elapsedRounds) && (cd.elapsedRounds ?? -1) >= 0 ? { ...cd, elapsedRounds: cd.elapsedRounds! + 1 } : cd;
+              return cd.sourceApplications?.length
+                ? tickAplicacoesCondicao(aged, 'round')
+                : { ...aged, remainingRounds: aged.remainingRounds === -1 ? -1 : aged.remainingRounds - 1 };
+            })
+            .filter((cd): cd is ActiveCondition => !!cd && (cd.remainingRounds === -1 || cd.remainingRounds > 0)),
         })),
       })),
       resetActions: () => set((state) => ({

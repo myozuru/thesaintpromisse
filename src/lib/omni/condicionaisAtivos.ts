@@ -15,7 +15,7 @@ export function condicoesComNome(c: Character, nome: string): ActiveCondition[] 
 
 /** A instância mais antiga com idade registrada; legadas não têm idade presumida. */
 export function idadeCondicao(c: Character, nome: string): number | undefined {
-  const idades = condicoesComNome(c, nome).map(a => a.elapsedRounds).filter((n): n is number => typeof n === 'number' && Number.isFinite(n) && n >= 0);
+  const idades = condicoesComNome(c, nome).map(a => a.elapsedRounds).filter((n): n is number => typeof n === 'number' && Number.isSafeInteger(n) && n >= 0);
   return idades.length ? Math.max(...idades) : undefined;
 }
 

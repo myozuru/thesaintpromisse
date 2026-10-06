@@ -48,6 +48,9 @@ export interface ExecucaoContexto {
   resultados?: number[];
   /** Nome amigável da entidade-fonte (item/feitiço/talento). */
   sourceName?: string;
+  /** IDs estáveis da fonte e da cópia que concederam o efeito, quando conhecidos. */
+  sourceEntityId?: string;
+  sourceInstanceId?: string;
   /** Snapshot do evento recebido, herdado por branches e subefeitos. */
   dano?: Readonly<Record<string, number>>;
 }
@@ -171,6 +174,8 @@ function executarConditionApply(eff: CombatEffect, ctx: ExecucaoContexto): Execu
       remainingRounds: ca.durationRounds ?? -1,
       sourceCharName: ctx.sourceName,
       sourceCharId: ctx.origemId === null ? undefined : ctx.origemId ?? ctx.usuarioId,
+      sourceEntityId: ctx.sourceEntityId,
+      sourceInstanceId: ctx.sourceInstanceId,
     };
     store.addCondition(targetId, ac);
     return { aplicado: 1, detalhe: `${def.icon} Aplicou ${def.name}` };
@@ -178,11 +183,9 @@ function executarConditionApply(eff: CombatEffect, ctx: ExecucaoContexto): Execu
   // remove: limpa todas as instâncias dessa conditionId no alvo.
   const target = store.characters.find((x) => x.id === targetId);
   if (target?.activeConditions?.length) {
-    const restantes = target.activeConditions.filter((c) => c.conditionId !== def.id);
-    if (restantes.length !== target.activeConditions.length) {
-      store.updateCharacter(targetId, { activeConditions: restantes });
-      return { aplicado: 1, detalhe: `${def.icon} Removeu ${def.name}` };
-    }
+    const removidas = target.activeConditions.filter((c) => c.conditionId === def.id);
+    for (const condition of removidas) store.removeCondition(targetId, condition.id);
+    if (removidas.length) return { aplicado: removidas.length, detalhe: `${def.icon} Removeu ${def.name}` };
   }
   return { aplicado: 0, detalhe: `${def.name} não estava ativa` };
 }

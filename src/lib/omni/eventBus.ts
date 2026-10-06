@@ -65,7 +65,7 @@ export function emitirEventoDaEntidade(ent: EntidadeOmni, evento: GatilhoId, opt
   const cadeia = reservarPassoOmni(opts.cadeia);
   if (!cadeia) return 0;
   return executarNaCadeiaOmni(cadeia, () => {
-    const ctx = { usuario: pegarChar(opts.usuarioId), alvo: pegarChar(opts.alvoId), cena: opts.cena, dano: opts.dano, origemNome: opts.origemNome, profundidade: 0 };
+    const ctx = { usuario: pegarChar(opts.usuarioId), alvo: pegarChar(opts.alvoId), cena: opts.cena, dano: opts.dano, origemNome: opts.origemNome, sourceInstanceId: opts.instanciaId, profundidade: 0 };
     return executarGatilho(ent, evento, ctx) + (opts.usuarioId ? dispararGatilhoEfeitosItens(evento, { usuarioId: opts.usuarioId, alvoId: opts.alvoId, cena: opts.cena, dano: opts.dano, entidade: ent, instanciaId: opts.instanciaId }) : 0);
   });
 }
@@ -84,6 +84,7 @@ function emitirEventoNaCadeia(evento: GatilhoId, opts: EmitirOpts): number {
     cena: opts.cena,
     dano: opts.dano,
     origemNome: opts.origemNome,
+    sourceInstanceId: opts.instanciaId,
     profundidade: 0,
   };
 

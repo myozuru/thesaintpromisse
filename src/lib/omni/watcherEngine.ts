@@ -188,6 +188,8 @@ function processarPersonagemNaCadeia(c: Character, apenasSnapshot: boolean) {
           alvoVars: variaveis,
           itemVars: itemBag,
           sourceName: fresco.nome,
+          sourceEntityId: fresco.id,
+          sourceInstanceId: inst.instanceId,
         });
         if (r.invalido) continue;
         consumiuUso = true;

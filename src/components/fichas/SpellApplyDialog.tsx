@@ -952,7 +952,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
           spell.conditions.forEach(sc => {
             const condDef = ALL_CONDITIONS.find(c => c.id === sc.conditionId);
             if (!condDef) return;
-            const expiry = normalizeConditionExpiry({ conditionId: condDef.id, ...sc });
+            const expiry = normalizeConditionExpiry(sc);
             const mode = expiry.durationMode ?? 'ate_acabar';
             const isAtePassar = mode === 'ate_passar_tr';
             addCondition(ta.id, {
@@ -961,9 +961,10 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
               name: condDef.name,
               icon: condDef.icon,
               remainingTurns: isAtePassar ? -1 : (sc.durationTurns || 1),
-              remainingRounds: sc.durationRounds,
+              remainingRounds: sc.durationRounds > 0 ? sc.durationRounds : -1,
               sourceCharName: source.name,
               sourceCharId: source.id,
+              sourceEntityId: spell.id,
               durationMode: mode,
               endCD: expiry.endCD,
               endTrType: expiry.endTrType,
@@ -1168,7 +1169,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
           const condDef = ALL_CONDITIONS.find(c => c.id === sc.conditionId);
           if (!condDef) return;
           const extraRounds = ts.result === 'crit_fail' ? 1 : 0;
-          const expiry = normalizeConditionExpiry({ conditionId: condDef.id, ...sc });
+          const expiry = normalizeConditionExpiry(sc);
           const mode = expiry.durationMode ?? 'ate_acabar';
           const isAtePassar = mode === 'ate_passar_tr';
           const baseTurns = sc.durationTurns > 0 ? sc.durationTurns : -1;
@@ -1181,6 +1182,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
             remainingRounds: sc.durationRounds > 0 ? sc.durationRounds + extraRounds : -1,
             sourceCharName: source.name,
               sourceCharId: source.id,
+            sourceEntityId: spell.id,
             durationMode: mode,
             endCD: expiry.endCD,
             endTrType: expiry.endTrType,
@@ -1295,7 +1297,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
         spell.conditions.forEach((sc) => {
           const condDef = ALL_CONDITIONS.find(c => c.id === sc.conditionId);
           if (!condDef) return;
-          const expiry = normalizeConditionExpiry({ conditionId: condDef.id, ...sc });
+          const expiry = normalizeConditionExpiry(sc);
           const mode = expiry.durationMode ?? 'ate_acabar';
           const isAtePassar = mode === 'ate_passar_tr';
           addCondition(id, {
@@ -1307,6 +1309,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
             remainingRounds: sc.durationRounds > 0 ? sc.durationRounds : -1,
             sourceCharName: source.name,
               sourceCharId: source.id,
+            sourceEntityId: spell.id,
             durationMode: mode,
             endCD: expiry.endCD,
             endTrType: expiry.endTrType,

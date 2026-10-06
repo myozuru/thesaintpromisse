@@ -207,6 +207,8 @@ export function dispararGatilhoEfeitosItens(
           alvoVars: montarVariaveisAtuais(),
           itemVars: itemBag,
           sourceName: fresco.nome,
+          sourceEntityId: fresco.id,
+          sourceInstanceId: inst.instanceId,
           dano: opts.dano,
         });
         if (r.invalido) continue;

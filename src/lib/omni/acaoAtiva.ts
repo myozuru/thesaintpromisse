@@ -310,7 +310,7 @@ export function podeUsarAtiva(u: Character, alvo: Character | undefined, cfg: Ac
   return { ok: true };
 }
 
-function aplicarEfeitos(u: Character, alvo: Character, efeitos: EfeitoSecundarioAtivo[], fonte: string, planos: PlanoMovimentoAtivo[] = [], sustentadas?: { charId: string; id: string }[], arma?: Weapon): string[] {
+function aplicarEfeitos(u: Character, alvo: Character, efeitos: EfeitoSecundarioAtivo[], fonte: string, planos: PlanoMovimentoAtivo[] = [], sustentadas?: { charId: string; id: string; sourceEntityId?: string; sourceInstanceId?: string }[], arma?: Weapon, sourceEntityId?: string, sourceInstanceId?: string): string[] {
   const notas: string[] = [];
   const store = useCharacterStore.getState();
   for (const [indice, ef] of efeitos.entries()) {
@@ -320,9 +320,12 @@ function aplicarEfeitos(u: Character, alvo: Character, efeitos: EfeitoSecundario
       const ac: ActiveCondition = {
         id: crypto.randomUUID(), conditionId: def.id, name: def.name, icon: def.icon,
         remainingTurns: -1, remainingRounds: sustentadas ? -1 : ef.rodadas > 0 ? ef.rodadas : -1, sourceCharName: fonte, sourceCharId: u.id,
+        sourceEntityId, sourceInstanceId,
       };
-      store.addCondition(alvo.id, ac);
-      if (sustentadas && useCharacterStore.getState().characters.find(c => c.id === alvo.id)?.activeConditions.some(c => c.id === ac.id)) sustentadas.push({ charId: alvo.id, id: ac.id });
+      const canonicalId = store.addCondition(alvo.id, ac);
+      const activeCondition = useCharacterStore.getState().characters.find(c => c.id === alvo.id)?.activeConditions.find(c => c.id === canonicalId);
+      const aplicacaoAtiva = activeCondition?.sourceApplications?.some(source => source.applicationId === ac.id) ?? canonicalId === ac.id;
+      if (sustentadas && canonicalId && aplicacaoAtiva) sustentadas.push({ charId: alvo.id, id: canonicalId, sourceEntityId, sourceInstanceId });
       if (!useCharacterStore.getState().characters.find(c => c.id === alvo.id)?.activeConditions.some(c => c.id === ac.id)) continue;
       notas.push(`${def.icon} ${def.name}${sustentadas ? ' (sustentada)' : ef.rodadas > 0 ? ` (${ef.rodadas} rod.)` : ''}`);
     } else if (ef.tipo === 'remover_condicao') {
@@ -491,7 +494,7 @@ async function executarAcaoAtivaInterna(
   if (ent?.categoria === 'feitico') notificarEventoPersonagem('aoConjurarFeitico', u.id, fonte, { custoPE: p.pe });
   else if (ent?.categoria === 'talento') notificarEventoPersonagem('aoUsarTalento', u.id, fonte);
   const pago = `${p.pe} PE${p.pv ? ` + ${p.pv} PV` : ''}${cargas ? ` + ${cargas} carga(s) de ${p.contador}` : ''}${p.municao ? ` + ${p.municao} munição(ões)` : ''}${p.usosItem ? ` + ${p.usosItem} uso(s) do item` : ''}${p.intensificacoes ? ` · intensificação ${p.intensificacoes}` : ''}`;
-  const sustentadas = p.pePorTurno > 0 ? [] as { charId: string; id: string }[] : undefined;
+  const sustentadas = p.pePorTurno > 0 ? [] as { charId: string; id: string; sourceEntityId?: string; sourceInstanceId?: string }[] : undefined;
 
 
   let danoTotal = 0;
@@ -583,7 +586,7 @@ async function executarAcaoAtivaInterna(
       const recuperado = Math.max(0, (recurso === 'pv' ? depois.hpCurrent : depois.peCurrent) - antes);
       curaTotal += recuperado;
       efeitoAplicado ||= recuperado > 0;
-      const notas = aplicarEfeitos(u, depois, cfg.efeitos ?? [], fonte, movimentos.planos.get(t.id), sustentadas, arma);
+      const notas = aplicarEfeitos(u, depois, cfg.efeitos ?? [], fonte, movimentos.planos.get(t.id), sustentadas, arma, ent?.id, opcoes.instanciaId);
       efeitoAplicado ||= notas.length > 0;
       const dados = r.rolagens.map(d => `${d.notacao} [${d.rolls.join(', ')}] = ${d.total}`).join('; ');
       const msg = `✨ ${u.name} usa ${cfg.nome} (${pago}) em ${t.name}: recupera ${recuperado} ${recurso.toUpperCase()} (valor ${valor}${dados ? '; ' + dados : ''})${notas.length ? ' · ' + notas.join(' · ') : ''}.`;
@@ -649,7 +652,7 @@ async function executarAcaoAtivaInterna(
     const inicioPlanos = grauTR && indicesDesfecho[grauTR] !== undefined ? indicesDesfecho[grauTR]! : 0;
     const todosPlanos = movimentos.planos.get(t.id) ?? [];
     const planosResultado = efeitosAplicados.map((_, i) => { const plano = todosPlanos.find(p => p.indice === inicioPlanos + i); return plano ? { ...plano, indice: i } : undefined; }).filter((p): p is PlanoMovimentoAtivo => !!p);
-    const notas = aplicaEfeitos ? aplicarEfeitos(u, t, efeitosAplicados, fonte, planosResultado, sustentadas, arma) : [];
+    const notas = aplicaEfeitos ? aplicarEfeitos(u, t, efeitosAplicados, fonte, planosResultado, sustentadas, arma, ent?.id, opcoes.instanciaId) : [];
     const partes = [
       cabecalho,
       mods.ativos.length ? `${mods.ativos.length} bloco(s) condicional(is) ativo(s)` : '',

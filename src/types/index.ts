@@ -141,7 +141,7 @@ export type SpellType = 'damage' | 'heal' | 'buff' | 'condition';
 export type SpellActionType = 'bonus' | 'action' | 'reaction' | 'full' | 'rapida' | 'movimento' | 'free';
 
 // Re-export condition types
-export type { ActiveCondition, SpellCondition, SpellLevel, ConditionDef } from './conditions';
+export type { ActiveCondition, ConditionSourceApplication, SpellCondition, SpellLevel, ConditionDef } from './conditions';
 export { ALL_CONDITIONS, SPELL_LEVELS, CONDITION_CATEGORIES } from './conditions';
 
 export interface SpellBuff {
@@ -1013,7 +1013,7 @@ export interface Character {
   /** Incrementado apenas quando um descanso curto/longo é concluído. */
   omniCounterRestCycle?: number;
   /** Custos de manutenção e condições exclusivamente criadas por ações OMNI. */
-  omniSustentacoes?: { id: string; nome: string; pePorTurno: number; condicoes: { charId: string; id: string }[] }[];
+  omniSustentacoes?: { id: string; nome: string; pePorTurno: number; condicoes: { charId: string; id: string; sourceEntityId?: string; sourceInstanceId?: string }[] }[];
   /**
    * Redutores de custo de recurso por chave canônica (ex.: `pe`, `vida`).
    * Aplicados em `gastarPE`/`spellCastPipeline`/`CONSUMIR_RECURSO`,

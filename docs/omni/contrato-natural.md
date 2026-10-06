@@ -1,6 +1,6 @@
 # OMNI natural — contrato e entregas
 
-Estado: etapas 1–13 concluídas no escopo documentado em cada etapa. A linguagem natural ainda não executa no jogo nem está conectada ao salvamento de habilidades. Base inicial examinada: main d2ef673b0e2a92918fa9fd7fac0095733c5b1d68, especificação Texto colado(4) e correções aprovadas na conversa de 05/10/2026. Evidências complementares em inventario-natural.md, diagnostico-execucao.md e documentação das etapas 2–13.
+Estado: etapas 1–14 concluídas localmente no escopo documentado em cada etapa. A linguagem natural ainda não executa no jogo nem está conectada ao salvamento de habilidades. Base inicial examinada: main d2ef673b0e2a92918fa9fd7fac0095733c5b1d68, especificação Texto colado(4) e correções aprovadas na conversa de 05/10/2026. Evidências complementares em inventario-natural.md, diagnostico-execucao.md e documentação das etapas 2–14.
 
 ## Fontes de verdade
 
@@ -44,7 +44,7 @@ Preservar parcelas tipadas, aplicar mitigação individual e consolidar em uma o
 
 Crítico usa multiplicador efetivo da arma nos dados; valores fixos permanecem. Diferenciar dados da arma de resultado já rolado para impedir inclusão duplicada. `ataque_tem_tipo(tipo)` consulta a ocorrência; `parcela_tipo` exige contexto de parcela.
 
-Condenado: idade contínua independente de duração restante; reaplicação usa maior duração e preserva idade. Isso não impõe política universal às demais condições. Preservar proveniência necessária a medo, marcas e remoção por fonte.
+Condenado: idade contínua independente de duração restante; reaplicação usa o maior prazo por fonte e preserva a idade da condição. -1 significa indefinido e prevalece sobre prazos finitos. Aplicações de fontes distintas não duplicam a condição; seus prazos e IDs ficam registrados separadamente, permitindo remover uma fonte sem encerrar outra que continue ativa. Isso não impõe política universal às demais condições. Condições novas começam com idade zero; histórico legado sem idade permanece desconhecido.
 
 Turno pertence à criatura; rodada é global. Momento de decremento e de captura de valores deve ser explícito. Ataques concedidos não geram outros ataques extras, mas mantêm demais efeitos permitidos.
 
@@ -73,7 +73,7 @@ Esta descrição é referência funcional, não exemplo de script já suportado.
 | 11    | Contadores                       | Teto global, ciclos independentes do saldo e gastos nominais                                                |
 | 12    | Perícias e TRs                   | Catálogo real; disputa e resistência distintos                                                              |
 | 13    | Armas e custos                   | IDs, mãos, munição, usos e pagamento completo ou nenhum                                                     |
-| 14    | Condições                        | Proveniência, idade, renovação, término e remoção canônicos                                                 |
+| 14    | Condições                        | Proveniência por fonte, idade conhecida/legada, renovação de Condenado, término por turno/rodada e remoção canônicos |
 | 15    | Dano e cura                      | Parcelas, multiplicador, proteções e ocorrência consolidada                                                 |
 | 16    | Espaço e movimento               | Tokens inequívocos; seleção e execução usam mesma geometria                                                 |
 | 17    | Reações                          | Uma janela; cancelamento/interceptação altera execução pendente                                             |

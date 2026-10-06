@@ -201,7 +201,7 @@ export const useReactionStore = create<ReactionStoreState>((set, get) => ({
     }));
     return true;
   },
-  runReaction: (charId, effect) => {
+  runReaction: <T extends { ok: boolean; reason?: string }>(charId: string, effect: () => T): T | { ok: false; reason: string } => {
     if (!get().consumeReaction(charId)) return { ok: false, reason: 'Sem reação disponível.' };
     const refund = () => {
       // `effect` é síncrono; falha ou exceção devolve apenas o débito acima.

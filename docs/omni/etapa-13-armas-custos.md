@@ -35,6 +35,6 @@ Fichas antigas sem os campos de ID continuam resolvendo a arma pelo nome até se
 
 ## Verificação
 
-Foram aprovados 125 testes direcionados em 8 arquivos sobre instâncias Omni e legadas, seleção no painel, munição e recarga, custos ativos, combate duplo, estilo do arremessador, descarte, armas de duas mãos e réplicas. Mais 44 testes passaram em cinco arquivos de resolução de equipamento e Zona de Risco.
+Foram aprovados 172 testes direcionados em 13 arquivos sobre instâncias Omni e legadas, seleção no painel, munição e recarga, custos ativos, combate duplo, estilo do arremessador, descarte, armas de duas mãos, réplicas, composição de equipamento e Zona de Risco.
 
-`npx tsc --noEmit` ainda falha em quatro erros fora das alterações desta etapa: três avisos TS2783 de `conditionId` duplicado em `src/components/fichas/SpellApplyDialog.tsx` (linhas 955, 1171 e 1298), e o tipo `T` não declarado em `src/stores/useReactionStore.ts` (linha 222). Não apareceu erro TypeScript nos arquivos modificados.
+Na primeira validação desta etapa, `npx tsc --noEmit` ainda apontava três spreads duplicados de `conditionId` em `SpellApplyDialog.tsx` e o tipo `T` não declarado em `useReactionStore.ts`. Os quatro erros foram corrigidos durante a Etapa 14; a validação atual de TypeScript passa.

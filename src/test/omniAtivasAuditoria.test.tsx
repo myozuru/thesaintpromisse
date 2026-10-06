@@ -7,7 +7,7 @@ vi.mock('@/lib/socket', () => ({ getSocket: () => null }));
 vi.mock('@/lib/sounds', async original => Object.fromEntries(Object.keys(await original<Record<string, unknown>>()).map(k => [k, () => {}])));
 import { ficha, montarMesa, pegarFicha, limparMesa, comoTela, esperar, forcarDados } from './helpers/mesaReal';
 import { executarAcaoAtiva, modificadorPericiaAtiva } from '@/lib/omni/acaoAtiva';
-import { inicioTurnoSustentacoesAtivas } from '@/lib/omni/custosAtivos';
+import { encerrarSustentacaoAtiva, inicioTurnoSustentacoesAtivas } from '@/lib/omni/custosAtivos';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useMapStore } from '@/stores/useMapStore';
@@ -122,14 +122,29 @@ describe('resultados, armas, disputa e sustentação',()=>{
   it('purificar a última condição encerra sustentação antes de cobrar manutenção',async()=>{
     await executarAcaoAtiva('u',cfg({efeitos:[{tipo:'condicao',condicao:'caido',rodadas:1}],custo_recursos:{tipo_acao:'sustentada',pe_por_turno:'2'}}),'a');const ac=pegarFicha('a').activeConditions[0];useCharacterStore.getState().removeCondition('a',ac.id);inicioTurnoSustentacoesAtivas('u');expect(pegarFicha('u').peCurrent).toBe(18);expect(pegarFicha('u').omniSustentacoes).toEqual([]);
   });
+  it('encerrar sustentação remove apenas a contribuição dela para Condenado',async()=>{
+    useCharacterStore.getState().addCondition('a',{id:'condenado-antigo',conditionId:'condenado',name:'Condenado',icon:'⛓',remainingTurns:-1,remainingRounds:4,elapsedRounds:3,sourceCharId:'u',sourceEntityId:'origem-anterior',sourceInstanceId:'copia-anterior'});
+    const fonte=novaEntidade('passiva');const instancia=useInventoryStore.getState().add('u',fonte);
+    await executarAcaoAtiva('u',cfg({efeitos:[{tipo:'condicao',condicao:'condenado',rodadas:2}],custo_recursos:{tipo_acao:'sustentada',pe_por_turno:'2'}}),'a',fonte,{instanciaId:instancia.instanceId});
+    const sustentacao=pegarFicha('u').omniSustentacoes![0];
+    expect(sustentacao.condicoes[0]).toMatchObject({id:'condenado-antigo',sourceEntityId:fonte.id,sourceInstanceId:instancia.instanceId});
+    encerrarSustentacaoAtiva('u',sustentacao.id);
+    expect(pegarFicha('a').activeConditions[0]).toMatchObject({id:'condenado-antigo',remainingRounds:4,elapsedRounds:3,sourceEntityId:'origem-anterior'});
+  });
 });
 function visual(acao:AcaoLogica['acao'],extra:Partial<AcaoLogica>={}){
   const e=novaEntidade('passiva');e.gatilhos=[{id:'g',evento:'aoEquipar',blocos:[{id:'b',modo:'todas',condicoes:[],acoes:[{id:'a',acao,alvoAplicacao:'ALVO',valor:{tipo:'fixo',valor:2},condicao:'caido',...extra}]}]}];
   executarGatilho(e,'aoEquipar',{usuario:pegarFicha('u'),alvo:pegarFicha('a')});
+  return e;
 }
 describe('condições visuais convergem com a ficha',()=>{
   it('aplicação fica visível aos predicados e registra a origem',()=>{
-    visual('APLICAR_CONDICAO');expect(avaliarPredicadoEstado({tipo:'tem_condicao',nome:'Caído'},pegarFicha('a'),pegarFicha('u'))).toBe(true);expect(pegarFicha('a').activeConditions[0].sourceCharId).toBe('u');
+    const fonte=visual('APLICAR_CONDICAO');expect(avaliarPredicadoEstado({tipo:'tem_condicao',nome:'Caído'},pegarFicha('a'),pegarFicha('u'))).toBe(true);expect(pegarFicha('a').activeConditions[0]).toMatchObject({sourceCharId:'u',sourceEntityId:fonte.id});
+  });
+  it('ação ativa preserva ID da entidade e da cópia que aplicou a condição',async()=>{
+    const fonte=novaEntidade('passiva');const instancia=useInventoryStore.getState().add('u',fonte);
+    await executarAcaoAtiva('u',cfg({efeitos:[{tipo:'condicao',condicao:'caido',rodadas:2}]}),'a',fonte,{instanciaId:instancia.instanceId});
+    expect(pegarFicha('a').activeConditions[0]).toMatchObject({sourceEntityId:fonte.id,sourceInstanceId:instancia.instanceId});
   });
   it('reaplicar a mesma condição por outra fonte não cria uma segunda instância',()=>{
     visual('APLICAR_CONDICAO');const own=pegarFicha('a').activeConditions[0];useCharacterStore.getState().addCondition('a',{...own,id:'outra'});expect(pegarFicha('a').activeConditions.map(c=>c.id)).toEqual([own.id]);useChronosStore.getState().tick(13);useOmniRuntimeStore.getState().podarExpirados();expect(pegarFicha('a').activeConditions).toEqual([]);
