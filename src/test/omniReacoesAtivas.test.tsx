@@ -243,7 +243,7 @@ describe('controlador remoto e confirmação de entrega', () => {
       await waitFor(() => expect(enviados.some(e => e.detail.tipo === 'passar')).toBe(true));
       const passou = enviados.find(e => e.detail.tipo === 'passar')!.detail;
       await receberRespostaRemota({ tipo: 'passar', janelaId: sondagem.janelaId, perfilId: sondagem.perfilId, clienteOrigem: 'origem' }, 'origem');
-      expect(await p).toEqual({ cancelado: false, defesaBonus: 0 });
+      expect(await p).toEqual({ cancelado: false, defesaBonus: 0, testeBonus: 0 });
       expect(passou.perfilId).toBe(DESTINATARIO_MESTRE);
       expect(pegarFicha('a').peCurrent).toBe(18);
     } finally { window.removeEventListener('omni-reaction:send', onSend); }
@@ -253,7 +253,7 @@ describe('controlador remoto e confirmação de entrega', () => {
     try {
       const p=abrirJanelaReacaoAtiva(ev);
       await vi.advanceTimersByTimeAsync(PRAZO_SONDAGEM_REACAO_MS);
-      expect(await p).toEqual({cancelado:false,defesaBonus:0});
+      expect(await p).toEqual({cancelado:false,defesaBonus:0,testeBonus:0});
       expect(useReacoesAtivasStore.getState().janelas).toHaveLength(0);
     } finally {vi.useRealTimers();}
   });
@@ -265,7 +265,7 @@ describe('controlador remoto e confirmação de entrega', () => {
       expect(useCombatStore.getState().reactionPauseIds).toHaveLength(1);
       const remaining=useCombatStore.getState().getTurnRemaining();
       await vi.advanceTimersByTimeAsync(PRAZO_SONDAGEM_REACAO_MS);
-      expect(await p).toEqual({cancelado:false,defesaBonus:0});
+      expect(await p).toEqual({cancelado:false,defesaBonus:0,testeBonus:0});
       expect(useCombatStore.getState().reactionPauseIds).toHaveLength(0);
       expect(useCombatStore.getState().getTurnRemaining()).toBeCloseTo(remaining);
     } finally {vi.useRealTimers();}
@@ -295,7 +295,7 @@ it('sem transporte multiplayer resolve sem aguardar controlador remoto', async()
   comoTela({role:'PLAYER',profileId:'perfil-u'});
   useCharacterStore.getState().updateCharacter('u',{profileId:'perfil-u'});
   const p=abrirJanelaReacaoAtiva({gatilho:'quando_alvo_declarar_ataque',origemId:'u',protegidoId:'a'});
-  expect(await p).toEqual({cancelado:false,defesaBonus:0});
+  expect(await p).toEqual({cancelado:false,defesaBonus:0,testeBonus:0});
   expect(useReacoesAtivasStore.getState().janelas).toHaveLength(0);
 });
 
@@ -310,10 +310,10 @@ it('resposta remota durante a reação local não deixa janela vazia presa', asy
     const p=abrirJanelaReacaoAtiva(evento), j=useReacoesAtivasStore.getState().janelas[0];
     const local=responderReacaoAtiva(j.id,j.ofertas[0].id);
     await waitFor(()=>expect(spy).toHaveBeenCalled());
-    await receberRespostaRemota({tipo:'resultado',janelaId:j.id,perfilId:'perfil-b',clienteOrigem:'origem',resultado:{cancelado:false,defesaBonus:3}},'origem');
+    await receberRespostaRemota({tipo:'resultado',janelaId:j.id,perfilId:'perfil-b',clienteOrigem:'origem',resultado:{cancelado:false,defesaBonus:3,testeBonus:0}},'origem');
     liberar({ok:true,efeitoAplicado:false,dano:0,detalhe:''} as Awaited<ReturnType<typeof mod.executarAcaoAtiva>>);
     await local;
-    expect(await p).toEqual({cancelado:false,defesaBonus:3});
+    expect(await p).toEqual({cancelado:false,defesaBonus:3,testeBonus:0});
     expect(useReacoesAtivasStore.getState().janelas).toHaveLength(0);
   } finally {spy.mockRestore();}
 });
