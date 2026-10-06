@@ -62,10 +62,17 @@ async def main():
       ra=pg.get_by_role("button",name="Rolar Ataque")
       print("   alvo:", await pg.get_by_text("Alvo:").first.inner_text() if await pg.get_by_text("Alvo:").count() else "-")
       if await ra.count() and await ra.first.is_visible(): await ra.first.click(); await pg.wait_for_timeout(3000)
-      await dados(3)
-      bt=pg.get_by_role("button",name="Rolar Dano")
-      if await bt.count(): await bt.first.click(force=True); await pg.wait_for_timeout(2000)
-      await dados(5)
+      for _ in range(30):
+        for nm in ["Passar e continuar"]:
+          x=pg.get_by_role("button",name=nm)
+          if await x.count() and await x.first.is_visible(): await x.first.click(force=True); await pg.wait_for_timeout(800)
+        t=pg.get_by_text("Clique ou segure")
+        if await t.count(): await t.first.click(force=True); await pg.wait_for_timeout(3500); continue
+        d=pg.get_by_role("button",name="Rolar Dano")
+        if await d.count() and await d.first.is_visible() and await d.first.is_enabled(): await d.first.click(force=True); await pg.wait_for_timeout(1500); continue
+        logs=await pg.evaluate("window.__logStore.getState().logs.map(l=>l.message).join('|')")
+        if ("Dano final" in logs or "errou" in logs.lower() or "ERROU" in logs) and not await pg.get_by_text("Clique ou segure").count(): break
+        await pg.wait_for_timeout(1000)
       await pg.screenshot(path=S+nome.replace(" ","_")+".png")
       st=await pg.evaluate("()=>{const g=id=>window.__charStore.getState().characters.find(c=>c.id===id);const i=g('nat-ini');return {hp:i.hpCurrent,cond:i.activeConditions.map(c=>c.conditionId+':'+(c.remainingRounds??c.remainingTurns)),log:window.__logStore.getState().logs.slice(-8).map(l=>l.message)}}")
       print(json.dumps(st,ensure_ascii=False)[:1400])
