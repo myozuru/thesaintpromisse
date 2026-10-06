@@ -17,6 +17,8 @@ export interface StatModifierOrigin {
   nome: string;
   /** Diferença numérica positiva (buff) ou negativa (debuff). */
   delta: number;
+  /** False quando um bônus concorrente foi mantido visível, mas não acumulou. */
+  aplicado?: boolean;
 }
 
 interface StatValueProps {
@@ -78,7 +80,7 @@ export function StatValue({
     <TooltipProvider delayDuration={150}>
       <Tooltip>
         <TooltipTrigger asChild>{node}</TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs space-y-1 text-xs">
+        <TooltipContent side="top" className="max-w-xs space-y-1 text-[13px]">
           <div className="font-semibold text-foreground">
             Base: <span className="font-mono">{valorBase}</span>
           </div>
@@ -93,6 +95,7 @@ export function StatValue({
                 </span>
                 {' '}
                 <span className="text-foreground/80">(Origem: {o.nome})</span>
+                {o.aplicado === false && <span className="ml-1 text-foreground/70">(não acumula)</span>}
               </div>
             );
           })}
