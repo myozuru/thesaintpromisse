@@ -10,7 +10,12 @@ const PERICIAS_ATIVAS = [...new Set([
   ...Object.values(SISTEMA_PERICIAS).map((caminho) => caminho.replace(/^pericias\./, '')),
   ...Object.values(ROTULOS_PERICIAS),
 ])] as [string, ...string[]];
-const PericiaAtivaSchema = z.enum(PERICIAS_ATIVAS);
+const ROTULO_POR_ID: Record<string, string> = Object.fromEntries(
+  Object.entries(SISTEMA_PERICIAS).map(([key, caminho]) => [
+    caminho.replace(/^pericias\./, ''), ROTULOS_PERICIAS[key as keyof typeof ROTULOS_PERICIAS],
+  ]),
+);
+const PericiaAtivaSchema = z.enum(PERICIAS_ATIVAS).transform((value) => ROTULO_POR_ID[value] ?? value);
 
 const ValorDinamicoSchema = z.union([
   z.object({ tipo: z.literal('fixo'), valor: z.number() }),
