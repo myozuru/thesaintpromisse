@@ -10,3 +10,4 @@
 - Réplicas materializáveis: `python tests/browser/replicas_materializar.py` cria ficha/réplica só no navegador, materializa, ataca, sustenta, deixa desfazer e solta a arma.
 - Chaves genéricas do OMNI (gatilho "aliado sofre dano" com distância, contador com teto por aliado, consumo em dano, condicao_rodadas): `python tests/browser/omni_contadores.py` — passivas/fichas/peças só no navegador, gravações bloqueadas.
 - Ações ativas OMNI (TR ramificado, puxão, condição, consumo de cargas): `python tests/browser/acoes_ativas.py` cria ficha/item só no navegador e usa Vingança Agulhada e Corte da Injustiça pelo painel de ataque.
+- Reações em testes do Mestre: `python tests/browser/omni_reacoes_testes.py` — pedido de TR com "quem força o teste", reação dá bônus, anula (sucesso garantido) ou passa; sem origem não abre.
