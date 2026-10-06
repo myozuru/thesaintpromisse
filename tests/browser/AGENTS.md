@@ -12,3 +12,4 @@
 - Ações ativas OMNI (TR ramificado, puxão, condição, consumo de cargas): `python tests/browser/acoes_ativas.py` cria ficha/item só no navegador e usa Vingança Agulhada e Corte da Injustiça pelo painel de ataque.
 - Reações em testes do Mestre: `python tests/browser/omni_reacoes_testes.py` — pedido de TR com "quem força o teste", reação dá bônus, anula (sucesso garantido) ou passa; sem origem não abre.
 - Frases naturais em ataque real: `python tests/browser/omni_texto_natural.py` — "ao acertar cac então aplicar condição…" e "causar 1d4 de dano psíquico por contador_rancor" (3 cargas → 3d4; à distância não dispara).
+- Portas da Morte + Ferimento Complexo + No Último Segundo: `python tests/browser/portas_da_morte.py` — cair, dano nas Portas, botão de teste na vez, +5 de iniciativa/benefício, Medicina (1,5m, CD), cura até 0, morte massiva, 3 falhas, ferimento por sorteio.

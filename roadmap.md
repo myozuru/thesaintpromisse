@@ -35,7 +35,7 @@
 - [x] Sincronizar câmera e bandeja durante toda a redução final para o dado não ser recortado nem saltar de posição.
 
 ## Pendências de regras
-- [ ] Suporte Nv 4 — "No Último Segundo": implementar junto com os testes da Porta da Morte (contador de fracassos). Lembrar o usuário quando a Porta da Morte for feita.
+- [x] Portas da Morte (testes, Medicina, cura, morte massiva, 3 falhas), Ferimentos Complexos e Suporte nv4 "No Último Segundo" — `python tests/browser/portas_da_morte.py`
 
 ## Pendências de mapa (regras definidas, aguardando início)
 - [x] Cena própria por tela: trocar de cena não arrasta mais as outras telas. (Pendente: Mestre enviar jogadores para uma cena.)
