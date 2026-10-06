@@ -5,6 +5,7 @@
 import type { Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLogStore } from '@/stores/useLogStore';
+import { temFeridaInterna, cdFeridaInterna } from '@/lib/ferimentosEfeitos';
 
 export const ULTIMO_SEGUNDO_ID = 'sup-no-ultimo-segundo';
 export const ULTIMO_SEGUNDO_MOV_M = 4.5;
@@ -168,4 +169,40 @@ export function aplicarUltimoSegundo<T extends EntradaIni>(ordem: T[], chars: Ch
   const morrendo = antes.filter((id) => { const c = byId.get(id); return !!c && naPorta(c); });
   const beneficiados = portadores.filter((p) => morrendo.some((m) => antes.indexOf(p) > antes.indexOf(m) && depois.indexOf(p) < depois.indexOf(m)));
   return { ordem: nova, beneficiados, impulsionados: portadores };
+}
+
+// ── Ferida interna (ferimento 7) ──
+/**
+ * Começo do turno em combate: quem tem ferida interna faz TR de Fortitude (CD 20 + nível; 10 se tratada).
+ * Falha → perde a Ação Comum e as reações até o próximo turno. Sempre limpa o bloqueio anterior.
+ */
+export function inicioTurnoFeridaInterna(id: string, emCombate: boolean, d20 = Math.floor(Math.random() * 20) + 1): 'sem' | 'passou' | 'falhou' {
+  const c = get(id); if (!c) return 'sem';
+  if (c.feridaInternaBloqueada) upd(id, { feridaInternaBloqueada: false, reactionsCurrent: c.reactionsMax ?? 1 });
+  if (!emCombate || !temFeridaInterna(c) || estaMorto(c) || naPorta(c)) return 'sem';
+  const atual = get(id)!;
+  const mod = (atual.savingThrows ?? []).find((s) => s.name === 'Fortitude')?.value ?? 0;
+  const cd = cdFeridaInterna(atual);
+  const total = d20 + mod;
+  if (total >= cd) {
+    log(`🩸 ${c.name} — Ferida interna: TR de Fortitude ${d20}+${mod} = ${total} vs CD ${cd} → passou, pode agir.`);
+    return 'passou';
+  }
+  upd(id, { feridaInternaBloqueada: true, actionsCurrent: 0, reactionsCurrent: 0 });
+  log(`🩸 ${c.name} — Ferida interna: TR de Fortitude ${d20}+${mod} = ${total} vs CD ${cd} → falhou: perde a ação e as reações até o próximo turno.`);
+  return 'falhou';
+}
+
+/** Mestre em Medicina, como Ação Comum, trata a ferida interna (CD passa a 10). */
+export function tratarFeridaInterna(alvoId: string, medicoId: string): { ok: boolean; reason?: string } {
+  const alvo = get(alvoId); const med = get(medicoId);
+  if (!alvo || !med) return { ok: false, reason: 'Personagem não encontrado.' };
+  const fi = alvo.ferimentosComplexos?.find((f) => f.resultado === 7 && !f.tratada);
+  if (!fi) return { ok: false, reason: 'Nenhuma ferida interna sem tratamento.' };
+  if (!(med.skills ?? []).some((s) => s.name === 'Medicina' && s.mastery)) return { ok: false, reason: `${med.name} não é mestre em Medicina.` };
+  if ((med.actionsCurrent ?? 1) < 1) return { ok: false, reason: `${med.name} não tem Ação Comum.` };
+  upd(medicoId, { actionsCurrent: (med.actionsCurrent ?? 1) - 1 });
+  upd(alvoId, { ferimentosComplexos: get(alvoId)!.ferimentosComplexos!.map((f) => f.id === fi.id ? { ...f, tratada: true } : f) });
+  log(`🩺 ${med.name} tratou a ferida interna de ${alvo.name}: a CD passa a 10.`);
+  return { ok: true };
 }

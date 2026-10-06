@@ -1,9 +1,11 @@
 import { create } from 'zustand';
-import { aplicarUltimoSegundo } from '@/lib/portasDaMorte';
+import { aplicarUltimoSegundo, inicioTurnoFeridaInterna } from '@/lib/portasDaMorte';
 import { terraPvtPatch, ceuPreparoPatch, TEMPESTADE_IMOVEL_PREFIX } from '@/lib/posturas';
 
 /** Posturas no começo do turno: Terra (PVT), Céu (preparo temporário) e fim do Imóvel da Tempestade. */
 function inicioTurnoPostura(charId: string) {
+  // Ferida interna (Ferimento Complexo 7): TR de Fortitude para agir.
+  inicioTurnoFeridaInterna(charId, useCombatStore.getState().inCombat);
   const st = useCharacterStore.getState();
   const eu = st.characters.find((x) => x.id === charId);
   if (eu) {

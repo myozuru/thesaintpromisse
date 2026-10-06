@@ -282,7 +282,9 @@ export interface Character {
   falhasMorte?: number;
   /** Dano que gerou um Ferimento Complexo aguardando o Mestre sortear/escolher. */
   ferimentoPendente?: number;
-  ferimentosComplexos?: { id: string; resultado: number; nome: string; desde: number }[];
+  ferimentosComplexos?: { id: string; resultado: number; nome: string; desde: number; tratada?: boolean }[];
+  /** Ferida interna: falhou no TR do começo do turno — sem ação comum nem reações até o próximo turno. */
+  feridaInternaBloqueada?: boolean;
   /** No Último Segundo: benefício ativo nesta rodada. */
   ultimoSegundoAtivo?: boolean;
   name: string;

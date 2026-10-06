@@ -377,6 +377,9 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
     ctx = { ...ctx, attacker: atacante, abilityMod: getAbilityMod(atacante, ctx.situation.preferredAbility ?? pickAttackAbility(atacante, ctx.weapon)), trainingBonus: atacante.trainingBonus ?? 0,
       targetDefense: ctx.targetDefense + computeTotalDefense(alvo, {}, kind) - defesaAntes + janela.defesaBonus };
   }
+  if (ctx.attacker.feridaInternaBloqueada) {
+    return { cancelled: true, semRecursao: !!ctx.semRecursao, d20: 0, attackRolls: [], rollMode: 'normal', natural: 0, attackTotal: 0, hit: false, critical: false, criticalFail: false, damageDice: '', damageRolls: [], damageTotal: 0, damageType: null, modifiers: [], notes: ['Ferida interna: perdeu a ação e as reações até o próximo turno.'], canRerollDamage: false };
+  }
   const w = ctx.weapon;
   const dmgNotation = resolveWeaponDamage(w, ctx.situation.twoHanded) ?? '1d4';
   let fixoArma = 0;

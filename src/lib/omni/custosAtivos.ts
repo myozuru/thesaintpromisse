@@ -102,6 +102,7 @@ export function validarRecursosAtivos(u: Character, p: PlanoCustosAtivos): { ok:
   if (p.pv > 0 && (!Number.isFinite(u.hpCurrent) || (u.hpCurrent ?? 0) <= p.pv)) return { ok: false, reason: `PV insuficiente: o custo de ${p.pv} deve deixar ao menos 1 PV.` };
   if (p.acao === 'comum' && (!Number.isFinite(u.actionsCurrent ?? 1) || (u.actionsCurrent ?? 1) < 1)) return { ok: false, reason: 'Sem Ação Comum disponível.' };
   if (p.acao === 'bonus' && (!Number.isFinite(u.bonusActionsCurrent ?? 1) || (u.bonusActionsCurrent ?? 1) < 1)) return { ok: false, reason: 'Sem Ação Bônus disponível.' };
+  if (u.feridaInternaBloqueada && (p.acao === 'comum' || p.acao === 'reacao')) return { ok: false, reason: 'Ferida interna: perdeu a ação e as reações até o próximo turno.' };
   const reacoesDisponiveis = u.reactionsCurrent ?? u.reactionsMax ?? 1;
   if (p.acao === 'reacao' && (!Number.isFinite(reacoesDisponiveis) || reacoesDisponiveis < 1)) return { ok: false, reason: 'Sem Reação disponível.' };
   if (p.acao === 'movimento') {

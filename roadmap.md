@@ -76,3 +76,4 @@
 - [x] Reações nos testes pedidos pelo Mestre: campo "Quem força o teste" (TR/perícia); testado no navegador
 - [x] Texto natural: aceitar "cac"/"corpo a corpo", "aplicar condição <nome>" e dano escalado por contador
 - [x] Guia OMNI: aba "Texto simples" com exemplos testados; painel abre inteiro na tela (já era redimensionável e com abas)
+- [x] Ferimentos Complexos: desvantagens (olho/perna/braço) e ferida interna (TR no turno, tratamento) funcionando
