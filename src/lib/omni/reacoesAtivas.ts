@@ -328,7 +328,7 @@ export async function receberRespostaRemota(msg: { tipo: 'resultado' | 'passar' 
     return;
   }
   if (msg.tipo === 'disponivel') return;
-  const resultado = msg.tipo === 'resultado' ? { cancelado: j.resultado.cancelado || !!msg.resultado?.cancelado, defesaBonus: j.resultado.defesaBonus + (msg.resultado?.defesaBonus ?? 0) } : j.resultado;
+  const resultado = msg.tipo === 'resultado' ? { cancelado: j.resultado.cancelado || !!msg.resultado?.cancelado, defesaBonus: j.resultado.defesaBonus + (msg.resultado?.defesaBonus ?? 0), testeBonus: (j.resultado.testeBonus ?? 0) + (msg.resultado?.testeBonus ?? 0) } : j.resultado;
   if (resultado.cancelado) { fechar(j.id, resultado); return; }
   const pendentes = j.pendentes.filter(x => x !== msg.perfilId);
   if (!pendentes.length && !j.ofertas.length) { fechar(j.id, resultado); return; }
