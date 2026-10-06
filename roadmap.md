@@ -77,3 +77,11 @@
 - [x] Texto natural: aceitar "cac"/"corpo a corpo", "aplicar condição <nome>" e dano escalado por contador
 - [x] Guia OMNI: aba "Texto simples" com exemplos testados; painel abre inteiro na tela (já era redimensionável e com abas)
 - [x] Ferimentos Complexos: desvantagens (olho/perna/braço) e ferida interna (TR no turno, tratamento) funcionando
+
+## Itens, baús e mapa (out/2026)
+- [x] Item solto no chão não é mais tratado como token da ficha
+- [x] Imagem de arma/item no OMNI (inventário, chão, selo no token ao empunhar)
+- [x] Mestre invoca arma/item do catálogo no chão
+- [x] Baú a partir de imagem enviada ao mapa (vincula/cria baú do catálogo)
+- [x] Menu do botão direito com rolagem
+- [ ] Troca de arma infinita — aguardando passo a passo do usuário (regra atual já cobra Ação Bônus na 2ª troca)
