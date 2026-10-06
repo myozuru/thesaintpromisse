@@ -4,7 +4,13 @@
  */
 import { z } from 'zod';
 import { DAMAGE_TYPES } from '@/types';
+import { ROTULOS_PERICIAS, SISTEMA_PERICIAS } from './constantesDoSistema';
 const DamageTypeSchema = z.enum(DAMAGE_TYPES);
+const PERICIAS_ATIVAS = [...new Set([
+  ...Object.values(SISTEMA_PERICIAS).map((caminho) => caminho.replace(/^pericias\./, '')),
+  ...Object.values(ROTULOS_PERICIAS),
+])] as [string, ...string[]];
+const PericiaAtivaSchema = z.enum(PERICIAS_ATIVAS);
 
 const ValorDinamicoSchema = z.union([
   z.object({ tipo: z.literal('fixo'), valor: z.number() }),
@@ -163,7 +169,7 @@ const AcaoAtivaSchema = z.object({
   }).optional(),
   mod_acerto: z.number().finite().optional(),
   custoPE: z.string(), alcanceM: z.number().finite().nonnegative(), teste: z.enum(['tr', 'ataque', 'disputa', 'nenhum']),
-  pericia_usuario: z.string().optional(), pericias_alvo: z.array(z.string()).optional(),
+  pericia_usuario: PericiaAtivaSchema.optional(), pericias_alvo: z.array(PericiaAtivaSchema).optional(),
   tipo_alvo: z.enum(['unico', 'multiplo', 'area', 'proprio']).optional(),
   filtro_alvo: z.enum(['inimigos', 'aliados', 'todos', 'todos_exceto_si']).optional(), max_alvos: z.string().optional(),
   area: z.object({ forma: z.enum(['cone', 'linha', 'raio_em_si', 'raio_no_ponto']), tamanho_m: z.number().finite().positive(), largura_m: z.number().finite().positive().optional() }).optional(),
