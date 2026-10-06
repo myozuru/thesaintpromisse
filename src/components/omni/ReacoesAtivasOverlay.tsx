@@ -34,6 +34,9 @@ export function ReacoesAtivasOverlay() {
   const role = useRoleStore(s => s.role);
   const perfilId = useProfileStore(s => s.activeProfileId);
   const characters = useCharacterStore(s => s.characters);
+  // A bandeja 3D de dados ocupa o canto inferior direito; a janela de reação
+  // precisa mudar de lado enquanto ela estiver aberta para continuar clicável.
+  const bandejaAberta = useDice3DStore(s => s.enabled && s.visible && s.current?.layout !== 'test-request');
   const [reacaoManual, setReacaoManual] = useState<ReacaoManualEmCurso | null>(null);
   useEffect(() => {
     if (!reacaoManual) return;
