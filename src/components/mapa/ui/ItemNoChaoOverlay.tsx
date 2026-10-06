@@ -21,14 +21,15 @@ export function ItemNoChaoOverlay() {
   const items = Object.values(ms.entities).filter(e => !!e.groundItem && !e.hidden);
   const catalogo = Object.values(entidades).filter(e => e.categoria === 'arma' || e.categoria === 'item').sort((a, b) => a.nome.localeCompare(b.nome));
   if (!items.length && !master) return null;
-  const invocar = () => {
+  const invocar = (alvo: HTMLElement) => {
     try {
       const cam = ms.camera;
-      const centro = screenToWorld(window.innerWidth / 2, window.innerHeight / 2, cam);
+      const area = (alvo.closest('[data-item-chao]')?.parentElement ?? document.body).getBoundingClientRect();
+      const centro = screenToWorld(area.width / 2, area.height / 2, cam);
       invocarItemNoChao(escolha, centro); setErro(null); setInvocando(false); setEscolha('');
     } catch (e) { setErro(e instanceof Error ? e.message : 'Não foi possível invocar.'); }
   };
-  return <div className="absolute bottom-20 left-3 z-40 max-h-72 max-w-80 overflow-y-auto rounded-lg border border-border bg-card/95 p-2 pointer-events-auto">
+  return <div data-item-chao className="absolute bottom-20 left-3 z-40 max-h-72 max-w-80 overflow-y-auto rounded-lg border border-border bg-card/95 p-2 pointer-events-auto">
     <div className="flex items-center gap-2"><b className="text-xs">Itens no chão</b>
       {master && <button type="button" className="ml-auto rounded border border-primary/50 px-2 py-0.5 text-xs text-primary" onClick={() => setInvocando(v => !v)}>{invocando ? 'Fechar' : '+ Invocar item'}</button>}
     </div>
@@ -37,7 +38,7 @@ export function ItemNoChaoOverlay() {
         <option value="">— escolha uma arma/item —</option>
         {catalogo.map(e => <option key={e.id} value={e.id}>{e.categoria === 'arma' ? '⚔️' : '📦'} {e.nome}</option>)}
       </select>
-      <button type="button" disabled={!escolha} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={invocar}>Colocar</button>
+      <button type="button" disabled={!escolha} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={ev => invocar(ev.currentTarget)}>Colocar</button>
     </div>}
     {!items.length && <p className="mt-1 text-xs text-muted-foreground italic">Nada no chão.</p>}
     {items.map(e => {
