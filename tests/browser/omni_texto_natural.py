@@ -35,7 +35,7 @@ async def main():
             attributes:[{id:'a1',name:'Força',value:30},{id:'a2',name:'Destreza',value:30}]}),
           mk('nat-ini',{name:'TESTE Inimigo',category:'INIMIGO',hpCurrent:300,hpMax:300,defense:1})]});
         ms.setState({entities:{e1:{id:'e1',characterId:'nat-at',type:'character',x:0,y:0,w:D,h:D},e2:{id:'e2',characterId:'nat-ini',type:'character',x:p.dist*D,y:0,w:D,h:D}}});
-        cb.setState({turnTimerEnabled:false,inCombat:true,round:1,initiativeOrder:[{charId:'nat-at'},{charId:'nat-ini'}],currentTurnIndex:0});
+        window.__logStore.setState({logs:[]}); cb.setState({turnTimerEnabled:false,turnDurationSec:99999,turnRemainingAtStart:99999,turnStartedAt:Date.now(),inCombat:true,round:1,initiativeOrder:[{charId:'nat-at'},{charId:'nat-ini'}],currentTurnIndex:0});
         return efs.map(e=>[e.trigger,e.condition,e.formula,e.damageType||'',e.conditionApply?.id||'']);
       }""", {"frases":FRASES,"cargas":cargas,"dist":distancia_cells,"arma":arma})
     async def dados(n):
