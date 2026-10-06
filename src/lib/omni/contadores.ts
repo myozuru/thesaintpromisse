@@ -3,15 +3,20 @@
  *
  * Regra pura e reutilizável — nenhuma habilidade específica vive aqui.
  *  - `<nome>`                 → total (o que as fórmulas leem: @USUARIO.<nome>)
- *  - `<nome>__fonte__<id>`    → parcela de cada criatura de origem (escopo 'porFonte')
- *  - teto global limita o total; teto 'porFonte' limita cada parcela.
+ *  - `<nome>__fonte__<id>`    → parcela de cada criatura que contribuiu
+ *  - o teto global limita o total; quota por fonte usa ciclo separado do saldo.
  */
 export const SEP_FONTE = '__fonte__';
 
 export interface OpcoesContador {
   valor: number;
   teto?: number;
+  /** Teto legado local a cada fonte. `por_fonte` no script novo só registra a origem. */
   escopoTeto?: 'global' | 'porFonte';
+  rastrearFonte?: boolean;
+  limiteFonte?: number;
+  cicloFonte?: string;
+  usoPorFonte?: Record<string, Record<string, { ciclo: string; usados: number }>>;
   /** Criatura que originou o acúmulo (ex.: aliado ferido). */
   fonteId?: string;
   /** Destino explicitamente selecionado por `contador nome fonte id`. */
@@ -22,6 +27,7 @@ export interface ResultadoContador {
   counters: Record<string, number>;
   anterior: number;
   consumido: number;
+  usoPorFonte: Record<string, Record<string, { ciclo: string; usados: number }>>;
 }
 
 const prefixoFonte = (nome: string) => `${nome}${SEP_FONTE}`;
@@ -48,11 +54,14 @@ export function calcularContador(
   const nome = nomeRaw.trim().toLowerCase();
   const c: Record<string, number> = { ...origem };
   const anterior = c[nome] ?? 0;
-  if (!Number.isFinite(op.valor) || (op.teto !== undefined && !Number.isFinite(op.teto))) return { counters: c, anterior, consumido: 0 };
+  const usoPorFonte = { ...(op.usoPorFonte ?? {}) };
+  if (!Number.isFinite(op.valor) || (op.teto !== undefined && !Number.isFinite(op.teto)) || (op.limiteFonte !== undefined && !Number.isFinite(op.limiteFonte))) return { counters: c, anterior, consumido: 0, usoPorFonte };
   const teto = op.teto === undefined ? undefined : Math.max(0, Math.round(op.teto));
+  const limiteFonte = op.limiteFonte === undefined ? undefined : Math.max(0, Math.round(op.limiteFonte));
   let consumido = 0;
 
   const temFontes = Object.keys(c).some(k => k.startsWith(prefixoFonte(nome)));
+  const rastrearFonte = temFontes || op.rastrearFonte || op.fonteExata || op.escopoTeto === 'porFonte';
   // Preserva cargas globais ao passar a contar por fonte.
   if (temFontes || op.fonteExata || op.escopoTeto === 'porFonte') {
     const semFonte = Math.max(0, anterior - somarFontes(c, nome));
@@ -68,28 +77,45 @@ export function calcularContador(
     const fk = `${prefixoFonte(nome)}${op.fonteId}`;
     const atual = c[fk] ?? 0;
     const qtd = Math.max(0, Math.round(op.valor));
-    if (acao === 'INCREMENTAR_CONTADOR') c[fk] = teto === undefined ? atual + qtd : Math.min(teto, atual + qtd);
+    if (acao === 'INCREMENTAR_CONTADOR') {
+      const ciclo = op.cicloFonte ?? 'sem_ciclo';
+      const usosAtuais = usoPorFonte[nome]?.[op.fonteId];
+      const usados = usosAtuais?.ciclo === ciclo ? usosAtuais.usados : 0;
+      const limiteRestante = limiteFonte === undefined ? qtd : Math.max(0, limiteFonte - usados);
+      const tetoRestante = op.escopoTeto === 'porFonte' || teto === undefined ? qtd : Math.max(0, teto - anterior);
+      const aceito = Math.min(qtd, limiteRestante, tetoRestante);
+      if (aceito > 0) c[fk] = atual + aceito;
+      c[nome] = somarFontes(c, nome);
+      if (limiteFonte !== undefined && aceito > 0) {
+        usoPorFonte[nome] = { ...(usoPorFonte[nome] ?? {}), [op.fonteId]: { ciclo, usados: usados + aceito } };
+      }
+    }
     else if (acao === 'CONSUMIR_CONTADOR') { consumido = Math.min(atual, op.valor > 0 ? qtd : atual); c[fk] = atual - consumido; }
     else c[fk] = acao === 'ZERAR_CONTADOR' ? 0 : teto === undefined ? qtd : Math.min(teto, qtd);
     c[nome] = somarFontes(c, nome);
-    return { counters: c, anterior, consumido };
+    return { counters: c, anterior, consumido, usoPorFonte };
   }
 
   if (acao === 'INCREMENTAR_CONTADOR') {
-    const qtd = Math.round(op.valor);
-    if (op.escopoTeto === 'porFonte') {
-      const fk = `${prefixoFonte(nome)}${op.fonteId ?? 'geral'}`;
+    const qtd = Math.max(0, Math.round(op.valor));
+    if (rastrearFonte) {
+      const fonteId = op.fonteId ?? 'geral';
+      const fk = `${prefixoFonte(nome)}${fonteId}`;
       const parcela = c[fk] ?? 0;
-      c[fk] = Math.max(0, teto !== undefined ? Math.min(teto, parcela + qtd) : parcela + qtd);
+      const ciclo = op.cicloFonte ?? 'sem_ciclo';
+      const usosAtuais = usoPorFonte[nome]?.[fonteId];
+      const usados = usosAtuais?.ciclo === ciclo ? usosAtuais.usados : 0;
+      const limiteRestante = limiteFonte === undefined ? qtd : Math.max(0, limiteFonte - usados);
+      const tetoRestante = op.escopoTeto === 'porFonte' || teto === undefined ? qtd : Math.max(0, teto - anterior);
+      const aceito = Math.min(qtd, limiteRestante, tetoRestante);
+      if (aceito > 0) c[fk] = Math.max(0, parcela + aceito);
       c[nome] = somarFontes(c, nome);
+      if (limiteFonte !== undefined && aceito > 0) {
+        usoPorFonte[nome] = { ...(usoPorFonte[nome] ?? {}), [fonteId]: { ciclo, usados: usados + aceito } };
+      }
     } else {
       const prox = anterior + qtd;
       c[nome] = Math.max(0, teto !== undefined ? Math.min(teto, prox) : prox);
-      if (temFontes) {
-        const delta = c[nome] - anterior;
-        if (delta > 0) c[`${prefixoFonte(nome)}geral`] = (c[`${prefixoFonte(nome)}geral`] ?? 0) + delta;
-        else if (delta < 0) retirarFontes(-delta);
-      }
     }
   } else if (acao === 'ZERAR_CONTADOR') {
     c[nome] = 0;
@@ -109,5 +135,5 @@ export function calcularContador(
     }
     c[nome] = resto;
   }
-  return { counters: c, anterior, consumido };
+  return { counters: c, anterior, consumido, usoPorFonte };
 }
