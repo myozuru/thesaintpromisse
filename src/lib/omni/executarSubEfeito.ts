@@ -103,7 +103,8 @@ export function executarCombatEffect(
   const out = avaliarFormulaEfeito(eff, ctx);
   const valor = Math.round(out.valor);
   const teto = eff.counterCap ? avaliarFormulaEfeito({ ...eff, formula: eff.counterCap }, ctx) : undefined;
-  if (out.diagnosticos.length || teto?.diagnosticos.length) return { aplicado: 0, invalido: true, detalhe: 'Fórmula ou limite com referência inválida.' };
+  const limiteFonte = eff.counterSourceLimit ? avaliarFormulaEfeito({ ...eff, formula: eff.counterSourceLimit }, ctx) : undefined;
+  if (out.diagnosticos.length || teto?.diagnosticos.length || limiteFonte?.diagnosticos.length) return { aplicado: 0, invalido: true, detalhe: 'Fórmula ou limite com referência inválida.' };
   const targetId = resolverTargetId(eff, ctx);
   if (eff.transferencia) {
     const store = useCharacterStore.getState();
@@ -119,7 +120,7 @@ export function executarCombatEffect(
     sourceName: ctx.sourceName,
     damageType: eff.damageType,
     attackerId: ctx.origemId === null ? undefined : ctx.origemId ?? ctx.usuarioId,
-    contador: { teto: teto?.valor, porFonte: eff.counterPerSource, fonteId: ctx.alvoId ?? ctx.usuarioId },
+    contador: { teto: teto?.valor, porFonte: eff.counterPerSource, fonteId: ctx.alvoId ?? ctx.usuarioId, limiteFonte: limiteFonte?.valor, periodoFonte: eff.counterSourcePeriod },
   });
   return { aplicado: r.aplicado, absorvidoPorBloqueio: r.absorvidoPorBloqueio };
 }
