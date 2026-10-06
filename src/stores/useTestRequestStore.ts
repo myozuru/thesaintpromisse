@@ -38,6 +38,8 @@ export interface TestRequest {
   drama?: 0 | 1 | 2 | 3;
   /** Mestre pediu acompanhamento e aproximação de câmera para uma rolagem individual. */
   cinematicFocus?: boolean;
+  /** Ficha que força o teste (TR/perícia); habilita reações OMNI de quem protege o alvo. */
+  originId?: string;
   /**
    * Bônus pré-calculado (usado quando o pedido vem de um feitiço, em que
    * a pipeline já sabe o bônus correto para aquele TR específico vs. alvo).
