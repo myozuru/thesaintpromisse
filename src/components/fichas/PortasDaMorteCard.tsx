@@ -51,7 +51,7 @@ export function PortasDaMorteCard({ c }: { c: Character }) {
 
   const rolar = async () => {
     setRolando(true);
-    try { const d = await rollD20Com(c.id, undefined, { label: `Teste de Morte — ${c.name}` }); registrarTesteMorte(c.id, d, round); }
+    try { const d = await rollD20Com(c.id, undefined, { label: `Teste de Morte — ${c.name}`, drama: 3, cinematicFocus: true }); registrarTesteMorte(c.id, d, round); }
     finally { setRolando(false); }
   };
   const medicina = (h: Character) => {
