@@ -228,6 +228,17 @@ function parsearComando(
   opts: OmniScriptParseOpts = {},
 ): { efeito?: CombatEffect; erro?: OmniScriptIssue } {
   let txt = raw.trim();
+  const transferenciaMoeda = txt.match(/^transferir\s+(.+?)\s+de\s+([\w-]+)\s+para\s+([\w-]+)\s+moeda\s+([\w-]+)$/i);
+  if (transferenciaMoeda) {
+    return { efeito: {
+      id: crypto.randomUUID(), type: 'MODIFICADOR', target: 'USUARIO', resourcePath: 'carteira',
+      formula: autoArrobaExpressao(normalizarConjuncaoComoSoma(transferenciaMoeda[1])),
+      transferencia: { origem: transferenciaMoeda[2], destino: transferenciaMoeda[3], moedaId: transferenciaMoeda[4] },
+    } };
+  }
+  if (/^transferir\b/i.test(txt) && /\bmoeda\b/i.test(txt)) {
+    return { erro: { posicao, trecho: raw, mensagem: 'Transferência monetária exige valor, ID da carteira de origem, ID da carteira de destino e ID da moeda: transferir <valor> de <carteira_origem> para <carteira_destino> moeda <moeda_id>.' } };
+  }
   const transferencia = txt.match(/^transferir\s+(.+?)\s+de\s+(.+?)\s+para\s+(.+?)$/i);
   if (transferencia) {
     const origem = extrairAlvoDoRecurso(transferencia[2], opts.defaultTarget ?? 'ALVO');
@@ -848,6 +859,7 @@ export function efeitosParaScript(
   // Serializa um único efeito como `<verbo> <formula> em <recurso>` (ou forma absoluta).
   const renderEfeito = (e: CombatEffect, defaultTarget = def): string => {
     if (e.transferencia) {
+      if (e.transferencia.moedaId) return `transferir ${e.formula} de ${e.transferencia.origem} para ${e.transferencia.destino} moeda ${e.transferencia.moedaId}`;
       const prefixo = e.target !== defaultTarget ? `${e.target.toLowerCase()}.` : '';
       return `transferir ${e.formula} de ${prefixo}${e.transferencia.origem} para ${prefixo}${e.transferencia.destino}`;
     }

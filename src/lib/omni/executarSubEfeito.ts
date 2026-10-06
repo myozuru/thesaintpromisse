@@ -20,6 +20,8 @@ import { aplicarEfeitoNoPersonagem } from './aplicarEfeito';
 import { avaliarFormula } from './parser';
 import { planejarTransferencia } from './componentes/transferencia';
 import { useCharacterStore } from '@/stores/useCharacterStore';
+import { useMoneyStore } from '@/stores/useMoneyStore';
+import { useRoleStore } from '@/stores/useRoleStore';
 import { ALL_CONDITIONS, type ActiveCondition } from '@/types/conditions';
 
 /** Resultado padronizado de uma execução. */
@@ -110,6 +112,27 @@ export function executarCombatEffect(
   if (out.diagnosticos.length || teto?.diagnosticos.length || limiteFonte?.diagnosticos.length) return { aplicado: 0, invalido: true, detalhe: 'Fórmula ou limite com referência inválida.' };
   const targetId = resolverTargetId(eff, ctx);
   if (eff.transferencia) {
+    if (eff.transferencia.moedaId) {
+      const money = useMoneyStore.getState();
+      const role = useRoleStore.getState().role;
+      const carteiraOrigem = money.wallets.find(w => w.id === eff.transferencia!.origem);
+      const carteiraDestino = money.wallets.find(w => w.id === eff.transferencia!.destino);
+      const valorTransferir = Math.floor(valor);
+      if (!Number.isFinite(valor) || valorTransferir <= 0 || !carteiraOrigem || !carteiraDestino
+        || !money.currencies.some(c => c.id === eff.transferencia!.moedaId)) {
+        return { aplicado: 0, invalido: true, detalhe: 'Transferência monetária inválida: verifique valor, carteiras e moeda.' };
+      }
+      if (role !== 'MASTER' && (role !== 'PLAYER' || !carteiraOrigem.members.includes(ctx.usuarioId))) {
+        return { aplicado: 0, invalido: true, detalhe: 'Transferência recusada: o executor precisa ser Mestre ou membro da carteira de origem.' };
+      }
+      const actor = role === 'MASTER' ? 'MASTER' : ctx.usuarioId;
+      const concluida = money.transfer(
+        carteiraOrigem.id, carteiraDestino.id, eff.transferencia.moedaId, valorTransferir,
+        ctx.sourceName ? `OMNI: ${ctx.sourceName}` : 'OMNI', actor,
+      );
+      if (!concluida) return { aplicado: 0, invalido: true, detalhe: 'Transferência recusada: saldo insuficiente, origem igual ao destino ou dados inválidos.' };
+      return { aplicado: valorTransferir };
+    }
     const store = useCharacterStore.getState();
     const c = store.characters.find(x => x.id === targetId);
     const plano = c && !out.diagnosticos.length ? planejarTransferencia(c, eff.transferencia.origem, eff.transferencia.destino, valor) : undefined;

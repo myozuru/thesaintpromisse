@@ -405,8 +405,8 @@ export interface CombatData {
 /** Um efeito atômico dentro de `CombatData.effects`. */
 export interface CombatEffect {
   id: string;
-  /** Transferência entre saldos da mesma ficha, calculada antes de qualquer débito. */
-  transferencia?: { origem: string; destino: string };
+  /** Transferência entre recursos da ficha ou carteiras/moedas da campanha. */
+  transferencia?: { origem: string; destino: string; moedaId?: string };
   /**
    * Fórmula matemática. Aceita @USUARIO.X, @ALVO.X, @CENA.X, dados (XdY)
    * e funções (floor/ceil/round/min/max/abs). Pode referenciar resultados

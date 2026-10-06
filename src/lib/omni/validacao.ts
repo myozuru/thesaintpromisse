@@ -76,6 +76,7 @@ const GatilhoSchema = z.object({
 
 const CombatEffectSchema: z.ZodTypeAny = z.lazy(() => z.object({
   id: z.string(),
+  transferencia: z.object({ origem: z.string(), destino: z.string(), moedaId: z.string().min(1).optional() }).optional(),
   formula: z.string(),
   type: z.enum(['SUBTRAIR', 'ADICIONAR', 'MODIFICADOR']),
   counterCap: z.string().optional(),
