@@ -63,7 +63,7 @@ async def main():
       if await bt.count(): await bt.first.click(force=True); await pg.wait_for_timeout(2000)
       await dados(5)
       await pg.screenshot(path=S+nome.replace(" ","_")+".png")
-      st=await pg.evaluate("()=>{const g=id=>window.__charStore.getState().characters.find(c=>c.id===id);const i=g('nat-ini');return {hp:i.hpCurrent,cond:i.activeConditions.map(c=>c.conditionId+':'+(c.remainingRounds??c.remainingTurns)),log:window.__logStore.getState().logs.slice(0,6).map(l=>l.message)}}")
+      st=await pg.evaluate("()=>{const g=id=>window.__charStore.getState().characters.find(c=>c.id===id);const i=g('nat-ini');return {hp:i.hpCurrent,cond:i.activeConditions.map(c=>c.conditionId+':'+(c.remainingRounds??c.remainingTurns)),log:window.__logStore.getState().logs.slice(-8).map(l=>l.message)}}")
       print(json.dumps(st,ensure_ascii=False)[:1400])
     await caso("A cac com 3 cargas",3,1,"Katana")
     await caso("B cac sem cargas",0,1,"Katana")
