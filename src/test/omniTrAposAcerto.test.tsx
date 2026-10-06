@@ -20,7 +20,7 @@ const abalado = () => pegarFicha('a').activeConditions?.some(c => c.conditionId 
 
 describe('TR após acerto', () => {
   it('acerto + falha no TR: dano entra e aplica Abalado', async () => {
-    mesa(); forcarDados(18, 1, 1, 1, 1, 1, 2);
+    mesa(); forcarDados(18, 1, 2, 1, 1, 1, 1);
     const r = await executarAcaoAtiva('u', punicao, 'a');
     expect(r.ok && r.detalhe).toContain('TR Fortitude');
     expect(r.ok && r.dano).toBeGreaterThan(0);
@@ -28,7 +28,7 @@ describe('TR após acerto', () => {
     expect(pegarFicha('u').peCurrent).toBe(15);
   });
   it('acerto + sucesso no TR: dano entra, sem condição', async () => {
-    mesa(); forcarDados(18, 1, 1, 1, 1, 1, 20);
+    mesa(); forcarDados(18, 1, 20, 1, 1, 1, 1);
     const r = await executarAcaoAtiva('u', punicao, 'a');
     expect(r.ok && r.dano).toBeGreaterThan(0);
     expect(r.ok && r.detalhe).toContain('SUCESSO');
