@@ -109,18 +109,22 @@ export function MapContextMenu({
     };
   }, [onClose]);
 
-  // ajusta posição pra não vazar
-  useEffect(() => {
+  // ajusta posição pra não vazar: limita a altura à tela e rola o resto.
+  useLayoutEffect(() => {
     const el = rootRef.current;
     if (!el) return;
-    const r = el.getBoundingClientRect();
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    let nx = x, ny = y;
-    if (r.right > vw) nx = Math.max(4, vw - r.width - 4);
-    if (r.bottom > vh) ny = Math.max(4, vh - r.height - 4);
-    el.style.left = `${nx}px`;
-    el.style.top  = `${ny}px`;
+    const fit = () => {
+      const vw = document.documentElement.clientWidth || window.innerWidth;
+      const vh = document.documentElement.clientHeight || window.innerHeight;
+      el.style.maxHeight = `${vh - 8}px`;
+      const w = el.offsetWidth, h = Math.min(el.scrollHeight, vh - 8);
+      el.style.left = `${Math.max(4, Math.min(x, vw - w - 4))}px`;
+      el.style.top = `${Math.max(4, Math.min(y, vh - h - 4))}px`;
+    };
+    fit();
+    const ro = new ResizeObserver(fit); ro.observe(el);
+    window.addEventListener('resize', fit);
+    return () => { ro.disconnect(); window.removeEventListener('resize', fit); };
   }, [x, y]);
 
   const canAlign = selectionCount >= 2;
