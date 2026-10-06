@@ -34,6 +34,7 @@ import { avaliarFormula } from './parser';
 import { canonicalizarChave } from './keyAliases';
 import { lerCaminhoOmni, montarVariaveisDoPersonagem } from './resolvedor';
 import { useCharacterStore } from '@/stores/useCharacterStore';
+import { useCombatStore } from '@/stores/useCombatStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { useOmniRuntimeStore } from '@/stores/useOmniRuntimeStore';
 import { grantAdvantage, clearAllAdvantage, type AdvScope } from './rollAdvantage';
@@ -520,14 +521,26 @@ function executarAcao(a: AcaoLogica, ctx: ContextoRuntime, log: (m: string) => v
       if (!alvoChar || !a.caminhoAlvo) break;
       const fresh = useCharacterStore.getState().characters.find((x) => x.id === alvoChar.id) ?? alvoChar;
       const key = a.caminhoAlvo.trim().toLowerCase();
+      const limiteFonte = a.limiteFonte ? resolverValorDinamico(a.limiteFonte, ctx) : undefined;
+      if (limiteFonte !== undefined && (!Number.isFinite(limiteFonte) || limiteFonte < 0)) throw new Error('Limite por fonte inválido.');
+      const combate = useCombatStore.getState();
+      const cicloFonte = a.periodoFonte === 'rodada'
+        ? `rodada:${combate.inCombat ? combate.combatId ?? 'combate' : 'fora'}:${combate.inCombat ? combate.round : 0}`
+        : a.periodoFonte === 'descanso'
+          ? `descanso:${fresh.omniCounterRestCycle ?? 0}`
+          : undefined;
       const res = calcularContador(fresh.omniCounters ?? {}, key, a.acao, {
         valor: a.acao === 'INCREMENTAR_CONTADOR' && !a.valor ? 1 : valor,
         teto: a.teto ? resolverValorDinamico(a.teto, ctx) : undefined,
-        escopoTeto: a.escopoTeto,
+        escopoTeto: 'global',
+        rastrearFonte: a.escopoTeto === 'porFonte' || limiteFonte !== undefined,
+        limiteFonte,
+        cicloFonte,
+        usoPorFonte: fresh.omniCounterSourceUsage,
         fonteId: fonteDoContador(ctx.evento, ctx.usuario?.id, ctx.alvo?.id),
       });
       const counters = res.counters;
-      useCharacterStore.getState().updateCharacter(alvoChar.id, { omniCounters: counters });
+      useCharacterStore.getState().updateCharacter(alvoChar.id, { omniCounters: counters, omniCounterSourceUsage: res.usoPorFonte });
       if (a.acao === 'CONSUMIR_CONTADOR') {
         // Disponível para as próximas ações do mesmo bloco: @CENA.consumido
         ctx.cena = { ...(ctx.cena ?? {}), consumido: res.consumido };
