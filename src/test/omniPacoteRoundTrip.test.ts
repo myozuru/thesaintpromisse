@@ -70,4 +70,22 @@ describe('round-trip de pacotes OMNI', () => {
     };
     expect(() => PacoteOmniSchema.parse(pacote)).toThrow(/periodicidade explícita/i);
   });
+
+  it('aceita apenas perícias canônicas nas disputas de ações ativas', () => {
+    const criarPacote = (pericia_usuario: string, pericias_alvo: string[]) => ({
+      formato: 'omni-engine.v1', nome: 'Disputa', geradoEm: 1,
+      entidades: [{
+        id: 'arma-disputa', versao: 1, nome: 'Manobra', categoria: 'arma',
+        descricao: '', tags: [], duracao: { tipo: 'permanente' }, custos: [], gatilhos: [],
+        acoesAtivas: [{ id: 'disputa', nome: 'Derrubar', acao: 'comum', custoPE: '0', alcanceM: 1.5,
+          teste: 'disputa', pericia_usuario, pericias_alvo }],
+        criadoEm: 1, atualizadoEm: 1,
+      }],
+    });
+
+    expect(PacoteOmniSchema.safeParse(criarPacote('atletismo', ['atletismo', 'acrobacia'])).success).toBe(true);
+    expect(PacoteOmniSchema.safeParse(criarPacote('Atletismo', ['Acrobacia'])).success).toBe(true);
+    expect(PacoteOmniSchema.safeParse(criarPacote('destreza', ['atletismo'])).success).toBe(false);
+    expect(PacoteOmniSchema.safeParse(criarPacote('atletismo', ['tr_fortitude'])).success).toBe(false);
+  });
 });
