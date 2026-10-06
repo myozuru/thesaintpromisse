@@ -85,3 +85,14 @@
 - [x] Baú a partir de imagem enviada ao mapa (vincula/cria baú do catálogo)
 - [x] Menu do botão direito com rolagem
 - [ ] Troca de arma infinita — aguardando passo a passo do usuário (regra atual já cobra Ação Bônus na 2ª troca)
+
+## Economia, lojas e Mural de Quests (out/2026)
+- [x] Comércio no OMNI: moeda do preço + estabelecimentos que aceitam o item (categorias criáveis)
+- [x] Lojas como NPCs clicáveis no mapa (abrem a loja a até 1,5 m da ficha do jogador)
+- [x] Pechincha funcional: CD oculta por mercador, teste de Presença, resultado aplica desconto
+- [x] Mural de Quests: cartazes visuais arrastáveis pelos players, ícones variados, itens do OMNI como recompensa
+- [x] Ponto de interrogação como máscara (Mestre revela ou não o objetivo real)
+- [x] Prazo de quest no relógio do mundo (não tempo real); Mestre expira/revela ao processar
+- [x] Botão do Mestre "concluir missão": dinheiro repartido igualmente; item de recompensa dropado no chão de um player (sem duplicação)
+- [ ] Limitação conhecida: CD de pechincha e objetivo oculto ficam nos dados da mesa (legíveis a quem inspecionar); só ocultos na interface
+- [ ] Limitação conhecida: prazos vencidos e revelações só são aplicados quando o Mestre está com o site aberto
