@@ -6,6 +6,8 @@ import { useCharacterStore } from '@/stores/useCharacterStore';
 import { SpellApplyDialog } from '@/components/fichas/SpellApplyDialog';
 import type { Spell } from '@/types';
 import { declararReacaoManual, concluirReacaoManual, type EventoReacaoAtiva } from '@/lib/omni/reacoesAtivas';
+import { useDice3DStore } from '@/stores/useDice3DStore';
+import { cn } from '@/lib/utils';
 
 interface ReacaoManualEmCurso {
   janelaId: string;
@@ -32,6 +34,9 @@ export function ReacoesAtivasOverlay() {
   const role = useRoleStore(s => s.role);
   const perfilId = useProfileStore(s => s.activeProfileId);
   const characters = useCharacterStore(s => s.characters);
+  // A bandeja 3D de dados ocupa o canto inferior direito; a janela de reação
+  // precisa mudar de lado enquanto ela estiver aberta para continuar clicável.
+  const bandejaAberta = useDice3DStore(s => s.enabled && s.visible && s.current?.layout !== 'test-request');
   const [reacaoManual, setReacaoManual] = useState<ReacaoManualEmCurso | null>(null);
   useEffect(() => {
     if (!reacaoManual) return;
@@ -70,7 +75,7 @@ export function ReacoesAtivasOverlay() {
     setReacaoManual(null);
   };
   return <>
-    {j && <div role="dialog" aria-label="Reação OMNI" className="fixed bottom-4 right-4 z-[250] w-80 rounded-lg border border-primary bg-background p-4 shadow-xl space-y-3">
+    {j && <div role="dialog" aria-label="Reação OMNI" className={cn('fixed bottom-4 z-[10000] w-80 rounded-lg border border-primary bg-background p-4 shadow-xl space-y-3', bandejaAberta ? 'left-4' : 'right-4')}>
       <p className="font-bold">Janela de reação</p>
       <p className="text-xs">{ofertasLocais.length ? 'O cronômetro de combate está pausado. Escolha uma reação ou passe.' : 'Aguardando a resposta do controlador da ficha (jogador ou mestre).'}</p>
       <TempoReacao expiresAt={j.expiresAt} />
@@ -80,7 +85,7 @@ export function ReacoesAtivasOverlay() {
       {j.erro && <p role="alert" className="text-xs text-destructive">{j.erro}</p>}
       <button disabled={j.busy} className="rounded border px-3 py-1" onClick={() => ofertasLocais.length ? responderReacaoAtiva(j.id) : continuarSemReacoesPendentes(j.id)}>Passar e continuar</button>
     </div>}
-    {remotas.map(r => <div key={r.janelaId} role="dialog" aria-label="Reação OMNI" className="fixed bottom-4 left-4 z-[250] w-80 rounded-lg border border-primary bg-background p-4 shadow-xl space-y-3">
+    {remotas.map(r => <div key={r.janelaId} role="dialog" aria-label="Reação OMNI" className={cn('fixed bottom-4 z-[10000] w-80 rounded-lg border border-primary bg-background p-4 shadow-xl space-y-3', bandejaAberta ? 'left-[21rem]' : 'left-4')}>
       <p className="font-bold">Reação disponível</p><p className="text-xs">O cronômetro de combate está pausado enquanto você decide.</p>
       <TempoReacao expiresAt={r.expiresAt} />
       {opcoesFeitico(r.janelaId, r.evento, { perfilId: r.perfilId, clienteOrigem: r.clienteOrigem })}
