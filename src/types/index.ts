@@ -167,6 +167,8 @@ export interface ActiveBuff {
   peCostPerRound?: number;
   /** Caster id — used to enforce "1 sustentado por player". */
   sourceCharId?: string;
+  /** Identifica uma conjuração sustentada, mesmo quando afeta vários alvos/buffs. */
+  sustainInstanceId?: string;
   /** True if this buff comes from a sustained spell (durationRounds === -1). */
   isSustained?: boolean;
 }

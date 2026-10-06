@@ -801,8 +801,8 @@ const CONDICOES_OMNI: ChaveOmniOpcao[] = [
 
 // ── PR-3: Concentração & Sustentados ───────────────────────────────────
 const CONCENTRACAO_OMNI: ChaveOmniOpcao[] = [
-  { id: 'qtd_concentrando',         label: 'Qtd. Concentrando',     hint: 'Quantos efeitos de concentração ativos.' },
-  { id: 'qtd_sustentados',          label: 'Qtd. Sustentados',      hint: 'Quantos buffs sustentados ativos.' },
+  { id: 'qtd_concentrando',         label: 'Qtd. Concentrando',     hint: 'Estado de concentração ainda não é persistido; não inferido do último feitiço lançado.' },
+  { id: 'qtd_sustentados',          label: 'Qtd. Sustentados',      hint: 'Conjurações sustentadas ativas; vários buffs/alvos da mesma conjuração contam uma vez.' },
   { id: 'slots_concentracao_livres',label: 'Slots Concentração Livres', hint: 'max_concentracao - qtd_concentrando.' },
   { id: 'slots_sustentado_livres',  label: 'Slots Sustentado Livres',   hint: 'max_sustentados - qtd_sustentados.' },
 ];

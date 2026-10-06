@@ -469,11 +469,19 @@ export function montarVariaveisDoPersonagem(
       const buffs = (c.activeBuffs ?? []) as Array<{
         isSustained?: boolean;
         durationRounds?: number;
+        sustainInstanceId?: string;
+        spellName?: string;
+        sourceCharId?: string;
       }>;
-      const qtdSust = buffs.filter(
-        (b) => b.isSustained === true || b.durationRounds === -1,
-      ).length;
-      const qtdConc = c.lastSpellUsedId ? 1 : 0;
+      const sustentados = buffs.filter((b) => b.isSustained === true || b.durationRounds === -1);
+      const qtdSust = new Set(sustentados.map((b, index) =>
+        b.sustainInstanceId ?? (b.spellName
+          ? `legado:${b.sourceCharId ?? ''}:${b.spellName}`
+          : `legado:${b.sourceCharId ?? ''}:${(b as { id?: string }).id ?? index}`),
+      )).size;
+      // lastSpellUsedId é histórico de lançamento, não representa concentração ativa.
+      // O modelo de concentração ainda não tem estado persistido no personagem.
+      const qtdConc = 0;
       const maxConc = c.maxConcentrationSlots ?? 1;
       const maxSust = c.maxSustainedSpells ?? 1;
       return {

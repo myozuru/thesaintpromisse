@@ -368,6 +368,10 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
   const isPureBuff = spell.spellType === 'buff';
   // Sustentado = durationRounds === -1 (sentinel "Cena"). Regra: 1 sustentado por player por vez.
   const isSustainedSpell = spell.durationRounds === -1;
+  // Todas as parcelas desta conjuração compartilham o mesmo custo de manutenção.
+  const sustainInstanceIdRef = useRef<string | undefined>(undefined);
+  if (isSustainedSpell && !sustainInstanceIdRef.current) sustainInstanceIdRef.current = crypto.randomUUID();
+  const sustainInstanceId = isSustainedSpell ? sustainInstanceIdRef.current : undefined;
 
   /** Antes de aplicar buffs sustentados, remove os anteriores do mesmo lançador (apenas players). */
   const enforceSingleSustained = () => {
@@ -953,10 +957,9 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
         
         // Apply buffs/conditions
         if (spell.buffs && spell.buffs.length > 0) {
-          const hasDuration = spell.durationRounds !== 0;
-          const pePerRound = hasDuration ? getSustainedPEPerRound(spell.spellLevel) : 0;
+          const pePerRound = isSustainedSpell ? getSustainedPEPerRound(spell.spellLevel) : 0;
           enforceSingleSustained();
-          spell.buffs.forEach(buff => addBuff(ta.id, { ...buff, id: crypto.randomUUID(), spellName: spell.name, remainingTurns: buff.durationTurns, peCostPerRound: pePerRound, sourceCharId, isSustained: isSustainedSpell }));
+          spell.buffs.forEach(buff => addBuff(ta.id, { ...buff, id: crypto.randomUUID(), spellName: spell.name, remainingTurns: buff.durationTurns, peCostPerRound: pePerRound, sourceCharId, isSustained: isSustainedSpell, sustainInstanceId }));
         }
 
         if (applyConditions && spell.conditions && spell.conditions.length > 0) {
@@ -976,6 +979,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
               sourceCharName: source.name,
               sourceCharId: source.id,
               sourceEntityId: spell.id,
+              sourceInstanceId: sustainInstanceId,
               durationMode: mode,
               endCD: expiry.endCD,
               endTrType: expiry.endTrType,
@@ -1153,9 +1157,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
 
       // Apply buffs
       if (spell.buffs && spell.buffs.length > 0) {
-        // Both sustentada (durationRounds === -1) and duradoura (durationRounds > 0) consume PE/round
-        const hasDuration = spell.durationRounds !== 0;
-        const pePerRound = hasDuration ? getSustainedPEPerRound(spell.spellLevel) : 0;
+        const pePerRound = isSustainedSpell ? getSustainedPEPerRound(spell.spellLevel) : 0;
         enforceSingleSustained();
         spell.buffs.forEach((buff) => {
           addBuff(ts.id, {
@@ -1170,6 +1172,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
             peCostPerRound: pePerRound,
             sourceCharId,
             isSustained: isSustainedSpell,
+            sustainInstanceId,
           });
         });
       }
@@ -1194,6 +1197,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
             sourceCharName: source.name,
               sourceCharId: source.id,
             sourceEntityId: spell.id,
+            sourceInstanceId: sustainInstanceId,
             durationMode: mode,
             endCD: expiry.endCD,
             endTrType: expiry.endTrType,
@@ -1278,9 +1282,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
       }
 
       if (spell.buffs && spell.buffs.length > 0) {
-        // Both sustentada (durationRounds === -1) and duradoura (durationRounds > 0) consume PE/round
-        const hasDuration = spell.durationRounds !== 0;
-        const pePerRound = hasDuration ? getSustainedPEPerRound(spell.spellLevel) : 0;
+        const pePerRound = isSustainedSpell ? getSustainedPEPerRound(spell.spellLevel) : 0;
         enforceSingleSustained();
         spell.buffs.forEach((buff) => {
           addBuff(id, {
@@ -1295,6 +1297,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
             peCostPerRound: pePerRound,
             sourceCharId,
             isSustained: isSustainedSpell,
+            sustainInstanceId,
           });
           const buffDesc = buff.type === 'ca' ? `CA+${buff.value}`
             : buff.type === 'hit' ? `Acerto+${buff.value}`
@@ -1321,6 +1324,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
             sourceCharName: source.name,
               sourceCharId: source.id,
             sourceEntityId: spell.id,
+            sourceInstanceId: sustainInstanceId,
             durationMode: mode,
             endCD: expiry.endCD,
             endTrType: expiry.endTrType,

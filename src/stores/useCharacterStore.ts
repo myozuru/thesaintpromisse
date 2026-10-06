@@ -4457,12 +4457,25 @@ export const useCharacterStore = create<CharacterStore>()(
       removeBuff: (charId, buffId) => set((state) => ({
         characters: state.characters.map((c) => c.id === charId ? { ...c, activeBuffs: (c.activeBuffs || []).filter(b => b.id !== buffId) } : c),
       })),
-      removeSustainedBuffsFrom: (sourceCharId) => set((state) => ({
-        characters: state.characters.map((c) => ({
-          ...c,
-          activeBuffs: (c.activeBuffs || []).filter(b => !(b.isSustained && b.sourceCharId === sourceCharId)),
-        })),
-      })),
+      removeSustainedBuffsFrom: (sourceCharId) => set((state) => {
+        const instances = new Set(state.characters.flatMap((c) => (c.activeBuffs || [])
+          .filter((b) => b.isSustained && b.sourceCharId === sourceCharId && b.sustainInstanceId)
+          .map((b) => b.sustainInstanceId!)));
+        return { characters: state.characters.map((c) => {
+          const activeBuffs = (c.activeBuffs || []).filter((b) => !(b.isSustained && b.sourceCharId === sourceCharId));
+          const activeConditions = instances.size
+            ? (c.activeConditions || []).flatMap((condition) => {
+                if (condition.sourceApplications?.length) {
+                  const remaining = condition.sourceApplications.filter((source) => !source.sourceInstanceId || !instances.has(source.sourceInstanceId));
+                  if (remaining.length === condition.sourceApplications.length) return [condition];
+                  return remaining.length ? [agregarFontesCondicao(condition, remaining)] : [];
+                }
+                return condition.sourceInstanceId && instances.has(condition.sourceInstanceId) ? [] : [condition];
+              })
+            : c.activeConditions;
+          return { ...c, activeBuffs, ...(activeConditions ? { activeConditions } : {}) };
+        }) };
+      }),
       addCondition: (charId, rawCondition) => {
         const cadeia = capturarCadeiaOmni();
         const target = get().characters.find((c) => c.id === charId);
@@ -4599,33 +4612,83 @@ export const useCharacterStore = create<CharacterStore>()(
         }) }));
         return removed;
       },
-      tickBuffs: (charId) => set((state) => ({
-        characters: state.characters.map((c) => {
-          if (c.id !== charId) return c;
-          
-          let peReduction = 0;
+      tickBuffs: (charId) => set((state) => {
+        const caster = state.characters.find((c) => c.id === charId);
+        if (!caster) return {};
+
+        // Sustentação é cobrada por conjuração, no turno do conjurador. Um
+        // feitiço pode criar vários buffs e atingir vários alvos, mas paga uma vez.
+        const sustentacoes = new Map<string, { custo: number; instanceId?: string; spellName: string }>();
+        for (const donoBuff of state.characters) {
+          for (const buff of donoBuff.activeBuffs ?? []) {
+            if (!buff.isSustained || (buff.sourceCharId && buff.sourceCharId !== charId)) continue;
+            if (!buff.sourceCharId && donoBuff.id !== charId) continue;
+            const key = buff.sustainInstanceId ?? `legado:${charId}:${buff.spellName}`;
+            const atual = sustentacoes.get(key);
+            sustentacoes.set(key, {
+              custo: Math.max(atual?.custo ?? 0, buff.peCostPerRound ?? 0),
+              instanceId: buff.sustainInstanceId,
+              spellName: buff.spellName,
+            });
+          }
+        }
+
+        let peReduction = 0;
+        const encerradas = new Set<string>();
+        const instanciasEncerradas = new Set<string>();
+        for (const [key, sustentacao] of [...sustentacoes.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+          if (sustentacao.custo <= 0) continue;
+          if (caster.peCurrent - peReduction < sustentacao.custo) {
+            encerradas.add(key);
+            if (sustentacao.instanceId) instanciasEncerradas.add(sustentacao.instanceId);
+          }
+          else peReduction += sustentacao.custo;
+        }
+
+        const buffsEncerrados = (buff: ActiveBuff, hostCharId: string) => {
+          if (!buff.isSustained || (buff.sourceCharId && buff.sourceCharId !== charId)) return false;
+          if (!buff.sourceCharId && hostCharId !== charId) return false;
+          const key = buff.sustainInstanceId ?? `legado:${charId}:${buff.spellName}`;
+          return encerradas.has(key);
+        };
+
+        return { characters: state.characters.map((c) => {
           const buffs = (c.activeBuffs || [])
-            .map((b) => {
-              if (b.peCostPerRound) peReduction += b.peCostPerRound;
-              return { ...b, remainingTurns: b.remainingTurns === -1 ? -1 : b.remainingTurns - 1 };
-            })
+            .filter((b) => !buffsEncerrados(b, c.id))
+            .map((b) => c.id !== charId || b.remainingTurns === -1
+              ? b
+              : { ...b, remainingTurns: b.remainingTurns - 1 })
             .filter((b) => b.remainingTurns === -1 || b.remainingTurns > 0);
+
+          const activeConditions = instanciasEncerradas.size
+            ? (c.activeConditions || []).flatMap((condition) => {
+                if (condition.sourceApplications?.length) {
+                  const remaining = condition.sourceApplications.filter((source) => !source.sourceInstanceId || !instanciasEncerradas.has(source.sourceInstanceId));
+                  if (remaining.length === condition.sourceApplications.length) return [condition];
+                  return remaining.length ? [agregarFontesCondicao(condition, remaining)] : [];
+                }
+                return condition.sourceInstanceId && instanciasEncerradas.has(condition.sourceInstanceId) ? [] : [condition];
+              })
+            : c.activeConditions;
 
           // Decrementa cooldowns de feitiços (Técnica Máxima etc).
           const nextCooldowns: Record<string, number> = {};
-          for (const [spellId, turns] of Object.entries(c.cooldowns || {})) {
-            const next = Math.max(0, (turns as number) - 1);
-            if (next > 0) nextCooldowns[spellId] = next;
+          if (c.id === charId) {
+            for (const [spellId, turns] of Object.entries(c.cooldowns || {})) {
+              const next = Math.max(0, (turns as number) - 1);
+              if (next > 0) nextCooldowns[spellId] = next;
+            }
           }
 
-          return { 
+          return {
             ...c, 
             activeBuffs: buffs,
-            peCurrent: Math.max(0, c.peCurrent - peReduction),
-            cooldowns: nextCooldowns,
+            ...(activeConditions ? { activeConditions } : {}),
+            ...(c.id === charId ? { peCurrent: Math.max(0, c.peCurrent - peReduction) } : {}),
+            cooldowns: c.id === charId ? nextCooldowns : c.cooldowns,
           };
-        }),
-      })),
+        }) };
+      }),
       tickConditions: (charId) => set((state) => ({
         characters: state.characters.map((c) => {
           if (c.id !== charId) return c;
@@ -4637,22 +4700,10 @@ export const useCharacterStore = create<CharacterStore>()(
           return { ...c, activeConditions: conditions };
         }),
       })),
-      tickAllBuffs: () => set((state) => ({
-        characters: state.characters.map((c) => {
-          let peReduction = 0;
-          const buffs = (c.activeBuffs || [])
-            .map((b) => {
-              if (b.peCostPerRound) peReduction += b.peCostPerRound;
-              return { ...b, remainingTurns: b.remainingTurns === -1 ? -1 : b.remainingTurns - 1 };
-            })
-            .filter((b) => b.remainingTurns === -1 || b.remainingTurns > 0);
-          return { 
-            ...c, 
-            activeBuffs: buffs,
-            peCurrent: Math.max(0, c.peCurrent - peReduction)
-          };
-        }),
-      })),
+      tickAllBuffs: () => {
+        // Mantém o mesmo pagador e o mesmo agrupamento por conjuração de tickBuffs.
+        for (const charId of get().characters.map((c) => c.id)) get().tickBuffs(charId);
+      },
       tickRoundConditions: () => set((state) => ({
         characters: state.characters.map((c) => ({
           ...c,

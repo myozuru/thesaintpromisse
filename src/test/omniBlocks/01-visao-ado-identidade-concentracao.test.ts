@@ -147,10 +147,23 @@ describe('🌀 Concentração & Sustentados', () => {
     expect(vEval(c, 'USUARIO', 'slots_sustentado_livres')).toBe(1);
   });
 
-  it('lastSpellUsedId definido → qtd_concentrando = 1', () => {
+  it('lastSpellUsedId é histórico e não marca concentração ativa', () => {
     const c = makeChar({ lastSpellUsedId: 'fb1', maxConcentrationSlots: 3 } as never);
-    expect(vEval(c, 'USUARIO', 'qtd_concentrando')).toBe(1);
-    expect(vEval(c, 'USUARIO', 'slots_concentracao_livres')).toBe(2); // 3-1
+    expect(vEval(c, 'USUARIO', 'qtd_concentrando')).toBe(0);
+    expect(vEval(c, 'USUARIO', 'slots_concentracao_livres')).toBe(3);
+  });
+
+  it('vários buffs de uma mesma conjuração ocupam um único espaço sustentado', () => {
+    const c = makeChar({
+      maxSustainedSpells: 3,
+      activeBuffs: [
+        { spellName: 'Aura', isSustained: true, sustainInstanceId: 'cast-a' },
+        { spellName: 'Aura', isSustained: true, sustainInstanceId: 'cast-a' },
+        { spellName: 'Escudo', isSustained: true, sustainInstanceId: 'cast-b' },
+      ],
+    } as never);
+    expect(vEval(c, 'USUARIO', 'qtd_sustentados')).toBe(2);
+    expect(vEval(c, 'USUARIO', 'slots_sustentado_livres')).toBe(1);
   });
 
   it('activeBuffs isSustained / durationRounds=-1 contam como sustentados', () => {
@@ -166,7 +179,7 @@ describe('🌀 Concentração & Sustentados', () => {
     expect(vEval(c, 'USUARIO', 'slots_sustentado_livres')).toBe(2); // 4-2
   });
 
-  it('slots livres nunca negativos (clamp em 0)', () => {
+  it('slots de sustentação são limitados a zero; histórico não ocupa concentração', () => {
     const c = makeChar({
       maxConcentrationSlots: 1,
       lastSpellUsedId: 'x',
@@ -177,7 +190,7 @@ describe('🌀 Concentração & Sustentados', () => {
         { spellName: 'C', isSustained: true },
       ],
     } as never);
-    expect(vEval(c, 'USUARIO', 'slots_concentracao_livres')).toBe(0);
+    expect(vEval(c, 'USUARIO', 'slots_concentracao_livres')).toBe(1);
     expect(vEval(c, 'USUARIO', 'slots_sustentado_livres')).toBe(0);
   });
 });
