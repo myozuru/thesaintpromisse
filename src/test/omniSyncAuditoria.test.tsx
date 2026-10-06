@@ -413,6 +413,40 @@ describe("receber resultado versus executar", () => {
       spy.mock.calls.filter((c) => c[1] === "aoEntrarEmAura"),
     ).toHaveLength(2);
   });
+  it("aura vinculada emite saída quando a origem perde posição ou o vínculo termina", () => {
+    const spy = vi.spyOn(bus, "emitirEventoDaEntidade");
+    const e = novaEntidade("aura");
+    e.areaRaio = { tipo: "fixo", valor: 4.5 };
+    useOmniEntidadesStore.setState({ entidades: { [e.id]: e } });
+    useCharacterStore.getState().updateCharacter("u", {
+      omniAtivos: [{ id: "v", entidadeId: e.id, categoria: "aura", instanceId: "i", vinculadoEm: 0 }],
+    });
+
+    recalcularAuras();
+    expect(spy.mock.calls.filter((c) => c[1] === "aoEntrarEmAura")).toHaveLength(2);
+
+    useMapStore.getState().removeEntities(["e-u"]);
+    recalcularAuras();
+    expect(spy.mock.calls.filter((c) => c[1] === "aoSairDaAura")).toHaveLength(2);
+
+    // A remoção do vínculo limpa o cache e não repete a saída na próxima varredura.
+    useCharacterStore.getState().updateCharacter("u", { omniAtivos: [] });
+    recalcularAuras();
+    expect(spy.mock.calls.filter((c) => c[1] === "aoSairDaAura")).toHaveLength(2);
+    expect(Object.keys(useOmniSpatialStore.getState().aurasDentro)).toHaveLength(0);
+  });
+  it("efeito de aura runtime removido emite saída para quem estava dentro", () => {
+    const spy = vi.spyOn(bus, "emitirEventoDaEntidade");
+    const e = novaEntidade("aura");
+    e.areaRaio = { tipo: "fixo", valor: 4.5 };
+    useOmniEntidadesStore.setState({ entidades: { [e.id]: e } });
+    const efeito = useOmniRuntimeStore.getState().aplicarEfeito(e, { sourceCharId: "u" });
+
+    recalcularAuras();
+    expect(spy.mock.calls.filter((c) => c[1] === "aoEntrarEmAura")).toHaveLength(2);
+    useOmniRuntimeStore.getState().removerEfeito(efeito.id);
+    expect(spy.mock.calls.filter((c) => c[1] === "aoSairDaAura")).toHaveLength(2);
+  });
   it("jogador e recepção remota não calculam entradas de aura", () => {
     const spy = vi.spyOn(bus, "emitirEventoDaEntidade");
     const e = novaEntidade("aura");
