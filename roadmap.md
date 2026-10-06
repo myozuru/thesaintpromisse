@@ -71,7 +71,8 @@
 - [x] Ataque com arma pode pedir TR do alvo ao acertar (TR e CD configuráveis; CD vazia usa a CD de Especialização)
 - [x] Reações em 15 gatilhos: entrar/sair do alcance, declarar ataque, errar, acertar, crítico, sofrer dano, causar dano, reduzido a 0 PV, derrubar inimigo, alvo/falhou/passou em TR, alvo de perícia, inimigo conjurando
 - [x] Proteção a aliados e janela única de reação (efeitos de uma reação nunca abrem outra reação)
-- [ ] Testar no navegador com peças no mapa: dentro/fora do alcance, casos inválidos, dano + TR + condição
+- [x] Testar no navegador com peças no mapa: dentro/fora do alcance, casos inválidos, dano + TR + condição (`python tests/browser/omni_reacoes.py` — 10 casos: dentro/fora do alcance, protegido aliado vs próprio, sem reação, PE insuficiente, dano mínimo, passar a vez, TR ramificado)
+- [x] Corrigir a janela de reação, que ficava escondida sob a bandeja 3D de dados no canto inferior direito e não podia ser clicada enquanto houvesse rolagem na tela
 - [ ] Reações nos testes pedidos pelo Mestre (hoje não vêm de uma ficha, então não abrem reação)
 - [ ] Texto natural: aceitar "cac"/"corpo a corpo", "aplicar condição <nome>" e dano escalado por contador
 - [ ] Guia OMNI: janela redimensionável, abas por função, exemplos testados
