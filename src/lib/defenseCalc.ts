@@ -48,9 +48,11 @@ import { aggregateSpecAbilityEffects } from '@/lib/specAbilityEffects';
 import { isPassiveActive } from '@/lib/spellRules';
 import { getShieldById } from '@/lib/shields';
 import {
+  resolverAcumuloOmni,
   selectOmniModifiers,
   selectOmniPassiveBonuses,
 } from '@/lib/omni/omniBridge';
+import type { OmniModifierContribution } from '@/lib/omni/omniBridge';
 import type { EntidadeOmni } from '@/lib/omni/tipos';
 
 export type AttackKind = 'melee' | 'ranged' | 'cursed';
@@ -113,16 +115,16 @@ export interface DefenseBreakdown {
 function getOmniPassiveCA(
   c: Character,
   omniMap: Record<string, EntidadeOmni>,
-): { value: number; notes: string[] } {
+): { value: number; notes: string[]; contributions: OmniModifierContribution[] } {
   const CATEGORIAS = new Set(['passiva', 'talento', 'aura']);
   const entidades = (c.omniAtivos ?? [])
     .filter((a) => CATEGORIAS.has(a.categoria))
     .map((a) => omniMap[a.entidadeId])
     .filter((e): e is NonNullable<typeof e> => Boolean(e));
-  if (entidades.length === 0) return { value: 0, notes: [] };
+  if (entidades.length === 0) return { value: 0, notes: [], contributions: [] };
   const bag = selectOmniPassiveBonuses(c, entidades);
-  const notes = bag.origins.ca.map((o) => `${o.source} ${o.delta >= 0 ? '+' : ''}${o.delta}`);
-  return { value: bag.totals.ca, notes };
+  const notes = bag.origins.ca.map((o) => `${o.source} ${o.delta >= 0 ? '+' : ''}${o.delta}${o.applied === false ? ' (não acumula)' : ''}`);
+  return { value: bag.totals.ca, notes, contributions: bag.origins.ca };
 }
 
 /**
@@ -133,7 +135,7 @@ function getOmniEquippedCA(
   c: Character,
   omniInventory: OmniInventoryInstance[],
   omniMap: Record<string, EntidadeOmni>,
-): { value: number; notes: string[] } {
+): { value: number; notes: string[]; contributions: OmniModifierContribution[] } {
   const equipped = omniInventory.filter(
     (inv) =>
       inv.ownerId === c.id &&
@@ -141,10 +143,10 @@ function getOmniEquippedCA(
       inv.entity.slotType &&
       inv.entity.slotType !== 'nenhum',
   );
-  if (equipped.length === 0) return { value: 0, notes: [] };
+  if (equipped.length === 0) return { value: 0, notes: [], contributions: [] };
   const bag = selectOmniModifiers(c, equipped, omniMap);
-  const notes = bag.origins.ca.map((o) => `${o.source} ${o.delta >= 0 ? '+' : ''}${o.delta}`);
-  return { value: bag.totals.ca, notes };
+  const notes = bag.origins.ca.map((o) => `${o.source} ${o.delta >= 0 ? '+' : ''}${o.delta}${o.applied === false ? ' (não acumula)' : ''}`);
+  return { value: bag.totals.ca, notes, contributions: bag.origins.ca };
 }
 
 /** Soma `bonusCA` apenas das passivas clássicas que estão ATIVAS no nível atual. */
@@ -208,6 +210,14 @@ export function computeDefenseBreakdown(
   const omniPassives = getOmniPassiveCA(c, omniMap);
   const classicItems = getItemsCA(c, items);
   const omniItems = getOmniEquippedCA(c, omniInventory, omniMap);
+  const omniContributions = [...omniPassives.contributions, ...omniItems.contributions];
+  const omniTotalCA = resolverAcumuloOmni(omniContributions);
+  const omniPassivesCA = omniContributions
+    .filter((origin) => origin.source.startsWith('✦') && origin.applied)
+    .reduce((total, origin) => total + origin.delta, 0);
+  const omniItemsCA = omniContributions
+    .filter((origin) => origin.source.startsWith('◇') && origin.applied)
+    .reduce((total, origin) => total + origin.delta, 0);
 
   const buffsCA = (c.activeBuffs ?? [])
     .filter((b) => b.type === 'ca')
@@ -265,9 +275,8 @@ export function computeDefenseBreakdown(
     desMod +
     halfLevel +
     passives.value +
-    omniPassives.value +
+    omniTotalCA +
     classicItems.value +
-    omniItems.value +
     buffsCA +
     auraCA +
     dualWieldCA +
@@ -287,9 +296,8 @@ export function computeDefenseBreakdown(
   if (halfLevel) notes.push(`½ Nível +${halfLevel}`);
   if (posturaCA) notes.push(`Postura ${posturaCA > 0 ? '+' : ''}${posturaCA}`);
   notes.push(...passives.notes);
-  notes.push(...omniPassives.notes);
+  notes.push(...omniContributions.map((o) => `${o.source} ${o.delta >= 0 ? '+' : ''}${o.delta}${o.applied === false ? ' (não acumula)' : ''}`));
   notes.push(...classicItems.notes);
-  notes.push(...omniItems.notes);
   if (buffsCA) notes.push(`Buffs ${buffsCA >= 0 ? '+' : ''}${buffsCA}`);
   if (auraCA) notes.push(`Aura Maciça +${auraCA}`);
   if (dualWieldCA) notes.push(`Empunhadura Dupla ${dualWieldCA >= 0 ? '+' : ''}${dualWieldCA}`);
@@ -307,9 +315,9 @@ export function computeDefenseBreakdown(
     desMod,
     halfLevel,
     passivesCA: passives.value,
-    omniPassivesCA: omniPassives.value,
+    omniPassivesCA,
     itemsCA: classicItems.value,
-    omniItemsCA: omniItems.value,
+    omniItemsCA,
     buffsCA,
     auraCA,
     dualWieldCA,
