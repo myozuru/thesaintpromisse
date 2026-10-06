@@ -35,8 +35,7 @@ SETUP = """(p) => {
   inv.setState({items:{},deleted:{}});
   const ent={id:'ent-reacao',versao:1,nome:'Corrente do Guardião',categoria:'item',descricao:'',tags:[],
     duracao:{tipo:'permanente'},custos:[],gatilhos:[],criadoEm:0,atualizadoEm:0,acoesAtivas:[p.cfg]};
-  const instId='inst-reacao-'+Math.random().toString(36).slice(2,9);
-  inv.getState().add('r-guard',ent,{instanceId:instId});
+  inv.getState().add('r-guard',ent,{instanceId:'inst-reacao-'+Math.random().toString(36).slice(2,9)});
   ms.setState({entities:{
     eg:{id:'eg',characterId:'r-guard',type:'character',x:p.gx*D,y:0,w:D,h:D},
     ea:{id:'ea',characterId:'r-aliado',type:'character',x:p.ax*D,y:0,w:D,h:D},
@@ -74,17 +73,18 @@ async def main():
         st = lambda i, f: pg.evaluate(f"window.__charStore.getState().characters.find(c=>c.id==='{i}').{f}")
         dialog = pg.get_by_role("dialog", name="Reação OMNI")
 
-        async def dados(n=8):
+        async def dados(n=10):
+            """Rola os dados que a reação pedir e espera o resultado assentar."""
             for _ in range(n):
                 tr = pg.get_by_text("Clique ou segure")
                 if await tr.count():
-                    await tr.first.click(); await pg.wait_for_timeout(3500)
+                    await tr.first.click(force=True); await pg.wait_for_timeout(3000)
                 else:
-                    await pg.wait_for_timeout(700)
+                    await pg.wait_for_timeout(600)
 
         async def limpar():
             if await dialog.count():
-                await dialog.get_by_role("button", name="Passar e continuar").first.click()
+                await dialog.get_by_role("button", name="Passar e continuar").first.click(force=True, timeout=6000)
                 await pg.wait_for_timeout(900)
 
         async def dano(alvo, valor):
@@ -98,9 +98,12 @@ async def main():
                     "condições inimigo": await pg.evaluate("window.__charStore.getState().characters.find(c=>c.id==='r-ini').activeConditions.map(c=>c.conditionId)"),
                     "janela aberta": await dialog.count(), "caso": tag}
 
+        async def logs(n=4):
+            return await pg.evaluate(f"window.__logStore.getState().logs.slice(0,{n}).map(l=>l.message)")
+
         resultados = []
 
-        async def caso(nome, cfg, pos, patch=None, alvo='r-aliado', valor=12, agir=None):
+        async def caso(nome, cfg, pos, patch=None, alvo='r-aliado', valor=12, agir=None, esperar=None):
             try:
                 await limpar()
                 await pg.evaluate(SETUP, {"cfg": cfg, "patch": patch, **pos})
@@ -108,12 +111,25 @@ async def main():
                 antes = await estado(nome + " (antes)")
                 await dano(alvo, valor)
                 aberto = await dialog.count()
+                await pg.screenshot(path=S + re.sub(r"\W+", "_", nome) + "_janela.png")
+                print(f"[{nome}] janela={'SIM' if aberto else 'não'} texto={await dialog.first.inner_text() if aberto else '-'!r}"[:400] if aberto else f"[{nome}] janela=não")
                 if agir and aberto:
-                    await agir()
+                    try:
+                        await agir()
+                    except Exception as e:
+                        print(f"[{nome}] ação falhou: {str(e)[:120]}")
+                        await pg.screenshot(path=S + re.sub(r"\W+", "_", nome) + "_falha.png")
+                if esperar:
+                    for _ in range(20):
+                        if await esperar():
+                            break
+                        await pg.wait_for_timeout(1000)
                 depois = await estado(nome + " (depois)")
+                logcase = await logs(3)
                 await pg.screenshot(path=S + re.sub(r"\W+", "_", nome) + ".png")
-                resultados.append({"caso": nome, "antes": antes, "depois": depois, "janela_apareceu": bool(aberto)})
-                print(f"[{nome}] janela={'SIM' if aberto else 'não'} | antes {antes} | depois {depois}")
+                resultados.append({"caso": nome, "antes": antes, "depois": depois,
+                                   "janela_apareceu": bool(aberto), "logs": logcase})
+                print(f"    depois {depois} | logs {json.dumps(logcase, ensure_ascii=False)[:400]}")
             except Exception as e:
                 resultados.append({"caso": nome, "erro": str(e)[:200]})
                 print(f"[{nome}] ERRO {str(e)[:160]}")
@@ -122,17 +138,21 @@ async def main():
 
         # A — aliado a 1m sofre dano: reação deve abrir e, ao clicar, gastar PE+reação, ferir o agressor e aplicá-lo Abalado.
         async def clicar():
-            await dialog.get_by_role("button", name=re.compile("Punição ao Agressor")).first.click()
-            await dados(8); await pg.wait_for_timeout(2500)
-        await caso("A dentro do alcance", CFG, {"gx": 0, "ax": 1, "fx": 3}, agir=clicar)
+            await dialog.get_by_role("button", name=re.compile("Punição ao Agressor")).first.click(force=True, timeout=8000)
+            await dados(10)
+        await caso("A dentro do alcance", CFG, {"gx": 0, "ax": 1, "fx": 3}, agir=clicar,
+                   esperar=lambda: st('r-ini', 'hpCurrent').__await__() if False else pg.evaluate(
+                       "window.__charStore.getState().characters.find(c=>c.id==='r-ini').hpCurrent < 200"))
 
         # B — guardião a 19m do aliado: fora do alcance, nada deve abrir.
         await caso("B fora do alcance", CFG, {"gx": 19, "ax": 1, "fx": 3})
 
-        # C — proteção só ao próprio portador: dano no aliado não abre; dano no guardião abre.
+        # C/D — proteção configurada: aliado vs próprio portador.
         cfg_self = json.loads(json.dumps(CFG)); cfg_self["reacao"]["protegido"] = "usuario"
-        await caso("C protegido=aliado, dano no aliado", cfg_self, {"gx": 0, "ax": 1, "fx": 3})
-        await caso("D protegido=próprio, dano no portador", cfg_self, {"gx": 0, "ax": 1, "fx": 3}, alvo='r-guard', agir=clicar)
+        await caso("C protegido=próprio, dano no aliado", cfg_self, {"gx": 0, "ax": 1, "fx": 3})
+        await caso("D protegido=próprio, dano no portador", cfg_self, {"gx": 0, "ax": 1, "fx": 3},
+                   alvo='r-guard', agir=clicar,
+                   esperar=lambda: pg.evaluate("window.__charStore.getState().characters.find(c=>c.id==='r-ini').hpCurrent < 200"))
 
         # E — sem reação disponível (0): não deve abrir.
         await caso("E sem reação disponível", CFG, {"gx": 0, "ax": 1, "fx": 3},
@@ -142,24 +162,25 @@ async def main():
         await caso("F PE insuficiente", CFG, {"gx": 0, "ax": 1, "fx": 3},
                    patch={"id": "r-guard", "set": {"peCurrent": 4}})
 
-        # G — dano mínimo 10: 5 não abre, 20 abre.
+        # G/H — dano mínimo 10: 5 não abre, 20 abre.
         cfg_min = json.loads(json.dumps(CFG)); cfg_min["reacao"]["dano_minimo"] = 10
         await caso("G dano mínimo, dano 5", cfg_min, {"gx": 0, "ax": 1, "fx": 3}, valor=5)
-        await caso("H dano mínimo, dano 20", cfg_min, {"gx": 0, "ax": 1, "fx": 3}, valor=20, agir=clicar)
+        await caso("H dano mínimo, dano 20", cfg_min, {"gx": 0, "ax": 1, "fx": 3}, valor=20, agir=clicar,
+                   esperar=lambda: pg.evaluate("window.__charStore.getState().characters.find(c=>c.id==='r-ini').hpCurrent < 200"))
 
         # I — passar a vez: nada é gasto.
         async def passar():
-            await dialog.get_by_role("button", name="Passar e continuar").first.click()
+            await dialog.get_by_role("button", name="Passar e continuar").first.click(force=True, timeout=8000)
             await pg.wait_for_timeout(1500)
         await caso("I passar a vez", CFG, {"gx": 0, "ax": 1, "fx": 3}, agir=passar)
 
         # J — TR ramificado: CD 40 força a falha, então o Abalado deve entrar.
         cfg_tr = json.loads(json.dumps(CFG))
         cfg_tr.update({"teste": "tr", "tr": "fortitude", "cd": "40", "dano": "2d8"})
-        await caso("J reação com TR", cfg_tr, {"gx": 0, "ax": 1, "fx": 3}, agir=clicar)
+        await caso("J reação com TR", cfg_tr, {"gx": 0, "ax": 1, "fx": 3}, agir=clicar,
+                   esperar=lambda: pg.evaluate("window.__charStore.getState().characters.find(c=>c.id==='r-ini').activeConditions.some(c=>c.conditionId==='abalado')"))
 
-        logs = await pg.evaluate("window.__logStore.getState().logs.slice(0,14).map(l=>l.message)")
-        print("LOG:", json.dumps(logs, ensure_ascii=False)[:3000])
+        print("LOG FINAL:", json.dumps(await pg.evaluate("window.__logStore.getState().logs.slice(0,16).map(l=>l.message)"), ensure_ascii=False)[:3000])
         pathlib.Path(S + "resumo.json").write_text(json.dumps(resultados, ensure_ascii=False, indent=1))
         print("gravações bloqueadas:", len(blocked))
         await b.close()
