@@ -48,6 +48,10 @@ const GRUPOS_NOVOS = new Set<string>([
   '🎬 Meta & Narrativa',
 ]);
 
+// Esta consulta não tem estado de concentração persistido no modelo Spell.
+// Não inferir concentração de `lastSpellUsedId` nem de qualquer buff sustentado.
+const CHAVES_SEM_ESTADO_PERSISTIDO = new Set(['qtd_concentrando']);
+
 // ─── Cenário BASELINE (tudo zerado/vazio) ──────────────────────────────
 const baseline: Character = {
   id: 'hero-base',
@@ -306,7 +310,7 @@ const bag4 = montarVariaveisDoPersonagem(altRich3, 'USUARIO');
 
 for (const cat of DICIONARIO_CHAVES_OMNI.filter(c => GRUPOS_NOVOS.has(c.grupo))) {
   for (const item of cat.itens) {
-    if (item.id.includes('<')) continue;
+    if (item.id.includes('<') || CHAVES_SEM_ESTADO_PERSISTIDO.has(item.id)) continue;
     const escopo = cat.escopos[0];
     const expr = escopo === 'NENHUM'
       ? `@${item.id.toUpperCase()}`
@@ -329,6 +333,12 @@ for (const cat of DICIONARIO_CHAVES_OMNI.filter(c => GRUPOS_NOVOS.has(c.grupo)))
 }
 
 describe('Auditoria de Responsividade — chaves novas (PR-1..9) reagem ao estado', () => {
+  it('mantém explícita a lacuna de concentração sem inferi-la de outro estado', () => {
+    const item = DICIONARIO_CHAVES_OMNI.flatMap((cat) => cat.itens).find((key) => key.id === 'qtd_concentrando');
+    expect(item?.hint).toContain('ainda não é persistido');
+    expect(avaliarFormula('@USUARIO.qtd_concentrando', bag1).valor).toBe(0);
+  });
+
   it('toda chave nova produz valor responsivo em ao menos 1 cenário', () => {
     if (suspeitas.length > 0) {
       const byGroup = suspeitas.reduce<Record<string, Resultado[]>>((acc, r) => {

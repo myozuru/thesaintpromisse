@@ -43,6 +43,9 @@ export function PartyPanel({ collapsed, onToggleCollapsed }: Props) {
   const showSheet = !!sheetToShow;
   const panelWidth = showSheet ? PANEL_WIDTH_WITH_SHEET : PANEL_WIDTH_GM_DEFAULT;
 
+  // Durante login/logout, papel indefinido nunca deve abrir ficha selecionada como se fosse Mestre.
+  if (!role) return null;
+
   return (
     <div className="h-full shrink-0 flex" style={{ width: collapsed ? 24 : panelWidth + 24 }}>
       <button

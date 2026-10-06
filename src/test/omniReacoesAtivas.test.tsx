@@ -134,8 +134,13 @@ describe('janelas de reação', () => {
   });
   it('contra-ataque após erro causa dano e não abre uma cadeia recursiva', async () => {
     useCharacterStore.getState().updateCharacter('u', { mainHandWeaponName: 'Espada Curta', attributes: [], trainingBonus: 0 });
-    add(config({ gatilho: 'quando_ataque_errar' }, { dano: '4', teste: 'ataque' })); add(config({}, { id: 'outro', nome: 'Outra' }), 'a'); render(<ReacoesAtivasOverlay />); forcarDados(1, 19, 3, 3);
-    const p = ataque(); fireEvent.click(await screen.findByText('u: Responder')); expect((await p).hit).toBe(false); expect(pegarFicha('a').hpCurrent).toBe(46); expect(useReacoesAtivasStore.getState().janelas).toEqual([]);
+    useMapStore.getState().updateEntity('e-a', { x: useMapStore.getState().gridConfig.dpi });
+    add(config({ gatilho: 'quando_ataque_errar' }, { dano: '4', teste: 'ataque' })); add(config({}, { id: 'outro', nome: 'Outra' }), 'a');
+    expect(ofertasReacaoAtiva({ gatilho: 'quando_ataque_errar', origemId: 'a', protegidoId: 'u' })).toHaveLength(1);
+    render(<ReacoesAtivasOverlay />); forcarDados(1, 19, 3, 3);
+    const p = ataque();
+    fireEvent.click(await screen.findByText('u: Responder'));
+    expect((await p).hit).toBe(false); expect(pegarFicha('a').hpCurrent).toBe(46); expect(useReacoesAtivasStore.getState().janelas).toEqual([]);
   });
   it('falha no TR da reação é necessária para cancelar o evento', async () => {
     add(config({ cancelar_evento: true }, { teste: 'tr', tr: 'fortitude', cd: '1' })); render(<ReacoesAtivasOverlay />); forcarDados(20, 12, 3);

@@ -7,6 +7,7 @@ import { useChronosStore } from '@/stores/useChronosStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { useProfileStore } from '@/stores/useProfileStore';
+import { charactersVisibleToRole } from '@/lib/characterVisibility';
 import { CharacterCategory, Character } from '@/types';
 import { CharacterCard, getAttrModifier } from './CharacterCard';
 import { TemporaryCharacterCard } from './TemporaryCharacterCard';
@@ -39,21 +40,17 @@ const CATEGORIES_FULL: { id: CharacterCategory; label: string; color: string }[]
 export function FichasModule() {
   const role = useRoleStore((s) => s.role);
   const isPlayer = role === 'PLAYER';
-  const CATEGORIES = isPlayer
-    ? CATEGORIES_FULL.filter((c) => c.id === 'PLAYER')
-    : CATEGORIES_FULL;
+  const CATEGORIES = role === 'MASTER'
+    ? CATEGORIES_FULL
+    : role === 'PLAYER'
+      ? CATEGORIES_FULL.filter((c) => c.id === 'PLAYER')
+      : [];
   const { characters: allCharacters, addCharacter, addTemporaryCharacter, resetActions, isNameTaken } = useCharacterStore();
   const activeProfileId = useProfileStore((s) => s.activeProfileId);
   // Player só vê fichas PLAYER criadas por players (ou legadas sem createdBy).
   // Fichas temporárias são privadas por perfil: cada player só vê as próprias.
   // Mestre vê tudo (inclusive fichas criadas por players).
-  const characters = isPlayer
-    ? allCharacters.filter((c) => {
-        if (c.category !== 'PLAYER' || c.createdBy === 'MASTER' || c.hiddenFromPlayers) return false;
-        if (c.temporary) return !!activeProfileId && c.profileId === activeProfileId;
-        return !c.profileId || c.profileId === activeProfileId;
-      })
-    : allCharacters;
+  const characters = charactersVisibleToRole(allCharacters, role, activeProfileId);
   const combat = useCombatStore();
   const chronosDay = useChronosStore((s) => s.day);
   const chronosMonth = useChronosStore((s) => s.month);
@@ -76,8 +73,8 @@ export function FichasModule() {
   // Auto-reset de usos com escopo `daily` sempre que o dia do Chronos mudar.
   useEffect(() => {
     const key = `${chronosYear}-${String(chronosMonth).padStart(2, '0')}-${String(chronosDay).padStart(2, '0')}`;
-    tickDailyReset(key);
-  }, [chronosDay, chronosMonth, chronosYear, tickDailyReset]);
+    if (role) tickDailyReset(key);
+  }, [chronosDay, chronosMonth, chronosYear, tickDailyReset, role]);
 
   // Sistema de Fome: a cada hora absoluta do Chronos, descontar 1 barrinha.
   // Calcula uma "hora absoluta" monotônica para todo o calendário.
@@ -89,12 +86,12 @@ export function FichasModule() {
     const hourKey = yearsHours + monthsHours + daysHours + chronosHours;
     // Só o Mestre aplica a fome (a fonte de verdade do relógio); cada tela de
     // jogador aplicando com seu próprio relógio duplicava/saltava a cobrança.
-    if (isPlayer) return;
+    if (role !== 'MASTER') return;
     // Só cobra quando a hora passou com o relógio rodando (ticker). Pausado,
     // avanços manuais, sync remoto ou reabrir a página apenas realinham.
     const cs = useChronosStore.getState();
     tickHunger(hourKey, cs.isRunning && cs.lastMutationSource === 'ticker');
-  }, [chronosHours, chronosDay, chronosMonth, chronosYear, tickHunger, isPlayer]);
+  }, [chronosHours, chronosDay, chronosMonth, chronosYear, tickHunger, role]);
 
 
   // Limite de 1 ficha PRINCIPAL por perfil de player. Fichas temporárias são ilimitadas.
@@ -193,6 +190,8 @@ export function FichasModule() {
 
   // Handlers de combate foram movidos para <CombatBar /> (componente compartilhado).
 
+  // Não renderiza nem opera fichas enquanto a sessão ainda não definiu o papel.
+  if (!role) return null;
 
   return (
     <div className="space-y-4">

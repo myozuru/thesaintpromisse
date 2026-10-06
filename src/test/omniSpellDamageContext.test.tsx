@@ -102,7 +102,7 @@ describe('Feitiços reais pela UI', () => {
     mesa(); forcarDados(natural, 4, 4, 4);
     const spy = vi.spyOn(eventBus, 'emitirEvento');
     render(<SpellApplyDialog spell={spell()} sourceCharId="caster" initialTargetIds={['alvo']} onClose={() => {}} />);
-    fireEvent.click(screen.getByRole('button', { name: /^Rolar$/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Rolar$/ }));
     await waitFor(() => expect((screen.getByRole('button', { name: 'Confirmar Ataques' }) as HTMLButtonElement).disabled).toBe(false), { timeout: 3000 });
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar Ataques' }));
     fireEvent.click(screen.getByRole('button', { name: 'Rolar Dano' }));
