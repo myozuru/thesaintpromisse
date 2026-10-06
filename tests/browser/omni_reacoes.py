@@ -141,9 +141,8 @@ async def main():
         async def clicar():
             await dialog.get_by_role("button", name=re.compile("Punição ao Agressor")).first.click(force=True, timeout=8000)
             await dados(10)
-        await caso("A dentro do alcance", CFG, {"gx": 0, "ax": 1, "fx": 3}, agir=clicar,
-                   esperar=lambda: st('r-ini', 'hpCurrent').__await__() if False else pg.evaluate(
-                       "window.__charStore.getState().characters.find(c=>c.id==='r-ini').hpCurrent < 200"))
+        vida_caiu = lambda: pg.evaluate("window.__charStore.getState().characters.find(c=>c.id==='r-ini').hpCurrent < 200")
+        await caso("A dentro do alcance", CFG, {"gx": 0, "ax": 1, "fx": 3}, agir=clicar, esperar=vida_caiu)
 
         # B — guardião a 19m do aliado: fora do alcance, nada deve abrir.
         await caso("B fora do alcance", CFG, {"gx": 19, "ax": 1, "fx": 3})
