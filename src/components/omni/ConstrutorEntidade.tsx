@@ -38,6 +38,8 @@ import {
 import { ConstrutorBlocoLogico } from './ConstrutorBlocoLogico';
 import { SmartDropdown } from './SmartDropdown';
 import { MultiSelectChips } from './MultiSelectChips';
+import { CategoriasPicker } from '@/components/economia/CategoriasPicker';
+import { useMoneyStore } from '@/stores/useMoneyStore';
 import { SimuladorPreview } from './SimuladorPreview';
 import { GuiaFormulasDialog } from './GuiaFormulasDialog';
 import { SeletorRecurso } from './SeletorRecurso';
@@ -1529,6 +1531,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                       onChange={(e) => setEnt({
                         ...ent,
                         comercio: {
+                          ...ent.comercio,
                           basePrice: Math.max(0, Number(e.target.value) || 0),
                           hiddenTags: ent.comercio?.hiddenTags ?? [],
                           isBought: ent.comercio?.isBought ?? false,
@@ -1543,6 +1546,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                       onValueChange={(v) => setEnt({
                         ...ent,
                         comercio: {
+                          ...ent.comercio,
                           basePrice: ent.comercio?.basePrice ?? 0,
                           hiddenTags: ent.comercio?.hiddenTags ?? [],
                           isBought: v === 'comprado',
@@ -1557,6 +1561,24 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                     </Select>
                   </div>
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Moeda do preço</Label>
+                    <MoedaSelect value={ent.comercio?.currencyId ?? ''} onChange={(v) => setEnt({
+                      ...ent,
+                      comercio: { basePrice: ent.comercio?.basePrice ?? 0, hiddenTags: ent.comercio?.hiddenTags ?? [], isBought: ent.comercio?.isBought ?? false, ...ent.comercio, currencyId: v || undefined },
+                    })} />
+                  </div>
+                </div>
+                <CategoriasPicker
+                  rotulo="Estabelecimentos que aceitam comprar este item"
+                  valor={ent.comercio?.categoriasAceitas ?? []}
+                  onChange={(v) => setEnt({
+                    ...ent,
+                    comercio: { basePrice: ent.comercio?.basePrice ?? 0, hiddenTags: ent.comercio?.hiddenTags ?? [], isBought: ent.comercio?.isBought ?? false, ...ent.comercio, categoriasAceitas: v },
+                  })}
+                />
+                <p className="text-xs text-muted-foreground">Só lojas dessas categorias compram o item. Ex.: uma espada no Ferreiro, nunca na Padaria.</p>
                 <div>
                   <Label>Tags ocultas (separadas por vírgula)</Label>
                   <Input
@@ -1565,6 +1587,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                     onChange={(e) => setEnt({
                       ...ent,
                       comercio: {
+                        ...ent.comercio,
                         basePrice: ent.comercio?.basePrice ?? 0,
                         hiddenTags: e.target.value.split(',').map((t) => t.trim()).filter(Boolean),
                         isBought: ent.comercio?.isBought ?? false,
@@ -2260,3 +2283,14 @@ function SemanticBuilder({
 }
 
 
+
+function MoedaSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const currencies = useMoneyStore((s) => s.currencies);
+  return (
+    <select aria-label="Moeda do preço" value={value} onChange={(e) => onChange(e.target.value)}
+      className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
+      <option value="">Moeda da loja</option>
+      {currencies.map((c) => <option key={c.id} value={c.id}>{c.symbol} {c.name}</option>)}
+    </select>
+  );
+}
