@@ -15,7 +15,7 @@ describe('texto natural — sinônimos e dano por contador', () => {
     expect(ef('ao acertar a distância então aplicar condenado por 1 rodada').condition).toBe('@DANO.tipo_ataque == 2');
   });
   it('dano escalonado por contador', () => {
-    expect(ef('ao acertar corpo_a_corpo então causar 1d4 de dano psíquico por contador_rancor')).toMatchObject({ formula: '(usuario.contador_rancor)d4', damageType: 'psiquico' });
-    expect(ef('ao acertar cac então causar 2d6 de dano psíquico por contador_rancor').formula).toBe('(2*usuario.contador_rancor)d6');
+    expect(ef('ao acertar corpo_a_corpo então causar 1d4 de dano psíquico por contador_rancor')).toMatchObject({ formula: '(@USUARIO.contador_rancor)d4', damageType: 'psiquico' });
+    expect(ef('ao acertar cac então causar 2d6 de dano psíquico por contador_rancor').formula).toBe('(2*@USUARIO.contador_rancor)d6');
   });
 });
