@@ -74,6 +74,12 @@ describe('ponte executável da sintaxe natural OMNI', () => {
     expect(r.erros[0]?.codigo).toBe('EVENTO_EM_DISJUNCAO');
   });
 
+  it('bloqueia predicado natural desconhecido em vez de removê-lo da regra', () => {
+    const r = compilarScriptNatural('ao acertar e alvo está vulnerável então causar 1d6 de dano cortante no alvo');
+    expect(r.efeitos).toEqual([]);
+    expect(r.erros[0]?.codigo).toBe('PREDICADO_NAO_SUPORTADO');
+  });
+
   it('mantém regras naturais e scripts legados juntos em um round-trip executável', () => {
     const fonte = [
       'ao sofrer dano de inimigo então acumular 1 contador_rancor até treino',
