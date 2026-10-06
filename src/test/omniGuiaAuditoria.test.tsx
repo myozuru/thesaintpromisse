@@ -48,6 +48,16 @@ describe("auditoria funcional do guia", () => {
       exemploCompostoDaChave({ id: "vida", aliases: ["hp"] }),
     ).toMatchObject(revisoes["316"]);
   });
+  it("explica vida_perdida com um caso real de escudo e PV", () => {
+    const chave = CHAVES_GUIA_OMNI.find((c) => c.id === "DANO.vida_perdida")!;
+    const exemplo = exemploCompostoDaChave(chave)!;
+    const script = parseOmniScript(exemplo.formula);
+
+    expect(exemplo.explicacao).toContain("escudo e vida temporária");
+    expect(exemplo.explicacao).toContain("5 PV");
+    expect(script.erros).toEqual([]);
+    expect(script.efeitos[0].condition).toContain("@DANO.vida_perdida");
+  });
   it.each(
     EXEMPLOS_COMPONENTES_UI.filter(
       (e) =>

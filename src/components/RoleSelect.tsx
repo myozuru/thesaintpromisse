@@ -232,7 +232,7 @@ export function RoleSelect() {
                             {p.name}
                           </p>
                           {p.password && (
-                            <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-1 mt-0.5">
+                            <p className="text-xs text-muted-foreground flex items-center justify-center gap-1 mt-0.5">
                               <Lock className="h-2.5 w-2.5" /> protegido
                             </p>
                           )}
@@ -383,7 +383,7 @@ export function RoleSelect() {
                   e.target.value = '';
                 }}
               />
-              <p className="text-[10px] text-muted-foreground mt-2">Foto (opcional)</p>
+              <p className="text-xs text-muted-foreground mt-2">Foto (opcional)</p>
             </div>
 
             <label className="block text-xs text-muted-foreground mb-1" style={{ fontFamily: "'Cinzel', serif" }}>
@@ -401,7 +401,7 @@ export function RoleSelect() {
               }`}
             />
             {newName.trim() && isProfileNameTaken(newName) ? (
-              <p className="text-[11px] text-destructive mb-2">Este nome já está em uso por outro perfil.</p>
+              <p className="text-xs text-destructive mb-2">Este nome já está em uso por outro perfil.</p>
             ) : (
               <div className="mb-2" />
             )}
@@ -520,7 +520,7 @@ export function RoleSelect() {
                   e.target.value = '';
                 }}
               />
-              <p className="text-[10px] text-muted-foreground mt-2">Foto de perfil</p>
+              <p className="text-xs text-muted-foreground mt-2">Foto de perfil</p>
             </div>
 
             {mode.canChangePassword && (
