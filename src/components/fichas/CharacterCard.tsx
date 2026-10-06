@@ -1,6 +1,7 @@
 import { EmpunharArmaButton } from './EmpunharArmaButton';
 import { PortasDaMorteCard } from './PortasDaMorteCard';
 import { SoltarItemButton } from './SoltarItemButton';
+import { OmniItemImagem } from '@/components/omni/OmniItemImagem';
 import { ContadoresEquipamento } from '@/components/omni/ContadoresEquipamento';
 import { consumeCritNegated } from '@/lib/suporteNegacao';
 import { implementoMarcialBonus } from '@/lib/golpeEspecial';
@@ -3270,6 +3271,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                       title="Ver detalhes"
                     >
                       <div className="flex items-center gap-2 flex-wrap">
+                        <OmniItemImagem entidade={inv.entity} />
                         <span>{inv.entity.nome}</span>
                         {isEquippable && (
                           <span className="rounded-full border border-primary/30 bg-primary/15 px-1.5 py-0.5 text-xs text-primary">
