@@ -1,5 +1,6 @@
 import { DAMAGE_TYPES as TIPOS_DANO_MOTOR, DAMAGE_TYPE_LABELS, type DamageType } from '@/types';
 import { resolverTipoDano } from '@/lib/omni/contextoDano';
+import { reduzirImagemItem } from '@/lib/omni/imagemItem';
 /**
  * Modal No-Code para criar/editar uma EntidadeOmni.
  * Abas: Geral | Efeitos | Custos | Gatilhos.
@@ -255,6 +256,28 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                   <Label>Descrição</Label>
                   <Textarea value={ent.descricao} onChange={(e) => setEnt({ ...ent, descricao: e.target.value })} rows={4} />
                 </div>
+                {(ent.categoria === 'arma' || ent.categoria === 'item') && (
+                  <div className="flex items-center gap-3">
+                    {ent.imagem
+                      ? <img src={ent.imagem} alt={ent.nome} className="h-16 w-16 rounded border border-border object-contain bg-background" />
+                      : <div className="flex h-16 w-16 items-center justify-center rounded border border-dashed border-border text-xs text-muted-foreground">sem imagem</div>}
+                    <div className="space-y-1">
+                      <Label>Imagem do item</Label>
+                      <p className="text-xs text-muted-foreground">Aparece no inventário, no chão do mapa e no personagem ao empunhar.</p>
+                      <div className="flex gap-2">
+                        <label className="cursor-pointer rounded border border-primary/50 px-2 py-1 text-xs hover:bg-primary/10">
+                          Escolher imagem
+                          <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                            const f = e.target.files?.[0]; e.target.value = '';
+                            if (!f) return;
+                            try { setEnt({ ...ent, imagem: await reduzirImagemItem(f) }); } catch { /* imagem inválida */ }
+                          }} />
+                        </label>
+                        {ent.imagem && <button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => setEnt({ ...ent, imagem: undefined })}>Remover</button>}
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div>
                   <Label>Tags (separadas por vírgula)</Label>
                   <Input

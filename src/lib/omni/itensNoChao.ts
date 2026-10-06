@@ -10,6 +10,7 @@ import { tokenDaFicha } from '@/stores/useAlvoMapaStore';
 import { touchDistanceMeters } from '@/lib/touchRange';
 import { findMyCharacter } from '@/lib/myCharacter';
 import type { Item } from '@/types';
+import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 
 export type ItemNoChao = { item: InventoryItem; droppedByCharId: string } | { legacy: Item; droppedByCharId: string };
 function validarDono(charId: string) {
@@ -63,4 +64,20 @@ export function recolherItemDoChao(charId: string, entityId: string): void {
   }
   ms.removeEntities([entityId]);
   useLogStore.getState().addLog('system', `📦 ${char.name} recolheu ${'item' in data ? data.item.entity.nome : data.legacy.name}.`);
+}
+
+/** Mestre coloca uma arma/item do catálogo OMNI diretamente no chão do mapa. */
+export function invocarItemNoChao(entidadeId: string, pos?: { x: number; y: number }): string {
+  if (useRoleStore.getState().role !== 'MASTER') throw new Error('Apenas o Mestre pode invocar itens no chão.');
+  const ent = useOmniEntidadesStore.getState().entidades[entidadeId];
+  if (!ent || !['arma', 'item'].includes(ent.categoria)) throw new Error('Escolha uma arma ou item do catálogo.');
+  const ms = useMapStore.getState(), dpi = ms.gridConfig.dpi || 70;
+  const p = pos ?? { x: dpi * 2, y: dpi * 2 };
+  const now = Date.now();
+  const item: InventoryItem = { instanceId: `mestre-${now}-${Math.random().toString(36).slice(2, 7)}`, ownerId: 'mestre', entity: ent, acquiredAt: now,
+    ...(ent.usos?.total != null ? { usosRestantes: ent.usos.total, usosTotais: ent.usos.total } : {}) };
+  const id = ms.addEntity({ shape: 'RECT', x: p.x, y: p.y, w: dpi * .5, h: dpi * .5, rotation: 0, color: '#c084fc', locked: true, layer: 'tokens',
+    label: `📦 ${ent.nome}`, nameplate: true, groundItem: { item, droppedByCharId: '' } });
+  useLogStore.getState().addLog('system', `📦 O Mestre colocou ${ent.nome} no chão.`);
+  return id;
 }

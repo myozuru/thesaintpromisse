@@ -135,6 +135,8 @@ export interface EntidadeOmni {
   categoria: CategoriaEntidade;
   descricao: string;
   icone?: string; // emoji ou url
+  /** Imagem do item/arma (data URL reduzida) mostrada no inventário, no chão e no token. */
+  imagem?: string;
   tags: string[];
   duracao: DuracaoEntidade;
   custos: CustoEntidade[];

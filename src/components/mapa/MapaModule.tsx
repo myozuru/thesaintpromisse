@@ -112,6 +112,8 @@ import { holdLocalMapSync, markLocalEntityEdits } from './mapSyncGuards';
 import { combatMoveBudget, reactionMoveBudget } from '@/lib/movementBudget';
 import { isFreeformFor } from '@/lib/freeformMode';
 import { toast } from '@/hooks/use-toast';
+import { imagemArmaEmpunhada, imagemPronta } from '@/lib/omni/imagemItem';
+import { useChestStore } from '@/stores/useChestStore';
 
 const MIN_SCALE = 0.1;
 const MAX_SCALE = 10;
@@ -302,6 +304,7 @@ const resolveEntityNameplateStats = (
   byId: Record<string, NameplateCharacterStats>,
 ): NameplateCharacterStats | undefined => {
   if (entity.characterId) return byId[entity.characterId];
+  if (entity.groundItem || entity.chestId) return undefined;
 
   const profileId = entity.avatarProfileId ?? entity.ownerProfileId;
   if (!profileId) return undefined;
@@ -766,6 +769,7 @@ export function MapaModule() {
           const direct = charsById.characters.find((c) => c.id === e.characterId);
           if (direct) return direct;
         }
+        if (e.groundItem || e.chestId) return undefined;
         const pid = e.avatarProfileId ?? e.ownerProfileId;
         if (!pid) return undefined;
         const players = charsById.characters.filter((c) => isPlayerVisibleCharacter(c) && c.profileId === pid);
@@ -783,6 +787,19 @@ export function MapaModule() {
         // Visual de Marcação: aura amarela + ícone 🔖 acima do token quando o
         // personagem ligado tem a condição 'marcado' ativa.
         const linkedChar = charForEntity(e);
+        // Arma empunhada com imagem: selo no canto inferior direito do token.
+        const armaImg = linkedChar && !e.hidden ? imagemPronta(imagemArmaEmpunhada(linkedChar)) : null;
+        if (armaImg) {
+          const s = Math.max(14 / camera.scale, Math.min(e.w, e.h) * 0.42);
+          const bx = e.x + e.w / 2 - s * 0.7, by = e.y + e.h / 2 - s * 0.7;
+          tkCtx.save();
+          tkCtx.fillStyle = 'rgba(12,12,16,0.85)';
+          tkCtx.strokeStyle = 'rgba(250,204,21,0.9)';
+          tkCtx.lineWidth = 1.5 / camera.scale;
+          tkCtx.beginPath(); tkCtx.arc(bx + s / 2, by + s / 2, s / 2 + 2 / camera.scale, 0, Math.PI * 2); tkCtx.fill(); tkCtx.stroke();
+          try { tkCtx.drawImage(armaImg, bx + s * 0.12, by + s * 0.12, s * 0.76, s * 0.76); } catch { /* decoding */ }
+          tkCtx.restore();
+        }
         const isMarked = !!linkedChar?.activeConditions?.some((c: any) => c.conditionId === 'marcado');
         if (isMarked && !e.hidden) {
           tkCtx.save();
@@ -3308,7 +3325,7 @@ export function MapaModule() {
       {pendingAssets.length > 0 && (() => {
         const item = pendingAssets[0];
         const consume = () => setPendingAssets((prev) => prev.slice(1));
-        const onChoose = (kind: AssetKind) => {
+        const onChoose = (kind: AssetKind, chestId?: string) => {
           const st = useMapStore.getState();
           const cfg = st.gridConfig;
           const ratio = item.dims.h > 0 ? item.dims.w / item.dims.h : 1;
@@ -3328,21 +3345,23 @@ export function MapaModule() {
             });
             st.setEntityLayer(id, 'map');
           } else {
-            const heightCells = kind === 'character' ? 1 : (cfg.defaultImageHeightM ?? 1.8);
+            const heightCells = kind === 'character' ? 1 : kind === 'chest' ? 1 : (cfg.defaultImageHeightM ?? 1.8);
             const h = Math.max(20, heightCells * cfg.dpi);
             const w = Math.max(20, h * ratio);
             const center = snapBypassRef.current
               ? item.world
               : GridEngine.snapToGrid(item.world, cfg);
+            const chest = chestId ? useChestStore.getState().chests[chestId] : undefined;
             const id = st.addEntity({
               shape: kind === 'character' ? 'ELLIPSE' : 'RECT',
               x: center.x, y: center.y,
               w: kind === 'character' ? h : w, h,
               rotation: 0,
               color: '#ffffff',
-              locked: false,
+              locked: kind === 'chest',
               assetId: item.assetId,
-              label: item.name.slice(0, 24),
+              label: (chest?.name ?? item.name).slice(0, 24),
+              ...(kind === 'chest' && chestId ? { chestId, nameplate: true } : {}),
               tokenCrop: kind === 'character' ? { zoom: 1, offsetX: 0, offsetY: 0 } : undefined,
             });
             st.setSelected([id]);
