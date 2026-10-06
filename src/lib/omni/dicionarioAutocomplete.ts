@@ -53,7 +53,8 @@ const VERBOS: SugestaoAutocomplete[] = [
   { valor: 'e',         categoria: 'Operador', hint: 'soma na fórmula (+)' },
   { valor: 'contador_', categoria: 'Contador', hint: '🔢 contador livre: somar 1 em contador_rancor' },
   { valor: 'ate',       categoria: 'Contador', hint: '🔢 teto: … em contador_x ate @USUARIO.treino' },
-  { valor: 'por_fonte', categoria: 'Contador', hint: '🔢 teto separado para cada ficha de origem' },
+  { valor: 'por_fonte', categoria: 'Contador', hint: '🔢 registra a ficha que originou cada parcela; o teto continua global' },
+  { valor: 'teto_aliado', categoria: 'Contador', hint: '🔢 limite por fonte; complete com uma quantidade e “por rodada” ou “por descanso”' },
   { valor: 'tudo',      categoria: 'Contador', hint: '🔢 subtrair tudo em contador_x (gasta tudo → @CENA.consumido)' },
 ];
 
