@@ -9,6 +9,7 @@ import type { AcaoAtivaConfig, EfeitoSecundarioAtivo, EntidadeOmni, TrNome } fro
 import { novaAcaoAtiva } from '@/lib/omni/acaoAtiva';
 import { copiarAcaoAtiva, criarAcaoDePreset, lerPresetsAcoesAtivas, salvarPresetAcaoAtiva, type PresetAcaoAtiva } from '@/lib/omni/presetsAcoesAtivas';
 import { DAMAGE_TYPES, DAMAGE_TYPE_LABELS } from '@/types';
+import { ORDEM_PERICIAS, ORDEM_TR, ROTULOS_PERICIAS, ROTULOS_TR } from '@/lib/omni/constantesDoSistema';
 import { resolverTipoDano } from '@/lib/omni/contextoDano';
 import { ALL_CONDITIONS } from '@/types/conditions';
 import { Input } from '@/components/ui/input';
@@ -17,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Copy, Plus, Save, Trash2 } from 'lucide-react';
 
 const sel = 'h-9 w-full rounded-md border border-input bg-background px-2 text-sm';
-const TRS: [TrNome, string][] = [['astucia', 'Astúcia'], ['fortitude', 'Fortitude'], ['integridade', 'Integridade'], ['reflexos', 'Reflexos'], ['vontade', 'Vontade']];
+const TRS: [TrNome, string][] = ORDEM_TR.map((key) => [key.toLocaleLowerCase() as TrNome, ROTULOS_TR[key].replace(/^TR — /, '')]);
 
 export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: (e: EntidadeOmni) => void }) {
   const lista = ent.acoesAtivas ?? [];
@@ -98,8 +99,12 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
             )}
           </div>
           {a.teste === 'disputa' && <div className="grid grid-cols-2 gap-2">
-            <label className="text-xs">Perícia do usuário<Input aria-label="Perícia do usuário" value={a.pericia_usuario ?? ''} placeholder="Atletismo" onChange={e => set(i, { pericia_usuario: e.target.value })} /></label>
-            <label className="text-xs">Perícias possíveis do alvo<Input aria-label="Perícias possíveis do alvo" value={(a.pericias_alvo ?? []).join(', ')} placeholder="Atletismo, Acrobacia" onChange={e => set(i, { pericias_alvo: e.target.value.split(',').map(v => v.trim()).filter(Boolean) })} /><span className="text-xs text-muted-foreground">Separadas por vírgula; o alvo usa a de maior bônus. Empate favorece o alvo.</span></label>
+            <label className="text-xs">Perícia do usuário<select aria-label="Perícia do usuário" className={sel} value={a.pericia_usuario ?? 'atletismo'} onChange={e => set(i, { pericia_usuario: e.target.value })}>
+              {ORDEM_PERICIAS.map(key => <option key={key} value={key.toLocaleLowerCase()}>{ROTULOS_PERICIAS[key]}</option>)}
+            </select></label>
+            <label className="text-xs">Perícias possíveis do alvo<select aria-label="Perícias possíveis do alvo" className={sel} multiple value={a.pericias_alvo ?? ['atletismo', 'acrobacia']} onChange={e => set(i, { pericias_alvo: Array.from(e.target.selectedOptions, option => option.value) })}>
+              {ORDEM_PERICIAS.map(key => <option key={key} value={key.toLocaleLowerCase()}>{ROTULOS_PERICIAS[key]}</option>)}
+            </select><span className="text-xs text-muted-foreground">Selecione uma ou mais opções; o alvo usa a perícia de maior bônus. Empate favorece o alvo.</span></label>
           </div>}
           {a.teste === 'tr' && <EditorDesfechosTR acao={a} onChange={p => set(i, p)} />}
           {a.teste === 'tr' && (
