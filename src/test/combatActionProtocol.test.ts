@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  canControlCombatActor,
   combatActionIntentSchema,
   publicCombatResolutionSchema,
   resolutionMatchesIntent,
@@ -43,6 +44,13 @@ describe("protocolo de intenção de combate", () => {
         targetPoint: { x: Number.POSITIVE_INFINITY, y: 0 },
       }).success,
     ).toBe(false);
+  });
+
+  it("autoriza o dono persistido ou o Mestre e recusa fichas sem vínculo", () => {
+    expect(canControlCombatActor("player-a", "player-a", false)).toBe(true);
+    expect(canControlCombatActor("player-a", "player-b", false)).toBe(false);
+    expect(canControlCombatActor(null, "player-a", false)).toBe(false);
+    expect(canControlCombatActor(null, "master-a", true)).toBe(true);
   });
 });
 

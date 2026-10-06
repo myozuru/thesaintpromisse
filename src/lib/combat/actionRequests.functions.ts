@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   combatActionIntentSchema,
+  canControlCombatActor,
   publicCombatResolutionSchema,
   resolutionMatchesIntent,
   type CombatActionIntent,
@@ -11,6 +12,12 @@ import {
 } from "@/lib/combat/actionProtocol";
 
 const requestIdSchema = z.object({ requestId: z.string().uuid() }).strict();
+const assignOwnerInputSchema = z
+  .object({
+    characterId: z.string().trim().min(1).max(128),
+    ownerUserId: z.string().uuid().nullable(),
+  })
+  .strict();
 const resolutionInputSchema = publicCombatResolutionSchema;
 
 type AuthContext = {
@@ -56,12 +63,68 @@ async function requireMaster(context: AuthContext): Promise<void> {
   if (error || data !== true) throw new Error("Forbidden: ação disponível apenas ao Mestre.");
 }
 
+async function requesterIsMaster(context: AuthContext): Promise<boolean> {
+  const { data, error } = await context.supabase.rpc("has_role", {
+    _user_id: context.userId,
+    _role: "master",
+  });
+  if (error) throw new Error("Não foi possível validar o papel da conta.");
+  return data === true;
+}
+
+/**
+ * O Mestre vincula a ficha ao UUID autenticado do jogador. O UUID do perfil
+ * enviado dentro de `characters` nunca é usado como prova de propriedade.
+ * `ownerUserId: null` remove o vínculo e bloqueia novas intenções do jogador.
+ */
+export const assignCombatCharacterOwner = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: unknown) => assignOwnerInputSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await requireMaster(context);
+    const admin = await getAdminClient();
+
+    if (data.ownerUserId === null) {
+      const { error } = await admin
+        .from("combat_character_owners")
+        .delete()
+        .eq("character_id", data.characterId);
+      if (error) throw new Error("Não foi possível remover o vínculo da ficha.");
+      return { characterId: data.characterId, ownerUserId: null };
+    }
+
+    const { data: target, error: userError } = await admin.auth.admin.getUserById(data.ownerUserId);
+    if (userError || !target.user) throw new Error("A conta selecionada não existe.");
+
+    const { error } = await admin.from("combat_character_owners").upsert(
+      {
+        character_id: data.characterId,
+        owner_user_id: data.ownerUserId,
+        assigned_by: context.userId,
+      },
+      { onConflict: "character_id" },
+    );
+    if (error) throw new Error("Não foi possível vincular a ficha à conta.");
+    return { characterId: data.characterId, ownerUserId: data.ownerUserId };
+  });
+
 /** Cria uma intenção pendente; não cobra recursos nem modifica fichas. */
 export const submitCombatActionIntent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => combatActionIntentSchema.parse(input))
   .handler(async ({ data, context }) => {
     const admin = await getAdminClient();
+    const isMaster = await requesterIsMaster(context);
+    if (!isMaster) {
+      const { data: owner, error: ownerError } = await admin
+        .from("combat_character_owners")
+        .select("owner_user_id")
+        .eq("character_id", data.actorCharacterId)
+        .maybeSingle();
+      if (ownerError) throw new Error("Não foi possível validar o controle desta ficha.");
+      if (!canControlCombatActor(owner?.owner_user_id, context.userId, false))
+        throw new Error("Você não tem controle desta ficha para enviar a ação.");
+    }
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 2 * 60_000);
 

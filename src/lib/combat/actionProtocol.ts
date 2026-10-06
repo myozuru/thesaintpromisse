@@ -51,6 +51,18 @@ export const combatActionIntentSchema = z
 
 export type CombatActionIntent = z.infer<typeof combatActionIntentSchema>;
 
+/**
+ * A identidade enviada na intenção só pode ser usada pelo dono persistido ou
+ * pelo Mestre. `profileId` e outros campos vindos da ficha não são autoridade.
+ */
+export function canControlCombatActor(
+  ownerUserId: string | null | undefined,
+  requesterUserId: string,
+  requesterIsMaster: boolean,
+): boolean {
+  return requesterIsMaster || (!!ownerUserId && ownerUserId === requesterUserId);
+}
+
 const publicTargetOutcomeSchema = z
   .object({
     characterId: idSchema,
