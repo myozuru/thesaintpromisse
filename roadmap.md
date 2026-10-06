@@ -75,4 +75,4 @@
 - [x] Corrigir a janela de reação, que ficava escondida sob a bandeja 3D de dados no canto inferior direito e não podia ser clicada enquanto houvesse rolagem na tela
 - [x] Reações nos testes pedidos pelo Mestre: campo "Quem força o teste" (TR/perícia); testado no navegador
 - [x] Texto natural: aceitar "cac"/"corpo a corpo", "aplicar condição <nome>" e dano escalado por contador
-- [ ] Guia OMNI: janela redimensionável, abas por função, exemplos testados
+- [x] Guia OMNI: aba "Texto simples" com exemplos testados; painel abre inteiro na tela (já era redimensionável e com abas)
