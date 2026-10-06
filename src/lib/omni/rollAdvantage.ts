@@ -211,9 +211,11 @@ export function consumeAdvantageFor(charId: string, ctx: RollContext, extra: { a
     for (const id of consumedIds) delete remaining[id];
     writeMods(charId, remaining);
   }
-  const notes = matches.map(m =>
-    `${m.kind === 'advantage' ? '🟢 vantagem' : '🔴 desvantagem'} (${m.scope}${m.target ? `:${m.target}` : ''}${m.source ? ` · ${m.source}` : ''})`
-  );
+  const notes = [
+    ...matches.map(m =>
+      `${m.kind === 'advantage' ? '🟢 vantagem' : '🔴 desvantagem'} (${m.scope}${m.target ? `:${m.target}` : ''}${m.source ? ` · ${m.source}` : ''})`),
+    ...ferimentos.map(f => `🔴 desvantagem (Ferimento Complexo · ${f})`),
+  ];
   return { net, consumedIds, notes };
 }
 
@@ -223,9 +225,10 @@ export function peekAdvantageFor(charId: string, ctx: RollContext): ResolveResul
   if (!c) return 'normal';
   const mods = readMods(c);
   const matches = Object.values(mods).filter(m => matchesScope(m, ctx) && m.bonus == null);
-  if (matches.length === 0) return 'normal';
+  const ferimento = desvantagensFerimentos(c, ctx).length > 0;
+  if (matches.length === 0 && !ferimento) return 'normal';
   const adv = matches.some(m => m.kind === 'advantage');
-  const dis = matches.some(m => m.kind === 'disadvantage');
+  const dis = ferimento || matches.some(m => m.kind === 'disadvantage');
   if (adv && !dis) return 'advantage';
   if (dis && !adv) return 'disadvantage';
   return 'normal';
