@@ -13,6 +13,7 @@ import { useInventoryStore } from '@/stores/useInventoryStore';
 import { novaEntidade } from '@/lib/omni/tipos';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
+import { useCombatStore } from '@/stores/useCombatStore';
 import { parseOmniScript, efeitosParaScript } from '@/lib/omni/omniScript';
 import { dispararGatilhoEfeitosItens } from '@/lib/omni/triggerEfeitos';
 import { montarVariaveisDoPersonagem } from '@/lib/omni/resolvedor';
@@ -51,11 +52,40 @@ beforeEach(() => { useInventoryStore.setState({ items: {}, deleted: {} }); comoT
 afterEach(() => { limparMesa(); vi.restoreAllMocks(); });
 
 describe('Regras puras', () => {
-  it('teto por fonte: cada ficha acumula até o teto, total soma', () => {
+  it('teto global limita o total mesmo com parcelas separadas por fonte', () => {
     let c: Record<string, number> = {};
-    for (const f of ['a', 'a', 'a', 'b', 'c', 'c']) c = calcularContador(c, 'rancor', 'INCREMENTAR_CONTADOR', { valor: 1, teto: 2, escopoTeto: 'porFonte', fonteId: f }).counters;
-    expect(c.rancor).toBe(5);
+    for (const f of ['a', 'a', 'a', 'b', 'c', 'c']) c = calcularContador(c, 'rancor', 'INCREMENTAR_CONTADOR', { valor: 1, teto: 2, rastrearFonte: true, fonteId: f }).counters;
+    expect(c.rancor).toBe(2);
     expect(c['rancor__fonte__a']).toBe(2);
+    expect(c['rancor__fonte__b']).toBeUndefined();
+  });
+  it('avança ciclo de cota ao concluir descansos curto e longo', async () => {
+    montarMesa([aliado('ana')], {});
+    expect(pegarFicha('ana').omniCounterRestCycle ?? 0).toBe(0);
+    await useCharacterStore.getState().applyShortRest('ana');
+    await esperar(10);
+    expect(pegarFicha('ana').omniCounterRestCycle).toBe(1);
+    await useCharacterStore.getState().applyLongRest('ana');
+    await esperar(10);
+    expect(pegarFicha('ana').omniCounterRestCycle).toBe(2);
+  });
+  it('limite por aliado usa ciclo explícito e não se renova quando o saldo é gasto', () => {
+    let counters: Record<string, number> = {};
+    let usoPorFonte: Record<string, Record<string, { ciclo: string; usados: number }>> = {};
+    const somar = (fonteId: string, cicloFonte: string) => {
+      const r = calcularContador(counters, 'rancor', 'INCREMENTAR_CONTADOR', { valor: 1, teto: 3, rastrearFonte: true, fonteId, limiteFonte: 1, cicloFonte, usoPorFonte });
+      counters = r.counters;
+      usoPorFonte = r.usoPorFonte;
+    };
+    somar('aliado-a', 'rodada:1');
+    somar('aliado-a', 'rodada:1');
+    expect(counters.rancor).toBe(1);
+    counters = calcularContador(counters, 'rancor', 'CONSUMIR_CONTADOR', { valor: 0 }).counters;
+    somar('aliado-a', 'rodada:1');
+    expect(counters.rancor).toBe(0);
+    somar('aliado-a', 'rodada:2');
+    somar('aliado-b', 'rodada:2');
+    expect(counters.rancor).toBe(2);
   });
   it('teto global e consumo total/parcial', () => {
     let c: Record<string, number> = {};
@@ -89,11 +119,18 @@ describe('Regras puras', () => {
     expect(r.efeitos[0].counterPerSource).toBe(true);
     expect(efeitosParaScript(r.efeitos, { defaultTarget: 'USUARIO' })).toContain('ate treino por_fonte');
   });
+  it('script preserva limite de fonte e periodicidade explícita', () => {
+    const script = '@aliado_sofrer_dano -> somar 1 em contador_rancor ate @USUARIO.treino por_fonte teto_aliado 1 por rodada';
+    const parsed = parseOmniScript(script, { defaultTarget: 'USUARIO' });
+    expect(parsed.erros).toHaveLength(0);
+    expect(parsed.efeitos[0]).toMatchObject({ counterCap: '@USUARIO.treino', counterPerSource: true, counterSourceLimit: '1', counterSourcePeriod: 'rodada' });
+    expect(efeitosParaScript(parsed.efeitos, { defaultTarget: 'USUARIO' })).toContain('ate treino por_fonte teto_aliado 1 por rodada');
+  });
 });
 
 describe('Combate real — Retribuição (aliado a 4,5 m sofre dano → carga por aliado)', () => {
   it('acumula por aliado até o treino, ignora quem está longe, depois consome em dano real', async () => {
-    const rancor = passiva('rancor', '@aliado_sofrer_dano -> se @CENA.distancia <= 4.5 entao somar 1 em contador_rancor ate @USUARIO.treino por_fonte');
+    const rancor = passiva('rancor', '@aliado_sofrer_dano -> se @CENA.distancia <= 4.5 entao somar 1 em contador_rancor ate @USUARIO.treino por_fonte teto_aliado 1 por rodada');
     const corte = passiva('corte', '@acertar -> subtrair tudo em usuario.contador_rancor e subtrair (@CENA.consumido)d1 em vida_atual', 'ALVO');
     montarMesa(
       [aliado('ana', { level: 9, omniAtivos: [vincular(rancor), vincular(corte)] }), aliado('bia'), aliado('caio'), aliado('davi'), inimigo('inim')],
@@ -101,21 +138,25 @@ describe('Combate real — Retribuição (aliado a 4,5 m sofre dano → carga po
     );
     const t = treinoDe('ana');
     expect(t).toBeGreaterThan(1);
+    useCombatStore.setState({ inCombat: true, combatId: 'contador-test', round: 1 });
     for (let i = 0; i < t + 2; i++) await danoEm('bia', 2, 'inim');   // perto: acumula até t
     await danoEm('caio', 2, 'inim');                                     // perto: +1
     await danoEm('davi', 2, 'inim');                                     // 9+ m: nada
+    useCombatStore.setState({ round: 2 });
+    await danoEm('bia', 2, 'inim');                                      // a cota renova na rodada nova
     await danoEm('inim', 2, 'bia');                                      // inimigo ferido: não é aliado
     const a = pegarFicha('ana');
-    expect(a.omniCounters?.['rancor__fonte__bia']).toBe(t);
+    const esperado = Math.min(t, 3);
+    expect(a.omniCounters?.['rancor__fonte__bia']).toBe(2);
     expect(a.omniCounters?.['rancor__fonte__caio']).toBe(1);
     expect(a.omniCounters?.['rancor__fonte__davi']).toBeUndefined();
-    expect(a.omniCounters?.rancor).toBe(t + 1);
+    expect(a.omniCounters?.rancor).toBe(esperado);
 
     const hpAntes = pegarFicha('inim').hpCurrent;
     dispararGatilhoEfeitosItens('aoAcertarAtaque', { usuarioId: 'ana', alvoId: 'inim' });
     await esperar(20);
     expect(pegarFicha('ana').omniCounters?.rancor).toBe(0);
-    expect(hpAntes - pegarFicha('inim').hpCurrent).toBe(t + 1);
+    expect(hpAntes - pegarFicha('inim').hpCurrent).toBe(esperado);
   });
 
   it('sem peça no mapa a distância é 999 e não acumula', async () => {
