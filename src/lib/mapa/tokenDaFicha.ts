@@ -6,7 +6,8 @@ export function resolverTokensDaFicha(
   char: Pick<Character, 'id' | 'profileId'>,
   entities: Record<string, Entity>, layerVisible: Record<string, boolean>,
 ): Entity[] {
-  const candidates = Object.values(entities).filter(e => !e.hidden && !e.carriedBy &&
+  // Itens soltos e baús nunca representam a ficha, mesmo tendo dono do perfil.
+  const candidates = Object.values(entities).filter(e => !e.hidden && !e.carriedBy && !e.groundItem && !e.chestId &&
     (e.layer ?? 'tokens') === 'tokens' && layerVisible[e.layer ?? 'tokens'] !== false);
   const ordenar = (tokens: Entity[]) => tokens.sort((a, b) => a.id.localeCompare(b.id));
   const vinculados = candidates.filter(e => e.characterId === char.id);

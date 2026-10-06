@@ -302,6 +302,7 @@ const resolveEntityNameplateStats = (
   byId: Record<string, NameplateCharacterStats>,
 ): NameplateCharacterStats | undefined => {
   if (entity.characterId) return byId[entity.characterId];
+  if (entity.groundItem || entity.chestId) return undefined;
 
   const profileId = entity.avatarProfileId ?? entity.ownerProfileId;
   if (!profileId) return undefined;
@@ -766,6 +767,7 @@ export function MapaModule() {
           const direct = charsById.characters.find((c) => c.id === e.characterId);
           if (direct) return direct;
         }
+        if (e.groundItem || e.chestId) return undefined;
         const pid = e.avatarProfileId ?? e.ownerProfileId;
         if (!pid) return undefined;
         const players = charsById.characters.filter((c) => isPlayerVisibleCharacter(c) && c.profileId === pid);

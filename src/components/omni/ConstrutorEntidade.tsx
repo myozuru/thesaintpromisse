@@ -1,5 +1,6 @@
 import { DAMAGE_TYPES as TIPOS_DANO_MOTOR, DAMAGE_TYPE_LABELS, type DamageType } from '@/types';
 import { resolverTipoDano } from '@/lib/omni/contextoDano';
+import { reduzirImagemItem } from '@/lib/omni/imagemItem';
 /**
  * Modal No-Code para criar/editar uma EntidadeOmni.
  * Abas: Geral | Efeitos | Custos | Gatilhos.
