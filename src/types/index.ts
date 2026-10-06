@@ -276,6 +276,15 @@ export function createEmptyRdByType(): Record<DamageType, number> {
 
 export interface Character {
   id: string;
+  /** Portas da Morte em andamento (só PLAYER, vida ≤ 0). */
+  portasMorte?: { sucessos: number; falhas: number; ultimaRodada?: number };
+  /** Falhas de teste de morte que perduram até o descanso longo. */
+  falhasMorte?: number;
+  /** Dano que gerou um Ferimento Complexo aguardando o Mestre sortear/escolher. */
+  ferimentoPendente?: number;
+  ferimentosComplexos?: { id: string; resultado: number; nome: string; desde: number }[];
+  /** No Último Segundo: benefício ativo nesta rodada. */
+  ultimoSegundoAtivo?: boolean;
   name: string;
   category: CharacterCategory;
   /** Quem criou esta ficha. PLAYER fichas criadas por jogadores são visíveis ao Mestre; fichas criadas pelo Mestre não são visíveis aos players. */

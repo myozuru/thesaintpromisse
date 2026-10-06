@@ -10,7 +10,7 @@ export const MOBILIDADE_ID = 'sup-mobilidade-avancada';
 export const MOBILIDADE_BONUS_M = 3;
 
 type MoveChar = Pick<Character, 'movement' | 'slotsCurrent' | 'slotsMax'> &
-  Partial<Pick<Character, 'chosenSpecAbilities' | 'mobilidadeReacaoM' | 'mobilidadeReacaoBase'>>;
+  Partial<Pick<Character, 'chosenSpecAbilities' | 'mobilidadeReacaoM' | 'mobilidadeReacaoBase' | 'ultimoSegundoAtivo' | 'ferimentosComplexos'>>;
 
 export function isOverloaded(c: Pick<Character, 'slotsCurrent' | 'slotsMax'> | undefined | null): boolean {
   if (!c) return false;
@@ -22,7 +22,8 @@ export function getMobilidadeBonus(c: Partial<Pick<Character, 'chosenSpecAbiliti
 }
 
 export function effectiveMovement(c: MoveChar | undefined | null, bonusDeslocamento = 0): number {
-  const base = Math.max(0, (c?.movement ?? 0) + getMobilidadeBonus(c) + bonusDeslocamento);
+  const pernas = (c?.ferimentosComplexos ?? []).some((f) => f.resultado >= 4 && f.resultado <= 6) ? 0.5 : 1;
+  const base = Math.max(0, ((c?.movement ?? 0) + getMobilidadeBonus(c)) * pernas + (c?.ultimoSegundoAtivo ? 4.5 : 0) + bonusDeslocamento);
   return isOverloaded(c) ? base / 2 : base;
 }
 

@@ -2653,6 +2653,10 @@ export const useCharacterStore = create<CharacterStore>()(
           }
         }
 
+        if (damageResolved) {
+          const hpAntesPorta = preHp, danoPorta = finalDamage;
+          void import('@/lib/portasDaMorte').then((m) => m.aposDano(id, hpAntesPorta, danoPorta)).catch(() => {});
+        }
         const postSet = get().characters.find((c) => c.id === id);
         // ─── Suporte — Protetor (aliado adjacente sofreu dano) ─────────────
         // Se um Suporte com a habilidade, escudo equipado e PE estiver a até
@@ -2897,6 +2901,7 @@ export const useCharacterStore = create<CharacterStore>()(
             return { ...c, hpCurrent: newHp, omniCounters };
           }),
         }));
+        if (healedAmount > 0) void import('@/lib/portasDaMorte').then((m) => m.aposCura(id)).catch(() => {});
         // ─── Omni-Engine: emite gatilho de cura recebida ───────────────────
         if (healedAmount > 0) {
           import('@/lib/omni/eventBus').then(({ emitirEvento }) => {
@@ -4925,6 +4930,7 @@ export const useCharacterStore = create<CharacterStore>()(
         return { peRecovered, economiaRoll };
       },
       applyLongRest: async (charId, opts) => {
+        void import('@/lib/portasDaMorte').then((m) => m.limparFalhasDescanso(charId)).catch(() => {});
         const crafting = !!opts?.crafting;
         // Pre-rola Economia (longo) antes do set.
         const cBefore = get().characters.find((x) => x.id === charId);
