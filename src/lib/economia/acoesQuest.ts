@@ -15,17 +15,21 @@ import { registrarEvento } from './linhaTempo';
 
 export const agoraMundo = () => toTimelineSeconds(useChronosStore.getState());
 
-export function aceitarQuest(questId: string, charId: string) {
+/** Aceita sozinho (um id) ou em grupo (vários ids escolhidos por quem aceita). */
+export function aceitarQuest(questId: string, charIds: string | string[]) {
   const st = useQuestStore.getState(), q = st.quests[questId];
   if (!q || q.deletedAt) throw new Error('Quest não encontrada.');
   if (questExpirou(q.prazoFim, agoraMundo())) throw new Error('O prazo desta quest já acabou.');
   if (q.status !== 'disponivel' && q.status !== 'aceita') throw new Error('Esta quest não está mais disponível.');
-  if (q.aceitaPor.includes(charId)) return;
+  const novos = [...new Set(Array.isArray(charIds) ? charIds : [charIds])].filter((id) => !q.aceitaPor.includes(id));
+  if (!novos.length) return;
   const primeira = q.aceitaPor.length === 0;
-  st.atualizarQuest(questId, { status: 'aceita', aceitaPor: [...q.aceitaPor, charId] });
-  const nome = useCharacterStore.getState().characters.find((c) => c.id === charId)?.name ?? 'Alguém';
-  useLogStore.getState().addLog('system', `📜 ${nome} aceitou a quest "${q.titulo}".`);
-  if (primeira) registrarEvento('quest', `Quest aceita: ${q.mascarada && !q.revelada ? 'Contrato misterioso' : q.titulo}`, `por ${nome}`);
+  st.atualizarQuest(questId, { status: 'aceita', aceitaPor: [...q.aceitaPor, ...novos] });
+  const chars = useCharacterStore.getState().characters;
+  const nomes = novos.map((id) => chars.find((c) => c.id === id)?.name ?? 'Alguém').join(', ');
+  const grupo = novos.length > 1;
+  useLogStore.getState().addLog('system', `📜 ${nomes} ${grupo ? 'aceitaram em grupo' : 'aceitou'} a quest "${q.titulo}".`);
+  if (primeira) registrarEvento('quest', `Quest aceita: ${q.mascarada && !q.revelada ? 'Contrato misterioso' : q.titulo}`, `por ${nomes}`);
 }
 
 function exigirMestre() {
