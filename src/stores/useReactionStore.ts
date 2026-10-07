@@ -31,7 +31,8 @@ export type ReactionKind =
   | 'fah_presenca_nefasta'     // FAH — início de combate, rolar TR Vontade dos inimigos vs CD Amaldiçoada
   | 'condition_end_tr_offer'    // Condição com modo "TR todos os rounds" / "Até passar em TR" — rolar TR no turno do alvo
   | 'lua_reacao_offer'         // Postura da Lua — atingido por ataque: usar reação para reduzir dano?
-  | 'persistent_area_tr_offer'; // Área Persistente — rolar TR para evitar dano/condição do tick
+  | 'persistent_area_tr_offer'  // Área Persistente — rolar TR para evitar dano/condição do tick
+  | 'aura_start_turn_tr_offer'; // Aura OMNI — TR no início do turno dentro do raio
 
 export interface ReactionPrompt {
   id: string;
@@ -78,6 +79,13 @@ export interface ReactionPrompt {
     zoneTRMode?: 'uma_vez' | 'todo_round' | 'todo_turno';
     /** persistent_area_tr_offer — se o gatilho foi entrada ou início do turno. */
     zoneTrigger?: 'entrada' | 'turno';
+    /** aura_start_turn_tr_offer — dono, entidade e ação que originaram o tick. */
+    auraOwnerId?: string;
+    auraEntityId?: string;
+    auraActionId?: string;
+    /** Fórmula de dano e tipo configurados na ação ativa da aura. */
+    auraDamageFormula?: string;
+    auraDamageType?: string;
     /** cobrir_se_offer — dano efetivamente sofrido (Esc+HP), para refund. */
     damageDealt?: number;
     /** cobrir_se_offer — dano subtraído do HP. */
