@@ -5,7 +5,8 @@
 import { useMemo, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { useQuestStore, type Quest } from '@/stores/useQuestStore';
+import { useQuestStore, type Quest, type Faccao } from '@/stores/useQuestStore';
+import { atendeRepMinima } from '@/lib/economia/reputacao';
 import { useBossStore } from '@/stores/useBossStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useMoneyStore } from '@/stores/useMoneyStore';
@@ -22,10 +23,11 @@ const papel: React.CSSProperties = {
   color: '#3b2410', filter: 'drop-shadow(0 6px 8px rgba(0,0,0,.55))',
 };
 
-export function questVisivelNoMural(q: Quest, muralId: string | null, master: boolean, charId?: string) {
+export function questVisivelNoMural(q: Quest, muralId: string | null, master: boolean, charId?: string, faccoes: Record<string, Faccao> = {}) {
   if (q.deletedAt) return false;
   if (muralId && q.murais.length && !q.murais.includes(muralId)) return false;
   if (master) return true;
+  if (!(charId && q.aceitaPor.includes(charId)) && q.faccaoId && !atendeRepMinima(faccoes[q.faccaoId], charId, q.repMinima)) return false;
   return q.status === 'disponivel' || (q.status === 'aceita') || (!!charId && q.aceitaPor.includes(charId));
 }
 
@@ -35,7 +37,8 @@ export function MuralQuestsDialog({ aberto, onClose, muralId, charId, master, on
   const questsMap = useQuestStore((s) => s.quests);
   const mural = useQuestStore((s) => (muralId ? s.murais[muralId] : undefined));
   const atualizar = useQuestStore((s) => s.atualizarQuest);
-  const quests = useMemo(() => Object.values(questsMap).filter((q) => questVisivelNoMural(q, muralId, master, charId)), [questsMap, muralId, master, charId]);
+  const faccoes = useQuestStore((s) => s.faccoes);
+  const quests = useMemo(() => Object.values(questsMap).filter((q) => questVisivelNoMural(q, muralId, master, charId, faccoes)), [questsMap, muralId, master, charId, faccoes]);
   const [aberta, setAberta] = useState<string | null>(null);
   const [drag, setDrag] = useState<{ id: string; x: number; y: number; moved: boolean } | null>(null);
   const quadro = useRef<HTMLDivElement>(null);
