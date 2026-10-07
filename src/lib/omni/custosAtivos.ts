@@ -76,7 +76,8 @@ export function planejarCustosAtivos(cfg: AcaoAtivaConfig, u: Character, intensi
       instanciaItemId = item.instanceId;
     }
     const g = c?.gastar_cargas;
-    const contador = g?.nome.trim().toLowerCase() ?? cfg.consumirContador?.nome.trim().toLowerCase();
+    const nomeBruto = g?.nome ?? cfg.consumirContador?.nome;
+    const contador = nomeBruto !== undefined ? nomeContadorAtivo(nomeBruto) : undefined;
     const tem = contador ? (u.omniCounters?.[contador] ?? 0) : 0;
     let cargas = 0;
     if (g || cfg.consumirContador) {
@@ -88,7 +89,7 @@ export function planejarCustosAtivos(cfg: AcaoAtivaConfig, u: Character, intensi
       if (cargas < 1 || tem < Math.max(minimo, cargas)) return { ok: false, reason: `Cargas insuficientes de ${contador} ou quantidade inválida (tem ${tem}).` };
     }
     const pePorTurno = c?.tipo_acao === 'sustentada' ? numero(c.pe_por_turno) : 0;
-    if (c?.tipo_acao === 'sustentada' && ![...(cfg.efeitos ?? []), ...Object.values(cfg.desfechosTR ?? {}).flatMap(r => r?.efeitos ?? [])].some(e => e.tipo === 'condicao')) throw new Error('Ação sustentada exige ao menos uma condição para manter.');
+    if (c?.tipo_acao === 'sustentada' && ![...(cfg.efeitos ?? []), ...Object.values(cfg.desfechosTR ?? {}).flatMap(r => r?.efeitos ?? [])].some(e => e.tipo === 'condicao') && !c.gerar_cargas?.nome.trim()) throw new Error('Ação sustentada exige ao menos uma condição ou cargas geradas para manter.');
     if (c?.tipo_acao === 'sustentada' && pePorTurno < 1) throw new Error('Ação sustentada exige PE por turno maior que zero.');
     const acao = c?.tipo_acao && c.tipo_acao !== 'sustentada' ? c.tipo_acao : cfg.acao;
     const efeitos = [...(cfg.efeitos ?? []), ...Object.values(cfg.desfechosTR ?? {}).flatMap(r => r?.efeitos ?? [])];
