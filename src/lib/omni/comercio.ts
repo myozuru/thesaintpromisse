@@ -27,7 +27,7 @@ export function canSellItemToShop(item: EntidadeOmni, shop: Shop): SellValidatio
   const shopTags = shop.acceptedTags ?? [];
   if (itemTags.some((t) => shopTags.includes(t))) return { ok: true };
 
-    return { ok: false, reason: 'O mercador não tem interesse neste tipo de mercadoria.' };
+  return { ok: false, reason: 'O mercador não tem interesse neste tipo de mercadoria.' };
 }
 
 /** Moeda do item (ou da loja, quando o item não define). */

@@ -179,8 +179,8 @@ type CondicaoSustentada = Sustentacao['condicoes'][number];
 
 function removerCondicaoSustentada(c: CondicaoSustentada): void {
   const store = useCharacterStore.getState();
-    if (c.sourceEntityId) store.removeConditionsFromSource(c.charId, c.sourceEntityId, c.sourceInstanceId);
-    else store.removeCondition(c.charId, c.id);
+  if (c.sourceEntityId) store.removeConditionsFromSource(c.charId, c.sourceEntityId, c.sourceInstanceId);
+  else store.removeCondition(c.charId, c.id);
 }
 
 function condicaoAindaAtiva(c: CondicaoSustentada): boolean {

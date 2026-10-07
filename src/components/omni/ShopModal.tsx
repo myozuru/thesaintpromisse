@@ -194,7 +194,7 @@ export function ShopModal({ aberto, onClose, shopId, characterId }: Props) {
                     <div className="min-w-0 flex-1">
                       <div className="font-semibold text-foreground truncate flex items-center gap-2">
                         {!v.ok && <Lock className="h-3.5 w-3.5 text-destructive/70 shrink-0" />}{inst.entity.nome}
-                    </div>
+                      </div>
                     </div>
                     <div className="text-sm text-primary font-mono">{v.ok ? `+${cur.symbol}${price}` : '—'}</div>
                     <Button size="sm" variant={v.ok ? 'default' : 'ghost'} disabled={!v.ok} onClick={() => vender(inst.instanceId)}>Vender</Button>

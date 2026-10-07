@@ -47,7 +47,7 @@ export function AssetTypeDialog({ name, previewUrl, onChoose, onCancel }: Props)
         )}
 
         {!escolhendoBau ? (<>
-        <div className="text-muted-foreground text-xs mb-3">Como deseja usar esta imagem?</div>
+          <div className="text-muted-foreground text-xs mb-3">Como deseja usar esta imagem?</div>
           <div className={`grid gap-2 ${isMaster ? 'grid-cols-4' : 'grid-cols-3'}`}>
             <Choice icon={<MapIcon className="h-5 w-5" />} label="Mapa" hint="Fundo da cena" onClick={() => onChoose('map')} />
             <Choice icon={<User className="h-5 w-5" />} label="Personagem" hint="Token 1 célula" onClick={() => onChoose('character')} />
@@ -71,7 +71,7 @@ export function AssetTypeDialog({ name, previewUrl, onChoose, onCancel }: Props)
               onClick={() => onChoose('chest', useChestStore.getState().createChest(name.replace(/\.[a-z0-9]+$/i, '')).id)}>
               + Criar novo baú com esta imagem
             </button>
-        </div>
+          </div>
         </>)}
       </div>
     </div>

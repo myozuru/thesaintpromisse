@@ -53,7 +53,7 @@ export function ItemNoChaoOverlay() {
         {'item' in g && <OmniItemImagem entidade={g.item.entity} tamanho={24} />}
         <span className="min-w-0 flex-1 truncate">{e.label}</span>
         <button className="rounded border px-2 py-1 text-xs" disabled={!char || d === null || d > 1.55} title={d !== null ? `${d.toFixed(1)} m · recolher até 1,5 m` : 'Sua ficha precisa estar no mapa'} onClick={() => {
-        try { recolherItemDoChao(char!.id, e.id); setErro(null); } catch (e) { setErro(e instanceof Error ? e.message : 'Não foi possível recolher.'); }
+          try { recolherItemDoChao(char!.id, e.id); setErro(null); } catch (e) { setErro(e instanceof Error ? e.message : 'Não foi possível recolher.'); }
         }}>Recolher</button>
         {master && <button className="rounded border border-destructive/50 px-2 py-1 text-xs text-destructive" title="Remover do mapa" onClick={() => ms.removeEntities([e.id])}>✕</button>}
       </div>;
