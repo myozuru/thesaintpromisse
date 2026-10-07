@@ -12,6 +12,7 @@ import { AcoesAtivasSection } from '@/components/fichas/AcoesAtivasSection';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useCombatStore } from '@/stores/useCombatStore';
+import { useCharacterStore } from '@/stores/useCharacterStore';
 
 const cfg: AcaoAtivaConfig = { id: 'corte', nome: 'Corte da vingança', acao: 'livre', custoPE: '0', alcanceM: 0, teste: 'nenhum', tipo_alvo: 'proprio', efeitos: [], custo_recursos: { usos_item: 1 } };
 const katana = () => ({ ...novaEntidade('arma'), nome: 'Katana', acoesAtivas: [cfg], usos: { total: 3, recarga: 'diaria' as const } });
@@ -60,4 +61,17 @@ it('acompanha a edição do catálogo e prefere um exemplar equipado', () => {
   act(() => useOmniEntidadesStore.setState({ entidades: { [ent.id]: { ...ent, acoesAtivas: [{ ...cfg, nome: 'Corte atualizado' }] } } }));
   expect(screen.queryByText('Corte da vingança')).toBeNull();
   expect(screen.getByText('Corte atualizado')).toBeTruthy();
+});
+
+it('inclui ações de entidades Omni vinculadas diretamente à ficha', () => {
+  const ent = { ...novaEntidade('feitico'), nome: 'Espírito de Fogo', acoesAtivas: [{ id: 'invocar', nome: 'Invocar Espíritos', acao: 'comum', custoPE: '2', alcanceM: 6, teste: 'nenhum', tipo_alvo: 'proprio', efeitos: [] } as AcaoAtivaConfig] };
+  useOmniEntidadesStore.setState({ entidades: { [ent.id]: ent } });
+  useCharacterStore.getState().updateCharacter('u', {
+    omniAtivos: [{ id: 'vinculo-espirito', categoria: 'feitico', entidadeId: ent.id, instanceId: 'inst-espirito', vinculadoEm: Date.now() }],
+  });
+  const acoes = acoesAtivasDe('u');
+  expect(acoes).toHaveLength(1);
+  expect(acoes[0].instanceId).toBe('inst-espirito');
+  expect(acoes[0].ent.id).toBe(ent.id);
+  expect(acoes[0].cfg.id).toBe('invocar');
 });

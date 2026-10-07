@@ -6,8 +6,8 @@ import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { planejarCustosAtivos, encerrarSustentacaoAtiva } from '@/lib/omni/custosAtivos';
 import { ajustarProtecoesOmni } from '@/lib/omni/protecoesAtivas';
 /**
- * Ações ativas OMNI (itens do inventário): escolher alvo e usar.
- * Cada ação vira um card com custo, tipo, teste e alvo próprios.
+ * Ações ativas OMNI do personagem: inventário + entidades vinculadas à ficha.
+ * Cada ação vira um card com custo, tipo, teste, alcance e alvo próprios.
  */
 import { useState } from 'react';
 import { useInventoryStore } from '@/stores/useInventoryStore';
@@ -36,8 +36,11 @@ export function AcoesAtivasSection({ charId }: { charId: string }) {
   const outros = chars.filter((c) => c.id !== charId);
 
   return (
-    <div className="rounded-md border border-primary/40 bg-primary/5 p-2 space-y-2" data-testid="acoes-ativas-section">
-      <div className="text-xs font-bold uppercase tracking-wider text-primary">⚡ Ações Ativas</div>
+    <div className="rounded-xl border border-primary/50 bg-primary/10 p-2.5 space-y-2 shadow-[0_0_24px_-14px_hsl(var(--primary))]" data-testid="acoes-ativas-section">
+      <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1.5">
+        <span className="text-xs font-black uppercase tracking-wider text-primary">⚡ Ações Ativas & Técnicas OMNI</span>
+        <span className="ml-auto text-[10px] uppercase tracking-wider text-muted-foreground">ficha + inventário</span>
+      </div>
 
       {(sust.length > 0 || prot.length > 0) && (
         <div className="space-y-1">
