@@ -19,6 +19,7 @@ import { installSafeLocalStorage } from "@/lib/safeLocalStorage";
 import { installOmniItemBankSync } from "@/lib/omni/syncItemBank";
 import { iniciarWatcherEngine } from "@/lib/omni/watcherEngine";
 import { iniciarEngineZonasTerreno } from "@/lib/mapa/engineZonasTerreno";
+import { iniciarVigiaSustentacao } from "@/lib/omni/vigiaSustentacao";
 import { validateCursedAptitudeCatalog } from "@/lib/auraAptitudes";
 import { hasWorkspaceCloud } from "@/integrations/supabase/safeClient";
 import Index from "@/pages/Index";
