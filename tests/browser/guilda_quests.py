@@ -50,6 +50,8 @@ async def main():
         await pg.screenshot(path=S + "0_antes_diario.png")
         print("overlay presente:", await pg.locator("[data-npc-overlay]").count())
         print("botões no overlay:", await pg.locator("[data-npc-overlay] button").all_inner_texts() if await pg.locator("[data-npc-overlay]").count() else None)
+        await pg.evaluate("document.querySelectorAll('[data-tsd-source*=WelcomeTutorial]').forEach(e=>e.remove())")
+        await pg.wait_for_timeout(300)
         diario_btn = pg.locator("[data-npc-overlay] button", has_text="Diário")
         print("botão Diário visível:", await diario_btn.count() > 0)
         await diario_btn.first.click(); await pg.wait_for_timeout(800)
