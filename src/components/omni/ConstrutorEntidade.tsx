@@ -539,6 +539,30 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                     </details>
                   </div>
                 )}
+
+                {(ent.categoria === 'passiva' || ent.categoria === 'talento' || ent.categoria === 'aura') && (
+                  <div className="rounded-md border border-dashed border-border/60 bg-background/40 p-3 space-y-3" data-testid="mitigacoes-passiva">
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                      Resistências, vulnerabilidades e imunidades
+                    </Label>
+                    <p className="text-xs text-muted-foreground leading-relaxed">Valem automaticamente enquanto esta habilidade estiver vinculada à ficha.</p>
+                    {([
+                      ['resistencias', 'Resistências (metade do dano)'],
+                      ['vulnerabilidades', 'Vulnerabilidades (×1,5 dano)'],
+                      ['imunidades_dano', 'Imunidades (anula o dano)'],
+                    ] as const).map(([campo, titulo]) => (
+                      <fieldset key={campo} className="space-y-1">
+                        <legend className="text-xs font-medium text-muted-foreground">{titulo}</legend>
+                        <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
+                          {TIPOS_DANO_MOTOR.map((tipo) => <label key={tipo} className="flex items-center gap-1 text-xs">
+                            <input type="checkbox" checked={(ent[campo] ?? []).includes(tipo)} onChange={() => toggleMitigacao(campo, tipo)} />
+                            {DAMAGE_TYPE_LABELS[tipo]}
+                          </label>)}
+                        </div>
+                      </fieldset>
+                    ))}
+                  </div>
+                )}
               </TabsContent>
 
               {/* CUSTOS */}
