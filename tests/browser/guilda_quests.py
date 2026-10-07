@@ -34,15 +34,25 @@ async def main():
         await c.route("**/*", guard); await c.route_web_socket("**/*", lambda ws: ws.close())
         await pg.goto("http://localhost:8080")
         await pg.evaluate(f"localStorage.setItem({json.dumps(os.environ['LOVABLE_BROWSER_SUPABASE_STORAGE_KEY'])},{json.dumps(os.environ['LOVABLE_BROWSER_SUPABASE_SESSION_JSON'])})")
+        await pg.evaluate("localStorage.setItem('mapa.tutorial.seen','1')")
         await pg.goto("http://localhost:8080"); await pg.wait_for_timeout(6000)
         await pg.mouse.click(640, 400); await pg.wait_for_timeout(2000)
         mapa = pg.get_by_text("Mapa", exact=True)
         if await mapa.count(): await mapa.first.click(force=True); await pg.wait_for_timeout(2000)
+        tut = pg.locator('div.fixed.inset-0.z-\\[2100\\]')
+        if await tut.count(): await tut.first.click(position={"x":5,"y":5}, force=True); await pg.wait_for_timeout(500)
         ids = await pg.evaluate(SETUP); await pg.wait_for_timeout(1200)
 
         # Selecionar o mural para abrir o painel e então o Diário
         await pg.evaluate("window.__mapStore.setState({selectedIds:['mur']})"); await pg.wait_for_timeout(1000)
-        diario_btn = pg.get_by_role("button", name="Diário")
+        await pg.keyboard.press("Escape"); await pg.wait_for_timeout(500)
+        await pg.evaluate("window.__mapStore.setState({selectedIds:[]})"); await pg.wait_for_timeout(300)
+        await pg.screenshot(path=S + "0_antes_diario.png")
+        print("overlay presente:", await pg.locator("[data-npc-overlay]").count())
+        print("botões no overlay:", await pg.locator("[data-npc-overlay] button").all_inner_texts() if await pg.locator("[data-npc-overlay]").count() else None)
+        await pg.evaluate("document.querySelectorAll('[data-tsd-source*=WelcomeTutorial]').forEach(e=>e.remove())")
+        await pg.wait_for_timeout(300)
+        diario_btn = pg.locator("[data-npc-overlay] button", has_text="Diário")
         print("botão Diário visível:", await diario_btn.count() > 0)
         await diario_btn.first.click(); await pg.wait_for_timeout(800)
         await pg.get_by_role("button", name="Guilda", exact=True).click(); await pg.wait_for_timeout(500)
@@ -67,7 +77,7 @@ async def main():
         if await pg.locator(f"[data-cartaz='{ids['quest']}']").count() == 0:
             await pg.evaluate("window.__mapStore.setState({selectedIds:['mur']})"); await pg.wait_for_timeout(1000)
         await pg.locator(f"[data-cartaz='{ids['quest']}']").click(); await pg.wait_for_timeout(500)
-        btn_guilda = pg.get_by_role("button", name=lambda n: n and "Aceitar pela guilda" in n)
+        btn_guilda = pg.locator("button", has_text="Aceitar pela guilda")
         print("botão aceitar pela guilda:", await btn_guilda.count() > 0)
         await pg.screenshot(path=S + "4_mural_guilda.png")
         await btn_guilda.first.click(); await pg.wait_for_timeout(600)
@@ -95,9 +105,9 @@ async def main():
 
         # Diário do jogador mostra a quest aceita pela guilda
         await pg.evaluate("""async()=>{const {useRoleStore}=await import('/src/stores/useRoleStore.ts');useRoleStore.setState({role:'PLAYER'})}""")
-        if await pg.get_by_role("button", name="Diário").count() == 0:
+        if await pg.locator("[data-npc-overlay] button", has_text="Diário").count() == 0:
             await pg.evaluate("window.__mapStore.setState({selectedIds:['mur']})"); await pg.wait_for_timeout(1000)
-        await pg.get_by_role("button", name="Diário").first.click(); await pg.wait_for_timeout(800)
+        await pg.locator("[data-npc-overlay] button", has_text="Diário").first.click(); await pg.wait_for_timeout(800)
         print("quest no diário:", await pg.get_by_text("Caçar o lobo").count() > 0)
         await pg.get_by_role("button", name="Guilda", exact=True).click(); await pg.wait_for_timeout(400)
         print("renome visível na aba:", await pg.get_by_text("Renome 5").count() > 0)
