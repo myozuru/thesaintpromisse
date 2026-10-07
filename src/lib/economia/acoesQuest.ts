@@ -11,6 +11,7 @@ import { useMapStore } from '@/stores/useMapStore';
 import { invocarItemNoChao } from '@/lib/omni/itensNoChao';
 import { toTimelineSeconds } from '@/lib/omni/tempo';
 import { dividirRecompensa, questExpirou } from './quests';
+import { registrarEvento } from './linhaTempo';
 
 export const agoraMundo = () => toTimelineSeconds(useChronosStore.getState());
 
@@ -20,9 +21,11 @@ export function aceitarQuest(questId: string, charId: string) {
   if (questExpirou(q.prazoFim, agoraMundo())) throw new Error('O prazo desta quest já acabou.');
   if (q.status !== 'disponivel' && q.status !== 'aceita') throw new Error('Esta quest não está mais disponível.');
   if (q.aceitaPor.includes(charId)) return;
+  const primeira = q.aceitaPor.length === 0;
   st.atualizarQuest(questId, { status: 'aceita', aceitaPor: [...q.aceitaPor, charId] });
   const nome = useCharacterStore.getState().characters.find((c) => c.id === charId)?.name ?? 'Alguém';
   useLogStore.getState().addLog('system', `📜 ${nome} aceitou a quest "${q.titulo}".`);
+  if (primeira) registrarEvento('quest', `Quest aceita: ${q.mascarada && !q.revelada ? 'Contrato misterioso' : q.titulo}`, `por ${nome}`);
 }
 
 function exigirMestre() {
@@ -52,6 +55,9 @@ export function concluirQuest(questId: string, participantes?: string[]) {
   q.recompensa.itens.forEach((eid, i) => {
     try { invocarItemNoChao(eid, token ? { x: token.x + dpi * (0.7 + i * 0.45), y: token.y + dpi * 0.7 } : undefined); } catch { /* item removido do catálogo */ }
   });
+  const rep = q.repRecompensa ?? 0;
+  if (q.faccaoId && rep) st.ajustarRep(q.faccaoId, rep, ids, true);
+  registrarEvento('quest', `Quest concluída: ${q.titulo}`, ids.map((id) => chars.find((c) => c.id === id)!.name).join(', '));
   const moeda = money.currencies.find((c) => c.id === q.recompensa.currencyId);
   useLogStore.getState().addLog('system', `🏆 Quest "${q.titulo}" concluída! ${q.recompensa.valor > 0 ? `${moeda?.symbol ?? ''}${q.recompensa.valor} divididos entre ${ids.length} jogador(es).` : ''}${q.recompensa.itens.length ? ` ${q.recompensa.itens.length} item(ns) caíram no chão${dono ? ` perto de ${dono.name}` : ''}.` : ''}`);
 }
@@ -61,6 +67,9 @@ export function falharQuest(questId: string) {
   const q = useQuestStore.getState().quests[questId];
   if (!q) return;
   useQuestStore.getState().atualizarQuest(questId, { status: 'falhou' });
+  const rep = q.repRecompensa ?? 0;
+  if (q.faccaoId && rep > 0) useQuestStore.getState().ajustarRep(q.faccaoId, -Math.ceil(rep / 2), q.aceitaPor, true);
+  registrarEvento('quest', `Quest falhou: ${q.titulo}`);
   useLogStore.getState().addLog('system', `✖ Quest "${q.titulo}" falhou.`);
 }
 
@@ -73,6 +82,7 @@ export function processarQuestsMestre(agora = agoraMundo()) {
     if ((q.status === 'disponivel' || q.status === 'aceita') && questExpirou(q.prazoFim, agora)) {
       st.atualizarQuest(q.id, { status: 'expirada' });
       useLogStore.getState().addLog('system', `⌛ O prazo da quest "${q.titulo}" acabou.`);
+      if (q.aceitaPor.length) registrarEvento('quest', `Prazo esgotado: ${q.titulo}`);
       continue;
     }
     if (q.status === 'aceita' && !q.revelacaoAplicada && q.alvo.tipo === 'boss' && q.alvo.bossId) {
