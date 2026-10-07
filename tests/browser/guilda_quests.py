@@ -45,7 +45,7 @@ async def main():
         await pg.screenshot(path=S + "0_antes_diario.png")
         print("overlay presente:", await pg.locator("[data-npc-overlay]").count())
         print("botões no overlay:", await pg.locator("[data-npc-overlay] button").all_inner_texts() if await pg.locator("[data-npc-overlay]").count() else None)
-        diario_btn = pg.get_by_role("button", name="Diário")
+        diario_btn = pg.locator("[data-npc-overlay] button", has_text="Diário")
         print("botão Diário visível:", await diario_btn.count() > 0)
         await diario_btn.first.click(); await pg.wait_for_timeout(800)
         await pg.get_by_role("button", name="Guilda", exact=True).click(); await pg.wait_for_timeout(500)
@@ -98,9 +98,9 @@ async def main():
 
         # Diário do jogador mostra a quest aceita pela guilda
         await pg.evaluate("""async()=>{const {useRoleStore}=await import('/src/stores/useRoleStore.ts');useRoleStore.setState({role:'PLAYER'})}""")
-        if await pg.get_by_role("button", name="Diário").count() == 0:
+        if await pg.locator("[data-npc-overlay] button", has_text="Diário").count() == 0:
             await pg.evaluate("window.__mapStore.setState({selectedIds:['mur']})"); await pg.wait_for_timeout(1000)
-        await pg.get_by_role("button", name="Diário").first.click(); await pg.wait_for_timeout(800)
+        await pg.locator("[data-npc-overlay] button", has_text="Diário").first.click(); await pg.wait_for_timeout(800)
         print("quest no diário:", await pg.get_by_text("Caçar o lobo").count() > 0)
         await pg.get_by_role("button", name="Guilda", exact=True).click(); await pg.wait_for_timeout(400)
         print("renome visível na aba:", await pg.get_by_text("Renome 5").count() > 0)
