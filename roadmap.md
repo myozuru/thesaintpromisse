@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] OMNI: chaves de mitigação por tipo de dano, scripts/passivas e verificação em combate no navegador.
+
 - [x] Migrate TP Fichas source and bundled assets into the current app.
 - [x] Adapt the app shell, route, metadata, and Tailwind v4 theme.
 - [x] Install the source application's required runtime packages.

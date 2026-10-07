@@ -1,3 +1,4 @@
+import { CHAVES_MITIGACAO } from './chavesMitigacao';
 /**
  * Dicionário de Chaves Universais do Omni-Engine (Pilar 2).
  *
@@ -1016,6 +1017,7 @@ export const DICIONARIO_CHAVES_OMNI: CategoriaChavesOmni[] = [
   { grupo: '🩺 Pools',    escopos: ['USUARIO', 'ALVO'], itens: POOLS_OMNI },
   { grupo: '🍖 Sobrevivência', escopos: ['USUARIO', 'ALVO'], itens: SOBREVIVENCIA_OMNI },
   { grupo: 'Progressão', escopos: ['USUARIO', 'ALVO'], itens: PROGRESSAO_OMNI },
+  { grupo: '🛡️ Mitigação de dano', escopos: ['USUARIO', 'ALVO'], itens: CHAVES_MITIGACAO },
   { grupo: 'Combate',    escopos: ['USUARIO', 'ALVO'], itens: COMBATE_OMNI },
   { grupo: '⚔️ Combate Avançado', escopos: ['USUARIO', 'ALVO'], itens: COMBATE_AVANCADO_OMNI },
   { grupo: '🧍 Estado',   escopos: ['USUARIO', 'ALVO'], itens: ESTADO_OMNI },
