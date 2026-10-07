@@ -9,6 +9,8 @@ import type { IconeQuest, StatusQuest } from '@/lib/economia/quests';
 import type { BossRevealField } from '@/lib/bosses';
 import { limitarRep, type Faccao } from '@/lib/economia/reputacao';
 import type { Transporte } from '@/lib/economia/viagem';
+import type { Guilda } from '@/lib/economia/guilda';
+export type { Guilda };
 
 export type { Faccao };
 
@@ -39,6 +41,8 @@ export interface Quest {
   murais: string[];
   status: StatusQuest;
   aceitaPor: string[];
+  /** Guilda que aceitou a quest (ganha/perde renome). */
+  guildaId?: string | null;
   revelacaoAplicada?: boolean;
   poster: { x: number; y: number; rot: number };
   createdAt: number;
@@ -69,6 +73,9 @@ interface QuestState {
   quests: Record<string, Quest>;
   murais: Record<string, Mural>;
   faccoes: Record<string, Faccao>;
+  guildas: Record<string, Guilda>;
+  criarGuilda: (nome: string, emblema: string, liderId: string, membros: string[]) => Guilda;
+  atualizarGuilda: (id: string, patch: Partial<Omit<Guilda, 'id'>>) => void;
   linhaTempo: Record<string, EventoTL>;
   /** Notas do diário por `${charId}:${questId}`. */
   notas: Record<string, NotaDiario>;
@@ -104,6 +111,13 @@ export const useQuestStore = create<QuestState>()(
       quests: {},
       murais: {},
       faccoes: {},
+      guildas: {},
+      criarGuilda: (nome, emblema, liderId, membros) => {
+        const g: Guilda = { id: uid('guilda'), nome: nome.trim() || 'Guilda', emblema: emblema || '⚔️', lema: '', liderId, membros: [...new Set([liderId, ...membros])], renome: 0, updatedAt: Date.now() };
+        set((s) => ({ guildas: { ...s.guildas, [g.id]: g } }));
+        return g;
+      },
+      atualizarGuilda: (id, patch) => set((s) => { const r = patchRec(s.guildas, id, patch); return r ? { guildas: r } : s; }),
       linhaTempo: {},
       notas: {},
       viagem: VIAGEM_PADRAO,
