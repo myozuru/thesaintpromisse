@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { useQuestStore, type Quest, type Faccao } from '@/stores/useQuestStore';
 import { atendeRepMinima } from '@/lib/economia/reputacao';
+import { guildaDe } from '@/lib/economia/guilda';
 import { useBossStore } from '@/stores/useBossStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useMoneyStore } from '@/stores/useMoneyStore';
@@ -103,6 +104,8 @@ function DetalheQuest({ q, charId, master, agora, onEditar, onFechar }: { q: Que
   const atualizar = useQuestStore((s) => s.atualizarQuest);
   const [erro, setErro] = useState<string | null>(null);
   const [grupo, setGrupo] = useState<string[] | null>(null);
+  const guildas = useQuestStore((s) => s.guildas);
+  const minhaGuilda = guildaDe(guildas ?? {}, charId);
   const oculto = q.mascarada && !q.revelada;
   const aceitou = !!charId && q.aceitaPor.includes(charId);
   const tentar = (fn: () => void) => { try { fn(); setErro(null); } catch (e) { setErro(e instanceof Error ? e.message : 'Erro'); } };
@@ -131,7 +134,9 @@ function DetalheQuest({ q, charId, master, agora, onEditar, onFechar }: { q: Que
       {!master && charId && !aceitou && (q.status === 'disponivel' || q.status === 'aceita') && (grupo === null ? (
         <div className="space-y-1.5">
           <Button size="sm" className="w-full" onClick={() => tentar(() => aceitarQuest(q.id, charId))}>Aceitar como indivíduo</Button>
-          <Button size="sm" variant="outline" className="w-full" onClick={() => setGrupo([charId])}>Aceitar como grupo</Button>
+          {minhaGuilda
+            ? <Button size="sm" variant="outline" className="w-full" onClick={() => tentar(() => aceitarQuest(q.id, minhaGuilda.membros, minhaGuilda.id))}>Aceitar pela guilda {minhaGuilda.emblema} {minhaGuilda.nome} ({minhaGuilda.membros.length})</Button>
+            : <Button size="sm" variant="outline" className="w-full" onClick={() => setGrupo([charId])}>Aceitar como grupo</Button>}
         </div>
       ) : (
         <div className="space-y-1 rounded border border-dashed p-2" style={{ borderColor: '#5a3a1a80' }} data-escolher-grupo>

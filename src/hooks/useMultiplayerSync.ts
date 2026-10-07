@@ -532,11 +532,12 @@ function aplicarRemoteInterno(slice: WorldSlice, data: unknown) {
       });
     }
     else if (slice === 'quests' && data && typeof data === 'object') {
-      const d = data as { quests?: Record<string, never>; murais?: Record<string, never>; faccoes?: Record<string, never>; linhaTempo?: Record<string, never>; notas?: Record<string, never>; viagem?: { updatedAt?: number } };
+      const d = data as { quests?: Record<string, never>; murais?: Record<string, never>; faccoes?: Record<string, never>; guildas?: Record<string, never>; linhaTempo?: Record<string, never>; notas?: Record<string, never>; viagem?: { updatedAt?: number } };
       const cur = useQuestStore.getState();
       useQuestStore.setState({
         quests: mergeByUpdatedAt(cur.quests, d.quests ?? {}), murais: mergeByUpdatedAt(cur.murais, d.murais ?? {}),
         faccoes: mergeByUpdatedAt(cur.faccoes ?? {}, d.faccoes ?? {}), linhaTempo: mergeByUpdatedAt(cur.linhaTempo ?? {}, d.linhaTempo ?? {}),
+        guildas: mergeByUpdatedAt(cur.guildas ?? {}, d.guildas ?? {}),
         notas: mergeByUpdatedAt(cur.notas ?? {}, d.notas ?? {}),
         ...(d.viagem && (d.viagem.updatedAt ?? 0) > (cur.viagem?.updatedAt ?? 0) ? { viagem: d.viagem as typeof cur.viagem } : {}),
       });
@@ -1224,7 +1225,7 @@ export function useMultiplayerSync() {
       if (applyingRemote) return;
       socket.emit('state:update', { slice: 'economia', data: next });
     });
-    const pickQuests = (st: ReturnType<typeof useQuestStore.getState>) => ({ quests: st.quests, murais: st.murais, faccoes: st.faccoes, linhaTempo: st.linhaTempo, notas: st.notas, viagem: st.viagem });
+    const pickQuests = (st: ReturnType<typeof useQuestStore.getState>) => ({ quests: st.quests, murais: st.murais, faccoes: st.faccoes, guildas: st.guildas, linhaTempo: st.linhaTempo, notas: st.notas, viagem: st.viagem });
     let lastQuests = JSON.stringify(pickQuests(useQuestStore.getState()));
     const unsubQuests = useQuestStore.subscribe((state) => {
       const next = pickQuests(state); const s = JSON.stringify(next);

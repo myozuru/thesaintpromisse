@@ -12,11 +12,12 @@ import { invocarItemNoChao } from '@/lib/omni/itensNoChao';
 import { toTimelineSeconds } from '@/lib/omni/tempo';
 import { dividirRecompensa, questExpirou } from './quests';
 import { registrarEvento } from './linhaTempo';
+import { limitarRenome, renomeGanho } from './guilda';
 
 export const agoraMundo = () => toTimelineSeconds(useChronosStore.getState());
 
 /** Aceita sozinho (um id) ou em grupo (vários ids escolhidos por quem aceita). */
-export function aceitarQuest(questId: string, charIds: string | string[]) {
+export function aceitarQuest(questId: string, charIds: string | string[], guildaId?: string) {
   const st = useQuestStore.getState(), q = st.quests[questId];
   if (!q || q.deletedAt) throw new Error('Quest não encontrada.');
   if (questExpirou(q.prazoFim, agoraMundo())) throw new Error('O prazo desta quest já acabou.');
@@ -24,7 +25,7 @@ export function aceitarQuest(questId: string, charIds: string | string[]) {
   const novos = [...new Set(Array.isArray(charIds) ? charIds : [charIds])].filter((id) => !q.aceitaPor.includes(id));
   if (!novos.length) return;
   const primeira = q.aceitaPor.length === 0;
-  st.atualizarQuest(questId, { status: 'aceita', aceitaPor: [...q.aceitaPor, ...novos] });
+  st.atualizarQuest(questId, { status: 'aceita', aceitaPor: [...q.aceitaPor, ...novos], ...(guildaId && !q.guildaId ? { guildaId } : {}) });
   const chars = useCharacterStore.getState().characters;
   const nomes = novos.map((id) => chars.find((c) => c.id === id)?.name ?? 'Alguém').join(', ');
   const grupo = novos.length > 1;
@@ -61,6 +62,8 @@ export function concluirQuest(questId: string, participantes?: string[]) {
   });
   const rep = q.repRecompensa ?? 0;
   if (q.faccaoId && rep) st.ajustarRep(q.faccaoId, rep, ids, true);
+  const g = q.guildaId ? st.guildas[q.guildaId] : undefined;
+  if (g && !g.deletedAt) st.atualizarGuilda(g.id, { renome: limitarRenome(g.renome + renomeGanho(q.repRecompensa)) });
   registrarEvento('quest', `Quest concluída: ${q.titulo}`, ids.map((id) => chars.find((c) => c.id === id)!.name).join(', '));
   const moeda = money.currencies.find((c) => c.id === q.recompensa.currencyId);
   useLogStore.getState().addLog('system', `🏆 Quest "${q.titulo}" concluída! ${q.recompensa.valor > 0 ? `${moeda?.symbol ?? ''}${q.recompensa.valor} divididos entre ${ids.length} jogador(es).` : ''}${q.recompensa.itens.length ? ` ${q.recompensa.itens.length} item(ns) caíram no chão${dono ? ` perto de ${dono.name}` : ''}.` : ''}`);
@@ -73,6 +76,8 @@ export function falharQuest(questId: string) {
   useQuestStore.getState().atualizarQuest(questId, { status: 'falhou' });
   const rep = q.repRecompensa ?? 0;
   if (q.faccaoId && rep > 0) useQuestStore.getState().ajustarRep(q.faccaoId, -Math.ceil(rep / 2), q.aceitaPor, true);
+  const g = q.guildaId ? useQuestStore.getState().guildas[q.guildaId] : undefined;
+  if (g && !g.deletedAt) useQuestStore.getState().atualizarGuilda(g.id, { renome: limitarRenome(g.renome - Math.ceil(renomeGanho(q.repRecompensa) / 2)) });
   registrarEvento('quest', `Quest falhou: ${q.titulo}`);
   useLogStore.getState().addLog('system', `✖ Quest "${q.titulo}" falhou.`);
 }
