@@ -67,6 +67,7 @@ import { SpecActionsPanel } from './SpecActionsPanel';
 import { SuportePanel } from './SuportePanel';
 import { CombateEstilosPanel } from './CombateEstilosPanel';
 import { AttackPanel } from './AttackPanel';
+import { AcoesAtivasSection } from './AcoesAtivasSection';
 import { CamDeathReactionDialog } from './CamDeathReactionDialog';
 import { PendingLevelChoicesPanel, hasPendingChoices } from './PendingLevelChoicesPanel';
 import { PendingSummaryButton } from './PendingSummaryButton';
@@ -1750,6 +1751,15 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
         <SuportePanel character={c} />
         <CombateEstilosPanel character={c} />
       </div>
+
+      {/* ─── Ações Ativas OMNI fora de combate ─── */}
+      {/* Permite consultar e usar técnicas inatas/feitiços vinculados sem
+          depender do AttackPanel, que só existe durante combate. */}
+      {!combatInProgress && !hideAttackPanel && (
+        <div className="px-4 pb-2" onClick={(e) => e.stopPropagation()}>
+          <AcoesAtivasSection charId={c.id} />
+        </div>
+      )}
 
       {/* ─── Painel de Ataque (combatEngine) ─── */}
       {/* Visível apenas durante combate ativo. */}
