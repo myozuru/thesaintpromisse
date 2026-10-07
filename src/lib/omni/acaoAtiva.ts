@@ -8,7 +8,7 @@ import { armaDoPersonagem, armaEstaEmpunhada } from './armaDoPersonagem';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useReactionStore } from '@/stores/useReactionStore';
 import { useCombatStore } from '@/stores/useCombatStore';
-import { planejarCustosAtivos, validarRecursosAtivos, patchCustosAtivos, consumirUsosItemAtivo, consumirMunicaoAtiva, type ContextoCustosAtivos } from './custosAtivos';
+import { nomeContadorAtivo, planejarCustosAtivos, validarRecursosAtivos, patchCustosAtivos, consumirUsosItemAtivo, consumirMunicaoAtiva, type ContextoCustosAtivos } from './custosAtivos';
 import { prepararMovimentosAtivos, aplicarMovimentoAtivo, validarPlanoMovimento, type PlanoMovimentoAtivo, type OpcoesMovimentoAtivo } from './movimentosAtivos';
 import { avaliarCondicionaisAtivos } from './condicionaisAtivos';
 import { applyAdvantageToD20, consumeAdvantageFor, consumeFlatBonusFor } from './rollAdvantage';
@@ -504,7 +504,12 @@ async function executarAcaoAtivaInterna(
   if (ent?.categoria === 'feitico') notificarEventoPersonagem('aoConjurarFeitico', u.id, fonte, { custoPE: p.pe });
   else if (ent?.categoria === 'talento') notificarEventoPersonagem('aoUsarTalento', u.id, fonte);
   const pago = `${p.pe} PE${p.pv ? ` + ${p.pv} PV` : ''}${cargas ? ` + ${cargas} carga(s) de ${p.contador}` : ''}${p.municao ? ` + ${p.municao} munição(ões)` : ''}${p.usosItem ? ` + ${p.usosItem} uso(s) do item` : ''}${p.intensificacoes ? ` · intensificação ${p.intensificacoes}` : ''}`;
-  const sustentadas = p.pePorTurno > 0 ? [] as { charId: string; id: string; sourceEntityId?: string; sourceInstanceId?: string }[] : undefined;
+  // Gastar cargas de um contador mantido por outra sustentação (ex.: enviar um espírito invocado)
+  // amarra os efeitos desta ação àquela sustentação: somem quando ela acaba ou o alvo se afasta.
+  const sustVinculada = p.pePorTurno <= 0 && p.contador && cargas > 0
+    ? useCharacterStore.getState().characters.find(c => c.id === usuarioId)?.omniSustentacoes?.find(s => s.contador === p.contador)
+    : undefined;
+  const sustentadas = p.pePorTurno > 0 || sustVinculada ? [] as { charId: string; id: string; sourceEntityId?: string; sourceInstanceId?: string }[] : undefined;
 
 
   let danoTotal = 0;
@@ -706,9 +711,34 @@ async function executarAcaoAtivaInterna(
     danoTotal += dano;
     detalhes.push(msg);
   }
-  if (sustentadas?.length) {
+  const gerar = cfg.custo_recursos?.gerar_cargas;
+  const contadorGerado = gerar?.nome.trim() ? nomeContadorAtivo(gerar.nome) : undefined;
+  if (gerar && contadorGerado) {
     const atual = useCharacterStore.getState().characters.find(c => c.id === usuarioId);
-    if (atual) useCharacterStore.getState().updateCharacter(usuarioId, { omniSustentacoes: [...(atual.omniSustentacoes ?? []), { id: crypto.randomUUID(), nome: cfg.nome, pePorTurno: p.pePorTurno, condicoes: sustentadas }] });
+    const qtd = atual ? Math.max(0, Math.floor(avaliarFormulaAtiva(gerar.quantidade || '1', atual, atual, arma).valor || 0)) : 0;
+    if (atual && qtd > 0) {
+      const antes = atual.omniCounters ?? {};
+      const depois = { ...antes, [contadorGerado]: (gerar.modo === 'somar' ? (antes[contadorGerado] ?? 0) : 0) + qtd };
+      useCharacterStore.getState().updateCharacter(usuarioId, { omniCounters: depois });
+      notificarAtualizacaoContadores(usuarioId, antes, depois);
+      const msg = `✨ ${atual.name}: ${cfg.nome} gera ${qtd} carga(s) de ${contadorGerado} (total ${depois[contadorGerado]}).`;
+      log(msg); detalhes.push(msg);
+    }
+  }
+  const alvosExternos = alvos.map(t => t.id).filter(id => id !== usuarioId);
+  if (sustVinculada && sustentadas) {
+    const atual = useCharacterStore.getState().characters.find(c => c.id === usuarioId);
+    if (atual) useCharacterStore.getState().updateCharacter(usuarioId, { omniSustentacoes: (atual.omniSustentacoes ?? []).map(s => s.id === sustVinculada.id
+      ? { ...s, condicoes: [...s.condicoes, ...sustentadas], alvos: [...new Set([...(s.alvos ?? []), ...alvosExternos])] }
+      : s) });
+  } else if (p.pePorTurno > 0 && (sustentadas?.length || contadorGerado)) {
+    const atual = useCharacterStore.getState().characters.find(c => c.id === usuarioId);
+    const alcanceM = cfg.custo_recursos?.alcance_sustentacao_m;
+    if (atual) useCharacterStore.getState().updateCharacter(usuarioId, { omniSustentacoes: [...(atual.omniSustentacoes ?? []), {
+      id: crypto.randomUUID(), nome: cfg.nome, pePorTurno: p.pePorTurno, condicoes: sustentadas ?? [],
+      ...(contadorGerado ? { contador: contadorGerado } : {}),
+      ...(alcanceM && alcanceM > 0 ? { alcanceM, alvos: alvosExternos } : {}),
+    }] });
   }
   return { ok: true, dano: danoTotal, cura: curaTotal, efeitoAplicado, detalhe: detalhes.join("\n") };
 }

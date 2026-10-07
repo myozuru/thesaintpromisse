@@ -1026,7 +1026,7 @@ export interface Character {
   /** Incrementado apenas quando um descanso curto/longo é concluído. */
   omniCounterRestCycle?: number;
   /** Custos de manutenção e condições exclusivamente criadas por ações OMNI. */
-  omniSustentacoes?: { id: string; nome: string; pePorTurno: number; condicoes: { charId: string; id: string; sourceEntityId?: string; sourceInstanceId?: string }[] }[];
+  omniSustentacoes?: { id: string; nome: string; pePorTurno: number; condicoes: { charId: string; id: string; sourceEntityId?: string; sourceInstanceId?: string }[]; contador?: string; alcanceM?: number; alvos?: string[] }[];
   /**
    * Redutores de custo de recurso por chave canônica (ex.: `pe`, `vida`).
    * Aplicados em `gastarPE`/`spellCastPipeline`/`CONSUMIR_RECURSO`,

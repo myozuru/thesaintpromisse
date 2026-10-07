@@ -7,6 +7,8 @@ import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useCombatStore } from '@/stores/useCombatStore';
+import { useMapStore } from '@/stores/useMapStore';
+import { distanciaCircularEntreFichas } from '@/lib/mapa/alcanceCircular';
 import { capacidadeDaReferencia, tirosRestantes } from '@/lib/recargaRapida';
 
 export interface ContextoCustosAtivos { armaNome?: string; armaInstanciaId?: string; instanciaId?: string; entidadeId?: string }
@@ -74,7 +76,8 @@ export function planejarCustosAtivos(cfg: AcaoAtivaConfig, u: Character, intensi
       instanciaItemId = item.instanceId;
     }
     const g = c?.gastar_cargas;
-    const contador = g?.nome.trim().toLowerCase() ?? cfg.consumirContador?.nome.trim().toLowerCase();
+    const nomeBruto = g?.nome ?? cfg.consumirContador?.nome;
+    const contador = nomeBruto !== undefined ? nomeContadorAtivo(nomeBruto) : undefined;
     const tem = contador ? (u.omniCounters?.[contador] ?? 0) : 0;
     let cargas = 0;
     if (g || cfg.consumirContador) {
@@ -86,7 +89,7 @@ export function planejarCustosAtivos(cfg: AcaoAtivaConfig, u: Character, intensi
       if (cargas < 1 || tem < Math.max(minimo, cargas)) return { ok: false, reason: `Cargas insuficientes de ${contador} ou quantidade inválida (tem ${tem}).` };
     }
     const pePorTurno = c?.tipo_acao === 'sustentada' ? numero(c.pe_por_turno) : 0;
-    if (c?.tipo_acao === 'sustentada' && ![...(cfg.efeitos ?? []), ...Object.values(cfg.desfechosTR ?? {}).flatMap(r => r?.efeitos ?? [])].some(e => e.tipo === 'condicao')) throw new Error('Ação sustentada exige ao menos uma condição para manter.');
+    if (c?.tipo_acao === 'sustentada' && ![...(cfg.efeitos ?? []), ...Object.values(cfg.desfechosTR ?? {}).flatMap(r => r?.efeitos ?? [])].some(e => e.tipo === 'condicao') && !c.gerar_cargas?.nome.trim()) throw new Error('Ação sustentada exige ao menos uma condição ou cargas geradas para manter.');
     if (c?.tipo_acao === 'sustentada' && pePorTurno < 1) throw new Error('Ação sustentada exige PE por turno maior que zero.');
     const acao = c?.tipo_acao && c.tipo_acao !== 'sustentada' ? c.tipo_acao : cfg.acao;
     const efeitos = [...(cfg.efeitos ?? []), ...Object.values(cfg.desfechosTR ?? {}).flatMap(r => r?.efeitos ?? [])];
@@ -158,34 +161,104 @@ export function consumirUsosItemAtivo(p: PlanoCustosAtivos): boolean {
   return useInventoryStore.getState().consumirUso(p.instanciaItemId, p.usosItem);
 }
 
-export function encerrarSustentacaoAtiva(charId: string, id: string): void {
+/** Nome canônico de contador ("Espíritos Fogo" / "contador_x" → "espiritos_fogo" / "x"). */
+export function nomeContadorAtivo(nome: string): string {
+  return nome.trim().toLowerCase().replace(/^contador_/, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_');
+}
+
+/** Zera um contador e sua contabilidade por fonte. */
+export function zerarContadorAtivo(charId: string, nome: string): void {
+  const store = useCharacterStore.getState(), u = store.characters.find(c => c.id === charId);
+  if (!u?.omniCounters) return;
+  const counters = Object.fromEntries(Object.entries(u.omniCounters).filter(([k]) => k !== nome && !k.startsWith(`${nome}__`)));
+  store.updateCharacter(charId, { omniCounters: counters });
+}
+
+type Sustentacao = NonNullable<Character['omniSustentacoes']>[number];
+type CondicaoSustentada = Sustentacao['condicoes'][number];
+
+function removerCondicaoSustentada(c: CondicaoSustentada): void {
+  const store = useCharacterStore.getState();
+  if (c.sourceEntityId) store.removeConditionsFromSource(c.charId, c.sourceEntityId, c.sourceInstanceId);
+  else store.removeCondition(c.charId, c.id);
+}
+
+function condicaoAindaAtiva(c: CondicaoSustentada): boolean {
+  return useCharacterStore.getState().characters.find(x => x.id === c.charId)?.activeConditions?.some(a => {
+    if (a.id !== c.id) return false;
+    if (!c.sourceEntityId) return true;
+    return a.sourceApplications?.some(source => source.sourceEntityId === c.sourceEntityId
+      && (!c.sourceInstanceId || source.sourceInstanceId === c.sourceInstanceId)) ?? false;
+  }) ?? false;
+}
+
+/** A sustentação continua viva enquanto mantiver alguma condição ou cargas no contador vinculado. */
+function sustentacaoTemConteudo(u: Character, s: Sustentacao): boolean {
+  if (s.condicoes.some(condicaoAindaAtiva)) return true;
+  return !!s.contador && (u.omniCounters?.[s.contador] ?? 0) > 0;
+}
+
+export function encerrarSustentacaoAtiva(charId: string, id: string, motivo?: string): void {
   const store = useCharacterStore.getState(), u = store.characters.find(c => c.id === charId);
   const ativo = u?.omniSustentacoes?.find(s => s.id === id);
   if (!u || !ativo) return;
-  for (const c of ativo.condicoes) {
-    if (c.sourceEntityId) store.removeConditionsFromSource(c.charId, c.sourceEntityId, c.sourceInstanceId);
-    else store.removeCondition(c.charId, c.id);
-  }
-  store.updateCharacter(charId, { omniSustentacoes: u.omniSustentacoes!.filter(s => s.id !== id) });
-  useLogStore.getState().addLog('combat', `⏳ ${u.name}: ${ativo.nome} deixou de ser sustentada.`);
+  for (const c of ativo.condicoes) removerCondicaoSustentada(c);
+  store.updateCharacter(charId, { omniSustentacoes: (useCharacterStore.getState().characters.find(c => c.id === charId)?.omniSustentacoes ?? []).filter(s => s.id !== id) });
+  if (ativo.contador) zerarContadorAtivo(charId, ativo.contador);
+  useLogStore.getState().addLog('combat', `⏳ ${u.name}: ${ativo.nome} deixou de ser sustentada${motivo ? ` (${motivo})` : ''}.`);
 }
 
 /** Uma chamada por começo de turno, nos mesmos pontos de integração das réplicas. */
 export function inicioTurnoSustentacoesAtivas(charId: string): void {
+  verificarDistanciaSustentacoes(charId);
   const ativos = useCharacterStore.getState().characters.find(c => c.id === charId)?.omniSustentacoes ?? [];
   for (const ativo of ativos) {
     const store = useCharacterStore.getState(), u = store.characters.find(c => c.id === charId);
     if (!u) return;
-    if (!u.omniSustentacoes?.some(s => s.id === ativo.id)) continue;
-    if (!ativo.condicoes.some(c => store.characters.find(x => x.id === c.charId)?.activeConditions?.some(a => {
-      if (a.id !== c.id) return false;
-      if (!c.sourceEntityId) return true;
-      return a.sourceApplications?.some(source => source.sourceEntityId === c.sourceEntityId
-        && (!c.sourceInstanceId || source.sourceInstanceId === c.sourceInstanceId)) ?? false;
-    })) || !Number.isSafeInteger(ativo.pePorTurno) || ativo.pePorTurno < 1) { encerrarSustentacaoAtiva(charId, ativo.id); continue; }
-    if ((u.peCurrent ?? 0) + (u.tempPE ?? 0) < ativo.pePorTurno) { encerrarSustentacaoAtiva(charId, ativo.id); continue; }
-    const temp = Math.min(u.tempPE ?? 0, ativo.pePorTurno);
-    store.updateCharacter(charId, { tempPE: (u.tempPE ?? 0) - temp, peCurrent: (u.peCurrent ?? 0) - (ativo.pePorTurno - temp) });
-    useLogStore.getState().addLog('combat', `⚡ ${u.name} sustenta ${ativo.nome} (${ativo.pePorTurno} PE).`);
+    const atual = u.omniSustentacoes?.find(s => s.id === ativo.id);
+    if (!atual) continue;
+    if (!sustentacaoTemConteudo(u, atual) || !Number.isSafeInteger(atual.pePorTurno) || atual.pePorTurno < 1) { encerrarSustentacaoAtiva(charId, atual.id); continue; }
+    if ((u.peCurrent ?? 0) + (u.tempPE ?? 0) < atual.pePorTurno) { encerrarSustentacaoAtiva(charId, atual.id, 'sem PE'); continue; }
+    const temp = Math.min(u.tempPE ?? 0, atual.pePorTurno);
+    store.updateCharacter(charId, { tempPE: (u.tempPE ?? 0) - temp, peCurrent: (u.peCurrent ?? 0) - (atual.pePorTurno - temp) });
+    useLogStore.getState().addLog('combat', `⚡ ${u.name} sustenta ${atual.nome} (${atual.pePorTurno} PE).`);
   }
+}
+
+/**
+ * Desfaz os efeitos sustentados em alvos que ficaram além do alcance configurado.
+ * Sem alvo restante e sem cargas, a sustentação inteira se encerra.
+ * Retorna quantos alvos perderam o efeito.
+ */
+export function verificarDistanciaSustentacoes(charId?: string): number {
+  const ms = useMapStore.getState();
+  let removidos = 0;
+  const conjuradores = useCharacterStore.getState().characters.filter(c => (!charId || c.id === charId) && c.omniSustentacoes?.some(s => s.alcanceM));
+  for (const conj of conjuradores) {
+    for (const s of conj.omniSustentacoes ?? []) {
+      if (!s.alcanceM) continue;
+      const chars = useCharacterStore.getState().characters;
+      const alvos = new Set([...(s.alvos ?? []), ...s.condicoes.map(c => c.charId)].filter(id => id !== conj.id));
+      const longe: string[] = [];
+      for (const id of alvos) {
+        const alvo = chars.find(c => c.id === id);
+        if (!alvo) { longe.push(id); continue; }
+        const d = distanciaCircularEntreFichas(conj, alvo, ms.entities, ms.layerVisible, ms.gridConfig);
+        if (d !== null && d > s.alcanceM + 0.05) longe.push(id);
+      }
+      if (!longe.length) continue;
+      removidos += longe.length;
+      for (const c of s.condicoes.filter(c => longe.includes(c.charId))) removerCondicaoSustentada(c);
+      const nomes = longe.map(id => chars.find(c => c.id === id)?.name ?? 'alvo').join(', ');
+      const store = useCharacterStore.getState(), u = store.characters.find(c => c.id === conj.id);
+      if (!u) continue;
+      const nova: Sustentacao = { ...s, condicoes: s.condicoes.filter(c => !longe.includes(c.charId)), alvos: (s.alvos ?? []).filter(id => !longe.includes(id)) };
+      useLogStore.getState().addLog('combat', `💨 ${u.name}: ${s.nome} se desfez em ${nomes} (além de ${s.alcanceM} m).`);
+      if (!sustentacaoTemConteudo(u, nova)) {
+        store.updateCharacter(u.id, { omniSustentacoes: (u.omniSustentacoes ?? []).map(x => x.id === s.id ? nova : x) });
+        encerrarSustentacaoAtiva(u.id, s.id, 'nada restante ao alcance');
+      } else store.updateCharacter(u.id, { omniSustentacoes: (u.omniSustentacoes ?? []).map(x => x.id === s.id ? nova : x) });
+    }
+  }
+  return removidos;
 }
