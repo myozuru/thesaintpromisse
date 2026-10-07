@@ -1,3 +1,4 @@
+import { interpretarChaveMitigacao, CHAVES_MITIGACAO } from './chavesMitigacao';
 import { notificarAtualizacaoContadores } from "./atualizacaoContadores";
 import { recursoBonito } from "./rotulosRecurso";
 export { recursoBonito } from "./rotulosRecurso";
@@ -170,6 +171,14 @@ export function aplicarEfeitoNoPersonagem(
     }
   }
 
+  const mitigacao = interpretarChaveMitigacao(path);
+  if (mitigacao) {
+    const atual = c.omniFlags?.[mitigacao.chave] ?? 0;
+    const novo = tipo === 'SUBTRAIR' ? atual - valor : tipo === 'ADICIONAR' ? atual + valor : valor;
+    store.updateCharacter(charId, { omniFlags: { ...c.omniFlags, [mitigacao.chave]: novo > 0 ? 1 : 0 } });
+    return { aplicado: novo > 0 ? 1 : 0 };
+  }
+
   // ─── Flags Omni (omniFlags genérico) ────────────────────────────────
   // Qualquer chave começando com "flag_" ou conhecida como flag genérica
   // (bloqueio_total) é gravada em c.omniFlags em vez de campos numéricos.
@@ -318,7 +327,7 @@ export function aplicarEfeitoNoPersonagem(
 }
 
 /** Mapa público para uso em UIs que precisam saber se o recurso é suportado. */
-export const RECURSOS_SUPORTADOS = Object.keys(RECURSO_PARA_CAMPO);
+export const RECURSOS_SUPORTADOS = [...Object.keys(RECURSO_PARA_CAMPO), ...CHAVES_MITIGACAO.map(k => k.id)];
 
 // ─── Rótulos amigáveis para UI/Log ──────────────────────────────────────
 

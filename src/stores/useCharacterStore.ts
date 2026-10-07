@@ -1,3 +1,4 @@
+import { coletarMitigacoesDano } from '@/lib/omni/mitigacoesDano';
 import { notificarEventoPersonagem } from '@/lib/omni/notificarEvento';
 import { reacaoEmCurso } from '@/lib/omni/reacaoEmCurso';
 import { armaDoPersonagem } from '@/lib/omni/armaDoPersonagem';
@@ -2531,7 +2532,6 @@ export const useCharacterStore = create<CharacterStore>()(
         const preSet = get().characters.find((c) => c.id === id);
         const preEsc = preSet?.escCurrent ?? 0;
         const preHp = preSet?.hpCurrent ?? 0;
-        const entidadesOmniAtuais = useOmniEntidadesStore.getState().entidades;
         const parcelasOriginais = (opts?.parcelas?.length ? opts.parcelas : [{ valor: rawDamage, tipo: damageType }])
           .map((p) => ({ valor: Math.max(0, Math.floor(p.valor)), tipo: resolverTipoDano(p.tipo) }));
         const totalParcelasOriginais = parcelasOriginais.reduce((soma, p) => soma + p.valor, 0);
@@ -2550,25 +2550,16 @@ export const useCharacterStore = create<CharacterStore>()(
           });
         };
         let perdaPvReal = 0;
-        const mitigacoesOmni = [
-          ...useInventoryStore.getState().listEquipped(id)
-            .filter((item) => item.entity.slotType && item.entity.slotType !== 'nenhum')
-            .map((item) => entidadesOmniAtuais[item.entity.id] ?? item.entity),
-          // Passivas, talentos e auras vinculados à ficha também concedem
-          // resistências/vulnerabilidades/imunidades enquanto vinculados.
-          ...(get().characters.find((ch) => ch.id === id)?.omniAtivos ?? [])
-            .filter((v) => v.categoria === 'passiva' || v.categoria === 'talento' || v.categoria === 'aura')
-            .map((v) => entidadesOmniAtuais[v.entidadeId])
-            .filter((e): e is NonNullable<typeof e> => Boolean(e)),
-        ];
+
 
         set((state) => ({
           characters: state.characters.map((c) => {
             if (c.id !== id) return c;
-            const immunes = [...(c.immunities || []), ...mitigacoesOmni.flatMap((item) => item.imunidades_dano ?? [])];
+            const mitigacoes = coletarMitigacoesDano(c);
+            const immunes = mitigacoes.imunidade;
             // CAM: dano DAL (na alma) é absorvido pela Integridade da Alma e reduz
             // o hpMax dos 3 núcleos simultaneamente. Não usa RD comum.
-            if (parcelasOriginais.length === 1 && parcelasOriginais[0]?.tipo === 'DAL' && !(c.immunities ?? []).includes('DAL') && !mitigacoesOmni.some((item) => item.imunidades_dano?.includes('DAL')) && isCamActive(c)) {
+            if (parcelasOriginais.length === 1 && parcelasOriginais[0]?.tipo === 'DAL' && !immunes.includes('DAL') && !opts?.ignoresResistance && isCamActive(c)) {
               const soulPatch = applySoulDamagePure(c, rawDamage);
               finalDamage = rawDamage;
               damageResolved = true;
@@ -2589,8 +2580,8 @@ export const useCharacterStore = create<CharacterStore>()(
               ? effectiveShieldRD(equippedShield, { mestreDefensivo: tBonusesForRd.shieldProficient })
               : 0;
             const rdByType = ensureRdByType(c);
-            const vulns = [...(c.vulnerabilities || []), ...mitigacoesOmni.flatMap((item) => item.vulnerabilidades ?? [])];
-            const resistencias = mitigacoesOmni.flatMap((item) => item.resistencias ?? []);
+            const vulns = mitigacoes.vulnerabilidade;
+            const resistencias = mitigacoes.resistencia;
             let damageFinal = 0;
             const parcelas = parcelasDesteGolpe(rawDamage);
             for (const parcela of parcelas) {
