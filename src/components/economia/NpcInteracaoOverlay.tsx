@@ -17,6 +17,7 @@ import { processarQuestsMestre } from '@/lib/economia/acoesQuest';
 import { ShopModal } from '@/components/omni/ShopModal';
 import { MuralQuestsDialog } from './MuralQuests';
 import { GerenciadorQuests } from './GerenciadorQuests';
+import { DiarioQuests } from './DiarioQuests';
 import { GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDraggableMapPanel } from '@/hooks/useDraggableMapPanel';
@@ -37,6 +38,7 @@ export function NpcInteracaoOverlay() {
   const [gerenciar, setGerenciar] = useState<{ id: string | null } | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [aberto, setAberto] = useState(true);
+  const [diario, setDiario] = useState(false);
   const panel = useDraggableMapPanel();
 
   const me = findMyCharacter(chars, profile);
@@ -77,14 +79,14 @@ export function NpcInteracaoOverlay() {
     return () => { unsubC(); unsubQ(); };
   }, [master]);
 
-  if (!pontos.length && !master) return null;
   return (
     <>
       <div ref={panel.ref} style={panel.style} data-npc-overlay className="absolute top-16 right-3 z-40 w-64 rounded-lg border border-border bg-card/95 p-2 pointer-events-auto text-sm">
         <div className="flex items-center gap-2">
           <Button type="button" variant="ghost" size="icon" className="h-6 w-5 shrink-0 touch-none cursor-grab active:cursor-grabbing" aria-label="Mover lojas e murais" title="Arrastar lojas e murais" {...panel.handleProps}><GripVertical /></Button>
           <button type="button" onClick={() => setAberto((v) => !v)} className="font-semibold text-xs">{aberto ? '▾' : '▸'} Lojas e murais</button>
-          {master && <button type="button" className="ml-auto rounded border border-primary/50 px-2 py-0.5 text-xs text-primary" onClick={() => setGerenciar({ id: null })}>📜 Quests</button>}
+          <button type="button" className={`${master ? '' : 'ml-auto '}rounded border border-border px-2 py-0.5 text-xs`} onClick={() => setDiario(true)}>📖 Diário</button>
+          {master && <button type="button" className="rounded border border-primary/50 px-2 py-0.5 text-xs text-primary" onClick={() => setGerenciar({ id: null })}>📜 Quests</button>}
           {master && <button type="button" className="rounded border border-border px-2 py-0.5 text-xs" onClick={() => setMural({ id: null })}>📌 Ver</button>}
         </div>
         {aberto && <>
@@ -107,6 +109,7 @@ export function NpcInteracaoOverlay() {
       </div>
       {loja && me && <ShopModal aberto onClose={() => setLoja(null)} shopId={loja} characterId={me.id} />}
       {mural && <MuralQuestsDialog aberto onClose={() => setMural(null)} muralId={mural.id} charId={me?.id} master={master} onEditar={(id) => setGerenciar({ id })} />}
+      {diario && <DiarioQuests aberto onClose={() => setDiario(false)} charId={me?.id} master={master} />}
       {gerenciar && <GerenciadorQuests aberto onClose={() => setGerenciar(null)} inicialId={gerenciar.id} />}
     </>
   );
