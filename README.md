@@ -14,7 +14,7 @@ Continue developing this project in the [Lovable editor](https://lovable.dev/pro
 
 ## Sync test
 
-Teste de sincronização GitHub → Lovable: 2026-10-07.
+Teste de sincronização GitHub → Lovable: 2026-10-07 09:49 BRT.
 
 ## Development
 
