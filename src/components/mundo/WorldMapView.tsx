@@ -13,6 +13,9 @@ import { useRoleStore } from '@/stores/useRoleStore';
 import { useBossStore } from '@/stores/useBossStore';
 import { canSeeField } from '@/lib/bosses';
 import { useQuestStore } from '@/stores/useQuestStore';
+import { useChronosStore } from '@/stores/useChronosStore';
+import { TRANSPORTES, distanciaKm, formatarDuracao, sortearEncontros, tempoViagemSegundos, type Transporte } from '@/lib/economia/viagem';
+import { registrarEvento } from '@/lib/economia/linhaTempo';
 import { BossGallery } from './BossGallery';
 import { BossSheetContent } from './BossSheet';
 import { BossPortrait } from './BossPortrait';
@@ -96,6 +99,26 @@ export function WorldMapView() {
   const panRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
 
   const questsMap = useQuestStore((s) => s.quests);
+  const viagem = useQuestStore((s) => s.viagem);
+  const [modoViagem, setModoViagem] = useState<null | 'grupo' | 'destino'>(null);
+  const [painelViagem, setPainelViagem] = useState(false);
+  const viajar = (dest: { x: number; y: number }) => {
+    const v = useQuestStore.getState().viagem;
+    if (!v.grupo) return;
+    const img = imgRef.current;
+    const prop = img && img.naturalWidth ? img.naturalHeight / img.naturalWidth : 1;
+    const km = distanciaKm(v.grupo, dest, v.escalaKm, prop);
+    const t = TRANSPORTES[v.transporte];
+    const seg = tempoViagemSegundos(km, t.kmDia);
+    const encontros = sortearEncontros(v.chanceEncontro, seg);
+    useQuestStore.getState().setViagem({ grupo: dest });
+    useChronosStore.getState().tick(seg, 'manual');
+    registrarEvento('viagem', `Viagem: ${km.toFixed(0)} km (${t.nome})`, `durou ${formatarDuracao(seg)}`);
+    if (encontros.length) {
+      registrarEvento('encontro', `Encontro na estrada`, `dia ${encontros.join(', ')} da viagem`);
+      toast.warning(`⚔️ Encontro sorteado no dia ${encontros.join(', ')} da viagem (só você vê).`, { duration: 8000 });
+    } else toast.success(`Viagem de ${km.toFixed(0)} km concluída em ${formatarDuracao(seg)}. Sem encontros.`);
+  };
   /** Situação do chefe nas quests: escondido (ninguém aceitou) ou misterioso ("?"). */
   const questDoBoss = useMemo(() => {
     const r: Record<string, { escondido: boolean; misterio: boolean }> = {};
@@ -228,6 +251,23 @@ export function WorldMapView() {
               </Button>
             </div>
           )}
+          {worldMap && (
+            <Button size="sm" variant={painelViagem ? 'default' : 'outline'} className="h-8 text-xs" onClick={() => setPainelViagem((v) => !v)}>🧭 Viagem</Button>
+          )}
+          {worldMap && painelViagem && (
+            <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-card px-2 py-1 text-xs" data-painel-viagem>
+              <Button size="sm" variant={modoViagem === 'grupo' ? 'default' : 'outline'} className="h-7 text-xs" onClick={() => setModoViagem(modoViagem === 'grupo' ? null : 'grupo')}>Posicionar grupo</Button>
+              <Button size="sm" disabled={!viagem.grupo} variant={modoViagem === 'destino' ? 'default' : 'outline'} className="h-7 text-xs" onClick={() => setModoViagem(modoViagem === 'destino' ? null : 'destino')}>Viajar até…</Button>
+              <label className="flex items-center gap-1">Mapa tem
+                <input type="number" min={1} aria-label="Largura do mapa em km" value={viagem.escalaKm} onChange={(e) => useQuestStore.getState().setViagem({ escalaKm: Math.max(1, Number(e.target.value) || 1) })} className="h-7 w-20 rounded border border-input bg-background px-1" /> km de largura</label>
+              <select aria-label="Transporte" value={viagem.transporte} onChange={(e) => useQuestStore.getState().setViagem({ transporte: e.target.value as Transporte })} className="h-7 rounded border border-input bg-background px-1">
+                {(Object.keys(TRANSPORTES) as Transporte[]).map((k) => <option key={k} value={k}>{TRANSPORTES[k].nome} ({TRANSPORTES[k].kmDia} km/dia)</option>)}
+              </select>
+              <label className="flex items-center gap-1">Encontro
+                <input type="number" min={0} max={100} aria-label="Chance de encontro por dia" value={viagem.chanceEncontro} onChange={(e) => useQuestStore.getState().setViagem({ chanceEncontro: Math.max(0, Math.min(100, Number(e.target.value) || 0)) })} className="h-7 w-14 rounded border border-input bg-background px-1" />% / dia</label>
+              {modoViagem && <span className="text-primary">Clique no mapa {modoViagem === 'grupo' ? 'onde o grupo está' : 'no destino'}.</span>}
+            </div>
+          )}
           {worldMap && unplaced.length > 0 && (
             <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
               Colocar no mapa:
@@ -252,7 +292,7 @@ export function WorldMapView() {
           {/* Área navegável */}
           <div
             ref={viewRef}
-            className={`relative h-[80vh] min-w-0 flex-1 select-none overflow-hidden rounded-xl border border-border ${placing ? 'cursor-crosshair' : 'cursor-grab'}`}
+            className={`relative h-[80vh] min-w-0 flex-1 select-none overflow-hidden rounded-xl border border-border ${placing || modoViagem ? 'cursor-crosshair' : 'cursor-grab'}`}
             style={{ backgroundColor: worldBackgroundColor }}
             onContextMenu={addPing}
             onPointerDown={(e) => {
@@ -281,6 +321,13 @@ export function WorldMapView() {
               dragRef.current = null;
             }}
             onClick={(e) => {
+              if (modoViagem) {
+                const p = pos(e);
+                if (modoViagem === 'grupo') useQuestStore.getState().setViagem({ grupo: p });
+                else viajar(p);
+                setModoViagem(null);
+                return;
+              }
               if (!placing) return;
               const p = pos(e);
               addMarker(placing, p.x, p.y);
@@ -318,6 +365,13 @@ export function WorldMapView() {
                 ))}
               </AnimatePresence>
 
+              {viagem.grupo && (
+                <div className="pointer-events-none absolute" data-grupo-viagem
+                  style={{ left: `${viagem.grupo.x}%`, top: `${viagem.grupo.y}%`, transform: `translate(-50%, -50%) scale(${1 / view.scale})` }}>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-primary bg-card text-lg shadow-lg">🧭</div>
+                  <div className="absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap rounded bg-background/85 px-1.5 py-0.5 text-xs font-semibold">Grupo</div>
+                </div>
+              )}
               {markers.map((m) => {
                 const b = bosses[m.bossId];
                 const misterio = !isMaster && !!questDoBoss[m.bossId]?.misterio;
