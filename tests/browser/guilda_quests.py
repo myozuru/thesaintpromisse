@@ -39,6 +39,8 @@ async def main():
         await pg.mouse.click(640, 400); await pg.wait_for_timeout(2000)
         mapa = pg.get_by_text("Mapa", exact=True)
         if await mapa.count(): await mapa.first.click(force=True); await pg.wait_for_timeout(2000)
+        tut = pg.locator('div.fixed.inset-0.z-\\[2100\\]')
+        if await tut.count(): await tut.first.click(position={"x":5,"y":5}, force=True); await pg.wait_for_timeout(500)
         ids = await pg.evaluate(SETUP); await pg.wait_for_timeout(1200)
 
         # Selecionar o mural para abrir o painel e então o Diário
