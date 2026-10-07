@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazyWithReload } from "@/lib/lazyWithReload";
 import { Header, getTabsForRole } from "@/components/Header";
 import { AuthScreen } from "@/components/AuthScreen";
 import { useRoleStore } from "@/stores/useRoleStore";
@@ -22,20 +23,20 @@ const ZOOM_LABELS = ["55%", "65%", "75%", "85%", "100%", "115%"];
 // Lazy-load every module so the initial page is light and each module is parsed
 // only on first access. Once mounted, we keep them alive (see render below) so
 // returning to a tab is instant.
-const FichasModule = lazy(() => import("@/components/fichas/FichasModule").then(m => ({ default: m.FichasModule })));
-const ChronosModule = lazy(() => import("@/components/chronos/ChronosModule").then(m => ({ default: m.ChronosModule })));
-const ItensModule = lazy(() => import("@/components/itens/ItensModule").then(m => ({ default: m.ItensModule })));
-const BausModule = lazy(() => import("@/components/baus/BausModule").then(m => ({ default: m.BausModule })));
-const CalendarioModule = lazy(() => import("@/components/calendario/CalendarioModule").then(m => ({ default: m.CalendarioModule })));
-const SistemaModule = lazy(() => import("@/components/sistema/SistemaModule").then(m => ({ default: m.SistemaModule })));
-const GuiaModule = lazy(() => import("@/components/guia/GuiaModule").then(m => ({ default: m.GuiaModule })));
-const SpellProposalsModule = lazy(() => import("@/components/fichas/SpellProposalsModule").then(m => ({ default: m.SpellProposalsModule })));
-const MoneyModule = lazy(() => import("@/components/money/MoneyModule").then(m => ({ default: m.MoneyModule })));
-const CardapiosModule = lazy(() => import("@/components/cardapios/CardapiosModule").then(m => ({ default: m.CardapiosModule })));
-const OmniModule = lazy(() => import("@/components/omni/OmniModule").then(m => ({ default: m.OmniModule })));
-const CatalogoModule = lazy(() => import("@/components/catalogo/CatalogoModule").then(m => ({ default: m.CatalogoModule })));
-const MapaModule = lazy(() => import("@/components/mundo/MapaHub").then(m => ({ default: m.MapaHub })));
-const GrimorioModule = lazy(() => import("@/components/grimorio/GrimorioModule").then(m => ({ default: m.GrimorioModule })));
+const FichasModule = lazyWithReload(() => import("@/components/fichas/FichasModule").then(m => ({ default: m.FichasModule })));
+const ChronosModule = lazyWithReload(() => import("@/components/chronos/ChronosModule").then(m => ({ default: m.ChronosModule })));
+const ItensModule = lazyWithReload(() => import("@/components/itens/ItensModule").then(m => ({ default: m.ItensModule })));
+const BausModule = lazyWithReload(() => import("@/components/baus/BausModule").then(m => ({ default: m.BausModule })));
+const CalendarioModule = lazyWithReload(() => import("@/components/calendario/CalendarioModule").then(m => ({ default: m.CalendarioModule })));
+const SistemaModule = lazyWithReload(() => import("@/components/sistema/SistemaModule").then(m => ({ default: m.SistemaModule })));
+const GuiaModule = lazyWithReload(() => import("@/components/guia/GuiaModule").then(m => ({ default: m.GuiaModule })));
+const SpellProposalsModule = lazyWithReload(() => import("@/components/fichas/SpellProposalsModule").then(m => ({ default: m.SpellProposalsModule })));
+const MoneyModule = lazyWithReload(() => import("@/components/money/MoneyModule").then(m => ({ default: m.MoneyModule })));
+const CardapiosModule = lazyWithReload(() => import("@/components/cardapios/CardapiosModule").then(m => ({ default: m.CardapiosModule })));
+const OmniModule = lazyWithReload(() => import("@/components/omni/OmniModule").then(m => ({ default: m.OmniModule })));
+const CatalogoModule = lazyWithReload(() => import("@/components/catalogo/CatalogoModule").then(m => ({ default: m.CatalogoModule })));
+const MapaModule = lazyWithReload(() => import("@/components/mundo/MapaHub").then(m => ({ default: m.MapaHub })));
+const GrimorioModule = lazyWithReload(() => import("@/components/grimorio/GrimorioModule").then(m => ({ default: m.GrimorioModule })));
 
 const MODULES: Partial<Record<TabId, React.ComponentType>> = {
   relogio: ChronosModule,
