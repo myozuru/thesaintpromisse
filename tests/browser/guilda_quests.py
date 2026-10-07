@@ -40,7 +40,8 @@ async def main():
         if await mapa.count(): await mapa.first.click(force=True); await pg.wait_for_timeout(2000)
         ids = await pg.evaluate(SETUP); await pg.wait_for_timeout(1200)
 
-        # Abrir Diário pelo painel "Lojas e murais" (botão Diário)
+        # Selecionar o mural para abrir o painel e então o Diário
+        await pg.evaluate("window.__mapStore.setState({selectedIds:['mur']})"); await pg.wait_for_timeout(1000)
         diario_btn = pg.get_by_role("button", name="Diário")
         print("botão Diário visível:", await diario_btn.count() > 0)
         await diario_btn.first.click(); await pg.wait_for_timeout(800)
@@ -62,8 +63,9 @@ async def main():
         await pg.screenshot(path=S + "3_membros.png")
         await pg.keyboard.press("Escape"); await pg.wait_for_timeout(500)
 
-        # Abrir mural e aceitar pela guilda
-        await pg.evaluate("window.__mapStore.setState({selectedIds:['mur']})"); await pg.wait_for_timeout(1000)
+        # Mural já deve estar aberto; se fechou, reabrir
+        if await pg.locator(f"[data-cartaz='{ids['quest']}']").count() == 0:
+            await pg.evaluate("window.__mapStore.setState({selectedIds:['mur']})"); await pg.wait_for_timeout(1000)
         await pg.locator(f"[data-cartaz='{ids['quest']}']").click(); await pg.wait_for_timeout(500)
         btn_guilda = pg.get_by_role("button", name=lambda n: n and "Aceitar pela guilda" in n)
         print("botão aceitar pela guilda:", await btn_guilda.count() > 0)
@@ -93,6 +95,8 @@ async def main():
 
         # Diário do jogador mostra a quest aceita pela guilda
         await pg.evaluate("""async()=>{const {useRoleStore}=await import('/src/stores/useRoleStore.ts');useRoleStore.setState({role:'PLAYER'})}""")
+        if await pg.get_by_role("button", name="Diário").count() == 0:
+            await pg.evaluate("window.__mapStore.setState({selectedIds:['mur']})"); await pg.wait_for_timeout(1000)
         await pg.get_by_role("button", name="Diário").first.click(); await pg.wait_for_timeout(800)
         print("quest no diário:", await pg.get_by_text("Caçar o lobo").count() > 0)
         await pg.get_by_role("button", name="Guilda", exact=True).click(); await pg.wait_for_timeout(400)
