@@ -102,6 +102,7 @@ function DetalheQuest({ q, charId, master, agora, onEditar, onFechar }: { q: Que
   const chars = useCharacterStore((s) => s.characters);
   const atualizar = useQuestStore((s) => s.atualizarQuest);
   const [erro, setErro] = useState<string | null>(null);
+  const [grupo, setGrupo] = useState<string[] | null>(null);
   const oculto = q.mascarada && !q.revelada;
   const aceitou = !!charId && q.aceitaPor.includes(charId);
   const tentar = (fn: () => void) => { try { fn(); setErro(null); } catch (e) { setErro(e instanceof Error ? e.message : 'Erro'); } };
@@ -127,9 +128,30 @@ function DetalheQuest({ q, charId, master, agora, onEditar, onFechar }: { q: Que
       </div>
       {q.aceitaPor.length > 0 && <div className="text-xs text-muted-foreground">Aceita por: {q.aceitaPor.map((id) => chars.find((c) => c.id === id)?.name ?? '?').join(', ')}</div>}
       {erro && <p className="text-xs text-destructive" role="alert">{erro}</p>}
-      {!master && charId && !aceitou && (q.status === 'disponivel' || q.status === 'aceita') && (
-        <Button size="sm" className="w-full" onClick={() => tentar(() => aceitarQuest(q.id, charId))}>Aceitar quest</Button>
-      )}
+      {!master && charId && !aceitou && (q.status === 'disponivel' || q.status === 'aceita') && (grupo === null ? (
+        <div className="space-y-1.5">
+          <Button size="sm" className="w-full" onClick={() => tentar(() => aceitarQuest(q.id, charId))}>Aceitar como indivíduo</Button>
+          <Button size="sm" variant="outline" className="w-full" onClick={() => setGrupo([charId])}>Aceitar como grupo</Button>
+        </div>
+      ) : (
+        <div className="space-y-1 rounded border border-dashed p-2" style={{ borderColor: '#5a3a1a80' }} data-escolher-grupo>
+          <div className="text-xs font-semibold">Quem faz parte do grupo? (clique para marcar)</div>
+          {chars.filter((c) => c.profileId && !c.temporary && !q.aceitaPor.includes(c.id)).map((c) => {
+            const marcado = grupo.includes(c.id);
+            return (
+              <button key={c.id} type="button" disabled={c.id === charId}
+                onClick={() => setGrupo((g) => (g ?? []).includes(c.id) ? (g ?? []).filter((x) => x !== c.id) : [...(g ?? []), c.id])}
+                className={`flex w-full items-center gap-2 rounded border px-2 py-1 text-left text-xs ${marcado ? 'border-primary bg-primary/10' : 'border-border'}`}>
+                <span>{marcado ? '☑' : '☐'}</span><span className="flex-1">{c.name}</span>{c.id === charId && <span className="opacity-70">(você)</span>}
+              </button>
+            );
+          })}
+          <div className="flex gap-1.5 pt-1">
+            <Button size="sm" className="flex-1" onClick={() => tentar(() => { aceitarQuest(q.id, grupo); setGrupo(null); })}>Confirmar grupo ({grupo.length})</Button>
+            <Button size="sm" variant="ghost" onClick={() => setGrupo(null)}>Cancelar</Button>
+          </div>
+        </div>
+      ))}
       {!master && aceitou && <p className="text-xs text-primary">Você aceitou esta quest.</p>}
       {master && (
         <div className="space-y-1.5 border-t border-border pt-2">
