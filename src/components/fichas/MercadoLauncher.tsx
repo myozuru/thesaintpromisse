@@ -16,7 +16,7 @@ interface Props {
 export function MercadoLauncher({ characterId }: Props) {
   const shopsMap = useShopStore((s) => s.shops);
   const shops = useMemo(
-    () => Object.values(shopsMap).sort((a, b) => a.name.localeCompare(b.name)),
+    () => Object.values(shopsMap).filter((s) => !s.deletedAt).sort((a, b) => a.name.localeCompare(b.name)),
     [shopsMap],
   );
   const [openShopId, setOpenShopId] = useState<string | null>(null);

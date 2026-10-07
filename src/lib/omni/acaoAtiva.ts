@@ -8,7 +8,7 @@ import { armaDoPersonagem, armaEstaEmpunhada } from './armaDoPersonagem';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useReactionStore } from '@/stores/useReactionStore';
 import { useCombatStore } from '@/stores/useCombatStore';
-import { planejarCustosAtivos, validarRecursosAtivos, patchCustosAtivos, consumirUsosItemAtivo, consumirMunicaoAtiva, type ContextoCustosAtivos } from './custosAtivos';
+import { nomeContadorAtivo, planejarCustosAtivos, validarRecursosAtivos, patchCustosAtivos, consumirUsosItemAtivo, consumirMunicaoAtiva, type ContextoCustosAtivos } from './custosAtivos';
 import { prepararMovimentosAtivos, aplicarMovimentoAtivo, validarPlanoMovimento, type PlanoMovimentoAtivo, type OpcoesMovimentoAtivo } from './movimentosAtivos';
 import { avaliarCondicionaisAtivos } from './condicionaisAtivos';
 import { applyAdvantageToD20, consumeAdvantageFor, consumeFlatBonusFor } from './rollAdvantage';
@@ -394,9 +394,19 @@ async function executarAcaoAtivaInterna(
   const armaDeclarada = JSON.stringify(arma);
   const validarInstancia = () => {
     if (!opcoes.instanciaId) return true;
-    const item = useInventoryStore.getState().items[opcoes.instanciaId];
     const usuario = useCharacterStore.getState().characters.find(c => c.id === usuarioId);
-    return !!item && !!usuario && item.ownerId === usuarioId && (!ent || item.entity.id === ent.id) && (ent?.categoria !== 'arma' ||
+    if (!usuario) return false;
+
+    // Entidades não-equipáveis (feitiços/talentos/passivas etc.) podem ficar
+    // vinculadas diretamente à ficha mesmo quando o exemplar de inventário
+    // original já não existe. O vínculo mantém a rastreabilidade por instanceId.
+    const vinculoFicha = (usuario.omniAtivos ?? []).some((v) =>
+      v.instanceId === opcoes.instanciaId && (!ent || v.entidadeId === ent.id)
+    );
+    if (vinculoFicha) return true;
+
+    const item = useInventoryStore.getState().items[opcoes.instanciaId];
+    return !!item && item.ownerId === usuarioId && (!ent || item.entity.id === ent.id) && (ent?.categoria !== 'arma' ||
       (usuario.mainHandWeaponInstanceId || usuario.offHandWeaponInstanceId
         ? usuario.mainHandWeaponInstanceId === item.instanceId || usuario.offHandWeaponInstanceId === item.instanceId
         : armaEstaEmpunhada(usuario, ent.replica ? item.replicaArma ?? '' : ent.nome)) && (!ent.replica || item.materializada));
@@ -504,7 +514,12 @@ async function executarAcaoAtivaInterna(
   if (ent?.categoria === 'feitico') notificarEventoPersonagem('aoConjurarFeitico', u.id, fonte, { custoPE: p.pe });
   else if (ent?.categoria === 'talento') notificarEventoPersonagem('aoUsarTalento', u.id, fonte);
   const pago = `${p.pe} PE${p.pv ? ` + ${p.pv} PV` : ''}${cargas ? ` + ${cargas} carga(s) de ${p.contador}` : ''}${p.municao ? ` + ${p.municao} munição(ões)` : ''}${p.usosItem ? ` + ${p.usosItem} uso(s) do item` : ''}${p.intensificacoes ? ` · intensificação ${p.intensificacoes}` : ''}`;
-  const sustentadas = p.pePorTurno > 0 ? [] as { charId: string; id: string; sourceEntityId?: string; sourceInstanceId?: string }[] : undefined;
+  // Gastar cargas de um contador mantido por outra sustentação (ex.: enviar um espírito invocado)
+  // amarra os efeitos desta ação àquela sustentação: somem quando ela acaba ou o alvo se afasta.
+  const sustVinculada = p.pePorTurno <= 0 && p.contador && cargas > 0
+    ? useCharacterStore.getState().characters.find(c => c.id === usuarioId)?.omniSustentacoes?.find(s => s.contador === p.contador)
+    : undefined;
+  const sustentadas = p.pePorTurno > 0 || sustVinculada ? [] as { charId: string; id: string; sourceEntityId?: string; sourceInstanceId?: string }[] : undefined;
 
 
   let danoTotal = 0;
@@ -532,13 +547,17 @@ async function executarAcaoAtivaInterna(
       const cd = cfg.cd?.trim() ? Math.round(avaliarFormulaAtiva(cfg.cd, u, t, arma).valor) : specDCFor(u);
       const adv = consumeAdvantageFor(t.id, { kind: 'save', name: TR_ROTULO[tr] }, { disadvantage: mods.desvantagemTR });
       const flat = consumeFlatBonusFor(t.id, { kind: 'save', name: TR_ROTULO[tr] });
-      const mod = modTR(t, tr) + mods.tr + flat.bonus;
+      const { abrirJanelaReacaoAtiva } = await import('./reacoesAtivas');
+      const preTR = opcoes.ignorarReacoes ? { cancelado: false, testeBonus: 0 } : await abrirJanelaReacaoAtiva({ gatilho: 'quando_alvo_de_tr', origemId: u.id, protegidoId: t.id });
+      if (preTR.cancelado) return { grau: 'sucesso' as GrauSucessoTR, texto: `TR ${TR_ROTULO[tr]} anulado por reação → SUCESSO` };
+      const mod = modTR(t, tr) + mods.tr + flat.bonus + (preTR.testeBonus ?? 0);
       const rolled = await applyAdvantageToD20(adv.net, () => rollD20Com(t.id, undefined, { label: `TR ${TR_ROTULO[tr]}` }));
       const d20 = rolled.d20;
       const totalTR = d20 + mod;
       const grau = classificarGrauTR(d20, totalTR, cd);
       const grauLabel = grau === 'falha_critica' ? 'FALHA CRÍTICA' : grau.toUpperCase();
-      return { grau, texto: `TR ${TR_ROTULO[tr]}${rolled.modeLabel} d20 ${d20}${mod >= 0 ? '+' : ''}${mod} = ${totalTR} vs CD ${cd} → ${grauLabel}` };
+      if (!opcoes.ignorarReacoes) await abrirJanelaReacaoAtiva({ gatilho: grau === 'sucesso' ? 'quando_passar_tr' : 'quando_falhar_tr', origemId: u.id, protegidoId: t.id });
+      return { grau, texto: `TR ${TR_ROTULO[tr]}${rolled.modeLabel} d20 ${d20}${mod >= 0 ? '+' : ''}${mod} = ${totalTR} vs CD ${cd} → ${grauLabel}${preTR.testeBonus ? ` (reação ${preTR.testeBonus > 0 ? '+' : ''}${preTR.testeBonus})` : ''}` };
     };
 
     if (cfg.teste === 'tr') {
@@ -627,10 +646,13 @@ async function executarAcaoAtivaInterna(
       const flatU = consumeFlatBonusFor(u.id, { kind: 'skill', name: periciaUsuario });
       const advT = consumeAdvantageFor(t.id, { kind: 'skill', name: periciaAlvo.nome });
       const flatT = consumeFlatBonusFor(t.id, { kind: 'skill', name: periciaAlvo.nome });
+      const { abrirJanelaReacaoAtiva: janelaPericia } = await import('./reacoesAtivas');
+      const prePericia = opcoes.ignorarReacoes ? { cancelado: false, testeBonus: 0 } : await janelaPericia({ gatilho: 'quando_alvo_de_pericia', origemId: u.id, protegidoId: t.id });
+      if (prePericia.cancelado) { const msg = `⛔ ${cfg.nome}: disputa contra ${t.name} anulada por reação.`; log(msg); detalhes.push(msg); continue; }
       const rollU = await applyAdvantageToD20(advU.net, () => rollD20Com(u.id, undefined, { label: `Disputa ${periciaUsuario}` }));
       const rollT = await applyAdvantageToD20(advT.net, () => rollD20Com(t.id, undefined, { label: `Disputa ${periciaAlvo.nome}` }));
       const totalU = rollU.d20 + modificadorPericiaAtiva(u, periciaUsuario)! + flatU.bonus;
-      const totalT = rollT.d20 + periciaAlvo.bonus + flatT.bonus;
+      const totalT = rollT.d20 + periciaAlvo.bonus + flatT.bonus + (prePericia.testeBonus ?? 0);
       const venceu = usuarioVenceDisputa(totalU, totalT);
       aplicaEfeitos = venceu;
       cabecalho = `disputa ${periciaUsuario} ${rollU.d20}+${totalU - rollU.d20}=${totalU} vs ${periciaAlvo.nome} ${rollT.d20}+${totalT - rollT.d20}=${totalT} → ${venceu ? 'VENCEU' : totalU === totalT ? 'EMPATE (alvo vence)' : 'PERDEU'}`;
@@ -699,9 +721,34 @@ async function executarAcaoAtivaInterna(
     danoTotal += dano;
     detalhes.push(msg);
   }
-  if (sustentadas?.length) {
+  const gerar = cfg.custo_recursos?.gerar_cargas;
+  const contadorGerado = gerar?.nome.trim() ? nomeContadorAtivo(gerar.nome) : undefined;
+  if (gerar && contadorGerado) {
     const atual = useCharacterStore.getState().characters.find(c => c.id === usuarioId);
-    if (atual) useCharacterStore.getState().updateCharacter(usuarioId, { omniSustentacoes: [...(atual.omniSustentacoes ?? []), { id: crypto.randomUUID(), nome: cfg.nome, pePorTurno: p.pePorTurno, condicoes: sustentadas }] });
+    const qtd = atual ? Math.max(0, Math.floor(avaliarFormulaAtiva(gerar.quantidade || '1', atual, atual, arma).valor || 0)) : 0;
+    if (atual && qtd > 0) {
+      const antes = atual.omniCounters ?? {};
+      const depois = { ...antes, [contadorGerado]: (gerar.modo === 'somar' ? (antes[contadorGerado] ?? 0) : 0) + qtd };
+      useCharacterStore.getState().updateCharacter(usuarioId, { omniCounters: depois });
+      notificarAtualizacaoContadores(usuarioId, antes, depois);
+      const msg = `✨ ${atual.name}: ${cfg.nome} gera ${qtd} carga(s) de ${contadorGerado} (total ${depois[contadorGerado]}).`;
+      log(msg); detalhes.push(msg);
+    }
+  }
+  const alvosExternos = alvos.map(t => t.id).filter(id => id !== usuarioId);
+  if (sustVinculada && sustentadas) {
+    const atual = useCharacterStore.getState().characters.find(c => c.id === usuarioId);
+    if (atual) useCharacterStore.getState().updateCharacter(usuarioId, { omniSustentacoes: (atual.omniSustentacoes ?? []).map(s => s.id === sustVinculada.id
+      ? { ...s, condicoes: [...s.condicoes, ...sustentadas], alvos: [...new Set([...(s.alvos ?? []), ...alvosExternos])] }
+      : s) });
+  } else if (p.pePorTurno > 0 && (sustentadas?.length || contadorGerado)) {
+    const atual = useCharacterStore.getState().characters.find(c => c.id === usuarioId);
+    const alcanceM = cfg.custo_recursos?.alcance_sustentacao_m;
+    if (atual) useCharacterStore.getState().updateCharacter(usuarioId, { omniSustentacoes: [...(atual.omniSustentacoes ?? []), {
+      id: crypto.randomUUID(), nome: cfg.nome, pePorTurno: p.pePorTurno, condicoes: sustentadas ?? [],
+      ...(contadorGerado ? { contador: contadorGerado } : {}),
+      ...(alcanceM && alcanceM > 0 ? { alcanceM, alvos: alvosExternos } : {}),
+    }] });
   }
   return { ok: true, dano: danoTotal, cura: curaTotal, efeitoAplicado, detalhe: detalhes.join("\n") };
 }
@@ -709,13 +756,36 @@ async function executarAcaoAtivaInterna(
 /** Ações ativas disponíveis ao personagem (itens do inventário dele). */
 export function acoesAtivasDe(charId: string): { instanceId: string; ent: EntidadeOmni; cfg: AcaoAtivaConfig }[] {
   const out: { instanceId: string; ent: EntidadeOmni; cfg: AcaoAtivaConfig }[] = [];
+  const seen = new Set<string>();
+  const entidades = useOmniEntidadesStore.getState().entidades;
+  const inventario = useInventoryStore.getState().items;
   const char = useCharacterStore.getState().characters.find(c => c.id === charId);
-  for (const i of Object.values(useInventoryStore.getState().items)) {
+
+  const adicionar = (instanceId: string, ent: EntidadeOmni) => {
+    for (const cfg of ent.acoesAtivas ?? []) {
+      const key = ent.id + ':' + instanceId + ':' + cfg.id;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ instanceId, ent, cfg });
+    }
+  };
+
+  // Itens físicos: mantém as mesmas regras de posse, empunhadura e réplica.
+  for (const i of Object.values(inventario)) {
     if (i.ownerId !== charId) continue;
-    const ent = useOmniEntidadesStore.getState().entidades[i.entity.id] ?? i.entity;
+    const ent = entidades[i.entity.id] ?? i.entity;
     if (ent.categoria === 'arma' && (!char || !armaEstaEmpunhada(char, ent.replica ? i.replicaArma ?? '' : ent.nome) || ent.replica && !i.materializada)) continue;
-    for (const cfg of ent.acoesAtivas ?? []) out.push({ instanceId: i.instanceId, ent, cfg });
+    adicionar(i.instanceId, ent);
   }
+
+  // Entidades OMNI vinculadas diretamente à ficha: feitiços, talentos,
+  // passivas, auras, condições e votos continuam disponíveis pelo vínculo.
+  for (const vinculo of char?.omniAtivos ?? []) {
+    const ent = entidades[vinculo.entidadeId];
+    if (!ent) continue;
+    adicionar(vinculo.instanceId, ent);
+  }
+
   return out;
 }
 

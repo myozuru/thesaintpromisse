@@ -1,5 +1,7 @@
 import { EmpunharArmaButton } from './EmpunharArmaButton';
+import { PortasDaMorteCard } from './PortasDaMorteCard';
 import { SoltarItemButton } from './SoltarItemButton';
+import { OmniItemImagem } from '@/components/omni/OmniItemImagem';
 import { ContadoresEquipamento } from '@/components/omni/ContadoresEquipamento';
 import { consumeCritNegated } from '@/lib/suporteNegacao';
 import { implementoMarcialBonus } from '@/lib/golpeEspecial';
@@ -65,6 +67,7 @@ import { SpecActionsPanel } from './SpecActionsPanel';
 import { SuportePanel } from './SuportePanel';
 import { CombateEstilosPanel } from './CombateEstilosPanel';
 import { AttackPanel } from './AttackPanel';
+import { AcoesAtivasSection } from './AcoesAtivasSection';
 import { CamDeathReactionDialog } from './CamDeathReactionDialog';
 import { PendingLevelChoicesPanel, hasPendingChoices } from './PendingLevelChoicesPanel';
 import { PendingSummaryButton } from './PendingSummaryButton';
@@ -1570,6 +1573,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
       </div>
       </div>
 
+      <PortasDaMorteCard c={c} />
       {/* ─── Status bars ─── */}
       <div className="px-4 pb-2 space-y-1.5">
         <div className="flex items-center gap-1">
@@ -1747,6 +1751,13 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
         <SuportePanel character={c} />
         <CombateEstilosPanel character={c} />
       </div>
+
+      {/* ─── Ações ativas fora de combate ───────────────────────────────── */}
+      {!combatInProgress && !hideAttackPanel && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <AcoesAtivasSection charId={c.id} />
+        </div>
+      )}
 
       {/* ─── Painel de Ataque (combatEngine) ─── */}
       {/* Visível apenas durante combate ativo. */}
@@ -3268,6 +3279,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                       title="Ver detalhes"
                     >
                       <div className="flex items-center gap-2 flex-wrap">
+                        <OmniItemImagem entidade={inv.entity} />
                         <span>{inv.entity.nome}</span>
                         {isEquippable && (
                           <span className="rounded-full border border-primary/30 bg-primary/15 px-1.5 py-0.5 text-xs text-primary">

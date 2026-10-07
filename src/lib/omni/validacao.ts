@@ -3,6 +3,7 @@
  * Defesa contra JSON corrompido / vindo de outro sistema.
  */
 import { z } from 'zod';
+import { GATILHOS_REACAO_IDS } from './tipos';
 import { DAMAGE_TYPES } from '@/types';
 import { ROTULOS_PERICIAS, SISTEMA_PERICIAS } from './constantesDoSistema';
 const DamageTypeSchema = z.enum(DAMAGE_TYPES);
@@ -162,9 +163,10 @@ const AcaoAtivaSchema = z.object({
   cura: z.string().optional(), recurso_cura: z.enum(['pv', 'pe']).optional(),
   desfechosTR: z.object({ falha: DesfechoTRSchema.optional(), sucesso: DesfechoTRSchema.optional(), falha_critica: DesfechoTRSchema.optional() }).optional(),
   reacao: z.object({
-    gatilho: z.enum(['quando_inimigo_entrar_alcance', 'quando_inimigo_sair_alcance', 'quando_alvo_declarar_ataque', 'quando_ataque_errar', 'quando_inimigo_conjurar']),
+    gatilho: z.enum(GATILHOS_REACAO_IDS),
     alcance_m: z.number().finite().positive(), protegido: z.enum(['usuario', 'aliados', 'todos']),
     alvo: z.enum(['origem', 'protegido', 'usuario']), cancelar_evento: z.boolean().optional(), defesa_bonus: z.number().finite().nonnegative().optional(),
+    bonus_teste: z.number().finite().optional(), dano_minimo: z.number().finite().nonnegative().optional(),
   }).optional(),
   id: z.string(), nome: z.string(), acao: z.enum(['comum', 'bonus', 'reacao', 'movimento', 'livre']),
   custo_recursos: z.object({
@@ -174,6 +176,8 @@ const AcaoAtivaSchema = z.object({
     municao: z.number().int().nonnegative().optional(), usos_item: z.number().int().nonnegative().optional(),
     gastar_cargas: z.object({ nome: z.string().trim().min(1), quantidade: z.string().min(1), minimo: z.number().int().positive().optional() }).optional(),
     tipo_acao: z.enum(['comum', 'bonus', 'reacao', 'movimento', 'livre', 'sustentada']).optional(), pe_por_turno: z.string().optional(),
+    gerar_cargas: z.object({ nome: z.string().trim().min(1), quantidade: z.string().min(1), modo: z.enum(['definir', 'somar']).optional() }).optional(),
+    alcance_sustentacao_m: z.number().finite().positive().optional(),
   }).optional(),
   mod_acerto: z.number().finite().optional(),
   tr_apos_acerto: z.boolean().optional(),

@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] OMNI: chaves de mitigação por tipo de dano, scripts/passivas e verificação em combate no navegador.
+
 - [x] Migrate TP Fichas source and bundled assets into the current app.
 - [x] Adapt the app shell, route, metadata, and Tailwind v4 theme.
 - [x] Install the source application's required runtime packages.
@@ -35,7 +37,7 @@
 - [x] Sincronizar câmera e bandeja durante toda a redução final para o dado não ser recortado nem saltar de posição.
 
 ## Pendências de regras
-- [ ] Suporte Nv 4 — "No Último Segundo": implementar junto com os testes da Porta da Morte (contador de fracassos). Lembrar o usuário quando a Porta da Morte for feita.
+- [x] Portas da Morte (testes, Medicina, cura, morte massiva, 3 falhas), Ferimentos Complexos e Suporte nv4 "No Último Segundo" — `python tests/browser/portas_da_morte.py`
 
 ## Pendências de mapa (regras definidas, aguardando início)
 - [x] Cena própria por tela: trocar de cena não arrasta mais as outras telas. (Pendente: Mestre enviar jogadores para uma cena.)
@@ -66,3 +68,41 @@
 - [x] Arremessos Potentes (+1 nível de dano; 1 PE ignora RD = treinamento) — dano do ataque agora desconta da vida do alvo
 - [x] Arsenal Cíclico
 - [x] Assumir Postura — base + 8 posturas (Sol, Lua com pergunta/Andar/Desengajar, Terra, Dragão, Fortuna, Devastação, Tempestade, Céu)
+
+## OMNI — Reações e Testes com Resistência
+- [x] Ataque com arma pode pedir TR do alvo ao acertar (TR e CD configuráveis; CD vazia usa a CD de Especialização)
+- [x] Reações em 15 gatilhos: entrar/sair do alcance, declarar ataque, errar, acertar, crítico, sofrer dano, causar dano, reduzido a 0 PV, derrubar inimigo, alvo/falhou/passou em TR, alvo de perícia, inimigo conjurando
+- [x] Proteção a aliados e janela única de reação (efeitos de uma reação nunca abrem outra reação)
+- [x] Testar no navegador com peças no mapa: dentro/fora do alcance, casos inválidos, dano + TR + condição (`python tests/browser/omni_reacoes.py` — 10 casos: dentro/fora do alcance, protegido aliado vs próprio, sem reação, PE insuficiente, dano mínimo, passar a vez, TR ramificado)
+- [x] Corrigir a janela de reação, que ficava escondida sob a bandeja 3D de dados no canto inferior direito e não podia ser clicada enquanto houvesse rolagem na tela
+- [x] Reações nos testes pedidos pelo Mestre: campo "Quem força o teste" (TR/perícia); testado no navegador
+- [x] Texto natural: aceitar "cac"/"corpo a corpo", "aplicar condição <nome>" e dano escalado por contador
+- [x] Guia OMNI: aba "Texto simples" com exemplos testados; painel abre inteiro na tela (já era redimensionável e com abas)
+- [x] Ferimentos Complexos: desvantagens (olho/perna/braço) e ferida interna (TR no turno, tratamento) funcionando
+
+## Itens, baús e mapa (out/2026)
+- [x] Permitir arrastar os painéis Itens no chão e Lojas e murais; navegador confirmou movimento independente e botões funcionando.
+- [x] Item solto no chão não é mais tratado como token da ficha
+- [x] Imagem de arma/item no OMNI (inventário, chão, selo no token ao empunhar)
+- [x] Mestre invoca arma/item do catálogo no chão
+- [x] Baú a partir de imagem enviada ao mapa (vincula/cria baú do catálogo)
+- [x] Menu do botão direito com rolagem
+- [ ] Troca de arma infinita — aguardando passo a passo do usuário (regra atual já cobra Ação Bônus na 2ª troca)
+
+## Economia, lojas e Mural de Quests (out/2026)
+- [x] Comércio no OMNI: moeda do preço + estabelecimentos que aceitam o item (categorias criáveis)
+- [x] Lojas como NPCs clicáveis no mapa (abrem a loja a até 1,5 m da ficha do jogador)
+- [x] Pechincha funcional: CD oculta por mercador, teste de Presença, resultado aplica desconto
+- [x] Mural de Quests: cartazes visuais arrastáveis pelos players, ícones variados, itens do OMNI como recompensa
+- [x] Ponto de interrogação como máscara (Mestre revela ou não o objetivo real)
+- [x] Prazo de quest no relógio do mundo (não tempo real); Mestre expira/revela ao processar
+- [x] Botão do Mestre "concluir missão": dinheiro repartido igualmente; item de recompensa dropado no chão de um player (sem duplicação)
+- [ ] Limitação conhecida: CD de pechincha e objetivo oculto ficam nos dados da mesa (legíveis a quem inspecionar); só ocultos na interface
+- [ ] Limitação conhecida: prazos vencidos e revelações só são aplicados quando o Mestre está com o site aberto
+
+## Diário, reputação, viagem e linha do tempo (out/2026)
+- [x] Diário de Quests do jogador (quests aceitas, prazo, recompensa, anotações; abas Reputação e Linha do tempo)
+- [x] Facções com reputação de grupo + individual; muda preços das lojas (loja recusa em Inimigo) e libera quests exclusivas
+- [x] Viagem no Mapa do Mundo: escala em km, transporte, avança o relógio, encontros sorteados só para o Mestre
+- [x] Linha do tempo automática (quests, viagens, encontros, eventos manuais) também lançada no Calendário
+- [ ] Testar no navegador os fluxos novos

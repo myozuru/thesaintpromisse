@@ -50,6 +50,8 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
   const [masterBonus, setMasterBonus] = useState<string>('');
   const [drama, setDrama] = useState<0 | 1 | 2 | 3>(0);
   const [cinematicFocus, setCinematicFocus] = useState(false);
+  const [originId, setOriginId] = useState<string>('');
+  const originOptions = useMemo(() => characters.filter((c) => c.category !== 'PLAYER'), [characters]);
 
   const selectedChars = players.filter((c) => charIds.includes(c.id));
   const refChar = selectedChars[0];
@@ -106,6 +108,7 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
         drama: drama || undefined,
         masterBonus: mb || undefined,
         cinematicFocus: cinematicFocus || undefined,
+        originId: kind !== 'attribute' && originId && originId !== c.id ? originId : undefined,
       });
     });
     toast({
@@ -227,6 +230,20 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
           <Input type="number" inputMode="numeric" placeholder="ex.: 2 ou -3" value={masterBonus} onChange={(e) => setMasterBonus(e.target.value)} />
           <p className="text-xs text-muted-foreground">O jogador só descobre o valor quando o resultado aparecer.</p>
         </div>
+
+        {kind !== 'attribute' && (
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold uppercase tracking-[0.18em] text-accent/80">Quem força o teste (opcional)</label>
+            <Select value={originId || 'none'} onValueChange={(v) => setOriginId(v === 'none' ? '' : v)}>
+              <SelectTrigger aria-label="Quem força o teste"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Ninguém (sem reações)</SelectItem>
+                {originOptions.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">Escolha o inimigo que causa o teste para os aliados próximos poderem reagir (bônus, anular, punir).</p>
+          </div>
+        )}
 
         <div className="space-y-2">
           <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.18em] text-accent/80"><Flame className="h-3.5 w-3.5" /> Drama da rolagem</label>

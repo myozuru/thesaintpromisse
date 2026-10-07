@@ -12,6 +12,7 @@
 import type { Entity, TokenCrop, Vector2 } from '@/stores/useMapStore';
 import { drawTokenBorder } from '@/lib/mapa/tokenBorders';
 import { assetCache } from './assetCache';
+import { imagemDaEntidade, imagemPronta } from '@/lib/omni/imagemItem';
 
 
 
@@ -275,7 +276,8 @@ export function drawEntity(ctx: CanvasRenderingContext2D, e: Entity, scale: numb
 
   // Imagem (assetId) — se disponível no cache e carregada.
   const cached = e.assetId ? assetCache.get(e.assetId) : null;
-  const image = cached?.ready ? cached.img : null;
+  const imagemChao = e.groundItem && 'item' in e.groundItem ? imagemPronta(imagemDaEntidade(e.groundItem.item.entity)) : null;
+  const image = cached?.ready ? cached.img : imagemChao;
 
   if (image) {
     // Clip pelo shape para imagem respeitar elipse.

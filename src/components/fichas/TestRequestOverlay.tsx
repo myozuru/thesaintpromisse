@@ -355,7 +355,14 @@ export function TestRequestOverlay() {
       current.kind === 'save' ? { kind: 'save', name: current.testName }
       : current.kind === 'skill' ? { kind: 'skill', name: current.testName }
       : { kind: 'attribute', name: current.testName };
-    const auto = consumeAutoOutcomeFor(char.id, outCtx);
+    let auto = consumeAutoOutcomeFor(char.id, outCtx);
+    // Teste forçado por uma ficha: aliados podem reagir antes da rolagem.
+    let preReacao = { cancelado: false, testeBonus: 0 };
+    if (current.originId && current.kind !== 'attribute' && !auto.outcome) {
+      const { abrirJanelaReacaoAtiva } = await import('@/lib/omni/reacoesAtivas');
+      preReacao = await abrirJanelaReacaoAtiva({ gatilho: current.kind === 'save' ? 'quando_alvo_de_tr' : 'quando_alvo_de_pericia', origemId: current.originId, protegidoId: char.id });
+      if (preReacao.cancelado) auto = { outcome: 'success', note: 'anulado por reação' } as typeof auto;
+    }
 
     let d20: number;
     let rolls: number[];
@@ -388,7 +395,7 @@ export function TestRequestOverlay() {
     // Bônus fixos (ex: Apoio Focado do Suporte) somam no total e são consumidos.
     const flat = consumeFlatBonusFor(char.id, ctx);
     const masterBonus = current.masterBonus ?? 0;
-    const totalBonus = bonus + flat.bonus + masterBonus + (current.kind === 'skill' ? posturaPericia(char) : 0);
+    const totalBonus = bonus + flat.bonus + masterBonus + preReacao.testeBonus + (current.kind === 'skill' ? posturaPericia(char) : 0);
 
     let total = d20 + totalBonus;
     // Quando o resultado é FORÇADO e há CD, ajusta `total` pra garantir
@@ -431,6 +438,9 @@ export function TestRequestOverlay() {
       const passedFinal = current.dc != null
         ? (auto.outcome ? auto.outcome === 'success' : total >= current.dc)
         : null;
+      if (current.originId && current.kind === 'save' && passedFinal != null) {
+        void import('@/lib/omni/reacoesAtivas').then(({ abrirJanelaReacaoAtiva }) => abrirJanelaReacaoAtiva({ gatilho: passedFinal ? 'quando_passar_tr' : 'quando_falhar_tr', origemId: current.originId!, protegidoId: char.id }));
+      }
       if (showOutcome && passedFinal != null) {
         if (passedFinal) playSuccessSound();
         else playErrorSound();

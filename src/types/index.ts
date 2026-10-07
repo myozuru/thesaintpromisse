@@ -276,6 +276,17 @@ export function createEmptyRdByType(): Record<DamageType, number> {
 
 export interface Character {
   id: string;
+  /** Portas da Morte em andamento (só PLAYER, vida ≤ 0). */
+  portasMorte?: { sucessos: number; falhas: number; ultimaRodada?: number };
+  /** Falhas de teste de morte que perduram até o descanso longo. */
+  falhasMorte?: number;
+  /** Dano que gerou um Ferimento Complexo aguardando o Mestre sortear/escolher. */
+  ferimentoPendente?: number;
+  ferimentosComplexos?: { id: string; resultado: number; nome: string; desde: number; tratada?: boolean }[];
+  /** Ferida interna: falhou no TR do começo do turno — sem ação comum nem reações até o próximo turno. */
+  feridaInternaBloqueada?: boolean;
+  /** No Último Segundo: benefício ativo nesta rodada. */
+  ultimoSegundoAtivo?: boolean;
   name: string;
   category: CharacterCategory;
   /** Quem criou esta ficha. PLAYER fichas criadas por jogadores são visíveis ao Mestre; fichas criadas pelo Mestre não são visíveis aos players. */
@@ -1015,7 +1026,7 @@ export interface Character {
   /** Incrementado apenas quando um descanso curto/longo é concluído. */
   omniCounterRestCycle?: number;
   /** Custos de manutenção e condições exclusivamente criadas por ações OMNI. */
-  omniSustentacoes?: { id: string; nome: string; pePorTurno: number; condicoes: { charId: string; id: string; sourceEntityId?: string; sourceInstanceId?: string }[] }[];
+  omniSustentacoes?: { id: string; nome: string; pePorTurno: number; condicoes: { charId: string; id: string; sourceEntityId?: string; sourceInstanceId?: string }[]; contador?: string; alcanceM?: number; alvos?: string[] }[];
   /**
    * Redutores de custo de recurso por chave canônica (ex.: `pe`, `vida`).
    * Aplicados em `gastarPE`/`spellCastPipeline`/`CONSUMIR_RECURSO`,

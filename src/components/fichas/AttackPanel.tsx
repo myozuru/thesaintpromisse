@@ -612,7 +612,7 @@ export function AttackPanel({ character: cProp }: Props) {
     const ctx = buildAttackContext({
       attacker: c,
       weapon: mainWeapon,
-      targetDefense: targetDef, targetId: isReroll ? undefined : target?.id,
+      targetDefense: targetDef + (ataqueOportunidade && target?.ultimoSegundoAtivo ? 5 : 0), targetId: isReroll ? undefined : target?.id,
       semRecursao: ataqueConcedidoSemRecursao,
       situation: {
         pistoleiro: pistoleiroUsado,
@@ -1454,6 +1454,8 @@ export function AttackPanel({ character: cProp }: Props) {
 
         {!collapsed && (<>
 
+        {/* ─── AÇÕES ATIVAS OMNI ─────────────────────────────────────────── */}
+        <AcoesAtivasSection charId={c.id} />
 
         {/* ─── EMPUNHADURA ─────────────────────────────────────────────── */}
         <div className="rounded-lg border border-border bg-background/40 p-2 space-y-2">
@@ -1466,7 +1468,6 @@ export function AttackPanel({ character: cProp }: Props) {
           </div>
 
           <ReplicasSection charId={c.id} />
-          <AcoesAtivasSection charId={c.id} />
           {inventoryWeapons.length === 0 ? (
             <div className="text-xs text-muted-foreground italic">
               Nenhuma arma do catálogo no inventário deste personagem. Adicione armas pelo módulo Itens (vincule ao personagem).

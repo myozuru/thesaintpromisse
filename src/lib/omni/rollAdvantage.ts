@@ -18,6 +18,7 @@
  */
 import type { Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
+import { desvantagensFerimentos } from '@/lib/ferimentosEfeitos';
 
 // ─── Modelo ────────────────────────────────────────────────────────────
 export type AdvKind = 'advantage' | 'disadvantage';
@@ -196,8 +197,9 @@ export function consumeAdvantageFor(charId: string, ctx: RollContext, extra: { a
   if (!c) return { net: 'normal', consumedIds: [], notes: [] };
   const mods = readMods(c);
   const matches: AdvModifier[] = Object.values(mods).filter(m => matchesScope(m, ctx) && m.bonus == null);
+  const ferimentos = desvantagensFerimentos(c, ctx);
   const advCount = matches.filter(m => m.kind === 'advantage').length + (extra.advantage ? 1 : 0);
-  const disCount = matches.filter(m => m.kind === 'disadvantage').length + (extra.disadvantage ? 1 : 0);
+  const disCount = matches.filter(m => m.kind === 'disadvantage').length + (extra.disadvantage ? 1 : 0) + ferimentos.length;
   let net: ResolveResult['net'] = 'normal';
   if (advCount > 0 && disCount === 0) net = 'advantage';
   else if (disCount > 0 && advCount === 0) net = 'disadvantage';
@@ -209,9 +211,11 @@ export function consumeAdvantageFor(charId: string, ctx: RollContext, extra: { a
     for (const id of consumedIds) delete remaining[id];
     writeMods(charId, remaining);
   }
-  const notes = matches.map(m =>
-    `${m.kind === 'advantage' ? '🟢 vantagem' : '🔴 desvantagem'} (${m.scope}${m.target ? `:${m.target}` : ''}${m.source ? ` · ${m.source}` : ''})`
-  );
+  const notes = [
+    ...matches.map(m =>
+      `${m.kind === 'advantage' ? '🟢 vantagem' : '🔴 desvantagem'} (${m.scope}${m.target ? `:${m.target}` : ''}${m.source ? ` · ${m.source}` : ''})`),
+    ...ferimentos.map(f => `🔴 desvantagem (Ferimento Complexo · ${f})`),
+  ];
   return { net, consumedIds, notes };
 }
 
@@ -221,9 +225,10 @@ export function peekAdvantageFor(charId: string, ctx: RollContext): ResolveResul
   if (!c) return 'normal';
   const mods = readMods(c);
   const matches = Object.values(mods).filter(m => matchesScope(m, ctx) && m.bonus == null);
-  if (matches.length === 0) return 'normal';
+  const ferimento = desvantagensFerimentos(c, ctx).length > 0;
+  if (matches.length === 0 && !ferimento) return 'normal';
   const adv = matches.some(m => m.kind === 'advantage');
-  const dis = matches.some(m => m.kind === 'disadvantage');
+  const dis = ferimento || matches.some(m => m.kind === 'disadvantage');
   if (adv && !dis) return 'advantage';
   if (dis && !adv) return 'disadvantage';
   return 'normal';

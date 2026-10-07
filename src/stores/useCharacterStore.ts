@@ -1,4 +1,6 @@
+import { coletarMitigacoesDano } from '@/lib/omni/mitigacoesDano';
 import { notificarEventoPersonagem } from '@/lib/omni/notificarEvento';
+import { reacaoEmCurso } from '@/lib/omni/reacaoEmCurso';
 import { armaDoPersonagem } from '@/lib/omni/armaDoPersonagem';
 import { reservarPassoOmni, executarNaCadeiaOmni, capturarCadeiaOmni } from '@/lib/omni/cadeiaEventos';
 import { ajustarProtecoesOmni, consumirProtecoesOmni, expirarProtecoesOmni } from '@/lib/omni/protecoesAtivas';
@@ -2530,7 +2532,6 @@ export const useCharacterStore = create<CharacterStore>()(
         const preSet = get().characters.find((c) => c.id === id);
         const preEsc = preSet?.escCurrent ?? 0;
         const preHp = preSet?.hpCurrent ?? 0;
-        const entidadesOmniAtuais = useOmniEntidadesStore.getState().entidades;
         const parcelasOriginais = (opts?.parcelas?.length ? opts.parcelas : [{ valor: rawDamage, tipo: damageType }])
           .map((p) => ({ valor: Math.max(0, Math.floor(p.valor)), tipo: resolverTipoDano(p.tipo) }));
         const totalParcelasOriginais = parcelasOriginais.reduce((soma, p) => soma + p.valor, 0);
@@ -2549,17 +2550,16 @@ export const useCharacterStore = create<CharacterStore>()(
           });
         };
         let perdaPvReal = 0;
-        const mitigacoesOmni = useInventoryStore.getState().listEquipped(id)
-          .filter((item) => item.entity.slotType && item.entity.slotType !== 'nenhum')
-          .map((item) => entidadesOmniAtuais[item.entity.id] ?? item.entity);
+
 
         set((state) => ({
           characters: state.characters.map((c) => {
             if (c.id !== id) return c;
-            const immunes = [...(c.immunities || []), ...mitigacoesOmni.flatMap((item) => item.imunidades_dano ?? [])];
+            const mitigacoes = coletarMitigacoesDano(c);
+            const immunes = mitigacoes.imunidade;
             // CAM: dano DAL (na alma) é absorvido pela Integridade da Alma e reduz
             // o hpMax dos 3 núcleos simultaneamente. Não usa RD comum.
-            if (parcelasOriginais.length === 1 && parcelasOriginais[0]?.tipo === 'DAL' && !(c.immunities ?? []).includes('DAL') && !mitigacoesOmni.some((item) => item.imunidades_dano?.includes('DAL')) && isCamActive(c)) {
+            if (parcelasOriginais.length === 1 && parcelasOriginais[0]?.tipo === 'DAL' && !immunes.includes('DAL') && !opts?.ignoresResistance && isCamActive(c)) {
               const soulPatch = applySoulDamagePure(c, rawDamage);
               finalDamage = rawDamage;
               damageResolved = true;
@@ -2580,8 +2580,8 @@ export const useCharacterStore = create<CharacterStore>()(
               ? effectiveShieldRD(equippedShield, { mestreDefensivo: tBonusesForRd.shieldProficient })
               : 0;
             const rdByType = ensureRdByType(c);
-            const vulns = [...(c.vulnerabilities || []), ...mitigacoesOmni.flatMap((item) => item.vulnerabilidades ?? [])];
-            const resistencias = mitigacoesOmni.flatMap((item) => item.resistencias ?? []);
+            const vulns = mitigacoes.vulnerabilidade;
+            const resistencias = mitigacoes.resistencia;
             let damageFinal = 0;
             const parcelas = parcelasDesteGolpe(rawDamage);
             for (const parcela of parcelas) {
@@ -2652,6 +2652,10 @@ export const useCharacterStore = create<CharacterStore>()(
           }
         }
 
+        if (damageResolved) {
+          const hpAntesPorta = preHp, danoPorta = finalDamage;
+          void import('@/lib/portasDaMorte').then((m) => m.aposDano(id, hpAntesPorta, danoPorta)).catch(() => {});
+        }
         const postSet = get().characters.find((c) => c.id === id);
         // ─── Suporte — Protetor (aliado adjacente sofreu dano) ─────────────
         // Se um Suporte com a habilidade, escudo equipado e PE estiver a até
@@ -2688,6 +2692,20 @@ export const useCharacterStore = create<CharacterStore>()(
           setTimeout(() => {
             void import('@/lib/suporteRepertorioMobilidade').then((m) => m.sendMobilidadeOffers(fallenId)).catch(() => {});
           }, 0);
+        }
+
+        // ─── Reações OMNI pós-dano (sofrer/causar dano, cair a 0 PV) ───────
+        if (postSet && protDealt > 0 && opts?.attackerId && opts.attackerId !== id && !reacaoEmCurso()) {
+          const atkId = opts.attackerId, alvoId = id, dano = protDealt;
+          const caiu = preHp > 0 && (postSet.hpCurrent ?? 0) <= 0;
+          void import('@/lib/omni/reacoesAtivas').then(async ({ abrirJanelaReacaoAtiva }) => {
+            await abrirJanelaReacaoAtiva({ gatilho: 'quando_sofrer_dano', origemId: atkId, protegidoId: alvoId, dano });
+            await abrirJanelaReacaoAtiva({ gatilho: 'quando_causar_dano', origemId: alvoId, protegidoId: atkId, dano });
+            if (caiu) {
+              await abrirJanelaReacaoAtiva({ gatilho: 'quando_reduzido_0_pv', origemId: atkId, protegidoId: alvoId, dano });
+              await abrirJanelaReacaoAtiva({ gatilho: 'quando_derrubar_inimigo', origemId: alvoId, protegidoId: atkId, dano });
+            }
+          }).catch(() => {});
         }
 
         // ─── Omni-Engine: emite gatilhos de dano ─────────────────────────────
@@ -2882,6 +2900,7 @@ export const useCharacterStore = create<CharacterStore>()(
             return { ...c, hpCurrent: newHp, omniCounters };
           }),
         }));
+        if (healedAmount > 0) void import('@/lib/portasDaMorte').then((m) => m.aposCura(id)).catch(() => {});
         // ─── Omni-Engine: emite gatilho de cura recebida ───────────────────
         if (healedAmount > 0) {
           import('@/lib/omni/eventBus').then(({ emitirEvento }) => {
@@ -4910,6 +4929,7 @@ export const useCharacterStore = create<CharacterStore>()(
         return { peRecovered, economiaRoll };
       },
       applyLongRest: async (charId, opts) => {
+        void import('@/lib/portasDaMorte').then((m) => m.limparFalhasDescanso(charId)).catch(() => {});
         const crafting = !!opts?.crafting;
         // Pre-rola Economia (longo) antes do set.
         const cBefore = get().characters.find((x) => x.id === charId);
