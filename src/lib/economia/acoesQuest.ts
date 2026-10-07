@@ -76,8 +76,9 @@ export function processarQuestsMestre(agora = agoraMundo()) {
       continue;
     }
     if (q.status === 'aceita' && !q.revelacaoAplicada && q.alvo.tipo === 'boss' && q.alvo.bossId) {
+      // Revela a ficha com os campos que o Mestre já deixou visíveis no próprio chefe.
       const bs = useBossStore.getState(), boss = bs.bosses[q.alvo.bossId];
-      if (boss) bs.update(boss.id, { revelado: { ...boss.revelado, ...Object.fromEntries(q.revelarBoss.map((f) => [f, true])) } });
+      if (boss && !boss.visivel) bs.update(boss.id, { visivel: true });
       st.atualizarQuest(q.id, { revelacaoAplicada: true });
     }
   }

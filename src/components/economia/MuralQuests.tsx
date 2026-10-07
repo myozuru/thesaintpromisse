@@ -14,7 +14,13 @@ import { useChronosStore } from '@/stores/useChronosStore';
 import { toTimelineSeconds } from '@/lib/omni/tempo';
 import { ICONES_QUEST, STATUS_LABEL, formatarRestante } from '@/lib/economia/quests';
 import { aceitarQuest, concluirQuest, falharQuest } from '@/lib/economia/acoesQuest';
-import { BOSS_REVEAL_LABELS } from '@/lib/bosses';
+import pergaminho from '@/assets/pergaminho.jpg';
+
+/** Visual de papel real (tinta marrom sobre pergaminho) — intencionalmente fora do tema. */
+const papel: React.CSSProperties = {
+  backgroundImage: `url(${pergaminho})`, backgroundSize: 'cover', backgroundPosition: 'center',
+  color: '#3b2410', filter: 'drop-shadow(0 6px 8px rgba(0,0,0,.55))',
+};
 
 export function questVisivelNoMural(q: Quest, muralId: string | null, master: boolean, charId?: string) {
   if (q.deletedAt) return false;
@@ -34,6 +40,7 @@ export function MuralQuestsDialog({ aberto, onClose, muralId, charId, master, on
   const [drag, setDrag] = useState<{ id: string; x: number; y: number; moved: boolean } | null>(null);
   const quadro = useRef<HTMLDivElement>(null);
   const agora = toTimelineSeconds(useChronosStore());
+  const currencies = useMoneyStore((s) => s.currencies);
 
   const posDe = (ev: React.PointerEvent) => {
     const r = quadro.current!.getBoundingClientRect();
@@ -61,16 +68,18 @@ export function MuralQuestsDialog({ aberto, onClose, muralId, charId, master, on
               const pos = drag?.id === q.id ? { x: drag.x, y: drag.y, rot: 0 } : q.poster;
               const oculto = q.mascarada && !q.revelada;
               const restante = formatarRestante(q.prazoFim, agora);
+              const moeda = currencies.find((c) => c.id === q.recompensa.currencyId);
               return (
                 <button key={q.id} type="button" data-cartaz={q.id} aria-label={`Cartaz ${oculto ? 'misterioso' : q.titulo}`}
                   onPointerDown={(ev) => { ev.preventDefault(); (ev.target as HTMLElement).releasePointerCapture?.(ev.pointerId); setDrag({ id: q.id, x: q.poster.x, y: q.poster.y, moved: false }); }}
-                  className={`absolute w-[150px] rounded-sm border border-border bg-card p-2 text-left shadow-lg transition-transform cursor-grab active:cursor-grabbing ${drag?.id === q.id ? 'scale-105 z-20' : 'z-10'} ${q.status !== 'disponivel' && q.status !== 'aceita' ? 'opacity-60' : ''}`}
-                  style={{ left: `${pos.x}%`, top: `${pos.y}%`, transform: `rotate(${pos.rot}deg)` }}>
-                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 h-3 w-3 rounded-full bg-destructive shadow" aria-hidden />
+                  className={`absolute w-[170px] min-h-[200px] px-4 pt-5 pb-4 text-left transition-transform cursor-grab active:cursor-grabbing ${drag?.id === q.id ? 'scale-105 z-20' : 'z-10'} ${q.status !== 'disponivel' && q.status !== 'aceita' ? 'opacity-60 grayscale' : ''}`}
+                  style={{ left: `${pos.x}%`, top: `${pos.y}%`, transform: `rotate(${pos.rot}deg)`, ...papel }}>
+                  <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 h-3.5 w-3.5 rounded-full bg-destructive shadow-md ring-1 ring-black/40" aria-hidden />
                   <div className="text-2xl text-center">{oculto ? '❓' : ICONES_QUEST[q.icone]}</div>
-                  <div className="text-sm font-semibold leading-tight line-clamp-2 text-center">{oculto ? '???' : q.titulo}</div>
-                  {q.recompensa.valor > 0 && <div className="text-xs text-center text-primary font-mono mt-1">{q.recompensa.valor} {q.recompensa.currencyId}</div>}
-                  {restante && <div className="text-xs text-center text-muted-foreground">⌛ {restante}</div>}
+                  <div className="text-sm font-bold uppercase tracking-wide leading-tight line-clamp-2 text-center" style={{ fontFamily: 'Georgia, serif' }}>{oculto ? 'Procura-se ajuda' : q.titulo}</div>
+                  {q.descricao && <p className="mt-1 text-xs leading-snug line-clamp-4 italic" style={{ fontFamily: 'Georgia, serif' }}>{q.descricao}</p>}
+                  {q.recompensa.valor > 0 && <div className="mt-2 border-t border-dashed pt-1 text-center text-sm font-bold" style={{ borderColor: '#5a3a1a80', fontFamily: 'Georgia, serif' }}>Recompensa: {moeda?.symbol ?? ''} {q.recompensa.valor}</div>}
+                  {restante && <div className="text-xs text-center">⌛ {restante}</div>}
                   {q.status !== 'disponivel' && <div className="text-xs text-center font-semibold">{STATUS_LABEL[q.status]}</div>}
                 </button>
               );
@@ -95,23 +104,23 @@ function DetalheQuest({ q, charId, master, agora, onEditar, onFechar }: { q: Que
   const tentar = (fn: () => void) => { try { fn(); setErro(null); } catch (e) { setErro(e instanceof Error ? e.message : 'Erro'); } };
   const restante = formatarRestante(q.prazoFim, agora);
   return (
-    <aside className="w-80 shrink-0 overflow-y-auto rounded-lg border border-border bg-card p-3 space-y-2 text-sm" data-detalhe-quest>
+    <aside className="w-80 shrink-0 overflow-y-auto px-6 pt-8 pb-6 space-y-2 text-sm" style={{ ...papel, fontFamily: 'Georgia, serif' }} data-detalhe-quest>
       <div className="flex items-start gap-2">
         <span className="text-2xl">{oculto ? '❓' : ICONES_QUEST[q.icone]}</span>
-        <div className="flex-1"><div className="font-semibold">{oculto ? 'Objetivo desconhecido' : q.titulo}</div>
-          <div className="text-xs text-muted-foreground">{STATUS_LABEL[q.status]}{restante ? ` · ⌛ ${restante}` : ''}</div></div>
-        <button type="button" onClick={onFechar} aria-label="Fechar detalhes" className="text-muted-foreground">✕</button>
+        <div className="flex-1"><div className="text-base font-bold uppercase tracking-wide">{oculto ? 'Procura-se ajuda' : q.titulo}</div>
+          <div className="text-xs opacity-75">{STATUS_LABEL[q.status]}{restante ? ` · ⌛ ${restante}` : ''}</div></div>
+        <button type="button" onClick={onFechar} aria-label="Fechar detalhes" className="opacity-70">✕</button>
       </div>
-      {q.descricao && <p className="whitespace-pre-wrap">{q.descricao}</p>}
-      {!oculto && q.objetivoReal && <p className="whitespace-pre-wrap rounded border border-primary/30 bg-primary/5 p-2"><b>Objetivo:</b> {q.objetivoReal}</p>}
+      {q.descricao && <p className="whitespace-pre-wrap italic leading-relaxed">{q.descricao}</p>}
+      {!oculto && q.objetivoReal && <p className="whitespace-pre-wrap border-l-2 pl-2" style={{ borderColor: '#5a3a1a' }}><b>Objetivo:</b> {q.objetivoReal}</p>}
       {(master || (!oculto && aceitou)) && boss && (
-        <div className="rounded border border-border p-2"><b>Alvo:</b> {boss.nome}
-          {master && <div className="text-xs text-muted-foreground">Revela ao aceitar: {q.revelarBoss.map((f) => BOSS_REVEAL_LABELS[f]).join(', ') || 'nada'}</div>}
+        <div className="border-l-2 pl-2" style={{ borderColor: '#5a3a1a' }}><b>Alvo:</b> {boss.nome}
+          {master && oculto && <div className="text-xs opacity-75">(só você vê — oculto aos jogadores)</div>}
         </div>
       )}
-      <div className="rounded border border-border p-2">
-        <b>Recompensa:</b> {q.recompensa.valor > 0 ? `${moeda?.symbol ?? ''}${q.recompensa.valor} (dividido igualmente)` : 'sem dinheiro'}
-        {q.recompensa.itens.length > 0 && <ul className="list-disc pl-5 text-xs">{q.recompensa.itens.map((id) => <li key={id}>{entidades[id]?.nome ?? 'Item'}</li>)}</ul>}
+      <div className="border-t border-dashed pt-2 text-center" style={{ borderColor: '#5a3a1a80' }}>
+        <b>Recompensa:</b> {q.recompensa.valor > 0 ? `${moeda?.symbol ?? ''} ${q.recompensa.valor} (dividido igualmente)` : 'sem dinheiro'}
+        {q.recompensa.itens.length > 0 && <ul className="list-disc pl-5 text-xs text-left">{q.recompensa.itens.map((id) => <li key={id}>{entidades[id]?.nome ?? 'Item'}</li>)}</ul>}
       </div>
       {q.aceitaPor.length > 0 && <div className="text-xs text-muted-foreground">Aceita por: {q.aceitaPor.map((id) => chars.find((c) => c.id === id)?.name ?? '?').join(', ')}</div>}
       {erro && <p className="text-xs text-destructive" role="alert">{erro}</p>}

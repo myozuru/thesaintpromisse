@@ -13,7 +13,6 @@ import { useMapStore } from '@/stores/useMapStore';
 import { useChronosStore } from '@/stores/useChronosStore';
 import { toTimelineSeconds } from '@/lib/omni/tempo';
 import { ICONES_QUEST, STATUS_LABEL, formatarRestante, prazoEmSegundos, type IconeQuest } from '@/lib/economia/quests';
-import { BOSS_REVEAL_FIELDS, BOSS_REVEAL_LABELS } from '@/lib/bosses';
 
 export function GerenciadorQuests({ aberto, onClose, inicialId }: { aberto: boolean; onClose: () => void; inicialId?: string | null }) {
   const questsMap = useQuestStore((s) => s.quests);
@@ -115,10 +114,7 @@ function EditorQuest({ q, murais, onRemover }: { q: Quest; murais: { id: string;
             <option value="">—</option>{itens.map((b) => <option key={b.id} value={b.id}>{b.nome}</option>)}
           </select></div>}
       </div>
-      {q.alvo.tipo === 'boss' && <div><Label>Ao aceitar, revelar do chefe</Label>
-        <div className="mt-1 flex flex-wrap gap-2">{BOSS_REVEAL_FIELDS.map((f) => (
-          <label key={f} className="flex items-center gap-1 text-xs"><input type="checkbox" checked={q.revelarBoss.includes(f)} onChange={(e) => up({ revelarBoss: e.target.checked ? [...q.revelarBoss, f] : q.revelarBoss.filter((x) => x !== f) })} />{BOSS_REVEAL_LABELS[f]}</label>
-        ))}</div></div>}
+      {q.alvo.tipo === 'boss' && <p className="text-xs text-muted-foreground">O chefe fica escondido no Mapa do Mundo até aceitarem a quest; então aparece com o que você já deixou visível na ficha dele.</p>}
       <div className="rounded border border-border p-2 space-y-2">
         <b>Recompensa</b>
         <div className="flex gap-2">
