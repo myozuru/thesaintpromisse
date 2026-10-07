@@ -719,6 +719,12 @@ export function PlayerActionBar() {
                   {activeList.map((e) => {
                     const handleClick = async () => {
                       if (e.disabled) return;
+                      // Ações OMNI rápidas usam o mesmo painel funcional da ficha,
+                      // que faz seleção de alvo, alcance, custos e execução.
+                      if (e.source === 'omni' && activeChar) {
+                        setOpen('ataque');
+                        return;
+                      }
                       if (open === 'feiticos' && activeChar) {
                         const sp = (activeChar.spells ?? []).find((s) => s.id === e.id);
                         if (!sp) return;
