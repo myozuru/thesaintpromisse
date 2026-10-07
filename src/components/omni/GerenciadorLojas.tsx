@@ -26,6 +26,7 @@ export function GerenciadorLojas({ aberto, onClose }: Props) {
   const shops = useMemo(() => Object.values(shopsMap).filter((s) => !s.deletedAt), [shopsMap]);
   const mapEntities = useMapStore((s) => s.entities);
   const npcs = useMemo(() => Object.values(mapEntities).filter((e) => !e.groundItem && e.label), [mapEntities]);
+  const faccoesMap = useQuestStore((s) => s.faccoes);
   const criar = useShopStore((s) => s.criar);
   const atualizar = useShopStore((s) => s.atualizar);
   const remover = useShopStore((s) => s.remover);

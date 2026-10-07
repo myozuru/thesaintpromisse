@@ -2,6 +2,8 @@
  * Modal de Comércio: Comprar / Vender, com moeda por item, categorias aceitas
  * e pechincha secreta (o jogador só vê o resultado narrado, nunca a CD).
  */
+import { useQuestStore } from '@/stores/useQuestStore';
+import { nivelReputacao, repEfetiva } from '@/lib/economia/reputacao';
 import { useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
