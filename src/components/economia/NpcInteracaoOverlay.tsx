@@ -90,9 +90,13 @@ export function NpcInteracaoOverlay() {
           {master && <button type="button" className="rounded border border-border px-2 py-0.5 text-xs" onClick={() => setMural({ id: null })}>📌 Ver</button>}
         </div>
         {aberto && <>
-          {!pontos.length && <p className="mt-1 text-xs text-muted-foreground italic">Vincule lojas a NPCs e crie murais em “📜 Quests”.</p>}
+          {master && !pontos.length && <p className="mt-1 text-xs text-muted-foreground italic">Vincule lojas a NPCs e crie murais em “📜 Quests”.</p>}
+          {!master && !pontos.some((p) => { const d = distancia(p); return d != null && d <= ALCANCE_INTERACAO_M + 0.05; }) && (
+            <p className="mt-1 text-xs text-muted-foreground italic">Nenhum comerciante ou mural por perto.</p>
+          )}
           {pontos.map((p) => {
             const d = distancia(p); const perto = master || (d != null && d <= ALCANCE_INTERACAO_M + 0.05);
+            if (!perto) return null;
             return (
               <div key={`${p.tipo}-${p.id}`} className="mt-1 flex items-center gap-2">
                 <span>{p.tipo === 'loja' ? '🛒' : '📌'}</span>
