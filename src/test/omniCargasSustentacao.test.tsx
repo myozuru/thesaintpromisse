@@ -45,7 +45,8 @@ describe('cargas geradas por sustentação', () => {
   });
   it('efeito enviado fica preso à sustentação e some ao encerrá-la', async () => {
     await executarAcaoAtiva('u', invocar, 'u');
-    await executarAcaoAtiva('u', enviar, 'b');
+    const env = await executarAcaoAtiva('u', enviar, 'b');
+    console.log('DBG', JSON.stringify(env), JSON.stringify(pegarFicha('b').activeConditions));
     expect(pegarFicha('b').activeConditions.some(c => c.id === 'caido')).toBe(true);
     const s = pegarFicha('u').omniSustentacoes![0];
     expect(s.alvos).toContain('b');
