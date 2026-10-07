@@ -241,7 +241,7 @@ export function ReactionPromptOverlay() {
                 }
                 const tipo = resolverTipoDano(p.payload?.auraDamageType) ?? 'DQ';
                 if (total > 0) {
-                  applyDamage(p.charId, total, tipo as DamageType, {
+                  await applyDamage(p.charId, total, tipo as DamageType, {
                     attackerId: p.payload?.auraOwnerId,
                     tags: ['__omni_aura_start_turn'],
                   });
