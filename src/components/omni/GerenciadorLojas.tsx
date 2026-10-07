@@ -12,6 +12,7 @@ import { Plus, Trash2, Pencil, Store } from 'lucide-react';
 import { useShopStore } from '@/stores/useShopStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useMapStore } from '@/stores/useMapStore';
+import { useQuestStore } from '@/stores/useQuestStore';
 import { CategoriasPicker } from '@/components/economia/CategoriasPicker';
 import { PECHINCHA_PADRAO, HUMOR_LABEL, type PechinchaConfig, type HumorMercador } from '@/lib/economia/pechincha';
 
@@ -154,6 +155,14 @@ export function GerenciadorLojas({ aberto, onClose }: Props) {
                     {npcs.map((n) => <option key={n.id} value={n.id}>{n.label}</option>)}
                   </select>
                   <p className="text-xs text-muted-foreground mt-1">Jogadores abrem a loja clicando no NPC a até 1,5 m.</p>
+                </div>
+                <div>
+                  <Label>Facção da loja (reputação muda os preços)</Label>
+                  <select aria-label="Facção da loja" value={editando.faccaoId ?? ''} onChange={(e) => atualizar(editando.id, { faccaoId: e.target.value || null })}
+                    className="mt-1 h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
+                    <option value="">— nenhuma —</option>
+                    {Object.values(faccoesMap).filter((f) => !f.deletedAt).map((f) => <option key={f.id} value={f.id}>{f.emblema} {f.nome}</option>)}
+                  </select>
                 </div>
                 <PechinchaEditor cfg={editando.pechincha ?? PECHINCHA_PADRAO} onChange={(p) => atualizar(editando.id, { pechincha: p })} />
                 <div>
