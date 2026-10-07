@@ -104,23 +104,23 @@ function DetalheQuest({ q, charId, master, agora, onEditar, onFechar }: { q: Que
   const tentar = (fn: () => void) => { try { fn(); setErro(null); } catch (e) { setErro(e instanceof Error ? e.message : 'Erro'); } };
   const restante = formatarRestante(q.prazoFim, agora);
   return (
-    <aside className="w-80 shrink-0 overflow-y-auto rounded-lg border border-border bg-card p-3 space-y-2 text-sm" data-detalhe-quest>
+    <aside className="w-80 shrink-0 overflow-y-auto px-6 pt-8 pb-6 space-y-2 text-sm" style={{ ...papel, fontFamily: 'Georgia, serif' }} data-detalhe-quest>
       <div className="flex items-start gap-2">
         <span className="text-2xl">{oculto ? '❓' : ICONES_QUEST[q.icone]}</span>
-        <div className="flex-1"><div className="font-semibold">{oculto ? 'Objetivo desconhecido' : q.titulo}</div>
-          <div className="text-xs text-muted-foreground">{STATUS_LABEL[q.status]}{restante ? ` · ⌛ ${restante}` : ''}</div></div>
-        <button type="button" onClick={onFechar} aria-label="Fechar detalhes" className="text-muted-foreground">✕</button>
+        <div className="flex-1"><div className="text-base font-bold uppercase tracking-wide">{oculto ? 'Procura-se ajuda' : q.titulo}</div>
+          <div className="text-xs opacity-75">{STATUS_LABEL[q.status]}{restante ? ` · ⌛ ${restante}` : ''}</div></div>
+        <button type="button" onClick={onFechar} aria-label="Fechar detalhes" className="opacity-70">✕</button>
       </div>
-      {q.descricao && <p className="whitespace-pre-wrap">{q.descricao}</p>}
-      {!oculto && q.objetivoReal && <p className="whitespace-pre-wrap rounded border border-primary/30 bg-primary/5 p-2"><b>Objetivo:</b> {q.objetivoReal}</p>}
+      {q.descricao && <p className="whitespace-pre-wrap italic leading-relaxed">{q.descricao}</p>}
+      {!oculto && q.objetivoReal && <p className="whitespace-pre-wrap border-l-2 pl-2" style={{ borderColor: '#5a3a1a' }}><b>Objetivo:</b> {q.objetivoReal}</p>}
       {(master || (!oculto && aceitou)) && boss && (
-        <div className="rounded border border-border p-2"><b>Alvo:</b> {boss.nome}
-          {master && <div className="text-xs text-muted-foreground">Revela ao aceitar: {q.revelarBoss.map((f) => BOSS_REVEAL_LABELS[f]).join(', ') || 'nada'}</div>}
+        <div className="border-l-2 pl-2" style={{ borderColor: '#5a3a1a' }}><b>Alvo:</b> {boss.nome}
+          {master && oculto && <div className="text-xs opacity-75">(só você vê — oculto aos jogadores)</div>}
         </div>
       )}
-      <div className="rounded border border-border p-2">
-        <b>Recompensa:</b> {q.recompensa.valor > 0 ? `${moeda?.symbol ?? ''}${q.recompensa.valor} (dividido igualmente)` : 'sem dinheiro'}
-        {q.recompensa.itens.length > 0 && <ul className="list-disc pl-5 text-xs">{q.recompensa.itens.map((id) => <li key={id}>{entidades[id]?.nome ?? 'Item'}</li>)}</ul>}
+      <div className="border-t border-dashed pt-2 text-center" style={{ borderColor: '#5a3a1a80' }}>
+        <b>Recompensa:</b> {q.recompensa.valor > 0 ? `${moeda?.symbol ?? ''} ${q.recompensa.valor} (dividido igualmente)` : 'sem dinheiro'}
+        {q.recompensa.itens.length > 0 && <ul className="list-disc pl-5 text-xs text-left">{q.recompensa.itens.map((id) => <li key={id}>{entidades[id]?.nome ?? 'Item'}</li>)}</ul>}
       </div>
       {q.aceitaPor.length > 0 && <div className="text-xs text-muted-foreground">Aceita por: {q.aceitaPor.map((id) => chars.find((c) => c.id === id)?.name ?? '?').join(', ')}</div>}
       {erro && <p className="text-xs text-destructive" role="alert">{erro}</p>}
