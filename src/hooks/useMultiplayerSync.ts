@@ -1224,7 +1224,7 @@ export function useMultiplayerSync() {
       if (applyingRemote) return;
       socket.emit('state:update', { slice: 'economia', data: next });
     });
-    const pickQuests = (st: ReturnType<typeof useQuestStore.getState>) => ({ quests: st.quests, murais: st.murais });
+    const pickQuests = (st: ReturnType<typeof useQuestStore.getState>) => ({ quests: st.quests, murais: st.murais, faccoes: st.faccoes, linhaTempo: st.linhaTempo, notas: st.notas, viagem: st.viagem });
     let lastQuests = JSON.stringify(pickQuests(useQuestStore.getState()));
     const unsubQuests = useQuestStore.subscribe((state) => {
       const next = pickQuests(state); const s = JSON.stringify(next);
