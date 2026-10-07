@@ -27,7 +27,7 @@ export function EditorFaccoes() {
   const map = useQuestStore((s) => s.faccoes);
   const st = useQuestStore.getState();
   const faccoes = useMemo(() => Object.values(map).filter((f) => !f.deletedAt), [map]);
-  const chars = useCharacterStore((s) => s.characters).filter((c) => !c.isNPC && !(c as { isTemporary?: boolean }).isTemporary);
+  const chars = useCharacterStore((s) => s.characters);
   return (
     <div className="space-y-2 overflow-y-auto text-sm">
       <Button size="sm" onClick={() => st.criarFaccao()}>+ Nova facção</Button>

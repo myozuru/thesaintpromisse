@@ -92,7 +92,7 @@ interface QuestState {
 
 const uid = (p: string) => `${p}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
-function patchRec<T extends { updatedAt?: number }>(rec: Record<string, T>, id: string, patch: Partial<T>): Record<string, T> | null {
+function patchRec<T>(rec: Record<string, T>, id: string, patch: object): Record<string, T> | null {
   const cur = rec[id];
   if (!cur) return null;
   return { ...rec, [id]: { ...cur, ...patch, id: (cur as unknown as { id: string }).id, updatedAt: Date.now() } };
