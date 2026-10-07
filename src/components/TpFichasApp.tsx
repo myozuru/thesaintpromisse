@@ -49,6 +49,7 @@ function RuntimeSetup() {
 
     try {
       iniciarEngineZonasTerreno();
+      iniciarVigiaSustentacao();
     } catch (error) {
       console.warn("[boot] Não foi possível iniciar o motor de zonas de terreno:", error);
     }
