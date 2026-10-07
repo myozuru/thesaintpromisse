@@ -19,11 +19,22 @@ import { useCombatStore } from '@/stores/useCombatStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { DAMAGE_TYPE_LABELS, type DamageType } from '@/types';
 import { rollDiceCom } from '@/lib/dice';
-import { parseDados } from '@/lib/omni/acaoAtiva';
 import { resolverTipoDano } from '@/lib/omni/contextoDano';
 import { X, Shield, Flame, Crosshair, Skull, Sparkles, Hourglass, ShieldPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { playSuccessSound, playErrorSound, playClickSound } from '@/lib/sounds';
+
+function parseAuraDamage(expr?: string) {
+  const out: { grupos: { count: number; sides: number }[]; fixo: number } = { grupos: [], fixo: 0 };
+  if (!expr) return out;
+  for (const raw of expr.replace(/\s+/g, '').split('+')) {
+    if (!raw) continue;
+    const dado = raw.match(/^(\d*)d(\d+)$/i);
+    if (dado) out.grupos.push({ count: parseInt(dado[1] || '1', 10), sides: parseInt(dado[2], 10) });
+    else if (/^-?\d+$/.test(raw)) out.fixo += parseInt(raw, 10);
+  }
+  return out;
+}
 
 export function ReactionPromptOverlay() {
   const prompts = useReactionStore(s => s.prompts);
@@ -221,7 +232,7 @@ export function ReactionPromptOverlay() {
                 addLog('combat', `✅ ${c.name}: TR vs ${p.payload?.zoneLabel ?? 'aura'} — SUCESSO. Nenhum dano.`);
               } else {
                 playErrorSound();
-                const plano = parseDados(p.payload?.auraDamageFormula);
+                const plano = parseAuraDamage(p.payload?.auraDamageFormula);
                 let total = plano.fixo;
                 const rollerId = p.payload?.auraOwnerId ?? p.charId;
                 for (const grupo of plano.grupos) {
