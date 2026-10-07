@@ -377,6 +377,9 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
     ctx = { ...ctx, attacker: atacante, abilityMod: getAbilityMod(atacante, ctx.situation.preferredAbility ?? pickAttackAbility(atacante, ctx.weapon)), trainingBonus: atacante.trainingBonus ?? 0,
       targetDefense: ctx.targetDefense + computeTotalDefense(alvo, {}, kind) - defesaAntes + janela.defesaBonus };
   }
+  if (ctx.attacker.feridaInternaBloqueada) {
+    return { cancelled: true, semRecursao: !!ctx.semRecursao, d20: 0, attackRolls: [], rollMode: 'normal', natural: 0, attackTotal: 0, hit: false, critical: false, criticalFail: false, damageDice: '', damageRolls: [], damageTotal: 0, damageType: null, modifiers: [], notes: ['Ferida interna: perdeu a ação e as reações até o próximo turno.'], canRerollDamage: false };
+  }
   const w = ctx.weapon;
   const dmgNotation = resolveWeaponDamage(w, ctx.situation.twoHanded) ?? '1d4';
   let fixoArma = 0;
@@ -584,6 +587,10 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
   if (jammed) notes.push(`🔧 ${w.name} EMPERROU (d20 ${natural} ≤ margem ${margemEmperrar(w, pistoleiroOn)}) — ação comum para desemperrar.`);
 
   if (!hit && ctx.targetId && !ctx.ignorarReacoes) await abrirJanelaReacaoAtiva({ gatilho: 'quando_ataque_errar', origemId: ctx.attacker.id, protegidoId: ctx.targetId });
+  if (hit && ctx.targetId && !ctx.ignorarReacoes) {
+    await abrirJanelaReacaoAtiva({ gatilho: 'quando_ataque_acertar', origemId: ctx.attacker.id, protegidoId: ctx.targetId });
+    if (critical) await abrirJanelaReacaoAtiva({ gatilho: 'quando_sofrer_critico', origemId: ctx.attacker.id, protegidoId: ctx.targetId });
+  }
   return {
     semRecursao: !!ctx.semRecursao, d20: natural, attackRolls, rollMode, natural, attackTotal, hit, critical, criticalFail,
     emperrou: jammed,

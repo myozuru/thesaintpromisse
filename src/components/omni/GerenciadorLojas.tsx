@@ -11,6 +11,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus, Trash2, Pencil, Store } from 'lucide-react';
 import { useShopStore } from '@/stores/useShopStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
+import { useMapStore } from '@/stores/useMapStore';
+import { useQuestStore } from '@/stores/useQuestStore';
+import { CategoriasPicker } from '@/components/economia/CategoriasPicker';
+import { PECHINCHA_PADRAO, HUMOR_LABEL, type PechinchaConfig, type HumorMercador } from '@/lib/economia/pechincha';
 
 interface Props {
   aberto: boolean;
@@ -19,7 +23,10 @@ interface Props {
 
 export function GerenciadorLojas({ aberto, onClose }: Props) {
   const shopsMap = useShopStore((s) => s.shops);
-  const shops = useMemo(() => Object.values(shopsMap), [shopsMap]);
+  const shops = useMemo(() => Object.values(shopsMap).filter((s) => !s.deletedAt), [shopsMap]);
+  const mapEntities = useMapStore((s) => s.entities);
+  const npcs = useMemo(() => Object.values(mapEntities).filter((e) => !e.groundItem && e.label), [mapEntities]);
+  const faccoesMap = useQuestStore((s) => s.faccoes);
   const criar = useShopStore((s) => s.criar);
   const atualizar = useShopStore((s) => s.atualizar);
   const remover = useShopStore((s) => s.remover);
@@ -139,6 +146,26 @@ export function GerenciadorLojas({ aberto, onClose }: Props) {
                     ))}
                   </div>
                 </div>
+                <CategoriasPicker rotulo="Categorias deste estabelecimento" valor={editando.categorias ?? []}
+                  onChange={(v) => atualizar(editando.id, { categorias: v })} />
+                <div>
+                  <Label>NPC no mapa que abre esta loja</Label>
+                  <select aria-label="NPC da loja" value={editando.npcEntityId ?? ''} onChange={(e) => atualizar(editando.id, { npcEntityId: e.target.value || null })}
+                    className="mt-1 h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
+                    <option value="">— nenhum (loja só pelo botão Mercado) —</option>
+                    {npcs.map((n) => <option key={n.id} value={n.id}>{n.label}</option>)}
+                  </select>
+                  <p className="text-xs text-muted-foreground mt-1">Jogadores abrem a loja clicando no NPC a até 1,5 m.</p>
+                </div>
+                <div>
+                  <Label>Facção da loja (reputação muda os preços)</Label>
+                  <select aria-label="Facção da loja" value={editando.faccaoId ?? ''} onChange={(e) => atualizar(editando.id, { faccaoId: e.target.value || null })}
+                    className="mt-1 h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
+                    <option value="">— nenhuma —</option>
+                    {Object.values(faccoesMap).filter((f) => !f.deletedAt).map((f) => <option key={f.id} value={f.id}>{f.emblema} {f.nome}</option>)}
+                  </select>
+                </div>
+                <PechinchaEditor cfg={editando.pechincha ?? PECHINCHA_PADRAO} onChange={(p) => atualizar(editando.id, { pechincha: p })} />
                 <div>
                   <Label>Inventário (itens à venda)</Label>
                   <div className="rounded-md border border-border/60 bg-card/40 p-2 max-h-64 overflow-y-auto space-y-1">
@@ -181,5 +208,39 @@ export function GerenciadorLojas({ aberto, onClose }: Props) {
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PechinchaEditor({ cfg, onChange }: { cfg: PechinchaConfig; onChange: (c: PechinchaConfig) => void }) {
+  const num = (k: keyof PechinchaConfig, label: string, min = 0, max = 100) => (
+    <label className="text-xs space-y-1"><span className="text-muted-foreground">{label}</span>
+      <Input type="number" min={min} max={max} aria-label={label} value={cfg[k] as number}
+        onChange={(e) => onChange({ ...cfg, [k]: Math.min(max, Math.max(min, Number(e.target.value) || 0)) })} />
+    </label>
+  );
+  return (
+    <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-3">
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-semibold">Pechincha (secreta)</span>
+        <label className="ml-auto flex items-center gap-1 text-xs"><input type="checkbox" checked={cfg.ativa} onChange={(e) => onChange({ ...cfg, ativa: e.target.checked })} /> Aceita pechinchar</label>
+      </div>
+      <p className="text-xs text-muted-foreground">Jogadores nunca veem a CD — só o resultado. Humor hostil +5 na CD, amigável −2; falha crítica deixa o mercador irritado (+5 na CD com aquele personagem).</p>
+      <div className="grid grid-cols-3 gap-2">
+        {num('cd', 'CD secreta', 1, 40)}
+        <label className="text-xs space-y-1"><span className="text-muted-foreground">Humor</span>
+          <select aria-label="Humor" value={cfg.humor} onChange={(e) => onChange({ ...cfg, humor: e.target.value as HumorMercador })} className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
+            {(Object.keys(HUMOR_LABEL) as HumorMercador[]).map((h) => <option key={h} value={h}>{HUMOR_LABEL[h]}</option>)}
+          </select>
+        </label>
+        {num('tentativasPorDia', 'Tentativas por dia', 0, 10)}
+        {num('descontoSucesso', 'Desconto no sucesso %')}
+        {num('descontoSucessoMaior', 'Sucesso por 5+ %')}
+        {num('descontoCritico', 'Crítico (20) %')}
+        {num('aumentoFalhaCritica', 'Falha crítica: preço +%')}
+      </div>
+      <label className="text-xs space-y-1 block"><span className="text-muted-foreground">Perícias aceitas (vírgula)</span>
+        <Input aria-label="Perícias aceitas" value={cfg.pericias.join(', ')} onChange={(e) => onChange({ ...cfg, pericias: e.target.value.split(',').map((x) => x.trim()).filter(Boolean) })} />
+      </label>
+    </div>
   );
 }

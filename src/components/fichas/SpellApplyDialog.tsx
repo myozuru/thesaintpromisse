@@ -462,7 +462,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
       // Uma reação já está resolvendo uma interrupção; ela não abre outra
       // janela de reação sobre si mesma.
       const janela = spell.actionType === 'reaction'
-        ? { cancelado: false, defesaBonus: 0 }
+        ? { cancelado: false, defesaBonus: 0, testeBonus: 0 }
         : await abrirJanelaReacaoAtiva(evento);
       if (!montadoRef.current) return;
       if (janela.cancelado || !canCast()) { addLog('spell', `⛔ ${spell.name}: conjuração interrompida ou recursos indisponíveis.`); onClose(); return; }
@@ -470,7 +470,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
       if (next === 'attacks') for (const id of selectedIds) {
         const eventoAtaque = { gatilho: 'quando_alvo_declarar_ataque' as const, origemId: sourceCharId, protegidoId: id };
         const defesa = spell.actionType === 'reaction'
-          ? { cancelado: false, defesaBonus: 0 }
+          ? { cancelado: false, defesaBonus: 0, testeBonus: 0 }
           : await abrirJanelaReacaoAtiva(eventoAtaque);
         if (!montadoRef.current) return;
         if (defesa.cancelado || !canCast()) { addLog('spell', `⛔ ${spell.name}: ataque mágico interrompido.`); onClose(); return; }

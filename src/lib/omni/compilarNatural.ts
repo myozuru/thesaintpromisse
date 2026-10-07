@@ -6,7 +6,7 @@ import type { CombatEffect } from './tipos';
 export interface DiagnosticoCompilacaoNatural { codigo: string; mensagem: string; inicio: number; fim: number }
 export interface ResultadoCompilacaoNatural { efeitos: CombatEffect[]; erros: DiagnosticoCompilacaoNatural[] }
 
-const limpar = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+const limpar = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim().replace(/\b(?:cac|corpo a corpo|melee)\b/g, 'corpo_a_corpo').replace(/\b(?:a distancia|ranged)\b/g, 'a_distancia');
 const idCondicao = (s: string) => limpar(s).replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '');
 
 function atomos(p: PredicadoNatural, out: Array<Extract<PredicadoNatural, { tipo: 'atomo' }>> = []) {
@@ -67,13 +67,16 @@ function acaoParaComando(a: AcaoNatural): { comando?: string; erro?: string; aft
   const t = a.texto.trim(), n = limpar(t);
   let m = n.match(/^acumular\s+(.+?)\s+(?:em\s+)?contador_([a-z0-9_]+)(?:\s+ate\s+(.+?))?(?:\s+(por_fonte))?(?:\s+teto_aliado\s+(.+?)\s+por\s+(rodada|descanso))?$/);
   if (m) return { comando: `somar ${m[1]} em contador_${m[2]}${m[3] ? ` ate ${m[3]}` : ''}${m[4] ? ' por_fonte' : ''}${m[5] ? ` teto_aliado ${m[5]} por ${m[6]}` : ''}`, afterDamage: true, contador:true };
+  // Dano escalonado: "causar 1d4 de dano psíquico por contador_rancor" → (N × cargas)dM.
+  m = n.match(/^causar\s+(\d*)d(\d+)\s+(?:de\s+)?dano\s+([a-z_]+)\s+por\s+contador_([a-z0-9_]+)(?:\s+(?:em|no|na)\s+(usuario|alvo))?$/);
+  if (m) { const q = Number(m[1] || 1); return { comando: `subtrair (${q === 1 ? '' : `${q}*`}@USUARIO.contador_${m[4]})d${m[2]} em ${m[5] ?? 'alvo'}.vida tipo ${m[3]}` }; }
   m = n.match(/^causar\s+(.+?)\s+(?:de\s+)?dano\s+([a-z_]+)(?:\s+(?:em|no|na)\s+(usuario|alvo))?$/);
   if (m) return { comando: `subtrair ${m[1]} em ${m[3] ?? 'alvo'}.vida tipo ${m[2]}` };
   m = n.match(/^curar\s+(.+?)\s+(?:de\s+)?(vida|pv|pe)(?:\s+(?:em|no|na))?\s+(usuario|alvo)$/);
   if (m) return { comando: `somar ${m[1]} em ${m[3]}.${m[2] === 'pv' ? 'vida' : m[2]}` };
   m = n.match(/^(?:restaurar|recuperar)\s+(.+?)\s+(?:de\s+)?(vida|pv|pe)\s+(?:em|no|na)\s+(usuario|alvo)$/);
   if (m) return { comando: `somar ${m[1]} em ${m[3]}.${m[2] === 'pv' ? 'vida' : m[2]}` };
-  m = n.match(/^aplicar\s+([\w-]+)(?:\s+por\s+(\d+)\s+rodadas?)?(?:\s+(?:em|no|na)\s+(usuario|alvo))?$/);
+  m = n.match(/^aplicar\s+(?:(?:a\s+)?condicao\s+)?([\w-]+)(?:\s+por\s+(\d+)\s+rodadas?)?(?:\s+(?:em|no|na)\s+(usuario|alvo))?$/);
   if (m) return { comando: `aplicar ${m[1]}${m[2] ? ` rodadas ${m[2]}` : ''} em ${m[3] ?? 'alvo'}` };
   m = n.match(/^remover\s+([\w-]+|todas)(?:\s+(?:em|do|da|no|na)\s+(usuario|alvo))?$/);
   if (m) return { comando: `remover ${m[1]} em ${m[2] ?? 'alvo'}` };

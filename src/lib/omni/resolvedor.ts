@@ -1,3 +1,4 @@
+import { variaveisMitigacao } from './mitigacoesDano';
 import { idadeCondicao } from "./condicionaisAtivos";
 import { anexarDadosCompostos } from "./componentes/contexto";
 import { dadosRecursos } from "./componentes/recursos";
@@ -169,6 +170,7 @@ export function lerCaminhoOmni(c: Character, caminho: string): number {
 export function montarVariaveisDoPersonagem(
   c: Character,
   escopo: "USUARIO" | "ALVO" | "CENA" = "USUARIO",
+  incluirScriptsMitigacao = true,
 ): Record<string, number> {
   const proj = projetarPersonagemParaOmni(c);
   const atributos = proj.atributos as Record<string, number>;
@@ -1228,6 +1230,8 @@ export function montarVariaveisDoPersonagem(
   } catch {
     /* */
   }
+
+  Object.assign(base, variaveisMitigacao(c, incluirScriptsMitigacao));
 
   // Mesmo bag também disponível sob o prefixo de escopo (USUARIO_FOR, ALVO_VIDA, ...).
   const prefixado: Record<string, number> = {};

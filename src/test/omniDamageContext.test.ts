@@ -246,6 +246,17 @@ describe('Contexto DANO do combate real', () => {
     await waitFor(() => expect(pegarFicha('alvo').hpCurrent).toBe(100 - danoFinal));
   });
 
+  it.each([
+    ['Queimante resistido', 'DQ', 10],
+    ['Congelante resistido', 'DCG', 10],
+    ['Cortante sem resistência', 'DCO', 20],
+  ] as const)('passiva vinculada (Revestimento de Chamas): %s', async (_n, tipo, danoFinal) => {
+    const passiva = { ...novaEntidade('passiva', 'Revestimento de Chamas'), id: 'revestimento', resistencias: ['DQ', 'DCG'] } as EntidadeOmni;
+    montarMesa([char('alvo', { omniAtivos: [vincular(passiva)] })], {});
+    useCharacterStore.getState().applyDamage('alvo', 20, tipo);
+    await waitFor(() => expect(pegarFicha('alvo').hpCurrent).toBe(100 - danoFinal));
+  });
+
   it('não aplica as propriedades de um acessório guardado no inventário', async () => {
     montarMesa([char('alvo')], {});
     useInventoryStore.getState().add('alvo', { ...novaEntidade('item', 'Broche'), slotType: 'anel', resistencias: ['DCO'] });

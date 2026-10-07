@@ -32,7 +32,8 @@ const limpar = (s: string) =>
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/\s+/g, " ")
-    .trim();
+    .trim()
+    .replace(/\b(?:cac|corpo a corpo|melee)\b/g, 'corpo_a_corpo').replace(/\b(?:a distancia|ranged)\b/g, 'a_distancia');
 const eventosNaturaisLegados: Record<string, string> = {
   "ao iniciar combate": "inicio_combate",
   "ao entrar em combate": "entrar_combate",

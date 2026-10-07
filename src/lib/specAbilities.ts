@@ -1573,6 +1573,14 @@ const SUPORTE: SpecAbility[] = [
     logicText: 'Bônus arredondado para cima. Sucesso detectado em testes com CD conhecida. PE acima do máximo vira PE temporário.',
   },
   {
+    id: 'sup-no-ultimo-segundo', name: 'No Último Segundo', tier: 4, specialization: 'Suporte',
+    flavor: 'Quando um aliado está a um passo da morte, você chega antes.',
+    mechanic: 'Ao iniciar uma rodada com um ou mais aliados com 2 fracassos nas Portas da Morte, sua iniciativa atual aumenta em +5. Se por causa disso agir antes de um aliado nas Portas, anula terreno difícil, tem +4,5 m de movimento e +5 de Defesa contra Ataques de Oportunidade durante a rodada.',
+    activation: 'passive',
+    triggerText: 'Automático no início de cada rodada de combate.',
+    logicText: 'O +5 soma na iniciativa atual a cada rodada em que a condição vale. O benefício dura até o início da próxima rodada.',
+  },
+  {
     id: 'sup-sintonizacao-vital', name: 'Sintonização Vital', tier: 4, specialization: 'Suporte',
     flavor: 'A cura que você canaliza transborda para quem está por perto.',
     mechanic: 'Quando curar um aliado, você pode gastar 3 PE para que outra criatura a até 3 m (incluindo você) recupere PV igual a metade da cura original.',

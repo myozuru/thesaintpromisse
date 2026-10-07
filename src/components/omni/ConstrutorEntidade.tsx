@@ -1,5 +1,6 @@
 import { DAMAGE_TYPES as TIPOS_DANO_MOTOR, DAMAGE_TYPE_LABELS, type DamageType } from '@/types';
 import { resolverTipoDano } from '@/lib/omni/contextoDano';
+import { reduzirImagemItem } from '@/lib/omni/imagemItem';
 /**
  * Modal No-Code para criar/editar uma EntidadeOmni.
  * Abas: Geral | Efeitos | Custos | Gatilhos.
@@ -37,6 +38,8 @@ import {
 import { ConstrutorBlocoLogico } from './ConstrutorBlocoLogico';
 import { SmartDropdown } from './SmartDropdown';
 import { MultiSelectChips } from './MultiSelectChips';
+import { CategoriasPicker } from '@/components/economia/CategoriasPicker';
+import { useMoneyStore } from '@/stores/useMoneyStore';
 import { SimuladorPreview } from './SimuladorPreview';
 import { GuiaFormulasDialog } from './GuiaFormulasDialog';
 import { SeletorRecurso } from './SeletorRecurso';
@@ -255,6 +258,28 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                   <Label>Descrição</Label>
                   <Textarea value={ent.descricao} onChange={(e) => setEnt({ ...ent, descricao: e.target.value })} rows={4} />
                 </div>
+                {(ent.categoria === 'arma' || ent.categoria === 'item') && (
+                  <div className="flex items-center gap-3">
+                    {ent.imagem
+                      ? <img src={ent.imagem} alt={ent.nome} className="h-16 w-16 rounded border border-border object-contain bg-background" />
+                      : <div className="flex h-16 w-16 items-center justify-center rounded border border-dashed border-border text-xs text-muted-foreground">sem imagem</div>}
+                    <div className="space-y-1">
+                      <Label>Imagem do item</Label>
+                      <p className="text-xs text-muted-foreground">Aparece no inventário, no chão do mapa e no personagem ao empunhar.</p>
+                      <div className="flex gap-2">
+                        <label className="cursor-pointer rounded border border-primary/50 px-2 py-1 text-xs hover:bg-primary/10">
+                          Escolher imagem
+                          <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                            const f = e.target.files?.[0]; e.target.value = '';
+                            if (!f) return;
+                            try { setEnt({ ...ent, imagem: await reduzirImagemItem(f) }); } catch { /* imagem inválida */ }
+                          }} />
+                        </label>
+                        {ent.imagem && <button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => setEnt({ ...ent, imagem: undefined })}>Remover</button>}
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div>
                   <Label>Tags (separadas por vírgula)</Label>
                   <Input
@@ -512,6 +537,30 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                         ))}
                       </div>
                     </details>
+                  </div>
+                )}
+
+                {(ent.categoria === 'passiva' || ent.categoria === 'talento' || ent.categoria === 'aura') && (
+                  <div className="rounded-md border border-dashed border-border/60 bg-background/40 p-3 space-y-3" data-testid="mitigacoes-passiva">
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                      Resistências, vulnerabilidades e imunidades
+                    </Label>
+                    <p className="text-xs text-muted-foreground leading-relaxed">Valem automaticamente enquanto esta habilidade estiver vinculada à ficha.</p>
+                    {([
+                      ['resistencias', 'Resistências (metade do dano)'],
+                      ['vulnerabilidades', 'Vulnerabilidades (×1,5 dano)'],
+                      ['imunidades_dano', 'Imunidades (anula o dano)'],
+                    ] as const).map(([campo, titulo]) => (
+                      <fieldset key={campo} className="space-y-1">
+                        <legend className="text-xs font-medium text-muted-foreground">{titulo}</legend>
+                        <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
+                          {TIPOS_DANO_MOTOR.map((tipo) => <label key={tipo} className="flex items-center gap-1 text-xs">
+                            <input type="checkbox" checked={(ent[campo] ?? []).includes(tipo)} onChange={() => toggleMitigacao(campo, tipo)} />
+                            {DAMAGE_TYPE_LABELS[tipo]}
+                          </label>)}
+                        </div>
+                      </fieldset>
+                    ))}
                   </div>
                 )}
               </TabsContent>
@@ -1506,6 +1555,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                       onChange={(e) => setEnt({
                         ...ent,
                         comercio: {
+                          ...ent.comercio,
                           basePrice: Math.max(0, Number(e.target.value) || 0),
                           hiddenTags: ent.comercio?.hiddenTags ?? [],
                           isBought: ent.comercio?.isBought ?? false,
@@ -1520,6 +1570,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                       onValueChange={(v) => setEnt({
                         ...ent,
                         comercio: {
+                          ...ent.comercio,
                           basePrice: ent.comercio?.basePrice ?? 0,
                           hiddenTags: ent.comercio?.hiddenTags ?? [],
                           isBought: v === 'comprado',
@@ -1534,6 +1585,24 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                     </Select>
                   </div>
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Moeda do preço</Label>
+                    <MoedaSelect value={ent.comercio?.currencyId ?? ''} onChange={(v) => setEnt({
+                      ...ent,
+                      comercio: { basePrice: ent.comercio?.basePrice ?? 0, hiddenTags: ent.comercio?.hiddenTags ?? [], isBought: ent.comercio?.isBought ?? false, ...ent.comercio, currencyId: v || undefined },
+                    })} />
+                  </div>
+                </div>
+                <CategoriasPicker
+                  rotulo="Estabelecimentos que aceitam comprar este item"
+                  valor={ent.comercio?.categoriasAceitas ?? []}
+                  onChange={(v) => setEnt({
+                    ...ent,
+                    comercio: { basePrice: ent.comercio?.basePrice ?? 0, hiddenTags: ent.comercio?.hiddenTags ?? [], isBought: ent.comercio?.isBought ?? false, ...ent.comercio, categoriasAceitas: v },
+                  })}
+                />
+                <p className="text-xs text-muted-foreground">Só lojas dessas categorias compram o item. Ex.: uma espada no Ferreiro, nunca na Padaria.</p>
                 <div>
                   <Label>Tags ocultas (separadas por vírgula)</Label>
                   <Input
@@ -1542,6 +1611,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                     onChange={(e) => setEnt({
                       ...ent,
                       comercio: {
+                        ...ent.comercio,
                         basePrice: ent.comercio?.basePrice ?? 0,
                         hiddenTags: e.target.value.split(',').map((t) => t.trim()).filter(Boolean),
                         isBought: ent.comercio?.isBought ?? false,
@@ -2237,3 +2307,14 @@ function SemanticBuilder({
 }
 
 
+
+function MoedaSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const currencies = useMoneyStore((s) => s.currencies);
+  return (
+    <select aria-label="Moeda do preço" value={value} onChange={(e) => onChange(e.target.value)}
+      className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
+      <option value="">Moeda da loja</option>
+      {currencies.map((c) => <option key={c.id} value={c.id}>{c.symbol} {c.name}</option>)}
+    </select>
+  );
+}

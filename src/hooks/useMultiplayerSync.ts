@@ -21,6 +21,9 @@ import { useMoneyStore } from '@/stores/useMoneyStore';
 import { useItemStore } from '@/stores/useItemStore';
 import { useCalendarStore } from '@/stores/useCalendarStore';
 import { useBossStore } from '@/stores/useBossStore';
+import { useShopStore } from '@/stores/useShopStore';
+import { useQuestStore } from '@/stores/useQuestStore';
+import { mergeByUpdatedAt } from '@/lib/economia/syncMerge';
 import { useSpellProposalStore } from '@/stores/useSpellProposalStore';
 import { useMenuStore } from '@/stores/useMenuStore';
 import { useDiscountStore } from '@/stores/useDiscountStore';
@@ -518,6 +521,26 @@ function aplicarRemoteInterno(slice: WorldSlice, data: unknown) {
       if (d.bosses && typeof d.bosses === 'object' && Array.isArray(d.worldMarkers)) {
         useBossStore.setState(projectBossesForPlayers(d.bosses as never, d.worldMarkers as never[]) as never);
       }
+    }
+    else if (slice === 'economia' && data && typeof data === 'object') {
+      const d = data as { shops?: Record<string, never>; categorias?: Record<string, never>; pechinchas?: Record<string, never> };
+      const cur = useShopStore.getState();
+      useShopStore.setState({
+        shops: mergeByUpdatedAt(cur.shops, d.shops ?? {}),
+        categorias: mergeByUpdatedAt(cur.categorias, d.categorias ?? {}),
+        pechinchas: mergeByUpdatedAt(cur.pechinchas, d.pechinchas ?? {}),
+      });
+    }
+    else if (slice === 'quests' && data && typeof data === 'object') {
+      const d = data as { quests?: Record<string, never>; murais?: Record<string, never>; faccoes?: Record<string, never>; guildas?: Record<string, never>; linhaTempo?: Record<string, never>; notas?: Record<string, never>; viagem?: { updatedAt?: number } };
+      const cur = useQuestStore.getState();
+      useQuestStore.setState({
+        quests: mergeByUpdatedAt(cur.quests, d.quests ?? {}), murais: mergeByUpdatedAt(cur.murais, d.murais ?? {}),
+        faccoes: mergeByUpdatedAt(cur.faccoes ?? {}, d.faccoes ?? {}), linhaTempo: mergeByUpdatedAt(cur.linhaTempo ?? {}, d.linhaTempo ?? {}),
+        guildas: mergeByUpdatedAt(cur.guildas ?? {}, d.guildas ?? {}),
+        notas: mergeByUpdatedAt(cur.notas ?? {}, d.notas ?? {}),
+        ...(d.viagem && (d.viagem.updatedAt ?? 0) > (cur.viagem?.updatedAt ?? 0) ? { viagem: d.viagem as typeof cur.viagem } : {}),
+      });
     }
     else if (slice === 'fog' && data && typeof data === 'object') {
       const d = data as { walls?: unknown; doors?: unknown; lights?: unknown };
@@ -1193,6 +1216,24 @@ export function useMultiplayerSync() {
       if (bossChanged) socket.emit('state:update', { slice: 'worldBosses', data: wb });
     });
 
+    // Lojas/categorias/pechinchas e quests/murais: todos publicam; a mescla por updatedAt resolve conflitos.
+    const pickEconomia = (st: ReturnType<typeof useShopStore.getState>) => ({ shops: st.shops, categorias: st.categorias, pechinchas: st.pechinchas });
+    let lastEconomia = JSON.stringify(pickEconomia(useShopStore.getState()));
+    const unsubEconomia = useShopStore.subscribe((state) => {
+      const next = pickEconomia(state); const s = JSON.stringify(next);
+      if (s === lastEconomia) return; lastEconomia = s;
+      if (applyingRemote) return;
+      socket.emit('state:update', { slice: 'economia', data: next });
+    });
+    const pickQuests = (st: ReturnType<typeof useQuestStore.getState>) => ({ quests: st.quests, murais: st.murais, faccoes: st.faccoes, guildas: st.guildas, linhaTempo: st.linhaTempo, notas: st.notas, viagem: st.viagem });
+    let lastQuests = JSON.stringify(pickQuests(useQuestStore.getState()));
+    const unsubQuests = useQuestStore.subscribe((state) => {
+      const next = pickQuests(state); const s = JSON.stringify(next);
+      if (s === lastQuests) return; lastQuests = s;
+      if (applyingRemote) return;
+      socket.emit('state:update', { slice: 'quests', data: next });
+    });
+
     let lastCalendar = JSON.stringify(pickCalendar(useCalendarStore.getState()));
     const unsubCalendar = useCalendarStore.subscribe((state) => {
       const next = pickCalendar(state);
@@ -1445,6 +1486,8 @@ export function useMultiplayerSync() {
       unsubItems();
       unsubCalendar();
       unsubWorld();
+      unsubEconomia();
+      unsubQuests();
       unsubRole();
       unsubProposals();
       unsubEsts();
