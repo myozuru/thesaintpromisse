@@ -37,6 +37,8 @@ import { cn } from '@/lib/utils';
 import { isFreeformFor } from '@/lib/freeformMode';
 import { FreeformActionBar } from './FreeformActionBar';
 import { AttackPanel } from '@/components/fichas/AttackPanel';
+import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
+import { acoesAtivasDe } from '@/lib/omni/acaoAtiva';
 
 type Category = 'ataque' | 'feiticos' | 'aptidoes' | 'especiais' | 'classe' | 'artes';
 
@@ -47,6 +49,8 @@ interface ListEntry {
   meta?: string;
   disabled?: boolean;
   disabledReason?: string;
+  source?: 'native' | 'omni';
+  omniCategory?: string;
 }
 
 
@@ -59,6 +63,7 @@ export function PlayerActionBar() {
   const currentTurnIndex = useCombatStore((s) => s.currentTurnIndex);
   const freeformMode = useCombatStore((s) => s.freeformMode);
   const inventoryMap = useInventoryStore((s) => s.items);
+  const omniEntidades = useOmniEntidadesStore((s) => s.entidades);
 
   const [open, setOpen] = useState<Category | null>(null);
   const [castingSpell, setCastingSpell] = useState<Spell | null>(null);
@@ -113,6 +118,31 @@ export function PlayerActionBar() {
   }, [role, inCombat, activeChar, myChar, activeProfileId]);
 
 
+  const omniAcaoLabel: Record<string, string> = {
+    comum: 'Ação Comum', bonus: 'Ação Bônus', reacao: 'Reação', movimento: 'Movimento', livre: 'Ação Livre',
+  };
+
+  const omniQuickEntries: ListEntry[] = useMemo(() => {
+    if (!activeChar) return [];
+    const seen = new Set<string>();
+    return acoesAtivasDe(activeChar.id)
+      .filter((a) => a.ent.categoria !== 'arma')
+      .filter((a) => {
+        const key = a.ent.id + ':' + a.cfg.id;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .map((a) => ({
+        id: 'omni-ativa:' + a.ent.id + ':' + a.cfg.id,
+        name: a.cfg.nome || a.ent.nome,
+        meta: (omniAcaoLabel[a.cfg.acao] ?? a.cfg.acao) + ' • PE ' + a.cfg.custoPE + (a.cfg.alcanceM > 0 ? ' • ' + String(a.cfg.alcanceM).replace('.', ',') + ' m' : ''),
+        description: a.ent.nome + (a.ent.descricao ? ' · ' + a.ent.descricao : ''),
+        source: 'omni' as const,
+        omniCategory: a.ent.categoria,
+      }));
+  }, [activeChar, omniEntidades]);
+
   // ─── Listas por categoria ──────────────────────────────────────────────
   const attackEntries: ListEntry[] = useMemo(() => {
     if (!activeChar) return [];
@@ -163,7 +193,7 @@ export function PlayerActionBar() {
       rapida: 'Ação Rápida',
       movimento: 'Movimento',
     };
-    return (activeChar.spells ?? []).map((sp) => {
+    const native = (activeChar.spells ?? []).map((sp) => {
       const at = sp.actionType;
       let disabled = false;
       let reason = '';
@@ -187,7 +217,8 @@ export function PlayerActionBar() {
         disabledReason: reason,
       };
     });
-  }, [activeChar]);
+    return [...native, ...omniQuickEntries.filter((a) => a.omniCategory === 'feitico')];
+  }, [activeChar, omniQuickEntries]);
 
 
 
@@ -197,7 +228,7 @@ export function PlayerActionBar() {
       ...((activeChar as any).chosenAuraAptitudes ?? []),
       ...((activeChar as any).chosenClAptitudes ?? []),
     ];
-    return ids
+    const native = ids
       .map((id) => {
         const a = getAuraAptitudeById(id);
         if (!a) return null;
@@ -209,7 +240,8 @@ export function PlayerActionBar() {
         } as ListEntry;
       })
       .filter(Boolean) as ListEntry[];
-  }, [activeChar]);
+    return [...native, ...omniQuickEntries.filter((a) => a.omniCategory !== 'feitico')];
+  }, [activeChar, omniQuickEntries]);
 
   const specialEntries: ListEntry[] = useMemo(() => {
     if (!activeChar) return [];
@@ -687,6 +719,10 @@ export function PlayerActionBar() {
                   {activeList.map((e) => {
                     const handleClick = async () => {
                       if (e.disabled) return;
+                      if (e.source === 'omni') {
+                        setOpen('ataque');
+                        return;
+                      }
                       if (open === 'feiticos' && activeChar) {
                         const sp = (activeChar.spells ?? []).find((s) => s.id === e.id);
                         if (!sp) return;
@@ -767,7 +803,7 @@ export function PlayerActionBar() {
                       }
                       // aptidões/itens/ataque: a serem plugados quando você definir a lógica final.
                     };
-                    const clickable = open === 'feiticos' && !e.disabled;
+                    const clickable = (open === 'feiticos' || e.source === 'omni') && !e.disabled;
                     return (
                       <li key={e.id}>
                         <button
