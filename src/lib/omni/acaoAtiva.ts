@@ -394,19 +394,9 @@ async function executarAcaoAtivaInterna(
   const armaDeclarada = JSON.stringify(arma);
   const validarInstancia = () => {
     if (!opcoes.instanciaId) return true;
-    const usuario = useCharacterStore.getState().characters.find(c => c.id === usuarioId);
-    if (!usuario) return false;
-
-    // Entidades vinculadas diretamente à ficha também podem ser a origem
-    // legítima da ação, mesmo quando o item que originou o vínculo não
-    // está mais presente no inventário.
-    const vinculo = usuario.omniAtivos?.some((v) =>
-      v.instanceId === opcoes.instanciaId && (!ent || v.entidadeId === ent.id),
-    );
-    if (vinculo) return true;
-
     const item = useInventoryStore.getState().items[opcoes.instanciaId];
-    return !!item && item.ownerId === usuarioId && (!ent || item.entity.id === ent.id) && (ent?.categoria !== 'arma' ||
+    const usuario = useCharacterStore.getState().characters.find(c => c.id === usuarioId);
+    return !!item && !!usuario && item.ownerId === usuarioId && (!ent || item.entity.id === ent.id) && (ent?.categoria !== 'arma' ||
       (usuario.mainHandWeaponInstanceId || usuario.offHandWeaponInstanceId
         ? usuario.mainHandWeaponInstanceId === item.instanceId || usuario.offHandWeaponInstanceId === item.instanceId
         : armaEstaEmpunhada(usuario, ent.replica ? item.replicaArma ?? '' : ent.nome)) && (!ent.replica || item.materializada));
@@ -716,42 +706,16 @@ async function executarAcaoAtivaInterna(
   return { ok: true, dano: danoTotal, cura: curaTotal, efeitoAplicado, detalhe: detalhes.join("\n") };
 }
 
-/**
- * Ações ativas disponíveis ao personagem: inventário + entidades Omni
- * vinculadas diretamente à ficha.
- */
+/** Ações ativas disponíveis ao personagem (itens do inventário dele). */
 export function acoesAtivasDe(charId: string): { instanceId: string; ent: EntidadeOmni; cfg: AcaoAtivaConfig }[] {
   const out: { instanceId: string; ent: EntidadeOmni; cfg: AcaoAtivaConfig }[] = [];
-  const entidades = useOmniEntidadesStore.getState().entidades;
-  const inventario = useInventoryStore.getState().items;
   const char = useCharacterStore.getState().characters.find(c => c.id === charId);
-  const adicionadas = new Set<string>();
-
-  const adicionar = (instanceId: string, ent: EntidadeOmni) => {
-    for (const cfg of ent.acoesAtivas ?? []) {
-      const chave = `${ent.id}:${instanceId}:${cfg.id}`;
-      if (adicionadas.has(chave)) continue;
-      adicionadas.add(chave);
-      out.push({ instanceId, ent, cfg });
-    }
-  };
-
-  // Itens físicos do inventário continuam sendo uma fonte válida.
-  for (const i of Object.values(inventario)) {
+  for (const i of Object.values(useInventoryStore.getState().items)) {
     if (i.ownerId !== charId) continue;
-    const ent = entidades[i.entity.id] ?? i.entity;
+    const ent = useOmniEntidadesStore.getState().entidades[i.entity.id] ?? i.entity;
     if (ent.categoria === 'arma' && (!char || !armaEstaEmpunhada(char, ent.replica ? i.replicaArma ?? '' : ent.nome) || ent.replica && !i.materializada)) continue;
-    adicionar(i.instanceId, ent);
+    for (const cfg of ent.acoesAtivas ?? []) out.push({ instanceId: i.instanceId, ent, cfg });
   }
-
-  // Vínculos diretos da ficha também expõem ações ativas, mesmo sem depender
-  // da presença atual do item no inventário.
-  for (const vinculo of char?.omniAtivos ?? []) {
-    const ent = entidades[vinculo.entidadeId];
-    if (!ent) continue;
-    adicionar(vinculo.instanceId, ent);
-  }
-
   return out;
 }
 
