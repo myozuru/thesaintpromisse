@@ -23,6 +23,23 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
+it('inclui ações de entidades Omni vinculadas diretamente à ficha', () => {
+  const ent = { ...novaEntidade('feitico'), nome: 'Invocar Espírito', acoesAtivas: [cfg] };
+  useOmniEntidadesStore.setState({ entidades: { [ent.id]: ent } });
+  useCharacterStore.getState().updateCharacter('u', {
+    omniAtivos: [{
+      id: 'vinculo-espirito',
+      categoria: 'feitico',
+      entidadeId: ent.id,
+      instanceId: 'origem-vinculada',
+      vinculadoEm: Date.now(),
+    }],
+  });
+  const acoes = acoesAtivasDe('u');
+  expect(acoes).toHaveLength(1);
+  expect(acoes[0]).toMatchObject({ instanceId: 'origem-vinculada', ent: { id: ent.id }, cfg: { id: cfg.id } });
+});
+
 it('cinco exemplares produzem um card e a seleção consome somente o exemplar escolhido', async () => {
   const ent = katana();
   const copias = Array.from({ length: 5 }, () => useInventoryStore.getState().add('u', ent));
