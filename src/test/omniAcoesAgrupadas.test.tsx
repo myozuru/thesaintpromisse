@@ -4,14 +4,15 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 vi.mock('@/integrations/supabase/client', async () => ({ supabase: (await import('./helpers/mesaReal')).nuvemFalsa }));
 vi.mock('@/integrations/supabase/safeClient', async () => ({ hasWorkspaceCloud: false, supabase: (await import('./helpers/mesaReal')).nuvemFalsa }));
 vi.mock('@/lib/socket', () => ({ getSocket: () => null }));
-import { ficha, montarMesa } from './helpers/mesaReal';
+import { ficha, montarMesa, pegarFicha } from './helpers/mesaReal';
 import { agruparAcoesAtivas } from '@/lib/omni/agruparAcoesAtivas';
-import { acoesAtivasDe } from '@/lib/omni/acaoAtiva';
+import { acoesAtivasDe, executarAcaoAtiva } from '@/lib/omni/acaoAtiva';
 import { novaEntidade, type AcaoAtivaConfig } from '@/lib/omni/tipos';
 import { AcoesAtivasSection } from '@/components/fichas/AcoesAtivasSection';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useCombatStore } from '@/stores/useCombatStore';
+import { useCharacterStore } from '@/stores/useCharacterStore';
 
 const cfg: AcaoAtivaConfig = { id: 'corte', nome: 'Corte da vingança', acao: 'livre', custoPE: '0', alcanceM: 0, teste: 'nenhum', tipo_alvo: 'proprio', efeitos: [], custo_recursos: { usos_item: 1 } };
 const katana = () => ({ ...novaEntidade('arma'), nome: 'Katana', acoesAtivas: [cfg], usos: { total: 3, recarga: 'diaria' as const } });
@@ -61,3 +62,47 @@ it('acompanha a edição do catálogo e prefere um exemplar equipado', () => {
   expect(screen.queryByText('Corte da vingança')).toBeNull();
   expect(screen.getByText('Corte atualizado')).toBeTruthy();
 });
+
+it('inclui ações de entidade vinculada à ficha mesmo sem item físico no inventário', () => {
+  const ent = { ...novaEntidade('talento'), nome: 'Espíritos de Fogo', acoesAtivas: [
+    { ...cfg, id: 'invocar', nome: 'Invocar Espíritos', acao: 'bonus' as const, custoPE: '3' },
+    { ...cfg, id: 'enviar', nome: 'Enviar Espírito', acao: 'livre' as const, custoPE: '0' },
+  ] };
+  useOmniEntidadesStore.setState({ entidades: { [ent.id]: ent } });
+  useCharacterStore.getState().updateCharacter('u', {
+    omniAtivos: [{ categoria: 'talento', entidadeId: ent.id, instanceId: 'ficha-espiritos' }],
+  });
+
+  expect(Object.keys(useInventoryStore.getState().items)).toHaveLength(0);
+  const nomes = acoesAtivasDe('u').map((a) => a.cfg.nome);
+  expect(nomes).toEqual(expect.arrayContaining(['Invocar Espíritos', 'Enviar Espírito']));
+
+  render(<AcoesAtivasSection charId="u" />);
+  expect(screen.getByText('Invocar Espíritos')).toBeTruthy();
+  expect(screen.getByText('Enviar Espírito')).toBeTruthy();
+});
+
+it('executa ação vinculada à ficha sem erro de instância indisponível', async () => {
+  const acao: AcaoAtivaConfig = {
+    id: 'invocar',
+    nome: 'Invocar Espíritos',
+    acao: 'livre',
+    custoPE: '3',
+    alcanceM: 0,
+    teste: 'nenhum',
+    tipo_alvo: 'proprio',
+    tipo_efeito: 'buff',
+    efeitos: [],
+  };
+  const ent = { ...novaEntidade('talento'), nome: 'Espíritos de Fogo', acoesAtivas: [acao] };
+  useOmniEntidadesStore.setState({ entidades: { [ent.id]: ent } });
+  useCharacterStore.getState().updateCharacter('u', {
+    peCurrent: 10,
+    omniAtivos: [{ categoria: 'talento', entidadeId: ent.id, instanceId: 'ficha-espiritos' }],
+  });
+
+  const r = await executarAcaoAtiva('u', acao, '', ent, { instanciaId: 'ficha-espiritos' });
+  expect(r.ok).toBe(true);
+  expect(pegarFicha('u').peCurrent).toBe(7);
+});
+
