@@ -2550,9 +2550,17 @@ export const useCharacterStore = create<CharacterStore>()(
           });
         };
         let perdaPvReal = 0;
-        const mitigacoesOmni = useInventoryStore.getState().listEquipped(id)
-          .filter((item) => item.entity.slotType && item.entity.slotType !== 'nenhum')
-          .map((item) => entidadesOmniAtuais[item.entity.id] ?? item.entity);
+        const mitigacoesOmni = [
+          ...useInventoryStore.getState().listEquipped(id)
+            .filter((item) => item.entity.slotType && item.entity.slotType !== 'nenhum')
+            .map((item) => entidadesOmniAtuais[item.entity.id] ?? item.entity),
+          // Passivas, talentos e auras vinculados à ficha também concedem
+          // resistências/vulnerabilidades/imunidades enquanto vinculados.
+          ...(get().characters.find((ch) => ch.id === id)?.omniAtivos ?? [])
+            .filter((v) => v.categoria === 'passiva' || v.categoria === 'talento' || v.categoria === 'aura')
+            .map((v) => entidadesOmniAtuais[v.entidadeId])
+            .filter((e): e is NonNullable<typeof e> => Boolean(e)),
+        ];
 
         set((state) => ({
           characters: state.characters.map((c) => {
