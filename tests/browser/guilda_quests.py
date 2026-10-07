@@ -77,7 +77,7 @@ async def main():
         if await pg.locator(f"[data-cartaz='{ids['quest']}']").count() == 0:
             await pg.evaluate("window.__mapStore.setState({selectedIds:['mur']})"); await pg.wait_for_timeout(1000)
         await pg.locator(f"[data-cartaz='{ids['quest']}']").click(); await pg.wait_for_timeout(500)
-        btn_guilda = pg.get_by_role("button", name=lambda n: n and "Aceitar pela guilda" in n)
+        btn_guilda = pg.locator("button", has_text="Aceitar pela guilda")
         print("botão aceitar pela guilda:", await btn_guilda.count() > 0)
         await pg.screenshot(path=S + "4_mural_guilda.png")
         await btn_guilda.first.click(); await pg.wait_for_timeout(600)
