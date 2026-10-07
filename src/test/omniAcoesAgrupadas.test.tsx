@@ -12,6 +12,7 @@ import { AcoesAtivasSection } from '@/components/fichas/AcoesAtivasSection';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useCombatStore } from '@/stores/useCombatStore';
+import { useCharacterStore } from '@/stores/useCharacterStore';
 
 const cfg: AcaoAtivaConfig = { id: 'corte', nome: 'Corte da vingança', acao: 'livre', custoPE: '0', alcanceM: 0, teste: 'nenhum', tipo_alvo: 'proprio', efeitos: [], custo_recursos: { usos_item: 1 } };
 const katana = () => ({ ...novaEntidade('arma'), nome: 'Katana', acoesAtivas: [cfg], usos: { total: 3, recarga: 'diaria' as const } });
@@ -22,6 +23,23 @@ beforeEach(() => {
   montarMesa([ficha('u', { hpCurrent: 20, hpMax: 20, mainHandWeaponName: 'Katana' })], {});
 });
 afterEach(cleanup);
+
+it('inclui ações de entidades Omni vinculadas diretamente à ficha', () => {
+  const ent = { ...novaEntidade('feitico'), nome: 'Invocar Espírito', acoesAtivas: [cfg] };
+  useOmniEntidadesStore.setState({ entidades: { [ent.id]: ent } });
+  useCharacterStore.getState().updateCharacter('u', {
+    omniAtivos: [{
+      id: 'vinculo-espirito',
+      categoria: 'feitico',
+      entidadeId: ent.id,
+      instanceId: 'origem-vinculada',
+      vinculadoEm: Date.now(),
+    }],
+  });
+  const acoes = acoesAtivasDe('u');
+  expect(acoes).toHaveLength(1);
+  expect(acoes[0]).toMatchObject({ instanceId: 'origem-vinculada', ent: { id: ent.id }, cfg: { id: cfg.id } });
+});
 
 it('cinco exemplares produzem um card e a seleção consome somente o exemplar escolhido', async () => {
   const ent = katana();
