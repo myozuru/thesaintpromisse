@@ -46,12 +46,11 @@ describe('cargas geradas por sustentação', () => {
   it('efeito enviado fica preso à sustentação e some ao encerrá-la', async () => {
     await executarAcaoAtiva('u', invocar, 'u');
     const env = await executarAcaoAtiva('u', enviar, 'b');
-    console.log('DBG', JSON.stringify(env), JSON.stringify(pegarFicha('b').activeConditions));
-    expect(pegarFicha('b').activeConditions.some(c => c.id === 'caido')).toBe(true);
+    expect(pegarFicha('b').activeConditions.some(c => c.conditionId === 'caido')).toBe(true);
     const s = pegarFicha('u').omniSustentacoes![0];
     expect(s.alvos).toContain('b');
     encerrarSustentacaoAtiva('u', s.id);
-    expect(pegarFicha('b').activeConditions.some(c => c.id === 'caido')).toBe(false);
+    expect(pegarFicha('b').activeConditions.some(c => c.conditionId === 'caido')).toBe(false);
     expect(pegarFicha('u').omniCounters?.espiritos_fogo ?? 0).toBe(0);
   });
   it('alvo a mais de 20 m perde o espírito; a 19,5 m mantém', async () => {
@@ -59,10 +58,10 @@ describe('cargas geradas por sustentação', () => {
     await executarAcaoAtiva('u', enviar, 'b');
     mover('b', 13); // 19,5 m
     expect(verificarDistanciaSustentacoes()).toBe(0);
-    expect(pegarFicha('b').activeConditions.some(c => c.id === 'caido')).toBe(true);
+    expect(pegarFicha('b').activeConditions.some(c => c.conditionId === 'caido')).toBe(true);
     mover('b', 15); // 22,5 m
     expect(verificarDistanciaSustentacoes()).toBe(1);
-    expect(pegarFicha('b').activeConditions.some(c => c.id === 'caido')).toBe(false);
+    expect(pegarFicha('b').activeConditions.some(c => c.conditionId === 'caido')).toBe(false);
     // Ainda resta 1 espírito com o conjurador: a sustentação continua.
     expect(pegarFicha('u').omniSustentacoes).toHaveLength(1);
   });
