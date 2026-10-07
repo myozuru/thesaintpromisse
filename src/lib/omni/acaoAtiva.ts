@@ -394,9 +394,18 @@ async function executarAcaoAtivaInterna(
   const armaDeclarada = JSON.stringify(arma);
   const validarInstancia = () => {
     if (!opcoes.instanciaId) return true;
-    const item = useInventoryStore.getState().items[opcoes.instanciaId];
     const usuario = useCharacterStore.getState().characters.find(c => c.id === usuarioId);
-    return !!item && !!usuario && item.ownerId === usuarioId && (!ent || item.entity.id === ent.id) && (ent?.categoria !== 'arma' ||
+    if (!usuario) return false;
+
+    // Feitiços, talentos, passivas, auras e técnicas podem existir nativamente
+    // na ficha via omniAtivos mesmo sem depender do exemplar físico original.
+    const vinculoFicha = (usuario.omniAtivos ?? []).some((v) =>
+      v.instanceId === opcoes.instanciaId && (!ent || v.entidadeId === ent.id)
+    );
+    if (vinculoFicha) return true;
+
+    const item = useInventoryStore.getState().items[opcoes.instanciaId];
+    return !!item && item.ownerId === usuarioId && (!ent || item.entity.id === ent.id) && (ent?.categoria !== 'arma' ||
       (usuario.mainHandWeaponInstanceId || usuario.offHandWeaponInstanceId
         ? usuario.mainHandWeaponInstanceId === item.instanceId || usuario.offHandWeaponInstanceId === item.instanceId
         : armaEstaEmpunhada(usuario, ent.replica ? item.replicaArma ?? '' : ent.nome)) && (!ent.replica || item.materializada));
@@ -743,16 +752,39 @@ async function executarAcaoAtivaInterna(
   return { ok: true, dano: danoTotal, cura: curaTotal, efeitoAplicado, detalhe: detalhes.join("\n") };
 }
 
-/** Ações ativas disponíveis ao personagem (itens do inventário dele). */
+/** Ações ativas disponíveis ao personagem: inventário + entidades OMNI vinculadas à ficha. */
 export function acoesAtivasDe(charId: string): { instanceId: string; ent: EntidadeOmni; cfg: AcaoAtivaConfig }[] {
   const out: { instanceId: string; ent: EntidadeOmni; cfg: AcaoAtivaConfig }[] = [];
+  const seen = new Set<string>();
+  const entidades = useOmniEntidadesStore.getState().entidades;
+  const inventario = useInventoryStore.getState().items;
   const char = useCharacterStore.getState().characters.find(c => c.id === charId);
-  for (const i of Object.values(useInventoryStore.getState().items)) {
+
+  const adicionar = (instanceId: string, ent: EntidadeOmni) => {
+    for (const cfg of ent.acoesAtivas ?? []) {
+      const key = ent.id + ':' + instanceId + ':' + cfg.id;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ instanceId, ent, cfg });
+    }
+  };
+
+  // Itens físicos continuam respeitando posse, empunhadura e materialização.
+  for (const i of Object.values(inventario)) {
     if (i.ownerId !== charId) continue;
-    const ent = useOmniEntidadesStore.getState().entidades[i.entity.id] ?? i.entity;
+    const ent = entidades[i.entity.id] ?? i.entity;
     if (ent.categoria === 'arma' && (!char || !armaEstaEmpunhada(char, ent.replica ? i.replicaArma ?? '' : ent.nome) || ent.replica && !i.materializada)) continue;
-    for (const cfg of ent.acoesAtivas ?? []) out.push({ instanceId: i.instanceId, ent, cfg });
+    adicionar(i.instanceId, ent);
   }
+
+  // Técnicas inatas / feitiços / talentos / auras vinculados à ficha também
+  // fornecem suas ações, mesmo que o exemplar físico original não exista mais.
+  for (const vinculo of char?.omniAtivos ?? []) {
+    const ent = entidades[vinculo.entidadeId];
+    if (!ent) continue;
+    adicionar(vinculo.instanceId, ent);
+  }
+
   return out;
 }
 
