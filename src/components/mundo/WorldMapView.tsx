@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { useBossStore } from '@/stores/useBossStore';
 import { canSeeField } from '@/lib/bosses';
+import { useQuestStore } from '@/stores/useQuestStore';
 import { BossGallery } from './BossGallery';
 import { BossSheetContent } from './BossSheet';
 import { BossPortrait } from './BossPortrait';
@@ -94,9 +95,21 @@ export function WorldMapView() {
   const dragRef = useRef<{ id: string; moved: boolean; dx: number; dy: number; sx: number; sy: number } | null>(null);
   const panRef = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
 
+  const questsMap = useQuestStore((s) => s.quests);
+  /** Situação do chefe nas quests: escondido (ninguém aceitou) ou misterioso ("?"). */
+  const questDoBoss = useMemo(() => {
+    const r: Record<string, { escondido: boolean; misterio: boolean }> = {};
+    for (const q of Object.values(questsMap)) {
+      if (q.deletedAt || q.alvo.tipo !== 'boss' || !q.alvo.bossId) continue;
+      const cur = r[q.alvo.bossId] ?? { escondido: true, misterio: false };
+      const aceita = q.status !== 'disponivel';
+      r[q.alvo.bossId] = { escondido: cur.escondido && !aceita, misterio: cur.misterio || (q.mascarada && !q.revelada) };
+    }
+    return r;
+  }, [questsMap]);
   const markers = useMemo(
-    () => worldMarkers.filter((m) => bosses[m.bossId]),
-    [worldMarkers, bosses, isMaster],
+    () => worldMarkers.filter((m) => bosses[m.bossId] && (isMaster || !questDoBoss[m.bossId]?.escondido)),
+    [worldMarkers, bosses, isMaster, questDoBoss],
   );
   const unplaced = Object.values(bosses).filter((b) => !worldMarkers.some((m) => m.bossId === b.id));
 
