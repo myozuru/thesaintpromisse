@@ -192,7 +192,7 @@ export function PlayerActionBar() {
       rapida: 'Ação Rápida',
       movimento: 'Movimento',
     };
-    return (activeChar.spells ?? []).map((sp) => {
+    const native = (activeChar.spells ?? []).map((sp) => {
       const at = sp.actionType;
       let disabled = false;
       let reason = '';
@@ -217,7 +217,7 @@ export function PlayerActionBar() {
       };
     });
 
-      return [...native, ...omniQuickEntries.filter((entry) => entry.omniCategory === 'feitico')];
+    return [...native, ...omniQuickEntries.filter((entry) => entry.omniCategory === 'feitico')];
   }, [activeChar, omniQuickEntries]);
 
 
@@ -228,7 +228,7 @@ export function PlayerActionBar() {
       ...((activeChar as any).chosenAuraAptitudes ?? []),
       ...((activeChar as any).chosenClAptitudes ?? []),
     ];
-    return ids
+    const base = ids
       .map((id) => {
         const a = getAuraAptitudeById(id);
         if (!a) return null;
