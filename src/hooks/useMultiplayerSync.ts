@@ -532,9 +532,14 @@ function aplicarRemoteInterno(slice: WorldSlice, data: unknown) {
       });
     }
     else if (slice === 'quests' && data && typeof data === 'object') {
-      const d = data as { quests?: Record<string, never>; murais?: Record<string, never> };
+      const d = data as { quests?: Record<string, never>; murais?: Record<string, never>; faccoes?: Record<string, never>; linhaTempo?: Record<string, never>; notas?: Record<string, never>; viagem?: { updatedAt?: number } };
       const cur = useQuestStore.getState();
-      useQuestStore.setState({ quests: mergeByUpdatedAt(cur.quests, d.quests ?? {}), murais: mergeByUpdatedAt(cur.murais, d.murais ?? {}) });
+      useQuestStore.setState({
+        quests: mergeByUpdatedAt(cur.quests, d.quests ?? {}), murais: mergeByUpdatedAt(cur.murais, d.murais ?? {}),
+        faccoes: mergeByUpdatedAt(cur.faccoes ?? {}, d.faccoes ?? {}), linhaTempo: mergeByUpdatedAt(cur.linhaTempo ?? {}, d.linhaTempo ?? {}),
+        notas: mergeByUpdatedAt(cur.notas ?? {}, d.notas ?? {}),
+        ...(d.viagem && (d.viagem.updatedAt ?? 0) > (cur.viagem?.updatedAt ?? 0) ? { viagem: d.viagem as typeof cur.viagem } : {}),
+      });
     }
     else if (slice === 'fog' && data && typeof data === 'object') {
       const d = data as { walls?: unknown; doors?: unknown; lights?: unknown };
