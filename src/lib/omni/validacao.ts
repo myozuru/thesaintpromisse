@@ -176,6 +176,8 @@ const AcaoAtivaSchema = z.object({
     municao: z.number().int().nonnegative().optional(), usos_item: z.number().int().nonnegative().optional(),
     gastar_cargas: z.object({ nome: z.string().trim().min(1), quantidade: z.string().min(1), minimo: z.number().int().positive().optional() }).optional(),
     tipo_acao: z.enum(['comum', 'bonus', 'reacao', 'movimento', 'livre', 'sustentada']).optional(), pe_por_turno: z.string().optional(),
+    gerar_cargas: z.object({ nome: z.string().trim().min(1), quantidade: z.string().min(1), modo: z.enum(['definir', 'somar']).optional() }).optional(),
+    alcance_sustentacao_m: z.number().finite().positive().optional(),
   }).optional(),
   mod_acerto: z.number().finite().optional(),
   tr_apos_acerto: z.boolean().optional(),

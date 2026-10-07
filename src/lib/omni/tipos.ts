@@ -292,6 +292,10 @@ export interface CustoRecursosAtivo {
   custo_pv?: string;
   tipo_acao?: 'comum' | 'bonus' | 'reacao' | 'movimento' | 'livre' | 'sustentada';
   pe_por_turno?: string;
+  /** Cria cargas num contador do usuário ao usar a ação (ex.: invocar 2 espíritos). */
+  gerar_cargas?: { nome: string; quantidade: string; modo?: 'definir' | 'somar' };
+  /** Sustentada: desfaz efeitos de um alvo que fique além desta distância (m) do usuário. */
+  alcance_sustentacao_m?: number;
 }
 
 export const GATILHOS_REACAO_IDS = [
