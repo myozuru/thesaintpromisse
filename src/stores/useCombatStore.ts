@@ -430,7 +430,12 @@ export const useCombatStore = create<CombatStore>()(
         });
         // Fase 2 — Aplica hook de início de turno para o 1º da iniciativa.
         const first = sorted[0];
-        if (first) useCharacterStore.getState().applyTurnStartSpecHooks(first.charId);
+        if (first) {
+          useCharacterStore.getState().applyTurnStartSpecHooks(first.charId);
+          import('@/lib/omni/auras').then(({ verificarAurasInicioTurno }) =>
+            verificarAurasInicioTurno(first.charId, 1),
+          );
+        }
         // 🆕 Reset do contador de toggles do slot de Venda ao iniciar combate.
         for (const e of sorted) {
           useCharacterStore.getState().updateCharacter(e.charId, {
@@ -609,6 +614,10 @@ export const useCombatStore = create<CombatStore>()(
             import('@/lib/suporteNivel6').then(({ expireApoiosGrantedBy }) => {
               expireApoiosGrantedBy(firstEntry.charId);
             });
+            // Auras corporais hostis: TR espacial no início do turno.
+            import('@/lib/omni/auras').then(({ verificarAurasInicioTurno }) =>
+              verificarAurasInicioTurno(firstEntry.charId, newRound),
+            );
             // TRs de fim de condição para o primeiro da nova rodada.
             enqueueConditionEndTRPrompts(firstEntry.charId);
             // Áreas Persistentes: decrementa a duração no início da rodada e aplica tick.
@@ -668,6 +677,10 @@ export const useCombatStore = create<CombatStore>()(
           import('@/lib/omni/eventBus').then(({ emitirEvento }) => {
             emitirEvento('noInicioDoTurno', { usuarioId: nextEntry.charId, incluirPassivas: true });
           });
+          // Auras corporais hostis: TR espacial no início do turno.
+          import('@/lib/omni/auras').then(({ verificarAurasInicioTurno }) =>
+            verificarAurasInicioTurno(nextEntry.charId, round),
+          );
           // TRs de fim de condição (modos tr_todo_round / ate_passar_tr).
           enqueueConditionEndTRPrompts(nextEntry.charId);
           // Áreas Persistentes — tick do turno (sem decremento de rodada).
