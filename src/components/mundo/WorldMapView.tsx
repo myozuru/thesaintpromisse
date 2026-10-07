@@ -320,7 +320,8 @@ export function WorldMapView() {
 
               {markers.map((m) => {
                 const b = bosses[m.bossId];
-                const showFace = b.retrato && canSeeField(b, 'retrato', isMaster);
+                const misterio = !isMaster && !!questDoBoss[m.bossId]?.misterio;
+                const showFace = !misterio && b.retrato && canSeeField(b, 'retrato', isMaster);
                 return (
                   <div
                     key={m.id}
@@ -329,7 +330,8 @@ export function WorldMapView() {
                   >
                     <button
                       type="button"
-                      title={b.nome}
+                      title={misterio ? '???' : b.nome}
+                      aria-label={misterio ? 'Marcador misterioso' : b.nome}
                       onPointerDown={(e) => {
                         e.stopPropagation();
                         if (!isMaster || e.button !== 0) return;
@@ -339,19 +341,21 @@ export function WorldMapView() {
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (dragRef.current?.moved) return;
+                        if (dragRef.current?.moved || misterio) return;
                         setOpenId(b.id);
                       }}
                       className={`flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border-2 bg-card shadow-lg transition-transform ${openId === b.id ? 'border-primary ring-2 ring-primary/50' : 'border-accent'} ${isMaster ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} ${!b.visivel ? 'opacity-60' : ''}`}
                     >
-                      {showFace ? (
+                      {misterio ? (
+                        <span className="text-xl font-bold text-accent">?</span>
+                      ) : showFace ? (
                         <BossPortrait boss={b} draggable={false} />
                       ) : (
                         <Skull className="h-5 w-5 text-accent" />
                       )}
                     </button>
                     <div className="pointer-events-none absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap rounded bg-background/85 px-1.5 py-0.5 text-xs font-semibold">
-                      {b.nome}
+                      {misterio ? '???' : b.nome}
                     </div>
                     {isMaster && (
                       <button
