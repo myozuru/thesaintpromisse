@@ -42,6 +42,8 @@ async def main():
 
         # Selecionar o mural para abrir o painel e então o Diário
         await pg.evaluate("window.__mapStore.setState({selectedIds:['mur']})"); await pg.wait_for_timeout(1000)
+        await pg.keyboard.press("Escape"); await pg.wait_for_timeout(500)
+        await pg.evaluate("window.__mapStore.setState({selectedIds:[]})"); await pg.wait_for_timeout(300)
         await pg.screenshot(path=S + "0_antes_diario.png")
         print("overlay presente:", await pg.locator("[data-npc-overlay]").count())
         print("botões no overlay:", await pg.locator("[data-npc-overlay] button").all_inner_texts() if await pg.locator("[data-npc-overlay]").count() else None)
