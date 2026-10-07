@@ -97,3 +97,10 @@
 - [x] Botão do Mestre "concluir missão": dinheiro repartido igualmente; item de recompensa dropado no chão de um player (sem duplicação)
 - [ ] Limitação conhecida: CD de pechincha e objetivo oculto ficam nos dados da mesa (legíveis a quem inspecionar); só ocultos na interface
 - [ ] Limitação conhecida: prazos vencidos e revelações só são aplicados quando o Mestre está com o site aberto
+
+## Diário, reputação, viagem e linha do tempo (out/2026)
+- [x] Diário de Quests do jogador (quests aceitas, prazo, recompensa, anotações; abas Reputação e Linha do tempo)
+- [x] Facções com reputação de grupo + individual; muda preços das lojas (loja recusa em Inimigo) e libera quests exclusivas
+- [x] Viagem no Mapa do Mundo: escala em km, transporte, avança o relógio, encontros sorteados só para o Mestre
+- [x] Linha do tempo automática (quests, viagens, encontros, eventos manuais) também lançada no Calendário
+- [ ] Testar no navegador os fluxos novos

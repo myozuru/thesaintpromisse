@@ -12,6 +12,7 @@ import { Plus, Trash2, Pencil, Store } from 'lucide-react';
 import { useShopStore } from '@/stores/useShopStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useMapStore } from '@/stores/useMapStore';
+import { useQuestStore } from '@/stores/useQuestStore';
 import { CategoriasPicker } from '@/components/economia/CategoriasPicker';
 import { PECHINCHA_PADRAO, HUMOR_LABEL, type PechinchaConfig, type HumorMercador } from '@/lib/economia/pechincha';
 
@@ -25,6 +26,7 @@ export function GerenciadorLojas({ aberto, onClose }: Props) {
   const shops = useMemo(() => Object.values(shopsMap).filter((s) => !s.deletedAt), [shopsMap]);
   const mapEntities = useMapStore((s) => s.entities);
   const npcs = useMemo(() => Object.values(mapEntities).filter((e) => !e.groundItem && e.label), [mapEntities]);
+  const faccoesMap = useQuestStore((s) => s.faccoes);
   const criar = useShopStore((s) => s.criar);
   const atualizar = useShopStore((s) => s.atualizar);
   const remover = useShopStore((s) => s.remover);
@@ -154,6 +156,14 @@ export function GerenciadorLojas({ aberto, onClose }: Props) {
                     {npcs.map((n) => <option key={n.id} value={n.id}>{n.label}</option>)}
                   </select>
                   <p className="text-xs text-muted-foreground mt-1">Jogadores abrem a loja clicando no NPC a até 1,5 m.</p>
+                </div>
+                <div>
+                  <Label>Facção da loja (reputação muda os preços)</Label>
+                  <select aria-label="Facção da loja" value={editando.faccaoId ?? ''} onChange={(e) => atualizar(editando.id, { faccaoId: e.target.value || null })}
+                    className="mt-1 h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
+                    <option value="">— nenhuma —</option>
+                    {Object.values(faccoesMap).filter((f) => !f.deletedAt).map((f) => <option key={f.id} value={f.id}>{f.emblema} {f.nome}</option>)}
+                  </select>
                 </div>
                 <PechinchaEditor cfg={editando.pechincha ?? PECHINCHA_PADRAO} onChange={(p) => atualizar(editando.id, { pechincha: p })} />
                 <div>

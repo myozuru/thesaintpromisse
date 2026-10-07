@@ -23,6 +23,8 @@ export interface Shop {
   buyMultiplier: number;
   /** Peça do mapa (NPC) que abre esta loja. */
   npcEntityId?: string | null;
+  /** Facção dona da loja: a reputação com ela muda os preços. */
+  faccaoId?: string | null;
   /** Configuração secreta de pechincha (nunca exibida ao jogador). */
   pechincha?: PechinchaConfig;
   createdAt: number;

@@ -12,6 +12,7 @@ import { useMoneyStore } from '@/stores/useMoneyStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { useChronosStore } from '@/stores/useChronosStore';
 import { toTimelineSeconds } from '@/lib/omni/tempo';
+import { EditorFaccoes, LinhaDoTempo } from './FaccoesTempo';
 import { ICONES_QUEST, STATUS_LABEL, formatarRestante, prazoEmSegundos, type IconeQuest } from '@/lib/economia/quests';
 
 export function GerenciadorQuests({ aberto, onClose, inicialId }: { aberto: boolean; onClose: () => void; inicialId?: string | null }) {
@@ -21,7 +22,7 @@ export function GerenciadorQuests({ aberto, onClose, inicialId }: { aberto: bool
   const quests = useMemo(() => Object.values(questsMap).filter((q) => !q.deletedAt).sort((a, b) => b.createdAt - a.createdAt), [questsMap]);
   const murais = useMemo(() => Object.values(muraisMap).filter((m) => !m.deletedAt), [muraisMap]);
   const [sel, setSel] = useState<string | null>(inicialId ?? null);
-  const [aba, setAba] = useState<'quests' | 'murais'>('quests');
+  const [aba, setAba] = useState<'quests' | 'murais' | 'faccoes' | 'tempo'>('quests');
   const entities = useMapStore((s) => s.entities);
   const pecas = Object.values(entities).filter((e) => !e.groundItem && e.label);
   const q = sel ? questsMap[sel] : undefined;
@@ -33,8 +34,10 @@ export function GerenciadorQuests({ aberto, onClose, inicialId }: { aberto: bool
         <div className="flex gap-2 border-b border-border pb-2">
           <Button size="sm" variant={aba === 'quests' ? 'default' : 'ghost'} onClick={() => setAba('quests')}>Quests</Button>
           <Button size="sm" variant={aba === 'murais' ? 'default' : 'ghost'} onClick={() => setAba('murais')}>Murais no mapa</Button>
+          <Button size="sm" variant={aba === 'faccoes' ? 'default' : 'ghost'} onClick={() => setAba('faccoes')}>Facções</Button>
+          <Button size="sm" variant={aba === 'tempo' ? 'default' : 'ghost'} onClick={() => setAba('tempo')}>Linha do tempo</Button>
         </div>
-        {aba === 'murais' ? (
+        {aba === 'faccoes' ? <EditorFaccoes /> : aba === 'tempo' ? <LinhaDoTempo editavel /> : aba === 'murais' ? (
           <div className="space-y-2 overflow-y-auto">
             <Button size="sm" onClick={() => st.criarMural('Mural da cidade')}>+ Novo mural</Button>
             {murais.map((m) => (
@@ -76,6 +79,8 @@ function EditorQuest({ q, murais, onRemover }: { q: Quest; murais: { id: string;
   const entidades = useOmniEntidadesStore((s) => s.entidades);
   const itens = Object.values(entidades).filter((e) => e.categoria === 'item' || e.categoria === 'arma');
   const currencies = useMoneyStore((s) => s.currencies);
+  const faccoesMap = useQuestStore((s) => s.faccoes);
+  const faccoes = Object.values(faccoesMap).filter((f) => !f.deletedAt);
   const agora = toTimelineSeconds(useChronosStore());
   const [dias, setDias] = useState(3), [horas, setHoras] = useState(0);
   const [itemAdd, setItemAdd] = useState('');
@@ -132,6 +137,18 @@ function EditorQuest({ q, murais, onRemover }: { q: Quest; murais: { id: string;
         {q.recompensa.itens.map((id, i) => <div key={`${id}-${i}`} className="flex items-center gap-2 text-xs">• {entidades[id]?.nome ?? 'Item removido'}
           <button type="button" className="text-destructive" onClick={() => up({ recompensa: { ...q.recompensa, itens: q.recompensa.itens.filter((_, j) => j !== i) } })}>remover</button></div>)}
         <p className="text-xs text-muted-foreground">O dinheiro é dividido igualmente; os itens caem no chão perto de um jogador ao concluir.</p>
+      </div>
+      <div className="rounded border border-border p-2 space-y-2">
+        <b>Facção e reputação</b>
+        <div className="grid grid-cols-3 gap-2">
+          <label className="text-xs">Facção
+            <select aria-label="Facção da quest" value={q.faccaoId ?? ''} onChange={(e) => up({ faccaoId: e.target.value || null })} className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
+              <option value="">— nenhuma —</option>{faccoes.map((f) => <option key={f.id} value={f.id}>{f.emblema} {f.nome}</option>)}
+            </select></label>
+          <label className="text-xs">Reputação ao concluir<Input type="number" aria-label="Reputação ao concluir" value={q.repRecompensa ?? 0} onChange={(e) => up({ repRecompensa: Number(e.target.value) || 0 })} /></label>
+          <label className="text-xs">Exclusiva: rep. mínima<Input type="number" aria-label="Reputação mínima" placeholder="livre" value={q.repMinima ?? ''} onChange={(e) => up({ repMinima: e.target.value === '' ? null : Number(e.target.value) })} /></label>
+        </div>
+        <p className="text-xs text-muted-foreground">Concluir dá a reputação ao grupo e a cada participante; falhar tira metade. Com mínimo, só quem tem essa reputação (grupo + própria) vê o cartaz.</p>
       </div>
       <div className="rounded border border-border p-2 space-y-2">
         <b>Prazo (tempo do mundo)</b>

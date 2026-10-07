@@ -2,6 +2,8 @@
  * Modal de Comércio: Comprar / Vender, com moeda por item, categorias aceitas
  * e pechincha secreta (o jogador só vê o resultado narrado, nunca a CD).
  */
+import { useQuestStore } from '@/stores/useQuestStore';
+import { nivelReputacao, repEfetiva } from '@/lib/economia/reputacao';
 import { useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -46,6 +48,7 @@ export function ShopModal({ aberto, onClose, shopId, characterId }: Props) {
   const grant = useMoneyStore((s) => s.masterGrant);
   const chronos = useChronosStore();
   const dia = diaDoMundo(toTimelineSeconds(chronos));
+  const faccoes = useQuestStore((s) => s.faccoes);
 
   const [tab, setTab] = useState<'comprar' | 'vender'>('comprar');
   const [pericia, setPericia] = useState('');
@@ -56,7 +59,10 @@ export function ShopModal({ aberto, onClose, shopId, characterId }: Props) {
   if (!shop || shop.deletedAt || !character || !walletId) return null;
 
   const cfg = shop.pechincha ?? PECHINCHA_PADRAO;
-  const ajuste = ajusteVigente(estadoP, dia);
+  const faccao = shop.faccaoId ? faccoes[shop.faccaoId] : undefined;
+  const nivelRep = faccao && !faccao.deletedAt ? nivelReputacao(repEfetiva(faccao, character.id)) : null;
+  const recusa = nivelRep?.ajustePreco === null;
+  const ajuste = ajusteVigente(estadoP, dia) + (nivelRep?.ajustePreco ?? 0);
   const restantes = tentativasRestantes(cfg, estadoP, dia);
   const periciasDisp = cfg.pericias.filter((p) => character.skills.some((s) => s.name === p));
   const wallet = wallets.find((w) => w.id === walletId);
@@ -68,7 +74,7 @@ export function ShopModal({ aberto, onClose, shopId, characterId }: Props) {
 
   const comprar = (entityId: string) => {
     const ent = entidades[entityId];
-    if (!ent) return;
+    if (!ent || recusa) return;
     const cur = moeda(moedaDoItem(ent, shop));
     const price = precoAjustado(ent.comercio?.basePrice ?? 0, ajuste, 'comprar');
     if (saldo(cur.id) < price) { toast({ title: 'Saldo insuficiente', description: `${cur.symbol}${price} necessário.`, variant: 'destructive' }); return; }
@@ -79,7 +85,7 @@ export function ShopModal({ aberto, onClose, shopId, characterId }: Props) {
 
   const vender = (instanceId: string) => {
     const inst = inventory.find((i) => i.instanceId === instanceId);
-    if (!inst) return;
+    if (!inst || recusa) return;
     const v = canSellItemToShop(inst.entity, shop);
     if (!v.ok) { toast({ title: 'Venda bloqueada', description: v.reason, variant: 'destructive' }); return; }
     const cur = moeda(moedaDoItem(inst.entity, shop));
@@ -120,7 +126,13 @@ export function ShopModal({ aberto, onClose, shopId, characterId }: Props) {
           {shop.description && <p className="text-xs text-muted-foreground italic">{shop.description}</p>}
         </DialogHeader>
 
-        {cfg.ativa && (
+        {faccao && nivelRep && (
+          <div className={`rounded-md border p-2 text-sm ${recusa ? 'border-destructive/60 text-destructive' : 'border-border/60'}`} data-reputacao-loja>
+            {faccao.emblema} {faccao.nome}: <b>{nivelRep.nome}</b>
+            {recusa ? ' — o mercador se recusa a negociar com você.' : nivelRep.ajustePreco ? ` — preços ${nivelRep.ajustePreco < 0 ? `${-nivelRep.ajustePreco}% menores` : `${nivelRep.ajustePreco}% maiores`} pela sua reputação.` : ''}
+          </div>
+        )}
+        {cfg.ativa && !recusa && (
           <div className="rounded-md border border-border/60 bg-card/50 p-2 flex flex-wrap items-center gap-2 text-sm" data-pechincha>
             <Handshake className="h-4 w-4 text-primary" />
             <b>Pechinchar</b>
