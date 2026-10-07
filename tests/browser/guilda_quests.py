@@ -34,6 +34,7 @@ async def main():
         await c.route("**/*", guard); await c.route_web_socket("**/*", lambda ws: ws.close())
         await pg.goto("http://localhost:8080")
         await pg.evaluate(f"localStorage.setItem({json.dumps(os.environ['LOVABLE_BROWSER_SUPABASE_STORAGE_KEY'])},{json.dumps(os.environ['LOVABLE_BROWSER_SUPABASE_SESSION_JSON'])})")
+        await pg.evaluate("localStorage.setItem('mapa.tutorial.seen','1')")
         await pg.goto("http://localhost:8080"); await pg.wait_for_timeout(6000)
         await pg.mouse.click(640, 400); await pg.wait_for_timeout(2000)
         mapa = pg.get_by_text("Mapa", exact=True)
