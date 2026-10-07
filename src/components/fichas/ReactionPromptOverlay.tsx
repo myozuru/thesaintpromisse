@@ -19,6 +19,8 @@ import { useCombatStore } from '@/stores/useCombatStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { DAMAGE_TYPE_LABELS, type DamageType } from '@/types';
 import { rollDiceCom } from '@/lib/dice';
+import { parseDados } from '@/lib/omni/acaoAtiva';
+import { resolverTipoDano } from '@/lib/omni/contextoDano';
 import { X, Shield, Flame, Crosshair, Skull, Sparkles, Hourglass, ShieldPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { playSuccessSound, playErrorSound, playClickSound } from '@/lib/sounds';
@@ -212,6 +214,34 @@ export function ReactionPromptOverlay() {
             const bonus = (stEntry?.value || 0) + attrMod;
             const r = acceptEffect ? null : await rollDiceCom(p.charId, '1d20');
             const passed = r ? (r.total + bonus) >= dc : false;
+
+            if (p.kind === 'aura_start_turn_tr_offer') {
+              if (passed) {
+                playSuccessSound();
+                addLog('combat', `✅ ${c.name}: TR vs ${p.payload?.zoneLabel ?? 'aura'} — SUCESSO. Nenhum dano.`);
+              } else {
+                playErrorSound();
+                const plano = parseDados(p.payload?.auraDamageFormula);
+                let total = plano.fixo;
+                const rollerId = p.payload?.auraOwnerId ?? p.charId;
+                for (const grupo of plano.grupos) {
+                  const dr = await rollDiceCom(rollerId, `${grupo.count}d${grupo.sides}`);
+                  total += dr.total;
+                }
+                const tipo = resolverTipoDano(p.payload?.auraDamageType) ?? 'DQ';
+                if (total > 0) {
+                  applyDamage(p.charId, total, tipo as DamageType, {
+                    attackerId: p.payload?.auraOwnerId,
+                    tags: ['__omni_aura_start_turn'],
+                  });
+                }
+                addLog('combat', `❌ ${c.name}: TR vs ${p.payload?.zoneLabel ?? 'aura'} — FALHA. Sofre ${Math.max(0, total)} de dano.`);
+              }
+              if (acceptEffect) addLog('combat', `${c.name}: aceitou o efeito de ${p.payload?.zoneLabel ?? 'aura'} sem rolar TR.`);
+              dismiss(p.id);
+              return;
+            }
+
             // Resolve via map store: aplica dano/condição se falhou, marca imune se passou.
             const { useMapStore } = await import('@/stores/useMapStore');
             const mp = useMapStore.getState();
@@ -322,7 +352,7 @@ function PromptCard({
     p.kind === 'fah_anatomia_incompr_offer' ? Shield :
     p.kind === 'cobrir_se_offer' ? ShieldPlus :
     p.kind === 'condition_end_tr_offer' ? Hourglass :
-    p.kind === 'persistent_area_tr_offer' ? Hourglass :
+    (p.kind === 'persistent_area_tr_offer' || p.kind === 'aura_start_turn_tr_offer') ? Hourglass :
     Skull;
 
   return (
@@ -493,10 +523,11 @@ function PromptCard({
         </div>
       )}
 
-      {p.kind === 'persistent_area_tr_offer' && (
+      {(p.kind === 'persistent_area_tr_offer' || p.kind === 'aura_start_turn_tr_offer') && (
         <div className="space-y-1.5">
           <div className="text-xs text-muted-foreground">
-            Zona: <span className="font-semibold">{p.payload?.zoneLabel ?? 'área persistente'}</span>
+            {p.kind === 'aura_start_turn_tr_offer' ? 'Aura' : 'Zona'}: <span className="font-semibold">{p.payload?.zoneLabel ?? (p.kind === 'aura_start_turn_tr_offer' ? 'aura' : 'área persistente')}</span>
+            {p.kind === 'aura_start_turn_tr_offer' && ' — TR automático do início do turno enquanto estiver dentro do raio.'}
             {p.payload?.zoneTRMode === 'uma_vez' && ' — TR uma vez ao entrar (imune se passar).'}
             {p.payload?.zoneTRMode === 'todo_round' && ' — TR a cada round (imune se passar).'}
             {p.payload?.zoneTRMode === 'todo_turno' && ' — TR a cada turno enquanto dentro.'}
@@ -506,7 +537,7 @@ function PromptCard({
               onClick={() => onPersistentAreaTR()}
               className="flex-1 text-xs px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
             >
-              ⏳ Rolar TR vs zona
+              🎲 Rolar TR
             </button>
             <button
               onClick={() => onPersistentAreaTR(true)}
