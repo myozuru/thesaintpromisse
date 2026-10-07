@@ -23,6 +23,8 @@ import { useRoleStore } from '@/stores/useRoleStore';
 import { useProfileStore } from '@/stores/useProfileStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { getReactionsAvailable } from '@/lib/reactionBudget';
+import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
+import { acoesAtivasDe } from '@/lib/omni/acaoAtiva';
 import { findMyCharacter } from '@/lib/myCharacter';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
@@ -47,6 +49,8 @@ interface ListEntry {
   meta?: string;
   disabled?: boolean;
   disabledReason?: string;
+  source?: 'native' | 'omni';
+  omniCategory?: string;
 }
 
 
@@ -59,6 +63,7 @@ export function PlayerActionBar() {
   const currentTurnIndex = useCombatStore((s) => s.currentTurnIndex);
   const freeformMode = useCombatStore((s) => s.freeformMode);
   const inventoryMap = useInventoryStore((s) => s.items);
+  const omniEntidades = useOmniEntidadesStore((s) => s.entidades);
 
   const [open, setOpen] = useState<Category | null>(null);
   const [castingSpell, setCastingSpell] = useState<Spell | null>(null);
@@ -112,6 +117,30 @@ export function PlayerActionBar() {
     return false;
   }, [role, inCombat, activeChar, myChar, activeProfileId]);
 
+
+  const omniAcaoLabel: Record<string, string> = {
+    comum: 'Ação Comum', bonus: 'Ação Bônus', reacao: 'Reação', movimento: 'Movimento', livre: 'Ação Livre',
+  };
+
+  const omniQuickEntries: ListEntry[] = useMemo(() => {
+    if (!activeChar) return [];
+    const seen = new Set<string>();
+    return acoesAtivasDe(activeChar.id)
+      .filter((a) => a.ent.categoria !== 'arma')
+      .filter((a) => {
+        const key = a.ent.id + ':' + a.cfg.id;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .map((a) => ({
+        id: 'omni-ativa:' + a.ent.id + ':' + a.cfg.id,
+        name: a.cfg.nome || a.ent.nome,
+        meta: (omniAcaoLabel[a.cfg.acao] ?? a.cfg.acao) + ' • PE ' + a.cfg.custoPE + (a.cfg.alcanceM > 0 ? ' • ' + String(a.cfg.alcanceM).replace('.', ',') + ' m' : ''),
+        description: a.ent.nome + (a.ent.descricao ? ' · ' + a.ent.descricao : ''),
+        source: 'omni' as const, omniCategory: a.ent.categoria,
+      }));
+  }, [activeChar, omniEntidades]);
 
   // ─── Listas por categoria ──────────────────────────────────────────────
   const attackEntries: ListEntry[] = useMemo(() => {
@@ -187,7 +216,9 @@ export function PlayerActionBar() {
         disabledReason: reason,
       };
     });
-  }, [activeChar]);
+
+      return [...native, ...omniQuickEntries.filter((entry) => entry.omniCategory === 'feitico')];
+  }, [activeChar, omniQuickEntries]);
 
 
 
@@ -209,7 +240,8 @@ export function PlayerActionBar() {
         } as ListEntry;
       })
       .filter(Boolean) as ListEntry[];
-  }, [activeChar]);
+    return [...base, ...omniQuickEntries.filter((entry) => entry.omniCategory !== 'feitico')];
+  }, [activeChar, omniQuickEntries]);
 
   const specialEntries: ListEntry[] = useMemo(() => {
     if (!activeChar) return [];
