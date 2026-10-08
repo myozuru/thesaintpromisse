@@ -76,6 +76,10 @@ async function ativa(cfg: Partial<AcaoAtivaConfig>, tipoArma = 'Psíquico') {
   const inst = useInventoryStore.getState().listByOwner('u')[0];
   useInventoryStore.setState({ items: { [inst.instanceId]: { ...inst, entity: ent } } });
   render(<AcoesAtivasSection charId="u" />);
+  fireEvent.click(screen.getByRole('button', { name: /Corte/ }));
+  if (cfg.custo_recursos?.gastar_cargas?.quantidade === 'todas') {
+    fireEvent.change(screen.getByLabelText('Cargas de Corte'), { target: { value: '3' } });
+  }
   fireEvent.click(screen.getByRole('button', { name: 'Usar' }));
   act(() => clicarAlvoMapa('e-a'));
 }
