@@ -17,6 +17,17 @@ jobs:
       - run: bun install --no-save
       - run: bunx tsc --noEmit
 
+  regression-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --no-save
+      - run: bunx vitest run src/test/GuiaFormulasDialog.test.tsx src/test/omniAttackMetadata.test.tsx src/test/omniCondicionaisAtivos.test.tsx src/test/omniDanoAuditoria.test.tsx src/test/omniGuiaAuditoria.test.tsx src/test/omniNaturalInventoryAudit.test.ts
+
   omni-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 10
