@@ -362,7 +362,7 @@ export function armaDaAcao(u: Character, ent?: EntidadeOmni, instanciaId?: strin
 const acoesEmCurso = new Set<string>();
 export async function executarAcaoAtiva(
   usuarioId: string, cfg: AcaoAtivaConfig, selecao: SelecaoAtiva, ent?: EntidadeOmni,
-  opcoes: OpcoesMovimentoAtivo & { intensificacoes?: number; ignorarReacoes?: boolean; instanciaId?: string } = {},
+  opcoes: OpcoesMovimentoAtivo & { intensificacoes?: number; ignorarReacoes?: boolean; instanciaId?: string; cargasSelecionadas?: number } = {},
 ): Promise<ResultadoAtiva> {
   if (acoesEmCurso.has(usuarioId)) return { ok: false, reason: 'Este personagem já está executando uma ação.' };
   acoesEmCurso.add(usuarioId);
@@ -376,7 +376,7 @@ async function executarAcaoAtivaInterna(
   cfg: AcaoAtivaConfig,
   selecao: SelecaoAtiva,
   ent?: EntidadeOmni,
-  opcoes: OpcoesMovimentoAtivo & { intensificacoes?: number; ignorarReacoes?: boolean; instanciaId?: string } = {},
+  opcoes: OpcoesMovimentoAtivo & { intensificacoes?: number; ignorarReacoes?: boolean; instanciaId?: string; cargasSelecionadas?: number } = {},
 ): Promise<ResultadoAtiva> {
   const inicio = useCharacterStore.getState().characters.find(c => c.id === usuarioId);
   const armaInicial = inicio ? armaDaAcao(inicio, ent, opcoes.instanciaId) : undefined;
@@ -415,7 +415,7 @@ async function executarAcaoAtivaInterna(
     ? u.mainHandWeaponInstanceId !== opcoes.instanciaId && u.offHandWeaponInstanceId !== opcoes.instanciaId
     : !armaEstaEmpunhada(u, ent.replica ? replicaWeaponName(ent) ?? ent.nome : ent.nome))) return { ok: false, reason: 'Empunhe a arma antes de usar a ação.' };
   const armaInstanciaId = ent?.categoria === 'arma' ? opcoes.instanciaId : u.mainHandWeaponInstanceId ?? undefined;
-  const contextoCustos: ContextoCustosAtivos = { armaNome: arma?.name, armaInstanciaId, instanciaId: opcoes.instanciaId, entidadeId: ent?.id };
+  const contextoCustos: ContextoCustosAtivos = { armaNome: arma?.name, armaInstanciaId, instanciaId: opcoes.instanciaId, entidadeId: ent?.id, cargasSelecionadas: opcoes.cargasSelecionadas };
   let alvos = escolhidos.ids.map(id => store.characters.find(c => c.id === id)!);
   for (const alvo of alvos) {
     const chk = podeUsarAtiva(u, alvo, cfg, opcoes.intensificacoes ?? 0, arma, contextoCustos, medicaoAlcance);
@@ -614,13 +614,13 @@ async function executarAcaoAtivaInterna(
       }
     }
 
-    if (cfg.tipo_efeito === 'cura') {
+    if (cfg.tipo_efeito === 'cura' || cfg.cura?.trim()) {
       const r = avaliarFormulaAtiva(cfg.cura || '0', u, t, arma);
       if (r.diagnosticos.length || !Number.isFinite(r.valor)) {
         const msg = `⛔ ${cfg.nome}: fórmula de recuperação inválida para ${t.name}.`;
         log(msg); detalhes.push(msg); continue;
       }
-      const valor = Math.max(0, Math.floor(r.valor));
+      const valor = Math.max(0, Math.floor(r.valor) * (p.contador && cargas > 0 ? cargas : 1));
       const atual = useCharacterStore.getState().characters.find(c => c.id === t.id)!;
       const recurso = cfg.recurso_cura ?? 'pv';
       const antes = recurso === 'pv' ? atual.hpCurrent : atual.peCurrent;
@@ -630,12 +630,12 @@ async function executarAcaoAtivaInterna(
       const recuperado = Math.max(0, (recurso === 'pv' ? depois.hpCurrent : depois.peCurrent) - antes);
       curaTotal += recuperado;
       efeitoAplicado ||= recuperado > 0;
-      const notas = aplicarEfeitos(u, depois, cfg.efeitos ?? [], fonte, movimentos.planos.get(t.id), sustentadas, arma, ent?.id, opcoes.instanciaId);
+      const notas = cfg.tipo_efeito === 'cura' ? aplicarEfeitos(u, depois, cfg.efeitos ?? [], fonte, movimentos.planos.get(t.id), sustentadas, arma, ent?.id, opcoes.instanciaId) : [];
       efeitoAplicado ||= notas.length > 0;
       const dados = r.rolagens.map(d => `${d.notacao} [${d.rolls.join(', ')}] = ${d.total}`).join('; ');
       const msg = `✨ ${u.name} usa ${cfg.nome} (${pago}) em ${t.name}: recupera ${recuperado} ${recurso.toUpperCase()} (valor ${valor}${dados ? '; ' + dados : ''})${notas.length ? ' · ' + notas.join(' · ') : ''}.`;
       log(msg); detalhes.push(msg);
-      continue;
+      if (cfg.tipo_efeito === 'cura') continue;
     }
 
     if (cfg.teste === 'disputa') {
@@ -665,7 +665,11 @@ async function executarAcaoAtivaInterna(
     const extraIntensificacao = planejarDano(undefined, notacaoDanoAtivo(cfg.tipo_efeito === 'buff' ? undefined : cfg.custo_recursos?.dano_por_intensificacao, u, t, arma), p.intensificacoes, false);
     const danoConfigurado = (cfg.tipo_efeito === 'buff' ? [] : [cfg.dano, ...mods.danos, ...extraIntensificacao.grupos.map(g => `${g.count}d${g.sides}`), extraIntensificacao.fixo ? String(extraIntensificacao.fixo) : '', desfechoTR?.dano_extra])
       .filter(Boolean).map(d => danoComContextoArma(d, arma, u)).filter((d): d is string => !!d).join('+');
-    const plano = planejarDano(notacaoDanoAtivo(danoConfigurado, u, t, arma), notacaoDanoAtivo(cfg.tipo_efeito === 'buff' ? undefined : cfg.dadosPorCarga, u, t, arma), cargas, critico, (arma?.critMultiplier ?? 2) + mods.multiplicador);
+    const baseDano = notacaoDanoAtivo(danoConfigurado, u, t, arma);
+    // Escalonamento automático apenas sem a configuração explícita dadosPorCarga.
+    const vezes = p.contador && cargas > 1 && !cfg.dadosPorCarga?.trim() ? cargas : 1;
+    const danoEscalonado = vezes > 1 ? Array.from({ length: vezes }, () => baseDano).join('+') : baseDano;
+    const plano = planejarDano(danoEscalonado, notacaoDanoAtivo(cfg.tipo_efeito === 'buff' ? undefined : cfg.dadosPorCarga, u, t, arma), cargas, critico, (arma?.critMultiplier ?? 2) + mods.multiplicador);
     const formulasComArma = [cfg.dano, ...mods.danos, desfechoTR?.dano_extra].filter(Boolean).join('+');
     const armaJaNaFormula = /@ARMA\.DANO/i.test(formulasComArma);
     const danoArmaAplicado = armaJaNaFormula ? 0 : armaDano;
