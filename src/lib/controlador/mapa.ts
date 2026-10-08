@@ -129,3 +129,56 @@ export function comandarReposicionamento(donoId: string, invocacaoId: string, di
   useCharacterStore.getState().updateCharacter(donoId, { bonusActionsCurrent: dono.bonusActionsCurrent - 1 });
   return { ok: true };
 }
+
+
+const ataquesPendentes = new Set<string>();
+
+/** Ataque de servo comandado no turno do Controlador. O alvo utiliza uma ficha
+ * real, portanto o dano percorre applyDamage (reações, RD e demais regras).
+ */
+export async function comandarAtaque(donoId: string, invocacaoId: string, acaoId: string, alvoId: string):
+  Promise<{ ok: true; acertou: boolean; totalAtaque: number; dano: number } | { ok: false; motivo: string }> {
+  const chave = donoId + ':' + invocacaoId;
+  if (ataquesPendentes.has(chave)) return { ok: false, motivo: 'Comando anterior ainda em andamento.' };
+  const dono = useCharacterStore.getState().characters.find(c => c.id === donoId);
+  if (!dono || dono.specialization !== 'Controlador') return { ok: false, motivo: 'Controlador inválido.' };
+  if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
+  if ((dono.actionsCurrent ?? 0) < 1) return { ok: false, motivo: 'Ação Comum indisponível.' };
+  const inv = dono.invocacoesConhecidas?.find(i => i.id === invocacaoId && i.donoCharacterId === donoId);
+  const acao = inv?.acoes.find(a => a.id === acaoId && a.tipo === 'ataque');
+  if (!acao || !acao.dano) return { ok: false, motivo: 'Ataque não configurado para esta invocação.' };
+  const mapa = useMapStore.getState();
+  const servo = tokensInvocados(donoId).find(e => e.invocationId === invocacaoId && (e.hp ?? 0) > 0);
+  const alvo = useCharacterStore.getState().characters.find(c => c.id === alvoId);
+  const tokenAlvo = Object.values(mapa.entities).find(e => e.characterId === alvoId && !e.invocationId);
+  if (!servo || !alvo || !tokenAlvo || alvoId === donoId) return { ok: false, motivo: 'Servo ou alvo ausente do mapa.' };
+  const escala = mapa.gridConfig.metersPerCell / mapa.gridConfig.dpi;
+  if (!(escala > 0)) return { ok: false, motivo: 'Grade inválida.' };
+  const distancia = Math.hypot((servo.x + servo.w / 2) - (tokenAlvo.x + tokenAlvo.w / 2),
+    (servo.y + servo.h / 2) - (tokenAlvo.y + tokenAlvo.h / 2)) * escala;
+  if (distancia > (acao.alcanceM ?? 1.5) + 1e-6) return { ok: false, motivo: 'Alvo fora do alcance.' };
+  const notacao = acao.dano.replace(/\s+/g, '');
+  if (!/^\d+d(?:4|6|8|10|12|20)(?:\+\d+)?$/i.test(notacao)) return { ok: false, motivo: 'Dano inválido; configure NdN ou NdN+N.' };
+  const [dados, bonusStr] = notacao.split('+');
+  const quantidade = parseInt(dados.split('d')[0], 10);
+  if (quantidade < 1 || quantidade > 40) return { ok: false, motivo: 'Quantidade de dados inválida.' };
+  ataquesPendentes.add(chave);
+  // Reserva uma única Ação Comum antes de qualquer espera de dados 3D.
+  useCharacterStore.getState().updateCharacter(donoId, { actionsCurrent: dono.actionsCurrent - 1 });
+  try {
+    const { rollD20Com, rollDiceCom } = await import('@/lib/dice');
+    const natural = await rollD20Com(donoId, 0, { label: 'Ataque de ' + inv!.nome + ': ' + acao.nome });
+    const totalAtaque = natural;
+    const acertou = natural === 20 || (natural !== 1 && totalAtaque >= (alvo.ca ?? 10));
+    if (!acertou) return { ok: true, acertou: false, totalAtaque, dano: 0 };
+    const rolagem = await rollDiceCom(donoId, dados, { label: 'Dano de ' + inv!.nome });
+    const dano = rolagem.total + Number(bonusStr ?? 0);
+    await useCharacterStore.getState().applyDamage(alvoId, dano, 'DCO', { attackerId: donoId });
+    return { ok: true, acertou: true, totalAtaque, dano };
+  } catch {
+    // A execução pode ter chegado ao dano antes da falha. Não duplicar ação nem dano.
+    return { ok: false, motivo: 'Falha ao resolver ataque; confira o log de combate.' };
+  } finally {
+    ataquesPendentes.delete(chave);
+  }
+}
