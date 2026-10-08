@@ -203,6 +203,22 @@ function vars(u: Character, a?: Character, arma?: Weapon) {
   };
 }
 
+/** Em efeitos de cura, atributos sem prefixo mod_ significam modificador d20.
+ * Fora deste contexto, FOR/SAB/etc. continuam expondo o valor bruto.
+ */
+function normalizarAtributosCura(expr: string): string {
+  return expr.replace(/@(USUARIO|ALVO)\.(for|des|con|int|sab|pre|car|forca|destreza|constituicao|inteligencia|sabedoria|presenca|carisma)\b/gi,
+    (_todo, escopo: string, atributo: string) => {
+      const chaves: Record<string, string> = {
+        for: 'for', forca: 'for', des: 'des', destreza: 'des',
+        con: 'con', constituicao: 'con', int: 'int', inteligencia: 'int',
+        sab: 'sab', sabedoria: 'sab', pre: 'pre', presenca: 'pre',
+        car: 'car', carisma: 'car',
+      };
+      return `@${escopo}.mod_${chaves[atributo.toLowerCase()]}`;
+    });
+}
+
 function avaliarFormulaAtiva(expressao: string, u: Character, alvo?: Character, arma?: Weapon, rng?: () => number) {
   return avaliarFormula(expressao, vars(u, alvo, arma), rng, { arma: danoArmaBase(arma, u) });
 }
@@ -615,12 +631,17 @@ async function executarAcaoAtivaInterna(
     }
 
     if (cfg.tipo_efeito === 'cura' || cfg.cura?.trim()) {
-      const r = avaliarFormulaAtiva(cfg.cura || '0', u, t, arma);
-      if (r.diagnosticos.length || !Number.isFinite(r.valor)) {
+      const formulaCura = normalizarAtributosCura(cfg.cura || '0');
+      // Separa os dados da parcela fixa, como no motor de dano. A animação
+      // 3D é resolvida uma vez por uso, antes de aplicar a recuperação.
+      const planoCura = planejarFormulaDano(formulaCura, parcela => avaliarFormulaAtiva(parcela, u, t, arma));
+      if (!Number.isFinite(planoCura.fixo) || planoCura.grupos.some(g => !Number.isSafeInteger(g.count) || g.count <= 0 || !Number.isSafeInteger(g.sides) || g.sides <= 0)) {
         const msg = `⛔ ${cfg.nome}: fórmula de recuperação inválida para ${t.name}.`;
         log(msg); detalhes.push(msg); continue;
       }
-      const valor = Math.max(0, Math.floor(r.valor) * (p.contador && cargas > 0 ? cargas : 1));
+      const rolado = planoCura.grupos.length ? await rollDiceGroups(planoCura.grupos, { label: `Cura: ${cfg.nome}` }) : null;
+      const multiplicador = p.contador && cargas > 0 ? cargas : 1;
+      const valor = Math.max(0, Math.floor(planoCura.fixo + (rolado?.total ?? 0)) * multiplicador);
       const atual = useCharacterStore.getState().characters.find(c => c.id === t.id)!;
       const recurso = cfg.recurso_cura ?? 'pv';
       const antes = recurso === 'pv' ? atual.hpCurrent : atual.peCurrent;
@@ -632,7 +653,7 @@ async function executarAcaoAtivaInterna(
       efeitoAplicado ||= recuperado > 0;
       const notas = cfg.tipo_efeito === 'cura' ? aplicarEfeitos(u, depois, cfg.efeitos ?? [], fonte, movimentos.planos.get(t.id), sustentadas, arma, ent?.id, opcoes.instanciaId) : [];
       efeitoAplicado ||= notas.length > 0;
-      const dados = r.rolagens.map(d => `${d.notacao} [${d.rolls.join(', ')}] = ${d.total}`).join('; ');
+      const dados = rolado?.groups.map(g => `${g.count}d${g.sides} [${g.rolls.join(', ')}] = ${g.total}`).join('; ') ?? '';
       const msg = `✨ ${u.name} usa ${cfg.nome} (${pago}) em ${t.name}: recupera ${recuperado} ${recurso.toUpperCase()} (valor ${valor}${dados ? '; ' + dados : ''})${notas.length ? ' · ' + notas.join(' · ') : ''}.`;
       log(msg); detalhes.push(msg);
       if (cfg.tipo_efeito === 'cura') continue;
