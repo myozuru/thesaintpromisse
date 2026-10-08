@@ -22,7 +22,10 @@ export interface InvocacaoControlador {
     nome: string;
     tipo: 'ataque' | 'habilidade' | 'movimento' | 'bonus';
     alcanceM?: number;
+    /** Bônus específico de acerto do servo, sem herdar o acerto do Controlador. */
+    bonusAtaque?: number;
     dano?: string;
+    tipoDano?: import('@/types').DamageType;
     entidadeOmniId?: string;
   }>;
 }
