@@ -192,8 +192,9 @@ export function recalcPeMaxFromHistory(
   attrs: Attribute[],
   bonusPeExternal = 0,
   _level = 1,
+  keyAttribute?: string | null,
 ): number {
-  const keyName = getKeyAttrForSpec(spec);
+  const keyName = getKeyAttrForSpec(spec, keyAttribute);
   let keyMod = 0;
   if (keyName) {
     const value = attrs.find((a) => a.name === keyName)?.value ?? 10;
