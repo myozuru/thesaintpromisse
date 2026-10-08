@@ -2,6 +2,8 @@ import { exemplarEstaEmpunhado } from './exemplarArma';
 import { resolverCondicaoOmni } from './condicaoDoSistema';
 import { notificarEventoPersonagem } from './notificarEvento';
 import { planejarFormulaDano } from './planoDano';
+import { normalizarAtributosCura, registrarEfeitoContinuo } from './efeitosContinuos';
+import type { EfeitoContinuoOmni } from '@/types';
 import { notificarAtualizacaoContadores } from './atualizacaoContadores';
 import { notificarResultadoAtaque } from './resultadoAtaque';
 import { armaDoPersonagem, armaEstaEmpunhada } from './armaDoPersonagem';
@@ -201,22 +203,6 @@ function vars(u: Character, a?: Character, arma?: Weapon) {
     ...(a ? montarVariaveisDoPersonagem(a, 'ALVO') : {}),
     ...(contexto ? { ARMA_DADOS: contexto.dados, ARMA_PASSO: contexto.passo, ARMA_CRITICO_MARGEM: contexto.critico_margem } : {}),
   };
-}
-
-/** Em efeitos de cura, atributos sem prefixo mod_ significam modificador d20.
- * Fora deste contexto, FOR/SAB/etc. continuam expondo o valor bruto.
- */
-function normalizarAtributosCura(expr: string): string {
-  return expr.replace(/@(USUARIO|ALVO)\.(for|des|con|int|sab|pre|car|forca|destreza|constituicao|inteligencia|sabedoria|presenca|carisma)\b/gi,
-    (_todo, escopo: string, atributo: string) => {
-      const chaves: Record<string, string> = {
-        for: 'for', forca: 'for', des: 'des', destreza: 'des',
-        con: 'con', constituicao: 'con', int: 'int', inteligencia: 'int',
-        sab: 'sab', sabedoria: 'sab', pre: 'pre', presenca: 'pre',
-        car: 'car', carisma: 'car',
-      };
-      return `@${escopo}.mod_${chaves[atributo.toLowerCase()]}`;
-    });
 }
 
 function avaliarFormulaAtiva(expressao: string, u: Character, alvo?: Character, arma?: Weapon, rng?: () => number) {
@@ -630,6 +616,20 @@ async function executarAcaoAtivaInterna(
       }
     }
 
+    const multiplicadorContinuo = p.contador && cargas > 0 ? cargas : 1;
+    const assistenciaDoAlvo = (): EfeitoContinuoOmni['assistencia'] | undefined => cfg.assistencia_dano?.dano.trim()
+      ? { escopo: cfg.assistencia_dano.escopo, filtroArma: cfg.assistencia_dano.filtroArma, dano: cfg.assistencia_dano.dano, tipoDano: cfg.assistencia_dano.tipoDano, consumo: cfg.assistencia_dano.consumo }
+      : undefined;
+    if (cfg.continuo?.cadencia === 'inicio_turno' && cfg.cura?.trim()) {
+      const assistencia = assistenciaDoAlvo();
+      pendentesContinuos.push({ alvoId: t.id, multiplicador: multiplicadorContinuo, rodadas: cfg.continuo.rodadas, cura: { formula: cfg.cura, recurso: cfg.recurso_cura ?? 'pv' }, assistencia });
+      const notas = aplicarEfeitos(u, t, cfg.efeitos ?? [], fonte, movimentos.planos.get(t.id), sustentadas, arma, ent?.id, opcoes.instanciaId);
+      efeitoAplicado = true;
+      const msg = `✨ ${u.name} usa ${cfg.nome} (${pago}) em ${t.name}: cura contínua${multiplicadorContinuo > 1 ? ` ×${multiplicadorContinuo}` : ''} a cada início de turno${assistencia ? ' · dano extra nos ataques' : ''}${notas.length ? ' · ' + notas.join(' · ') : ''}.`;
+      log(msg); detalhes.push(msg);
+      continue;
+    }
+
     if (cfg.tipo_efeito === 'cura' || cfg.cura?.trim()) {
       const formulaCura = normalizarAtributosCura(cfg.cura || '0');
       // Separa os dados da parcela fixa, como no motor de dano. A animação
@@ -656,6 +656,7 @@ async function executarAcaoAtivaInterna(
       const dados = rolado?.groups.map(g => `${g.count}d${g.sides} [${g.rolls.join(', ')}] = ${g.total}`).join('; ') ?? '';
       const msg = `✨ ${u.name} usa ${cfg.nome} (${pago}) em ${t.name}: recupera ${recuperado} ${recurso.toUpperCase()} (valor ${valor}${dados ? '; ' + dados : ''})${notas.length ? ' · ' + notas.join(' · ') : ''}.`;
       log(msg); detalhes.push(msg);
+      if (cfg.tipo_efeito === 'cura' && assistenciaDoAlvo()) pendentesContinuos.push({ alvoId: t.id, multiplicador: multiplicadorContinuo, rodadas: cfg.assistencia_dano?.rodadas, assistencia: assistenciaDoAlvo() });
       if (cfg.tipo_efeito === 'cura') continue;
     }
 
@@ -733,6 +734,7 @@ async function executarAcaoAtivaInterna(
     const inicioPlanos = grauTR && indicesDesfecho[grauTR] !== undefined ? indicesDesfecho[grauTR]! : 0;
     const todosPlanos = movimentos.planos.get(t.id) ?? [];
     const planosResultado = efeitosAplicados.map((_, i) => { const plano = todosPlanos.find(p => p.indice === inicioPlanos + i); return plano ? { ...plano, indice: i } : undefined; }).filter((p): p is PlanoMovimentoAtivo => !!p);
+    if (aplicaEfeitos && assistenciaDoAlvo()) pendentesContinuos.push({ alvoId: t.id, multiplicador: multiplicadorContinuo, rodadas: cfg.assistencia_dano?.rodadas, assistencia: assistenciaDoAlvo() });
     const notas = aplicaEfeitos ? aplicarEfeitos(u, t, efeitosAplicados, fonte, planosResultado, sustentadas, arma, ent?.id, opcoes.instanciaId) : [];
     const partes = [
       cabecalho,
@@ -765,14 +767,25 @@ async function executarAcaoAtivaInterna(
     if (atual) useCharacterStore.getState().updateCharacter(usuarioId, { omniSustentacoes: (atual.omniSustentacoes ?? []).map(s => s.id === sustVinculada.id
       ? { ...s, condicoes: [...s.condicoes, ...sustentadas], alvos: [...new Set([...(s.alvos ?? []), ...alvosExternos])] }
       : s) });
-  } else if (p.pePorTurno > 0 && (sustentadas?.length || contadorGerado)) {
+  } else if (p.pePorTurno > 0 && (sustentadas?.length || contadorGerado || pendentesContinuos.length)) {
     const atual = useCharacterStore.getState().characters.find(c => c.id === usuarioId);
     const alcanceM = cfg.custo_recursos?.alcance_sustentacao_m;
+    novaSustId = crypto.randomUUID();
     if (atual) useCharacterStore.getState().updateCharacter(usuarioId, { omniSustentacoes: [...(atual.omniSustentacoes ?? []), {
-      id: crypto.randomUUID(), nome: cfg.nome, pePorTurno: p.pePorTurno, condicoes: sustentadas ?? [],
+      id: novaSustId, nome: cfg.nome, pePorTurno: p.pePorTurno, condicoes: sustentadas ?? [],
       ...(contadorGerado ? { contador: contadorGerado } : {}),
       ...(alcanceM && alcanceM > 0 ? { alcanceM, alvos: alvosExternos } : {}),
     }] });
+  }
+  const sustIdContinuo = sustVinculada && sustentadas ? sustVinculada.id : novaSustId;
+  for (const pend of pendentesContinuos) {
+    registrarEfeitoContinuo(pend.alvoId, {
+      nome: cfg.nome, origemId: usuarioId, acaoId: cfg.id, multiplicador: pend.multiplicador,
+      ...(sustIdContinuo ? { sustentacaoId: sustIdContinuo } : {}),
+      ...(pend.rodadas ? { rodadas: pend.rodadas } : {}),
+      ...(pend.cura ? { cura: pend.cura } : {}),
+      ...(pend.assistencia ? { assistencia: pend.assistencia } : {}),
+    });
   }
   return { ok: true, dano: danoTotal, cura: curaTotal, efeitoAplicado, detalhe: detalhes.join("\n") };
 }
