@@ -182,8 +182,7 @@ it('Usar com Teste Ataque rola acerto e dispara Rancor; erro não aplica dano', 
   useInventoryStore.setState({ items: { [inst.instanceId]: { ...inst, entity: ent } } });
   const spy = vi.spyOn(eventBus, 'emitirEvento');
   render(<AcoesAtivasSection charId="ana" />);
-  fireEvent.click(screen.getByRole('button', { name: /Golpe com duas cargas/ }));
-  fireEvent.change(screen.getByLabelText('Cargas de Golpe com duas cargas'), { target: { value: '2' } });
+  fireEvent.click(screen.getByRole('button', { name: /Golpe de Rancor/ }));
   fireEvent.click(screen.getByRole('button', { name: 'Usar' }));
   act(() => clicarAlvoMapa('e-bruno'));
   await waitFor(() => expect(spy.mock.calls.filter(([e]) => e === 'aoAcertarAtaque')).toHaveLength(1));
@@ -279,6 +278,8 @@ it('Usar paga cargas parciais e notifica o contador uma única vez', async () =>
   useCharacterStore.getState().updateCharacter('ana', { peCurrent: 5, peMax: 20, omniCounters: { rancor: 3 } });
   const spy = vi.spyOn(eventBus, 'emitirEvento');
   render(<AcoesAtivasSection charId="ana" />);
+  fireEvent.click(screen.getByRole('button', { name: /Golpe com duas cargas/ }));
+  fireEvent.change(screen.getByLabelText('Cargas de Golpe com duas cargas'), { target: { value: '2' } });
   fireEvent.click(screen.getByRole('button', { name: 'Usar' }));
   act(() => clicarAlvoMapa('e-bruno'));
   await waitFor(() => expect(pegarFicha('ana').peCurrent).toBe(6));
