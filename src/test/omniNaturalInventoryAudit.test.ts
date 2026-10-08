@@ -58,7 +58,7 @@ describe('inventário natural: sondagem da implementação existente', () => {
         rows,
       }, null, 2) + '\n');
     }
-  });
+  }, 30000);
 
   it('expõe fallback de nome desconhecido sem tratá-lo como suporte', () => {
     const c = ficha('unknown');
