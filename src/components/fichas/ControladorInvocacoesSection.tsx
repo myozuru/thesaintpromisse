@@ -3,7 +3,7 @@ import type { Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useMapStore } from '@/stores/useMapStore';
-import { invocarControlador, recolherInvocacao, limparInvocacoesDerrotadas, type DirecaoInvocacao } from '@/lib/controlador/mapa';
+import { invocarControlador, recolherInvocacao, limparInvocacoesDerrotadas, comandarReposicionamento, type DirecaoInvocacao } from '@/lib/controlador/mapa';
 import { limiteInvocacoesConhecidas, limiteInvocacoesAtivas, validarCatalogoControlador, type InvocacaoControlador, type TipoInvocacaoControlador } from '@/lib/controlador/tipos';
 
 type Fonte = { id: string; nome: string; tipo: 'grimorio' | 'omni'; hp: number; defesa: number; deslocamento: number; porte: InvocacaoControlador['porte']; acoes: InvocacaoControlador['acoes'] };
@@ -47,6 +47,11 @@ export function ControladorInvocacoesSection({ character }: { character: Charact
     const resultado = invocarControlador(character.id, id, direcao);
     if (!resultado.ok) { setErro(resultado.motivo); return; }
     setErro(''); setMensagem('Invocação materializada no mapa.');
+  };
+  const comandar = (id: string) => {
+    const r = comandarReposicionamento(character.id, id, direcao);
+    if (!r.ok) { setErro(r.motivo); return; }
+    setErro(''); setMensagem('Reposicionamento executado com uma Ação Bônus.');
   };
   const recolher = (id: string) => {
     if (recolherInvocacao(character.id, id)) { setErro(''); setMensagem('Invocação recolhida.'); }
@@ -99,7 +104,7 @@ export function ControladorInvocacoesSection({ character }: { character: Charact
           <div><strong>{inv.nome}</strong><div className="text-xs text-muted-foreground">{inv.tipo === 'shikigami' ? 'Shikigami' : 'Corpo Amaldiçoado'} · PV {inv.hpAtual}/{inv.hpMaximo} · Defesa {inv.defesa} · {inv.deslocamentoM} m · {inv.custoInvocacaoPE} PE · {inv.acoes.length} ações</div></div>
           <div className="flex shrink-0 flex-wrap gap-1">
             {ativos.some(e => e.invocationId === inv.id) ? (
-              <button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => recolher(inv.id)}>Recolher</button>
+              <><button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => comandar(inv.id)}>Comandar movimento (bônus)</button><button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => recolher(inv.id)}>Recolher</button></>
             ) : (
               <button type="button" className="rounded border border-primary px-2 py-1 text-xs" onClick={() => invocar(inv.id)}>Invocar</button>
             )}
@@ -132,7 +137,7 @@ export function ControladorInvocacoesSection({ character }: { character: Charact
         {erro && <p role="alert" className="text-xs text-destructive">{erro}</p>}
         <button type="button" disabled={catalogo.length >= max} onClick={salvar} className="rounded bg-primary px-3 py-2 text-xs text-primary-foreground disabled:opacity-50">Adicionar ao catálogo</button>
       </div>
-      <p className="text-xs text-muted-foreground">Invocar gasta PE e cria um token no mapa. Comandos e ataques dos servos serão integrados na Fase 4.</p>
+      <p className="text-xs text-muted-foreground">Invocar gasta PE e cria um token no mapa. Reposicionamento comandado custa uma Ação Bônus no turno do Controlador. Ataques comandados serão integrados na próxima etapa.</p>
     </div>
   );
 }
