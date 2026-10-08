@@ -193,6 +193,12 @@ const AcaoAtivaSchema = z.object({
   margemCritico: z.object({ condicao: z.string(), reducao: z.number().finite() }).optional(),
   efeitos: z.array(EfeitoSecundarioSchema).optional(),
   condicionais: z.array(CondicionalAtivoSchema).optional(),
+  continuo: z.object({ cadencia: z.literal('inicio_turno'), rodadas: z.number().int().nonnegative().optional() }).optional(),
+  assistencia_dano: z.object({
+    escopo: z.enum(['qualquer', 'corpo_a_corpo', 'distancia', 'feitico', 'arma', 'arma_especifica']),
+    filtroArma: z.string().optional(), dano: z.string(), tipoDano: z.string().optional(),
+    consumo: z.enum(['proximo_acerto', 'duracao']), rodadas: z.number().int().nonnegative().optional(),
+  }).optional(),
 });
 
 const EntidadeSchema = z.object({

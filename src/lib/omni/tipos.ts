@@ -361,6 +361,21 @@ export interface AcaoAtivaConfig {
   margemCritico?: { condicao: string; reducao: number };
   efeitos?: EfeitoSecundarioAtivo[];
   condicionais?: ModificadorCondicionalAtivo[];
+  /**
+   * Cura contínua: em vez de curar uma vez, fica no alvo e rola a cura no
+   * início de cada turno dele (enquanto sustentada ou pelas rodadas dadas).
+   */
+  continuo?: { cadencia: 'inicio_turno'; rodadas?: number };
+  /** Dano extra concedido ao alvo nos ataques compatíveis. */
+  assistencia_dano?: {
+    escopo: 'qualquer' | 'corpo_a_corpo' | 'distancia' | 'feitico' | 'arma' | 'arma_especifica';
+    filtroArma?: string;
+    dano: string;
+    tipoDano?: string;
+    consumo: 'proximo_acerto' | 'duracao';
+    /** 0/ausente = enquanto sustentada (ou até ser consumida). */
+    rodadas?: number;
+  };
 }
 
 /** Metadados comerciais de uma entidade. */
