@@ -2,6 +2,7 @@ import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { limiteInvocacoesAtivas } from './tipos';
+import { useLogStore } from '@/stores/useLogStore';
 
 export type DirecaoInvocacao = 'norte' | 'sul' | 'leste' | 'oeste';
 export type ResultadoInvocacao = { ok: true; tokenId: string } | { ok: false; motivo: string };
@@ -131,6 +132,11 @@ export function comandarReposicionamento(donoId: string, invocacaoId: string, di
 }
 
 
+/** Quantidade de comandos complexos obtida por Ação Comum, com progressão modular. */
+export function comandosPorAcao(nivel: number): number {
+  return nivel >= 18 ? 4 : nivel >= 12 ? 3 : nivel >= 6 ? 2 : 1;
+}
+
 const ataquesPendentes = new Set<string>();
 
 /** Ataque de servo comandado no turno do Controlador. O alvo utiliza uma ficha
@@ -143,7 +149,9 @@ export async function comandarAtaque(donoId: string, invocacaoId: string, acaoId
   const dono = useCharacterStore.getState().characters.find(c => c.id === donoId);
   if (!dono || dono.specialization !== 'Controlador') return { ok: false, motivo: 'Controlador inválido.' };
   if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
-  if ((dono.actionsCurrent ?? 0) < 1) return { ok: false, motivo: 'Ação Comum indisponível.' };
+  const rodada = useCombatStore.getState().round;
+  const pendente = dono.comandosControle?.rodada === rodada ? dono.comandosControle.restantes : 0;
+  if (pendente <= 0 && (dono.actionsCurrent ?? 0) < 1) return { ok: false, motivo: 'Ação Comum indisponível.' };
   const inv = dono.invocacoesConhecidas?.find(i => i.id === invocacaoId && i.donoCharacterId === donoId);
   const acao = inv?.acoes.find(a => a.id === acaoId && a.tipo === 'ataque');
   if (!acao || !acao.dano) return { ok: false, motivo: 'Ataque não configurado para esta invocação.' };
@@ -164,17 +172,26 @@ export async function comandarAtaque(donoId: string, invocacaoId: string, acaoId
   const quantidade = parseInt(dados.split('d')[0], 10);
   if (quantidade < 1 || quantidade > 40) return { ok: false, motivo: 'Quantidade de dados inválida.' };
   ataquesPendentes.add(chave);
-  // Reserva uma única Ação Comum antes de qualquer espera de dados 3D.
-  useCharacterStore.getState().updateCharacter(donoId, { actionsCurrent: dono.actionsCurrent - 1 });
+  // Cada Ação Comum abre um grupo de ordens. Os créditos remanescentes
+  // não gastam outra ação, e não atravessam a rodada.
+  const abrirGrupo = pendente <= 0;
+  useCharacterStore.getState().updateCharacter(donoId, {
+    actionsCurrent: dono.actionsCurrent - (abrirGrupo ? 1 : 0),
+    comandosControle: { rodada, restantes: abrirGrupo ? comandosPorAcao(dono.level) - 1 : pendente - 1 },
+  });
   try {
     const { rollD20Com, rollDiceCom } = await import('@/lib/dice');
     const natural = await rollD20Com(donoId, 0, { label: 'Ataque de ' + inv!.nome + ': ' + acao.nome });
     const totalAtaque = natural + (acao.bonusAtaque ?? 0);
     const acertou = natural === 20 || (natural !== 1 && totalAtaque >= (alvo.ca ?? 10));
-    if (!acertou) return { ok: true, acertou: false, totalAtaque, dano: 0 };
+    if (!acertou) {
+      useLogStore.getState().addLog('combat', `🎯 ${inv!.nome} — ${acao.nome} contra ${alvo.name}: ${totalAtaque} (erro).`);
+      return { ok: true, acertou: false, totalAtaque, dano: 0 };
+    }
     const rolagem = await rollDiceCom(donoId, dados, { label: 'Dano de ' + inv!.nome });
     const dano = rolagem.total + Number(bonusStr ?? 0);
     await useCharacterStore.getState().applyDamage(alvoId, dano, acao.tipoDano ?? 'DCO', { attackerId: donoId });
+    useLogStore.getState().addLog('combat', `🎯 ${inv!.nome} — ${acao.nome} contra ${alvo.name}: acerto ${totalAtaque}, dano rolado ${dano} (${acao.tipoDano ?? 'DCO'}).`);
     return { ok: true, acertou: true, totalAtaque, dano };
   } catch {
     // A execução pode ter chegado ao dano antes da falha. Não duplicar ação nem dano.
