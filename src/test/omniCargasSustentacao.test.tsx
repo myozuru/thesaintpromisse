@@ -36,6 +36,24 @@ describe('cargas geradas por sustentação', () => {
     expect(pegarFicha('u').peCurrent).toBe(17);
     expect(pegarFicha('u').omniSustentacoes?.[0]).toMatchObject({ contador: 'espiritos_fogo', alcanceM: 20, pePorTurno: 1 });
   });
+  it('seleção de uma carga preserva a outra e mantém a sustentação', async () => {
+    await executarAcaoAtiva('u', invocar, 'u');
+    const r = await executarAcaoAtiva('u', enviar, 'b', undefined, { cargasSelecionadas: 1 });
+    expect(r.ok).toBe(true);
+    expect(pegarFicha('u').omniCounters?.espiritos_fogo).toBe(1);
+    expect(pegarFicha('u').omniSustentacoes).toHaveLength(1);
+  });
+  it('seleção de duas cargas consome apenas as duas disponíveis', async () => {
+    await executarAcaoAtiva('u', invocar, 'u');
+    expect((await executarAcaoAtiva('u', enviar, 'b', undefined, { cargasSelecionadas: 2 })).ok).toBe(true);
+    expect(pegarFicha('u').omniCounters?.espiritos_fogo ?? 0).toBe(0);
+  });
+  it('recusa selecionar mais cargas do que o personagem possui', async () => {
+    await executarAcaoAtiva('u', invocar, 'u');
+    const r = await executarAcaoAtiva('u', enviar, 'b', undefined, { cargasSelecionadas: 3 });
+    expect(r.ok).toBe(false);
+    expect(pegarFicha('u').omniCounters?.espiritos_fogo).toBe(2);
+  });
   it('só dá para enviar 2 espíritos; o terceiro é recusado', async () => {
     await executarAcaoAtiva('u', invocar, 'u');
     expect((await executarAcaoAtiva('u', enviar, 'b')).ok).toBe(true);
