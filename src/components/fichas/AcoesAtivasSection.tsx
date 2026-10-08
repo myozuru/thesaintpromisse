@@ -93,7 +93,7 @@ export function AcoesAtivasSection({ charId, incluirCategorias, excluirCategoria
         const multiplo = cfg.tipo_alvo === 'multiplo';
         const area = cfg.tipo_alvo === 'area';
 
-        const teste = cfg.teste === 'tr' ? `TR ${TR_ROT[cfg.tr ?? 'fortitude']}${cfg.cd ? ` CD ${cfg.cd}` : ''}` : cfg.teste === 'ataque' ? (cfg.tr_apos_acerto ? `Ataque + TR ${TR_ROT[cfg.tr ?? 'fortitude']}${cfg.cd ? ` CD ${cfg.cd}` : ''}` : 'Ataque') : cfg.teste === 'disputa' ? 'Disputa' : null;
+        const teste = cfg.teste === 'tr' ? `TR ${TR_ROT[cfg.tr ?? 'fortitude']}${cfg.cd ? ` CD ${formulaNatural(cfg.cd, u)}` : ''}` : cfg.teste === 'ataque' ? (cfg.tr_apos_acerto ? `Ataque + TR ${TR_ROT[cfg.tr ?? 'fortitude']}${cfg.cd ? ` CD ${formulaNatural(cfg.cd, u)}` : ''}` : 'Ataque') : cfg.teste === 'disputa' ? 'Disputa' : null;
         const cargas = p?.contador ? (u.omniCounters?.[p.contador] ?? 0) : null;
         const aberta = !!acaoSelecionada || acaoAbertaId === grupo.chave;
         return (
@@ -129,7 +129,7 @@ export function AcoesAtivasSection({ charId, incluirCategorias, excluirCategoria
               {area && <span className={`${chip} border-border`}>Área: {cfg.area?.forma ?? '?'} {cfg.area?.tamanho_m ?? ''}m</span>}
               {proprio && <span className={`${chip} border-border`}>Em si</span>}
               {cfg.dano && cfg.tipo_efeito !== 'cura' && <span className={`${chip} border-border`}>Dano {formulaNatural(cfg.dano, u)}</span>}
-              {cfg.tipo_efeito === 'cura' && <span className={`${chip} border-border`}>Cura {formulaNatural(cfg.cura ?? '0', u)} {(cfg.recurso_cura ?? 'pv').toUpperCase()}</span>}
+              {(cfg.tipo_efeito === 'cura' || cfg.cura?.trim()) && <span className={`${chip} border-border`}>Cura {formulaNatural(cfg.cura ?? '0', u)} {(cfg.recurso_cura ?? 'pv').toUpperCase()}</span>}
               {p?.contador && <span className={`${chip} border-accent/50`}>{nomeNatural(p.contador)}: {cargas} disponíveis (gasta {p.cargas})</span>}
               {p?.municao ? <span className={`${chip} border-border`}>Munição {p.municao}/{p.armaMunicao?.restanteAntes}</span> : null}
               {p?.usosItem ? <span className={`${chip} border-border`}>Usos {useInventoryStore.getState().items[instanceId]?.usosRestantes ?? ent.usos?.total ?? 0}</span> : null}
