@@ -30,6 +30,12 @@
       "nome": "Seis Olhos (Gojo)",
       "descricao": "Passiva completa do Seis Olhos: imunidade a Cego/Desprevenido, redução de custo de PE escalável (vendado = metade do ER, descoberto = ER inteiro), Ler Técnica ação bônus → livre 1×/rodada quando descoberto, fadiga em combate (4 = 1 exaustão) e zeragem em descansos. Use o slot Venda da ficha para alternar.",
       "arquivo": "/omni-presets/seis-olhos.json"
+    },
+    {
+      "id": "aura-ardente",
+      "nome": "Aura Ardente",
+      "descricao": "Aura Ardente 1: quem começa o turno a até 3 m faz TR de Fortitude; na falha sofre 2d8 de dano queimante.",
+      "arquivo": "/omni-presets/aura-ardente.json"
     }
   ]
 }
