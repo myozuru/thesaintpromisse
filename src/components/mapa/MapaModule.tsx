@@ -2942,7 +2942,11 @@ export function MapaModule() {
     if (a === 'addInit') {
       // garante painel aberto
       st.setInitiativeOpen(true);
-      for (const en of ents) st.addInitiativeFromEntity(en.id);
+      const fichas = useCharacterStore.getState().characters;
+      for (const en of ents) {
+        const ch = en.characterId ? fichas.find((c) => c.id === en.characterId) : undefined;
+        st.addInitiativeFromEntity(en.id, { side: ladoIniciativaPorFicha(ch?.category, en.layer) });
+      }
       st.sortInitiative();
       return;
     }
