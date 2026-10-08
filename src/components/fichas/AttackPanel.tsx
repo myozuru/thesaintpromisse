@@ -1456,7 +1456,7 @@ export function AttackPanel({ character: cProp }: Props) {
 
 
         {/* ─── AÇÕES ATIVAS & TÉCNICAS OMNI ───────────────────────────── */}
-        <AcoesAtivasSection charId={c.id} />
+        <AcoesAtivasSection charId={c.id} incluirCategorias={['arma']} />
 
         {/* ─── EMPUNHADURA ─────────────────────────────────────────────── */}
         <div className="rounded-lg border border-border bg-background/40 p-2 space-y-2">
