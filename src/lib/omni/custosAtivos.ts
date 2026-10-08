@@ -11,7 +11,7 @@ import { useMapStore } from '@/stores/useMapStore';
 import { distanciaCircularEntreFichas } from '@/lib/mapa/alcanceCircular';
 import { capacidadeDaReferencia, tirosRestantes } from '@/lib/recargaRapida';
 
-export interface ContextoCustosAtivos { armaNome?: string; armaInstanciaId?: string; instanciaId?: string; entidadeId?: string }
+export interface ContextoCustosAtivos { armaNome?: string; armaInstanciaId?: string; instanciaId?: string; entidadeId?: string; cargasSelecionadas?: number }
 
 export interface PlanoCustosAtivos {
   pe: number; pv: number; cargas: number; contador?: string;
@@ -82,7 +82,9 @@ export function planejarCustosAtivos(cfg: AcaoAtivaConfig, u: Character, intensi
     let cargas = 0;
     if (g || cfg.consumirContador) {
       if (!contador) throw new Error('Informe o nome do contador.');
-      cargas = g && g.quantidade !== 'todas' ? numero(g.quantidade) : tem;
+      const escolhidas = contexto.cargasSelecionadas;
+      if (escolhidas !== undefined && (!Number.isSafeInteger(escolhidas) || escolhidas < 1)) throw new Error('Quantidade de cargas deve ser um inteiro positivo.');
+      cargas = escolhidas ?? (g && g.quantidade !== 'todas' ? numero(g.quantidade) : tem);
       if (!Number.isSafeInteger(tem) || tem < 0) throw new Error('Saldo de cargas inválido.');
       const minimo = g ? (g.minimo ?? 1) : cfg.consumirContador!.minimo;
       if (!Number.isSafeInteger(minimo) || minimo < 1) throw new Error('Mínimo de cargas deve ser um inteiro positivo.');
