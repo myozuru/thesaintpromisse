@@ -274,6 +274,28 @@ export function createEmptyRdByType(): Record<DamageType, number> {
   return Object.fromEntries(DAMAGE_TYPES.map(t => [t, 0])) as Record<DamageType, number>;
 }
 
+/** Escopo de ataque aceito por uma assistência contínua de dano. */
+export type EscopoAssistenciaDano = 'qualquer' | 'corpo_a_corpo' | 'distancia' | 'feitico' | 'arma' | 'arma_especifica';
+
+/** Efeito OMNI em andamento na ficha do alvo, vinculado à origem e opcionalmente à sustentação. */
+export interface EfeitoContinuoOmni {
+  id: string;
+  nome: string;
+  origemId: string;
+  acaoId: string;
+  multiplicador: number;
+  sustentacaoId?: string;
+  rodadas?: number;
+  cura?: { formula: string; recurso?: 'pv' | 'pe' };
+  assistencia?: {
+    escopo: EscopoAssistenciaDano;
+    filtroArma?: string;
+    dano: string;
+    tipoDano?: string;
+    consumo: 'proximo_acerto' | 'duracao';
+  };
+}
+
 export interface Character {
   id: string;
   /** Portas da Morte em andamento (só PLAYER, vida ≤ 0). */
