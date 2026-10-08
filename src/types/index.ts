@@ -779,6 +779,13 @@ export interface Character {
   /** Atributo-chave da especialização. Técnica: 'Inteligência' ou 'Sabedoria';
    * Suporte: 'Presença' ou 'Sabedoria'. Definido no wizard. */
   keyAttribute?: 'Inteligência' | 'Sabedoria' | 'Presença' | 'Força' | 'Destreza';
+  /** Catálogo do Controlador; invocações são modelos persistidos, ainda não tokens em campo. */
+  invocacoesConhecidas?: import('@/lib/controlador/tipos').InvocacaoControlador[];
+  /** Treinamento específico em Controle (distinto do bônus geral de Treinamento). */
+  treinoControle?: number;
+  /** Limites derivados do nível e treino; não devem substituir a validação do motor. */
+  limiteInvocacoesConhecidas?: number;
+  limiteInvocacoesAtivas?: number;
   /** Suporte em Combate: usos da cura de toque gastos desde o último descanso. */
   suporteHealUsed?: number;
   /** Suporte Nv 6 — Apoio Avançado: apoios conhecidos (1 no Nv 6, +1 no Nv 12). */
