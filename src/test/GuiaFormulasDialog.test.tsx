@@ -11,6 +11,8 @@ describe('GuiaFormulasDialog', () => {
     render(<GuiaFormulasDialog aberto onClose={() => {}} onInserirFormula={onInserirFormula} />);
 
     expect(screen.getAllByRole('tab')).toHaveLength(10);
+    const componentes = screen.getByRole('tab', { name: /Componentes/ });
+    fireEvent.click(componentes);
     expect(screen.getByRole('button', { name: '303 componentes' })).toBeTruthy();
     const recursos = screen.getByRole('tab', { name: /Recursos/ });
     fireEvent.mouseDown(recursos, { button: 0 });
