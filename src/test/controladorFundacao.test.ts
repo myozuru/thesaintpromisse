@@ -7,7 +7,8 @@ import {
   validarCatalogoControlador,
   type InvocacaoControlador,
 } from '@/lib/controlador/tipos';
-import type { Attribute } from '@/types';
+import type { Attribute, Character } from '@/types';
+import { specDCFor } from '@/lib/golpeEspecial';
 
 const attrs = [
   { id: 'sab', name: 'Sabedoria', value: 18 },
@@ -30,6 +31,15 @@ describe('Controlador — atributo-chave e progressão', () => {
     expect(recalcPeMaxBySpec(1, 'Controlador', attrs, 0, 'Presença')).toBe(7);
     expect(recalcPeMaxBySpec(6, 'Controlador', attrs, 0, 'Presença')).toBe(32);
     expect(recalcPeMaxFromHistory(10, 0, 'Controlador', attrs, 0, 1, 'Presença')).toBe(12);
+  });
+  it('usa o atributo escolhido na CD sem duplicar o modificador já salvo pelo wizard', () => {
+    const char = (attr: 'Presença' | 'Sabedoria', baseDC: number): Character => ({
+      specialization: 'Controlador', keyAttribute: attr, attributes: attrs,
+      level: 1, baseDC,
+    } as Character);
+    expect(specDCFor(char('Sabedoria', 14))).toBe(16);
+    expect(specDCFor(char('Presença', 12))).toBe(14);
+    expect(specDCFor(char('Presença', 10))).toBe(14);
   });
   it('PV inicial 10+CON, depois d8 ou média 5 + CON', () => {
     expect(pvControlador(1, 2)).toBe(12);
