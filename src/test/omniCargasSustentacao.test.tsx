@@ -117,7 +117,7 @@ describe('cargas geradas por sustentação', () => {
 
 describe('espírito de fogo contínuo no aliado', () => {
   const enviarAliado: AcaoAtivaConfig = {
-    id: 'env-al', nome: 'Espírito no Aliado', acao: 'livre', custoPE: '0', alcanceM: 9, teste: 'nenhum', tipo_efeito: 'cura', filtro_alvo: 'todos_exceto_si',
+    id: 'env-al', nome: 'Espírito no Aliado', acao: 'livre', custoPE: '0', alcanceM: 9, teste: 'nenhum', tipo_efeito: 'cura', filtro_alvo: 'aliados',
     cura: '2', continuo: { cadencia: 'inicio_turno' },
     assistencia_dano: { escopo: 'corpo_a_corpo', dano: '1d4', tipoDano: 'DQ', consumo: 'proximo_acerto' },
     custo_recursos: { pe_base: '0', gastar_cargas: { nome: 'espiritos_fogo', quantidade: '1' } },
