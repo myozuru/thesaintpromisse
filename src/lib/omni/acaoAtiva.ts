@@ -522,6 +522,17 @@ async function executarAcaoAtivaInterna(
     : undefined;
   const sustentadas = p.pePorTurno > 0 || sustVinculada ? [] as { charId: string; id: string; sourceEntityId?: string; sourceInstanceId?: string }[] : undefined;
 
+  // Efeitos criados nesta execução são registrados após o pagamento e a
+  // definição do vínculo de sustentação, nunca antes das validações.
+  const pendentesContinuos: Array<{
+    alvoId: string;
+    multiplicador: number;
+    rodadas?: number;
+    cura?: EfeitoContinuoOmni['cura'];
+    assistencia?: EfeitoContinuoOmni['assistencia'];
+  }> = [];
+  let novaSustId: string | undefined;
+
 
   let danoTotal = 0;
   let curaTotal = 0;
