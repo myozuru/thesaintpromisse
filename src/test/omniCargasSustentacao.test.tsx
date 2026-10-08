@@ -8,6 +8,7 @@ import { ficha, montarMesa, pegarFicha, limparMesa, comoTela, esperar } from './
 import { executarAcaoAtiva } from '@/lib/omni/acaoAtiva';
 import { encerrarSustentacaoAtiva, inicioTurnoSustentacoesAtivas, verificarDistanciaSustentacoes } from '@/lib/omni/custosAtivos';
 import type { AcaoAtivaConfig } from '@/lib/omni/tipos';
+import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { useMapStore } from '@/stores/useMapStore';
@@ -53,6 +54,21 @@ describe('cargas geradas por sustentação', () => {
     const r = await executarAcaoAtiva('u', enviar, 'b', undefined, { cargasSelecionadas: 3 });
     expect(r.ok).toBe(false);
     expect(pegarFicha('u').omniCounters?.espiritos_fogo).toBe(2);
+  });
+  it('escala dano e cura juntos pelas cargas selecionadas', async () => {
+    await executarAcaoAtiva('u', invocar, 'u');
+    useCharacterStore.getState().updateCharacter('b', { hpCurrent: 10 });
+    const misto: AcaoAtivaConfig = {
+      id: 'misto', nome: 'Espírito Curativo e Ardente', acao: 'livre', custoPE: '0',
+      alcanceM: 9, teste: 'nenhum', filtro_alvo: 'todos_exceto_si',
+      tipo_efeito: 'dano', dano: '2', cura: '3',
+      custo_recursos: { gastar_cargas: { nome: 'espiritos_fogo', quantidade: '1' } },
+    };
+    const r = await executarAcaoAtiva('u', misto, 'b', undefined, { cargasSelecionadas: 2 });
+    expect(r.ok).toBe(true);
+    expect(pegarFicha('u').omniCounters?.espiritos_fogo ?? 0).toBe(0);
+    expect(pegarFicha('b').hpCurrent).toBe(12);
+    if (r.ok) { expect(r.cura).toBe(6); expect(r.dano).toBe(4); }
   });
   it('só dá para enviar 2 espíritos; o terceiro é recusado', async () => {
     await executarAcaoAtiva('u', invocar, 'u');
