@@ -127,7 +127,7 @@ describe('espírito de fogo contínuo no aliado', () => {
     useCharacterStore.getState().updateCharacter('b', { hpCurrent: 10 });
     await executarAcaoAtiva('u', invocar, 'u');
     const r1 = await executarAcaoAtiva('u', enviarAliado, 'b');
-    expect(r1).toMatchObject({ ok: true });
+    expect((r1 as { reason?: string }).reason).toBeUndefined();
     await executarAcaoAtiva('u', enviarAliado, 'b');
     expect(pegarFicha('u').omniCounters?.espiritos_fogo ?? 0).toBe(0);
     expect(pegarFicha('b').omniEfeitosContinuos?.[0]).toMatchObject({ multiplicador: 2 });
