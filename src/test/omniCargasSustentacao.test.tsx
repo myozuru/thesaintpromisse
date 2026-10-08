@@ -114,3 +114,32 @@ describe('cargas geradas por sustentação', () => {
     expect(pegarFicha('u').omniSustentacoes).toHaveLength(1);
   });
 });
+
+describe('espírito de fogo contínuo no aliado', () => {
+  const enviarAliado: AcaoAtivaConfig = {
+    id: 'env-al', nome: 'Espírito no Aliado', acao: 'livre', custoPE: '0', alcanceM: 9, teste: 'nenhum', tipo_efeito: 'cura', filtro_alvo: 'todos_exceto_si',
+    cura: '2', continuo: { cadencia: 'inicio_turno' },
+    assistencia_dano: { escopo: 'corpo_a_corpo', dano: '1d4', tipoDano: 'DQ', consumo: 'proximo_acerto' },
+    custo_recursos: { pe_base: '0', gastar_cargas: { nome: 'espiritos_fogo', quantidade: '1' } },
+  };
+  it('os dois espíritos ficam no aliado, mantêm a sustentação e somem quando ela acaba', async () => {
+    const { tickEfeitosContinuosInicioTurno } = await import('@/lib/omni/efeitosContinuos');
+    useCharacterStore.getState().updateCharacter('b', { hpCurrent: 10 });
+    await executarAcaoAtiva('u', invocar, 'u');
+    await executarAcaoAtiva('u', enviarAliado, 'b');
+    await executarAcaoAtiva('u', enviarAliado, 'b');
+    expect(pegarFicha('u').omniCounters?.espiritos_fogo ?? 0).toBe(0);
+    expect(pegarFicha('b').omniEfeitosContinuos?.[0]).toMatchObject({ multiplicador: 2 });
+    // Sem cargas, a sustentação continua porque os espíritos estão no aliado.
+    inicioTurnoSustentacoesAtivas('u');
+    const sust = pegarFicha('u').omniSustentacoes ?? [];
+    expect(sust).toHaveLength(1);
+    expect(pegarFicha('u').peCurrent).toBe(16);
+    await tickEfeitosContinuosInicioTurno('b');
+    expect(pegarFicha('b').hpCurrent).toBe(14);
+    encerrarSustentacaoAtiva('u', sust[0].id);
+    expect(pegarFicha('b').omniEfeitosContinuos ?? []).toHaveLength(0);
+    await tickEfeitosContinuosInicioTurno('b');
+    expect(pegarFicha('b').hpCurrent).toBe(14);
+  });
+});
