@@ -294,8 +294,7 @@ export function InitiativePanel({ onClose }: Props) {
                 // Iniciativa só do mapa: ainda assim dispara as auras de início de turno.
                 const ms = useMapStore.getState();
                 const ini = ms.initiative;
-                const sorted = [...ini.entries].sort((a, b) => b.init - a.init);
-                const atual = sorted[ini.turnIndex] ?? ini.entries[ini.turnIndex];
+                const atual = ini.entries[ini.turnIndex];
                 if (!atual) return;
                 void import('@/lib/omni/auras').then(({ verificarAurasInicioTurno, charIdDaEntradaIniciativa }) => {
                   const charId = charIdDaEntradaIniciativa(atual.entityId, atual.name);

@@ -71,21 +71,46 @@ function instalarListenerRemocaoAuraRuntime() {
   });
 }
 
+type TokenLike = { id: string; x: number; y: number; characterId?: string; name?: string; label?: string; layer?: string; carriedBy?: string };
+
+const normNome = (s: string | undefined) => (s ?? '').trim().toLowerCase();
+
+/** Token da ficha em qualquer camada (inclusive a do Mestre, onde ficam inimigos do grimório). */
+function tokenDoPersonagem(id: string): TokenLike | null {
+  const ms = useMapStore.getState();
+  const direto = findCharEntity(ms.entities, id);
+  if (direto) return direto as unknown as TokenLike;
+  const todos = Object.values(ms.entities) as unknown as TokenLike[];
+  const validos = todos.filter((e) => !e.carriedBy && (!e.layer || e.layer === 'tokens' || e.layer === 'gm'));
+  const porVinculo = validos.find((e) => e.characterId === id);
+  if (porVinculo) return porVinculo;
+  const nome = normNome(useCharacterStore.getState().characters.find((c) => c.id === id)?.name);
+  if (!nome) return null;
+  const semVinculo = validos.filter((e) => !e.characterId);
+  const exato = semVinculo.find((e) => normNome(e.name ?? e.label) === nome);
+  if (exato) return exato;
+  // "Akira" ↔ "Kurogiri Akira": uma palavra inteira em comum basta.
+  const palavras = new Set(nome.split(/\s+/).filter((p) => p.length >= 3));
+  return semVinculo.find((e) => normNome(e.name ?? e.label).split(/\s+/).some((p) => palavras.has(p))) ?? null;
+}
+
+/** Descobre a ficha de uma entrada da iniciativa do mapa (por peça ou nome). */
+export function charIdDaEntradaIniciativa(entityId: string | undefined, nome: string): string | null {
+  const ms = useMapStore.getState();
+  const ent = entityId ? (ms.entities as Record<string, TokenLike>)[entityId] : undefined;
+  if (ent?.characterId) return ent.characterId;
+  const chars = useCharacterStore.getState().characters;
+  const n = normNome(ent?.name ?? ent?.label ?? nome);
+  const exato = chars.find((c) => normNome(c.name) === n);
+  if (exato) return exato.id;
+  const palavras = n.split(/\s+/).filter((p) => p.length >= 3);
+  return chars.find((c) => normNome(c.name).split(/\s+/).some((p) => palavras.includes(p)))?.id ?? null;
+}
+
 /** No mapa as coordenadas são pixels; o painel espacial usa metros. */
 function posicaoDoPersonagem(id: string) {
   const ms = useMapStore.getState();
-  let token = findCharEntity(ms.entities, id);
-  if (!token) {
-    // Peças sem vínculo gravado: reconhece pelo nome da ficha.
-    const nome = useCharacterStore.getState().characters.find((c) => c.id === id)?.name?.trim().toLowerCase();
-    if (nome) {
-      token = Object.values(ms.entities).find((e) => {
-        const en = e as typeof e & { name?: string; label?: string; layer?: string; carriedBy?: string };
-        const n = (en.name ?? en.label ?? '').trim().toLowerCase();
-        return !en.characterId && !en.carriedBy && (!en.layer || en.layer === 'tokens' || en.layer === 'gm') && n === nome;
-      }) ?? null;
-    }
-  }
+  const token = tokenDoPersonagem(id);
   if (!token) return useOmniSpatialStore.getState().obter(id);
   const escala = (ms.gridConfig.metersPerCell || 1.5) / (ms.gridConfig.dpi || 70);
   const ponto = ms.pendingMove?.entityId === token.id ? { x: ms.pendingMove.startX, y: ms.pendingMove.startY } : token;
