@@ -267,6 +267,8 @@ const canStartMoveEntityNow = (entity: Entity): boolean => {
   if (!playerOwnsEntity(entity, activeProfileId, characters)) return false;
 
   const combat = useCombatStore.getState();
+  // Servos não possuem turnos independentes: em combate aguardam comando do dono.
+  if (entity.invocationId && combat.inCombat) return false;
   if (!combat.inCombat) return true;
   // Entidades sem ficha vinculada (imagens/objetos enviados pelo player) são
   // movíveis livremente mesmo em combate — não consomem orçamento de movimento.
