@@ -37,6 +37,7 @@ import { cn } from '@/lib/utils';
 import { isFreeformFor } from '@/lib/freeformMode';
 import { FreeformActionBar } from './FreeformActionBar';
 import { AttackPanel } from '@/components/fichas/AttackPanel';
+import { AcoesAtivasSection } from '@/components/fichas/AcoesAtivasSection';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { acoesAtivasDe } from '@/lib/omni/acaoAtiva';
 
@@ -51,6 +52,8 @@ interface ListEntry {
   disabledReason?: string;
   source?: 'native' | 'omni';
   omniCategory?: string;
+  omniEntityId?: string;
+  omniActionId?: string;
 }
 
 
@@ -66,6 +69,7 @@ export function PlayerActionBar() {
   const omniEntidades = useOmniEntidadesStore((s) => s.entidades);
 
   const [open, setOpen] = useState<Category | null>(null);
+  const [omniSelecionada, setOmniSelecionada] = useState<{ entidadeId: string; acaoId: string } | null>(null);
   const [castingSpell, setCastingSpell] = useState<Spell | null>(null);
   /** Feitiço "armado": aguardando o player clicar num token-alvo. */
   const [armedSpell, setArmedSpell] = useState<Spell | null>(null);
@@ -140,6 +144,8 @@ export function PlayerActionBar() {
         description: a.ent.nome + (a.ent.descricao ? ' · ' + a.ent.descricao : ''),
         source: 'omni' as const,
         omniCategory: a.ent.categoria,
+        omniEntityId: a.ent.id,
+        omniActionId: a.cfg.id,
       }));
   }, [activeChar, omniEntidades]);
 
@@ -690,7 +696,7 @@ export function PlayerActionBar() {
               </span>
               <button
                 type="button"
-                onClick={() => setOpen(null)}
+                onClick={() => { setOpen(null); setOmniSelecionada(null); }}
                 className="text-muted-foreground hover:text-foreground transition-colors"
                 title="Fechar"
               >
@@ -719,8 +725,8 @@ export function PlayerActionBar() {
                   {activeList.map((e) => {
                     const handleClick = async () => {
                       if (e.disabled) return;
-                      if (e.source === 'omni') {
-                        setOpen('ataque');
+                      if (e.source === 'omni' && e.omniEntityId && e.omniActionId) {
+                        setOmniSelecionada({ entidadeId: e.omniEntityId, acaoId: e.omniActionId });
                         return;
                       }
                       if (open === 'feiticos' && activeChar) {
@@ -844,7 +850,11 @@ export function PlayerActionBar() {
                   })}
 
                 </ul>
-
+              )}
+              {omniSelecionada && activeChar && open && open !== 'ataque' && open !== 'classe' && open !== 'artes' && (
+                <div className="border-t border-border/40 p-2" onClick={e => e.stopPropagation()}>
+                  <AcoesAtivasSection charId={activeChar.id} acaoSelecionada={omniSelecionada} esconderCabecalho />
+                </div>
               )}
             </div>
           </div>
