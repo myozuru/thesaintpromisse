@@ -248,8 +248,6 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
         ? keyAttribute
         : specialization === 'Controlador'
           ? ctrlKeyAttribute
-          : specialization === 'Controlador'
-          ? ctrlKeyAttribute
           : specialization === 'Suporte'
           ? supKeyAttribute
           : specialization === 'Especialista em Combate'
