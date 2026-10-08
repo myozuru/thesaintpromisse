@@ -1752,15 +1752,6 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
         <CombateEstilosPanel character={c} />
       </div>
 
-      {/* ─── Ações Ativas OMNI fora de combate ─── */}
-      {/* Permite consultar e usar técnicas inatas/feitiços vinculados sem
-          depender do AttackPanel, que só existe durante combate. */}
-      {!combatInProgress && !hideAttackPanel && (
-        <div className="px-4 pb-2" onClick={(e) => e.stopPropagation()}>
-          <AcoesAtivasSection charId={c.id} />
-        </div>
-      )}
-
       {/* ─── Painel de Ataque (combatEngine) ─── */}
       {/* Visível apenas durante combate ativo. */}
       {/* stopPropagation: o painel está dentro da região clickable do header
@@ -2935,6 +2926,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                 hideEmpty
                 onUsar={(entidade) => executarAcaoItem({ entidade })}
               />
+              <AcoesAtivasSection charId={c.id} incluirCategorias={['feitico']} />
             </Section>
           )}
 
