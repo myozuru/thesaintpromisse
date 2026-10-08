@@ -85,7 +85,7 @@ export function AcoesAtivasSection({ charId, incluirCategorias, excluirCategoria
         const nomeContador = cfg.custo_recursos?.gastar_cargas?.nome ?? cfg.consumirContador?.nome;
         const contador = nomeContador ? nomeContadorAtivo(nomeContador) : undefined;
         const saldo = contador ? (u.omniCounters?.[contador] ?? 0) : 0;
-        const podeSelecionar = !!contador && (cfg.custo_recursos?.gastar_cargas?.quantidade === 'todas' || !!cfg.consumirContador);
+        const podeSelecionar = !!contador && (!!cfg.custo_recursos?.gastar_cargas || !!cfg.consumirContador);
         const selecionadas = podeSelecionar ? Math.max(1, Math.min(saldo || 1, cargasEscolhidas[key] ?? 1)) : undefined;
         const custos = planejarCustosAtivos(cfg, u, intensidade, { armaNome: arma?.name, instanciaId: instanceId, entidadeId: ent.id, cargasSelecionadas: selecionadas });
         const p = custos.ok ? custos.plano : undefined;
