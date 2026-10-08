@@ -72,7 +72,7 @@ it('inclui ações de entidade vinculada à ficha mesmo sem item físico no inve
   ] };
   useOmniEntidadesStore.setState({ entidades: { [ent.id]: ent } });
   useCharacterStore.getState().updateCharacter('u', {
-    omniAtivos: [{ categoria: 'talento', entidadeId: ent.id, instanceId: 'ficha-espiritos' }],
+    omniAtivos: [{ id: 'vinculo-espiritos', categoria: 'talento', entidadeId: ent.id, instanceId: 'ficha-espiritos', vinculadoEm: Date.now() }],
   });
 
   expect(Object.keys(useInventoryStore.getState().items)).toHaveLength(0);
@@ -100,7 +100,7 @@ it('executa ação vinculada à ficha sem erro de instância indisponível', asy
   useOmniEntidadesStore.setState({ entidades: { [ent.id]: ent } });
   useCharacterStore.getState().updateCharacter('u', {
     peCurrent: 10,
-    omniAtivos: [{ categoria: 'talento', entidadeId: ent.id, instanceId: 'ficha-espiritos' }],
+    omniAtivos: [{ id: 'vinculo-espiritos', categoria: 'talento', entidadeId: ent.id, instanceId: 'ficha-espiritos', vinculadoEm: Date.now() }],
   });
 
   const r = await executarAcaoAtiva('u', acao, '', ent, { instanciaId: 'ficha-espiritos' });
