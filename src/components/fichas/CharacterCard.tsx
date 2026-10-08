@@ -2870,6 +2870,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                 filtroCategoria="talento"
                 hideEmpty
               />
+              <AcoesAtivasSection charId={c.id} incluirCategorias={['talento']} />
             </Section>
           )}
 
@@ -2881,6 +2882,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                 filtroCategoria="aura"
                 hideEmpty
               />
+              <AcoesAtivasSection charId={c.id} incluirCategorias={['aura']} />
             </Section>
           )}
 
@@ -2891,7 +2893,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
           )}
 
           {/* Feitiços - hide for Não-Feiticeiro */}
-          {c.characterClass !== 'Não-Feiticeiro' && (
+          {(c.characterClass !== 'Não-Feiticeiro' || (c.omniAtivos ?? []).some(a => a.categoria === 'feitico')) && (
             <Section icon={<Zap className="h-4 w-4" />} title="Feitiços">
               <SpellBlock
                 spells={c.spells}
