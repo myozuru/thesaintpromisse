@@ -2606,7 +2606,7 @@ export const useCharacterStore = create<CharacterStore>()(
             }
             finalDamage = damageFinal;
             damageResolved = true;
-            let newEsc = c.escCurrent;
+            let newEsc = c.escCurrent ?? 0;
             let newHp = c.hpCurrent;
             if (damageFinal <= newEsc) { newEsc -= damageFinal; }
             else { const overflow = damageFinal - newEsc; newEsc = 0; newHp -= overflow; }
