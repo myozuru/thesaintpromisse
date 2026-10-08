@@ -224,6 +224,7 @@ const sendEntityPatches = (patches: EntityPatchMessage) => {
 
 const playerOwnsEntity = (entity: Entity, profileId: string | null, characters: Character[]): boolean => {
   if (!profileId) return false;
+  if (entity.ownerCharId && characters.some(c => c.id === entity.ownerCharId && c.profileId === profileId)) return true;
   // Posse real do token/imagem enviada pelo player.
   if (entity.ownerProfileId === profileId) return true;
   // Avatar marcado como "Sou eu" também conta como controlável.
