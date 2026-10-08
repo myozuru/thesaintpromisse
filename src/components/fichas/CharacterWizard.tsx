@@ -119,6 +119,9 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
   const [keyAttribute, setKeyAttribute] = useState<'Inteligência' | 'Sabedoria'>('Inteligência');
   /** Suporte: atributo-chave escolhido (Presença ou Sabedoria — regra do livro). */
   const [supKeyAttribute, setSupKeyAttribute] = useState<'Presença' | 'Sabedoria'>('Presença');
+  const [ctrlKeyAttribute, setCtrlKeyAttribute] = useState<'Presença' | 'Sabedoria'>('Sabedoria');
+  const [ctrlSaveChoice, setCtrlSaveChoice] = useState<'Astúcia' | 'Vontade' | ''>('');
+  const isControlador = charClass === 'Feiticeiro' && specialization === 'Controlador';
 
   // Step 3: Stats — agora DERIVADAS dos atributos + classe/spec.
   const [level, setLevel] = useState(1);
@@ -243,7 +246,11 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
     if (charClass === 'Feiticeiro') {
       keyAttrName = specialization === 'Especialista em Técnica'
         ? keyAttribute
-        : specialization === 'Suporte'
+        : specialization === 'Controlador'
+          ? ctrlKeyAttribute
+          : specialization === 'Controlador'
+          ? ctrlKeyAttribute
+          : specialization === 'Suporte'
           ? supKeyAttribute
           : specialization === 'Especialista em Combate'
             ? combKeyAttribute
@@ -261,7 +268,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
     const ca = 10 + desMod;
     const baseDC = 10 + keyMod;
     return { hpMax, peMax, ca, baseDC, keyAttrName, keyMod, conMod, desMod };
-  }, [attrValues, charClass, specialization, keyAttribute, supKeyAttribute, combKeyAttribute, effects.attrBonuses]);
+  }, [attrValues, charClass, specialization, keyAttribute, ctrlKeyAttribute, supKeyAttribute, combKeyAttribute, effects.attrBonuses]);
   const { hpMax, peMax, ca, baseDC } = derivedStats;
 
   const maxSpells = charClass === 'Feiticeiro'
@@ -401,6 +408,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
       if (!tecChoicesComplete) return false;
       // Suporte: bloqueia avanço sem TR + 2 Ofícios.
       if (!supChoicesComplete) return false;
+      if (isControlador && !ctrlSaveChoice) return false;
       // Especialista em Combate: bloqueia avanço sem TR + 2 perícias da lista.
       if (!combChoicesComplete) return false;
       return true;
@@ -498,6 +506,13 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
       });
     }
     // Especialista em Combate: TODAS as armas + Escudos (regra do livro).
+    if (isControlador) {
+      passivesForCharacter.push({
+        id: crypto.randomUUID(), name: 'Treinamento: Armas Simples e à Distância',
+        description: 'Controlador: proficiência em armas simples e à distância.',
+        bonusHP: 0, bonusPE: 0, bonusESC: 0, bonusSlots: 0, bonusRD: 0, bonusCA: 0,
+      });
+    }
     if (isCombate) {
       passivesForCharacter.push({
         id: crypto.randomUUID(),
@@ -587,6 +602,10 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
           });
         }
         // Suporte: adiciona o TR escolhido (Astúcia OU Vontade) como Treinado.
+        if (isControlador && ctrlSaveChoice) {
+          base.push({ id: crypto.randomUUID(), name: ctrlSaveChoice, value: 0,
+            linkedAttribute: undefined, trained: true, mastery: false });
+        }
         if (isSuporte && supSaveChoice) {
           base.push({
             id: crypto.randomUUID(),
@@ -668,6 +687,10 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
           : specialization === 'Especialista em Combate'
             ? combKeyAttribute
             : undefined,
+      invocacoesConhecidas: isControlador ? [] : undefined,
+      treinoControle: isControlador ? 1 : undefined,
+      limiteInvocacoesConhecidas: isControlador ? 2 : undefined,
+      limiteInvocacoesAtivas: isControlador ? 2 : undefined,
       tecnicaFundamentos: isTecnica ? tecFundamentos : undefined,
       combatStyles: isCombate && combStyle ? [combStyle] : undefined,
       // ===== Origin metadata =====
@@ -960,6 +983,32 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
                 </div>
               )}
 
+              {isControlador && (
+                <div className="space-y-3 rounded-lg border border-primary/40 bg-primary/5 p-3">
+                  <div className="text-sm font-bold text-primary">Especialização: Controlador</div>
+                  <label className="block text-xs font-semibold">Atributo-chave para PE e CD</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(['Sabedoria', 'Presença'] as const).map(attr => (
+                      <button key={attr} type="button" onClick={() => setCtrlKeyAttribute(attr)}
+                        aria-pressed={ctrlKeyAttribute === attr}
+                        className={cn('rounded border px-2 py-2 text-xs', ctrlKeyAttribute === attr ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background')}>
+                        {attr}
+                      </button>
+                    ))}
+                  </div>
+                  <label className="block text-xs font-semibold">Teste de Resistência treinado</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(['Astúcia', 'Vontade'] as const).map(tr => (
+                      <button key={tr} type="button" onClick={() => setCtrlSaveChoice(tr)}
+                        aria-pressed={ctrlSaveChoice === tr}
+                        className={cn('rounded border px-2 py-2 text-xs', ctrlSaveChoice === tr ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background')}>
+                        {tr}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">PV inicial: 10 + CON; dados de vida seguintes: d8. Invocações conhecidas: 2; ativas: 2 (com +1 em Controle).</p>
+                </div>
+              )}
               {/* ─── Suporte: atributo-chave + treinamentos obrigatórios ─── */}
               {isSuporte && (
                 <div className="space-y-3 rounded-lg border-2 border-primary/40 bg-primary/5 p-3">
