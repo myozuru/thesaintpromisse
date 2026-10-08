@@ -667,7 +667,7 @@ async function executarAcaoAtivaInterna(
       .filter(Boolean).map(d => danoComContextoArma(d, arma, u)).filter((d): d is string => !!d).join('+');
     const baseDano = notacaoDanoAtivo(danoConfigurado, u, t, arma);
     // Escalonamento automático apenas sem a configuração explícita dadosPorCarga.
-    const vezes = p.contador && cargas > 1 && !cfg.dadosPorCarga?.trim() ? cargas : 1;
+    const vezes = p.contador && cargas > 1 && !!cfg.cura?.trim() && !cfg.dadosPorCarga?.trim() ? cargas : 1;
     const danoEscalonado = vezes > 1 ? Array.from({ length: vezes }, () => baseDano).join('+') : baseDano;
     const plano = planejarDano(danoEscalonado, notacaoDanoAtivo(cfg.tipo_efeito === 'buff' ? undefined : cfg.dadosPorCarga, u, t, arma), cargas, critico, (arma?.critMultiplier ?? 2) + mods.multiplicador);
     const formulasComArma = [cfg.dano, ...mods.danos, desfechoTR?.dano_extra].filter(Boolean).join('+');
