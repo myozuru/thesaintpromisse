@@ -42,6 +42,13 @@ export function ControladorInvocacoesSection({ character }: { character: Charact
   const [mensagem, setMensagem] = useState('');
   const [alvosAtaque, setAlvosAtaque] = useState<Record<string, string>>({});
   const [busyAtaque, setBusyAtaque] = useState(false);
+  const [editando, setEditando] = useState<string | null>(null);
+  const [nomeAtaque, setNomeAtaque] = useState('');
+  const [formulaAtaque, setFormulaAtaque] = useState('1d6');
+  const [alcanceAtaque, setAlcanceAtaque] = useState(1.5);
+  const [bonusAtaque, setBonusAtaque] = useState(0);
+  const [tipoDanoAtaque, setTipoDanoAtaque] = useState<import('@/types').DamageType>('DCO');
+
   const entities = useMapStore(s => s.entities);
   const ativos = Object.values(entities).filter(e => e.ownerCharId === character.id && !!e.invocationId);
   useEffect(() => { if (ativos.some(e => (e.hp ?? 0) <= 0)) limparInvocacoesDerrotadas(character.id); }, [entities, character.id]);
@@ -98,6 +105,26 @@ export function ControladorInvocacoesSection({ character }: { character: Charact
     updateCharacter(character.id, { invocacoesConhecidas: [...catalogo, novo], limiteInvocacoesConhecidas: max, limiteInvocacoesAtivas: ativas });
     setFonte(''); setNome(''); setErro('');
   };
+  const adicionarAtaque = (id: string) => {
+    if (!nomeAtaque.trim() || !/^\\d+d(?:4|6|8|10|12|20)(?:\\+\\d+)?$/i.test(formulaAtaque.trim())
+      || !Number.isFinite(alcanceAtaque) || alcanceAtaque <= 0 || !Number.isFinite(bonusAtaque)) {
+      setErro('Informe nome, dados no formato 1d6+2, alcance e bônus válidos.'); return;
+    }
+    const acoes = catalogo.map(inv => inv.id !== id ? inv : {
+      ...inv, acoes: [...inv.acoes, {
+        id: crypto.randomUUID(), nome: nomeAtaque.trim(), tipo: 'ataque' as const,
+        dano: formulaAtaque.trim(), alcanceM: alcanceAtaque, bonusAtaque, tipoDano: tipoDanoAtaque,
+      }],
+    });
+    updateCharacter(character.id, { invocacoesConhecidas: acoes });
+    setEditando(null); setNomeAtaque(''); setErro('');
+  };
+  const removerAtaque = (invId: string, ataqueId: string) => {
+    updateCharacter(character.id, {
+      invocacoesConhecidas: catalogo.map(inv => inv.id !== invId ? inv :
+        { ...inv, acoes: inv.acoes.filter(a => a.id !== ataqueId) }),
+    });
+  };
   const remover = (id: string) => {
     updateCharacter(character.id, { invocacoesConhecidas: catalogo.filter(i => i.id !== id) });
     setErro('');
@@ -121,6 +148,30 @@ export function ControladorInvocacoesSection({ character }: { character: Charact
               <button type="button" className="rounded border border-primary px-2 py-1 text-xs" onClick={() => invocar(inv.id)}>Invocar</button>
             )}
             <button type="button" disabled={ativos.some(e => e.invocationId === inv.id)} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={() => remover(inv.id)}>Remover</button>
+          </div>
+          <div className="basis-full space-y-2 border-t border-border/60 pt-2">
+            <div className="flex items-center justify-between gap-2">
+              <strong className="text-xs">Ataques personalizados</strong>
+              <button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => setEditando(editando === inv.id ? null : inv.id)}>Adicionar ataque</button>
+            </div>
+            {inv.acoes.filter(a => a.tipo === 'ataque').map(a => (
+              <div key={a.id} className="flex items-center justify-between text-xs">
+                <span>{a.nome}: {a.dano ?? 'sem dano'} · {a.alcanceM ?? 1.5} m · acerto {a.bonusAtaque ?? 0}</span>
+                <button type="button" className="rounded border px-2 py-1" onClick={() => removerAtaque(inv.id, a.id)}>Excluir</button>
+              </div>
+            ))}
+            {editando === inv.id && (
+              <div className="grid grid-cols-2 gap-2">
+                <label className="text-xs">Nome<input aria-label="Nome do ataque" value={nomeAtaque} onChange={e => setNomeAtaque(e.target.value)} className="w-full rounded border bg-background p-2" /></label>
+                <label className="text-xs">Dano<input aria-label="Dados de dano" value={formulaAtaque} onChange={e => setFormulaAtaque(e.target.value)} className="w-full rounded border bg-background p-2" /></label>
+                <label className="text-xs">Alcance (m)<input type="number" min="0.1" step="0.5" value={alcanceAtaque} onChange={e => setAlcanceAtaque(Number(e.target.value))} className="w-full rounded border bg-background p-2" /></label>
+                <label className="text-xs">Bônus de acerto<input type="number" value={bonusAtaque} onChange={e => setBonusAtaque(Number(e.target.value))} className="w-full rounded border bg-background p-2" /></label>
+                <label className="text-xs">Tipo de dano<select value={tipoDanoAtaque} onChange={e => setTipoDanoAtaque(e.target.value as import('@/types').DamageType)} className="w-full rounded border bg-background p-2">
+                  {(['DCO','DP','DI','DA','DCG','DCC','DQ','DS','DAL','DNR','DE','DPS','DR','DN','DV'] as const).map(d => <option key={d} value={d}>{d}</option>)}
+                </select></label>
+                <button type="button" className="rounded bg-primary px-2 py-2 text-xs text-primary-foreground" onClick={() => adicionarAtaque(inv.id)}>Salvar ataque</button>
+              </div>
+            )}
           </div>
           {ativos.some(e => e.invocationId === inv.id) && inv.acoes.some(a => a.tipo === 'ataque') && (
             <div className="basis-full space-y-2 border-t border-border/60 pt-2">
