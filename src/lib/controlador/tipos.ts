@@ -15,6 +15,9 @@ export interface InvocacaoControlador {
   defesa: number;
   deslocamentoM: number;
   porte: 'Pequeno' | 'Médio' | 'Grande';
+  /** Grau e atributos definidos pelo editor de Shikigamis. */
+  grau?: 'quarto' | 'terceiro' | 'segundo' | 'primeiro' | 'especial';
+  atributos?: Record<'forca' | 'destreza' | 'constituicao' | 'inteligencia' | 'sabedoria' | 'presenca', number>;
   custoInvocacaoPE: number;
   custoSustentacaoPE?: number;
   acoes: Array<{
