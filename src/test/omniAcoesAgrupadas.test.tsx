@@ -28,6 +28,7 @@ it('cinco exemplares produzem um card e a seleção consome somente o exemplar e
   const ent = katana();
   const copias = Array.from({ length: 5 }, () => useInventoryStore.getState().add('u', ent));
   render(<AcoesAtivasSection charId="u" />);
+  fireEvent.click(screen.getByRole('button', { name: /Corte da vingança/ }));
   expect(screen.getAllByTestId('acao-ativa-Corte da vingança')).toHaveLength(1);
   fireEvent.change(screen.getByLabelText('Exemplar para Corte da vingança'), { target: { value: copias[3].instanceId } });
   fireEvent.click(screen.getByRole('button', { name: 'Usar' }));
@@ -57,6 +58,7 @@ it('acompanha a edição do catálogo e prefere um exemplar equipado', () => {
   const equipada = useInventoryStore.getState().add('u', ent);
   useInventoryStore.getState().equipItem(equipada.instanceId, 'principal');
   render(<AcoesAtivasSection charId="u" />);
+  fireEvent.click(screen.getByRole('button', { name: /Corte da vingança/ }));
   expect((screen.getByLabelText('Exemplar para Corte da vingança') as HTMLSelectElement).value).toBe(equipada.instanceId);
   act(() => useOmniEntidadesStore.setState({ entidades: { [ent.id]: { ...ent, acoesAtivas: [{ ...cfg, nome: 'Corte atualizado' }] } } }));
   expect(screen.queryByText('Corte da vingança')).toBeNull();
