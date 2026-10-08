@@ -1027,6 +1027,8 @@ export interface Character {
   omniCounterRestCycle?: number;
   /** Custos de manutenção e condições exclusivamente criadas por ações OMNI. */
   omniSustentacoes?: { id: string; nome: string; pePorTurno: number; condicoes: { charId: string; id: string; sourceEntityId?: string; sourceInstanceId?: string }[]; contador?: string; alcanceM?: number; alvos?: string[] }[];
+  /** Efeitos OMNI presos a esta ficha (cura todo turno, dano extra nos ataques). */
+  omniEfeitosContinuos?: EfeitoContinuoOmni[];
   /**
    * Redutores de custo de recurso por chave canônica (ex.: `pe`, `vida`).
    * Aplicados em `gastarPE`/`spellCastPipeline`/`CONSUMIR_RECURSO`,
