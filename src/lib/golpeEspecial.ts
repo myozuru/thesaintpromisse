@@ -105,5 +105,9 @@ export function specDCFor(c: Character): number {
   const a = (c.attributes ?? []).find((x) => x.name === key);
   const mod = a ? Math.floor(((a.value ?? 10) - 10) / 2) : 0;
   const lv = c.level ?? 1;
-  return (c.baseDC || 10) + mod + Math.floor(lv / 2) + getTrainingBonusByLevel(lv) + implementoMarcialBonus(c);
+  // Fichas do Controlador geradas pelo wizard já incluem o modificador
+  // escolhido em baseDC = 10 + mod. Não somar o mesmo bônus duas vezes.
+  const atributoJaNaBase = c.specialization === 'Controlador' && c.baseDC === 10 + mod;
+  return (c.baseDC || 10) + (atributoJaNaBase ? 0 : mod)
+    + Math.floor(lv / 2) + getTrainingBonusByLevel(lv) + implementoMarcialBonus(c);
 }
