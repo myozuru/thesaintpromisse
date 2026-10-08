@@ -123,6 +123,12 @@ export interface Entity {
   ownerProfileId?: string;
   /** ID do perfil que marcou este token como avatar ativo; não define posse do token. */
   avatarProfileId?: string;
+  /** Invocação do Controlador: proprietário e ID do catálogo. */
+  ownerCharId?: string;
+  invocationId?: string;
+  /** Defesa e deslocamento próprios do servo (sem criar turno separado). */
+  invocationDefense?: number;
+  invocationMovementM?: number;
   /** ID da ficha (Character) vinculada a esta imagem/token. */
   characterId?: string;
   /** Configuração de efeito persistente aplicada quando personagens entram ou terminam o turno na zona. */
