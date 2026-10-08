@@ -74,7 +74,18 @@ function instalarListenerRemocaoAuraRuntime() {
 /** No mapa as coordenadas são pixels; o painel espacial usa metros. */
 function posicaoDoPersonagem(id: string) {
   const ms = useMapStore.getState();
-  const token = findCharEntity(ms.entities, id);
+  let token = findCharEntity(ms.entities, id);
+  if (!token) {
+    // Peças sem vínculo gravado: reconhece pelo nome da ficha.
+    const nome = useCharacterStore.getState().characters.find((c) => c.id === id)?.name?.trim().toLowerCase();
+    if (nome) {
+      token = Object.values(ms.entities).find((e) => {
+        const en = e as typeof e & { name?: string; label?: string; layer?: string; carriedBy?: string };
+        const n = (en.name ?? en.label ?? '').trim().toLowerCase();
+        return !en.characterId && !en.carriedBy && (!en.layer || en.layer === 'tokens' || en.layer === 'gm') && n === nome;
+      }) ?? null;
+    }
+  }
   if (!token) return useOmniSpatialStore.getState().obter(id);
   const escala = (ms.gridConfig.metersPerCell || 1.5) / (ms.gridConfig.dpi || 70);
   const ponto = ms.pendingMove?.entityId === token.id ? { x: ms.pendingMove.startX, y: ms.pendingMove.startY } : token;
