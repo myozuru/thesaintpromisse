@@ -22,6 +22,7 @@ function inicioTurnoPostura(charId: string) {
 }
 import { persist } from 'zustand/middleware';
 import { useCharacterStore } from './useCharacterStore';
+import { ladoIniciativaPorFicha } from '@/lib/mapa/ladoIniciativa';
 import { useReactionStore } from './useReactionStore';
 
 /**
@@ -424,7 +425,8 @@ export const useCombatStore = create<CombatStore>()(
               (en) => en?.characterId === e.charId,
             );
             if (linked) {
-              useMapStore.getState().addInitiativeFromEntity(linked.id, { init: e.total });
+              const ch = useCharacterStore.getState().characters.find((c) => c.id === e.charId);
+              useMapStore.getState().addInitiativeFromEntity(linked.id, { init: e.total, side: ladoIniciativaPorFicha(ch?.category, linked.layer) });
             }
           }
         });
