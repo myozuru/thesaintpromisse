@@ -7,7 +7,7 @@
  */
 import type { Character } from '@/types';
 import { isEspecialistaCombate } from '@/lib/combateEstilos';
-import { getTrainingBonusByLevel } from '@/lib/levelEngine';
+import { getTrainingBonusByLevel, getKeyAttrForSpec } from '@/lib/levelEngine';
 
 export type GolpePropId =
   | 'amplo' | 'atroz' | 'impactante' | 'letal' | 'longo' | 'penetrante'
@@ -99,7 +99,9 @@ export function impactanteMeters(damage: number, fortitudePassou: boolean): numb
 
 /** CD de Especialização (base + atributo-chave + ½ nível + treinamento + Implemento). */
 export function specDCFor(c: Character): number {
-  const key = c.keyAttribute;
+  const key = c.specialization === 'Controlador'
+    ? getKeyAttrForSpec('Controlador', c.keyAttribute)
+    : c.keyAttribute;
   const a = (c.attributes ?? []).find((x) => x.name === key);
   const mod = a ? Math.floor(((a.value ?? 10) - 10) / 2) : 0;
   const lv = c.level ?? 1;
