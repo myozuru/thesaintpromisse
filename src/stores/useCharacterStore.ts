@@ -1,3 +1,4 @@
+import { limiteInvocacoesConhecidas, limiteInvocacoesAtivas } from '@/lib/controlador/tipos';
 import { coletarMitigacoesDano } from '@/lib/omni/mitigacoesDano';
 import { notificarEventoPersonagem } from '@/lib/omni/notificarEvento';
 import { reacaoEmCurso } from '@/lib/omni/reacaoEmCurso';
@@ -1566,6 +1567,10 @@ export const useCharacterStore = create<CharacterStore>()(
             ...tec.patch,
             ...origRes.patch,
             level: newLevel,
+            ...(c.specialization === 'Controlador' ? {
+              limiteInvocacoesConhecidas: limiteInvocacoesConhecidas(newLevel),
+              limiteInvocacoesAtivas: limiteInvocacoesAtivas(c.treinoControle ?? 1),
+            } : {}),
             attributes,
             skills,
             attrCaps,
