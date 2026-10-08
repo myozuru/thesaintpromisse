@@ -10,7 +10,7 @@ import { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
 import { Character, Attribute, Passive, Spell, DAMAGE_TYPES, DAMAGE_TYPE_LABELS, DAMAGE_TYPE_ABBR, DamageType, SpellBuff, createEmptyRdByType, CHARACTER_CLASSES, CharacterClass, SPECIALIZATIONS, Specialization, MOTIVATIONS, Motivation, ORIGINS, Origin, createEmptyAccessorySlots, AccessorySlots, ItemSlotType, ITEM_SLOT_LABELS, ALL_CONDITIONS, SPELL_LEVELS, SpellLevel, SpellCondition, SPELL_RANGES, SPELL_TARGET_MODES, SpellTargetMode, getTrainingBonus, getMasteryBonus, getLevelSkillBonus, getBaseAttackBonus, getTrainingValue, SaveAttr, SAVE_ATTRS, APTITUDE_KEYS, APTITUDE_LABELS, APTITUDE_MAX, createDefaultCursedAptitudes, type AptitudeKey } from '@/types';
 import { SpellCreationAssistant } from './SpellCreationAssistant';
 import { OmniVinculadosList } from './OmniVinculadosList';
-import { ControladorInvocacoesSection } from './ControladorInvocacoesSection';
+import { ControladorShikigamisAba } from './ControladorShikigamisAba';
 import { BlindfoldSlot } from './BlindfoldSlot';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useRoleStore } from '@/stores/useRoleStore';
@@ -2890,7 +2890,13 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
           {c.characterClass === 'Feiticeiro' && !c.isGrimorioCreature && (
             <Section icon={<Sparkles className="h-4 w-4" />} title="Habilidades de Especialização">
               <SpecAbilitiesPanel character={c} editMode={editMode} />
-              {c.specialization === 'Controlador' && <ControladorInvocacoesSection character={c} />}
+
+            </Section>
+          )}
+
+          {c.specialization === 'Controlador' && !c.isGrimorioCreature && (
+            <Section icon={<Sparkles className="h-4 w-4" />} title="Shikigamis">
+              <ControladorShikigamisAba character={c} />
             </Section>
           )}
 
