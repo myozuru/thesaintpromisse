@@ -6,6 +6,8 @@ vi.mock('@/lib/sounds', async (original) => Object.fromEntries(Object.keys(await
 vi.mock('@/lib/socket', () => ({ getSocket: () => null }));
 vi.mock('@/integrations/supabase/safeClient', async () => ({ hasWorkspaceCloud: false, supabase: (await import('./helpers/mesaReal')).nuvemFalsa }));
 import { useMapStore } from '@/stores/useMapStore';
+import { useDice3DStore } from '@/stores/useDice3DStore';
+import { montarVariaveisDoPersonagem } from '@/lib/omni/resolvedor';
 import { executarAcaoAtiva, planejarDano, danoAposTR, moverForcado, parseDados } from '@/lib/omni/acaoAtiva';
 import type { AcaoAtivaConfig } from '@/lib/omni/tipos';
 import { ficha, montarMesa, limparMesa, comoTela, pegarFicha, forcarDados, CASA, esperar } from './helpers/mesaReal';
@@ -74,6 +76,29 @@ describe('Vingança Agulhada (TR)', () => {
     montar(2);
     const r2 = await executarAcaoAtiva('heroi', { ...vinganca, custoPE: '99' }, 'alvo');
     expect(r2.ok).toBe(false);
+  });
+});
+
+describe('cura com atributos e dados 3D', () => {
+  it('Sabedoria 18 fornece modificador +4; 1d6=2 recupera 6 PV pela bandeja', async () => {
+    montarMesa([
+      ficha('heroi', {
+        hpCurrent: 10, hpMax: 30, actionsCurrent: 1,
+        attributes: [{ id: 'sabedoria', name: 'Sabedoria', value: 18, externalBonus: 0, mastery: false }],
+      }),
+    ], { heroi: [0, 0] });
+    expect(montarVariaveisDoPersonagem(pegarFicha('heroi')).MOD_SAB).toBe(4);
+    const roll = vi.spyOn(useDice3DStore.getState(), 'requestNotation').mockResolvedValue([2]);
+    const cfg: AcaoAtivaConfig = {
+      id: 'cura-sab', nome: 'Cura de Sabedoria', acao: 'comum', custoPE: '0',
+      alcanceM: 0, tipo_alvo: 'proprio', teste: 'nenhum',
+      tipo_efeito: 'cura', cura: '1d6 + @USUARIO.sab', recurso_cura: 'pv',
+    };
+    const r = await executarAcaoAtiva('heroi', cfg, 'heroi');
+    expect(r.ok).toBe(true);
+    expect(r.ok && r.cura).toBe(6);
+    expect(pegarFicha('heroi').hpCurrent).toBe(16);
+    expect(roll).toHaveBeenCalledWith('1d6', 'Cura: Cura de Sabedoria', undefined);
   });
 });
 
