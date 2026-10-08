@@ -1,3 +1,4 @@
+import { ladoIniciativaPorFicha } from '@/lib/mapa/ladoIniciativa';
 import { NpcInteracaoOverlay } from '@/components/economia/NpcInteracaoOverlay';
 import { comPreviaMovimento, confirmarMovimentoMapa } from '@/lib/mapa/movimentoConfirmado';
 import { ItemNoChaoOverlay } from './ui/ItemNoChaoOverlay';
