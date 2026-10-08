@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
+import { useMapStore } from '@/stores/useMapStore';
+import { invocarControlador, recolherInvocacao, limparInvocacoesDerrotadas, tokensInvocados, type DirecaoInvocacao } from '@/lib/controlador/mapa';
 import { limiteInvocacoesConhecidas, limiteInvocacoesAtivas, validarCatalogoControlador, type InvocacaoControlador, type TipoInvocacaoControlador } from '@/lib/controlador/tipos';
 
 type Fonte = { id: string; nome: string; tipo: 'grimorio' | 'omni'; hp: number; defesa: number; deslocamento: number; porte: InvocacaoControlador['porte']; acoes: InvocacaoControlador['acoes'] };
@@ -36,6 +38,19 @@ export function ControladorInvocacoesSection({ character }: { character: Charact
   const [custoPE, setCustoPE] = useState(3);
   const [fonte, setFonte] = useState('');
   const [erro, setErro] = useState('');
+  const [direcao, setDirecao] = useState<DirecaoInvocacao>('leste');
+  const [mensagem, setMensagem] = useState('');
+  const entities = useMapStore(s => s.entities);
+  const ativos = Object.values(entities).filter(e => e.ownerCharId === character.id && !!e.invocationId);
+  useEffect(() => { if (ativos.some(e => (e.hp ?? 0) <= 0)) limparInvocacoesDerrotadas(character.id); }, [entities, character.id]);
+  const invocar = (id: string) => {
+    const resultado = invocarControlador(character.id, id, direcao);
+    if (!resultado.ok) { setErro(resultado.motivo); return; }
+    setErro(''); setMensagem('Invocação materializada no mapa.');
+  };
+  const recolher = (id: string) => {
+    if (recolherInvocacao(character.id, id)) { setErro(''); setMensagem('Invocação recolhida.'); }
+  };
   const catalogo = character.invocacoesConhecidas ?? [];
   const max = limiteInvocacoesConhecidas(character.level);
   const ativas = limiteInvocacoesAtivas(character.treinoControle ?? 1);
@@ -72,11 +87,24 @@ export function ControladorInvocacoesSection({ character }: { character: Charact
   };
   return (
     <div className="space-y-3 rounded-lg border border-border p-3 text-sm">
-      <div className="font-semibold">Invocações conhecidas: {catalogo.length}/{max} · Limite em campo: {ativas}</div>
+      <div className="font-semibold">Invocações conhecidas: {catalogo.length}/{max} · Em campo: {ativos.length}/{ativas}</div>
+      <label className="block text-xs">Posicionar na célula adjacente ao Controlador
+        <select aria-label="Direção da invocação" value={direcao} onChange={e => setDirecao(e.target.value as DirecaoInvocacao)} className="mt-1 w-full rounded border border-input bg-background p-2">
+          <option value="norte">Norte</option><option value="sul">Sul</option><option value="leste">Leste</option><option value="oeste">Oeste</option>
+        </select>
+      </label>
+      {mensagem && <p role="status" className="text-xs text-muted-foreground">{mensagem}</p>}
       {catalogo.map(inv => (
         <div key={inv.id} className="flex items-center justify-between gap-2 rounded border border-border p-2">
           <div><strong>{inv.nome}</strong><div className="text-xs text-muted-foreground">{inv.tipo === 'shikigami' ? 'Shikigami' : 'Corpo Amaldiçoado'} · PV {inv.hpAtual}/{inv.hpMaximo} · Defesa {inv.defesa} · {inv.deslocamentoM} m · {inv.custoInvocacaoPE} PE · {inv.acoes.length} ações</div></div>
-          <button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => remover(inv.id)}>Remover</button>
+          <div className="flex shrink-0 flex-wrap gap-1">
+            {ativos.some(e => e.invocationId === inv.id) ? (
+              <button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => recolher(inv.id)}>Recolher</button>
+            ) : (
+              <button type="button" className="rounded border border-primary px-2 py-1 text-xs" onClick={() => invocar(inv.id)}>Invocar</button>
+            )}
+            <button type="button" disabled={ativos.some(e => e.invocationId === inv.id)} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={() => remover(inv.id)}>Remover</button>
+          </div>
         </div>
       ))}
       <div className="space-y-2 rounded border border-border p-2">
@@ -104,7 +132,7 @@ export function ControladorInvocacoesSection({ character }: { character: Charact
         {erro && <p role="alert" className="text-xs text-destructive">{erro}</p>}
         <button type="button" disabled={catalogo.length >= max} onClick={salvar} className="rounded bg-primary px-3 py-2 text-xs text-primary-foreground disabled:opacity-50">Adicionar ao catálogo</button>
       </div>
-      <p className="text-xs text-muted-foreground">Catálogo preparado para a Fase 3: ainda não cria tokens nem gasta PE.</p>
+      <p className="text-xs text-muted-foreground">Invocar gasta PE e cria um token no mapa. Comandos e ataques dos servos serão integrados na Fase 4.</p>
     </div>
   );
 }
