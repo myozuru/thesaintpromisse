@@ -392,7 +392,7 @@ function PromptCard({
       </div>
       {p.expiresAt != null && <div className={cn('text-xs font-semibold tabular-nums', secondsLeft <= 3 ? 'text-destructive' : 'text-muted-foreground')}>
         {secondsLeft > 0 ? `Tempo para reagir: ${secondsLeft}s` : 'Encerrando reação…'}
-      </div>
+      </div>}
 
       {p.kind === 'nullify_offer' && (
         <div className="flex items-center gap-1.5">
