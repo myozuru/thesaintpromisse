@@ -4,7 +4,7 @@ import { ficha, montarMesa, pegarFicha, comoTela } from './helpers/mesaReal';
 import { useMapStore } from '@/stores/useMapStore';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
-import { invocarControlador, recolherInvocacao, tokensInvocados, limparInvocacoesDerrotadas, causarDanoInvocacao, comandarReposicionamento, comandarAtaque } from '@/lib/controlador/mapa';
+import { invocarControlador, recolherInvocacao, tokensInvocados, limparInvocacoesDerrotadas, causarDanoInvocacao, comandarReposicionamento, comandarAtaque, comandosPorAcao } from '@/lib/controlador/mapa';
 import type { InvocacaoControlador } from '@/lib/controlador/tipos';
 
 function modelo(id: string): InvocacaoControlador {
@@ -129,6 +129,29 @@ describe('Controlador — materialização real no mapa', () => {
     expect(result).toEqual({ ok: true, acertou: true, totalAtaque: 15, dano: 6 });
     expect(damage).toHaveBeenCalledWith('inimigo', 6, 'DP', { attackerId: 'dono' });
     expect(pegarFicha('dono').actionsCurrent).toBe(0);
+    useCombatStore.setState({ inCombat: false } as never);
+    vi.restoreAllMocks();
+  });
+  it('progride a cota de comandos nos níveis 1, 6, 12 e 18', () => {
+    expect([1, 6, 12, 18].map(comandosPorAcao)).toEqual([1, 2, 3, 4]);
+  });
+  it('nível 6 compartilha a mesma Ação Comum por dois ataques', async () => {
+    const inv = { ...modelo('a'), acoes: [{ id: 'mordida', nome: 'Mordida', tipo: 'ataque' as const, alcanceM: 1.5, dano: '1d6' }] };
+    useCharacterStore.getState().updateCharacter('dono', { level: 6, actionsCurrent: 1, invocacoesConhecidas: [inv] });
+    useCharacterStore.setState({ characters: [...useCharacterStore.getState().characters,
+      ficha('inimigo', { hpCurrent: 15, hpMax: 15, ca: 30 })] });
+    useMapStore.getState().addEntity({ shape: 'ELLIPSE', x: 280, y: 140, w: 70, h: 70,
+      rotation: 0, color: '#000', locked: false, characterId: 'inimigo' });
+    expect(invocarControlador('dono', 'a', 'leste').ok).toBe(true);
+    useCombatStore.setState({ inCombat: true, round: 1, initiativeOrder: [{ charId: 'dono', initiative: 10 }], currentTurnIndex: 0 } as never);
+    const { useDice3DStore } = await import('@/stores/useDice3DStore');
+    vi.spyOn(useDice3DStore.getState(), 'requestRoll').mockResolvedValue([2]);
+    expect((await comandarAtaque('dono', 'a', 'mordida', 'inimigo')).ok).toBe(true);
+    expect(pegarFicha('dono').actionsCurrent).toBe(0);
+    expect(pegarFicha('dono').comandosControle?.restantes).toBe(1);
+    expect((await comandarAtaque('dono', 'a', 'mordida', 'inimigo')).ok).toBe(true);
+    expect(pegarFicha('dono').comandosControle?.restantes).toBe(0);
+    expect((await comandarAtaque('dono', 'a', 'mordida', 'inimigo')).ok).toBe(false);
     useCombatStore.setState({ inCombat: false } as never);
     vi.restoreAllMocks();
   });
