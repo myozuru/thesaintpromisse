@@ -37,7 +37,7 @@ jobs:
         with:
           bun-version: latest
       - run: bun install --no-save
-      - run: bunx vitest run src/test/controladorFundacao.test.ts
+      - run: bunx vitest run src/test/controladorFundacao.test.ts src/test/controladorMapa.test.ts
 
   omni-tests:
     runs-on: ubuntu-latest
