@@ -435,6 +435,7 @@ export const useCombatStore = create<CombatStore>()(
           import('@/lib/omni/auras').then(({ verificarAurasInicioTurno }) =>
             verificarAurasInicioTurno(first.charId, 1),
           );
+          import('@/lib/omni/efeitosContinuos').then(({ tickEfeitosContinuosInicioTurno }) => tickEfeitosContinuosInicioTurno(first.charId));
         }
         // 🆕 Reset do contador de toggles do slot de Venda ao iniciar combate.
         for (const e of sorted) {
@@ -618,6 +619,7 @@ export const useCombatStore = create<CombatStore>()(
             import('@/lib/omni/auras').then(({ verificarAurasInicioTurno }) =>
               verificarAurasInicioTurno(firstEntry.charId, newRound),
             );
+            import('@/lib/omni/efeitosContinuos').then(({ tickEfeitosContinuosInicioTurno }) => tickEfeitosContinuosInicioTurno(firstEntry.charId));
             // TRs de fim de condição para o primeiro da nova rodada.
             enqueueConditionEndTRPrompts(firstEntry.charId);
             // Áreas Persistentes: decrementa a duração no início da rodada e aplica tick.
@@ -671,6 +673,7 @@ export const useCombatStore = create<CombatStore>()(
           inicioTurnoPostura(nextEntry.charId);
           import('@/lib/replicas').then(({ inicioTurnoReplicas }) => inicioTurnoReplicas(nextEntry.charId));
           import('@/lib/omni/custosAtivos').then(({ inicioTurnoSustentacoesAtivas }) => inicioTurnoSustentacoesAtivas(nextEntry.charId));
+          import('@/lib/omni/efeitosContinuos').then(({ tickEfeitosContinuosInicioTurno }) => tickEfeitosContinuosInicioTurno(nextEntry.charId));
           // Preparo Imediato: a ação preparada expira no começo do próprio turno.
           import('@/lib/preparoImediato').then(({ expirarPreparoNoTurno }) => expirarPreparoNoTurno(nextEntry.charId));
 
