@@ -69,14 +69,14 @@ export function getConMod(c: Pick<Character, 'attributes'>): number {
 }
 
 /** Atributo-chave para PE por classe. Apenas Especialista em Técnica/Controlador/Suporte ganham bônus.
- *  Suporte escolhe entre Presença ou Sabedoria (regra do livro) — usa `keyAttribute`
- *  da ficha quando definido; fallback Presença para fichas antigas. */
+ *  Controlador e Suporte escolhem Presença ou Sabedoria via `keyAttribute`.
+ *  Controlador legado mantém Sabedoria; Suporte legado mantém Presença. */
 export function getKeyAttrForSpec(spec: Specialization, keyAttribute?: string | null): string | null {
   switch (spec) {
     case 'Especialista em Técnica':
       return 'Inteligência';
     case 'Controlador':
-      return 'Sabedoria';
+      return keyAttribute === 'Presença' ? 'Presença' : 'Sabedoria';
     case 'Suporte':
       return keyAttribute === 'Sabedoria' ? 'Sabedoria' : 'Presença';
     default:
