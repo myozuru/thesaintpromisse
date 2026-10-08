@@ -159,6 +159,7 @@ export async function comandarAtaque(donoId: string, invocacaoId: string, acaoId
   if (distancia > (acao.alcanceM ?? 1.5) + 1e-6) return { ok: false, motivo: 'Alvo fora do alcance.' };
   const notacao = acao.dano.replace(/\s+/g, '');
   if (!/^\d+d(?:4|6|8|10|12|20)(?:\+\d+)?$/i.test(notacao)) return { ok: false, motivo: 'Dano inválido; configure NdN ou NdN+N.' };
+  if (!Number.isFinite(acao.bonusAtaque ?? 0)) return { ok: false, motivo: 'Bônus de ataque inválido.' };
   const [dados, bonusStr] = notacao.split('+');
   const quantidade = parseInt(dados.split('d')[0], 10);
   if (quantidade < 1 || quantidade > 40) return { ok: false, motivo: 'Quantidade de dados inválida.' };
@@ -168,12 +169,12 @@ export async function comandarAtaque(donoId: string, invocacaoId: string, acaoId
   try {
     const { rollD20Com, rollDiceCom } = await import('@/lib/dice');
     const natural = await rollD20Com(donoId, 0, { label: 'Ataque de ' + inv!.nome + ': ' + acao.nome });
-    const totalAtaque = natural;
+    const totalAtaque = natural + (acao.bonusAtaque ?? 0);
     const acertou = natural === 20 || (natural !== 1 && totalAtaque >= (alvo.ca ?? 10));
     if (!acertou) return { ok: true, acertou: false, totalAtaque, dano: 0 };
     const rolagem = await rollDiceCom(donoId, dados, { label: 'Dano de ' + inv!.nome });
     const dano = rolagem.total + Number(bonusStr ?? 0);
-    await useCharacterStore.getState().applyDamage(alvoId, dano, 'DCO', { attackerId: donoId });
+    await useCharacterStore.getState().applyDamage(alvoId, dano, acao.tipoDano ?? 'DCO', { attackerId: donoId });
     return { ok: true, acertou: true, totalAtaque, dano };
   } catch {
     // A execução pode ter chegado ao dano antes da falha. Não duplicar ação nem dano.
