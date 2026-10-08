@@ -1247,3 +1247,22 @@ export interface LogEntry {
   /** Texto seguro para o histórico compartilhado; detalhes ficam no cliente de origem. */
   publicMessage?: string;
 }
+
+/** Em quais ataques a assistência de dano entra. */
+export type EscopoAssistenciaDano = 'qualquer' | 'corpo_a_corpo' | 'distancia' | 'feitico' | 'arma' | 'arma_especifica';
+
+/** Efeito OMNI contínuo preso a um alvo (ver src/lib/omni/efeitosContinuos.ts). */
+export interface EfeitoContinuoOmni {
+  id: string;
+  nome: string;
+  origemId: string;
+  acaoId: string;
+  /** Sustentação do conjurador que mantém o efeito vivo. */
+  sustentacaoId?: string;
+  /** Quantas cargas/espíritos estão no alvo: multiplica os dados. */
+  multiplicador: number;
+  /** Rodadas restantes; ausente/0 = enquanto durar a sustentação. */
+  rodadas?: number;
+  cura?: { formula: string; recurso?: 'pv' | 'pe' };
+  assistencia?: { escopo: EscopoAssistenciaDano; filtroArma?: string; dano: string; tipoDano?: string; consumo: 'proximo_acerto' | 'duracao' };
+}

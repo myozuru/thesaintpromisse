@@ -1,3 +1,4 @@
+import { sustentacaoTemEfeitoContinuo } from './efeitosContinuos';
 import type { Character } from '@/types';
 import type { AcaoAtivaConfig } from './tipos';
 import { avaliarFormula } from './parser';
@@ -197,6 +198,7 @@ function condicaoAindaAtiva(c: CondicaoSustentada): boolean {
 /** A sustentação continua viva enquanto mantiver alguma condição ou cargas no contador vinculado. */
 function sustentacaoTemConteudo(u: Character, s: Sustentacao): boolean {
   if (s.condicoes.some(condicaoAindaAtiva)) return true;
+  if (sustentacaoTemEfeitoContinuo(u.id, s.id)) return true;
   return !!s.contador && (u.omniCounters?.[s.contador] ?? 0) > 0;
 }
 
@@ -205,6 +207,10 @@ export function encerrarSustentacaoAtiva(charId: string, id: string, motivo?: st
   const ativo = u?.omniSustentacoes?.find(s => s.id === id);
   if (!u || !ativo) return;
   for (const c of ativo.condicoes) removerCondicaoSustentada(c);
+  for (const alvo of useCharacterStore.getState().characters) {
+    const lista = alvo.omniEfeitosContinuos ?? [];
+    if (lista.some(e => e.origemId === charId && e.sustentacaoId === id)) store.updateCharacter(alvo.id, { omniEfeitosContinuos: lista.filter(e => !(e.origemId === charId && e.sustentacaoId === id)) });
+  }
   store.updateCharacter(charId, { omniSustentacoes: (useCharacterStore.getState().characters.find(c => c.id === charId)?.omniSustentacoes ?? []).filter(s => s.id !== id) });
   if (ativo.contador) zerarContadorAtivo(charId, ativo.contador);
   useLogStore.getState().addLog('combat', `⏳ ${u.name}: ${ativo.nome} deixou de ser sustentada${motivo ? ` (${motivo})` : ''}.`);
@@ -251,6 +257,11 @@ export function verificarDistanciaSustentacoes(charId?: string): number {
       if (!longe.length) continue;
       removidos += longe.length;
       for (const c of s.condicoes.filter(c => longe.includes(c.charId))) removerCondicaoSustentada(c);
+      for (const id of longe) {
+        const alvo = useCharacterStore.getState().characters.find(c => c.id === id);
+        const lista = alvo?.omniEfeitosContinuos ?? [];
+        if (alvo && lista.some(e => e.origemId === conj.id && e.sustentacaoId === s.id)) useCharacterStore.getState().updateCharacter(id, { omniEfeitosContinuos: lista.filter(e => !(e.origemId === conj.id && e.sustentacaoId === s.id)) });
+      }
       const nomes = longe.map(id => chars.find(c => c.id === id)?.name ?? 'alvo').join(', ');
       const store = useCharacterStore.getState(), u = store.characters.find(c => c.id === conj.id);
       if (!u) continue;

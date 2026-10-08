@@ -2874,6 +2874,11 @@ export const useCharacterStore = create<CharacterStore>()(
             });
           }, 0);
         }
+        // Assistência de dano OMNI (ex.: espírito de fogo no ombro do atacante).
+        if (finalDamage > 0 && opts?.attackerId) {
+          const optsAssist = opts;
+          setTimeout(() => { import('@/lib/omni/efeitosContinuos').then(({ dispararAssistenciaDano }) => dispararAssistenciaDano(id, optsAssist)).catch(() => {}); }, 0);
+        }
         });
       },
       applyHealing: (id, amount, source = 'other', healerId) => {

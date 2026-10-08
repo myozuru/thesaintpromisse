@@ -527,6 +527,8 @@ async function executarAcaoAtivaInterna(
   let curaTotal = 0;
   let efeitoAplicado = false;
   const detalhes: string[] = [];
+  const pendentesContinuos: { alvoId: string; multiplicador: number; rodadas?: number; cura?: EfeitoContinuoOmni['cura']; assistencia?: EfeitoContinuoOmni['assistencia'] }[] = [];
+  let novaSustId: string | undefined;
   for (const selecionado of alvos) {
     const t = useCharacterStore.getState().characters.find(c => c.id === selecionado.id);
     if (!t) continue;
