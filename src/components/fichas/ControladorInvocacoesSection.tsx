@@ -3,7 +3,7 @@ import type { Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useMapStore } from '@/stores/useMapStore';
-import { invocarControlador, recolherInvocacao, limparInvocacoesDerrotadas, tokensInvocados, type DirecaoInvocacao } from '@/lib/controlador/mapa';
+import { invocarControlador, recolherInvocacao, limparInvocacoesDerrotadas, type DirecaoInvocacao } from '@/lib/controlador/mapa';
 import { limiteInvocacoesConhecidas, limiteInvocacoesAtivas, validarCatalogoControlador, type InvocacaoControlador, type TipoInvocacaoControlador } from '@/lib/controlador/tipos';
 
 type Fonte = { id: string; nome: string; tipo: 'grimorio' | 'omni'; hp: number; defesa: number; deslocamento: number; porte: InvocacaoControlador['porte']; acoes: InvocacaoControlador['acoes'] };
