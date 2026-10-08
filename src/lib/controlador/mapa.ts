@@ -82,3 +82,50 @@ export function podeComandarInvocacao(donoId: string): boolean {
   const combat = useCombatStore.getState();
   return combat.inCombat && combat.initiativeOrder[combat.currentTurnIndex]?.charId === donoId;
 }
+
+
+/** Dano direcionado a um token real de invocação; nunca altera PV da ficha do dono. */
+export function causarDanoInvocacao(tokenId: string, dano: number): { ok: true; hpRestante: number; destruida: boolean } | { ok: false; motivo: string } {
+  const mapa = useMapStore.getState();
+  const token = mapa.entities[tokenId];
+  if (!token?.ownerCharId || !token.invocationId) return { ok: false, motivo: 'Token não pertence a uma invocação.' };
+  if (!Number.isFinite(dano) || dano < 0) return { ok: false, motivo: 'Dano inválido.' };
+  const hpRestante = Math.max(0, (token.hp ?? 0) - Math.floor(dano));
+  mapa.updateEntity(tokenId, { hp: hpRestante });
+  const dono = useCharacterStore.getState().characters.find(c => c.id === token.ownerCharId);
+  if (dono) {
+    useCharacterStore.getState().updateCharacter(dono.id, {
+      invocacoesConhecidas: (dono.invocacoesConhecidas ?? []).map(i => i.id === token.invocationId ? { ...i, hpAtual: hpRestante } : i),
+    });
+  }
+  if (hpRestante === 0) mapa.removeEntities([tokenId]);
+  return { ok: true, hpRestante, destruida: hpRestante === 0 };
+}
+
+/** Primeiro comando da Fase 4: uma ação bônus reposiciona um servo em
+ * uma célula livre. Não cria novo turno na iniciativa nem movimento gratuito.
+ */
+export function comandarReposicionamento(donoId: string, invocacaoId: string, direcao: DirecaoInvocacao): { ok: true } | { ok: false; motivo: string } {
+  const dono = useCharacterStore.getState().characters.find(c => c.id === donoId);
+  if (!dono || dono.specialization !== 'Controlador') return { ok: false, motivo: 'Controlador inválido.' };
+  if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Só é possível comandar no turno do Controlador.' };
+  const token = tokensInvocados(donoId).find(e => e.invocationId === invocacaoId);
+  if (!token || (token.hp ?? 0) <= 0) return { ok: false, motivo: 'Invocação não está ativa.' };
+  if ((dono.bonusActionsCurrent ?? 0) < 1) return { ok: false, motivo: 'Ação Bônus indisponível.' };
+  const mapa = useMapStore.getState();
+  const passo = mapa.gridConfig.dpi;
+  if (!(passo > 0) || !(mapa.gridConfig.metersPerCell > 0)) return { ok: false, motivo: 'Grade inválida.' };
+  const deltas: Record<DirecaoInvocacao, [number, number]> = {
+    norte: [0, -1], sul: [0, 1], leste: [1, 0], oeste: [-1, 0],
+  };
+  if (!deltas[direcao]) return { ok: false, motivo: 'Direção inválida.' };
+  const [dx, dy] = deltas[direcao];
+  const x = token.x + dx * passo, y = token.y + dy * passo;
+  const ocupado = Object.values(mapa.entities).some(e => e.id !== token.id && e.layer !== 'map' && !e.hidden &&
+    Math.abs((e.x + e.w / 2) - (x + token.w / 2)) < passo * .45 &&
+    Math.abs((e.y + e.h / 2) - (y + token.h / 2)) < passo * .45);
+  if (ocupado) return { ok: false, motivo: 'Destino ocupado.' };
+  mapa.updateEntity(token.id, { x, y });
+  useCharacterStore.getState().updateCharacter(donoId, { bonusActionsCurrent: dono.bonusActionsCurrent - 1 });
+  return { ok: true };
+}
