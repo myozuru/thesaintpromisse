@@ -244,6 +244,14 @@ export function montarVariaveisDoPersonagem(
   const qtdHabilidadesSpec = (c.chosenSpecAbilities ?? []).length;
 
   const base: Record<string, number> = {
+    // Modificadores d20 explícitos; não modificam as keys de atributo bruto.
+    MOD_FOR: Math.floor((atributos.forca - 10) / 2),
+    MOD_DES: Math.floor((atributos.destreza - 10) / 2),
+    MOD_CON: Math.floor((atributos.constituicao - 10) / 2),
+    MOD_INT: Math.floor((atributos.inteligencia - 10) / 2),
+    MOD_SAB: Math.floor((atributos.sabedoria - 10) / 2),
+    MOD_PRE: Math.floor((atributos.presenca - 10) / 2),
+    MOD_CAR: Math.floor((atributos.presenca - 10) / 2),
     FOR: atributos.forca,
     DES: atributos.destreza,
     CON: atributos.constituicao,
