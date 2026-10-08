@@ -805,6 +805,8 @@ export interface Character {
   invocacoesConhecidas?: import('@/lib/controlador/tipos').InvocacaoControlador[];
   /** Treinamento específico em Controle (distinto do bônus geral de Treinamento). */
   treinoControle?: number;
+  /** Saldo de ordens complexas financiadas pela última Ação Comum, por rodada. */
+  comandosControle?: { rodada: number; restantes: number };
   /** Limites derivados do nível e treino; não devem substituir a validação do motor. */
   limiteInvocacoesConhecidas?: number;
   limiteInvocacoesAtivas?: number;
