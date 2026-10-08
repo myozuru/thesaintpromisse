@@ -126,7 +126,8 @@ describe('espírito de fogo contínuo no aliado', () => {
     const { tickEfeitosContinuosInicioTurno } = await import('@/lib/omni/efeitosContinuos');
     useCharacterStore.getState().updateCharacter('b', { hpCurrent: 10 });
     await executarAcaoAtiva('u', invocar, 'u');
-    await executarAcaoAtiva('u', enviarAliado, 'b');
+    const r1 = await executarAcaoAtiva('u', enviarAliado, 'b');
+    expect(r1).toMatchObject({ ok: true });
     await executarAcaoAtiva('u', enviarAliado, 'b');
     expect(pegarFicha('u').omniCounters?.espiritos_fogo ?? 0).toBe(0);
     expect(pegarFicha('b').omniEfeitosContinuos?.[0]).toMatchObject({ multiplicador: 2 });
