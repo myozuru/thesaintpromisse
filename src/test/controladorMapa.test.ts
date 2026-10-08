@@ -109,6 +109,29 @@ describe('Controlador — materialização real no mapa', () => {
     useCombatStore.setState({ inCombat: false } as never);
     vi.restoreAllMocks();
   });
+  it('acerto comandado usa bônus e tipo do servo, com dados 3D e pipeline de dano', async () => {
+    const inv = { ...modelo('a'), acoes: [{
+      id: 'mordida', nome: 'Mordida', tipo: 'ataque' as const, alcanceM: 1.5,
+      dano: '1d6+2', bonusAtaque: 3, tipoDano: 'DP' as const,
+    }] };
+    useCharacterStore.getState().updateCharacter('dono', { actionsCurrent: 1, invocacoesConhecidas: [inv] });
+    useCharacterStore.setState({ characters: [...useCharacterStore.getState().characters,
+      ficha('inimigo', { hpCurrent: 15, hpMax: 15, ca: 13 })] });
+    useMapStore.getState().addEntity({ shape: 'ELLIPSE', x: 280, y: 140, w: 70, h: 70, rotation: 0,
+      color: '#000', locked: false, characterId: 'inimigo' });
+    expect(invocarControlador('dono', 'a', 'leste').ok).toBe(true);
+    useCombatStore.setState({ inCombat: true, initiativeOrder: [{ charId: 'dono', initiative: 10 }], currentTurnIndex: 0 } as never);
+    const { useDice3DStore } = await import('@/stores/useDice3DStore');
+    vi.spyOn(useDice3DStore.getState(), 'requestRoll').mockResolvedValue([12]);
+    vi.spyOn(useDice3DStore.getState(), 'requestNotation').mockResolvedValue([4]);
+    const damage = vi.spyOn(useCharacterStore.getState(), 'applyDamage').mockResolvedValue();
+    const result = await comandarAtaque('dono', 'a', 'mordida', 'inimigo');
+    expect(result).toEqual({ ok: true, acertou: true, totalAtaque: 15, dano: 6 });
+    expect(damage).toHaveBeenCalledWith('inimigo', 6, 'DP', { attackerId: 'dono' });
+    expect(pegarFicha('dono').actionsCurrent).toBe(0);
+    useCombatStore.setState({ inCombat: false } as never);
+    vi.restoreAllMocks();
+  });
   it('remove token com 0 PV e registra o estado no catálogo', () => {
     const r = invocarControlador('dono', 'a', 'leste');
     if (!r.ok) throw new Error(r.motivo);
