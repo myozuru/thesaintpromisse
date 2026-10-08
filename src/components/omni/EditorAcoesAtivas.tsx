@@ -4,6 +4,7 @@ import { EditorDesfechosTR } from './EditorDesfechosTR';
 import { EditorReacoesAtivas } from './EditorReacoesAtivas';
 import { EditorCustosAtivos } from './EditorCustosAtivos';
 import { EditorCondicionaisAtivos } from './EditorCondicionaisAtivos';
+import { EditorContinuoAtivo } from './EditorContinuoAtivo';
 /** Editor no-code das ações ativas genéricas de uma entidade OMNI. */
 import type { AcaoAtivaConfig, EfeitoSecundarioAtivo, EntidadeOmni, TrNome } from '@/lib/omni/tipos';
 import { novaAcaoAtiva } from '@/lib/omni/acaoAtiva';
@@ -125,6 +126,7 @@ export function EditorAcoesAtivas({ ent, setEnt }: { ent: EntidadeOmni; setEnt: 
               <label className="text-xs">Recurso<select aria-label="Recurso da recuperação" className={sel} value={a.recurso_cura ?? 'pv'} onChange={e => set(i, { recurso_cura: e.target.value as 'pv' | 'pe' })}><option value="pv">PV</option><option value="pe">PE</option></select></label>
             </>}
           </div>
+          <EditorContinuoAtivo acao={a} onChange={p => set(i, p)} />
           <div className="grid grid-cols-3 gap-2">
             <div><Label className="text-xs">Dano (ex.: 6d8)</Label><Input aria-label={`Dano de ${a.nome}`} value={a.dano ?? ''} placeholder="@ARMA.DANO + 2d8" onChange={(e) => set(i, { dano: e.target.value })} /><p className="text-xs text-muted-foreground">Fórmula: @ARMA.DANO, @ARMA.DADOS, @ARMA.PASSO, @ARMA.CRITICO_MARGEM</p></div>
             <div><Label className="text-xs" htmlFor={`tipo-dano-${a.id}`}>Tipo de dano</Label>

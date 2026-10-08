@@ -1,0 +1,38 @@
+{
+  "formato": "omni-engine.v1",
+  "nome": "Aura Ardente",
+  "autor": "Omni-Engine",
+  "geradoEm": 1760000000000,
+  "entidades": [
+    {
+      "id": "preset-aura-ardente-1",
+      "versao": 1,
+      "nome": "Aura Ardente 1",
+      "categoria": "aura",
+      "descricao": "As chamas são incorporadas na sua aura, deixando-a ardente. Toda criatura que iniciar o turno a até 3 metros de você faz um teste de resistência de Fortitude; na falha, recebe 2d8 de dano queimante.",
+      "tags": ["preset", "aura", "fogo"],
+      "duracao": { "tipo": "permanente" },
+      "areaRaio": { "tipo": "fixo", "valor": 3 },
+      "custos": [],
+      "gatilhos": [],
+      "acoesAtivas": [
+        {
+          "id": "aa-aura-ardente-1",
+          "nome": "Chamas da Aura",
+          "acao": "livre",
+          "custoPE": "0",
+          "alcanceM": 3,
+          "tipo_alvo": "unico",
+          "filtro_alvo": "todos_exceto_si",
+          "teste": "tr",
+          "tr": "fortitude",
+          "metadeNoSucesso": false,
+          "dano": "2d8",
+          "tipoDano": "Queimante"
+        }
+      ],
+      "criadoEm": 1760000000000,
+      "atualizadoEm": 1760000000000
+    }
+  ]
+}

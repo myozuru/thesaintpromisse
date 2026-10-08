@@ -285,7 +285,23 @@ export function InitiativePanel({ onClose }: Props) {
             Anterior
           </button>
           <button
-            onClick={nextTurn}
+            onClick={() => {
+              // Em combate, o avanço precisa passar pelo combate (auras, efeitos contínuos, TRs).
+              void import('@/stores/useCombatStore').then(({ useCombatStore }) => {
+                const cs = useCombatStore.getState();
+                if (cs.inCombat && cs.initiativeOrder.length) { cs.nextTurn(); return; }
+                nextTurn();
+                // Iniciativa só do mapa: ainda assim dispara as auras de início de turno.
+                const ms = useMapStore.getState();
+                const ini = ms.initiative;
+                const atual = ini.entries[ini.turnIndex];
+                if (!atual) return;
+                void import('@/lib/omni/auras').then(({ verificarAurasInicioTurno, charIdDaEntradaIniciativa }) => {
+                  const charId = charIdDaEntradaIniciativa(atual.entityId, atual.name);
+                  if (charId) verificarAurasInicioTurno(charId, ini.round);
+                });
+              });
+            }}
             disabled={!ordered.length}
             className="h-7 px-2 rounded text-accent-foreground font-medium disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
             style={{ background: '#fcd34d' }}

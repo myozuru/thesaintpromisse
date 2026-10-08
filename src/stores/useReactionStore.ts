@@ -158,7 +158,7 @@ export const useReactionStore = create<ReactionStoreState>((set, get) => ({
   prompts: [],
   reactionsUsedByChar: {},
   enqueue: (p) => {
-    const prompt = buildPrompt({ ...p, expiresAt: p.expiresAt ?? Date.now() + REACTION_DECISION_TIMEOUT_MS });
+    const prompt = buildPrompt({ ...p, expiresAt: SEM_PRAZO.has(p.kind) ? undefined : p.expiresAt ?? Date.now() + REACTION_DECISION_TIMEOUT_MS });
     const character = useCharacterStore.getState().characters.find((c) => c.id === p.charId);
     const destinatario = character ? destinatarioReacao(character) : null;
     const hasBus = typeof window !== 'undefined' && !!(window as unknown as { __worldBus?: { send?: unknown } }).__worldBus?.send;
@@ -275,9 +275,13 @@ function finalizePrompt(id: string, answer: number | null) {
   }
 }
 
+/** TRs obrigatórios (dano na falha) não são reações opcionais: ficam abertos até rolar. */
+const SEM_PRAZO = new Set<ReactionPrompt['kind']>(['aura_start_turn_tr_offer']);
+
 function schedulePromptExpiry(prompt: ReactionPrompt, remoteRecipient?: string) {
   clearPromptTimer(prompt.id);
   if (remoteRecipient) remotePromptRecipients.set(prompt.id, remoteRecipient);
+  if (SEM_PRAZO.has(prompt.kind)) return;
   const pauseKey = prompt.remoteClientId ? `reaction-ui:${prompt.id}` : prompt.id;
   promptPauseKeys.set(prompt.id, pauseKey);
   useCombatStore.getState().pauseTurnTimerForReaction(pauseKey);
