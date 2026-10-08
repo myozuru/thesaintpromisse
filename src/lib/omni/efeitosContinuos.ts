@@ -161,6 +161,7 @@ export function assistenciaCombina(escopo: EscopoAssistenciaDano, filtroArma: st
       return termos.some(t => alvo.some(a => a === t || a.includes(t)));
     }
   }
+  return false;
 }
 
 /** Chamado depois que um ataque causa dano: soma as assistências do atacante. */
