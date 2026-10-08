@@ -2,6 +2,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ficha, montarMesa, pegarFicha, comoTela } from './helpers/mesaReal';
 import { useMapStore } from '@/stores/useMapStore';
+import { useCombatStore } from '@/stores/useCombatStore';
+import { useCharacterStore } from '@/stores/useCharacterStore';
 import { invocarControlador, recolherInvocacao, tokensInvocados, limparInvocacoesDerrotadas, causarDanoInvocacao, comandarReposicionamento } from '@/lib/controlador/mapa';
 import type { InvocacaoControlador } from '@/lib/controlador/tipos';
 
@@ -63,6 +65,17 @@ describe('Controlador — materialização real no mapa', () => {
     if (!r.ok) throw new Error(r.motivo);
     expect(comandarReposicionamento('dono', 'a', 'norte').ok).toBe(false);
     expect(pegarFicha('dono').bonusActionsCurrent ?? 0).toBe(0);
+  });
+  it('reposiciona uma célula no turno do dono e desconta uma ação bônus', () => {
+    const r = invocarControlador('dono', 'a', 'leste');
+    if (!r.ok) throw new Error(r.motivo);
+    useCombatStore.setState({ inCombat: true, initiativeOrder: [{ charId: 'dono', initiative: 10 }], currentTurnIndex: 0 } as never);
+    useCharacterStore.getState().updateCharacter('dono', { bonusActionsCurrent: 1 });
+    expect(comandarReposicionamento('dono', 'a', 'leste')).toEqual({ ok: true });
+    expect(useMapStore.getState().entities[r.tokenId].x).toBe(280);
+    expect(pegarFicha('dono').bonusActionsCurrent).toBe(0);
+    expect(comandarReposicionamento('dono', 'a', 'leste').ok).toBe(false);
+    useCombatStore.setState({ inCombat: false } as never);
   });
   it('remove token com 0 PV e registra o estado no catálogo', () => {
     const r = invocarControlador('dono', 'a', 'leste');
