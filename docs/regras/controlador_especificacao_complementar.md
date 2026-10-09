@@ -40,6 +40,41 @@ Ao ocorrer gatilho válido de reação, abrir **prompt para o jogador Controlado
 ### 7. Permissões do Mestre
 O **Mestre possui controle e edição total sobre qualquer Shikigami**, independentemente de seu proprietário. Os jogadores controlam suas próprias invocações de acordo com as permissões usuais.
 
+
+## Decisões adicionais de controle, autonomia e tempo — 2026-10-09
+
+**Status:** especificação aprovada; a implementação existente precisa ser revisada e validada. Estas decisões são complementares ao TXT original e, em caso de diferença, representam uma personalização solicitada pelo usuário, sem alterar a fonte.
+
+### 8. Duas formas de controle individual
+Cada Shikigami deve permitir **ambas as interfaces**: (a) selecionar seu token e assumir o controle pela HUD própria da invocação; (b) selecioná-lo e enviar comandos pela HUD do Controlador. O controle e a seleção são individuais por Shikigami, mesmo quando vários pertencem ao mesmo jogador.
+
+### 9. Cronômetro individual e relógio global
+A ficha de criação de **cada Shikigami** deve oferecer um campo configurável de **tempo adicional**. No combate, o tempo de cada Shikigami deve **ser acrescido ao relógio global do jogador Controlador**, em vez de funcionar como um relógio isolado independente do cronômetro principal. Deve existir identificação visual da contribuição e/ou uso de tempo de cada invocação, evitando confundir o tempo dos diferentes Shikigamis.
+
+**Pormenores ainda não definidos:** unidade, limites e valor inicial desse tempo; se o acréscimo ocorre no início de cada turno ou por invocação/comando; como descontar tempo quando o Shikigami é dissipado no meio do turno; pausas e simultaneidade. **Perguntar ao usuário antes de assumir essas regras.**
+
+### 10. Economia de ações independente
+Cada Shikigami terá **seu próprio conjunto de ações e recursos**, definidos na sua ficha no momento da criação, em vez de compartilhar as quantidades de ações do jogador. Eles são entidades autônomas em combate, funcionando quase como personagens individuais, mas mantendo vínculo com o proprietário e com o relógio global conforme a decisão anterior.
+
+**Revisão obrigatória:** a implementação provisória que debita `actionsCurrent` e `bonusActionsCurrent` do Controlador para ações da invocação não atende a esta decisão; revisar antes de afirmar que o combate está concluído.
+
+### 11. Autonomia configurada individualmente
+A autonomia é uma configuração **por Shikigami**, definida na sua própria ficha, inclusive o **custo dos comandos**. Deve permitir comportamentos e ações automáticas em combate por meio do motor OMNI, respeitando sua validação e segurança. Não impor o mesmo conjunto de regras de autonomia a todas as invocações.
+
+**Pormenores ainda não definidos:** quais custos são permitidos, como são pagos e quais gatilhos OMNI podem operar sem intervenção do Controlador. Perguntar antes de escolher defaults de regra.
+
+### 12. Identidade e gestão separadas
+Cada Shikigami deve ter identidade visual, imagem/token, ficha, HUD e indicadores próprios de PV, ações e tempo, distinguíveis dos personagens jogadores. Suas rolagens, habilidades, reações e estado devem ser rastreados por invocação, sem confundirem seus valores com os do dono. O Mestre conserva edição e controle total (decisão 7).
+
+## Novas verificações de aceitação
+- [ ] Seleção e controle por HUD de invocação e por HUD do Controlador.
+- [ ] Campo configurável de tempo extra na criação de cada Shikigami.
+- [ ] Soma verificável dos tempos individuais ao relógio global do jogador.
+- [ ] Recursos e ações separados por invocação e independentes do saldo de ações do dono.
+- [ ] Autonomia e custos próprios configuráveis por invocação no OMNI.
+- [ ] Imagem, token, HUD, PV, rolagens e estados individualizados.
+- [ ] Testes de duas ou mais invocações simultâneas, inclusive relógio, comandos, economia e sincronização.
+
 ## Checklist de implementação — pendente de validação funcional
 - [ ] Campos da ficha de criação e edição com alternância automática/manual individual.
 - [ ] Recálculo de PV, Defesa e outros valores derivados, respeitando o modo manual.
