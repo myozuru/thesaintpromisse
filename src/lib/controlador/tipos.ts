@@ -33,19 +33,18 @@ export interface InvocacaoControlador {
   }>;
 }
 
-/** A progressão segue marcos cumulativos, inclusive os acima do limite
- * atual de nível de campanha, para manter os dados prontos para expansão.
- */
-export const MARCOS_INVOCACOES = [3, 6, 9, 10, 12, 15, 18] as const;
-
+/** Livro de Invocações: Controlador recebe 2 no nível 1 e +1 a cada 3 níveis.
+ * Outras especializações obtêm invocações por Interlúdio, sem limite numérico
+ * de catálogo definido neste capítulo. */
 export function limiteInvocacoesConhecidas(nivel: number): number {
-  const n = Math.max(1, Math.min(20, Math.trunc(nivel) || 1));
-  return 2 + MARCOS_INVOCACOES.filter(marco => n >= marco).length;
+  return 2 + Math.floor((Math.max(1, Math.trunc(nivel) || 1) - 1) / 3);
 }
-
-/** O treino em Controle inicia em +1; não confundir com trainingBonus (+2 no nível 1). */
-export function limiteInvocacoesAtivas(treinoControle = 1): number {
+/** Padrão: 1 em campo; Controlador utiliza Treinamento em Controle. */
+export function limiteInvocacoesAtivas(treinoControle = 0): number {
   return 1 + Math.max(0, Math.trunc(treinoControle) || 0);
+}
+export function limiteAtivasPersonagem(especializacao: string, treinoControle = 0): number {
+  return especializacao === 'Controlador' ? limiteInvocacoesAtivas(treinoControle) : 1;
 }
 
 /** Níveis de Controlador: PV inicial 10+CON, subsequentes 1d8 (média 5)+CON. */
@@ -62,7 +61,7 @@ export function validarCatalogoControlador(
   nivel: number,
   catalogo: readonly InvocacaoControlador[],
 ): { ok: true } | { ok: false; motivo: string } {
-  if (catalogo.length > limiteInvocacoesConhecidas(nivel)) return { ok: false, motivo: 'Limite de invocações conhecidas excedido.' };
+  // Atingir o limite gera aviso na UI, não impede personalização autorizada.
   const ids = new Set<string>();
   for (const inv of catalogo) {
     if (!inv.id || ids.has(inv.id)) return { ok: false, motivo: 'ID de invocação duplicado ou ausente.' };
