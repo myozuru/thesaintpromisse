@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { __resetCharSyncStamps, mergeIncomingCharacters, stampLocalChanges, withStamps } from '@/lib/charSyncStamps';
+import { calcularContador, CHAVE_TETO_GLOBAL_CONTADOR, CICLO_TETO_GLOBAL_CONTADOR } from '@/lib/omni/contadores';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 
 type C = { id: string; hpCurrent: number; _syncAt?: number; _syncFields?: Record<string, number> };
@@ -139,6 +140,68 @@ describe('mescla de alterações concorrentes por campo', () => {
       rancor__fonte__geral: 1,
       rancor__fonte__aliado_a: 1,
       rancor__fonte__aliado_b: 1,
+    });
+  });
+
+  it('respeita o teto global ao mesclar fontes que incrementaram em paralelo', () => {
+    type Ficha = {
+      id: string;
+      omniCounters: Record<string, number>;
+      omniCounterSourceUsage: Record<string, Record<string, { ciclo: string; usados: number }>>;
+      _syncAt?: number;
+      _syncFields?: Record<string, number>;
+    };
+    const metadataKey = '__omni_meta_teto_global__';
+    const uso = { ciclo: '__omni_teto_global__', usados: 3 };
+    const local: Ficha = {
+      id: 'a',
+      omniCounters: { rancor: 3, rancor__fonte__geral: 2, rancor__fonte__aliado_a: 1 },
+      omniCounterSourceUsage: { rancor: { [metadataKey]: uso } },
+      _syncAt: 200,
+      _syncFields: {
+        [campo('omniCounters', 'rancor')]: 200,
+        [campo('omniCounters', 'rancor__fonte__geral')]: 100,
+        [campo('omniCounters', 'rancor__fonte__aliado_a')]: 200,
+        [campo('omniCounterSourceUsage', 'rancor', metadataKey, 'ciclo')]: 200,
+        [campo('omniCounterSourceUsage', 'rancor', metadataKey, 'usados')]: 200,
+      },
+    };
+    const remote: Ficha = {
+      id: 'a',
+      omniCounters: { rancor: 3, rancor__fonte__geral: 2, rancor__fonte__aliado_b: 1 },
+      omniCounterSourceUsage: { rancor: { [metadataKey]: uso } },
+      _syncAt: 250,
+      _syncFields: {
+        [campo('omniCounters', 'rancor')]: 250,
+        [campo('omniCounters', 'rancor__fonte__geral')]: 100,
+        [campo('omniCounters', 'rancor__fonte__aliado_b')]: 250,
+        [campo('omniCounterSourceUsage', 'rancor', metadataKey, 'ciclo')]: 250,
+        [campo('omniCounterSourceUsage', 'rancor', metadataKey, 'usados')]: 250,
+      },
+    };
+
+    const merged = mergeIncomingCharacters([local], [remote])[0];
+    expect(merged.omniCounters).toEqual({
+      rancor: 3,
+      rancor__fonte__geral: 2,
+      rancor__fonte__aliado_a: 1,
+      rancor__fonte__aliado_b: 0,
+    });
+    __resetCharSyncStamps();
+    const reversed = mergeIncomingCharacters([remote], [local])[0];
+    expect(reversed.omniCounters).toEqual(merged.omniCounters);
+  });
+
+  it('grava o teto global junto da quota por fonte para a reconciliação', () => {
+    const result = calcularContador({}, 'rancor', 'INCREMENTAR_CONTADOR', {
+      valor: 1,
+      teto: 3,
+      rastrearFonte: true,
+      fonteId: 'aliado_a',
+    });
+    expect(result.usoPorFonte.rancor[CHAVE_TETO_GLOBAL_CONTADOR]).toEqual({
+      ciclo: CICLO_TETO_GLOBAL_CONTADOR,
+      usados: 3,
     });
   });
 

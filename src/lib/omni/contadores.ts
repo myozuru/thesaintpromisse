@@ -7,6 +7,9 @@
  *  - o teto global limita o total; quota por fonte usa ciclo separado do saldo.
  */
 export const SEP_FONTE = '__fonte__';
+/** Entrada reservada dentro da contabilidade por fonte, nunca uma fonte real. */
+export const CHAVE_TETO_GLOBAL_CONTADOR = '__omni_meta_teto_global__';
+export const CICLO_TETO_GLOBAL_CONTADOR = '__omni_teto_global__';
 
 export interface OpcoesContador {
   valor: number;
@@ -62,6 +65,14 @@ export function calcularContador(
 
   const temFontes = Object.keys(c).some(k => k.startsWith(prefixoFonte(nome)));
   const rastrearFonte = temFontes || op.rastrearFonte || op.fonteExata || op.escopoTeto === 'porFonte';
+  // O carimbo do teto permite que a sincronização reconcilie incrementos
+  // concorrentes sem ultrapassar o limite global da mesma operação.
+  if (teto !== undefined && rastrearFonte) {
+    usoPorFonte[nome] = {
+      ...(usoPorFonte[nome] ?? {}),
+      [CHAVE_TETO_GLOBAL_CONTADOR]: { ciclo: CICLO_TETO_GLOBAL_CONTADOR, usados: teto },
+    };
+  }
   // Preserva cargas globais ao passar a contar por fonte.
   // Ao introduzir rastreio por fonte em um contador que já tinha saldo
   // global, preserva esse saldo como contribuição geral antes de recalcular

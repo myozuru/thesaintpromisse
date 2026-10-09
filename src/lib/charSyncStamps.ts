@@ -1,3 +1,5 @@
+import { CHAVE_TETO_GLOBAL_CONTADOR, CICLO_TETO_GLOBAL_CONTADOR } from './omni/contadores';
+
 /**
  * Carimbos de sincronização das fichas. O carimbo de ficha é mantido para
  * compatibilidade; `_syncFields` guarda versões por caminho para que uma
@@ -218,12 +220,49 @@ function reconcileCounterTotals(character: JsonRecord, versions: Record<string, 
   for (const name of names) {
     const prefix = `${name}${COUNTER_SOURCE_SEPARATOR}`;
     let total = 0;
-    let version = versions[pathKey(['omniCounters', name])] ?? 0;
-    for (const [key, value] of Object.entries(counters)) {
-      if (!key.startsWith(prefix) || typeof value !== 'number' || !Number.isFinite(value)) continue;
-      total += value;
-      version = Math.max(version, versions[pathKey(['omniCounters', key])] ?? 0);
+    const usageRoot = asRecord(character.omniCounterSourceUsage);
+    const usageForCounter = asRecord(usageRoot?.[name]);
+    const capMetadata = asRecord(usageForCounter?.[CHAVE_TETO_GLOBAL_CONTADOR]);
+    const configuredCap = capMetadata?.ciclo === CICLO_TETO_GLOBAL_CONTADOR
+      && typeof capMetadata.usados === 'number'
+      && Number.isFinite(capMetadata.usados)
+      ? Math.max(0, Math.round(capMetadata.usados))
+      : undefined;
+    const capVersion = configuredCap === undefined
+      ? 0
+      : maxPathStamp(versions, ['omniCounterSourceUsage', name, CHAVE_TETO_GLOBAL_CONTADOR]);
+    const sources = Object.entries(counters)
+      .filter(([key, value]) => key.startsWith(prefix) && typeof value === 'number' && Number.isFinite(value))
+      .map(([key, value]) => ({ key, value: Math.max(0, value as number), version: versions[pathKey(['omniCounters', key])] ?? 0 }));
+
+    if (configuredCap !== undefined && sources.reduce((sum, source) => sum + source.value, 0) > configuredCap) {
+      // Conflitos de cap em telas diferentes precisam ser determinísticos. Mantém
+      // primeiro as parcelas mais antigas e usa o nome como desempate estável.
+      sources.sort((a, b) => a.version - b.version || a.key.localeCompare(b.key));
+      let restante = configuredCap;
+      const limiteVersao = Math.max(
+        versions[pathKey(['omniCounters', name])] ?? 0,
+        capVersion,
+        ...sources.map(source => source.version),
+      ) + 1;
+      for (const source of sources) {
+        const mantido = Math.min(source.value, restante);
+        restante -= mantido;
+        if (mantido !== source.value) {
+          defineOwn(counters, source.key, mantido);
+          versions[pathKey(['omniCounters', source.key])] = limiteVersao;
+          source.value = mantido;
+          source.version = limiteVersao;
+        }
+      }
     }
+
+    total = sources.reduce((sum, source) => sum + source.value, 0);
+    let version = Math.max(
+      versions[pathKey(['omniCounters', name])] ?? 0,
+      capVersion,
+      ...sources.map(source => source.version),
+    );
     defineOwn(counters, name, total);
     versions[pathKey(['omniCounters', name])] = version;
   }
