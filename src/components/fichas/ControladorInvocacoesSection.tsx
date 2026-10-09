@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
+import { useRoleStore } from '@/stores/useRoleStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { invocarControlador, recolherInvocacao, limparInvocacoesDerrotadas, comandarReposicionamento, comandarAtaque, type DirecaoInvocacao } from '@/lib/controlador/mapa';
@@ -29,6 +30,7 @@ function criaturasGrimorio(): Fonte[] {
 }
 export function ControladorInvocacoesSection({ character }: { character: Character }) {
   const updateCharacter = useCharacterStore(s => s.updateCharacter);
+  const isMaster = useRoleStore(s => s.role) === 'MASTER';
   const entidades = useOmniEntidadesStore(s => s.entidades);
   const [nome, setNome] = useState('');
   const [tipo, setTipo] = useState<TipoInvocacaoControlador>('shikigami');
@@ -95,6 +97,7 @@ export function ControladorInvocacoesSection({ character }: { character: Charact
     const novo: InvocacaoControlador = {
       id: crypto.randomUUID(), donoCharacterId: character.id,
       nome: escolhido?.nome ?? nome.trim(), tipo,
+      aprovacaoMestre: isMaster ? 'aprovada' : 'pendente',
       origem: escolhido ? { tipo: escolhido.tipo, entidadeId: escolhido.id } : { tipo: 'manual' },
       hpAtual: escolhido?.hp ?? hp, hpMaximo: escolhido?.hp ?? hp,
       defesa: escolhido?.defesa ?? defesa, deslocamentoM: escolhido?.deslocamento ?? deslocamento,
@@ -126,6 +129,12 @@ export function ControladorInvocacoesSection({ character }: { character: Charact
         { ...inv, acoes: inv.acoes.filter(a => a.id !== ataqueId) }),
     });
   };
+  const decidirAprovacao = (id: string, estado: 'aprovada' | 'rejeitada') => {
+    if (!isMaster) return;
+    updateCharacter(character.id, { invocacoesConhecidas: catalogo.map(inv =>
+      inv.id === id ? { ...inv, aprovacaoMestre: estado } : inv) });
+    setMensagem(estado === 'aprovada' ? 'Invocação aprovada pelo Mestre.' : 'Solicitação rejeitada pelo Mestre.');
+  };
   const remover = (id: string) => {
     updateCharacter(character.id, { invocacoesConhecidas: catalogo.filter(i => i.id !== id) });
     setErro('');
@@ -142,11 +151,18 @@ export function ControladorInvocacoesSection({ character }: { character: Charact
       {catalogo.map(inv => (
         <div key={inv.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border p-2">
           <div><strong>{inv.nome}</strong><div className="text-xs text-muted-foreground">{inv.tipo === 'shikigami' ? 'Shikigami' : 'Corpo Amaldiçoado'} · PV {inv.hpAtual}/{inv.hpMaximo} · Defesa {inv.defesa} · {inv.deslocamentoM} m · {inv.custoInvocacaoPE} PE · {inv.acoes.length} ações</div></div>
+          <div className="basis-full text-xs text-muted-foreground">Aquisição: {inv.aprovacaoMestre === 'pendente' ? 'Aguardando aprovação do Mestre' : inv.aprovacaoMestre === 'rejeitada' ? 'Rejeitada — edite e solicite novamente' : 'Aprovada'}</div>
+          {isMaster && inv.aprovacaoMestre && inv.aprovacaoMestre !== 'aprovada' && (
+            <div className="flex gap-2">
+              <button type="button" className="rounded border border-primary px-2 py-1 text-xs" onClick={() => decidirAprovacao(inv.id, 'aprovada')}>Aprovar</button>
+              <button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => decidirAprovacao(inv.id, 'rejeitada')}>Rejeitar</button>
+            </div>
+          )}
           <div className="flex shrink-0 flex-wrap gap-1">
             {ativos.some(e => e.invocationId === inv.id) ? (
               <><button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => comandar(inv.id)}>Comandar movimento (bônus)</button><button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => recolher(inv.id)}>Recolher</button></>
             ) : (
-              <button type="button" className="rounded border border-primary px-2 py-1 text-xs" onClick={() => invocar(inv.id)}>Invocar</button>
+              <button type="button" className="rounded border border-primary px-2 py-1 text-xs" disabled={inv.aprovacaoMestre !== undefined && inv.aprovacaoMestre !== "aprovada"} onClick={() => invocar(inv.id)}>Invocar</button>
             )}
             <button type="button" disabled={ativos.some(e => e.invocationId === inv.id)} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={() => remover(inv.id)}>Remover</button>
           </div>
