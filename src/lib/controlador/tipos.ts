@@ -8,6 +8,8 @@ export interface InvocacaoControlador {
   id: string;
   donoCharacterId: string;
   nome: string;
+  /** Aquisição depende de aprovação do Mestre. Ausência em saves antigos equivale a legado já adquirido. */
+  aprovacaoMestre?: 'pendente' | 'aprovada' | 'rejeitada';
   tipo: TipoInvocacaoControlador;
   origem?: { tipo: 'grimorio' | 'omni' | 'manual'; entidadeId?: string };
   hpAtual: number;
