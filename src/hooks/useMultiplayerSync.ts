@@ -1,5 +1,6 @@
 import { publicLogEntry, mergePublicLogs } from '@/lib/logPrivacy';
 import { podeResponderReacao } from '@/lib/omni/destinatarioReacao';
+import { isMasterControlledWorldSlice, podePublicarWorldSlice } from '@/lib/omni/worldSliceAuthorization';
 import { entidadeSyncValida, efeitoSyncValido, posicaoSyncValida } from '@/lib/omni/validarSnapshot';
 import { pacoteDicionario, mergeDicionario } from '@/lib/omni/dicionarioSync';
 import { comEstadoRemoto } from '@/lib/omni/estadoRemoto';
@@ -35,7 +36,7 @@ import { useTestRequestStore } from '@/stores/useTestRequestStore';
 import { useMapStore, type SceneDoc } from '@/stores/useMapStore';
 import { assetDB } from '@/components/mapa/assetDB';
 import { assetCache } from '@/components/mapa/assetCache';
-import { supabase } from '@/integrations/supabase/safeClient';
+import { hasWorkspaceCloud, supabase } from '@/integrations/supabase/safeClient';
 import { useFogStore } from '@/stores/fogStore';
 import { mergeTempTemplates, useTempTemplateStore, type TempTemplate } from '@/stores/useTempTemplateStore';
 import { getProtectedRemoteEntityPatchIds, getRecentLocalEntityEdits, markLocalEntityEdits, shouldIgnoreRemoteMapScene } from '@/components/mapa/mapSyncGuards';
@@ -591,6 +592,9 @@ export function useMultiplayerSync() {
     worldBus.on('broadcast', { event: 'slice' }, ({ payload }) => {
       const p = payload as { clientId?: string; slice?: WorldSlice; data?: unknown } | null;
       if (!p || p.clientId === clientId || !p.slice || p.slice === 'worldBossesMaster') return;
+      // Em nuvem, fatias administrativas chegam pelo Postgres, onde RLS
+      // valida quem gravou. Um broadcast aberto não autentica o emissor.
+      if (hasWorkspaceCloud && isMasterControlledWorldSlice(p.slice)) return;
       applyRemote(p.slice, p.data);
     });
     worldBus.on('broadcast', { event: 'amizade' }, ({ payload }) => {
@@ -849,6 +853,7 @@ export function useMultiplayerSync() {
         const a = args[0] as { slice?: WorldSlice; data?: unknown };
         if (a.slice === 'worldBossesMaster') return socket;
         if (a.slice) {
+          if (hasWorkspaceCloud && !podePublicarWorldSlice(useRoleStore.getState().role, a.slice)) return socket;
           let outgoing = a;
           if (a.slice === 'worldBosses') {
             if (useRoleStore.getState().role === 'MASTER') persistSlice('worldBossesMaster', a.data);
@@ -858,9 +863,11 @@ export function useMultiplayerSync() {
               : { bosses: {}, worldMarkers: [] };
             outgoing = { ...a, data: projected };
           }
-          try {
-            void worldBus.send({ type: 'broadcast', event: 'slice', payload: { clientId, slice: outgoing.slice, data: outgoing.data } });
-          } catch (err) { /* ignore */ }
+          if (!hasWorkspaceCloud || !isMasterControlledWorldSlice(outgoing.slice!)) {
+            try {
+              void worldBus.send({ type: 'broadcast', event: 'slice', payload: { clientId, slice: outgoing.slice, data: outgoing.data } });
+            } catch (err) { /* ignore */ }
+          }
           persistSlice(outgoing.slice!, outgoing.data);
           if (outgoing !== a) args[0] = outgoing;
         }
@@ -883,7 +890,7 @@ export function useMultiplayerSync() {
         if (row.slice === 'tempTemplates' || row.slice === 'worldBosses' || row.slice === 'worldBossesMaster') continue;
         if (row.data !== null) applyRemote(row.slice as WorldSlice, row.data);
       }
-      if (privateBossRow?.data) {
+      if (privateBossRow?.data && useRoleStore.getState().role === 'MASTER') {
         applyRemote('worldBossesMaster', privateBossRow.data);
         const masterBossState = useBossStore.getState();
         socket.emit('state:update', {
@@ -987,18 +994,18 @@ export function useMultiplayerSync() {
       // Slices "replace": só aplica o remoto se o local estiver vazio/default.
       // Logs, combat e chronos podem ser puxados do servidor sem perda.
       if (world.combat) applyRemote('combat', world.combat);
-      if (world.chronos) applyRemote('chronos', world.chronos);
+      if (world.chronos && !hasWorkspaceCloud) applyRemote('chronos', world.chronos);
       if (world.logs) applyRemote('logs', world.logs);
       if (world.testRequests) applyRemote('testRequests', world.testRequests);
 
       // Omni: união versionada por registro, com exclusões persistentes.
-      applyRemote('omniEntidades', world.omniEntidades);
+      if (!hasWorkspaceCloud) applyRemote('omniEntidades', world.omniEntidades);
       const mergedOmniEnt = pickOmniEntidades(useOmniEntidadesStore.getState());
       applyRemote('omniRuntime', world.omniRuntime);
       const mergedOmniRt = pickOmniRuntime(useOmniRuntimeStore.getState());
       applyRemote('omniSpatial', world.omniSpatial);
       const mergedOmniSp = pickOmniSpatial(useOmniSpatialStore.getState());
-      applyRemote('omniEntidades', mergedOmniEnt);
+      if (!hasWorkspaceCloud) applyRemote('omniEntidades', mergedOmniEnt);
       applyRemote('omniRuntime', mergedOmniRt);
       applyRemote('omniSpatial', mergedOmniSp);
 
@@ -1040,6 +1047,7 @@ export function useMultiplayerSync() {
 
     const onUpdate = ({ slice, data }: { slice: WorldSlice; data: unknown }) => {
       if (slice === 'worldBossesMaster') return;
+      if (hasWorkspaceCloud && isMasterControlledWorldSlice(slice)) return;
       applyRemote(slice, data);
     };
 
@@ -1077,6 +1085,28 @@ export function useMultiplayerSync() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'realtime_world', filter: 'slice=eq.worldBossesMaster' }, (payload) => {
         const next = (payload.new as { data?: unknown } | null)?.data;
         if (next && useRoleStore.getState().role === 'MASTER') applyRemote('worldBossesMaster', next);
+      })
+      .subscribe();
+
+    // Fatias do Mestre usam Postgres Changes em Cloud. O catálogo OMNI é
+    // legível pelos jogadores, mas só a role MASTER pode gravá-lo (RLS).
+    const cloudMasterWorldChannel = supabase
+      .channel('master-controlled-world-state')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'realtime_world', filter: 'slice=eq.chronos' }, (payload) => {
+        const next = (payload.new as { data?: unknown } | null)?.data;
+        if (next) applyRemote('chronos', next);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'realtime_world', filter: 'slice=eq.worldMap' }, (payload) => {
+        const next = (payload.new as { data?: unknown } | null)?.data;
+        if (next) applyRemote('worldMap', next);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'realtime_world', filter: 'slice=eq.worldBosses' }, (payload) => {
+        const next = (payload.new as { data?: unknown } | null)?.data;
+        if (next) applyRemote('worldBosses', next);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'realtime_world', filter: 'slice=eq.omniEntidades' }, (payload) => {
+        const next = (payload.new as { data?: unknown } | null)?.data;
+        if (next) applyRemote('omniEntidades', next);
       })
       .subscribe();
 
@@ -1465,6 +1495,7 @@ export function useMultiplayerSync() {
       void supabase.removeChannel(cloudMapChannel);
       void supabase.removeChannel(cloudAssetChannel);
       void supabase.removeChannel(cloudMasterBossChannel);
+      void supabase.removeChannel(cloudMasterWorldChannel);
       window.removeEventListener('amizade:send', onAmizadeSend);
       window.removeEventListener('omni-reaction:send', onOmniReactionSend);
       window.removeEventListener('reaction-prompt:send', onReactionPromptSend);
