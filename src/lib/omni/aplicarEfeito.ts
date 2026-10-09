@@ -18,6 +18,7 @@ import { useCharacterStore } from "@/stores/useCharacterStore";
 import { useCombatStore } from "@/stores/useCombatStore";
 import type { CombatEffect } from "./tipos";
 import { canonicalizarChave } from "./keyAliases";
+import { SISTEMA_PERICIAS } from "./constantesDoSistema";
 import {
   adicionarImunidade,
   removerImunidade,
@@ -50,6 +51,12 @@ const RECURSO_PARA_CAMPO: Record<string, string> = {
   ado_restantes: "opportunityCurrent",
   ado_max: "opportunityMax",
 };
+
+/** Chaves técnicas válidas das perícias cadastradas na ficha. */
+const CHAVES_PERICIAS = Object.values(SISTEMA_PERICIAS).map((caminho) =>
+  caminho.replace(/^pericias\./, "pericia_"),
+);
+const CHAVES_PERICIAS_SET = new Set(CHAVES_PERICIAS);
 
 function normalizarRecursoAplicacao(resourcePath?: string): string {
   if (resourcePath) {
@@ -198,6 +205,9 @@ export function aplicarEfeitoNoPersonagem(
   // ─── 🥋 Perícias (pericia_<x>) ──────────────────────────────────────
   // Acumulam em `omniSkillBonuses` — somados em rolagens de perícia.
   if (path.startsWith("pericia_")) {
+    // `canonicalizarChave` mantém prefixos desconhecidos por compatibilidade
+    // com flags customizadas; eles não podem criar perícias inexistentes.
+    if (!CHAVES_PERICIAS_SET.has(path)) return { aplicado: 0 };
     const sub = path.slice("pericia_".length);
     const mapa = { ...(c.omniSkillBonuses ?? {}) };
     const atual = mapa[sub] ?? 0;
@@ -327,7 +337,11 @@ export function aplicarEfeitoNoPersonagem(
 }
 
 /** Mapa público para uso em UIs que precisam saber se o recurso é suportado. */
-export const RECURSOS_SUPORTADOS = [...Object.keys(RECURSO_PARA_CAMPO), ...CHAVES_MITIGACAO.map(k => k.id)];
+export const RECURSOS_SUPORTADOS = [
+  ...Object.keys(RECURSO_PARA_CAMPO),
+  ...CHAVES_PERICIAS,
+  ...CHAVES_MITIGACAO.map((k) => k.id),
+];
 
 // ─── Rótulos amigáveis para UI/Log ──────────────────────────────────────
 

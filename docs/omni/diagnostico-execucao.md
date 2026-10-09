@@ -57,3 +57,22 @@ Etapa 1 concluída no escopo de contrato e diagnóstico: 345 entradas classifica
 Etapa 2 concluída no escopo da base de contexto e consultas: `contextoNatural.ts` e `consultasNaturais.ts` conectam papéis explícitos ao resolvedor da ficha. A gramática textual e os produtores de eventos serão integrados nas etapas 3–6; o terminal e o combate atuais mantêm os caminhos legados. Detalhes em etapa-2-contexto.md.
 
 Validação desta entrega: 5 arquivos, 483 testes aprovados. Inclui os oito casos parametrizados e testes do novo contexto para vítima/atacante distintos, token ambíguo ou divergente, ausência de alvo, exclusão do próprio usuário da relação de outro aliado e isolamento dos gastos.
+
+## Revalidação na main atual — 2026-10-09
+
+O workspace foi alinhado à `main` remota em `3e57b76aaf7e4ef9fcacd08067baa1f05a460e49`. A sondagem acima é histórica e não representa, sozinha, o estado completo dessa revisão.
+
+### Incompatibilidade de perícias corrigida
+
+A revalidação encontrou dois defeitos no caminho de escrita de perícias:
+
+- `aplicarEfeitoNoPersonagem` aceitava qualquer nome `pericia_<x>` e podia gravar, por exemplo, `adestramento` em `omniSkillBonuses`, embora essa perícia não exista no catálogo.
+- `validarDestinoEscritaNatural` consultava `RECURSOS_SUPORTADOS`, que não incluía nenhuma das 22 perícias oficiais, e por isso rejeitava destinos válidos.
+
+O executor agora restringe a escrita às chaves derivadas de `SISTEMA_PERICIAS` e o catálogo de destinos inclui essas 22 chaves. Os testes confirmam a escrita em Atletismo, a validação de todas as 22 perícias e a rejeição de `pericia_adestramento` sem alteração da ficha.
+
+Validação após a correção: `npx tsc --noEmit` concluiu sem erros; os dois arquivos focados passaram (28 testes); a suíte OMNI passou em 104 arquivos (3.320 testes). A correção está no workspace, ainda sem commit.
+
+### Lacunas que seguem abertas
+
+A correção de perícias não fecha as outras incompatibilidades da tabela deste documento. Continuam em investigação os aliases de tipo de dano, os destinos que o parser aceita sem efeito persistido, a equivalência de leitura/escrita de proteções, os diagnósticos explícitos para nomes desconhecidos e os limites de autorização no backend. A lista de 345 entradas permanece uma sondagem derivada do rascunho, não uma certificação exaustiva do catálogo efetivamente exposto pela versão atual.

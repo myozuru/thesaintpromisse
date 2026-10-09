@@ -15,6 +15,7 @@ import { destinoComposto } from "@/lib/omni/componentes/escrita";
 import { executarCombatEffect } from "@/lib/omni/executarSubEfeito";
 import { montarVariaveisDoPersonagem } from "@/lib/omni/resolvedor";
 import { validarDestinoEscritaNatural } from "@/lib/omni/politicaEscritaNatural";
+import { SISTEMA_PERICIAS } from "@/lib/omni/constantesDoSistema";
 afterEach(limparMesa);
 describe("destinos compostos graváveis", () => {
   it("consome e repõe dados de vida com teto", () => {
@@ -112,6 +113,34 @@ describe("destinos compostos graváveis", () => {
       codigo: "DESTINO_NAO_SUPORTADO",
     });
     expect(validarDestinoEscritaNatural("recurso inventado")).toMatchObject({
+      ok: false,
+      codigo: "DESTINO_NAO_SUPORTADO",
+    });
+  });
+  it("valida as 22 perícias canônicas e não cria bônus para perícia inexistente", () => {
+    const caminhos = Object.values(SISTEMA_PERICIAS).map((caminho) =>
+      caminho.replace(/^pericias\./, "pericia_"),
+    );
+    for (const caminho of caminhos) {
+      expect(validarDestinoEscritaNatural(caminho)).toEqual({
+        ok: true,
+        caminho,
+        canal: "pericia",
+      });
+    }
+
+    montarMesa([ficha("skill-write", { omniSkillBonuses: { atletismo: 2 } })], {});
+    expect(
+      aplicarEfeitoNoPersonagem("skill-write", "ADICIONAR", "pericia_atletismo", 3),
+    ).toEqual({ aplicado: 5 });
+    expect(pegarFicha("skill-write").omniSkillBonuses).toEqual({ atletismo: 5 });
+
+    const before = pegarFicha("skill-write").omniSkillBonuses;
+    expect(
+      aplicarEfeitoNoPersonagem("skill-write", "ADICIONAR", "pericia_adestramento", 1),
+    ).toEqual({ aplicado: 0 });
+    expect(pegarFicha("skill-write").omniSkillBonuses).toEqual(before);
+    expect(validarDestinoEscritaNatural("pericia_adestramento")).toMatchObject({
       ok: false,
       codigo: "DESTINO_NAO_SUPORTADO",
     });
