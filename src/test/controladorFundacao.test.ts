@@ -3,6 +3,7 @@ import { getKeyAttrForSpec, recalcPeMaxBySpec, recalcPeMaxFromHistory } from '@/
 import {
   limiteInvocacoesConhecidas,
   limiteInvocacoesAtivas,
+  limiteAtivasPersonagem,
   pvControlador,
   validarCatalogoControlador,
   type InvocacaoControlador,
@@ -49,6 +50,11 @@ describe('Controlador — atributo-chave e progressão', () => {
   });
   it.each([[1,2],[3,2],[4,3],[6,3],[7,4],[9,4],[10,5],[12,5],[13,6],[16,7],[19,8]])('nível %i permite %i invocações conhecidas', (nivel, esperado) => {
     expect(limiteInvocacoesConhecidas(nivel)).toBe(esperado);
+  });
+  it('todas as especializações mantêm uma invocação em campo por padrão', () => {
+    expect(limiteAtivasPersonagem('Lutador', 10)).toBe(1);
+    expect(limiteAtivasPersonagem('Suporte', 4)).toBe(1);
+    expect(limiteAtivasPersonagem('Controlador', 2)).toBe(3);
   });
   it('até duas ativas com +1 em Controle, sem confundir com treino geral', () => {
     expect(limiteInvocacoesAtivas(1)).toBe(2);
