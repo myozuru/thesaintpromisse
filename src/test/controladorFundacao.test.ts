@@ -47,11 +47,11 @@ describe('Controlador — atributo-chave e progressão', () => {
     expect(pvControlador(3, 2, [8, 1])).toBe(25);
     expect(() => pvControlador(2, 0, [9])).toThrow();
   });
-  it.each([[1,2],[3,3],[6,4],[9,5],[10,6],[12,7],[15,8],[18,9]])('nível %i permite %i invocações conhecidas', (nivel, esperado) => {
+  it.each([[1,2],[3,2],[4,3],[6,3],[7,4],[9,4],[10,5],[12,5],[13,6],[16,7],[19,8]])('nível %i permite %i invocações conhecidas', (nivel, esperado) => {
     expect(limiteInvocacoesConhecidas(nivel)).toBe(esperado);
   });
   it('até duas ativas com +1 em Controle, sem confundir com treino geral', () => {
-    expect(limiteInvocacoesAtivas()).toBe(2);
+    expect(limiteInvocacoesAtivas(1)).toBe(2);
     expect(limiteInvocacoesAtivas(2)).toBe(3);
     expect(limiteInvocacoesAtivas(0)).toBe(1);
   });
@@ -62,7 +62,7 @@ describe('Controlador — catálogo', () => {
     expect(validarCatalogoControlador('intruso', 1, [shikigami]).ok).toBe(false);
     expect(validarCatalogoControlador('mestre', 1, [shikigami, shikigami]).ok).toBe(false);
     const tres = [shikigami, { ...shikigami, id: 'b' }, { ...shikigami, id: 'c' }];
-    expect(validarCatalogoControlador('mestre', 1, tres).ok).toBe(false);
+    expect(validarCatalogoControlador('mestre', 1, tres).ok).toBe(true); // Excesso de catálogo é aviso, não bloqueio
     expect(validarCatalogoControlador('mestre', 3, tres).ok).toBe(true);
   });
 });
