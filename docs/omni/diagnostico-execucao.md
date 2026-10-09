@@ -82,3 +82,20 @@ Validação depois desta etapa: 3 arquivos focados, 92 testes aprovados; suíte 
 ### Lacunas que seguem abertas
 
 A correção de perícias e a dos aliases de dano não fecham as outras incompatibilidades da tabela deste documento. Continuam em investigação os destinos que o parser aceita sem efeito persistido, a equivalência de leitura/escrita de proteções, os diagnósticos explícitos para nomes desconhecidos e os limites de autorização no backend. A lista de 345 entradas permanece uma sondagem derivada do rascunho, não uma certificação exaustiva do catálogo efetivamente exposto pela versão atual.
+
+### Destinos de escrita validados na revisão atual
+
+Base desta rodada: `a13bf84` na `main` remota. A etapa conectou a validação do destino ao `parseOmniScript`: palavras sem caminho de execução, como `acoes_comuns`, `bonus_acerto` e `margem_critico`, agora retornam erro de destino em vez de criar um efeito que terminaria com `aplicado: 0`.
+
+Os destinos usados por exemplos existentes que tinham leitura mas não uma escrita persistente ganharam caminhos concretos:
+
+- `acerto` grava em `customHitBonus`, que é a variável de Acerto genérica/customizada já exposta pelo resolvedor; os três modos normais de ataque continuam usando seus cálculos próprios.
+- `atencao` grava no campo `attention`, aceitando valores assinados.
+- Os cinco TRs (`astucia`, `fortitude`, `integridade`, `reflexos`, `vontade`, inclusive aliases `tr.`/`tr_`) alteram apenas `savingThrows.value`, sem apagar treinamento ou maestria e permitindo penalidades negativas.
+- `empolgacao` grava no nível do Lutador, limitado a 0–5. `empolgacao_nivel` e `empolgacao_level` são normalizados para escrita, preservando o alias de leitura legado.
+- `deslocamento`/`desloc` alteram `movement`, o valor base consumido pelo orçamento de movimento; o caminho de bônus de equipamento continua separado.
+- `usos_restantes` grava na instância identificada de inventário, respeita o teto e compartilha o mesmo executor entre ficha, gatilhos e watchers. Se o próprio script consumiu usos, o consumo automático do item não desconta outra carga.
+
+Validação: a suíte focada passou em 6 arquivos (880 testes); a suíte completa OMNI passou em 104 arquivos (3.338 testes); `npx tsc --noEmit` terminou sem erros. Os testes cobrem mudanças no estado real da ficha/inventário, aliases, limites, penalidades negativas, acionamento por watcher/gatilho e evitam o segundo consumo automático.
+
+Este avanço fecha os destinos identificados nesta rodada. Não certifica cada variável de leitura, gatilho e ação do catálogo de ponta a ponta; a auditoria comportamental completa continua aberta.

@@ -145,6 +145,7 @@ function processarPersonagemNaCadeia(c: Character, apenasSnapshot: boolean) {
     if (temUsos && (inst.usosRestantes ?? 0) <= 0) continue;
 
     let consumiuUso = false;
+    let consumiuUsosExplicitamente = false;
     for (const eff of efeitos) {
       const w = eff.watcher!;
       const recursoObservado = normalizarRecursoWatcher(w.resource);
@@ -226,8 +227,12 @@ function processarPersonagemNaCadeia(c: Character, apenasSnapshot: boolean) {
         sourceName: fresco.nome,
         damageType: eff.damageType,
         attackerId: c.id,
+        itemInstanceId: inst.instanceId,
         contador: { teto, porFonte: eff.counterPerSource, fonteId: c.id, limiteFonte, periodoFonte: eff.counterSourcePeriod },
       });
+      if ((eff.resourcePath ?? '').toLowerCase() === 'usos_restantes' && (res.consumido ?? 0) > 0) {
+        consumiuUsosExplicitamente = true;
+      }
       consumiuUso = true;
       useLogStore.getState().addLog(
         'system',
@@ -237,11 +242,16 @@ function processarPersonagemNaCadeia(c: Character, apenasSnapshot: boolean) {
       );
     }
 
-    if (consumiuUso && temUsos) {
+    if (consumiuUso && temUsos && !consumiuUsosExplicitamente) {
       inv.consumirUso(inst.instanceId, 1);
-      const restantes = (inst.usosRestantes ?? 1) - 1;
+      const restantes = useInventoryStore.getState().items[inst.instanceId]?.usosRestantes ?? 0;
       toast(`⚡ Gatilho Ativado: ${fresco.nome}`, {
         description: `1 uso consumido — restam ${restantes}/${inst.usosTotais}`,
+      });
+    } else if (consumiuUso && temUsos && consumiuUsosExplicitamente) {
+      const restantes = useInventoryStore.getState().items[inst.instanceId]?.usosRestantes ?? 0;
+      toast(`⚡ Gatilho Ativado: ${fresco.nome}`, {
+        description: `Uso definido pelo script — restam ${restantes}/${inst.usosTotais}`,
       });
     } else if (consumiuUso) {
       toast(`⚡ Gatilho Ativado: ${fresco.nome}`, { description: 'Uso ilimitado' });

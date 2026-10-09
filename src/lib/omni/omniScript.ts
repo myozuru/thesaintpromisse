@@ -34,6 +34,7 @@ import { ALL_CONDITIONS } from '@/types/conditions';
 import { transformarForaDasComposicoes } from './componentes/expressoes';
 import { interpretarComposicao } from './componentes/interpretar';
 import { destinoComposto } from './componentes/escrita';
+import { validarDestinoEscritaNatural } from './politicaEscritaNatural';
 
 /** Palavras reservadas da OmniScript. */
 export const OMNI_SCRIPT_KEYWORDS = [
@@ -465,13 +466,15 @@ function parsearComando(
     const recursoBruto = mAbs[2].trim();
     if (/\s/.test(recursoBruto) && !destinoComposto(recursoBruto)) return { erro: { posicao, trecho: raw, mensagem: 'Essa composição não identifica um recurso gravável.' } };
     const { target, recurso } = extrairAlvoDoRecurso(recursoBruto, opts.defaultTarget ?? 'ALVO');
+    const destino = validarDestinoEscritaNatural(traduzirRecurso(recurso));
+    if (!destino.ok) return { erro: { posicao, trecho: raw, mensagem: destino.mensagem } };
     return {
       efeito: {
         id: crypto.randomUUID(),
         formula: '0',
         type: 'MODIFICADOR', // tradução silenciosa: definir 0
         target,
-        resourcePath: traduzirRecurso(recurso),
+        resourcePath: destino.caminho,
         absoluteVerb: cmd,
       },
     };
@@ -513,13 +516,15 @@ function parsearComando(
   }
   const formulaFinal = /^tudo$/i.test(expr) ? '0' : autoArrobaExpressao(normalizarConjuncaoComoSoma(expr));
   const { target, recurso } = extrairAlvoDoRecurso(recursoBruto, opts.defaultTarget ?? 'ALVO');
+  const destino = validarDestinoEscritaNatural(traduzirRecurso(recurso));
+  if (!destino.ok) return { erro: { posicao, trecho: raw, mensagem: destino.mensagem } };
   return {
     efeito: {
       id: crypto.randomUUID(),
       formula: formulaFinal,
       type: tipo,
       target,
-      resourcePath: traduzirRecurso(recurso),
+      resourcePath: destino.caminho,
       ...(damageType ? { damageType } : {}),
       ...(m[4] ? { counterCap: autoArrobaExpressao(m[4].trim()) } : {}),
       ...(m[5] ? { counterPerSource: true } : {}),

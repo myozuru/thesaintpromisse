@@ -17,6 +17,8 @@ import { iniciarWatcherEngine } from '@/lib/omni/watcherEngine';
 import { executarGatilho } from '@/lib/omni/executor';
 import { executarAcaoAtiva } from '@/lib/omni/acaoAtiva';
 import { aplicarMovimentoAtivo } from '@/lib/omni/movimentosAtivos';
+import { dispararGatilhoEfeitosItens } from '@/lib/omni/triggerEfeitos';
+import { parseOmniScript } from '@/lib/omni/omniScript';
 import * as bus from '@/lib/omni/eventBus';
 import { recalcularAuras } from '@/lib/omni/auras';
 const ch = (id: string) => ficha(id, { hpCurrent: 100, hpMax: 100, peCurrent: 20, peMax: 20, rd: 0, escCurrent: 0, attributes: [], trainingBonus: 3, actionsCurrent: 3, bonusActionsCurrent: 3, reactionsCurrent: 3, activeBuffs: [], skills: [] });
@@ -131,6 +133,30 @@ describe('observadores de estado', () => {
     useCharacterStore.getState().updateCharacter('u', { peCurrent: 5 }); const item = observar({}, 'arma'); await esperar(5);
     expect(item.isEquipped).toBeFalsy(); useCharacterStore.getState().updateCharacter('u', { hpCurrent: 40 });
     await waitFor(() => expect(pegarFicha('u').peCurrent).toBe(6));
+  });
+  it('item com watcher que consome usos pelo script não sofre auto-consumo duplicado', async () => {
+    useCharacterStore.getState().updateCharacter('u', { peCurrent: 5 });
+    const parsed = parseOmniScript('subtrair 2 em @ITEM.usos_restantes', { defaultTarget: 'USUARIO' });
+    expect(parsed.erros).toEqual([]);
+    const item = observar({ ...parsed.efeitos[0], watcher: { resource: 'vida', op: '<=', threshold: 50 } });
+    await esperar(5);
+    useCharacterStore.getState().updateCharacter('u', { hpCurrent: 40 });
+    await waitFor(() => expect(useInventoryStore.getState().items[item.instanceId].usosRestantes).toBe(1));
+    expect(pegarFicha('u').peCurrent).toBe(5);
+  });
+  it('gatilho consome exatamente o total declarado em usos_restantes', () => {
+    const parsed = parseOmniScript('subtrair 2 em @ITEM.usos_restantes', { defaultTarget: 'ALVO' });
+    expect(parsed.erros).toEqual([]);
+    const itemEntidade = novaEntidade('item', 'Relíquia com usos');
+    itemEntidade.usos = { total: 3, recarga: 'manual' };
+    itemEntidade.combatData = {
+      critRange: 20, critMultiplier: 2, effects: [],
+      effectsActive: [{ ...parsed.efeitos[0], trigger: 'aoSofrerDano' }],
+    };
+    const item = useInventoryStore.getState().add('u', itemEntidade);
+    useInventoryStore.getState().equipItem(item.instanceId, 'Anel');
+    expect(dispararGatilhoEfeitosItens('aoSofrerDano', { usuarioId: 'u', alvoId: 'a' })).toBe(1);
+    expect(useInventoryStore.getState().items[item.instanceId].usosRestantes).toBe(1);
   });
 });
 

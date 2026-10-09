@@ -5,7 +5,7 @@ import type { NoComposicao } from "./componentes/composicao";
 import { interpretarComposicao } from "./componentes/interpretar";
 
 export type CanalEscritaNatural =
-  "vida" | "protecao" | "recurso" | "contador" | "flag" | "pericia";
+  "vida" | "protecao" | "recurso" | "contador" | "flag" | "pericia" | "item";
 export type ResultadoDestinoNatural =
   | { ok: true; caminho: string; canal: CanalEscritaNatural }
   | {
@@ -92,7 +92,12 @@ export function validarDestinoEscritaNatural(
 
   const composicao = destinoComposto(fonte);
   const bruto = fonte.replace(/^(usuario|alvo|area)\./, "");
-  const chave = composicao?.caminho ?? canonicalizarChave(bruto);
+  const chaveBruta = composicao?.caminho ?? canonicalizarChave(bruto);
+  // A leitura mantém EMPOLGACAO_NIVEL como alias legado distinto; na escrita,
+  // ambos os nomes apontam para o mesmo pool persistido da ficha.
+  const chave = ["empolgacao_nivel", "empolgacao_level"].includes(chaveBruta)
+    ? "empolgacao"
+    : chaveBruta;
 
   if (
     derivadosSomenteLeitura.has(chave) ||
@@ -126,6 +131,9 @@ export function validarDestinoEscritaNatural(
   ) {
     return { ok: true, caminho: chave, canal: "flag" };
   }
+  // Destino contextualizado por uma instância de item; não pertence à ficha.
+  if (chave === "usos_restantes")
+    return { ok: true, caminho: chave, canal: "item" };
   if (chave.startsWith("pericia_") && RECURSOS_SUPORTADOS.includes(chave)) {
     return { ok: true, caminho: chave, canal: "pericia" };
   }

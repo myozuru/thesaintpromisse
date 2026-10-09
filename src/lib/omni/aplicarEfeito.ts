@@ -16,6 +16,7 @@ import { destinoComposto } from "./componentes/escrita";
 import { calcularContador } from "./contadores";
 import { useCharacterStore } from "@/stores/useCharacterStore";
 import { useCombatStore } from "@/stores/useCombatStore";
+import { useInventoryStore } from "@/stores/useInventoryStore";
 import type { CombatEffect } from "./tipos";
 import { canonicalizarChave } from "./keyAliases";
 import { SISTEMA_PERICIAS } from "./constantesDoSistema";
@@ -32,6 +33,7 @@ const RECURSO_PARA_CAMPO: Record<string, string> = {
   pe: "peCurrent",
   pe_max: "peMax",
   defesa: "ca",
+  desloc: "movement",
   esquiva: "escCurrent",
   rd_curse: "rd",
   vida_temp: "escCurrent",
@@ -65,7 +67,10 @@ function normalizarRecursoAplicacao(resourcePath?: string): string {
   }
   if (resourcePath && /\s/.test(resourcePath))
     return destinoComposto(resourcePath)?.caminho ?? "";
-  return canonicalizarChave(resourcePath || "vida") || "vida";
+  const chave = canonicalizarChave(resourcePath || "vida") || "vida";
+  return ["empolgacao_nivel", "empolgacao_level"].includes(chave)
+    ? "empolgacao"
+    : chave;
 }
 
 /**
@@ -92,6 +97,8 @@ export function aplicarEfeitoNoPersonagem(
     attackerId?: string;
     /** Contadores: teto já avaliado, escopo e ficha de origem. */
     contador?: { teto?: number; porFonte?: boolean; fonteId?: string; limiteFonte?: number; periodoFonte?: 'rodada' | 'descanso' };
+    /** Instância que fornece contexto para destinos @ITEM, como usos_restantes. */
+    itemInstanceId?: string;
   },
 ): { aplicado: number; absorvidoPorBloqueio?: boolean; consumido?: number } {
   if (!Number.isFinite(valor)) return { aplicado: 0 };
@@ -135,6 +142,32 @@ export function aplicarEfeitoNoPersonagem(
   const store = useCharacterStore.getState();
   const c = store.characters.find((x) => x.id === charId);
   if (!c) return { aplicado: 0 };
+
+  // ─── 🧰 Usos da instância de item de origem ────────────────────────
+  // O saldo pertence à cópia do item, nunca ao personagem. Exigir o ID da
+  // instância evita alterar outra cópia com o mesmo nome.
+  if (path === "usos_restantes") {
+    const instanceId = extras?.itemInstanceId;
+    const inv = useInventoryStore.getState();
+    const item = instanceId ? inv.items[instanceId] : undefined;
+    if (!instanceId || !item || item.usosTotais === undefined)
+      return { aplicado: 0 };
+    const atual = item.usosRestantes ?? item.usosTotais;
+    const valorInteiro = Math.round(valor);
+    const bruto = tipo === "SUBTRAIR"
+      ? atual - Math.abs(valorInteiro)
+      : tipo === "ADICIONAR"
+        ? atual + Math.abs(valorInteiro)
+        : valorInteiro;
+    const novo = Math.max(0, Math.min(item.usosTotais, bruto));
+    useInventoryStore.setState((state) => ({
+      items: {
+        ...state.items,
+        [instanceId]: { ...state.items[instanceId], usosRestantes: novo },
+      },
+    }));
+    return { aplicado: novo, consumido: Math.max(0, atual - novo) };
+  }
 
   // ─── 🔢 Contadores livres: contador_<nome> ───────────────────────────
   // somar → acumula (teto total e quota de fonte independentes); subtrair → consome
@@ -260,6 +293,60 @@ export function aplicarEfeitoNoPersonagem(
     return { aplicado: atualizado?.hunger ?? Math.max(0, Math.min(24, novo)) };
   }
 
+  // ─── Modificadores numéricos assinados ────────────────────────────
+  // Acerto e Atenção aceitam penalidades abaixo de zero, ao contrário de
+  // pools de recurso que não podem ficar negativos.
+  if (path === "acerto" || path === "atencao") {
+    const campo = path === "acerto" ? "customHitBonus" : "attention";
+    const atual = Number(
+      (c as unknown as Record<string, number | undefined>)[campo] ?? 0,
+    );
+    const novo = tipo === "SUBTRAIR"
+      ? atual - Math.abs(Math.round(valor))
+      : tipo === "ADICIONAR"
+        ? atual + Math.abs(Math.round(valor))
+        : Math.round(valor);
+    store.updateCharacter(charId, { [campo]: novo } as Partial<typeof c>);
+    return { aplicado: novo };
+  }
+
+  // TRs são bônus assinados em savingThrows.value. Preservamos os campos de
+  // treinamento e maestria e alteramos apenas o bônus configurado.
+  if (["astucia", "fortitude", "integridade", "reflexos", "vontade"].includes(path)) {
+    const normalizarTr = (texto: string) => texto
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+    const index = (c.savingThrows ?? []).findIndex((tr) =>
+      normalizarTr(tr.name || tr.id || "") === path,
+    );
+    if (index < 0) return { aplicado: 0 };
+    const trs = [...(c.savingThrows ?? [])];
+    const atual = trs[index].value ?? 0;
+    const novo = tipo === "SUBTRAIR"
+      ? atual - Math.abs(Math.round(valor))
+      : tipo === "ADICIONAR"
+        ? atual + Math.abs(Math.round(valor))
+        : Math.round(valor);
+    trs[index] = { ...trs[index], value: novo };
+    store.updateCharacter(charId, { savingThrows: trs });
+    return { aplicado: novo };
+  }
+
+  // Empolgação é um pool de 0 a 5 níveis; o Lutador inicia em 1 ou 2.
+  if (path === "empolgacao") {
+    const atual = c.empolgacaoLevel ?? 0;
+    const bruto = tipo === "SUBTRAIR"
+      ? atual - Math.abs(Math.round(valor))
+      : tipo === "ADICIONAR"
+        ? atual + Math.abs(Math.round(valor))
+        : Math.round(valor);
+    const novo = Math.max(0, Math.min(5, bruto));
+    store.updateCharacter(charId, { empolgacaoLevel: novo });
+    return { aplicado: novo };
+  }
+
   // Caminho privilegiado: vida passa pelos hooks de dano/cura.
   if (path === "vida") {
     if (tipo === "SUBTRAIR") {
@@ -340,6 +427,18 @@ export function aplicarEfeitoNoPersonagem(
 export const RECURSOS_SUPORTADOS = [
   ...Object.keys(RECURSO_PARA_CAMPO),
   ...CHAVES_PERICIAS,
+  // Destinos implementados por ramos especiais do executor, fora do mapa de campos.
+  "fadiga",
+  "exaustao",
+  "exhaustion",
+  "acerto",
+  "atencao",
+  "astucia",
+  "empolgacao",
+  "fortitude",
+  "integridade",
+  "reflexos",
+  "vontade",
   ...CHAVES_MITIGACAO.map((k) => k.id),
 ];
 

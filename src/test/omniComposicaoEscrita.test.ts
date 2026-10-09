@@ -16,6 +16,8 @@ import { executarCombatEffect } from "@/lib/omni/executarSubEfeito";
 import { montarVariaveisDoPersonagem } from "@/lib/omni/resolvedor";
 import { validarDestinoEscritaNatural } from "@/lib/omni/politicaEscritaNatural";
 import { SISTEMA_PERICIAS } from "@/lib/omni/constantesDoSistema";
+import { useInventoryStore } from "@/stores/useInventoryStore";
+import { effectiveMovement } from "@/lib/movementBudget";
 afterEach(limparMesa);
 describe("destinos compostos graváveis", () => {
   it("consome e repõe dados de vida com teto", () => {
@@ -144,6 +146,146 @@ describe("destinos compostos graváveis", () => {
       ok: false,
       codigo: "DESTINO_NAO_SUPORTADO",
     });
+  });
+  it("valida destinos no parser e executa aliases graváveis de proteção", () => {
+    for (const destino of ["acoes_comuns", "bonus_acerto", "margem_critico"]) {
+      expect(parseOmniScript(`somar 1 em ${destino}`).erros).toMatchObject([
+        { mensagem: expect.stringContaining("não grava") },
+      ]);
+    }
+
+    expect(validarDestinoEscritaNatural("vida_temporaria")).toMatchObject({
+      ok: true,
+      caminho: "vida_temp",
+      canal: "protecao",
+    });
+    expect(validarDestinoEscritaNatural("pe_temporario")).toMatchObject({
+      ok: true,
+      caminho: "pe_temp",
+      canal: "protecao",
+    });
+    expect(validarDestinoEscritaNatural("usos_restantes")).toMatchObject({
+      ok: true,
+      caminho: "usos_restantes",
+      canal: "item",
+    });
+    expect(parseOmniScript("somar 1 em exaustao").erros).toEqual([]);
+    expect(parseOmniScript("somar 1 em fadiga").erros).toEqual([]);
+    expect(parseOmniScript("subtrair 1 em usos_restantes").erros).toEqual([]);
+
+    montarMesa([ficha("protections", { escCurrent: 3, escMax: 10, tempPE: 2 })], {});
+    const vida = parseOmniScript("somar 2 em vida_temporaria", {
+      defaultTarget: "USUARIO",
+    });
+    expect(vida.erros).toEqual([]);
+    expect(vida.efeitos[0].resourcePath).toBe("vida_temp");
+    executarCombatEffect(vida.efeitos[0], {
+      usuarioId: "protections",
+      usuarioVars: montarVariaveisDoPersonagem(pegarFicha("protections")),
+    });
+    expect(pegarFicha("protections").escCurrent).toBe(5);
+
+    const pe = parseOmniScript("somar 3 em pe_temporario", {
+      defaultTarget: "USUARIO",
+    });
+    expect(pe.erros).toEqual([]);
+    expect(pe.efeitos[0].resourcePath).toBe("pe_temp");
+    executarCombatEffect(pe.efeitos[0], {
+      usuarioId: "protections",
+      usuarioVars: montarVariaveisDoPersonagem(pegarFicha("protections")),
+    });
+    expect(pegarFicha("protections").tempPE).toBe(5);
+  });
+  it("escreve Acerto, Atenção, os cinco TRs, Empolgação e Deslocamento no estado real", () => {
+    montarMesa([ficha("stats-write", {
+      customHitBonus: 1,
+      attention: 10,
+      movement: 9,
+      empolgacaoLevel: 3,
+      characterClass: "Feiticeiro",
+      specialization: "Lutador",
+      savingThrows: [
+        { id: "astucia", name: "Astúcia", value: 1 },
+        { id: "fortitude", name: "Fortitude", value: 2 },
+        { id: "integridade", name: "Integridade", value: 3 },
+        { id: "reflexos", name: "Reflexos", value: 4 },
+        { id: "vontade", name: "Vontade", value: 5 },
+      ],
+    })], {});
+    const c = pegarFicha("stats-write");
+    const vars = () => montarVariaveisDoPersonagem(pegarFicha(c.id));
+    const executar = (texto: string) => {
+      const parsed = parseOmniScript(texto, { defaultTarget: "USUARIO" });
+      expect(parsed.erros, texto).toEqual([]);
+      if (texto.includes("empolgacao")) expect(parsed.efeitos[0].resourcePath).toBe("empolgacao");
+      return executarCombatEffect(parsed.efeitos[0], {
+        usuarioId: c.id,
+        usuarioVars: vars(),
+      });
+    };
+
+    executar("somar 2 em acerto");
+    expect(pegarFicha(c.id).customHitBonus).toBe(3);
+    expect(vars().ACERTO).toBe(3);
+    executar("subtrair 7 em acerto");
+    expect(pegarFicha(c.id).customHitBonus).toBe(-4);
+    expect(vars().ACERTO).toBe(-4);
+    executar("subtrair 2 em atencao");
+    expect(pegarFicha(c.id).attention).toBe(8);
+    expect(vars().ATENCAO).toBe(8);
+
+    for (const [tr, esperado] of [["astucia", 0], ["fortitude", 1], ["integridade", 2], ["reflexos", 3], ["vontade", 4]] as const) {
+      executar(`subtrair 1 em tr.${tr}`);
+      const salvo = pegarFicha(c.id).savingThrows.find((s) => s.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() === tr);
+      expect(salvo?.value).toBe(esperado);
+      expect(vars()[tr.toUpperCase()]).toBe(esperado);
+    }
+    executar("subtrair 4 em tr.astucia");
+    expect(pegarFicha(c.id).savingThrows[0].value).toBe(-4);
+    expect(vars().ASTUCIA).toBe(-4);
+
+    executar("somar 4 em empolgacao_nivel");
+    expect(pegarFicha(c.id).empolgacaoLevel).toBe(5);
+    executar("somar 2 em empolgacao");
+    expect(pegarFicha(c.id).empolgacaoLevel).toBe(5);
+    executar("subtrair 8 em empolgacao");
+    expect(pegarFicha(c.id).empolgacaoLevel).toBe(0);
+
+    executar("somar 3 em deslocamento");
+    expect(pegarFicha(c.id).movement).toBe(12);
+    expect(effectiveMovement(pegarFicha(c.id))).toBe(12);
+    executar("subtrair 20 em deslocamento");
+    expect(pegarFicha(c.id).movement).toBe(0);
+  });
+  it("consome usos_restantes na instância indicada e mantém o limite", () => {
+    montarMesa([ficha("item-owner")], {});
+    useInventoryStore.setState({
+      items: {
+        copia_a: {
+          instanceId: "copia_a", ownerId: "item-owner", entity: {} as never,
+          acquiredAt: 1, usosRestantes: 4, usosTotais: 5,
+        },
+        copia_b: {
+          instanceId: "copia_b", ownerId: "item-owner", entity: {} as never,
+          acquiredAt: 1, usosRestantes: 2, usosTotais: 5,
+        },
+      },
+    } as never);
+    const parsed = parseOmniScript("subtrair 2 em @ITEM.usos_restantes", { defaultTarget: "USUARIO" });
+    expect(parsed.erros).toEqual([]);
+    const contexto = {
+      usuarioId: "item-owner",
+      usuarioVars: montarVariaveisDoPersonagem(pegarFicha("item-owner")),
+      sourceInstanceId: "copia_a",
+    };
+    expect(executarCombatEffect(parsed.efeitos[0], contexto)).toMatchObject({ aplicado: 2, consumido: 2 });
+    expect(useInventoryStore.getState().items.copia_a.usosRestantes).toBe(2);
+    expect(useInventoryStore.getState().items.copia_b.usosRestantes).toBe(2);
+    const recarga = parseOmniScript("somar 20 em usos_restantes", { defaultTarget: "USUARIO" });
+    expect(recarga.erros).toEqual([]);
+    executarCombatEffect(recarga.efeitos[0], contexto);
+    expect(useInventoryStore.getState().items.copia_a.usosRestantes).toBe(5);
+    expect(aplicarEfeitoNoPersonagem("item-owner", "SUBTRAIR", "usos_restantes", 1)).toEqual({ aplicado: 0 });
   });
   it("respeita o teto oficial de fome e a sincronização canônica de exaustão", () => {
     montarMesa([ficha("sobrevivente", { hunger: 20, exhaustionLevel: 0 })], {});

@@ -680,14 +680,9 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
       const recursoLower = (eff.resourcePath || '').toLowerCase();
       let absorvidoPorBloqueio = false;
       if (recursoLower === 'usos_restantes' && instance) {
-        // Decrementa diretamente o contador da instância.
-        const delta = eff.type === 'SUBTRAIR' ? -Math.abs(total) : eff.type === 'ADICIONAR' ? Math.abs(total) : 0;
-        if (delta !== 0) {
-          const novoRest = Math.max(0, Math.min(instance.usosTotais ?? 0, (instance.usosRestantes ?? 0) + delta));
-          useInventoryStore.setState((s) => ({
-            items: { ...s.items, [instance!.instanceId]: { ...s.items[instance!.instanceId], usosRestantes: novoRest } },
-          }));
-        }
+        const r = aplicarEfeitoNoPersonagem(c.id, eff.type, eff.resourcePath, total, {
+          itemInstanceId: instance.instanceId,
+        });
       } else if (eff.target === 'USUARIO') {
         const r = aplicarEfeitoNoPersonagem(c.id, eff.type, eff.resourcePath, total, {
           peSpellReduction: eff.peSpellReduction,
@@ -695,6 +690,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
           sourceName: nome,
           damageType: eff.damageType,
           attackerId: c.id,
+          itemInstanceId: instance?.instanceId,
         });
         if (r?.absorvidoPorBloqueio) absorvidoPorBloqueio = true;
       }
@@ -713,7 +709,12 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     const scriptDecrementou = efeitosAtivos.some(
       (e) => (e.resourcePath || '').toLowerCase() === 'usos_restantes' && e.type === 'SUBTRAIR',
     );
-    if (instance && instance.usosTotais !== undefined && !scriptDecrementou) {
+    const usoDepoisDosEfeitos = instance
+      ? useInventoryStore.getState().items[instance.instanceId]?.usosRestantes
+      : undefined;
+    const consumoManualReal = scriptDecrementou && typeof usoDepoisDosEfeitos === 'number'
+      && usoDepoisDosEfeitos < (instance?.usosRestantes ?? usoDepoisDosEfeitos);
+    if (instance && instance.usosTotais !== undefined && !consumoManualReal) {
       useInventoryStore.getState().consumirUso(instance.instanceId, 1);
     }
 

@@ -179,6 +179,7 @@ export function dispararGatilhoEfeitosItens(
     };
 
     let consumiuUso = false;
+    let consumiuUsosExplicitamente = false;
     const cenaLocal: Record<string, number> = {};
     for (const eff of candidatos) {
       const variaveis = montarVariaveisAtuais();
@@ -247,6 +248,7 @@ export function dispararGatilhoEfeitosItens(
         sourceName: fresco.nome,
         damageType: eff.damageType,
         attackerId: usuario.id,
+        itemInstanceId: inst.instanceId,
         contador: {
           teto: limite?.valor,
           porFonte: eff.counterPerSource,
@@ -255,6 +257,9 @@ export function dispararGatilhoEfeitosItens(
           periodoFonte: eff.counterSourcePeriod,
         },
       });
+      if ((eff.resourcePath ?? '').toLowerCase() === 'usos_restantes' && (res.consumido ?? 0) > 0) {
+        consumiuUsosExplicitamente = true;
+      }
       if (typeof res.consumido === 'number') cenaLocal.consumido = res.consumido;
       console.log(
         `    ↳ ✓ aplicado: ${eff.type} ${valor} em ${eff.resourcePath} (target=${eff.target} → ${targetId.slice(0, 8)})`,
@@ -272,12 +277,17 @@ export function dispararGatilhoEfeitosItens(
     // Após qualquer execução bem-sucedida, o motor decrementa 1 carga
     // automaticamente e emite um toast unificado. O script do Mestre
     // permanece limpo (apenas a ação real, sem `subtrair 1 em usos`).
-    if (consumiuUso && temUsos) {
+    if (consumiuUso && temUsos && !consumiuUsosExplicitamente) {
       inv.consumirUso(inst.instanceId, 1);
-      const restantes = (inst.usosRestantes ?? 1) - 1;
+      const restantes = useInventoryStore.getState().items[inst.instanceId]?.usosRestantes ?? 0;
       console.log(`    ↳ 🔄 [Auto-Consumo] 1 carga consumida (resta ${restantes}/${inst.usosTotais})`);
       toast(`⚡ Gatilho Ativado: ${fresco.nome}`, {
         description: `1 uso consumido — restam ${restantes}/${inst.usosTotais}`,
+      });
+    } else if (consumiuUso && temUsos && consumiuUsosExplicitamente) {
+      const restantes = useInventoryStore.getState().items[inst.instanceId]?.usosRestantes ?? 0;
+      toast(`⚡ Gatilho Ativado: ${fresco.nome}`, {
+        description: `Uso definido pelo script — restam ${restantes}/${inst.usosTotais}`,
       });
     } else if (consumiuUso) {
       toast(`⚡ Gatilho Ativado: ${fresco.nome}`, {

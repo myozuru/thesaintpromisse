@@ -29,6 +29,7 @@ export interface ExecucaoResultado {
   invalido?: boolean;
   aplicado: number;
   absorvidoPorBloqueio?: boolean;
+  consumido?: number;
   /** Descrição amigável do que aconteceu (para o log/toast). */
   detalhe?: string;
 }
@@ -146,9 +147,10 @@ export function executarCombatEffect(
     sourceName: ctx.sourceName,
     damageType: eff.damageType,
     attackerId: ctx.origemId === null ? undefined : ctx.origemId ?? ctx.usuarioId,
+    itemInstanceId: ctx.sourceInstanceId,
     contador: { teto: teto?.valor, porFonte: eff.counterPerSource, fonteId: ctx.alvoId ?? ctx.usuarioId, limiteFonte: limiteFonte?.valor, periodoFonte: eff.counterSourcePeriod },
   });
-  return { aplicado: r.aplicado, absorvidoPorBloqueio: r.absorvidoPorBloqueio };
+  return { aplicado: r.aplicado, absorvidoPorBloqueio: r.absorvidoPorBloqueio, consumido: r.consumido };
 }
 
 // ─── Helpers internos ────────────────────────────────────────────────

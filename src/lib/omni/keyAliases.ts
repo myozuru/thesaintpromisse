@@ -26,6 +26,7 @@ export const LEGACY_TO_CANONICAL: Record<string, string> = {
   'status.vida.max': 'vida_max',
   'hp_max': 'vida_max',
   'pv_max': 'vida_max',
+  'vida_temporaria': 'vida_temp',
 
   // — Energia (PE / Amaldiçoada) —
   'status.energiaamaldicoada.atual': 'pe',
@@ -34,6 +35,7 @@ export const LEGACY_TO_CANONICAL: Record<string, string> = {
   'pe_atual': 'pe',
   'status.energiaamaldicoada.max': 'pe_max',
   'energia_max': 'pe_max',
+  'pe_temporario': 'pe_temp',
 
   // — Status de combate —
   'status.defesa': 'defesa',
@@ -67,6 +69,18 @@ export const LEGACY_TO_CANONICAL: Record<string, string> = {
   'presenca': 'pre',
   'carisma': 'pre',
   'car': 'pre',
+
+  // Testes de Resistência — nomes canônicos com prefixo opcional.
+  'tr.astucia': 'astucia',
+  'tr_astucia': 'astucia',
+  'tr.fortitude': 'fortitude',
+  'tr_fortitude': 'fortitude',
+  'tr.integridade': 'integridade',
+  'tr_integridade': 'integridade',
+  'tr.reflexos': 'reflexos',
+  'tr_reflexos': 'reflexos',
+  'tr.vontade': 'vontade',
+  'tr_vontade': 'vontade',
 };
 
 /**
