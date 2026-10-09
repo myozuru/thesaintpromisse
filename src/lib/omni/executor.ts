@@ -737,7 +737,14 @@ function executarAcao(a: AcaoLogica, ctx: ContextoRuntime, log: (m: string) => v
       if (!key) break;
       const map = { ...(alvoChar.omniActionCost ?? {}) };
       // Reavaliações do mesmo gatilho não podem reabrir o limite já gasto nesta rodada.
-      const usadosNestaRodada = map[key]?.usedThisRound ?? 0;
+      const chavesCorrespondentes = Object.entries(map).filter(([existente]) =>
+        normalizarIdentificadorCustoAcao(existente) === key,
+      );
+      const usosExistentes = chavesCorrespondentes
+        .map(([, registro]) => registro?.usedThisRound)
+        .filter((uso): uso is number => uso !== undefined);
+      const usadosNestaRodada = usosExistentes.length ? Math.max(...usosExistentes) : 0;
+      for (const [existente] of chavesCorrespondentes) delete map[existente];
       map[key] = { cost: a.condicao, perRound: valor > 0 ? valor : undefined, usedThisRound: usadosNestaRodada };
       useCharacterStore.getState().updateCharacter(alvoChar.id, { omniActionCost: map });
       log(`${nomeOrigem}: ${nomeAlvo}.acao.${key} → ${a.condicao}${valor > 0 ? ` (${valor}×/rodada)` : ""}`);
