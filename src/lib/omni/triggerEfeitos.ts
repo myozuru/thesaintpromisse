@@ -27,7 +27,7 @@ import { normalizarCombatData } from './tipos';
 import { avaliarFormula } from './parser';
 import { montarVariaveisDoPersonagem } from './resolvedor';
 import { aplicarEfeitoNoPersonagem } from './aplicarEfeito';
-import { executarCombatEffect } from './executarSubEfeito';
+import { executarCombatEffect, erroDestinoCombatEffect } from './executarSubEfeito';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useLogStore } from '@/stores/useLogStore';
@@ -219,6 +219,11 @@ export function dispararGatilhoEfeitosItens(
         aplicados++;
         consumiuUso = true;
         log(`⚡ ${fresco.nome} (${evento}): ${r.detalhe ?? 'efeito especial'}`);
+        continue;
+      }
+      const erroDestino = erroDestinoCombatEffect(eff, usuario.id, inst.instanceId);
+      if (erroDestino) {
+        log(`⛔ ${fresco.nome} (${evento}): destino inválido — ${erroDestino}`);
         continue;
       }
       // Calcula fórmula e aplica.

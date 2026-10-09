@@ -33,7 +33,7 @@ import { normalizarCombatData } from './tipos';
 import { avaliarFormula } from './parser';
 import { montarVariaveisDoPersonagem } from './resolvedor';
 import { aplicarEfeitoNoPersonagem } from './aplicarEfeito';
-import { executarCombatEffect } from './executarSubEfeito';
+import { executarCombatEffect, erroDestinoCombatEffect } from './executarSubEfeito';
 
 /** Mapa Recurso (camada Omni) → campo numérico no `Character`. */
 const RECURSO_PARA_CAMPO: Record<string, keyof Character> = {
@@ -199,6 +199,11 @@ function processarPersonagemNaCadeia(c: Character, apenasSnapshot: boolean) {
           `🔭 ${fresco.nome} (watcher ${recursoObservado}${w.op}${w.threshold}${w.percent ? '%' : ''}): ` +
             (r.detalhe ?? 'efeito especial'),
         );
+        continue;
+      }
+      const erroDestino = erroDestinoCombatEffect(eff, c.id, inst.instanceId);
+      if (erroDestino) {
+        useLogStore.getState().addLog('system', `⛔ ${fresco.nome}: destino inválido — ${erroDestino}`);
         continue;
       }
       let valor = 0;

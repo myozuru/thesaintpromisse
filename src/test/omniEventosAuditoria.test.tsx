@@ -170,7 +170,7 @@ describe('observadores de estado', () => {
     useCharacterStore.getState().updateCharacter('u', { hpCurrent: 30 }); await esperar(5);
     expect(pegarFicha('u').peCurrent).toBe(6); expect(useInventoryStore.getState().items[item.instanceId].usosRestantes).toBe(2);
   });
-  it.each([{ formula: '@USUARIO.chave_inexistente + 1' }, { condition: '@USUARIO.chave_inexistente == 0' }, { watcher: { resource: 'chave_inexistente', op: '<=' as const, threshold: 100 } }, { counterCap: '@USUARIO.chave_inexistente' }])('referência inválida não aplica nem consome usos: %j', async patch => {
+  it.each([{ formula: '@USUARIO.chave_inexistente + 1' }, { condition: '@USUARIO.chave_inexistente == 0' }, { watcher: { resource: 'chave_inexistente', op: '<=' as const, threshold: 100 } }, { counterCap: '@USUARIO.chave_inexistente' }, { resourcePath: 'chave_inexistente' }])('referência inválida não aplica nem consome usos: %j', async patch => {
     useCharacterStore.getState().updateCharacter('u', { peCurrent: 5 });
     const item = observar(patch); await esperar(5); useCharacterStore.getState().updateCharacter('u', { hpCurrent: 40 }); await esperar(10);
     expect(pegarFicha('u').peCurrent).toBe(5); expect(useInventoryStore.getState().items[item.instanceId].usosRestantes).toBe(3);
@@ -227,6 +227,18 @@ describe('observadores de estado', () => {
     useInventoryStore.getState().equipItem(item.instanceId, 'Anel');
     expect(dispararGatilhoEfeitosItens('aoSofrerDano', { usuarioId: 'u', alvoId: 'a' })).toBe(1);
     expect(useInventoryStore.getState().items[item.instanceId].usosRestantes).toBe(1);
+  });
+  it('gatilho não consome o item quando o destino numérico não é gravável', () => {
+    const entidade = novaEntidade('item', 'Relíquia inválida'); entidade.usos = { total: 3, recarga: 'manual' };
+    entidade.combatData = {
+      critRange: 20, critMultiplier: 2, effects: [],
+      effectsActive: [{ ...efeito({ resourcePath: 'chave_inexistente' }), trigger: 'aoSofrerDano' }],
+    };
+    const item = useInventoryStore.getState().add('u', entidade);
+    useInventoryStore.getState().equipItem(item.instanceId, 'Anel');
+    expect(dispararGatilhoEfeitosItens('aoSofrerDano', { usuarioId: 'u', alvoId: 'a' })).toBe(0);
+    expect(useInventoryStore.getState().items[item.instanceId].usosRestantes).toBe(3);
+    expect(pegarFicha('u').peCurrent).toBe(20);
   });
 });
 

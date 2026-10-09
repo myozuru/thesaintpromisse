@@ -32,7 +32,7 @@ import {
   descreverAcaoEfeito,
   recursoBonito,
 } from '@/lib/omni/aplicarEfeito';
-import { executarCombatEffect } from '@/lib/omni/executarSubEfeito';
+import { executarCombatEffect, erroDestinoCombatEffect } from '@/lib/omni/executarSubEfeito';
 import { useSpellProposalStore } from '@/stores/useSpellProposalStore';
 import { usePassiveProposalStore } from '@/stores/usePassiveProposalStore';
 import { rollD20Com, rollDiceCom } from '@/lib/dice';
@@ -614,6 +614,17 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     }
     const efeitosAtivos = cd?.effectsActive ?? [];
     if (!cd || efeitosAtivos.length === 0) return;
+
+    const efeitoComDestinoInvalido = efeitosAtivos.find((eff) =>
+      !eff.diceSwitch && !eff.conditionApply && !eff.buttonOnly
+        ? erroDestinoCombatEffect(eff, c.id, instance?.instanceId)
+        : false,
+    );
+    if (efeitoComDestinoInvalido) {
+      const motivo = erroDestinoCombatEffect(efeitoComDestinoInvalido, c.id, instance?.instanceId);
+      addLog('system', `⛔ ${nome}: destino de efeito inválido — ${motivo ?? 'verifique a configuração do item.'}`);
+      return;
+    }
 
     // ─── Gate de usos ────────────────────────────────────────────────
     if (instance && instance.usosTotais !== undefined) {

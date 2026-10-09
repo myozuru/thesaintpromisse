@@ -302,6 +302,17 @@ describe("destinos compostos graváveis", () => {
     expect(useInventoryStore.getState().items.copia_a.usosRestantes).toBe(5);
     expect(aplicarEfeitoNoPersonagem("item-owner", "SUBTRAIR", "usos_restantes", 1)).toEqual({ aplicado: 0 });
   });
+  it("recusa usos_restantes no executor sem instância de origem", () => {
+    montarMesa([ficha("item-owner")], {});
+    useInventoryStore.setState({ items: {} });
+    const parsed = parseOmniScript("subtrair 1 em @ITEM.usos_restantes", { defaultTarget: "USUARIO" });
+    const result = executarCombatEffect(parsed.efeitos[0], {
+      usuarioId: "item-owner",
+      usuarioVars: montarVariaveisDoPersonagem(pegarFicha("item-owner")),
+    });
+    expect(result).toMatchObject({ aplicado: 0, invalido: true });
+    expect(pegarFicha("item-owner").omniCounters).toBeUndefined();
+  });
   it("concede e consome vida temporária mesmo sem teto de escudo configurado", () => {
     montarMesa([ficha("sem-teto", { hpCurrent: 20, hpMax: 20, escCurrent: 0, escMax: 0 })], {});
     const parsed = parseOmniScript("somar 8 em @USUARIO.vida temporaria", {

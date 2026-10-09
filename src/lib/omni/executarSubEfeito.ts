@@ -16,12 +16,13 @@
  * keys no futuro só altera este arquivo.
  */
 import type { CombatEffect } from './tipos';
-import { aplicarEfeitoNoPersonagem } from './aplicarEfeito';
+import { aplicarEfeitoNoPersonagem, validarDestinoAplicacao } from './aplicarEfeito';
 import { avaliarFormula } from './parser';
 import { planejarTransferencia } from './componentes/transferencia';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useMoneyStore } from '@/stores/useMoneyStore';
 import { useRoleStore } from '@/stores/useRoleStore';
+import { useInventoryStore } from '@/stores/useInventoryStore';
 import { ALL_CONDITIONS, type ActiveCondition } from '@/types/conditions';
 
 /** Resultado padronizado de uma execução. */
@@ -56,6 +57,24 @@ export interface ExecucaoContexto {
   sourceInstanceId?: string;
   /** Snapshot do evento recebido, herdado por branches e subefeitos. */
   dano?: Readonly<Record<string, number>>;
+}
+
+/** Confere se um CombatEffect numérico tem um destino gravável e contexto suficiente. */
+export function erroDestinoCombatEffect(
+  eff: Pick<CombatEffect, 'resourcePath' | 'transferencia' | 'peSpellReduction' | 'immunityGrant'>,
+  usuarioId: string,
+  sourceInstanceId?: string,
+): string | undefined {
+  if (eff.transferencia || eff.peSpellReduction || eff.immunityGrant) return undefined;
+  const destino = validarDestinoAplicacao(eff.resourcePath);
+  if (!destino.ok) return destino.mensagem;
+  if (destino.canal === 'item') {
+    const item = sourceInstanceId ? useInventoryStore.getState().items[sourceInstanceId] : undefined;
+    if (!item || item.ownerId !== usuarioId || item.usosTotais === undefined) {
+      return 'usos_restantes exige a instância de item com usos, pertencente ao usuário da ação.';
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -141,6 +160,8 @@ export function executarCombatEffect(
     store.updateCharacter(targetId, plano.patch);
     return { aplicado: plano.valor };
   }
+  const erroDestino = erroDestinoCombatEffect(eff, ctx.usuarioId, ctx.sourceInstanceId);
+  if (erroDestino) return { aplicado: 0, invalido: true, detalhe: erroDestino };
   const r = aplicarEfeitoNoPersonagem(targetId, eff.type, eff.resourcePath, valor, {
     peSpellReduction: eff.peSpellReduction,
     immunityGrant: eff.immunityGrant,

@@ -139,3 +139,15 @@ Os destinos usados por exemplos existentes que tinham leitura mas não uma escri
 Validação: a suíte focada passou em 6 arquivos (880 testes); a suíte completa OMNI passou em 104 arquivos (3.338 testes); `npx tsc --noEmit` terminou sem erros. Os testes cobrem mudanças no estado real da ficha/inventário, aliases, limites, penalidades negativas, acionamento por watcher/gatilho e evitam o segundo consumo automático.
 
 Este avanço fecha os destinos identificados nesta rodada. Não certifica cada variável de leitura, gatilho e ação do catálogo de ponta a ponta; a auditoria comportamental completa continua aberta.
+
+### Destinos numéricos nos gatilhos, watchers e ações de item
+
+Foi reproduzido um no-op tratado como sucesso: um `CombatEffect` de watcher com `resourcePath: "chave_inexistente"` não alterava recurso algum, mas ainda consumia um uso do item. O mesmo caminho existia em efeitos numéricos de gatilho, porque esses dois motores chamavam `aplicarEfeitoNoPersonagem` diretamente. O writer devolve `aplicado: 0` para destino desconhecido, sem distinguir erro de uma operação válida cujo saldo já esteja zerado.
+
+O writer agora expõe uma validação baseada nos próprios caminhos que implementa. O executor compartilhado, gatilhos e watchers recusam destino sem gravação antes da mutação e antes do consumo automático. `usos_restantes` também exige uma instância com usos configurados pertencente ao usuário da ação. A ação de item aberta pela ficha faz a mesma verificação antes do d20 e do gasto.
+
+Regressões adicionadas: destino desconhecido em watcher e gatilho não altera a ficha nem gasta uso; `usos_restantes` sem instância retorna erro; a cópia correta continua podendo ser consumida quando identificada.
+
+Validação desta etapa: testes focados em 3 arquivos, 75 testes aprovados; suíte OMNI em 99 arquivos, 3.293 testes aprovados; `npx tsc --noEmit` e `git diff --check` sem erros. A suíte ampla foi executada com `--no-file-parallelism` para evitar erros de teardown do ambiente Vitest observados quando dois arquivos dependentes dos stores eram executados em workers paralelos.
+
+Esta etapa fecha a validação dos destinos numéricos nesses caminhos. A auditoria ainda não certifica todos os consumidores de fórmulas: por exemplo, a execução numérica manual da ficha precisa rejeitar fórmulas com diagnóstico, e o switch de dados precisa propagar falhas de subefeitos sem anunciar sucesso. Esses são os próximos casos a verificar.

@@ -448,6 +448,27 @@ export const RECURSOS_SUPORTADOS = [
   ...CHAVES_MITIGACAO.map((k) => k.id),
 ];
 
+/** Valida diretamente contra os caminhos que `aplicarEfeitoNoPersonagem` grava. */
+export function validarDestinoAplicacao(resourcePath?: string):
+  | { ok: true; caminho: string; canal: "ficha" | "contador" | "flag" | "item" }
+  | { ok: false; mensagem: string } {
+  const texto = resourcePath || "vida";
+  const composicao = destinoComposto(texto);
+  const caminho = normalizarRecursoAplicacao(texto);
+  if (composicao?.contador || /^contador[._][a-z0-9_]+$/.test(caminho))
+    return { ok: true, caminho, canal: "contador" };
+  if (/^flag_[a-z0-9_]+$/.test(caminho) || ["bloqueio_total", "dano_pendente"].includes(caminho))
+    return { ok: true, caminho, canal: "flag" };
+  if (caminho === "usos_restantes")
+    return { ok: true, caminho, canal: "item" };
+  if (RECURSOS_SUPORTADOS.includes(caminho))
+    return { ok: true, caminho, canal: "ficha" };
+  return {
+    ok: false,
+    mensagem: `O executor atual não grava "${texto}" como recurso.`,
+  };
+}
+
 // ─── Rótulos amigáveis para UI/Log ──────────────────────────────────────
 
 /**
