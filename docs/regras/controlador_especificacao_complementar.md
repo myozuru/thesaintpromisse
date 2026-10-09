@@ -59,6 +59,8 @@ A ficha de criação de **cada Shikigami** deve oferecer um campo configurável 
 
 **Regra confirmada em 2026-10-09 — queda e derrota definitiva:** chegar a **0 PV não dissipa automaticamente** a invocação. Ela permanece caída no chão, no mapa, e **continua podendo ser alvo**. A dissipação por derrota só ocorre quando seus PV chegam a **−100% dos PV máximos** (por exemplo, −20 PV para uma invocação de PV máximo 20). Antes desse limiar, pode ocorrer a dissipação voluntária conforme a regra acima.
 
+**Regra confirmada em 2026-10-09 — recuperação de um Shikigami caído:** enquanto estiver com 0 PV ou menos, mas acima do limiar de derrota definitiva (−100% dos PV máximos), a invocação pode receber cura. Ao recuperar PV **acima de 0**, ela não volta imediatamente a agir: permanece caída até **gastar uma ação para se levantar**. Somente depois de se levantar volta a agir normalmente. O tipo/custo exato dessa ação ainda deverá ser alinhado com o sistema de ações, sem presumir uma categoria não especificada.
+
 **Regra confirmada em 2026-10-09 — tempo após derrota definitiva:** quando a invocação é definitivamente derrotada e dissipada ao alcançar −100% dos PV máximos, **não retirar sua contribuição temporal restante do relógio global**, que permanece como compensação ao jogador pela perda da invocação. Registrar a saída como derrota definitiva, separada da dissipação voluntária.
 
 **Pendências que exigem esclarecimento antes da implementação:** unidade, limite e valor inicial do tempo configurável; regras de consumo e reserva durante comandos simultâneos; reinvocação e reinício das reservas; fim do combate. A consequência da derrota definitiva sobre a biblioteca da invocação (perda permanente ou recuperação posterior) permanece sob a decisão do Controlador/Mestre, conforme item 5, salvo nova orientação explícita.
@@ -83,6 +85,7 @@ Cada Shikigami deve ter identidade visual, imagem/token, ficha, HUD e indicadore
 - [ ] Reservas de tempo distintas e identificáveis na HUD, contribuindo para o relógio global.
 - [ ] Na dissipação voluntária, retirar somente o tempo restante da invocação, respeitando o piso de 10 segundos no relógio global.
 - [ ] Manter invocações caídas no mapa em 0 PV, ainda como alvos, e dissipar por derrota apenas em −100% dos PV máximos.
+- [ ] Permitir cura acima de 0 PV e exigir uma ação para o Shikigami se levantar antes de voltar a agir.
 - [ ] Preservar o tempo restante no relógio global após derrota definitiva.
 - [ ] Recursos e ações separados por invocação e independentes do saldo de ações do dono.
 - [ ] Autonomia e custos próprios configuráveis por invocação no OMNI.
