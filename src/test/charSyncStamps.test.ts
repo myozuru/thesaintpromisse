@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { __resetCharSyncStamps, mergeIncomingCharacters, stampLocalChanges, withStamps } from '@/lib/charSyncStamps';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 
-type C = { id: string; hpCurrent: number; _syncAt?: number };
+type C = { id: string; hpCurrent: number; _syncAt?: number; _syncFields?: Record<string, number> };
 
 describe('sincronização de vida/PE das fichas', () => {
   beforeEach(() => __resetCharSyncStamps());
@@ -26,6 +26,7 @@ describe('sincronização de vida/PE das fichas', () => {
     const a: C = { id: 'a', hpCurrent: 7 };
     stampLocalChanges([], [a], 4242);
     expect(withStamps([a])[0]._syncAt).toBe(4242);
+    expect(withStamps([a])[0]._syncFields?.[JSON.stringify(['hpCurrent'])]).toBe(4242);
   });
 
   it('subir atributo em ficha temporária não reseta vida/PE', () => {
@@ -52,5 +53,78 @@ describe('salvar fichas na nuvem', () => {
       [{ id: 'a', hpCurrent: 12, _syncAt: 500 }, { id: 'b', hpCurrent: 1, _syncAt: 200 }],
     );
     expect(out.map((c) => c.hpCurrent)).toEqual([12, 9]);
+  });
+
+  it('salvar na nuvem combina campos editados em telas diferentes', () => {
+    type Ficha = { id: string; hpCurrent: number; peCurrent: number; _syncAt?: number; _syncFields?: Record<string, number> };
+    const mine: Ficha = {
+      id: 'a', hpCurrent: 12, peCurrent: 10, _syncAt: 200,
+      _syncFields: { [JSON.stringify(['hpCurrent'])]: 200, [JSON.stringify(['peCurrent'])]: 100 },
+    };
+    const cloud: Ficha = {
+      id: 'a', hpCurrent: 30, peCurrent: 4, _syncAt: 250,
+      _syncFields: { [JSON.stringify(['hpCurrent'])]: 100, [JSON.stringify(['peCurrent'])]: 250 },
+    };
+    expect(pickNewestPerCharacter([mine], [cloud])[0]).toMatchObject({ hpCurrent: 12, peCurrent: 4 });
+  });
+});
+
+const campo = (...path: string[]) => JSON.stringify(path);
+
+describe('mescla de alterações concorrentes por campo', () => {
+  beforeEach(() => __resetCharSyncStamps());
+
+  it('preserva alterações recentes em campos diferentes da mesma ficha', () => {
+    type Ficha = { id: string; hpCurrent: number; peCurrent: number; _syncAt?: number; _syncFields?: Record<string, number> };
+    const base: Ficha = { id: 'a', hpCurrent: 30, peCurrent: 10 };
+    stampLocalChanges([], [base], 1000);
+    const baseWire = withStamps([base])[0];
+
+    const local: Ficha = { ...baseWire, hpCurrent: 12 };
+    stampLocalChanges([baseWire], [local], 2000);
+    const localWire = withStamps([local])[0];
+    const remote: Ficha = {
+      ...baseWire,
+      peCurrent: 4,
+      _syncAt: 1500,
+      _syncFields: { ...baseWire._syncFields, [campo('peCurrent')]: 1500 },
+    };
+
+    const merged = mergeIncomingCharacters([localWire], [remote])[0];
+    expect([merged.hpCurrent, merged.peCurrent]).toEqual([12, 4]);
+  });
+
+  it('mescla contadores Omni diferentes sem substituir o mapa inteiro', () => {
+    type Ficha = { id: string; omniCounters: Record<string, number>; _syncAt?: number; _syncFields?: Record<string, number> };
+    const local: Ficha = {
+      id: 'a', omniCounters: { rancor: 2, foco: 1 }, _syncAt: 200,
+      _syncFields: { [campo('omniCounters', 'rancor')]: 200, [campo('omniCounters', 'foco')]: 100 },
+    };
+    const remote: Ficha = {
+      id: 'a', omniCounters: { rancor: 1, foco: 4 }, _syncAt: 250,
+      _syncFields: { [campo('omniCounters', 'rancor')]: 150, [campo('omniCounters', 'foco')]: 250 },
+    };
+
+    const merged = mergeIncomingCharacters([local], [remote])[0];
+    expect(merged.omniCounters).toEqual({ rancor: 2, foco: 4 });
+  });
+
+  it('preserva exclusão explícita de um campo contra uma cópia antiga', () => {
+    type Ficha = { id: string; notes?: string; _syncAt?: number; _syncFields?: Record<string, number> };
+    const local: Ficha = { id: 'a', _syncAt: 200, _syncFields: { [campo('notes')]: 200 } };
+    const remote: Ficha = { id: 'a', notes: 'texto antigo', _syncAt: 150, _syncFields: { [campo('notes')]: 150 } };
+
+    const merged = mergeIncomingCharacters([local], [remote])[0];
+    expect(merged).not.toHaveProperty('notes');
+  });
+
+  it('resolve conflito no mesmo campo de forma determinística, independente da ordem', () => {
+    type Ficha = { id: string; notes: string; _syncAt?: number; _syncFields?: Record<string, number> };
+    const a: Ficha = { id: 'a', notes: 'alfa', _syncAt: 50, _syncFields: { [campo('notes')]: 50 } };
+    const b: Ficha = { id: 'a', notes: 'beta', _syncAt: 50, _syncFields: { [campo('notes')]: 50 } };
+    const ab = mergeIncomingCharacters([a], [b])[0];
+    __resetCharSyncStamps();
+    const ba = mergeIncomingCharacters([b], [a])[0];
+    expect(ab.notes).toBe(ba.notes);
   });
 });
