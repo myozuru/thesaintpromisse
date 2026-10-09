@@ -14,7 +14,8 @@ export function CriadorShikigami({character}:{character:Character}){
   const [grau,setGrau]=useState<GrauShikigami>('quarto');
   const [atributos,setAtributos]=useState(atributosIniciaisShikigami);
   const [erro,setErro]=useState('');
-  const disponiveis=grausDisponiveis(character.level);
+  const controlador=character.specialization==='Controlador';
+  const disponiveis=controlador?grausDisponiveis(character.level):(['quarto','terceiro','segundo','primeiro','especial'] as GrauShikigami[]);
   const regras=regrasGrau(grau);
   const saldo=pontosRestantesShikigami(grau,atributos);
   const valores=valoresShikigami(grau,atributos,character.level,getTrainingBonusByLevel(character.level));
@@ -24,7 +25,8 @@ export function CriadorShikigami({character}:{character:Character}){
     if(!nome.trim()){setErro('Informe o nome do Shikigami.');return;}
     if(!disponiveis.includes(grau)){setErro('Grau indisponível para este nível.');return;}
     if(mensagem){setErro(mensagem);return;}
-    if(catalogo.length>=limiteInvocacoesConhecidas(character.level)){setErro('Limite de invocações conhecidas atingido.');return;}
+    // O livro exige Interlúdio para não Controladores e invocações extras;
+    // o editor informa a regra, preservando as exceções livres autorizadas.
     update(character.id,{invocacoesConhecidas:[...catalogo,{
       id:crypto.randomUUID(),donoCharacterId:character.id,nome:nome.trim(),tipo:'shikigami',
       origem:{tipo:'manual'},grau,atributos:{...atributos},
@@ -37,6 +39,7 @@ export function CriadorShikigami({character}:{character:Character}){
   return <div className="space-y-3 rounded-lg border border-border p-3">
     <h3 className="font-semibold">Criar Shikigami</h3>
     <p className="text-xs text-muted-foreground">Regras originais de Invocações · criação por grau e distribuição de atributos.</p>
+    <p className="text-xs text-amber-600">{controlador ? `Controlador: ${limiteInvocacoesConhecidas(character.level)} invocações pela progressão do livro; adicionais exigem Interlúdio.` : "Outras especializações: obtenção por Interlúdio (talismãs/corpos). O livro não define limite numérico de invocações conhecidas para elas."}</p>
     <label className="block text-xs">Nome
       <input className="mt-1 w-full rounded border border-input bg-background p-2" value={nome} onChange={e=>setNome(e.target.value)} aria-label="Nome do Shikigami"/>
     </label>
