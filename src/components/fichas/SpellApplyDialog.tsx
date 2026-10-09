@@ -868,7 +868,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
   const handleCastWithAttacks = async () => {
     if (!canCast()) return;
     // Consume PE and actions
-    const updates: Partial<typeof source> = { peCurrent: (useCharacterStore.getState().characters.find(c => c.id === sourceCharId)?.peCurrent ?? 0) - effectiveCostPE };
+    const updates = buildCastUpdates();
     if (!updates || !consumeActionUpdates(updates)) return;
     updateCharacter(sourceCharId, withTecnicaMaximaCooldown(updates));
     emitFundLogLines();
@@ -1039,8 +1039,8 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
   const handleCastWithSaves = async () => {
     if (!canCast()) return;
     // Consume action slot
-    const updates: Partial<typeof source> = { peCurrent: (useCharacterStore.getState().characters.find(c => c.id === sourceCharId)?.peCurrent ?? 0) - effectiveCostPE };
-    if (!consumeActionUpdates(updates)) return;
+    const updates = buildCastUpdates();
+    if (!updates || !consumeActionUpdates(updates)) return;
     updateCharacter(sourceCharId, withTecnicaMaximaCooldown(updates));
     emitFundLogLines();
     applySpecPostCast();
@@ -1199,7 +1199,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
             value: buff.value,
             extraDiceCount: buff.extraDiceCount,
             extraDiceSides: buff.extraDiceSides,
-            remainingTurns: buff.durationTurns,
+            remainingTurns: hasConcentration ? -1 : buff.durationTurns,
             peCostPerRound: pePerRound,
             sourceCharId,
             isSustained: isSustainedSpell,
@@ -1229,7 +1229,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
             sourceCharName: source.name,
               sourceCharId: source.id,
             sourceEntityId: spell.id,
-            sourceInstanceId: sustainInstanceId,
+            sourceInstanceId: effectInstanceId,
             durationMode: mode,
             endCD: expiry.endCD,
             endTrType: expiry.endTrType,
@@ -1253,8 +1253,8 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
   const handleCastDirect = async () => {
     if (selectedIds.length === 0 || !canCast()) return;
 
-    const updates: Partial<typeof source> = { peCurrent: (useCharacterStore.getState().characters.find(c => c.id === sourceCharId)?.peCurrent ?? 0) - effectiveCostPE };
-    if (!consumeActionUpdates(updates)) return;
+    const updates = buildCastUpdates();
+    if (!updates || !consumeActionUpdates(updates)) return;
     updateCharacter(sourceCharId, withTecnicaMaximaCooldown(updates));
     emitFundLogLines();
     applySpecPostCast();
@@ -1326,11 +1326,12 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
             value: buff.value,
             extraDiceCount: buff.extraDiceCount,
             extraDiceSides: buff.extraDiceSides,
-            remainingTurns: buff.durationTurns,
+            remainingTurns: hasConcentration ? -1 : buff.durationTurns,
             peCostPerRound: pePerRound,
             sourceCharId,
             isSustained: isSustainedSpell,
             sustainInstanceId,
+            concentrationInstanceId,
           });
           const buffDesc = buff.type === 'ca' ? `CA+${buff.value}`
             : buff.type === 'hit' ? `Acerto+${buff.value}`
@@ -1353,11 +1354,11 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
             name: condDef.name,
             icon: condDef.icon,
             remainingTurns: hasConcentration || isAtePassar ? -1 : (sc.durationTurns > 0 ? sc.durationTurns : -1),
-            remainingRounds: sc.durationRounds > 0 ? sc.durationRounds : -1,
+            remainingRounds: hasConcentration ? -1 : (sc.durationRounds > 0 ? sc.durationRounds : -1),
             sourceCharName: source.name,
               sourceCharId: source.id,
             sourceEntityId: spell.id,
-            sourceInstanceId: sustainInstanceId,
+            sourceInstanceId: effectInstanceId,
             durationMode: mode,
             endCD: expiry.endCD,
             endTrType: expiry.endTrType,
