@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
+import { useRoleStore } from '@/stores/useRoleStore';
 import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import { ATRIBUTOS_SHIKIGAMI, atributosIniciaisShikigami, grausDisponiveis, pontosRestantesShikigami, regrasGrau, validarAtributosShikigami, valoresShikigami, type GrauShikigami } from '@/lib/controlador/regrasShikigami';
 import { limiteInvocacoesConhecidas } from '@/lib/controlador/tipos';
@@ -10,6 +11,7 @@ const graus = {quarto:'Quarto Grau',terceiro:'Terceiro Grau',segundo:'Segundo Gr
 
 export function CriadorShikigami({character}:{character:Character}){
   const update=useCharacterStore(s=>s.updateCharacter);
+  const isMaster=useRoleStore(s=>s.role)==='MASTER';
   const [nome,setNome]=useState('');
   const [grau,setGrau]=useState<GrauShikigami>('quarto');
   const [atributos,setAtributos]=useState(atributosIniciaisShikigami);
@@ -29,7 +31,7 @@ export function CriadorShikigami({character}:{character:Character}){
     // o editor informa a regra, preservando as exceções livres autorizadas.
     update(character.id,{invocacoesConhecidas:[...catalogo,{
       id:crypto.randomUUID(),donoCharacterId:character.id,nome:nome.trim(),tipo:'shikigami',
-      origem:{tipo:'manual'},grau,atributos:{...atributos},
+      origem:{tipo:'manual'},grau,atributos:{...atributos},aprovacaoMestre:isMaster?'aprovada':'pendente',
       hpAtual:valores.pv,hpMaximo:valores.pv,defesa:valores.defesa,
       deslocamentoM:valores.deslocamentoM,porte:'Médio',
       custoInvocacaoPE:valores.custoPE,acoes:[],
@@ -63,6 +65,6 @@ export function CriadorShikigami({character}:{character:Character}){
       <span>Custo base: <strong>{valores.custoPE} PE</strong></span>
     </div>
     {erro&&<p role="alert" className="text-xs text-destructive">{erro}</p>}
-    <button type="button" onClick={cadastrar} className="rounded bg-primary px-3 py-2 text-xs text-primary-foreground">Salvar Shikigami na biblioteca</button>
+    <button type="button" onClick={cadastrar} className="rounded bg-primary px-3 py-2 text-xs text-primary-foreground">{isMaster?'Salvar e aprovar Shikigami':'Solicitar aprovação do Mestre'}</button>
   </div>;
 }
