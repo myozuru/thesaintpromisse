@@ -109,8 +109,14 @@ function variaveisCompletas(ctx: ContextoRuntime): Record<string, number> {
 }
 
 class FormulaRuntimeInvalida extends Error {}
-function avaliarFormulaSegura(expressao: string, ctx: ContextoRuntime): number {
-  const r = avaliarFormula(expressao, variaveisCompletas(ctx));
+function avaliarFormulaSegura(
+  expressao: string,
+  ctx: ContextoRuntime,
+  valoresAdicionais?: Record<string, number>,
+): number {
+  const variaveis = variaveisCompletas(ctx);
+  if (valoresAdicionais) Object.assign(variaveis, valoresAdicionais);
+  const r = avaliarFormula(expressao, variaveis);
   if (r.diagnosticos.length || !Number.isFinite(r.valor)) throw new FormulaRuntimeInvalida(`Fórmula inválida: ${expressao}`);
   return r.valor;
 }
@@ -127,13 +133,38 @@ function resolverOperando(op: Operando, ctx: ContextoRuntime): number | string {
   if (op.tipo === 'formula') return avaliarFormulaSegura(op.expressao, ctx);
   // ref
   if (op.ref.composicao) {
-    const dados = extrairDadosCompostos(variaveisCompletas(ctx))[op.ref.composicao.contexto];
+    // ALVO tem fallback para o próprio usuário no leitor legado; preserve o
+    // mesmo contrato também para composições quando a ação não tem alvo.
+    const contextoComAlvo = op.ref.composicao.contexto === 'ALVO' && !ctx.alvo && ctx.usuario
+      ? { ...ctx, alvo: ctx.usuario }
+      : ctx;
+    const dados = extrairDadosCompostos(variaveisCompletas(contextoComAlvo))[op.ref.composicao.contexto];
     const r = dados ? avaliarComposicao(op.ref.composicao, dados) : undefined;
-    return r?.ok ? r.valor : 0;
+    if (!r?.ok) {
+      const motivo = r?.mensagem ?? 'dados indisponíveis para este contexto';
+      throw new FormulaRuntimeInvalida(`Referência composta inválida (${op.ref.caminho}): ${motivo}`);
+    }
+    return r.valor;
   }
-  const alvo = personagemDoEscopo(ctx, op.ref.alvo);
-  if (!alvo) return 0;
-  return lerCaminhoOmni(alvo, op.ref.caminho);
+  const caminho = op.ref.caminho.trim().replace(/^@?(usuario|alvo|cena)\./i, '');
+  if (!caminho) throw new FormulaRuntimeInvalida('Referência vazia no bloco visual.');
+
+  // O leitor legado retorna 0 para qualquer caminho desconhecido. As
+  // referências do construtor passam pelo parser de fórmulas para distinguir
+  // zero real de key ausente e também suportar escopos de CENA.
+  const escopo = op.ref.alvo === 'ALVO' && !ctx.alvo ? 'USUARIO' : op.ref.alvo;
+  const adicionais: Record<string, number> = {};
+  if (escopo === 'USUARIO' || escopo === 'ALVO') {
+    const alvo = escopo === 'USUARIO' ? ctx.usuario : ctx.alvo;
+    const chave = canonicalizarChave(caminho);
+    // Contadores e flags nomeados são namespaces dinâmicos: ainda não existir
+    // na ficha significa saldo/estado zero, não uma referência desconhecida.
+    if (alvo && (/^contador_[a-z0-9_]+$/.test(chave) || /^flag_[a-z0-9_]+$/.test(chave))) {
+      const variavel = `${escopo}_${chave.toUpperCase()}`;
+      if (variaveisCompletas(ctx)[variavel] === undefined) adicionais[variavel] = 0;
+    }
+  }
+  return avaliarFormulaSegura(`@${escopo}.${caminho}`, ctx, adicionais);
 }
 
 // =============================================================================

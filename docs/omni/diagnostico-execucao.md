@@ -101,6 +101,16 @@ Validação desta etapa: suíte OMNI em 104 arquivos, 3.340 testes aprovados; te
 
 Validação desta etapa: suíte OMNI em 104 arquivos, 3.341 testes aprovados; E2E da ponte: 74 testes aprovados; `npx tsc --noEmit` e `git diff --check` sem erros.
 
+### Referências estruturadas do executor visual rejeitam keys ausentes
+
+Foi reproduzido que uma condição do construtor `chave_inexistente = 0` era verdadeira: `resolverOperando` chamava `lerCaminhoOmni`, cujo fallback legado transforma caminho desconhecido em zero. Referências compostas sem dados para o contexto também retornavam zero. Isso podia disparar ações silenciosamente, embora o usuário tivesse escrito uma key inválida ou usado contexto indisponível.
+
+O executor agora avalia referências escalares com o parser estrito e interrompe o bloco quando recebe diagnóstico. Falhas de composição geram erro de runtime tratado pelo executor; contexto `CENA` passa pelo mesmo caminho. `contador_<nome>` e `flag_<nome>` continuam aceitos mesmo antes de existir valor na ficha, com leitura zero como previsto para esses namespaces dinâmicos. O fallback de `lerCaminhoOmni` continua disponível aos consumidores legados que ainda precisam ser auditados.
+
+A validação de pacotes preserva e valida `ref.composicao`; antes, o schema Zod removia esse campo durante importação/exportação, apagando a árvore estruturada da referência.
+
+Validação desta etapa: os testes focados passaram em 4 arquivos (88 testes); a suíte OMNI executada passou em 99 arquivos (3.288 testes); `npx tsc --noEmit` e `git diff --check` sem erros. Foram adicionados testes de regressão para key inexistente comparada a zero, composição sem contexto, zero real de contador, e referências de cena com e sem valor. Isso fecha o consumidor do executor visual, não todos os consumidores do fallback legado nem a certificação total do catálogo.
+
 ### Lacunas que seguem abertas
 
 O caminho direto legado `lerCaminhoOmni` ainda retorna zero para nomes desconhecidos por compatibilidade; consultas naturais estritas e o avaliador de fórmulas já oferecem erro/diagnóstico. Ainda falta auditar todos os consumidores que recebem esse diagnóstico, revisar a autorização no backend e certificar comportamento de ponta a ponta para gatilhos, ações e variáveis do catálogo. A lista histórica de 345 entradas continua sendo uma sondagem derivada do rascunho; ela não certifica todas as keys da versão atual.

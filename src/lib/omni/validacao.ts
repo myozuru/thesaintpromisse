@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { GATILHOS_REACAO_IDS } from './tipos';
 import { DAMAGE_TYPES } from '@/types';
 import { ROTULOS_PERICIAS, SISTEMA_PERICIAS } from './constantesDoSistema';
+import { validarComposicao, type ReferenciaComposta } from './componentes/composicao';
 const DamageTypeSchema = z.enum(DAMAGE_TYPES);
 const PERICIAS_ATIVAS = [...new Set([
   ...Object.values(SISTEMA_PERICIAS).map((caminho) => caminho.replace(/^pericias\./, '')),
@@ -23,9 +24,15 @@ const ValorDinamicoSchema = z.union([
   z.object({ tipo: z.literal('formula'), expressao: z.string() }),
 ]);
 
+const ComposicaoSchema = z.custom<ReferenciaComposta>(
+  (value) => validarComposicao(value).length === 0,
+  { message: 'Referência composta inválida.' },
+);
+
 const RefSchema = z.object({
   alvo: z.enum(['USUARIO', 'ALVO', 'CENA']),
   caminho: z.string(),
+  composicao: ComposicaoSchema.optional(),
 });
 
 const OperandoSchema = z.union([

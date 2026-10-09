@@ -5,6 +5,7 @@ import { interpretarComposicao } from '@/lib/omni/componentes/interpretar';
 import { projetarDadosLegados, mesclarDados } from '@/lib/omni/componentes/legado';
 import { avaliarFormula, resolverChavePtBr } from '@/lib/omni/parser';
 import { novaEntidade } from '@/lib/omni/tipos';
+import { PacoteOmniSchema } from '@/lib/omni/validacao';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 afterEach(() => useOmniEntidadesStore.setState({ entidades: {} }));
 describe('compatibilidade e persistência de composições', () => {
@@ -24,6 +25,16 @@ describe('compatibilidade e persistência de composições', () => {
     const p = JSON.parse(JSON.stringify(useOmniEntidadesStore.getState().exportarPacote()));
     expect(useOmniEntidadesStore.getState().importarPacote(p, 'substituir')).toBe(1);
     expect(useOmniEntidadesStore.getState().entidades[e.id].gatilhos[0].blocos[0].condicoes[0].esquerdo).toEqual(e.gatilhos[0].blocos[0].condicoes[0].esquerdo);
+  });
+  it('validação de pacote preserva a árvore da referência composta', () => {
+    const composicao = interpretarComposicao('vida temporaria maximo').referencia!;
+    const e = { ...novaEntidade('item'), gatilhos: [{ id: 'g', evento: 'aoEquipar' as const, blocos: [{ id: 'b', modo: 'todas' as const,
+      condicoes: [{ id: 'c', esquerdo: { tipo: 'ref' as const, ref: { alvo: 'USUARIO' as const, caminho: 'vida temporaria maximo', composicao } },
+        operador: 'MAIOR_QUE' as const, direito: { tipo: 'fixo' as const, valor: 0 } }], acoes: [] }] }] };
+    const pacote = PacoteOmniSchema.parse({ formato: 'omni-engine.v1', nome: 'Teste', geradoEm: 0, entidades: [e] });
+    expect(pacote.entidades[0].gatilhos[0].blocos[0].condicoes[0].esquerdo).toMatchObject({
+      tipo: 'ref', ref: { caminho: 'vida temporaria maximo', composicao },
+    });
   });
   it('projeta fatos legados em campos reutilizáveis', () => {
     const dados = projetarDadosLegados({ MAX_CONCENTRACAO: 3, BLOQUEIO_TOTAL: 1 }, 'USUARIO', resolverChavePtBr);

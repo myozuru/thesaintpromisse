@@ -15,6 +15,7 @@ import { useOmniRuntimeStore } from '@/stores/useOmniRuntimeStore';
 import { useOmniSpatialStore } from '@/stores/useOmniSpatialStore';
 import { iniciarWatcherEngine } from '@/lib/omni/watcherEngine';
 import { executarGatilho } from '@/lib/omni/executor';
+import { interpretarComposicao } from '@/lib/omni/componentes/interpretar';
 import { executarAcaoAtiva } from '@/lib/omni/acaoAtiva';
 import { aplicarMovimentoAtivo } from '@/lib/omni/movimentosAtivos';
 import { dispararGatilhoEfeitosItens } from '@/lib/omni/triggerEfeitos';
@@ -88,6 +89,53 @@ describe('isolamento do dono de eventos', () => {
   it('fórmula desconhecida no bloco visual não executa a ação', () => {
     const e = visual('aoMover'); e.gatilhos[0].blocos[0].acoes[0].valor = { tipo: 'formula', expressao: '@USUARIO.chave_inexistente + 1' };
     executarGatilho(e, 'aoMover', { usuario: pegarFicha('u') }); expect(pegarFicha('u').omniCounters?.teste).toBeUndefined();
+  });
+  it('referência estruturada ausente não vira zero em uma condição', () => {
+    const e = visual('aoMover');
+    e.gatilhos[0].blocos[0].condicoes = [{ id: 'c', operador: 'IGUAL',
+      esquerdo: { tipo: 'ref', ref: { alvo: 'USUARIO', caminho: 'chave_inexistente' } },
+      direito: { tipo: 'fixo', valor: 0 },
+    }];
+    expect(executarGatilho(e, 'aoMover', { usuario: pegarFicha('u') })).toBe(0);
+    expect(pegarFicha('u').omniCounters?.teste).toBeUndefined();
+  });
+  it('composição sem dados do contexto não vira zero em uma condição', () => {
+    const composicao = interpretarComposicao('@DANO.dano final').referencia;
+    expect(composicao).toBeDefined();
+    const e = visual('aoMover');
+    e.gatilhos[0].blocos[0].condicoes = [{ id: 'c', operador: 'IGUAL',
+      esquerdo: { tipo: 'ref', ref: { alvo: 'ALVO', caminho: '@DANO.dano final', composicao: composicao! } },
+      direito: { tipo: 'fixo', valor: 0 },
+    }];
+    expect(executarGatilho(e, 'aoMover', { usuario: pegarFicha('u') })).toBe(0);
+    expect(pegarFicha('u').omniCounters?.teste).toBeUndefined();
+  });
+  it('contador nomeado ausente continua sendo uma leitura válida com valor zero', () => {
+    const e = visual('aoMover');
+    e.gatilhos[0].blocos[0].condicoes = [{ id: 'c', operador: 'IGUAL',
+      esquerdo: { tipo: 'ref', ref: { alvo: 'USUARIO', caminho: 'contador_rancor' } },
+      direito: { tipo: 'fixo', valor: 0 },
+    }];
+    expect(executarGatilho(e, 'aoMover', { usuario: pegarFicha('u') })).toBe(1);
+    expect(pegarFicha('u').omniCounters?.teste).toBe(1);
+  });
+  it('referência direta de CENA lê o valor presente no contexto', () => {
+    const e = visual('aoMover');
+    e.gatilhos[0].blocos[0].condicoes = [{ id: 'c', operador: 'IGUAL',
+      esquerdo: { tipo: 'ref', ref: { alvo: 'CENA', caminho: 'distancia' } },
+      direito: { tipo: 'fixo', valor: 0 },
+    }];
+    expect(executarGatilho(e, 'aoMover', { usuario: pegarFicha('u'), cena: { distancia: 0 } })).toBe(1);
+    expect(pegarFicha('u').omniCounters?.teste).toBe(1);
+  });
+  it('referência direta de CENA sem contexto é inválida, não zero', () => {
+    const e = visual('aoMover');
+    e.gatilhos[0].blocos[0].condicoes = [{ id: 'c', operador: 'IGUAL',
+      esquerdo: { tipo: 'ref', ref: { alvo: 'CENA', caminho: 'distancia' } },
+      direito: { tipo: 'fixo', valor: 0 },
+    }];
+    expect(executarGatilho(e, 'aoMover', { usuario: pegarFicha('u') })).toBe(0);
+    expect(pegarFicha('u').omniCounters?.teste).toBeUndefined();
   });
 });
 
