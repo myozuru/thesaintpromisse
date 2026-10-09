@@ -21,6 +21,7 @@ import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { avaliarFormula } from './parser';
 import { montarVariaveisDoPersonagem } from './resolvedor';
 import { canonicalizarChave } from './keyAliases';
+import { SISTEMA_PERICIAS } from './constantesDoSistema';
 import { resolverAcumuloOmni } from './omniBridge';
 import type { OmniModifierContribution } from './omniBridge';
 
@@ -31,6 +32,11 @@ export interface PassivaDerivada {
 }
 
 const VAZIO: PassivaDerivada = { skillBonuses: {}, peReductions: [], immunities: [] };
+const PERICIAS_VALIDAS = new Set(
+  Object.values(SISTEMA_PERICIAS).map((caminho) =>
+    caminho.replace(/^pericias\./, '').toLowerCase(),
+  ),
+);
 
 export function derivarPassivasContinuas(c: Character | null | undefined): PassivaDerivada {
   if (!c?.omniAtivos?.length) return VAZIO;
@@ -69,7 +75,7 @@ export function derivarPassivasContinuas(c: Character | null | undefined): Passi
       if (eff.condition && eff.condition.trim()) {
         try {
           const r = avaliarFormula(eff.condition, getVars());
-          if (r.valor <= 0) continue;
+          if (r.diagnosticos.length || !Number.isFinite(r.valor) || r.valor <= 0) continue;
         } catch {
           continue;
         }
@@ -82,7 +88,9 @@ export function derivarPassivasContinuas(c: Character | null | undefined): Passi
       if (eff.peSpellReduction) {
         let valor = 0;
         try {
-          valor = avaliarFormula(eff.formula || '0', getVars()).valor;
+          const r = avaliarFormula(eff.formula || '0', getVars());
+          if (r.diagnosticos.length || !Number.isFinite(r.valor)) continue;
+          valor = r.valor;
         } catch { continue; }
         const reduce = Math.max(0, Math.round(valor));
         if (reduce <= 0) continue;
@@ -107,9 +115,12 @@ export function derivarPassivasContinuas(c: Character | null | undefined): Passi
       const path = canonicalizarChave(eff.resourcePath ?? '');
       if (path.startsWith('pericia_')) {
         const sub = path.slice('pericia_'.length);
+        if (!PERICIAS_VALIDAS.has(sub)) continue;
         let valor = 0;
         try {
-          valor = avaliarFormula(eff.formula || '0', getVars()).valor;
+          const r = avaliarFormula(eff.formula || '0', getVars());
+          if (r.diagnosticos.length || !Number.isFinite(r.valor)) continue;
+          valor = r.valor;
         } catch { continue; }
         const delta =
           eff.type === 'SUBTRAIR' ? -Math.round(valor) :

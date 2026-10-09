@@ -24,6 +24,8 @@ import type { EntidadeOmni, CombatEffect } from '@/lib/omni/tipos';
 import { effectiveMovement, combatMoveBudget, reactionMoveBudget } from '@/lib/movementBudget';
 import { computeDefenseBreakdown } from '@/lib/defenseCalc';
 import { derivarPassivasContinuas } from '@/lib/omni/passivasDerivadas';
+import { avaliarFormula } from '@/lib/omni/parser';
+import { montarVariaveisDoPersonagem } from '@/lib/omni/resolvedor';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { ORDEM_PERICIAS, SISTEMA_PERICIAS, ORDEM_TR, SISTEMA_TR } from '@/lib/omni/constantesDoSistema';
 
@@ -382,5 +384,70 @@ describe('Passivas contínuas condicionais', () => {
     expect(derivarPassivasContinuas(personagem).skillBonuses.atletismo).toBe(4);
     const forcaMenor = { ...personagem, attributes: personagem.attributes.map((attr) => attr.id === 'forca' ? { ...attr, value: 3 } : attr) };
     expect(derivarPassivasContinuas(forcaMenor).skillBonuses.atletismo).toBe(2);
+  });
+
+  it('não aplica bônus nem redução quando condição ou fórmula referencia key desconhecida', () => {
+    const c = baseCobaia();
+    const passiva = novaEntidade('passiva', 'Inscrição ilegível');
+    passiva.combatData = {
+      critRange: 20,
+      critMultiplier: 2,
+      isActive: false,
+      effects: [],
+      effectsActive: [],
+      effectsPassive: [
+        {
+          id: 'condicao-invalida',
+          type: 'ADICIONAR',
+          target: 'USUARIO',
+          resourcePath: 'pericia_atletismo',
+          formula: '4',
+          condition: '@USUARIO.chave_inexistente + 1 > 0',
+        },
+        {
+          id: 'formula-pericia-invalida',
+          type: 'ADICIONAR',
+          target: 'USUARIO',
+          resourcePath: 'pericia_furtividade',
+          formula: '@USUARIO.chave_inexistente + 4',
+        },
+        {
+          id: 'formula-reducao-invalida',
+          type: 'MODIFICADOR',
+          target: 'USUARIO',
+          resourcePath: 'pe',
+          formula: '@USUARIO.chave_inexistente + 4',
+          peSpellReduction: { filtro: 'tipo:damage', min: 1 },
+        },
+        {
+          id: 'pericia-inexistente',
+          type: 'ADICIONAR',
+          target: 'USUARIO',
+          resourcePath: 'pericia_adestramento',
+          formula: '8',
+        },
+      ],
+    };
+    useOmniEntidadesStore.setState({ entidades: { [passiva.id]: passiva } });
+    const personagem = {
+      ...c,
+      omniAtivos: [{ id: passiva.id, entidadeId: passiva.id, categoria: 'passiva' as const, instanceId: passiva.id, vinculadoEm: 0 }],
+    } as Character;
+
+    const vars = montarVariaveisDoPersonagem(personagem, 'USUARIO');
+    expect(avaliarFormula('@USUARIO.chave_inexistente + 1 > 0', vars)).toMatchObject({
+      valor: 1,
+      diagnosticos: [expect.objectContaining({ tipo: 'chave_ausente' })],
+    });
+    expect(avaliarFormula('@USUARIO.chave_inexistente + 4', vars)).toMatchObject({
+      valor: 4,
+      diagnosticos: [expect.objectContaining({ tipo: 'chave_ausente' })],
+    });
+
+    expect(derivarPassivasContinuas(personagem)).toEqual({
+      skillBonuses: {},
+      peReductions: [],
+      immunities: [],
+    });
   });
 });

@@ -14,7 +14,7 @@ São 345 entradas: 337 sondadas como nomes simples e 8 modelos/comandos que exig
 
 | Caso | Observação | Consequência | Tratamento previsto |
 |---|---|---|---|
-| Nome inventado | canonicalizarChave conserva o nome; lerCaminhoOmni retorna 0; writer informa aplicado 0 | Ausência fica indistinguível de saldo zero no acesso direto | Resolver estrito da nova linguagem, preservando adaptador legado (2–5) |
+| Nome inventado | `lerCaminhoOmni` mantém o fallback legado em 0; `consultarNatural` retorna `CHAVE_DESCONHECIDA` e `avaliarFormula` emite diagnóstico | Um consumidor que ignora diagnósticos pode transformar referência ausente em zero | Manter caminhos de consulta estritos; auditar cada consumidor antes de depender do fallback legado |
 | `acoes_comuns`, `pe_temporario`, `bonus_acerto`, `margem_critico` | Sondagem histórica: o parser aceitava nomes sem destino executável | Parsing bem-sucedido não garantia efeito | `pe_temporario` recebeu caminho de escrita; `acoes_comuns`, `bonus_acerto` e `margem_critico` agora são rejeitados pelo parser natural (`fa43a80`) |
 | `vida_temporaria` | Sondagem histórica: leitura funcionava, mas a escrita não encontrava o campo | Leitura e escrita não tinham equivalência uniforme | Alias gravável e teste de estado real adicionados; limite zero corrigido na etapa seguinte |
 | `pericia_adestramento` | Writer cria entrada em omniSkillBonuses mesmo sem perícia canônica | Pode guardar bônus sem destinatário real no catálogo | Validar perícia contra registro real (12) |
@@ -87,9 +87,17 @@ Um teste de regressão primeiro reproduziu a falha (`aplicado: 0`) e, após a co
 
 Validação desta etapa: suíte OMNI em 104 arquivos, 3.339 testes aprovados; `npx tsc --noEmit` sem erros; `git diff --check` limpo.
 
+### Passivas contínuas agora rejeitam referências inválidas
+
+`derivarPassivasContinuas` consumia apenas o número retornado por `avaliarFormula`. Assim, `@USUARIO.chave_inexistente + 4` podia virar uma redução de PE igual a 4 apesar do diagnóstico de referência ausente. O mesmo caminho também derivava bônus para `pericia_adestramento`, nome que não consta nas 22 perícias da ficha.
+
+O seletor agora descarta condições e fórmulas com diagnóstico ou resultado não finito e só gera bônus para perícias presentes em `SISTEMA_PERICIAS`. O teste E2E confirma que uma condição desconhecida cujo resultado parcial seria verdadeiro não ativa a passiva, que fórmula parcial não concede bônus/redução e que uma perícia inexistente não produz bônus derivado.
+
+Validação desta etapa: suíte OMNI em 104 arquivos, 3.340 testes aprovados; teste E2E da ponte após ampliar as asserções: 73 testes aprovados; `npx tsc --noEmit` sem erros; `git diff --check` limpo.
+
 ### Lacunas que seguem abertas
 
-Permanecem em investigação os diagnósticos explícitos para nomes de leitura desconhecidos, a autorização no backend e a certificação comportamental completa de gatilhos, ações e variáveis do catálogo. A lista histórica de 345 entradas continua sendo uma sondagem derivada do rascunho; ela não certifica todas as keys da versão atual.
+O caminho direto legado `lerCaminhoOmni` ainda retorna zero para nomes desconhecidos por compatibilidade; consultas naturais estritas e o avaliador de fórmulas já oferecem erro/diagnóstico. Ainda falta auditar todos os consumidores que recebem esse diagnóstico, revisar a autorização no backend e certificar comportamento de ponta a ponta para gatilhos, ações e variáveis do catálogo. A lista histórica de 345 entradas continua sendo uma sondagem derivada do rascunho; ela não certifica todas as keys da versão atual.
 
 ### Destinos de escrita validados na revisão atual
 
