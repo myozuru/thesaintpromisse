@@ -182,14 +182,36 @@ export function avaliarFormulaNaFicha(
   character: Character,
   formula: string | undefined,
 ): number {
+  return avaliarFormulaNaFichaDetalhada(character, formula).value;
+}
+
+export interface OmniFormulaEvaluation {
+  value: number;
+  unroundedValue: number;
+  diagnostics: string[];
+  hasRandomRolls: boolean;
+}
+
+/** Avalia a fórmula preservando os erros que a API numérica legada omite. */
+export function avaliarFormulaNaFichaDetalhada(
+  character: Character,
+  formula: string | undefined,
+): OmniFormulaEvaluation {
   const expr = (formula ?? '').trim();
-  if (!expr) return 0;
+  if (!expr) return { value: 0, unroundedValue: 0, diagnostics: [], hasRandomRolls: false };
   try {
     const vars = montarVariaveisDoPersonagem(character, 'USUARIO');
-    const r = avaliarFormula(expr, vars);
-    return r.diagnosticos.length ? 0 : Math.round(r.valor || 0);
+    const result = avaliarFormula(expr, vars);
+    const diagnostics = result.diagnosticos.map((diagnostic) => diagnostic.mensagem);
+    const unroundedValue = diagnostics.length ? 0 : result.valor || 0;
+    return {
+      value: Math.round(unroundedValue),
+      unroundedValue,
+      diagnostics,
+      hasRandomRolls: result.rolagens.length > 0,
+    };
   } catch {
-    return 0;
+    return { value: 0, unroundedValue: 0, diagnostics: ['Não foi possível avaliar a expressão.'], hasRandomRolls: false };
   }
 }
 
@@ -218,6 +240,14 @@ export interface OmniModifierContribution {
   applied?: boolean;
 }
 
+/** Falha de configuração em uma fórmula ou chave de modificador passivo. */
+export interface OmniModifierDiagnostic {
+  source: string;
+  key: string;
+  formula?: string;
+  message: string;
+}
+
 /** Mapa final de modificadores e suas origens, indexado por chave de bônus. */
 export interface OmniModifierBag {
   totals: Record<OmniBonusKey, number>;
@@ -228,6 +258,7 @@ export interface OmniModifierBag {
   trOrigins: Partial<Record<OmniRollBonusKey, OmniModifierContribution[]>>;
   deslocamento: number;
   deslocamentoOrigins: OmniModifierContribution[];
+  formulaDiagnostics: OmniModifierDiagnostic[];
 }
 
 export interface OmniPassiveBonusBag extends OmniModifierBag {
@@ -243,7 +274,7 @@ function vazio(): OmniModifierBag {
     totals: { hp: 0, pe: 0, ca: 0, rd: 0, esc: 0, slots: 0 },
     origins: { hp: [], pe: [], ca: [], rd: [], esc: [], slots: [] },
     pericias: {}, periciaOrigins: {}, trs: {}, trOrigins: {},
-    deslocamento: 0, deslocamentoOrigins: [],
+    deslocamento: 0, deslocamentoOrigins: [], formulaDiagnostics: [],
   };
 }
 
@@ -302,26 +333,95 @@ function chaveRolagemDoRecurso(resourcePath?: string): OmniRollBonusKey | null {
   return null;
 }
 
-function avaliarBonusPorRecurso(character: Character, ent: EntidadeOmni, resourceKey: OmniRollBonusKey): number {
+function registrarDiagnostico(
+  bag: OmniModifierBag,
+  diagnostic: OmniModifierDiagnostic,
+): void {
+  const duplicate = bag.formulaDiagnostics.some((item) =>
+    item.source === diagnostic.source
+    && item.key === diagnostic.key
+    && item.formula === diagnostic.formula
+    && item.message === diagnostic.message,
+  );
+  if (!duplicate) bag.formulaDiagnostics.push(diagnostic);
+}
+
+function avaliarFormulaParaBag(
+  character: Character,
+  formula: string | undefined,
+  source: string,
+  key: string,
+  bag: OmniModifierBag,
+): number {
+  const result = avaliarFormulaNaFichaDetalhada(character, formula);
+  registrarFalhasFormula(bag, result, source, key, formula);
+  return result.hasRandomRolls ? 0 : result.value;
+}
+
+function registrarFalhasFormula(
+  bag: OmniModifierBag,
+  result: OmniFormulaEvaluation,
+  source: string,
+  key: string,
+  formula?: string,
+): void {
+  for (const message of result.diagnostics) {
+    registrarDiagnostico(bag, { source, key, formula, message });
+  }
+  if (result.hasRandomRolls) {
+    registrarDiagnostico(bag, {
+      source,
+      key,
+      formula,
+      message: 'Bônus passivos precisam ser determinísticos; esta fórmula rola dados.',
+    });
+  }
+}
+
+function avaliarPartesFormulaParaBag(
+  character: Character,
+  formulas: Array<string | undefined>,
+  source: string,
+  key: string,
+  bag: OmniModifierBag,
+): number {
+  let total = 0;
+  for (const formula of formulas) {
+    const result = avaliarFormulaNaFichaDetalhada(character, formula);
+    registrarFalhasFormula(bag, result, source, key, formula);
+    if (!result.hasRandomRolls) total += result.unroundedValue;
+  }
+  return Math.round(total);
+}
+
+function avaliarBonusPorRecurso(
+  character: Character,
+  ent: EntidadeOmni,
+  resourceKey: OmniRollBonusKey,
+  bag: OmniModifierBag,
+): number {
   const cd = normalizarCombatData(ent.combatData);
   const efeitosPassivos = cd?.effectsPassive ?? [];
   return efeitosPassivos.reduce((total, ef) => {
     if (ef.watcher || ef.trigger?.trim() || (ef.target !== 'USUARIO' && ef.target !== 'ALVO')) return total;
-    if (ef.condition?.trim() && !avaliarFormulaNaFicha(character, ef.condition)) return total;
     if (chaveRolagemDoRecurso(ef.resourcePath) !== resourceKey) return total;
-    const valor = avaliarFormulaNaFicha(character, ef.formula);
+    const source = `✦ ${ent.nome}`;
+    if (ef.condition?.trim()) {
+      const condition = avaliarFormulaNaFichaDetalhada(character, ef.condition);
+      const key = ef.resourcePath ?? resourceKey;
+      for (const message of condition.diagnostics) {
+        registrarDiagnostico(bag, { source, key, formula: ef.condition, message: `Condição inválida: ${message}` });
+      }
+      if (condition.hasRandomRolls) {
+        registrarDiagnostico(bag, { source, key, formula: ef.condition, message: 'Condição passiva não pode depender de dados aleatórios.' });
+      }
+      if (condition.diagnostics.length || condition.hasRandomRolls || !condition.value) return total;
+    }
+    const valor = avaliarFormulaParaBag(character, ef.formula, source, ef.resourcePath ?? resourceKey, bag);
     if (ef.type === 'SUBTRAIR') return total - valor;
     if (ef.type === 'ADICIONAR' || ef.type === 'MODIFICADOR') return total + valor;
     return total;
   }, 0);
-}
-
-/** Junta uma fórmula explícita com a derivada do Plano de Execução. */
-function fundirFormula(explicita?: string, derivada?: string): string {
-  const a = (explicita ?? '').trim();
-  const b = (derivada ?? '').trim();
-  if (a && b) return `(${a}) + (${b})`;
-  return a || b || '';
 }
 
 /**
@@ -365,15 +465,15 @@ export function selectOmniModifiers(
 
     for (const k of CHAVES_PASSIVAS) {
       const fixo = fixos[k] ?? 0;
-      const formulaCombinada = fundirFormula(formulas[k], derivadas[k]);
-      const formulaVal = avaliarFormulaNaFicha(character, formulaCombinada);
+      const formulaVal = avaliarPartesFormulaParaBag(character, [formulas[k], derivadas[k]], `◇ ${ent.nome}`, k, out);
       const total = fixo + formulaVal;
       if (total !== 0) {
         out.totals[k] += total;
         out.origins[k].push({ source: `◇ ${ent.nome}`, delta: total });
       }
     }
-    const deslocamento = (Number(fixos.deslocamento) || 0) + avaliarFormulaNaFicha(character, fundirFormula(formulas.deslocamento, derivadas.deslocamento));
+    const deslocamento = (Number(fixos.deslocamento) || 0)
+      + avaliarPartesFormulaParaBag(character, [formulas.deslocamento, derivadas.deslocamento], `◇ ${ent.nome}`, 'deslocamento', out);
     if (deslocamento !== 0) {
       out.deslocamento += deslocamento;
       out.deslocamentoOrigins.push({ source: `◇ ${ent.nome}`, delta: deslocamento });
@@ -387,9 +487,16 @@ export function selectOmniModifiers(
       const key = canonica.startsWith('pericia_')
         ? canonica.slice('pericia_'.length)
         : normalizarChaveOmni(rawKey).replace(/^pericia(s)?_/, '');
-      if (!PERICIAS_VALIDAS.has(key)) continue;
+      if (!PERICIAS_VALIDAS.has(key)) {
+        registrarDiagnostico(out, {
+          source: `◇ ${ent.nome}`,
+          key: rawKey,
+          message: `Perícia não reconhecida: ${rawKey}.`,
+        });
+        continue;
+      }
       const fixo = Number(fixos.pericias?.[rawKey]) || 0;
-      const formula = avaliarFormulaNaFicha(character, formulas.pericias?.[rawKey]);
+      const formula = avaliarFormulaParaBag(character, formulas.pericias?.[rawKey], `◇ ${ent.nome}`, rawKey, out);
       const value = fixo + formula;
       if (!key || value === 0) continue;
       out.pericias[key] = (out.pericias[key] ?? 0) + value;
@@ -402,9 +509,17 @@ export function selectOmniModifiers(
     for (const rawKey of chavesTR) {
       const key = normalizarChaveOmni(rawKey) as OmniRollBonusKey;
       const fixo = Number(fixos.trs?.[rawKey as keyof NonNullable<typeof fixos.trs>]) || 0;
-      const formula = avaliarFormulaNaFicha(character, formulas.trs?.[rawKey as keyof NonNullable<typeof formulas.trs>]);
+      if (!CHAVES_ROLAGEM_PASSIVA.includes(key)) {
+        registrarDiagnostico(out, {
+          source: `◇ ${ent.nome}`,
+          key: rawKey,
+          message: `Teste de resistência não reconhecido: ${rawKey}.`,
+        });
+        continue;
+      }
+      const formula = avaliarFormulaParaBag(character, formulas.trs?.[rawKey as keyof NonNullable<typeof formulas.trs>], `◇ ${ent.nome}`, rawKey, out);
       const value = fixo + formula;
-      if (!CHAVES_ROLAGEM_PASSIVA.includes(key) || value === 0) continue;
+      if (value === 0) continue;
       out.trs[key] = (out.trs[key] ?? 0) + value;
       (out.trOrigins[key] ??= []).push({ source: `◇ ${ent.nome}`, delta: value });
     }
@@ -443,8 +558,7 @@ export function selectOmniPassiveBonuses(
 
     for (const k of CHAVES_PASSIVAS) {
       const fixo = fixos[k] ?? 0;
-      const formulaCombinada = fundirFormula(formulas[k], derivadas[k]);
-      const formulaVal = avaliarFormulaNaFicha(character, formulaCombinada);
+      const formulaVal = avaliarPartesFormulaParaBag(character, [formulas[k], derivadas[k]], `✦ ${ent.nome}`, k, out);
       const total = fixo + formulaVal;
       if (total !== 0) {
         out.totals[k] += total;
@@ -452,14 +566,15 @@ export function selectOmniPassiveBonuses(
       }
     }
 
-    const deslocamento = (Number(fixos.deslocamento) || 0) + avaliarFormulaNaFicha(character, fundirFormula(formulas.deslocamento, derivadas.deslocamento));
+    const deslocamento = (Number(fixos.deslocamento) || 0)
+      + avaliarPartesFormulaParaBag(character, [formulas.deslocamento, derivadas.deslocamento], `✦ ${ent.nome}`, 'deslocamento', out);
     if (deslocamento !== 0) {
       out.deslocamento += deslocamento;
       out.deslocamentoOrigins.push({ source: `✦ ${ent.nome}`, delta: deslocamento });
     }
 
     for (const k of CHAVES_ROLAGEM_PASSIVA) {
-      const total = avaliarBonusPorRecurso(character, ent, k);
+      const total = avaliarBonusPorRecurso(character, ent, k, out);
       if (total !== 0) {
         out.rollTotals[k] = (out.rollTotals[k] ?? 0) + total;
         (out.rollOrigins[k] ??= []).push({ source: `✦ ${ent.nome}`, delta: total });

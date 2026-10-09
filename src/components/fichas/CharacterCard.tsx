@@ -387,7 +387,9 @@ function DamageHealPanel({ sourceId, sourceName }: { sourceId: string; sourceNam
 }
 
 export function CharacterCard({ character: c, hideAttackPanel, compactHeader = false }: Props) {
-  const isPlayer = useRoleStore((s) => s.role) === 'PLAYER';
+  const role = useRoleStore((s) => s.role);
+  const isPlayer = role === 'PLAYER';
+  const isMaster = role === 'MASTER';
   const canSeeCombatDefense = !isPlayer || c.category === 'PLAYER';
   const activeProfileId = useProfileStore((s) => s.activeProfileId);
   const combatInProgress = useCombatStore((s) => s.inCombat);
@@ -572,8 +574,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     .filter((e): e is NonNullable<typeof e> => Boolean(e));
   const omniPassivasBonus = useMemo(
     () => selectOmniPassiveBonuses(c, entidadesPassivasVinculadas),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [c, entidadesPassivasVinculadas.map((e) => e.id).join('|')],
+    [c, omniEntidadesMap],
   );
   const omniPassivasContinuas = useMemo(
     () => derivarPassivasContinuas(c),
@@ -874,6 +875,10 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     () => selectOmniModifiers(c, equippedOmniInstances, omniEntidadesMap),
     [c, equippedOmniInstances, omniEntidadesMap],
   );
+  const omniFormulaDiagnostics = [
+    ...omniModifiers.formulaDiagnostics,
+    ...omniPassivasBonus.formulaDiagnostics,
+  ];
   // Fontes Omni vinculadas e equipamentos concorrem na mesma chave; combinar
   // os arrays aqui evita somar os máximos de cada grupo novamente.
   const omniOriginsCombinadas = {
@@ -1661,6 +1666,27 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
         <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform duration-300', expanded && 'rotate-180')} />
       </div>
       </div>
+
+      {isMaster && omniFormulaDiagnostics.length > 0 && (
+        <div
+          role="alert"
+          onClick={(event) => event.stopPropagation()}
+          className="mx-4 mt-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm leading-relaxed text-amber-100"
+        >
+          <div className="mb-1 flex items-center gap-2 font-semibold">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            Fórmulas ou keys de bônus OMNI inválidas
+          </div>
+          <ul className="list-disc space-y-1 pl-5">
+            {omniFormulaDiagnostics.map((diagnostic, index) => (
+              <li key={`${diagnostic.source}-${diagnostic.key}-${index}`}>
+                <strong>{diagnostic.source}</strong> · {diagnostic.key}: {diagnostic.message}
+                {diagnostic.formula && <code className="ml-1 break-all">({diagnostic.formula})</code>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <PortasDaMorteCard c={c} />
       {/* ─── Status bars ─── */}

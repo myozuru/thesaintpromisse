@@ -197,3 +197,13 @@ Uma key ausente em `max_alvos` era recusada indiretamente como “no máximo 0 a
 A seleção múltipla agora valida a expressão e devolve o diagnóstico da key desconhecida. Fórmulas com dados recebem erro explícito porque o limite de alvos precisa ser determinístico. O caminho de compatibilidade que retorna só o número continua disponível, enquanto a execução usa o resultado estrito.
 
 Validação desta etapa: 3 arquivos focados, 56 testes aprovados; `npx tsc --noEmit` e `git diff --check` sem erros. Os testes cobrem tanto a mensagem da key ausente quanto os caminhos válidos de ações múltiplas e cura.
+
+### Bônus passivos/equipados expõem fórmulas inválidas
+
+`avaliarFormulaNaFicha` preservava compatibilidade retornando `0` para fórmulas com diagnóstico, mas os seletores de bônus descartavam o motivo. Keys de perícia/TR fora dos catálogos também eram ignoradas sem aviso. Além disso, fórmula com dados era reavaliada ao recalcular o personagem, produzindo bônus instáveis sem uma rolagem persistida.
+
+As bags de `selectOmniModifiers` e `selectOmniPassiveBonuses` agora incluem diagnósticos por origem e key. Um trecho inválido é ignorado sem apagar valores fixos ou fórmulas válidas irmãs; keys de perícias/TR desconhecidas são explicitadas. Bônus e condições passivas com dados são recusados como não determinísticos até que exista um modelo para rolar uma vez e persistir o resultado. A ficha mostra esses avisos somente para `MASTER`, com origem, key e fórmula. O recálculo também acompanha alterações de uma entidade vinculada com o mesmo ID.
+
+Validação desta etapa: 3 arquivos focados, 122 testes aprovados; `npx tsc --noEmit` e `git diff --check` sem erros.
+
+Ainda falta auditar o seletor paralelo `passivasDerivadas.ts`, que descarta silenciosamente fórmulas, condições e perícias contínuas inválidas, além dos demais consumidores diretos de `avaliarFormula` em gatilhos, watchers, mitigação, auras e movimento. Isso mantém aberta a certificação de todo o catálogo de keys.

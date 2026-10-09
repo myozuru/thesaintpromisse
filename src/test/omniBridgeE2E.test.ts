@@ -16,6 +16,7 @@ import {
   resolverAcumuloOmni,
   resolveOmniKey,
   avaliarFormulaNaFicha,
+  avaliarFormulaNaFichaDetalhada,
 } from '@/lib/omni/omniBridge';
 import { novaEntidade } from '@/lib/omni/tipos';
 import { PacoteOmniSchema } from '@/lib/omni/validacao';
@@ -280,6 +281,12 @@ describe('🌉 OmniBridge E2E — avaliarFormulaNaFicha', () => {
   it('expressão malformada não explode', () => {
     expect(avaliarFormulaNaFicha(c, '(((')).toBe(0);
   });
+  it('a avaliação detalhada preserva o diagnóstico de uma key desconhecida', () => {
+    const result = avaliarFormulaNaFichaDetalhada(c, '@USUARIO.chave_inexistente + 2');
+    expect(result.value).toBe(0);
+    expect(result.diagnostics.join(' ')).toMatch(/chave_inexistente/i);
+    expect(avaliarFormulaNaFicha(c, '@USUARIO.chave_inexistente + 2')).toBe(0);
+  });
 });
 
 
@@ -374,6 +381,81 @@ describe('Fórmulas de bônus equipado para perícias, TRs e deslocamento', () =
     };
     const pacote = PacoteOmniSchema.parse({ formato: 'omni-engine.v1', nome: 'Teste', geradoEm: 1, entidades: [item] });
     expect(pacote.entidades[0].bonusEquipadoFormula).toEqual(item.bonusEquipadoFormula);
+  });
+});
+
+describe('Diagnósticos de bônus Omni passivos', () => {
+  it('mantém a parte fixa válida e aponta a fórmula inválida do item equipado', () => {
+    const c = baseCobaia();
+    const item = novaEntidade('item', 'Anel de Rancor');
+    item.slotType = 'anel';
+    item.bonusEquipado = { ca: 2 };
+    item.bonusEquipadoFormula = { ca: '@USUARIO.key_que_nao_existe' };
+    item.combatData = {
+      critRange: 20,
+      critMultiplier: 2,
+      isActive: false,
+      effects: [],
+      effectsActive: [],
+      effectsPassive: [{ id: 'ca-valida', type: 'ADICIONAR', target: 'USUARIO', resourcePath: 'ca', formula: '3' }],
+    };
+
+    const bag = selectOmniModifiers(c, [{ instanceId: 'anel', equippedSlot: 'anel:0', entity: item }]);
+    expect(bag.totals.ca).toBe(5);
+    expect(bag.formulaDiagnostics).toContainEqual(expect.objectContaining({
+      source: `◇ ${item.nome}`,
+      key: 'ca',
+      formula: '@USUARIO.key_que_nao_existe',
+    }));
+  });
+
+  it('não rerrola dados aleatórios como modificador passivo a cada recálculo', () => {
+    const c = baseCobaia();
+    const item = novaEntidade('item', 'Anel Instável');
+    item.slotType = 'anel';
+    item.bonusEquipadoFormula = { ca: '1d6' };
+
+    const bag = selectOmniModifiers(c, [{ instanceId: 'anel', equippedSlot: 'anel:0', entity: item }]);
+    expect(bag.totals.ca).toBe(0);
+    expect(bag.formulaDiagnostics).toContainEqual(expect.objectContaining({
+      source: `◇ ${item.nome}`,
+      key: 'ca',
+      formula: '1d6',
+      message: expect.stringContaining('rola dados'),
+    }));
+  });
+
+  it('aponta fórmula e key de perícia inválidas no item equipado', () => {
+    const c = baseCobaia();
+    const item = novaEntidade('item', 'Inscrição falha');
+    item.slotType = 'anel';
+    item.bonusEquipadoFormula = {
+      pericias: {
+        adestramento: '@USUARIO.treino',
+        furtividade: '@USUARIO.foco_inexistente',
+      },
+    };
+    const bag = selectOmniModifiers(c, [{ instanceId: 'inscricao', equippedSlot: 'anel:0', entity: item }]);
+
+    expect(bag.formulaDiagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: 'adestramento', message: expect.stringContaining('não reconhecida') }),
+      expect.objectContaining({ key: 'furtividade', formula: '@USUARIO.foco_inexistente' }),
+    ]));
+  });
+
+  it('não descarta em silêncio uma condição inválida de bônus em TR', () => {
+    const c = baseCobaia();
+    const passiva = fazerPassiva({ nome: 'Guarda', resourcePath: 'fortitude', formula: '2' });
+    passiva.combatData!.effectsPassive![0].condition = '@USUARIO.condicao_inexistente > 0';
+    const bag = selectOmniPassiveBonuses(c, [passiva]);
+
+    expect(bag.rollTotals.fortitude).toBeUndefined();
+    expect(bag.formulaDiagnostics).toContainEqual(expect.objectContaining({
+      source: `✦ ${passiva.nome}`,
+      key: 'fortitude',
+      formula: '@USUARIO.condicao_inexistente > 0',
+      message: expect.stringContaining('Condição inválida'),
+    }));
   });
 });
 
