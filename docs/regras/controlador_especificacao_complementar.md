@@ -55,6 +55,8 @@ A ficha de criação de **cada Shikigami** deve oferecer um campo configurável 
 
 **Regra confirmada em 2026-10-09 — reservas individuais:** cada Shikigami tem **sua própria reserva de tempo identificável**, definida na criação da ficha. As reservas individuais **contribuem para o relógio global do jogador Controlador**, que recebe o acréscimo ao invocar cada criatura. A interface deve permitir acompanhar de qual Shikigami veio cada contribuição, evitando dupla contabilização de um mesmo evento de invocação.
 
+**Decisão confirmada em 2026-10-09 — saída de campo:** o tratamento da reserva de tempo deverá ser **diferente entre dissipação voluntária e derrota**. Essas são duas causas distintas de retirada do Shikigami e devem ser registradas individualmente no estado de combate. **Ainda não foi decidido** se o saldo remanescente é mantido, devolvido ou retirado em cada caso; não implementar uma regra automática para nenhum deles sem confirmação expressa do usuário.
+
 **Ainda precisa de esclarecimento, não presumir valores nem comportamento:** unidade, limite e valor inicial do tempo configurável; tratamento da reserva quando o Shikigami é dissipado, derrotado, reinvocado ou quando o combate termina; eventual simultaneidade das ações; regras detalhadas para debitar as reservas individuais durante a execução. Consultar o usuário antes de implementar esses aspectos.
 
 ### 10. Economia de ações independente
@@ -75,6 +77,7 @@ Cada Shikigami deve ter identidade visual, imagem/token, ficha, HUD e indicadore
 - [ ] Campo configurável de tempo extra na criação de cada Shikigami.
 - [ ] Soma verificável dos tempos individuais ao relógio global do jogador, disparada ao invocar cada Shikigami, sem duplicação.
 - [ ] Reservas de tempo distintas e identificáveis na HUD, contribuindo para o relógio global.
+- [ ] Tratar dissipação voluntária e derrota como eventos distintos para as reservas, com as consequências pendentes de decisão do usuário.
 - [ ] Recursos e ações separados por invocação e independentes do saldo de ações do dono.
 - [ ] Autonomia e custos próprios configuráveis por invocação no OMNI.
 - [ ] Imagem, token, HUD, PV, rolagens e estados individualizados.
