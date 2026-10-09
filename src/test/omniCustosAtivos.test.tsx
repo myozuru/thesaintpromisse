@@ -157,6 +157,35 @@ describe('custos genéricos de ações', () => {
     expect(u.actionsCurrent).toBe(1); expect(u.bonusActionsCurrent).toBe(tipo_acao === 'bonus' ? 0 : 1); expect(u.reactionsCurrent).toBe(tipo_acao === 'reacao' ? 0 : 1);
     if (tipo_acao === 'reacao') expect(useReactionStore.getState().reactionsUsedByChar.u).toBe(1);
   });
+  it('MODIFICAR_CUSTO_ACAO troca o custo real e respeita o limite por rodada', async () => {
+    mesa({ actionsCurrent: 1, bonusActionsCurrent: 1, omniActionCost: { ler_tecnica: { cost: 'action_free', perRound: 1, usedThisRound: 0 } } });
+    useCombatStore.setState({ inCombat: true, currentTurnIndex: 0, initiativeOrder: [{ charId: 'u' }] } as never);
+    const acao = cfg({ id: 'id-config-aleatorio', nome: 'Ler Técnica', acao: 'bonus', custoPE: '0' });
+    const ent = { ...novaEntidade('item', 'Ler Técnica'), id: 'ler_tecnica', acoesAtivas: [acao] } as EntidadeOmni;
+    const item = useInventoryStore.getState().add('u', ent);
+
+    const primeira = await executarAcaoAtiva('u', acao, 'a', item.entity, { instanciaId: item.instanceId });
+    expect(primeira.ok).toBe(true);
+    expect(pegarFicha('u')).toMatchObject({ actionsCurrent: 1, bonusActionsCurrent: 1, omniActionCost: { ler_tecnica: { usedThisRound: 1 } } });
+
+    const segunda = await executarAcaoAtiva('u', acao, 'a', item.entity, { instanciaId: item.instanceId });
+    expect(segunda.ok).toBe(true);
+    expect(pegarFicha('u')).toMatchObject({ actionsCurrent: 1, bonusActionsCurrent: 0, omniActionCost: { ler_tecnica: { usedThisRound: 1 } } });
+  });
+  it('custo action_full exige e consome duas ações comuns', async () => {
+    mesa({ actionsCurrent: 1, omniActionCost: { golpe_completo: { cost: 'action_full' } } });
+    useCombatStore.setState({ inCombat: true });
+    const acao = cfg({ id: 'golpe_completo', acao: 'livre', custoPE: '0' });
+
+    const insuficiente = await executarAcaoAtiva('u', acao, 'a');
+    expect(insuficiente).toMatchObject({ ok: false, reason: 'Sem duas Ações Comuns disponíveis.' });
+    expect(pegarFicha('u').actionsCurrent).toBe(1);
+
+    useCharacterStore.getState().updateCharacter('u', { actionsCurrent: 2 });
+    const suficiente = await executarAcaoAtiva('u', acao, 'a');
+    expect(suficiente.ok).toBe(true);
+    expect(pegarFicha('u').actionsCurrent).toBe(0);
+  });
   it('exige uma ação determinada para purificação manual', async () => {
     const purificar = cfg({ acao: 'livre', efeitos: [{ tipo: 'remover_condicao', condicao: 'caido' }] });
     const antes = pegarFicha('u');

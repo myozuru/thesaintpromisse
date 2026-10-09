@@ -11,17 +11,78 @@ import { useCombatStore } from '@/stores/useCombatStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { distanciaCircularEntreFichas } from '@/lib/mapa/alcanceCircular';
 import { capacidadeDaReferencia, tirosRestantes } from '@/lib/recargaRapida';
+import { SYSTEM_ACTIONS } from './constantesDoSistema';
 
 export interface ContextoCustosAtivos { armaNome?: string; armaInstanciaId?: string; instanciaId?: string; entidadeId?: string; cargasSelecionadas?: number }
+
+type AcaoAtivaEfetiva = AcaoAtivaConfig['acao'] | 'completa';
 
 export interface PlanoCustosAtivos {
   pe: number; pv: number; cargas: number; contador?: string;
   municao: number; armaMunicao?: { charId: string; nome: string; restanteAntes: number; instanceId?: string };
   usosItem: number; instanciaItemId?: string;
-  acao: AcaoAtivaConfig['acao']; intensificacoes: number; maxIntensificacoes: number;
+  acao: AcaoAtivaEfetiva; custoAcaoOmniKey?: string; intensificacoes: number; maxIntensificacoes: number;
   pePorTurno: number;
 }
 export type ResultadoCustosAtivos = { ok: true; plano: PlanoCustosAtivos } | { ok: false; reason: string };
+
+type AcaoAtivaEfetiva = AcaoAtivaConfig['acao'] | 'completa';
+
+export interface PlanoCustosAtivos {
+  pe: number; pv: number; cargas: number; contador?: string;
+  municao: number; armaMunicao?: { charId: string; nome: string; restanteAntes: number; instanceId?: string };
+  usosItem: number; instanciaItemId?: string;
+  acao: AcaoAtivaEfetiva; custoAcaoOmniKey?: string; intensificacoes: number; maxIntensificacoes: number;
+  pePorTurno: number;
+}
+export type ResultadoCustosAtivos = { ok: true; plano: PlanoCustosAtivos } | { ok: false; reason: string };
+
+/** Normaliza IDs ou nomes usados por MODIFICAR_CUSTO_ACAO e por ações ativas. */
+export function normalizarIdentificadorCustoAcao(valor: string): string {
+  return valor.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase()
+    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
+
+function tipoAcaoDoSistema(custo: string): AcaoAtivaEfetiva | undefined {
+  switch (custo) {
+    case SYSTEM_ACTIONS.LIVRE.id: return 'livre';
+    case SYSTEM_ACTIONS.MOVIMENTO.id: return 'movimento';
+    case SYSTEM_ACTIONS.PADRAO.id: return 'comum';
+    case SYSTEM_ACTIONS.BONUS.id: return 'bonus';
+    case SYSTEM_ACTIONS.REACAO.id:
+    case SYSTEM_ACTIONS.INTERROMPER.id: return 'reacao';
+    case SYSTEM_ACTIONS.COMPLETA.id: return 'completa';
+    default: return undefined;
+  }
+}
+
+function custoAcaoOmni(u: Character, cfg: AcaoAtivaConfig, contexto: ContextoCustosAtivos) {
+  const mapa = u.omniActionCost ?? {};
+  const candidatos = [contexto.entidadeId, cfg.id, cfg.nome].filter((v): v is string => !!v?.trim());
+  let encontrado: [string, NonNullable<Character['omniActionCost']>[string]] | undefined;
+  for (const candidato of candidatos) {
+    const normalizado = normalizarIdentificadorCustoAcao(candidato);
+    encontrado = Object.entries(mapa).find(([key]) =>
+      key.trim().toLocaleLowerCase() === candidato.trim().toLocaleLowerCase()
+        || normalizarIdentificadorCustoAcao(key) === normalizado,
+    );
+    if (encontrado) break;
+  }
+  if (!encontrado) return undefined;
+
+  const [key, modificador] = encontrado;
+  const tipo = tipoAcaoDoSistema(modificador.cost);
+  if (!tipo) throw new Error(`Custo de ação Omni inválido em "${key}": ${modificador.cost}.`);
+  if (modificador.perRound !== undefined && (!Number.isSafeInteger(modificador.perRound) || modificador.perRound < 1)) {
+    throw new Error(`Limite por rodada inválido em "${key}".`);
+  }
+  const usados = modificador.usedThisRound ?? 0;
+  if (!Number.isSafeInteger(usados) || usados < 0) throw new Error(`Uso por rodada inválido em "${key}".`);
+
+  const emCombate = useCombatStore.getState().inCombat;
+  if (emCombate && modificador.perRound !== undefined && usados >= modificador.perRound) return undefined;
+  return { tipo, key: emCombate && modificador.perRound !== undefined ? key : undefined };
+}
 
 /** Recursos novos exigem fórmulas determinísticas; legados preservam seu arredondamento. */
 export function planejarCustosAtivos(cfg: AcaoAtivaConfig, u: Character, intensificacoes = 0, contexto: ContextoCustosAtivos = {}): ResultadoCustosAtivos {
@@ -94,11 +155,13 @@ export function planejarCustosAtivos(cfg: AcaoAtivaConfig, u: Character, intensi
     const pePorTurno = c?.tipo_acao === 'sustentada' ? numero(c.pe_por_turno) : 0;
     if (c?.tipo_acao === 'sustentada' && ![...(cfg.efeitos ?? []), ...Object.values(cfg.desfechosTR ?? {}).flatMap(r => r?.efeitos ?? [])].some(e => e.tipo === 'condicao') && !c.gerar_cargas?.nome.trim()) throw new Error('Ação sustentada exige ao menos uma condição ou cargas geradas para manter.');
     if (c?.tipo_acao === 'sustentada' && pePorTurno < 1) throw new Error('Ação sustentada exige PE por turno maior que zero.');
-    const acao = c?.tipo_acao && c.tipo_acao !== 'sustentada' ? c.tipo_acao : cfg.acao;
+    const acaoBase = c?.tipo_acao && c.tipo_acao !== 'sustentada' ? c.tipo_acao : cfg.acao;
+    const modificadorAcao = custoAcaoOmni(u, cfg, contexto);
+    const acao = modificadorAcao?.tipo ?? acaoBase;
     const efeitos = [...(cfg.efeitos ?? []), ...Object.values(cfg.desfechosTR ?? {}).flatMap(r => r?.efeitos ?? [])];
     if (efeitos.some(e => e.tipo === 'remover_condicao') && acao === 'livre') return { ok: false, reason: 'Remover condições exige uma ação: escolha Comum, Bônus, Reação ou Movimento.' };
-    if (!['comum', 'bonus', 'reacao', 'movimento', 'livre'].includes(acao)) throw new Error('Tipo de ação inválido.');
-    return { ok: true, plano: { pe, pv, cargas, contador, municao, armaMunicao, usosItem, instanciaItemId, acao, intensificacoes, maxIntensificacoes: max, pePorTurno } };
+    if (!['comum', 'bonus', 'reacao', 'movimento', 'livre', 'completa'].includes(acao)) throw new Error('Tipo de ação inválido.');
+    return { ok: true, plano: { pe, pv, cargas, contador, municao, armaMunicao, usosItem, instanciaItemId, acao, custoAcaoOmniKey: modificadorAcao?.key, intensificacoes, maxIntensificacoes: max, pePorTurno } };
   } catch (e) { return { ok: false, reason: e instanceof Error ? e.message : 'Custos inválidos.' }; }
 }
 
@@ -106,9 +169,10 @@ export function validarRecursosAtivos(u: Character, p: PlanoCustosAtivos): { ok:
   if (![u.peCurrent ?? 0, u.tempPE ?? 0].every(n => Number.isFinite(n) && n >= 0) || (u.peCurrent ?? 0) + (u.tempPE ?? 0) < p.pe) return { ok: false, reason: `PE insuficiente (precisa de ${p.pe}).` };
   // Sacrifício usa PV reais, sem mitigação/escudo/PV temporários e sem matar o usuário.
   if (p.pv > 0 && (!Number.isFinite(u.hpCurrent) || (u.hpCurrent ?? 0) <= p.pv)) return { ok: false, reason: `PV insuficiente: o custo de ${p.pv} deve deixar ao menos 1 PV.` };
-  if (p.acao === 'comum' && (!Number.isFinite(u.actionsCurrent ?? 1) || (u.actionsCurrent ?? 1) < 1)) return { ok: false, reason: 'Sem Ação Comum disponível.' };
+  const comunsNecessarias = p.acao === 'completa' ? 2 : p.acao === 'comum' ? 1 : 0;
+  if (comunsNecessarias && (!Number.isFinite(u.actionsCurrent ?? 1) || (u.actionsCurrent ?? 1) < comunsNecessarias)) return { ok: false, reason: comunsNecessarias === 2 ? 'Sem duas Ações Comuns disponíveis.' : 'Sem Ação Comum disponível.' };
   if (p.acao === 'bonus' && (!Number.isFinite(u.bonusActionsCurrent ?? 1) || (u.bonusActionsCurrent ?? 1) < 1)) return { ok: false, reason: 'Sem Ação Bônus disponível.' };
-  if (u.feridaInternaBloqueada && (p.acao === 'comum' || p.acao === 'reacao')) return { ok: false, reason: 'Ferida interna: perdeu a ação e as reações até o próximo turno.' };
+  if (u.feridaInternaBloqueada && (p.acao === 'comum' || p.acao === 'completa' || p.acao === 'reacao')) return { ok: false, reason: 'Ferida interna: perdeu a ação e as reações até o próximo turno.' };
   const reacoesDisponiveis = u.reactionsCurrent ?? u.reactionsMax ?? 1;
   if (p.acao === 'reacao' && (!Number.isFinite(reacoesDisponiveis) || reacoesDisponiveis < 1)) return { ok: false, reason: 'Sem Reação disponível.' };
   if (p.acao === 'movimento') {
@@ -124,9 +188,17 @@ export function patchCustosAtivos(u: Character, p: PlanoCustosAtivos): Partial<C
   const patch: Partial<Character> = { tempPE: (u.tempPE ?? 0) - temp, peCurrent: (u.peCurrent ?? 0) - (p.pe - temp) };
   if (p.pv) patch.hpCurrent = u.hpCurrent - p.pv;
   if (p.acao === 'comum') patch.actionsCurrent = Math.max(0, (u.actionsCurrent ?? 1) - 1);
+  if (p.acao === 'completa') patch.actionsCurrent = Math.max(0, (u.actionsCurrent ?? 1) - 2);
   if (p.acao === 'bonus') patch.bonusActionsCurrent = Math.max(0, (u.bonusActionsCurrent ?? 1) - 1);
   if (p.acao === 'reacao') patch.reactionsCurrent = Math.max(0, (u.reactionsCurrent ?? u.reactionsMax ?? 1) - 1);
   if (p.contador && p.cargas > 0) patch.omniCounters = calcularContador(u.omniCounters ?? {}, p.contador, 'CONSUMIR_CONTADOR', { valor: p.cargas }).counters;
+  if (p.custoAcaoOmniKey) {
+    const atual = u.omniActionCost?.[p.custoAcaoOmniKey];
+    if (atual) patch.omniActionCost = {
+      ...(u.omniActionCost ?? {}),
+      [p.custoAcaoOmniKey]: { ...atual, usedThisRound: (atual.usedThisRound ?? 0) + 1 },
+    };
+  }
   return patch;
 }
 

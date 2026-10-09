@@ -540,6 +540,29 @@ describe('🎯 MODIFICAR_CUSTO_ACAO', () => {
     })), 'aoEquipar', { usuario: c });
     expect(getChar(c.id).omniActionCost?.magia.perRound).toBeUndefined();
   });
+  it('reaplicar o modificador não restaura usos já gastos na rodada', () => {
+    const c = novoChar();
+    useCharacterStore.getState().updateCharacter(c.id, {
+      omniActionCost: { ler_tecnica: { cost: 'action_bonus', perRound: 1, usedThisRound: 1 } },
+    });
+    executarGatilho(entidade(baseAcao('a', 'MODIFICAR_CUSTO_ACAO', {
+      caminhoAlvo: 'Ler Técnica', condicao: 'action_free' as any, valor: fixo(1),
+    })), 'aoEquipar', { usuario: getChar(c.id) });
+    expect(getChar(c.id).omniActionCost?.ler_tecnica).toEqual({
+      cost: 'action_free', perRound: 1, usedThisRound: 1,
+    });
+  });
+  it.each([
+    { condicao: 'nao_existe', valor: 1 },
+    { condicao: 'action_free', valor: -1 },
+    { condicao: 'action_free', valor: 1.5 },
+  ])('não grava configuração inválida $condicao / $valor', ({ condicao, valor }) => {
+    const c = novoChar();
+    executarGatilho(entidade(baseAcao('a', 'MODIFICAR_CUSTO_ACAO', {
+      caminhoAlvo: 'ler_tecnica', condicao: condicao as any, valor: fixo(valor),
+    })), 'aoEquipar', { usuario: c });
+    expect(getChar(c.id).omniActionCost).toBeUndefined();
+  });
 });
 
 // ──────────────────────────────────────────────────────────────────────

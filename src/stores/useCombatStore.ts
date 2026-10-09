@@ -394,10 +394,13 @@ export const useCombatStore = create<CombatStore>()(
       clearParticipants: () => set({ participantIds: [] }),
       startCombat: (entries) => {
         for (const c of useCharacterStore.getState().characters) {
+          const omniActionCost = c.omniActionCost
+            ? Object.fromEntries(Object.entries(c.omniActionCost).map(([key, value]) => [key, { ...value, usedThisRound: 0 }]))
+            : undefined;
           useCharacterStore.getState().updateCharacter(c.id, { omniCounters: {
             ...c.omniCounters, __omni_rodada: 1, cura_recebida_nesta_rodada: 0,
             dano_recebido_nesta_rodada: 0, vida_perdida_nesta_rodada: 0,
-          } });
+          }, ...(omniActionCost ? { omniActionCost } : {}) });
         }
         const sorted = [...entries].sort((a, b) => b.total - a.total);
         set((s) => ({

@@ -26,6 +26,7 @@ import type {
 } from './tipos';
 import {
   ACOES_EFEITO,
+  SYSTEM_ACTIONS,
   type AlvoRefId,
   type GatilhoId,
   OPERADORES_LOGICOS,
@@ -41,6 +42,7 @@ import { useOmniRuntimeStore } from '@/stores/useOmniRuntimeStore';
 import { grantAdvantage, clearAllAdvantage, type AdvScope } from './rollAdvantage';
 import { adicionarImunidade, removerImunidade, formatarImunidade } from './immunity';
 import { calcularContador } from './contadores';
+import { normalizarIdentificadorCustoAcao } from './custosAtivos';
 import { aplicarEfeitoNoPersonagem } from './aplicarEfeito';
 import { avaliarComposicao } from './componentes/avaliar';
 import { dadosCena } from './componentes/cena';
@@ -722,14 +724,23 @@ function executarAcao(a: AcaoLogica, ctx: ContextoRuntime, log: (m: string) => v
     }
     case 'MODIFICAR_CUSTO_ACAO': {
       if (!alvoChar || !a.caminhoAlvo || !a.condicao) break;
-      // caminhoAlvo = id da habilidade (ex.: 'ler_tecnica')
-      // condicao    = novo custo (ex.: 'action_bonus' | 'action_free')
-      // valor       = perRound (0 = ilimitado)
-      const key = a.caminhoAlvo.trim().toLowerCase();
+      // caminhoAlvo = id da habilidade; condicao = SYSTEM_ACTIONS; valor = limite por rodada (0 = ilimitado).
+      if (!Object.values(SYSTEM_ACTIONS).some(custo => custo.id === a.condicao)) {
+        log(`${nomeOrigem}: custo de ação inválido: ${a.condicao}.`);
+        break;
+      }
+      if (!Number.isSafeInteger(valor) || valor < 0) {
+        log(`${nomeOrigem}: limite por rodada de ação deve ser um inteiro não negativo.`);
+        break;
+      }
+      const key = normalizarIdentificadorCustoAcao(a.caminhoAlvo);
+      if (!key) break;
       const map = { ...(alvoChar.omniActionCost ?? {}) };
-      map[key] = { cost: a.condicao, perRound: valor > 0 ? Math.round(valor) : undefined, usedThisRound: 0 };
+      // Reavaliações do mesmo gatilho não podem reabrir o limite já gasto nesta rodada.
+      const usadosNestaRodada = map[key]?.usedThisRound ?? 0;
+      map[key] = { cost: a.condicao, perRound: valor > 0 ? valor : undefined, usedThisRound: usadosNestaRodada };
       useCharacterStore.getState().updateCharacter(alvoChar.id, { omniActionCost: map });
-      log(`${nomeOrigem}: ${nomeAlvo}.acao.${key} → ${a.condicao}${valor > 0 ? ` (${valor}×/rodada)` : ''}`);
+      log(`${nomeOrigem}: ${nomeAlvo}.acao.${key} → ${a.condicao}${valor > 0 ? ` (${valor}×/rodada)` : ""}`);
       break;
     }
     // ── Exaustão (escada genérica) ──────────────────────────────────────
