@@ -217,3 +217,13 @@ O resultado agora inclui diagnósticos por fonte, key e fórmula. Condições e 
 Validação desta etapa: `omniBridgeE2E.test.ts`, 80 testes aprovados; `npx tsc --noEmit` e `git diff --check` sem erros.
 
 Continuam pendentes os consumidores diretos de fórmulas em gatilhos, watchers, mitigação de dano, auras, movimento e execução visual, além da varredura e certificação integral do catálogo de keys.
+
+### Mitigações passivas denunciam condições e fórmulas inválidas
+
+O seletor de resistência, vulnerabilidade e imunidade descartava em silêncio condições/fórmulas com diagnóstico e não validava o tipo de dano desconhecido. Fórmulas com dados podiam tornar a mitigação diferente a cada recálculo de dano.
+
+Mitigações passivas agora ignoram fórmulas não determinísticas ou inválidas sem alterar o estado e produzem diagnósticos com a origem e a key. Keys iniciadas por um prefixo de mitigação, mas com tipo de dano inexistente, também são sinalizadas. O aviso da ficha reúne esses diagnósticos somente para `MASTER`.
+
+Validação desta etapa: 2 arquivos focados, 117 testes aprovados; `npx tsc --noEmit` e `git diff --check` sem erros.
+
+Ainda precisam de auditoria semelhante as áreas dinâmicas e CDs de aura, os limites de contadores em gatilhos/watchers, o executor visual e o restante do catálogo de keys.

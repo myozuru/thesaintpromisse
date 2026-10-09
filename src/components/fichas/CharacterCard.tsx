@@ -24,6 +24,7 @@ import { montarVariaveisDoPersonagem } from '@/lib/omni/resolvedor';
 import { SYSTEM_ACTIONS } from '@/lib/omni/constantesDoSistema';
 import { normalizarCombatData } from '@/lib/omni/tipos';
 import { resolverAcumuloOmni, selectOmniModifiers, selectOmniPassiveBonuses } from '@/lib/omni/omniBridge';
+import { listarDiagnosticosMitigacaoDano } from '@/lib/omni/mitigacoesDano';
 import { derivarPassivasContinuas } from '@/lib/omni/passivasDerivadas';
 import { aggregateSpecChoices } from '@/lib/specChoiceEffects';
 import { aggregateSpecAbilityEffects } from '@/lib/specAbilityEffects';
@@ -875,10 +876,15 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     () => selectOmniModifiers(c, equippedOmniInstances, omniEntidadesMap),
     [c, equippedOmniInstances, omniEntidadesMap],
   );
+  const omniMitigationDiagnostics = useMemo(
+    () => listarDiagnosticosMitigacaoDano(c),
+    [c, equippedOmniInstances, omniEntidadesMap],
+  );
   const omniFormulaDiagnostics = [
     ...omniModifiers.formulaDiagnostics,
     ...omniPassivasBonus.formulaDiagnostics,
     ...omniPassivasContinuas.diagnostics,
+    ...omniMitigationDiagnostics,
   ];
   // Fontes Omni vinculadas e equipamentos concorrem na mesma chave; combinar
   // os arrays aqui evita somar os máximos de cada grupo novamente.

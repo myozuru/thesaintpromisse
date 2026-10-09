@@ -18,6 +18,7 @@ import {
   avaliarFormulaNaFicha,
   avaliarFormulaNaFichaDetalhada,
 } from '@/lib/omni/omniBridge';
+import { coletarMitigacoesDano, listarDiagnosticosMitigacaoDano } from '@/lib/omni/mitigacoesDano';
 import { novaEntidade } from '@/lib/omni/tipos';
 import { PacoteOmniSchema } from '@/lib/omni/validacao';
 import type { Character } from '@/types';
@@ -28,6 +29,7 @@ import { derivarPassivasContinuas } from '@/lib/omni/passivasDerivadas';
 import { avaliarFormula } from '@/lib/omni/parser';
 import { montarVariaveisDoPersonagem } from '@/lib/omni/resolvedor';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
+import { useInventoryStore } from '@/stores/useInventoryStore';
 import { ORDEM_PERICIAS, SISTEMA_PERICIAS, ORDEM_TR, SISTEMA_TR } from '@/lib/omni/constantesDoSistema';
 
 // ─── Cobaia padronizada ──────────────────────────────────────────────────
@@ -456,6 +458,46 @@ describe('Diagnósticos de bônus Omni passivos', () => {
       formula: '@USUARIO.condicao_inexistente > 0',
       message: expect.stringContaining('Condição inválida'),
     }));
+  });
+});
+
+describe('Mitigações passivas com keys inválidas', () => {
+  it('ignora condições/fórmulas inválidas e aleatórias, mas mantém mitigação válida e explica os erros', () => {
+    const ent = novaEntidade('passiva', 'Manto Prismático');
+    ent.combatData = {
+      critRange: 20,
+      critMultiplier: 2,
+      isActive: false,
+      effects: [],
+      effectsActive: [],
+      effectsPassive: [
+        { id: 'condicao', type: 'ADICIONAR', target: 'USUARIO', resourcePath: 'resistencia_fogo', formula: '1', condition: '@USUARIO.sem_essa_key > 0' },
+        { id: 'formula', type: 'ADICIONAR', target: 'USUARIO', resourcePath: 'vulnerabilidade_veneno', formula: '@USUARIO.key_inexistente' },
+        { id: 'dado', type: 'ADICIONAR', target: 'USUARIO', resourcePath: 'imunidade_impacto', formula: '1d6' },
+        { id: 'tipo', type: 'ADICIONAR', target: 'USUARIO', resourcePath: 'resistencia_dano_impossivel', formula: '1' },
+        { id: 'valida', type: 'ADICIONAR', target: 'USUARIO', resourcePath: 'resistencia_psiquico', formula: '1' },
+      ],
+    };
+    useOmniEntidadesStore.setState({ entidades: { [ent.id]: ent } });
+    useInventoryStore.setState({ items: {} });
+    const personagem = {
+      ...baseCobaia(),
+      omniAtivos: [{ id: 'manto', entidadeId: ent.id, categoria: 'passiva' as const, instanceId: ent.id, vinculadoEm: 0 }],
+    } as Character;
+
+    const mitigacoes = coletarMitigacoesDano(personagem);
+    expect(mitigacoes.resistencia).toEqual(['DPS']);
+    expect(mitigacoes.vulnerabilidade).toEqual([]);
+    expect(mitigacoes.imunidade).toEqual([]);
+
+    const diagnostics = listarDiagnosticosMitigacaoDano(personagem);
+    expect(diagnostics).toHaveLength(4);
+    expect(diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: 'resistencia_fogo', message: expect.stringContaining('Condição inválida') }),
+      expect.objectContaining({ key: 'vulnerabilidade_veneno', formula: '@USUARIO.key_inexistente' }),
+      expect.objectContaining({ key: 'imunidade_impacto', message: expect.stringContaining('rola dados') }),
+      expect.objectContaining({ key: 'resistencia_dano_impossivel', message: expect.stringContaining('não reconhecido') }),
+    ]));
   });
 });
 
