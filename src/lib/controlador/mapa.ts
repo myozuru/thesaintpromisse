@@ -1,7 +1,7 @@
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { useCombatStore } from '@/stores/useCombatStore';
-import { limiteInvocacoesAtivas } from './tipos';
+import { limiteAtivasPersonagem } from './tipos';
 import { useLogStore } from '@/stores/useLogStore';
 
 export type DirecaoInvocacao = 'norte' | 'sul' | 'leste' | 'oeste';
@@ -16,7 +16,7 @@ export function tokensInvocados(donoCharacterId: string) {
 export function invocarControlador(donoId: string, invocacaoId: string, direcao: DirecaoInvocacao): ResultadoInvocacao {
   const cs = useCharacterStore.getState();
   const dono = cs.characters.find(c => c.id === donoId);
-  if (!dono || dono.specialization !== 'Controlador') return { ok: false, motivo: 'Apenas um Controlador pode invocar.' };
+  if (!dono) return { ok: false, motivo: 'Personagem não encontrado.' };
   const modelo = dono.invocacoesConhecidas?.find(i => i.id === invocacaoId && i.donoCharacterId === donoId);
   if (!modelo) return { ok: false, motivo: 'Invocação não pertence ao catálogo.' };
   if (modelo.hpAtual <= 0) return { ok: false, motivo: 'A invocação precisa ter PV para ser materializada.' };
@@ -24,7 +24,7 @@ export function invocarControlador(donoId: string, invocacaoId: string, direcao:
   const mapa = useMapStore.getState();
   const ativos = tokensInvocados(donoId);
   if (ativos.some(e => e.invocationId === invocacaoId)) return { ok: false, motivo: 'Essa invocação já está no mapa.' };
-  if (ativos.length >= limiteInvocacoesAtivas(dono.treinoControle ?? 1)) return { ok: false, motivo: 'Limite de invocações ativas atingido.' };
+  if (ativos.length >= limiteAtivasPersonagem(dono.specialization, dono.treinoControle ?? 0)) return { ok: false, motivo: 'Limite de invocações ativas atingido.' };
   if (!Number.isFinite(modelo.custoInvocacaoPE) || modelo.custoInvocacaoPE < 0) return { ok: false, motivo: 'Custo de PE inválido.' };
   if ((dono.peCurrent ?? 0) < modelo.custoInvocacaoPE) return { ok: false, motivo: 'PE insuficiente.' };
   const origem = Object.values(mapa.entities).find(e => e.characterId === donoId && !e.invocationId);
@@ -57,7 +57,7 @@ export function invocarControlador(donoId: string, invocacaoId: string, direcao:
 /** Recolhe um servo real e libera o slot, sem reembolsar PE. */
 export function recolherInvocacao(donoId: string, invocacaoId: string): boolean {
   const dono = useCharacterStore.getState().characters.find(c => c.id === donoId);
-  if (!dono || dono.specialization !== 'Controlador') return false;
+  if (!dono) return false;
   const mapa = useMapStore.getState();
   const tokens = Object.values(mapa.entities).filter(e => e.ownerCharId === donoId && e.invocationId === invocacaoId);
   if (!tokens.length) return false;
@@ -108,7 +108,7 @@ export function causarDanoInvocacao(tokenId: string, dano: number): { ok: true; 
  */
 export function comandarReposicionamento(donoId: string, invocacaoId: string, direcao: DirecaoInvocacao): { ok: true } | { ok: false; motivo: string } {
   const dono = useCharacterStore.getState().characters.find(c => c.id === donoId);
-  if (!dono || dono.specialization !== 'Controlador') return { ok: false, motivo: 'Controlador inválido.' };
+  if (!dono) return { ok: false, motivo: 'Personagem inválido.' };
   if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Só é possível comandar no turno do Controlador.' };
   const token = tokensInvocados(donoId).find(e => e.invocationId === invocacaoId);
   if (!token || (token.hp ?? 0) <= 0) return { ok: false, motivo: 'Invocação não está ativa.' };
@@ -147,7 +147,7 @@ export async function comandarAtaque(donoId: string, invocacaoId: string, acaoId
   const chave = donoId + ':' + invocacaoId;
   if (ataquesPendentes.has(chave)) return { ok: false, motivo: 'Comando anterior ainda em andamento.' };
   const dono = useCharacterStore.getState().characters.find(c => c.id === donoId);
-  if (!dono || dono.specialization !== 'Controlador') return { ok: false, motivo: 'Controlador inválido.' };
+  if (!dono) return { ok: false, motivo: 'Personagem inválido.' };
   if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
   const rodada = useCombatStore.getState().round;
   const pendente = dono.comandosControle?.rodada === rodada ? dono.comandosControle.restantes : 0;
