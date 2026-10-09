@@ -95,6 +95,12 @@ O seletor agora descarta condições e fórmulas com diagnóstico ou resultado n
 
 Validação desta etapa: suíte OMNI em 104 arquivos, 3.340 testes aprovados; teste E2E da ponte após ampliar as asserções: 73 testes aprovados; `npx tsc --noEmit` sem erros; `git diff --check` limpo.
 
+### Bônus de perícias em equipamentos limitados ao catálogo
+
+`selectOmniModifiers` aceitava qualquer nome em `bonusEquipado.pericias` e `bonusEquipadoFormula.pericias`. Um item de teste gerou `adestramento: 6` (bônus fixo 3 + `@TREINO` 3), embora `adestramento` não seja uma das 22 perícias oficiais. O seletor agora normaliza a chave e só deriva bônus quando ela consta em `SISTEMA_PERICIAS`; os campos fixo e de fórmula seguem a mesma validação.
+
+Validação desta etapa: suíte OMNI em 104 arquivos, 3.341 testes aprovados; E2E da ponte: 74 testes aprovados; `npx tsc --noEmit` e `git diff --check` sem erros.
+
 ### Lacunas que seguem abertas
 
 O caminho direto legado `lerCaminhoOmni` ainda retorna zero para nomes desconhecidos por compatibilidade; consultas naturais estritas e o avaliador de fórmulas já oferecem erro/diagnóstico. Ainda falta auditar todos os consumidores que recebem esse diagnóstico, revisar a autorização no backend e certificar comportamento de ponta a ponta para gatilhos, ações e variáveis do catálogo. A lista histórica de 345 entradas continua sendo uma sondagem derivada do rascunho; ela não certifica todas as keys da versão atual.

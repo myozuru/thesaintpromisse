@@ -31,6 +31,8 @@ import {
 } from './resolvedor';
 import { avaliarFormula } from './parser';
 import { derivarBonusEquipadoDosEfeitos } from './derivarBonusEquipado';
+import { canonicalizarChave } from './keyAliases';
+import { SISTEMA_PERICIAS } from './constantesDoSistema';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. Key Mapper
@@ -39,6 +41,11 @@ import { derivarBonusEquipadoDosEfeitos } from './derivarBonusEquipado';
 /** Chaves "passivas" oficialmente reconhecidas pela ficha (acessórios). */
 export type OmniBonusKey = 'hp' | 'pe' | 'ca' | 'rd' | 'esc' | 'slots';
 export type OmniRollBonusKey = 'integridade' | 'vontade' | 'fortitude' | 'reflexos' | 'astucia';
+const PERICIAS_VALIDAS = new Set(
+  Object.values(SISTEMA_PERICIAS).map((caminho) =>
+    caminho.replace(/^pericias\./, '').toLowerCase(),
+  ),
+);
 
 /**
  * Normaliza qualquer chave/recurso escrito pelo Mestre em uma string
@@ -376,7 +383,11 @@ export function selectOmniModifiers(
       ...Object.keys(formulas.pericias ?? {}),
     ]);
     for (const rawKey of chavesPericia) {
-      const key = normalizarChaveOmni(rawKey).replace(/^pericia(s)?_/, '');
+      const canonica = canonicalizarChave(rawKey);
+      const key = canonica.startsWith('pericia_')
+        ? canonica.slice('pericia_'.length)
+        : normalizarChaveOmni(rawKey).replace(/^pericia(s)?_/, '');
+      if (!PERICIAS_VALIDAS.has(key)) continue;
       const fixo = Number(fixos.pericias?.[rawKey]) || 0;
       const formula = avaliarFormulaNaFicha(character, formulas.pericias?.[rawKey]);
       const value = fixo + formula;

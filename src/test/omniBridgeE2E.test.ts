@@ -352,6 +352,18 @@ describe('Fórmulas de bônus equipado para perícias, TRs e deslocamento', () =
     expect(bag.trs.vontade).toBeUndefined();
   });
 
+  it('não deriva bônus para perícias fora do catálogo oficial', () => {
+    const c = baseCobaia();
+    const item = novaEntidade('item', 'Caderno de Adestramento');
+    item.slotType = 'anel';
+    item.bonusEquipado = { pericias: { adestramento: 3 } };
+    item.bonusEquipadoFormula = { pericias: { adestramento: '@TREINO' } };
+
+    const bag = selectOmniModifiers(c, [{ instanceId: 'caderno', equippedSlot: 'anel:0', entity: item }]);
+    expect(bag.pericias).toEqual({});
+    expect(bag.periciaOrigins).toEqual({});
+  });
+
   it('preserva as fórmulas no pacote importado', () => {
     const item = novaEntidade('item', 'Anel escalável');
     item.slotType = 'anel';
