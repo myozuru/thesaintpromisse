@@ -71,7 +71,7 @@ A revalidação encontrou dois defeitos no caminho de escrita de perícias:
 
 O executor agora restringe a escrita às chaves derivadas de `SISTEMA_PERICIAS` e o catálogo de destinos inclui essas 22 chaves. Os testes confirmam a escrita em Atletismo, a validação de todas as 22 perícias e a rejeição de `pericia_adestramento` sem alteração da ficha.
 
-Validação após a correção: `npx tsc --noEmit` concluiu sem erros; os dois arquivos focados passaram (28 testes); a suíte OMNI passou em 104 arquivos (3.320 testes). A correção está no workspace, ainda sem commit.
+Validação após a correção: `npx tsc --noEmit` concluiu sem erros; os dois arquivos focados passaram (28 testes); a suíte OMNI passou em 104 arquivos (3.320 testes). A correção foi publicada na `main` em `2e6c8ec`.
 
 ### Lacunas que seguem abertas
 
