@@ -92,6 +92,17 @@ Cada Shikigami deve ter identidade visual, imagem/token, ficha, HUD e indicadore
 - [ ] Imagem, token, HUD, PV, rolagens e estados individualizados.
 - [ ] Testes de duas ou mais invocações simultâneas, inclusive relógio, comandos, economia e sincronização.
 
+## Acesso universal ao criador de Shikigamis — 2026-10-09
+
+**Decisão do usuário:** a seção de criação deve estar disponível para **todas as especializações**, não apenas Controladores. O acesso ao editor não significa aquisição gratuita no jogo: seguem válidas as condições do TXT original.
+
+- **Controlador:** obtém 2 invocações no nível 1 e mais 1 a cada 3 níveis (níveis 4, 7, 10, 13, 16, 19...). Invocações adicionais dependem de Interlúdio.
+- **Demais personagens:** podem construir/obter invocações por Interlúdio, conforme as regras de talismãs e Corpos Amaldiçoados. O trecho fornecido não fixa um limite numérico geral para invocações conhecidas por outros personagens; não inventar esse número.
+- **Em campo:** por padrão, qualquer personagem mantém **1 invocação simultânea**. Controladores ampliam esse limite pela habilidade **Treinamento em Controle**, de acordo com o valor efetivo da habilidade.
+- **Acesso a grau:** a progressão automática de graus (quarto grau nos níveis 1–4, terceiro a partir de 5 etc.) está especificada no texto para **Controladores**. Para outros, a criação via Interlúdio tem regras próprias fora do trecho disponível. Não aplicar automaticamente a tabela de acesso do Controlador a personagens de outra especialização.
+- **Personalização:** limites do livro devem ser exibidos como avisos, conforme a decisão anterior do usuário. A interface e o sistema devem distinguir **criar uma ficha de invocação** de **ter adquirido aquela invocação no jogo**, evitando que a edição signifique aquisição gratuita.
+- **Trabalho pendente:** integrar confirmação de aquisição/Interlúdio, Treinamento em Controle real, propriedades de talismã, edição pelo Mestre, verificações de posse e testes de multiplayer. Não marcar como implementado só por exibir a aba.
+
 ## Checklist de implementação — pendente de validação funcional
 - [ ] Campos da ficha de criação e edição com alternância automática/manual individual.
 - [ ] Recálculo de PV, Defesa e outros valores derivados, respeitando o modo manual.
