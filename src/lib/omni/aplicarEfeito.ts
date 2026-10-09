@@ -394,9 +394,15 @@ export function aplicarEfeitoNoPersonagem(
     reactionsCurrent: "reactionsMax",
     opportunityCurrent: "opportunityMax",
   };
-  const limite = maximos[campo]
+  const limiteConfigurado = maximos[campo]
     ? (c as unknown as Record<string, number>)[maximos[campo]]
     : undefined;
+  // escCurrent também recebe PV temporários vindos de ações e magias, que
+  // podem existir mesmo quando a ficha não tem um teto base de escudo.
+  // Nesse caso, zero significa "sem teto configurado", não capacidade zero.
+  const limite = campo === "escCurrent" && (limiteConfigurado ?? 0) <= 0
+    ? undefined
+    : limiteConfigurado;
   novo = Math.max(
     0,
     limite === undefined ? novo : Math.min(Math.max(0, limite), novo),

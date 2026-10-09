@@ -13,10 +13,11 @@ import { aplicarEfeitoNoPersonagem } from "@/lib/omni/aplicarEfeito";
 import { parseOmniScript } from "@/lib/omni/omniScript";
 import { destinoComposto } from "@/lib/omni/componentes/escrita";
 import { executarCombatEffect } from "@/lib/omni/executarSubEfeito";
-import { montarVariaveisDoPersonagem } from "@/lib/omni/resolvedor";
+import { lerCaminhoOmni, montarVariaveisDoPersonagem } from "@/lib/omni/resolvedor";
 import { validarDestinoEscritaNatural } from "@/lib/omni/politicaEscritaNatural";
 import { SISTEMA_PERICIAS } from "@/lib/omni/constantesDoSistema";
 import { useInventoryStore } from "@/stores/useInventoryStore";
+import { useCharacterStore } from "@/stores/useCharacterStore";
 import { effectiveMovement } from "@/lib/movementBudget";
 afterEach(limparMesa);
 describe("destinos compostos graváveis", () => {
@@ -184,6 +185,19 @@ describe("destinos compostos graváveis", () => {
       usuarioVars: montarVariaveisDoPersonagem(pegarFicha("protections")),
     });
     expect(pegarFicha("protections").escCurrent).toBe(5);
+    const vidaVariaveis = montarVariaveisDoPersonagem(pegarFicha("protections"));
+    expect(vidaVariaveis.VIDA_TEMP).toBe(5);
+    expect(lerCaminhoOmni(pegarFicha("protections"), "vida_temporaria")).toBe(5);
+
+    const excedente = parseOmniScript("somar 20 em vida_temp", {
+      defaultTarget: "USUARIO",
+    });
+    expect(excedente.erros).toEqual([]);
+    executarCombatEffect(excedente.efeitos[0], {
+      usuarioId: "protections",
+      usuarioVars: montarVariaveisDoPersonagem(pegarFicha("protections")),
+    });
+    expect(pegarFicha("protections").escCurrent).toBe(10);
 
     const pe = parseOmniScript("somar 3 em pe_temporario", {
       defaultTarget: "USUARIO",
@@ -195,6 +209,7 @@ describe("destinos compostos graváveis", () => {
       usuarioVars: montarVariaveisDoPersonagem(pegarFicha("protections")),
     });
     expect(pegarFicha("protections").tempPE).toBe(5);
+    expect(lerCaminhoOmni(pegarFicha("protections"), "pe_temporario")).toBe(5);
   });
   it("escreve Acerto, Atenção, os cinco TRs, Empolgação e Deslocamento no estado real", () => {
     montarMesa([ficha("stats-write", {
@@ -286,6 +301,24 @@ describe("destinos compostos graváveis", () => {
     executarCombatEffect(recarga.efeitos[0], contexto);
     expect(useInventoryStore.getState().items.copia_a.usosRestantes).toBe(5);
     expect(aplicarEfeitoNoPersonagem("item-owner", "SUBTRAIR", "usos_restantes", 1)).toEqual({ aplicado: 0 });
+  });
+  it("concede e consome vida temporária mesmo sem teto de escudo configurado", () => {
+    montarMesa([ficha("sem-teto", { hpCurrent: 20, hpMax: 20, escCurrent: 0, escMax: 0 })], {});
+    const parsed = parseOmniScript("somar 8 em @USUARIO.vida temporaria", {
+      defaultTarget: "USUARIO",
+    });
+    expect(parsed.erros).toEqual([]);
+    const aplicado = executarCombatEffect(parsed.efeitos[0], {
+      usuarioId: "sem-teto",
+      usuarioVars: montarVariaveisDoPersonagem(pegarFicha("sem-teto")),
+    });
+    expect(aplicado.aplicado).toBe(8);
+    expect(pegarFicha("sem-teto").escCurrent).toBe(8);
+    expect(montarVariaveisDoPersonagem(pegarFicha("sem-teto")).VIDA_TEMP).toBe(8);
+
+    useCharacterStore.getState().applyDamage("sem-teto", 3, undefined, { ignoresRD: true });
+    expect(pegarFicha("sem-teto").escCurrent).toBe(5);
+    expect(pegarFicha("sem-teto").hpCurrent).toBe(20);
   });
   it("respeita o teto oficial de fome e a sincronização canônica de exaustão", () => {
     montarMesa([ficha("sobrevivente", { hunger: 20, exhaustionLevel: 0 })], {});

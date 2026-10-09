@@ -15,12 +15,12 @@ São 345 entradas: 337 sondadas como nomes simples e 8 modelos/comandos que exig
 | Caso | Observação | Consequência | Tratamento previsto |
 |---|---|---|---|
 | Nome inventado | canonicalizarChave conserva o nome; lerCaminhoOmni retorna 0; writer informa aplicado 0 | Ausência fica indistinguível de saldo zero no acesso direto | Resolver estrito da nova linguagem, preservando adaptador legado (2–5) |
-| `acoes_comuns`, `pe_temporario`, `bonus_acerto`, `margem_critico` | Parser legado aceita destino; tentativa ADICIONAR não altera campo do recurso | Parsing bem-sucedido não garante efeito | Resolver aliases/capacidades e validar destinos antes da ação (8–9) |
-| `vida_temporaria` | Fórmula nesta ficha resolve 3; writer com esse nome não altera o recurso | Leitura e escrita não têm equivalência uniforme | Contrato de leitura/escrita explícito e teste com proteção (8) |
+| `acoes_comuns`, `pe_temporario`, `bonus_acerto`, `margem_critico` | Sondagem histórica: o parser aceitava nomes sem destino executável | Parsing bem-sucedido não garantia efeito | `pe_temporario` recebeu caminho de escrita; `acoes_comuns`, `bonus_acerto` e `margem_critico` agora são rejeitados pelo parser natural (`fa43a80`) |
+| `vida_temporaria` | Sondagem histórica: leitura funcionava, mas a escrita não encontrava o campo | Leitura e escrita não tinham equivalência uniforme | Alias gravável e teste de estado real adicionados; limite zero corrigido na etapa seguinte |
 | `pericia_adestramento` | Writer cria entrada em omniSkillBonuses mesmo sem perícia canônica | Pode guardar bônus sem destinatário real no catálogo | Validar perícia contra registro real (12) |
 | `contador_foco` | Fórmula lê 2; writer altera omniCounters | Suporte nominal legado existe | Preservar suporte e acrescentar ciclos/gastos nominais (11) |
 | `vida_pct` | Fórmula retorna 55 para 17/31; escrita não modifica a ficha | Consulta funciona nessa fixture; writer já não aplica esse destino | Preservar leitura e rejeitar escrita com diagnóstico explícito (8) |
-| Aliases de dano | corte → DCO e Energético → DE; energia_amaldicoada e energia_reversa ainda retornam undefined | Alguns aliases aprovados ainda não são interpretados | Registrar aliases explícitos no resolvedor de tipos (15) |
+| Aliases de dano | Sondagem histórica não reconhecia `energia_amaldicoada` e `energia_reversa` | Alguns aliases aprovados não chegavam ao pipeline de dano | Corrigido no resolvedor de tipos em `a13bf84` |
 | `bloqueio_total` | Escrita altera omniFlags, não cria RD numérica | Descrição do rascunho como redução fixa é incompatível | Descrever semântica real e separar de RD (8–9) |
 
 ## Verificação realizada
@@ -79,9 +79,17 @@ O catálogo oficial associa `energia_reversa` a `DNR` e `energia_amaldicoada` a 
 
 Validação depois desta etapa: 3 arquivos focados, 92 testes aprovados; suíte OMNI em 104 arquivos, 3.333 testes aprovados; `npx tsc --noEmit` sem erros.
 
+### PV temporários sem teto base corrigidos
+
+O caminho natural `somar N em vida_temp` gravava em `escCurrent`, mas o executor aplicava sempre `escMax` como teto. Com `escMax = 0`, a escrita retornava zero, embora ações e magias concedam PV temporários nesse mesmo estado da ficha. Agora o executor interpreta zero como ausência de teto base configurado; um `escMax` positivo continua limitando a escrita. O saldo segue sendo o mesmo que o resolvedor expõe em `VIDA_TEMP` e continua sendo absorvido antes dos PV normais. Os aliases `vida_temporaria` e `pe_temporario` também são verificados na leitura após a escrita.
+
+Um teste de regressão primeiro reproduziu a falha (`aplicado: 0`) e, após a correção, verifica concessão sem teto, leitura pelo resolvedor, absorção de dano sem perda de PV e respeito a um teto positivo.
+
+Validação desta etapa: suíte OMNI em 104 arquivos, 3.339 testes aprovados; `npx tsc --noEmit` sem erros; `git diff --check` limpo.
+
 ### Lacunas que seguem abertas
 
-A correção de perícias e a dos aliases de dano não fecham as outras incompatibilidades da tabela deste documento. Continuam em investigação os destinos que o parser aceita sem efeito persistido, a equivalência de leitura/escrita de proteções, os diagnósticos explícitos para nomes desconhecidos e os limites de autorização no backend. A lista de 345 entradas permanece uma sondagem derivada do rascunho, não uma certificação exaustiva do catálogo efetivamente exposto pela versão atual.
+Permanecem em investigação os diagnósticos explícitos para nomes de leitura desconhecidos, a autorização no backend e a certificação comportamental completa de gatilhos, ações e variáveis do catálogo. A lista histórica de 345 entradas continua sendo uma sondagem derivada do rascunho; ela não certifica todas as keys da versão atual.
 
 ### Destinos de escrita validados na revisão atual
 
