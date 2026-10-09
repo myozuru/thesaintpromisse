@@ -233,8 +233,8 @@ export function dispararGatilhoEfeitosItens(
       let valor = 0;
       try {
         const r = avaliarFormula(eff.formula || '0', variaveis, undefined, { item: itemBag });
-        if (r.diagnosticos.length) {
-          log(`⛔ ${fresco.nome} (${evento}): fórmula inválida — ${r.diagnosticos.map(d => d.mensagem).join('; ')}`);
+        if (r.diagnosticos.length || !Number.isFinite(r.valor)) {
+          log(`⛔ ${fresco.nome} (${evento}): fórmula inválida — ${r.diagnosticos.map(d => d.mensagem).join('; ') || 'valor não finito'}`);
           continue;
         }
         valor = r.valor;
@@ -242,13 +242,29 @@ export function dispararGatilhoEfeitosItens(
         console.warn(`    ↳ erro avaliando fórmula "${eff.formula}":`, err);
         continue;
       }
-      const limite = eff.counterCap ? avaliarFormula(eff.counterCap, variaveis, undefined, { item: itemBag }) : undefined;
-      const limiteFonte = eff.counterSourceLimit ? avaliarFormula(eff.counterSourceLimit, variaveis, undefined, { item: itemBag }) : undefined;
-      const diagnosticosDosTetos = [...(limite?.diagnosticos ?? []), ...(limiteFonte?.diagnosticos ?? [])];
-      if (diagnosticosDosTetos.length || (limite && !Number.isFinite(limite.valor)) || (limiteFonte && !Number.isFinite(limiteFonte.valor))) {
-        log(`⛔ ${fresco.nome} (${evento}): teto inválido — ${diagnosticosDosTetos.map(d => d.mensagem).join('; ') || 'valor não finito'}`);
+      let limite: number | undefined;
+      let limiteFonte: number | undefined;
+      const avaliarTeto = (expressao: string | undefined, nome: string): number | undefined => {
+        if (!expressao?.trim()) return undefined;
+        const r = avaliarFormula(expressao, variaveis, undefined, { item: itemBag });
+        const motivo = r.diagnosticos.map(d => d.mensagem).join('; ')
+          || (r.rolagens.length ? 'o teto precisa ser determinístico; dados aleatórios não são permitidos' : '')
+          || (!Number.isFinite(r.valor) ? 'valor não finito' : '')
+          || (r.valor < 0 ? 'o teto não pode ser negativo' : '');
+        if (motivo) {
+          log(`⛔ ${fresco.nome} (${evento}): ${nome} inválido em "${expressao}" — ${motivo}`);
+          return NaN;
+        }
+        return r.valor;
+      };
+      const tetoCalculado = avaliarTeto(eff.counterCap, 'teto global');
+      const tetoFonteCalculado = avaliarTeto(eff.counterSourceLimit, 'teto por fonte');
+      if ((tetoCalculado !== undefined && !Number.isFinite(tetoCalculado))
+        || (tetoFonteCalculado !== undefined && !Number.isFinite(tetoFonteCalculado))) {
         continue;
       }
+      limite = tetoCalculado;
+      limiteFonte = tetoFonteCalculado;
       const targetId = eff.target === 'ALVO' ? (alvo?.id ?? usuario.id) : usuario.id;
       const res = aplicarEfeitoNoPersonagem(targetId, eff.type, eff.resourcePath, valor, {
         peSpellReduction: eff.peSpellReduction,
@@ -258,10 +274,10 @@ export function dispararGatilhoEfeitosItens(
         attackerId: usuario.id,
         itemInstanceId: inst.instanceId,
         contador: {
-          teto: limite?.valor,
+          teto: limite,
           porFonte: eff.counterPerSource,
           fonteId: fonteDoContador(evento, usuario.id, opts.alvoId),
-          limiteFonte: limiteFonte?.valor,
+          limiteFonte,
           periodoFonte: eff.counterSourcePeriod,
         },
       });

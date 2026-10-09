@@ -16,9 +16,10 @@ import { TemplateEngine, type MapTemplate } from '@/components/mapa/TemplateEngi
 import { selecionarAlvosAtivos } from '@/lib/omni/alvosAtivos';
 import { iniciarEngineZonasTerreno } from '@/lib/mapa/engineZonasTerreno';
 import { confirmarMovimentoMapa, comPreviaMovimento, receberMovimentoConfirmado } from '@/lib/mapa/movimentoConfirmado';
-import { recalcularAuras } from '@/lib/omni/auras';
+import { recalcularAuras, verificarAurasInicioTurno } from '@/lib/omni/auras';
 import * as eventBus from '@/lib/omni/eventBus';
 import { segmentoEntraNaZona, zonaEstaAtiva } from '@/lib/mapa/zonaTerreno';
+import { toast } from 'sonner';
 const token = (p: Partial<Entity> = {}): Entity => ({ id:'t', x:0,y:0,w:100,h:100,rotation:0,shape:'RECT',layer:'tokens',...p } as Entity);
 const template = (p: Partial<MapTemplate> = {}): MapTemplate => ({ id:'a',kind:'circle',x:20,y:20,rotation:0,length:1,width:1,color:'#fff',opacity:1,...p });
 const cfg = (p: Partial<AcaoAtivaConfig> = {}): AcaoAtivaConfig => ({ id:'c',nome:'teste',acao:'comum',custoPE:'0',alcanceM:3,teste:'nenhum',...p } as AcaoAtivaConfig);
@@ -146,6 +147,40 @@ describe('aura acompanha o dono no mapa',()=>{
     recalcularAuras(); expect(pegarFicha('a').peCurrent).toBe(5);
     useMapStore.getState().updateEntity('e-u',{x:350}); expect(pegarFicha('a').peCurrent).toBe(7);
     recalcularAuras(); expect(pegarFicha('a').peCurrent).toBe(7);
+  });
+
+  it('diagnostica key inválida no raio e não dispara a aura', () => {
+    const erroToast = vi.spyOn(toast, 'error').mockImplementation(() => 'toast-id');
+    const e = novaEntidade('aura', 'Círculo Falho');
+    e.areaRaio = { tipo: 'formula', expressao: '@USUARIO.raio_inexistente' };
+    e.combatData = {
+      critRange: 20,
+      critMultiplier: 2,
+      effects: [],
+      effectsPassive: [{ id: 'entrada', type: 'ADICIONAR', target: 'ALVO', resourcePath: 'pe', formula: '2', trigger: 'aoEntrarEmAura' }],
+    };
+    useOmniEntidadesStore.setState({ entidades: { [e.id]: e } });
+    useCharacterStore.getState().updateCharacter('u', { omniAtivos: [{ id: 'a', entidadeId: e.id, categoria: 'aura', instanceId: e.id, vinculadoEm: 0 }] });
+
+    recalcularAuras();
+
+    expect(pegarFicha('a').peCurrent).toBe(5);
+    expect(erroToast).toHaveBeenCalledWith(expect.stringContaining(e.nome), expect.objectContaining({ description: expect.stringContaining('raio') }));
+    erroToast.mockRestore();
+  });
+
+  it('não substitui CD inválida pela CD padrão da ficha', () => {
+    const erroToast = vi.spyOn(toast, 'error').mockImplementation(() => 'toast-id');
+    const e = novaEntidade('aura', 'Aura de CD Inválida');
+    e.areaRaio = { tipo: 'fixo', valor: 100 };
+    e.acoesAtivas = [cfg({ id: 'tr-aura', alcanceM: 100, teste: 'tr', tipo_efeito: 'dano', dano: '1d6', cd: '@USUARIO.cd_inexistente' })];
+    useOmniEntidadesStore.setState({ entidades: { [e.id]: e } });
+    useCharacterStore.getState().updateCharacter('u', { omniAtivos: [{ id: 'a', entidadeId: e.id, categoria: 'aura', instanceId: e.id, vinculadoEm: 0 }] });
+
+    expect(verificarAurasInicioTurno('a', 999)).toBe(0);
+    expect(useReactionStore.getState().prompts).toHaveLength(0);
+    expect(erroToast).toHaveBeenCalledWith(expect.stringContaining(e.nome), expect.objectContaining({ description: expect.stringContaining('CD') }));
+    erroToast.mockRestore();
   });
 
   it('recalcula automaticamente quando um token de ficha é removido', () => {

@@ -150,8 +150,20 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
         try {
           const r = avaliarFormula(eff.formula || '0', vars, () => 0.5);
           const diagnosticos = [...r.diagnosticos];
-          for (const [label, expr] of [['Condição', eff.condition], ['Teto', eff.counterCap]]) {
-            if (expr) diagnosticos.push(...avaliarFormula(expr, vars, () => 0.5).diagnosticos.map(d => ({ ...d, mensagem: `${label}: ${d.mensagem}` })));
+          for (const [label, expr, deterministico] of [
+            ['Condição', eff.condition, false],
+            ['Teto global', eff.counterCap, true],
+            ['Teto por fonte', eff.counterSourceLimit, true],
+          ] as const) {
+            if (!expr) continue;
+            const avaliacao = avaliarFormula(expr, vars, () => 0.5);
+            diagnosticos.push(...avaliacao.diagnosticos.map(d => ({ ...d, mensagem: `${label}: ${d.mensagem}` })));
+            if (deterministico && avaliacao.rolagens.length) diagnosticos.push({
+              tipo: 'expressao_invalida', mensagem: `${label}: precisa ser determinístico; dados aleatórios não são permitidos.`,
+            });
+            if (deterministico && Number.isFinite(avaliacao.valor) && avaliacao.valor < 0) diagnosticos.push({
+              tipo: 'expressao_invalida', mensagem: `${label}: precisa ser não negativo.`,
+            });
           }
           return { ...r, diagnosticos };
         } catch {
@@ -322,7 +334,7 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
                   </span>
                 </div>
                 {avaliacoesMock[i]?.diagnosticos.map((d, j) => (
-                  <div key={j} role="status" className="text-[12px] text-amber-300">
+                  <div key={j} role="status" className="text-sm text-amber-300">
                     Prévia incompleta: {d.mensagem}
                   </div>
                 ))}

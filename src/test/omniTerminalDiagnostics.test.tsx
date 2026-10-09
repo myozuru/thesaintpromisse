@@ -38,3 +38,11 @@ it.each([
   expect(screen.getByRole('status').textContent).toContain(campo);
   expect(screen.getByRole('status').textContent).toContain('@USUARIO.key_inexistente');
 });
+
+it.each([
+  'somar 1 em contador_rancor ate 1d4',
+  'somar 1 em contador_rancor teto_aliado 1d4 por rodada',
+])('o terminal explica que tetos de contadores não aceitam dados: %s', script => {
+  render(<OmniScriptTerminal onChange={vi.fn()} personagemPreview={hero} valor={script} />);
+  expect(screen.getByRole('status').textContent).toContain('determinístico');
+});

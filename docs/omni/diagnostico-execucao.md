@@ -227,3 +227,33 @@ Mitigações passivas agora ignoram fórmulas não determinísticas ou inválida
 Validação desta etapa: 2 arquivos focados, 117 testes aprovados; `npx tsc --noEmit` e `git diff --check` sem erros.
 
 Ainda precisam de auditoria semelhante as áreas dinâmicas e CDs de aura, os limites de contadores em gatilhos/watchers, o executor visual e o restante do catálogo de keys.
+
+### Auras denunciam fórmulas inválidas de raio e CD
+
+O cálculo de raio transformava uma fórmula inválida em `0` sem explicar por quê, desativando a área silenciosamente. Uma CD inválida podia cair no valor padrão da ficha e abrir uma reação com uma CD diferente da configurada.
+
+Raio fixo ou calculado agora precisa ser finito e não negativo; fórmulas com key inexistente, dados aleatórios ou resultado inválido geram aviso com a aura e o campo. Uma CD configurada inválida interrompe a oferta de reação; só a ausência de configuração usa a CD padrão.
+
+Validação desta etapa: `omniEspacialAuditoria.test.tsx`, 31 testes aprovados; `npx tsc --noEmit` e `git diff --check` sem erros.
+
+Seguem pendentes a auditoria dos limites e condições em gatilhos/watchers, dos demais consumidores de fórmulas no executor visual e a certificação integral do catálogo de keys.
+
+### Gatilhos e watchers mostram falhas de key e validam limites
+
+Os gatilhos já impediam algumas fórmulas inválidas, mas podiam aceitar teto de contador aleatório ou negativo. Watchers descartavam condições, recursos observados e tetos inválidos sem explicar o problema; um recurso com dados podia mudar a cada atualização da ficha e disparar por acaso.
+
+Os limites global e por fonte de gatilhos/watchers agora exigem expressões válidas, finitas, não negativas e determinísticas. O watcher também valida o recurso observado, o valor percentual e sua base; sorteios não podem ser usados como recurso ou base observada. Condições e fórmulas inválidas são registradas com origem, campo e expressão, com deduplicação para evitar repetir o mesmo aviso a cada atualização. Configurações inválidas não aplicam efeitos nem consomem usos.
+
+Validação desta etapa: `omniEventosAuditoria.test.tsx`, 43 testes aprovados; `npx tsc --noEmit` e `git diff --check` sem erros.
+
+Seguem pendentes o restante dos consumidores diretos em subefeitos e interfaces, bem como a certificação integral do catálogo de keys.
+
+### Tetos de subefeitos são determinísticos também no uso de itens
+
+A pré-validação de ações da ficha e de ramos de `diceSwitch` verificava referências nos tetos, mas aceitava dados aleatórios e valores negativos. O executor compartilhado e o caminho numérico de item precisavam repetir a mesma regra em tempo de execução. O guia do terminal também não mostrava erros em `counterSourceLimit`, e a lista de mostradores não descobria contadores citados apenas nesse limite.
+
+Tetos global e por fonte agora precisam ser válidos, finitos, não negativos e sem dados na pré-validação e na execução. O motivo específico é retornado ao chamador. O terminal acusa teto aleatório/negativo e inclui o limite por fonte; o mostrador permanente também encontra contadores referenciados em `counterSourceLimit`.
+
+Validação desta etapa: `omniComposicaoEscrita.test.ts` (25), `omniEventosAuditoria.test.tsx` (43), `omniTerminalDiagnostics.test.tsx` (6) e `contadoresEquipamento.test.tsx` (5), total de 79 testes aprovados em execuções isoladas; `npx tsc --noEmit` e `git diff --check` sem erros. Os arquivos de teste foram executados isoladamente para evitar falhas de teardown do Vitest ao combinar ambientes jsdom com stores persistidos.
+
+Continuam pendentes a verificação dos demais leitores diretos do parser, incluindo referências de caminho legado e consumidores de ações/efeitos, e a certificação integral do catálogo de keys.

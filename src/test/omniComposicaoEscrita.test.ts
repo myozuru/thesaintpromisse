@@ -345,6 +345,26 @@ describe("destinos compostos graváveis", () => {
       detalhe: expect.stringContaining("chave_inexistente"),
     });
   });
+  it("recusa tetos aleatórios ou negativos em efeitos diretos e subefeitos", () => {
+    montarMesa([ficha("item-owner", { hpCurrent: 20, hpMax: 20 })], {});
+    const contador = parseOmniScript("somar 1 em contador_rancor", { defaultTarget: "USUARIO" }).efeitos[0];
+    const contexto = { usuarioId: "item-owner", usuarioVars: montarVariaveisDoPersonagem(pegarFicha("item-owner")) };
+
+    expect(validarEfeitosAtivosDaFicha([{ ...contador, counterCap: "1d4" }], contexto)).toMatchObject({
+      ok: false, detalhe: expect.stringContaining("determinístico"),
+    });
+    expect(validarEfeitosAtivosDaFicha([{ ...contador, counterSourceLimit: "-1" }], contexto)).toMatchObject({
+      ok: false, detalhe: expect.stringContaining("não negativo"),
+    });
+    expect(validarEfeitosAtivosDaFicha([{
+      ...contador,
+      diceSwitch: { dice: "1d2", branches: [{ values: [1], effects: [{ ...contador, counterCap: "1d6" }] }] },
+    }], contexto)).toMatchObject({ ok: false, detalhe: expect.stringContaining("teto global precisa ser determinístico") });
+
+    const aplicado = executarCombatEffect({ ...contador, counterCap: "1d4" }, contexto);
+    expect(aplicado).toMatchObject({ aplicado: 0, invalido: true, detalhe: expect.stringContaining("determinístico") });
+    expect(pegarFicha("item-owner").omniCounters?.rancor).toBeUndefined();
+  });
   it("concede e consome vida temporária mesmo sem teto de escudo configurado", () => {
     montarMesa([ficha("sem-teto", { hpCurrent: 20, hpMax: 20, escCurrent: 0, escMax: 0 })], {});
     const parsed = parseOmniScript("somar 8 em @USUARIO.vida temporaria", {

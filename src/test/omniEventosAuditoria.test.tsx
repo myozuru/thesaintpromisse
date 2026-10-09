@@ -171,9 +171,29 @@ describe('observadores de estado', () => {
     expect(pegarFicha('u').peCurrent).toBe(6); expect(useInventoryStore.getState().items[item.instanceId].usosRestantes).toBe(2);
   });
   it.each([{ formula: '@USUARIO.chave_inexistente + 1' }, { condition: '@USUARIO.chave_inexistente == 0' }, { watcher: { resource: 'chave_inexistente', op: '<=' as const, threshold: 100 } }, { counterCap: '@USUARIO.chave_inexistente' }, { resourcePath: 'chave_inexistente' }])('referência inválida não aplica nem consome usos: %j', async patch => {
+    useLogStore.getState().clearLogs();
     useCharacterStore.getState().updateCharacter('u', { peCurrent: 5 });
     const item = observar(patch); await esperar(5); useCharacterStore.getState().updateCharacter('u', { hpCurrent: 40 }); await esperar(10);
     expect(pegarFicha('u').peCurrent).toBe(5); expect(useInventoryStore.getState().items[item.instanceId].usosRestantes).toBe(3);
+    expect(useLogStore.getState().logs.some(log => log.message.includes('⛔'))).toBe(true);
+  });
+  it('watcher não usa fórmula aleatória como recurso observado', async () => {
+    useLogStore.getState().clearLogs();
+    useCharacterStore.getState().updateCharacter('u', { peCurrent: 5 });
+    const item = observar({ watcher: { resource: '1d6', op: '<=' as const, threshold: 100 } });
+    await esperar(5); useCharacterStore.getState().updateCharacter('u', { hpCurrent: 40 }); await esperar(10);
+    expect(pegarFicha('u').peCurrent).toBe(5);
+    expect(useInventoryStore.getState().items[item.instanceId].usosRestantes).toBe(3);
+    expect(useLogStore.getState().logs.some(log => log.message.includes('recurso observado') && log.message.includes('determinístico'))).toBe(true);
+  });
+  it('watcher recusa teto de contador aleatório e registra o erro', async () => {
+    useLogStore.getState().clearLogs();
+    useCharacterStore.getState().updateCharacter('u', { peCurrent: 5 });
+    const item = observar({ counterCap: '1d4' });
+    await esperar(5); useCharacterStore.getState().updateCharacter('u', { hpCurrent: 40 }); await esperar(10);
+    expect(pegarFicha('u').peCurrent).toBe(5);
+    expect(useInventoryStore.getState().items[item.instanceId].usosRestantes).toBe(3);
+    expect(useLogStore.getState().logs.some(log => log.message.includes('teto global') && log.message.includes('determinístico'))).toBe(true);
   });
   it('primeiro dano no mesmo tick de equipar não é perdido', async () => {
     useCharacterStore.getState().updateCharacter('u', { peCurrent: 5 }); observar();
@@ -239,6 +259,21 @@ describe('observadores de estado', () => {
     expect(dispararGatilhoEfeitosItens('aoSofrerDano', { usuarioId: 'u', alvoId: 'a' })).toBe(0);
     expect(useInventoryStore.getState().items[item.instanceId].usosRestantes).toBe(3);
     expect(pegarFicha('u').peCurrent).toBe(20);
+  });
+  it('gatilho recusa teto de contador aleatório e registra a causa', () => {
+    useLogStore.getState().clearLogs();
+    const entidade = novaEntidade('item', 'Teto Aleatório'); entidade.usos = { total: 3, recarga: 'manual' };
+    entidade.combatData = {
+      critRange: 20, critMultiplier: 2, effects: [],
+      effectsActive: [{ ...efeito({ resourcePath: 'contador_rancor', counterCap: '1d4' }), trigger: 'aoSofrerDano' }],
+    };
+    const item = useInventoryStore.getState().add('u', entidade);
+    useInventoryStore.getState().equipItem(item.instanceId, 'Anel');
+
+    expect(dispararGatilhoEfeitosItens('aoSofrerDano', { usuarioId: 'u', alvoId: 'a' })).toBe(0);
+    expect(pegarFicha('u').omniCounters?.rancor).toBeUndefined();
+    expect(useInventoryStore.getState().items[item.instanceId].usosRestantes).toBe(3);
+    expect(useLogStore.getState().logs.some(log => log.message.includes('teto global') && log.message.includes('determinístico'))).toBe(true);
   });
 });
 

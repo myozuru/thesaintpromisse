@@ -12,7 +12,7 @@ export function contadoresDaEntidade(entidade: EntidadeOmni): string[] {
     if (no.tipo === 'comparacao') { arvore(no.esquerdo); arvore(no.direito); }
     if (no.tipo === 'vinculo') arvore(no.referencia);
   };
-  const campos = new Set(['formula','expressao','condition','condicao','counterCap','caminho','caminhoAlvo','caminhoRecurso','resourcePath','dano','dadosPorCarga','custoPE']);
+  const campos = new Set(['formula','expressao','condition','condicao','counterCap','counterSourceLimit','caminho','caminhoAlvo','caminhoRecurso','resourcePath','dano','dadosPorCarga','custoPE']);
   function visitar(v: unknown, campo = '') {
     if (typeof v === 'string') {
       if (!campos.has(campo)) return;

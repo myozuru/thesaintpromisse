@@ -64,25 +64,45 @@ const ALIASES_RECURSO_WATCHER: Record<string, string> = {
   pe_max: 'energia_max',
 };
 
+const avisosWatcherEmitidos = new Set<string>();
+
+function diagnosticarWatcher(fonte: string, efeitoId: string, campo: string, expressao: string, motivo: string): void {
+  const chave = `${fonte}:${efeitoId}:${campo}:${expressao}:${motivo}`;
+  if (avisosWatcherEmitidos.has(chave)) return;
+  avisosWatcherEmitidos.add(chave);
+  useLogStore.getState().addLog('system', `⛔ ${fonte} (${campo} "${expressao}"): ${motivo}`);
+}
+
 function normalizarRecursoWatcher(recurso: string): string {
   const raw = recurso.replace(/^@?(usuario|alvo|area)\./i, '').toLowerCase();
   return ALIASES_RECURSO_WATCHER[raw] ?? raw;
 }
 
-/** Recurso desconhecido nunca é interpretado como zero para disparar um watcher. */
-function lerRecurso(c: Character, recurso: string): number {
+/** Recurso inválido nunca é interpretado como zero nem recalculado com dados aleatórios. */
+function lerRecurso(c: Character, recurso: string): { valor: number; erro?: never } | { valor?: never; erro: string } {
   const campo = RECURSO_PARA_CAMPO[normalizarRecursoWatcher(recurso)];
-  if (campo) { const v = c[campo]; return typeof v === 'number' && Number.isFinite(v) ? v : NaN; }
+  if (campo) {
+    const v = c[campo];
+    return typeof v === 'number' && Number.isFinite(v) ? { valor: v } : { erro: `o campo ${String(campo)} não contém um número finito` };
+  }
   const r = avaliarFormula(recurso, montarVariaveisDoPersonagem(c));
-  return r.diagnosticos.length || !Number.isFinite(r.valor) ? NaN : r.valor;
+  if (r.diagnosticos.length) return { erro: r.diagnosticos.map(d => d.mensagem).join('; ') };
+  if (r.rolagens.length) return { erro: 'o recurso observado precisa ser determinístico; dados aleatórios não são permitidos' };
+  if (!Number.isFinite(r.valor)) return { erro: 'o recurso observado não produziu um número finito' };
+  return { valor: r.valor };
 }
 
 /** Percentuais usam o máximo do pool, não uma chave inventada *_atual_max. */
-function resolverThreshold(c: Character, w: NonNullable<CombatEffect['watcher']>): number {
-  if (!w.percent) return w.threshold;
+function resolverThreshold(c: Character, w: NonNullable<CombatEffect['watcher']>): { valor: number; erro?: never } | { valor?: never; erro: string } {
+  if (!Number.isFinite(w.threshold)) return { erro: 'o limite precisa ser um número finito' };
+  if (!w.percent) return { valor: w.threshold };
+  if (w.threshold < 0 || w.threshold > 1) return { erro: 'o percentual deve ficar entre 0 e 1 (por exemplo, 0.5 para 50%)' };
   const campo = RECURSO_PARA_CAMPO[normalizarRecursoWatcher(w.resource)];
   const base = w.percentBase ?? (campo === 'hpCurrent' ? 'vida_max' : campo === 'peCurrent' ? 'pe_max' : `${normalizarRecursoWatcher(w.resource)} maximo`);
-  return lerRecurso(c, base) * w.threshold;
+  const leitura = lerRecurso(c, base);
+  if ('erro' in leitura) return leitura;
+  const valor = leitura.valor * w.threshold;
+  return Number.isFinite(valor) ? { valor } : { erro: 'o limite percentual não produziu um número finito' };
 }
 
 /** Avalia a comparação `valor OP threshold`. */
@@ -149,10 +169,19 @@ function processarPersonagemNaCadeia(c: Character, apenasSnapshot: boolean) {
     for (const eff of efeitos) {
       const w = eff.watcher!;
       const recursoObservado = normalizarRecursoWatcher(w.resource);
-      const atual = lerRecurso(c, recursoObservado);
-      const thr = resolverThreshold(c, w);
+      const leitura = lerRecurso(c, recursoObservado);
+      if (typeof leitura.erro === 'string') {
+        diagnosticarWatcher(fresco.nome, eff.id, 'recurso observado', w.resource, leitura.erro);
+        continue;
+      }
+      const limiteResolvido = resolverThreshold(c, w);
+      if (typeof limiteResolvido.erro === 'string') {
+        diagnosticarWatcher(fresco.nome, eff.id, 'limite do watcher', String(w.threshold), limiteResolvido.erro);
+        continue;
+      }
+      const atual = leitura.valor;
+      const thr = limiteResolvido.valor;
       const eraKey = `${inst.instanceId}::${eff.id}::${JSON.stringify(eff)}`;
-      if (!Number.isFinite(atual) || !Number.isFinite(thr)) continue;
       const era = previous.get(eraKey);
       proximoSnapshot.set(eraKey, atual);
       if (apenasSnapshot) continue;
@@ -174,8 +203,13 @@ function processarPersonagemNaCadeia(c: Character, apenasSnapshot: boolean) {
       if (eff.condition && eff.condition.trim()) {
         try {
           const r = avaliarFormula(eff.condition, variaveis, undefined, { item: itemBag });
-          if (r.diagnosticos.length || !Number.isFinite(r.valor) || r.valor <= 0) continue;
+          if (r.diagnosticos.length || !Number.isFinite(r.valor)) {
+            diagnosticarWatcher(fresco.nome, eff.id, 'condição', eff.condition, r.diagnosticos.map(d => d.mensagem).join('; ') || 'valor não finito');
+            continue;
+          }
+          if (r.valor <= 0) continue;
         } catch {
+          diagnosticarWatcher(fresco.nome, eff.id, 'condição', eff.condition, 'não foi possível avaliar a condição');
           continue;
         }
       }
@@ -215,13 +249,27 @@ function processarPersonagemNaCadeia(c: Character, apenasSnapshot: boolean) {
       try {
         const r = avaliarFormula(eff.formula || '0', variaveis, undefined, { item: itemBag });
         if (r.diagnosticos.length || !Number.isFinite(r.valor)) {
-          useLogStore.getState().addLog('system', `⛔ ${fresco.nome}: fórmula do observador inválida.`);
+          diagnosticarWatcher(fresco.nome, eff.id, 'fórmula', eff.formula || '0', r.diagnosticos.map(d => d.mensagem).join('; ') || 'valor não finito');
           continue;
         }
         const limite = eff.counterCap ? avaliarFormula(eff.counterCap, variaveis, undefined, { item: itemBag }) : undefined;
-        if (limite?.diagnosticos.length || (limite && !Number.isFinite(limite.valor))) continue;
+        const erroTeto = limite && (limite.diagnosticos.map(d => d.mensagem).join('; ')
+          || (limite.rolagens.length ? 'o teto precisa ser determinístico; dados aleatórios não são permitidos' : '')
+          || (!Number.isFinite(limite.valor) ? 'valor não finito' : '')
+          || (limite.valor < 0 ? 'o teto não pode ser negativo' : ''));
+        if (erroTeto) {
+          diagnosticarWatcher(fresco.nome, eff.id, 'teto global', eff.counterCap!, erroTeto);
+          continue;
+        }
         const limiteFonteAvaliado = eff.counterSourceLimit ? avaliarFormula(eff.counterSourceLimit, variaveis, undefined, { item: itemBag }) : undefined;
-        if (limiteFonteAvaliado?.diagnosticos.length || (limiteFonteAvaliado && !Number.isFinite(limiteFonteAvaliado.valor))) continue;
+        const erroTetoFonte = limiteFonteAvaliado && (limiteFonteAvaliado.diagnosticos.map(d => d.mensagem).join('; ')
+          || (limiteFonteAvaliado.rolagens.length ? 'o teto precisa ser determinístico; dados aleatórios não são permitidos' : '')
+          || (!Number.isFinite(limiteFonteAvaliado.valor) ? 'valor não finito' : '')
+          || (limiteFonteAvaliado.valor < 0 ? 'o teto não pode ser negativo' : ''));
+        if (erroTetoFonte) {
+          diagnosticarWatcher(fresco.nome, eff.id, 'teto por fonte', eff.counterSourceLimit!, erroTetoFonte);
+          continue;
+        }
         teto = limite?.valor;
         limiteFonte = limiteFonteAvaliado?.valor;
         valor = r.valor;

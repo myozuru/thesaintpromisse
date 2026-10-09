@@ -29,6 +29,9 @@ describe('contadores permanentes de equipamentos', () => {
   it('preserva nomes literais nos custos', () => {
     expect(contadoresDaEntidade(entidade({ acoesAtivas: [{ consumirContador: { nome: 'contador_rancor' } }] }))).toEqual(['contador_rancor']);
   });
+  it('mostra contadores referenciados somente no limite por fonte', () => {
+    expect(contadoresDaEntidade(entidade({ combatData: { effectsActive: [{ counterSourceLimit: '@USUARIO.contador foco' }] } }))).toEqual(['foco']);
+  });
   it('mostra zero para uma passiva e atualiza o total e as origens sem alterar os recursos', () => {
     montarMesa([{ id: 'portador', name: 'Portador', omniCounters: {} }, { id: 'bia', name: 'Bia' }] as Character[], {});
     render(<ContadoresEquipamento charId="portador" entidade={entidade({ combatData: { effectsPassive: [{ formula: '@USUARIO.contador rancor * 1d4' }] } })} />);

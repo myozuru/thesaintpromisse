@@ -27,18 +27,54 @@ import type { Character } from '@/types';
 import { aceitaAlvoAtivo } from './alvosAtivos';
 import { specDCFor } from '@/lib/golpeEspecial';
 import { useReactionStore } from '@/stores/useReactionStore';
+import { toast } from 'sonner';
 
 const auraTurnChecks = new Set<string>();
+const avisosFormulaAura = new Set<string>();
 
-function formulaNumeroAura(expressao: string | undefined, dono: Character, alvo: Character): number | undefined {
+function reportarErroFormulaAura(fonte: string, campo: string, expressao: string, motivo: string): void {
+  const chave = `${fonte}:${campo}:${expressao}:${motivo}`;
+  if (avisosFormulaAura.has(chave)) return;
+  avisosFormulaAura.add(chave);
+  toast.error(`A aura ${fonte} não pôde ser calculada.`, {
+    description: `${campo}: ${motivo}`,
+  });
+}
+
+function avaliarFormulaAura(
+  expressao: string | undefined,
+  variaveis: Record<string, number>,
+  fonte: string,
+  campo: string,
+): number | null {
+  if (!expressao?.trim()) {
+    reportarErroFormulaAura(fonte, campo, expressao ?? '', 'Fórmula vazia.');
+    return null;
+  }
+  const resultado = avaliarFormula(expressao, variaveis, () => 0.5);
+  if (resultado.diagnosticos.length) {
+    reportarErroFormulaAura(fonte, campo, expressao, resultado.diagnosticos.map(d => d.mensagem).join('; '));
+    return null;
+  }
+  if (resultado.rolagens.length) {
+    reportarErroFormulaAura(fonte, campo, expressao, 'A fórmula não pode usar dados aleatórios.');
+    return null;
+  }
+  if (!Number.isFinite(resultado.valor)) {
+    reportarErroFormulaAura(fonte, campo, expressao, 'A fórmula não produziu um número finito.');
+    return null;
+  }
+  return resultado.valor;
+}
+
+function formulaNumeroAura(expressao: string | undefined, dono: Character, alvo: Character, fonte: string): number | null | undefined {
   if (!expressao?.trim()) return undefined;
   const vars = {
     ...montarVariaveisDoPersonagem(dono, 'USUARIO'),
     ...montarVariaveisDoPersonagem(alvo, 'ALVO'),
   };
-  const r = avaliarFormula(expressao, vars, () => 0.5);
-  if (r.diagnosticos.length || r.rolagens.length || !Number.isFinite(r.valor)) return undefined;
-  return Math.round(r.valor);
+  const valor = avaliarFormulaAura(expressao, vars, fonte, 'CD');
+  return valor === null ? null : Math.round(valor);
 }
 
 function acoesDeTickDaAura(ent: EntidadeOmni) {
@@ -120,19 +156,39 @@ function posicaoDoPersonagem(id: string) {
 function raioDoEfeito(ef: EfeitoAtivo): number {
   const ent = useOmniEntidadesStore.getState().entidades[ef.entidadeId];
   if (!ent || !ent.areaRaio) return 0;
-  if (ent.areaRaio.tipo === 'fixo') return ent.areaRaio.valor;
+  if (ent.areaRaio.tipo === 'fixo') {
+    if (!Number.isFinite(ent.areaRaio.valor) || ent.areaRaio.valor < 0) {
+      reportarErroFormulaAura(ent.nome, 'raio', String(ent.areaRaio.valor), 'O raio precisa ser um número não negativo.');
+      return 0;
+    }
+    return ent.areaRaio.valor;
+  }
   const src = useCharacterStore.getState().characters.find((c) => c.id === ef.sourceCharId);
   const vars = src ? montarVariaveisDoPersonagem(src, 'USUARIO') : {};
-  const r = avaliarFormula(ent.areaRaio.expressao, vars);
-  return r.diagnosticos.length || !Number.isFinite(r.valor) ? 0 : r.valor;
+  const raio = avaliarFormulaAura(ent.areaRaio.expressao, vars, ent.nome, 'raio');
+  if (raio === null || raio < 0) {
+    if (raio !== null) reportarErroFormulaAura(ent.nome, 'raio', ent.areaRaio.expressao, 'O raio precisa ser não negativo.');
+    return 0;
+  }
+  return raio;
 }
 
 function raioDeEntidadeVinculada(ent: EntidadeOmni, dono: Character): number {
   if (!ent.areaRaio) return 0;
-  if (ent.areaRaio.tipo === 'fixo') return ent.areaRaio.valor;
+  if (ent.areaRaio.tipo === 'fixo') {
+    if (!Number.isFinite(ent.areaRaio.valor) || ent.areaRaio.valor < 0) {
+      reportarErroFormulaAura(ent.nome, 'raio', String(ent.areaRaio.valor), 'O raio precisa ser um número não negativo.');
+      return 0;
+    }
+    return ent.areaRaio.valor;
+  }
   const vars = montarVariaveisDoPersonagem(dono, 'USUARIO');
-  const r = avaliarFormula(ent.areaRaio.expressao, vars);
-  return r.diagnosticos.length || !Number.isFinite(r.valor) ? 0 : r.valor;
+  const raio = avaliarFormulaAura(ent.areaRaio.expressao, vars, ent.nome, 'raio');
+  if (raio === null || raio < 0) {
+    if (raio !== null) reportarErroFormulaAura(ent.nome, 'raio', ent.areaRaio.expressao, 'O raio precisa ser não negativo.');
+    return 0;
+  }
+  return raio;
 }
 
 
@@ -308,7 +364,9 @@ export function verificarAurasInicioTurno(alvoCharId: string, round: number): nu
         auraTurnChecks.add(chave);
 
         const tr = cfg.tr ?? 'fortitude';
-        const cd = formulaNumeroAura(cfg.cd, dono, alvo) ?? specDCFor(dono);
+        const cdConfigurada = formulaNumeroAura(cfg.cd, dono, alvo, ent.nome);
+        if (cdConfigurada === null) continue;
+        const cd = cdConfigurada ?? specDCFor(dono);
         const rotuloTR: Record<string, string> = {
           astucia: 'Astúcia',
           fortitude: 'Fortitude',

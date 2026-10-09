@@ -739,9 +739,17 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
       const limitesVars = { alvo: alvoVars, item: itemVars, resultados: resultados.slice(0, -1) };
       const teto = eff.counterCap ? avaliarFormula(eff.counterCap, usuarioVars, undefined, limitesVars) : undefined;
       const limiteFonte = eff.counterSourceLimit ? avaliarFormula(eff.counterSourceLimit, usuarioVars, undefined, limitesVars) : undefined;
-      if (teto?.diagnosticos.length || limiteFonte?.diagnosticos.length
-        || teto && !Number.isFinite(teto.valor) || limiteFonte && !Number.isFinite(limiteFonte.valor)) {
-        erroExecucao = `Teto inválido: ${[...(teto?.diagnosticos ?? []), ...(limiteFonte?.diagnosticos ?? [])].map(d => d.mensagem).join('; ') || 'resultado não finito.'}`;
+      const erroDoLimite = (rotulo: string, resultado: ReturnType<typeof avaliarFormula> | undefined): string | undefined => {
+        if (!resultado) return undefined;
+        if (resultado.diagnosticos.length) return `${rotulo}: ${resultado.diagnosticos.map(d => d.mensagem).join('; ')}`;
+        if (resultado.rolagens.length) return `${rotulo}: precisa ser determinístico; dados aleatórios não são permitidos.`;
+        if (!Number.isFinite(resultado.valor)) return `${rotulo}: valor não finito.`;
+        if (resultado.valor < 0) return `${rotulo}: precisa ser não negativo.`;
+        return undefined;
+      };
+      const erroLimite = erroDoLimite('teto global', teto) ?? erroDoLimite('teto por fonte', limiteFonte);
+      if (erroLimite) {
+        erroExecucao = `Teto inválido: ${erroLimite}`;
         resultados[resultados.length - 1] = 0;
         linhas.push(`#${idx + 1} inválido: ${erroExecucao}`);
         return;

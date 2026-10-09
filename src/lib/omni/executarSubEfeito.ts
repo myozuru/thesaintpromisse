@@ -95,11 +95,17 @@ export function validarEfeitosAtivosDaFicha(
     resultados,
     dano: ctx.dano ? { ...ctx.dano } : undefined,
   });
-  const avaliar = (expressao: string, rotulo: string): { ok: true; valor: number } | { ok: false; erro: string } => {
+  const avaliar = (
+    expressao: string,
+    rotulo: string,
+    op: { deterministico?: boolean; naoNegativo?: boolean } = {},
+  ): { ok: true; valor: number } | { ok: false; erro: string } => {
     const r = avaliarFormula(expressao || '0', ctx.usuarioVars, () => 0.5, extras());
     if (r.diagnosticos.length || !Number.isFinite(r.valor)) {
       return { ok: false, erro: `${rotulo}: ${r.diagnosticos.map(d => d.mensagem).join('; ') || 'resultado não finito.'}` };
     }
+    if (op.deterministico && r.rolagens.length) return { ok: false, erro: `${rotulo}: precisa ser determinístico; dados aleatórios não são permitidos.` };
+    if (op.naoNegativo && r.valor < 0) return { ok: false, erro: `${rotulo}: precisa ser não negativo.` };
     return { ok: true, valor: r.valor };
   };
 
@@ -153,9 +159,9 @@ export function validarEfeitosAtivosDaFicha(
     }
     const formula = avaliar(eff.formula || '0', `Fórmula do efeito ${indice + 1}`);
     if (!formula.ok) return { ok: false, detalhe: formula.erro };
-    const teto = eff.counterCap ? avaliar(eff.counterCap, `Teto do efeito ${indice + 1}`) : undefined;
+    const teto = eff.counterCap ? avaliar(eff.counterCap, `Teto do efeito ${indice + 1}`, { deterministico: true, naoNegativo: true }) : undefined;
     if (teto && !teto.ok) return { ok: false, detalhe: teto.erro };
-    const tetoFonte = eff.counterSourceLimit ? avaliar(eff.counterSourceLimit, `Teto por fonte do efeito ${indice + 1}`) : undefined;
+    const tetoFonte = eff.counterSourceLimit ? avaliar(eff.counterSourceLimit, `Teto por fonte do efeito ${indice + 1}`, { deterministico: true, naoNegativo: true }) : undefined;
     if (tetoFonte && !tetoFonte.ok) return { ok: false, detalhe: tetoFonte.erro };
     const valor = Math.round(formula.valor * (eff.type === 'SUBTRAIR' ? multiplicadorCritico : 1));
     resultados.push(valor);
@@ -215,7 +221,19 @@ export function executarCombatEffect(
   const valor = Math.round(out.valor);
   const teto = eff.counterCap ? avaliarFormulaEfeito({ ...eff, formula: eff.counterCap }, ctx) : undefined;
   const limiteFonte = eff.counterSourceLimit ? avaliarFormulaEfeito({ ...eff, formula: eff.counterSourceLimit }, ctx) : undefined;
-  if (out.diagnosticos.length || teto?.diagnosticos.length || limiteFonte?.diagnosticos.length) return { aplicado: 0, invalido: true, detalhe: 'Fórmula ou limite com referência inválida.' };
+  const diagnosticoLimite = (rotulo: string, resultado: ReturnType<typeof avaliarFormulaEfeito> | undefined): string | undefined => {
+    if (!resultado) return undefined;
+    if (resultado.diagnosticos.length) return `${rotulo}: ${resultado.diagnosticos.map(d => d.mensagem).join('; ')}`;
+    if (resultado.rolagens.length) return `${rotulo}: precisa ser determinístico; dados aleatórios não são permitidos.`;
+    if (!Number.isFinite(resultado.valor)) return `${rotulo}: valor não finito.`;
+    if (resultado.valor < 0) return `${rotulo}: precisa ser não negativo.`;
+    return undefined;
+  };
+  const erroLimite = diagnosticoLimite('Teto global', teto) ?? diagnosticoLimite('Teto por fonte', limiteFonte);
+  if (out.diagnosticos.length || !Number.isFinite(out.valor) || erroLimite) {
+    const erroFormula = out.diagnosticos.map(d => d.mensagem).join('; ') || (!Number.isFinite(out.valor) ? 'fórmula do efeito não finita' : '');
+    return { aplicado: 0, invalido: true, detalhe: erroLimite ?? erroFormula ?? 'Fórmula inválida.' };
+  }
   const targetId = resolverTargetId(eff, ctx);
   if (eff.transferencia) {
     if (eff.transferencia.moedaId) {
@@ -370,6 +388,11 @@ function validarRamosDiceSwitch(
         || teto && !Number.isFinite(teto.valor)
         || limiteFonte && !Number.isFinite(limiteFonte.valor)) {
         return `${caminho}: fórmula ou limite inválido — ${diagnosticos.map(d => d.mensagem).join('; ') || 'resultado não finito.'}`;
+      }
+      for (const [rotulo, limite] of [['teto global', teto], ['teto por fonte', limiteFonte]] as const) {
+        if (!limite) continue;
+        if (limite.rolagens.length) return `${caminho}: ${rotulo} precisa ser determinístico; dados aleatórios não são permitidos.`;
+        if (limite.valor < 0) return `${caminho}: ${rotulo} precisa ser não negativo.`;
       }
       if (efeito.transferencia && !efeito.transferencia.moedaId) {
         const alvoId = resolverTargetId(efeito, ctx);
