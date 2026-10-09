@@ -189,3 +189,11 @@ O planejador da fórmula agora transforma essa exceção em resultado inválido 
 Validação desta etapa: `omniEfeitosContinuos.test.tsx`, 9 testes aprovados; `npx tsc --noEmit` e `git diff --check` sem erros. As regressões cobrem key desconhecida em cura contínua e em assistência, verificando que o efeito válido seguinte ainda é aplicado.
 
 Limite restante: a fórmula inválida continua armazenada na configuração contínua até ser corrigida pelo Mestre; o runtime deixa de interromper turnos/ataques e registra a falha a cada acionamento.
+
+### `max_alvos` explica keys inválidas
+
+Uma key ausente em `max_alvos` era recusada indiretamente como “no máximo 0 alvos”. A ação não prosseguia, mas o motivo real da falha na fórmula ficava oculto. Tetos com dados também eram recusados sem explicar a restrição.
+
+A seleção múltipla agora valida a expressão e devolve o diagnóstico da key desconhecida. Fórmulas com dados recebem erro explícito porque o limite de alvos precisa ser determinístico. O caminho de compatibilidade que retorna só o número continua disponível, enquanto a execução usa o resultado estrito.
+
+Validação desta etapa: 3 arquivos focados, 56 testes aprovados; `npx tsc --noEmit` e `git diff --check` sem erros. Os testes cobrem tanto a mensagem da key ausente quanto os caminhos válidos de ações múltiplas e cura.

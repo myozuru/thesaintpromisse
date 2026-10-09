@@ -82,7 +82,10 @@ describe('alcances e seleção',()=>{
   });
   it.each([NaN,Infinity,-1])('rejeita alcance inválido %s',async alcanceM=>expect((await selecionarAlvosAtivos('u',cfg({alcanceM}),'a')).ok).toBe(false));
   it('não transforma variável desconhecida nem dados em teto válido',async()=>{
-    for(const max_alvos of ['@USUARIO.inexistente + 3','1d4']) expect((await selecionarAlvosAtivos('u',cfg({tipo_alvo:'multiplo',max_alvos,alcanceM:0}),['a'])).ok).toBe(false);
+    const keyAusente = await selecionarAlvosAtivos('u',cfg({tipo_alvo:'multiplo',max_alvos:'@USUARIO.inexistente + 3',alcanceM:0}),['a']);
+    expect(keyAusente).toMatchObject({ok:false,reason:expect.stringMatching(/inexistente/i)});
+    const comDados = await selecionarAlvosAtivos('u',cfg({tipo_alvo:'multiplo',max_alvos:'1d4',alcanceM:0}),['a']);
+    expect(comDados).toMatchObject({ok:false,reason:expect.stringMatching(/dados aleatórios/i)});
   });
   it('deduplica alvo repetido antes de contar o limite',async()=>expect(await selecionarAlvosAtivos('u',cfg({tipo_alvo:'multiplo',max_alvos:'1',alcanceM:0}),['a','a'])).toEqual({ok:true,ids:['a']}));
 });

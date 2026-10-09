@@ -35,8 +35,22 @@ export function aceitaAlvoAtivo(u: Character, a: Character, cfg: AcaoAtivaConfig
 }
 
 export function limiteAlvosAtivos(cfg: AcaoAtivaConfig, u: Character): number {
+  const r = avaliarLimiteAlvosAtivos(cfg, u);
+  return r.ok ? r.maximo : 0;
+}
+
+function avaliarLimiteAlvosAtivos(
+  cfg: AcaoAtivaConfig,
+  u: Character,
+): { ok: true; maximo: number } | { ok: false; reason: string } {
   const r = avaliarFormula(cfg.max_alvos || '1', montarVariaveisDoPersonagem(u, 'USUARIO'));
-  return !r.diagnosticos.length && !r.rolagens.length && Number.isFinite(r.valor) ? Math.max(0, Math.floor(r.valor)) : 0;
+  if (r.diagnosticos.length) {
+    return { ok: false, reason: `Limite de alvos inválido: ${r.diagnosticos.map(d => d.mensagem).join('; ')}` };
+  }
+  if (r.rolagens.length) return { ok: false, reason: 'Limite de alvos não pode usar dados aleatórios.' };
+  const maximo = Math.floor(r.valor);
+  if (!Number.isSafeInteger(maximo) || maximo < 0) return { ok: false, reason: 'Limite de alvos precisa ser um inteiro não negativo.' };
+  return { ok: true, maximo };
 }
 
 export async function selecionarAlvosAtivos(usuarioId: string, cfg: AcaoAtivaConfig, selecao: SelecaoAtiva, alcanceArmaM?: number | null, medicao: 'circular' | 'borda' = 'circular'): Promise<SelecaoResultado> {
@@ -51,7 +65,9 @@ export async function selecionarAlvosAtivos(usuarioId: string, cfg: AcaoAtivaCon
   else if (tipo !== 'area') {
     ids = [...new Set(typeof selecao === 'string' ? [selecao].filter(Boolean) : Array.isArray(selecao) ? selecao : [])];
     if (!ids.length) return { ok: false, reason: 'Escolha um alvo.' };
-    const max = tipo === 'multiplo' ? limiteAlvosAtivos(cfg, u) : 1;
+    const limite = tipo === 'multiplo' ? avaliarLimiteAlvosAtivos(cfg, u) : { ok: true as const, maximo: 1 };
+    if (!limite.ok) return { ok: false, reason: limite.reason };
+    const max = limite.maximo;
     if (ids.length > max) return { ok: false, reason: `Selecione no máximo ${max} alvo(s).` };
   } else {
     const area = cfg.area;
