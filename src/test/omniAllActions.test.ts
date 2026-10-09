@@ -14,6 +14,7 @@ import { useOmniRuntimeStore } from '@/stores/useOmniRuntimeStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { executarGatilho } from '@/lib/omni/executor';
+import { aplicarReducaoCustoFeitico } from '@/lib/omni/spellCostReduction';
 import {
   ACOES_EFEITO,
   type AcaoEfeitoId,
@@ -76,6 +77,13 @@ const baseAcao = (
   alvoAplicacao: 'USUARIO' as AlvoRefId,
   ...extras,
 });
+
+function executarSequencia(acoes: AcaoLogica[], usuario: Character, nome: string) {
+  const ent = entidade(acoes[0] ?? baseAcao('sequencia', 'REDUZIR_PE'), { nome });
+  ent.gatilhos[0].blocos[0].acoes = acoes;
+  executarGatilho(ent, 'aoEquipar', { usuario });
+  return ent;
+}
 
 // Reset global antes de cada teste — todos os stores em estado neutro.
 beforeEach(() => {
@@ -423,6 +431,98 @@ describe('🪬 REDUZIR_CUSTO / LIMPAR_REDUTOR_CUSTO', () => {
   });
 });
 
+describe('🪄 Redução de PE de feitiços e filtros de escopo', () => {
+  const feitiço = (extras: Record<string, unknown> = {}) => ({
+    id: 'spell_fixture',
+    name: 'Bola de Fogo',
+    spellLevel: '2',
+    spellType: 'damage',
+    actionType: 'action',
+    ...extras,
+  }) as any;
+
+  const redutor = (acao: AcaoEfeitoId, extras: Partial<AcaoLogica> = {}) =>
+    baseAcao(`a-${acao}`, acao, { alvoAplicacao: 'USUARIO', valor: fixo(3), ...extras });
+
+  it('REDUZIR_PE altera o custo efetivo e respeita o piso configurado', () => {
+    const c = novoChar();
+    executarSequencia([redutor('REDUZIR_PE', { condicao: '2' as any })], c, 'Fonte desconto');
+
+    const atual = getChar(c.id);
+    expect(atual.omniSpellCostReduction).toHaveLength(1);
+    expect(atual.omniSpellCostReduction?.[0]).toMatchObject({ filtro: 'todos', reduce: 3, min: 2, origem: 'Fonte desconto' });
+    expect(aplicarReducaoCustoFeitico(5, atual, feitiço())).toMatchObject({ custoFinal: 2, reducaoAplicada: 3 });
+  });
+
+  it('ESCOPO_FEITICO mantém o redutor universal aplicável a tipos distintos', () => {
+    const c = novoChar();
+    executarSequencia([
+      redutor('REDUZIR_PE'),
+      redutor('ESCOPO_FEITICO'),
+    ], c, 'Fonte universal');
+
+    const atual = getChar(c.id);
+    expect(atual.omniSpellCostReduction?.[0].filtro).toBe('todos');
+    expect(aplicarReducaoCustoFeitico(5, atual, feitiço()).custoFinal).toBe(2);
+    expect(aplicarReducaoCustoFeitico(5, atual, feitiço({ spellType: 'heal' })).custoFinal).toBe(2);
+  });
+
+  it('ESCOPO_NIVEL limita o redutor ao intervalo declarado', () => {
+    const c = novoChar();
+    executarSequencia([
+      redutor('REDUZIR_PE'),
+      redutor('ESCOPO_NIVEL', { caminhoAlvo: '2-3' }),
+    ], c, 'Fonte por nível');
+
+    const atual = getChar(c.id);
+    expect(atual.omniSpellCostReduction?.[0].filtro).toBe('nivel:2-3');
+    expect(aplicarReducaoCustoFeitico(5, atual, feitiço({ spellLevel: '2' })).custoFinal).toBe(2);
+    expect(aplicarReducaoCustoFeitico(5, atual, feitiço({ spellLevel: '3' })).custoFinal).toBe(2);
+    expect(aplicarReducaoCustoFeitico(5, atual, feitiço({ spellLevel: '4' })).custoFinal).toBe(5);
+  });
+
+  it('ESCOPO_TIPO limita o desconto ao tipo configurado', () => {
+    const c = novoChar();
+    executarSequencia([
+      redutor('REDUZIR_PE'),
+      redutor('ESCOPO_TIPO', { caminhoAlvo: 'damage' }),
+    ], c, 'Fonte por tipo');
+
+    const atual = getChar(c.id);
+    expect(atual.omniSpellCostReduction?.[0].filtro).toBe('tipo:damage');
+    expect(aplicarReducaoCustoFeitico(5, atual, feitiço()).custoFinal).toBe(2);
+    expect(aplicarReducaoCustoFeitico(5, atual, feitiço({ spellType: 'buff' })).custoFinal).toBe(5);
+  });
+
+  it('ESCOPO_NOME compara o nome do feitiço sem diferenciar caixa', () => {
+    const c = novoChar();
+    executarSequencia([
+      redutor('REDUZIR_PE'),
+      redutor('ESCOPO_NOME', { caminhoAlvo: 'bola de fogo' }),
+    ], c, 'Fonte por nome');
+
+    const atual = getChar(c.id);
+    expect(atual.omniSpellCostReduction?.[0].filtro).toBe('nome:bola de fogo');
+    expect(aplicarReducaoCustoFeitico(5, atual, feitiço()).custoFinal).toBe(2);
+    expect(aplicarReducaoCustoFeitico(5, atual, feitiço({ name: 'Raio de Gelo' })).custoFinal).toBe(5);
+  });
+
+  it('LIMPAR_REDUTOR_PE remove as entradas desta entidade e preserva outras fontes', () => {
+    const c = novoChar();
+    useCharacterStore.getState().updateCharacter(c.id, {
+      omniSpellCostReduction: [
+        { id: 'a', filtro: 'todos', reduce: 2, min: 1, origem: 'Fonte própria' },
+        { id: 'b', filtro: 'tipo:damage', reduce: 1, min: 1, origem: 'Outra fonte' },
+      ],
+    });
+    executarSequencia([redutor('LIMPAR_REDUTOR_PE')], getChar(c.id), 'Fonte própria');
+
+    expect(getChar(c.id).omniSpellCostReduction).toEqual([
+      { id: 'b', filtro: 'tipo:damage', reduce: 1, min: 1, origem: 'Outra fonte' },
+    ]);
+  });
+});
+
 describe('🎯 MODIFICAR_CUSTO_ACAO', () => {
   it('grava o mapeamento por id de habilidade', () => {
     const c = novoChar();
@@ -483,6 +583,23 @@ describe('📡 DISPARAR_GATILHO (macro)', () => {
 // ──────────────────────────────────────────────────────────────────────
 describe('📚 Cobertura — toda chave de ACOES_EFEITO tem teste e executor não explode', () => {
   const ids = Object.keys(ACOES_EFEITO) as AcaoEfeitoId[];
+  const contratosSemanticos = new Set<AcaoEfeitoId>([
+    'SOMAR', 'SUBTRAIR', 'MULTIPLICAR', 'DIVIDIR', 'DEFINIR',
+    'APLICAR_CONDICAO', 'REMOVER_CONDICAO', 'CURAR', 'DANO', 'REROLL',
+    'CONSUMIR_RECURSO', 'DISPARAR_GATILHO', 'CONCEDER_TALENTO', 'REMOVER_TALENTO',
+    'RECARREGAR_HABILIDADE', 'MODIFICAR_USOS_APTIDAO', 'CONCEDER_VANTAGEM',
+    'CONCEDER_DESVANTAGEM', 'LIMPAR_VANT_DESV', 'CONCEDER_IMUNIDADE',
+    'REMOVER_IMUNIDADE', 'ATIVAR_FLAG', 'DESATIVAR_FLAG', 'ALTERNAR_FLAG',
+    'INCREMENTAR_CONTADOR', 'ZERAR_CONTADOR', 'DEFINIR_CONTADOR', 'CONSUMIR_CONTADOR',
+    'REDUZIR_CUSTO', 'LIMPAR_REDUTOR_CUSTO', 'REDUZIR_PE', 'ESCOPO_FEITICO',
+    'ESCOPO_NIVEL', 'ESCOPO_TIPO', 'ESCOPO_NOME', 'LIMPAR_REDUTOR_PE',
+    'MODIFICAR_CUSTO_ACAO', 'ADICIONAR_EXAUSTAO',
+  ]);
+
+  it('cada primitiva publicada tem um caso semântico que verifica estado/resultado real', () => {
+    expect([...contratosSemanticos].sort()).toEqual([...ids].sort());
+  });
+
   it.each(ids)('%s não lança ao executar com inputs mínimos', (acaoId) => {
     const c = novoChar();
     // Inputs genéricos amplos o suficiente pra cada ação aceitar.

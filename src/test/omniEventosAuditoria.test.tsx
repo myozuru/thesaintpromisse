@@ -7,7 +7,7 @@ vi.mock('@/lib/socket', () => ({ getSocket: () => null }));
 vi.mock('@/lib/sounds', async original => Object.fromEntries(Object.keys(await original<Record<string, unknown>>()).map(k => [k, () => {}])));
 import { ficha, montarMesa, pegarFicha, limparMesa, esperar } from './helpers/mesaReal';
 import { novaEntidade, type CombatEffect, type EntidadeOmni, type AcaoLogica } from '@/lib/omni/tipos';
-import type { GatilhoId } from '@/lib/omni/constantesDoSistema';
+import { GATILHOS_EVENTOS, type GatilhoId } from '@/lib/omni/constantesDoSistema';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useLogStore } from '@/stores/useLogStore';
@@ -50,6 +50,32 @@ beforeEach(async () => {
 afterEach(async () => { await esperar(10); limparMesa(); });
 
 describe('isolamento do dono de eventos', () => {
+  it('despacha cada um dos 34 gatilhos registrados até uma ação observável', () => {
+    const eventos = Object.values(GATILHOS_EVENTOS);
+    const entidadeTodosEventos = novaEntidade('passiva', 'Contrato dos gatilhos');
+    entidadeTodosEventos.gatilhos = eventos.map((evento, index) => ({
+      id: `evento-${index}`,
+      evento,
+      blocos: [{
+        id: `bloco-${index}`,
+        modo: 'todas',
+        condicoes: [],
+        acoes: [{
+          id: `acao-${index}`,
+          acao: 'ATIVAR_FLAG',
+          alvoAplicacao: 'USUARIO',
+          caminhoAlvo: `gatilho_auditado_${index}`,
+        }],
+      }],
+    }));
+    vincular('u', entidadeTodosEventos);
+
+    eventos.forEach((evento, index) => {
+      expect(bus.emitirEvento(evento, { usuarioId: 'u' }), evento).toBe(1);
+      expect(pegarFicha('u').omniFlags?.[`gatilho_auditado_${index}`], evento).toBe(1);
+    });
+  });
+
   it('passiva visual do alvo não recebe o evento emitido para o usuário', () => {
     vincular('a', visual('aoSofrerDano'));
     expect(bus.emitirEvento('aoSofrerDano', { usuarioId: 'u', alvoId: 'a' })).toBe(0);

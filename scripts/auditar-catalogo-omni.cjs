@@ -4,13 +4,23 @@ const path = require('node:path');
 const ts = require('typescript');
 const root = path.resolve(__dirname, '..');
 const cache = new Map();
+function resolverArquivo(file) {
+  const candidatos = [file, `${file}.ts`, `${file}.tsx`, path.join(file, 'index.ts'), path.join(file, 'index.tsx')];
+  const encontrado = candidatos.find(candidato => fs.existsSync(candidato) && fs.statSync(candidato).isFile());
+  if (!encontrado) throw new Error(`Módulo TypeScript não encontrado: ${file}`);
+  return encontrado;
+}
 function carregar(file) {
-  const absolute = path.resolve(root, file);
+  const absolute = resolverArquivo(path.resolve(root, file));
   if (cache.has(absolute)) return cache.get(absolute).exports;
   const module = { exports: {} }; cache.set(absolute, module);
   const src = fs.readFileSync(absolute, 'utf8');
-  const js = ts.transpileModule(src, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  const requireLocal = name => name.startsWith('.') ? carregar(path.relative(root, path.resolve(path.dirname(absolute), name + '.ts'))) : require(name);
+  const js = ts.transpileModule(src, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
+  const requireLocal = name => {
+    if (name.startsWith('@/')) return carregar(path.resolve(root, 'src', name.slice(2)));
+    if (name.startsWith('.')) return carregar(path.resolve(path.dirname(absolute), name));
+    return require(name);
+  };
   new Function('require', 'module', 'exports', js)(requireLocal, module, module.exports);
   return module.exports;
 }
@@ -55,7 +65,11 @@ const referencias = (evento, constante) => fonte.flatMap(f => f.linhas.flatMap((
 const gatilhos = Object.entries(c.GATILHOS_EVENTOS).map(([constante, id]) => ({ id, constante, aliases: aliases.ALIASES_POR_EVENTO[id], referencias: referencias(id, constante), estado: 'requer_validacao_do_fluxo_real' }));
 const exec = fs.readFileSync(path.join(root, 'src/lib/omni/executor.ts'), 'utf8');
 const primitivas = Object.entries(c.ACOES_EFEITO).map(([id, info]) => ({ id, ...info, temCaseExecutor: exec.includes(`case '${id}'`), estado: 'requer_validacao_do_fluxo_real' }));
-const variaveis = c.DICIONARIO_CHAVES_OMNI.flatMap(cat => cat.itens.map(key => ({ ...key, categoria: cat.label ?? cat.id })));
+const variaveis = c.DICIONARIO_CHAVES_OMNI.flatMap(cat => cat.itens.map(key => ({
+  ...key,
+  categoria: cat.grupo ?? cat.label ?? cat.id,
+  escopos: [...cat.escopos],
+})));
 const duplicados = list => [...new Set(list)].filter(v => list.filter(x => x === v).length > 1);
 const aliasEventos = gatilhos.flatMap(g => g.aliases.map(a => ({ alias: a, evento: g.id })));
 const conflitosAliases = duplicados(aliasEventos.map(a => a.alias)).filter(a => new Set(aliasEventos.filter(x => x.alias === a).map(x => x.evento)).size > 1);

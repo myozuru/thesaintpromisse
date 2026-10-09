@@ -102,7 +102,7 @@ parser.functions.d = (sides: number): number => {
  * curta após um prefixo de contexto (ex: @USUARIO.vida → VIDA).
  * Aceita variações sem acento e em qualquer caixa.
  */
-const ATALHOS_PT_BR: Record<string, string> = {
+export const ATALHOS_PT_BR: Record<string, string> = {
   vida: 'VIDA',
   vida_atual: 'VIDA',
   vidaatual: 'VIDA',
@@ -166,7 +166,9 @@ const ATALHOS_PT_BR: Record<string, string> = {
   dado_vida: 'DADO_VIDA', dadovida: 'DADO_VIDA',
   dado_vida_atual: 'DADO_VIDA_ATUAL', dado_vida_max: 'DADO_VIDA_MAX',
   reserva_pe: 'RESERVA_PE', reservape: 'RESERVA_PE',
-  exaustao_nivel: 'EXAUSTAO_NIVEL',
+  // O mapa central canoniza exaustao_nivel como exaustao; mantenha o atalho
+  // do parser apontando ao mesmo campo para não divergir em estados futuros.
+  exaustao_nivel: 'EXAUSTAO',
   fome: 'FOME', fome_nivel: 'FOME_NIVEL',
   defesa_cac: 'DEFESA_CAC', defesa_corpo: 'DEFESA_CAC',
   defesa_dist: 'DEFESA_DIST', defesa_distancia: 'DEFESA_DIST',

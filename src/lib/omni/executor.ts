@@ -97,6 +97,12 @@ function personagemDoEscopo(ctx: ContextoRuntime, escopo: AlvoRefId): Character 
   return undefined;
 }
 
+function atualizarFichasDoContexto(ctx: ContextoRuntime): void {
+  const personagens = useCharacterStore.getState().characters;
+  if (ctx.usuario) ctx.usuario = personagens.find(c => c.id === ctx.usuario?.id) ?? ctx.usuario;
+  if (ctx.alvo) ctx.alvo = personagens.find(c => c.id === ctx.alvo?.id) ?? ctx.alvo;
+}
+
 function variaveisCompletas(ctx: ContextoRuntime): Record<string, number> {
   const vars: Record<string, number> = {};
   if (ctx.usuario) Object.assign(vars, montarVariaveisDoPersonagem(ctx.usuario, 'USUARIO'));
@@ -772,6 +778,10 @@ export function executarGatilho(
       // só vale entre ações do mesmo bloco.
       ctxComOrigem._ultimoRedutorPeId = undefined;
       for (const acao of bloco.acoes) {
+        // Cada ação precisa ler o estado persistido pela ação anterior do
+        // mesmo bloco. Sem isso, sequências REDUZIR_PE + ESCOPO_* operam
+        // sobre uma cópia antiga da ficha e o filtro nunca é anexado.
+        atualizarFichasDoContexto(ctxComOrigem);
         try { executarAcao(acao, ctxComOrigem, log); }
         catch (err) { if (!(err instanceof FormulaRuntimeInvalida)) throw err; log(`⛔ ${ctxComOrigem.origemNome}: ${err.message}`); }
       }
