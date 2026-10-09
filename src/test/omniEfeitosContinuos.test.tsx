@@ -59,6 +59,13 @@ describe('cura contínua', () => {
     await tickEfeitosContinuosInicioTurno('a');
     expect(pegarFicha('a').hpCurrent).toBe(12);
   });
+
+  it('key inválida em uma cura contínua não interrompe os outros efeitos do turno', async () => {
+    registrarEfeitoContinuo('a', { nome: 'Fórmula quebrada', origemId: 'u', acaoId: 'ruim', multiplicador: 1, cura: { formula: '@USUARIO.chave_inexistente + 2' } });
+    registrarEfeitoContinuo('a', { nome: 'Brasa estável', origemId: 'u', acaoId: 'bom', multiplicador: 1, cura: { formula: '2' } });
+    await expect(tickEfeitosContinuosInicioTurno('a')).resolves.toBe(1);
+    expect(pegarFicha('a').hpCurrent).toBe(12);
+  });
 });
 
 describe('assistência de dano', () => {
@@ -86,5 +93,12 @@ describe('assistência de dano', () => {
     expect(await dispararAssistenciaDano('i', { attackerId: 'a', isMelee: false, source: 'arma' })).toBe(0);
     expect(await dispararAssistenciaDano('i', { attackerId: 'a', isMelee: true, source: 'arma' })).toBe(3);
     expect(useCharacterStore.getState().characters.find(c => c.id === 'a')!.omniEfeitosContinuos).toHaveLength(1);
+  });
+
+  it('key inválida em uma assistência não interrompe as outras assistências do ataque', async () => {
+    registrarEfeitoContinuo('a', { nome: 'Assistência quebrada', origemId: 'u', acaoId: 'ruim', multiplicador: 1, assistencia: { escopo: 'qualquer', dano: '@USUARIO.chave_inexistente + 4', consumo: 'duracao' } });
+    registrarEfeitoContinuo('a', { nome: 'Assistência estável', origemId: 'u', acaoId: 'bom', multiplicador: 1, assistencia: { escopo: 'qualquer', dano: '2', consumo: 'duracao' } });
+    await expect(dispararAssistenciaDano('i', { attackerId: 'a', isMelee: true, source: 'arma', ignoresRD: true })).resolves.toBe(2);
+    expect(pegarFicha('i').hpCurrent).toBe(38);
   });
 });

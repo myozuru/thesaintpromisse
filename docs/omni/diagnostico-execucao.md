@@ -179,3 +179,13 @@ Agora `podeUsarAtiva` valida o nome do contador e a fórmula de quantidade antes
 Validação desta etapa: 4 arquivos de ações ativas, 106 testes aprovados; `npx tsc --noEmit` e `git diff --check` sem erros. A regressão confirma que key desconhecida impede a ação antes de cobrar PE, criar contador ou iniciar sustentação.
 
 Limite restante: se o estado do personagem mudar durante a ação e a fórmula de geração passar a falhar só depois da aplicação dos efeitos, o erro é registrado, mas a ação e seus efeitos já concluídos não são revertidos. A validação inicial impede keys ausentes e fórmulas malformadas no estado de declaração.
+
+### Fórmulas de efeitos contínuos não interrompem o turno ou ataque
+
+`rolarFormula` entregava a avaliação das parcelas de cura/dano a `planejarFormulaDano`, que lança exceção quando uma referência tem diagnóstico. Uma key inválida em uma cura contínua podia rejeitar a promessa do tick e impedir o processamento dos efeitos seguintes; em uma assistência podia interromper o ataque que a acionou.
+
+O planejador da fórmula agora transforma essa exceção em resultado inválido controlado. O tick de cura já registra que a cura foi ignorada e segue para o próximo efeito; assistências também registram o erro e continuam com as outras fontes do golpe, sem aplicar dano parcial da fórmula inválida.
+
+Validação desta etapa: `omniEfeitosContinuos.test.tsx`, 9 testes aprovados; `npx tsc --noEmit` e `git diff --check` sem erros. As regressões cobrem key desconhecida em cura contínua e em assistência, verificando que o efeito válido seguinte ainda é aplicado.
+
+Limite restante: a fórmula inválida continua armazenada na configuração contínua até ser corrigida pelo Mestre; o runtime deixa de interromper turnos/ataques e registra a falha a cada acionamento.

@@ -87,7 +87,12 @@ function variaveis(origem: Character | undefined, alvo: Character) {
 /** Rola uma fórmula (dados animados em 3D) N vezes somadas. */
 async function rolarFormula(formula: string, vezes: number, origem: Character | undefined, alvo: Character, rotulo: string) {
   const vars = variaveis(origem, alvo);
-  const plano = planejarFormulaDano(normalizarAtributosCura(formula), parcela => avaliarFormula(parcela, vars));
+  let plano: ReturnType<typeof planejarFormulaDano>;
+  try {
+    plano = planejarFormulaDano(normalizarAtributosCura(formula), parcela => avaliarFormula(parcela, vars));
+  } catch {
+    return null;
+  }
   const n = Math.max(1, Math.floor(vezes));
   if (!Number.isFinite(plano.fixo) || plano.grupos.some(g => !Number.isSafeInteger(g.count) || g.count <= 0 || !Number.isSafeInteger(g.sides) || g.sides <= 0)) return null;
   const grupos = plano.grupos.map(g => ({ count: g.count * n, sides: g.sides }));
@@ -182,7 +187,11 @@ export async function dispararAssistenciaDano(alvoId: string, opts: OpcoesDano |
     if (!assistenciaCombina(a.escopo, a.filtroArma, ctx)) continue;
     const origem = chars().find(c => c.id === e.origemId);
     const r = await rolarFormula(a.dano, e.multiplicador, origem, atacante, `Assistência: ${e.nome}`);
-    if (!r || r.total <= 0) continue;
+    if (!r) {
+      useLogStore.getState().addLog('combat', `⛔ ${e.nome}: fórmula de assistência inválida; nenhum dano adicional foi aplicado.`);
+      continue;
+    }
+    if (r.total <= 0) continue;
     const tipo = resolverTipoDano(a.tipoDano) as DamageType | undefined;
     await useCharacterStore.getState().applyDamage(alvoId, r.total, tipo, { attackerId: atacanteId, source: 'omni', tags: [TAG_ASSISTENCIA] });
     useLogStore.getState().addLog('combat', `🔥 ${e.nome} soma +${r.total} de dano${a.tipoDano ? ` ${a.tipoDano}` : ''} ao golpe de ${atacante.name} em ${alvo.name} (${r.texto || r.total}).`);
