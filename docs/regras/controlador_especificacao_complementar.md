@@ -55,9 +55,13 @@ A ficha de criação de **cada Shikigami** deve oferecer um campo configurável 
 
 **Regra confirmada em 2026-10-09 — reservas individuais:** cada Shikigami tem **sua própria reserva de tempo identificável**, definida na criação da ficha. As reservas individuais **contribuem para o relógio global do jogador Controlador**, que recebe o acréscimo ao invocar cada criatura. A interface deve permitir acompanhar de qual Shikigami veio cada contribuição, evitando dupla contabilização de um mesmo evento de invocação.
 
-**Decisão confirmada em 2026-10-09 — saída de campo:** o tratamento da reserva de tempo deverá ser **diferente entre dissipação voluntária e derrota**. Essas são duas causas distintas de retirada do Shikigami e devem ser registradas individualmente no estado de combate. **Ainda não foi decidido** se o saldo remanescente é mantido, devolvido ou retirado em cada caso; não implementar uma regra automática para nenhum deles sem confirmação expressa do usuário.
+**Regra confirmada em 2026-10-09 — dissipação voluntária:** quando a invocação é dissipada por escolha do Controlador ou Mestre, retirar do relógio global a porção ainda disponível da reserva temporal correspondente àquela invocação, **sem permitir que o relógio global fique abaixo de 10 segundos**. Não descontar tempo já consumido e não afetar a contribuição identificada de outras invocações além do necessário para aplicar a regra.
 
-**Ainda precisa de esclarecimento, não presumir valores nem comportamento:** unidade, limite e valor inicial do tempo configurável; tratamento da reserva quando o Shikigami é dissipado, derrotado, reinvocado ou quando o combate termina; eventual simultaneidade das ações; regras detalhadas para debitar as reservas individuais durante a execução. Consultar o usuário antes de implementar esses aspectos.
+**Regra confirmada em 2026-10-09 — queda e derrota definitiva:** chegar a **0 PV não dissipa automaticamente** a invocação. Ela permanece caída no chão, no mapa, e **continua podendo ser alvo**. A dissipação por derrota só ocorre quando seus PV chegam a **−100% dos PV máximos** (por exemplo, −20 PV para uma invocação de PV máximo 20). Antes desse limiar, pode ocorrer a dissipação voluntária conforme a regra acima.
+
+**Regra confirmada em 2026-10-09 — tempo após derrota definitiva:** quando a invocação é definitivamente derrotada e dissipada ao alcançar −100% dos PV máximos, **não retirar sua contribuição temporal restante do relógio global**, que permanece como compensação ao jogador pela perda da invocação. Registrar a saída como derrota definitiva, separada da dissipação voluntária.
+
+**Pendências que exigem esclarecimento antes da implementação:** unidade, limite e valor inicial do tempo configurável; regras de consumo e reserva durante comandos simultâneos; reinvocação e reinício das reservas; fim do combate. A consequência da derrota definitiva sobre a biblioteca da invocação (perda permanente ou recuperação posterior) permanece sob a decisão do Controlador/Mestre, conforme item 5, salvo nova orientação explícita.
 
 ### 10. Economia de ações independente
 Cada Shikigami terá **seu próprio conjunto de ações e recursos**, definidos na sua ficha no momento da criação, em vez de compartilhar as quantidades de ações do jogador. Eles são entidades autônomas em combate, funcionando quase como personagens individuais, mas mantendo vínculo com o proprietário e com o relógio global conforme a decisão anterior.
@@ -77,7 +81,9 @@ Cada Shikigami deve ter identidade visual, imagem/token, ficha, HUD e indicadore
 - [ ] Campo configurável de tempo extra na criação de cada Shikigami.
 - [ ] Soma verificável dos tempos individuais ao relógio global do jogador, disparada ao invocar cada Shikigami, sem duplicação.
 - [ ] Reservas de tempo distintas e identificáveis na HUD, contribuindo para o relógio global.
-- [ ] Tratar dissipação voluntária e derrota como eventos distintos para as reservas, com as consequências pendentes de decisão do usuário.
+- [ ] Na dissipação voluntária, retirar somente o tempo restante da invocação, respeitando o piso de 10 segundos no relógio global.
+- [ ] Manter invocações caídas no mapa em 0 PV, ainda como alvos, e dissipar por derrota apenas em −100% dos PV máximos.
+- [ ] Preservar o tempo restante no relógio global após derrota definitiva.
 - [ ] Recursos e ações separados por invocação e independentes do saldo de ações do dono.
 - [ ] Autonomia e custos próprios configuráveis por invocação no OMNI.
 - [ ] Imagem, token, HUD, PV, rolagens e estados individualizados.
