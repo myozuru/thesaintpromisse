@@ -51,7 +51,11 @@ Cada Shikigami deve permitir **ambas as interfaces**: (a) selecionar seu token e
 ### 9. Cronômetro individual e relógio global
 A ficha de criação de **cada Shikigami** deve oferecer um campo configurável de **tempo adicional**. No combate, o tempo de cada Shikigami deve **ser acrescido ao relógio global do jogador Controlador**, em vez de funcionar como um relógio isolado independente do cronômetro principal. Deve existir identificação visual da contribuição e/ou uso de tempo de cada invocação, evitando confundir o tempo dos diferentes Shikigamis.
 
-**Pormenores ainda não definidos:** unidade, limites e valor inicial desse tempo; se o acréscimo ocorre no início de cada turno ou por invocação/comando; como descontar tempo quando o Shikigami é dissipado no meio do turno; pausas e simultaneidade. **Perguntar ao usuário antes de assumir essas regras.**
+**Regra confirmada em 2026-10-09 — momento do acréscimo:** o tempo adicional de um Shikigami é acrescido **no instante em que ele é invocado**, não automaticamente no começo de cada turno e não somente quando recebe um comando.
+
+**Regra confirmada em 2026-10-09 — reservas individuais:** cada Shikigami tem **sua própria reserva de tempo identificável**, definida na criação da ficha. As reservas individuais **contribuem para o relógio global do jogador Controlador**, que recebe o acréscimo ao invocar cada criatura. A interface deve permitir acompanhar de qual Shikigami veio cada contribuição, evitando dupla contabilização de um mesmo evento de invocação.
+
+**Ainda precisa de esclarecimento, não presumir valores nem comportamento:** unidade, limite e valor inicial do tempo configurável; tratamento da reserva quando o Shikigami é dissipado, derrotado, reinvocado ou quando o combate termina; eventual simultaneidade das ações; regras detalhadas para debitar as reservas individuais durante a execução. Consultar o usuário antes de implementar esses aspectos.
 
 ### 10. Economia de ações independente
 Cada Shikigami terá **seu próprio conjunto de ações e recursos**, definidos na sua ficha no momento da criação, em vez de compartilhar as quantidades de ações do jogador. Eles são entidades autônomas em combate, funcionando quase como personagens individuais, mas mantendo vínculo com o proprietário e com o relógio global conforme a decisão anterior.
@@ -69,7 +73,8 @@ Cada Shikigami deve ter identidade visual, imagem/token, ficha, HUD e indicadore
 ## Novas verificações de aceitação
 - [ ] Seleção e controle por HUD de invocação e por HUD do Controlador.
 - [ ] Campo configurável de tempo extra na criação de cada Shikigami.
-- [ ] Soma verificável dos tempos individuais ao relógio global do jogador.
+- [ ] Soma verificável dos tempos individuais ao relógio global do jogador, disparada ao invocar cada Shikigami, sem duplicação.
+- [ ] Reservas de tempo distintas e identificáveis na HUD, contribuindo para o relógio global.
 - [ ] Recursos e ações separados por invocação e independentes do saldo de ações do dono.
 - [ ] Autonomia e custos próprios configuráveis por invocação no OMNI.
 - [ ] Imagem, token, HUD, PV, rolagens e estados individualizados.
