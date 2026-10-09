@@ -103,6 +103,17 @@ Cada Shikigami deve ter identidade visual, imagem/token, ficha, HUD e indicadore
 - **Personalização:** limites do livro devem ser exibidos como avisos, conforme a decisão anterior do usuário. A interface e o sistema devem distinguir **criar uma ficha de invocação** de **ter adquirido aquela invocação no jogo**, evitando que a edição signifique aquisição gratuita.
 - **Trabalho pendente:** integrar confirmação de aquisição/Interlúdio, Treinamento em Controle real, propriedades de talismã, edição pelo Mestre, verificações de posse e testes de multiplayer. Não marcar como implementado só por exibir a aba.
 
+## Aprovação obrigatória pelo Mestre — 2026-10-09
+
+**Decisão confirmada:** todos os personagens podem criar e editar a ficha de uma invocação, mas a aquisição para uso no jogo exige **aprovação explícita do Mestre**. Criar ou salvar não equivale a obter o Shikigami.
+
+- Novos registros feitos por jogadores começam **pendentes de aprovação** e não podem ser invocados enquanto pendentes ou rejeitados.
+- O Mestre tem botões de **Aprovar** e **Rejeitar**; quando o Mestre registra diretamente a invocação, ela pode entrar aprovada.
+- Invocações antigas sem campo de aprovação são tratadas como legado já adquirido para não retirar criaturas existentes sem uma migração confirmada.
+- A aprovação deve ser verificada na lógica de materialização, além da interface.
+- A aprovação reconhece a aquisição; permanece necessária a aplicação de limites de campo, custos de PE e regras próprias de Interlúdio, quando aplicáveis.
+- **Pendente para revisão de segurança:** autorização reforçada por identidade/perfil no backend multiplayer, trilha de auditoria e revisão de edição após aprovação. A checagem de papel no cliente não constitui autorização confiável por si só.
+
 ## Checklist de implementação — pendente de validação funcional
 - [ ] Campos da ficha de criação e edição com alternância automática/manual individual.
 - [ ] Recálculo de PV, Defesa e outros valores derivados, respeitando o modo manual.
