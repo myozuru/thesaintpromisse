@@ -38,6 +38,20 @@ describe('Controlador — materialização real no mapa', () => {
     expect(invocarControlador('dono', 'a', 'sul').ok).toBe(false);
     expect(pegarFicha('dono').peCurrent).toBe(7);
   });
+  it('não permite materializar sem aprovação do Mestre', () => {
+    const dono = pegarFicha('dono');
+    useCharacterStore.getState().updateCharacter('dono', {
+      invocacoesConhecidas: (dono.invocacoesConhecidas ?? []).map(i => i.id === 'a' ? { ...i, aprovacaoMestre: 'pendente' } : i),
+    });
+    expect(invocarControlador('dono', 'a', 'leste').ok).toBe(false);
+    expect(pegarFicha('dono').peCurrent).toBe(10);
+    const atual = pegarFicha('dono');
+    useCharacterStore.getState().updateCharacter('dono', {
+      invocacoesConhecidas: (atual.invocacoesConhecidas ?? []).map(i => i.id === 'a' ? { ...i, aprovacaoMestre: 'aprovada' } : i),
+    });
+    expect(invocarControlador('dono', 'a', 'leste').ok).toBe(true);
+    expect(pegarFicha('dono').peCurrent).toBe(7);
+  });
   it('respeita limite, ocupação e PE sem criar tokens indevidos', () => {
     expect(invocarControlador('dono', 'a', 'leste').ok).toBe(true);
     expect(invocarControlador('dono', 'b', 'sul').ok).toBe(true);
