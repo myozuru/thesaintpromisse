@@ -35,6 +35,7 @@ import { canonicalizarChave } from './keyAliases';
 import { lerCaminhoOmni, montarVariaveisDoPersonagem } from './resolvedor';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useCombatStore } from '@/stores/useCombatStore';
+import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { useOmniRuntimeStore } from '@/stores/useOmniRuntimeStore';
 import { grantAdvantage, clearAllAdvantage, type AdvScope } from './rollAdvantage';
@@ -46,8 +47,12 @@ import { dadosCena } from './componentes/cena';
 import { dadosEventoDano } from './componentes/eventos';
 import { mesclarDados } from './componentes/legado';
 import { anexarDadosCompostos, extrairDadosCompostos } from './componentes/contexto';
+import { validarDestinoEscritaNatural } from './politicaEscritaNatural';
 
 const PROFUNDIDADE_MAX = 8;
+const ACOES_COM_DESTINO_ESCRITO = new Set<AcaoLogica['acao']>([
+  'CONSUMIR_RECURSO', 'SOMAR', 'SUBTRAIR', 'DEFINIR', 'MULTIPLICAR', 'DIVIDIR',
+]);
 
 /**
  * Expande "tipo:a,b,c" em ["tipo:a","tipo:b","tipo:c"]. Mantém "todas" e
@@ -226,6 +231,18 @@ function blocoVale(b: BlocoLogico, ctx: ContextoRuntime): boolean {
 // Execução de ações
 // =============================================================================
 
+function lerValorDestinoEscrita(
+  c: Character,
+  caminhoRaw: string,
+  extras?: Parameters<typeof aplicarEfeitoNoPersonagem>[4],
+): number {
+  if (canonicalizarChave(caminhoRaw) === 'usos_restantes') {
+    const item = extras?.itemInstanceId ? useInventoryStore.getState().items[extras.itemInstanceId] : undefined;
+    return item?.usosRestantes ?? item?.usosTotais ?? 0;
+  }
+  return lerCaminhoOmni(c, caminhoRaw);
+}
+
 function aplicarPatchNumerico(
   charId: string,
   caminhoRaw: string,
@@ -244,17 +261,38 @@ function aplicarPatchNumerico(
   const store = useCharacterStore.getState();
   const c = store.characters.find((x) => x.id === charId);
   if (!c) return;
-  const atual = lerCaminhoOmni(c, caminhoRaw);
+  const atual = lerValorDestinoEscrita(c, caminhoRaw, extras);
   const novo = modo === 'multiplicar' ? atual * delta : delta === 0 ? atual : atual / delta;
   aplicarEfeitoNoPersonagem(charId, 'MODIFICADOR', caminhoRaw, novo, extras);
 }
 
 function executarAcao(a: AcaoLogica, ctx: ContextoRuntime, log: (m: string) => void) {
-  const valor = resolverValorDinamico(a.valor, ctx);
   const alvoChar = personagemDoEscopo(ctx, a.alvoAplicacao);
   const nomeAlvo = alvoChar?.name ?? '—';
   const nomeOrigem = ctx.origemNome ?? 'Omni';
-  const extras = { attackerId: ctx.usuario?.id, damageType: a.tipoDano, sourceName: nomeOrigem };
+  const exigeDestinoEscrita = ACOES_COM_DESTINO_ESCRITO.has(a.acao);
+  let destinoItemId: string | undefined;
+  if (exigeDestinoEscrita) {
+    if (!a.caminhoAlvo?.trim()) {
+      log(`⛔ ${nomeOrigem}: ${a.acao} exige um destino de recurso.`);
+      return;
+    }
+    const destino = validarDestinoEscritaNatural(a.caminhoAlvo);
+    if (!destino.ok) {
+      log(`⛔ ${nomeOrigem}: ${destino.mensagem}`);
+      return;
+    }
+    if (destino.canal === 'item') {
+      destinoItemId = ctx.sourceInstanceId;
+      const item = destinoItemId ? useInventoryStore.getState().items[destinoItemId] : undefined;
+      if (!item || item.usosTotais === undefined) {
+        log(`⛔ ${nomeOrigem}: ${a.caminhoAlvo} exige uma instância de item com usos configurados.`);
+        return;
+      }
+    }
+  }
+  const valor = resolverValorDinamico(a.valor, ctx);
+  const extras = { attackerId: ctx.usuario?.id, damageType: a.tipoDano, sourceName: nomeOrigem, itemInstanceId: destinoItemId };
 
   switch (a.acao) {
     case 'DANO': {
@@ -278,7 +316,7 @@ function executarAcao(a: AcaoLogica, ctx: ContextoRuntime, log: (m: string) => v
         const red = alvoChar.omniCostReduction?.[key];
         let custo = Math.abs(valor);
         if (red && red.reduce > 0) custo = Math.max(red.min ?? 1, custo - red.reduce);
-        aplicarPatchNumerico(alvoChar.id, a.caminhoAlvo, Math.max(0, lerCaminhoOmni(alvoChar, a.caminhoAlvo) - custo), 'definir', extras);
+        aplicarPatchNumerico(alvoChar.id, a.caminhoAlvo, Math.max(0, lerValorDestinoEscrita(alvoChar, a.caminhoAlvo, extras) - custo), 'definir', extras);
         log(`${nomeOrigem}: ${nomeAlvo} gastou ${custo} em ${a.caminhoAlvo}${red ? ` (reduzido de ${Math.abs(valor)})` : ''}`);
       }
       break;

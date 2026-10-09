@@ -111,6 +111,14 @@ A validação de pacotes preserva e valida `ref.composicao`; antes, o schema Zod
 
 Validação desta etapa: os testes focados passaram em 4 arquivos (88 testes); a suíte OMNI executada passou em 99 arquivos (3.288 testes); `npx tsc --noEmit` e `git diff --check` sem erros. Foram adicionados testes de regressão para key inexistente comparada a zero, composição sem contexto, zero real de contador, e referências de cena com e sem valor. Isso fecha o consumidor do executor visual, não todos os consumidores do fallback legado nem a certificação total do catálogo.
 
+### Destinos visuais rejeitados quando não há escrita funcional
+
+O executor visual chamava o writer para qualquer caminho e registrava uma mensagem de sucesso mesmo quando o writer retornava `aplicado: 0` para uma key não suportada. A key `usos_restantes` também era anunciada no catálogo de escrita, mas o executor não encaminhava `sourceInstanceId`; o writer precisa desse ID para alterar a cópia correta do item.
+
+As ações numéricas visuais agora validam o destino pela mesma política de escrita do parser antes de avaliar ou aplicar a ação. Destino ausente/não suportado gera erro de runtime em vez de log de sucesso. Para `usos_restantes`, o executor exige uma instância de item com usos configurados, encaminha seu ID ao writer e lê o saldo da própria instância em operações de consumo, multiplicação e divisão.
+
+Validação desta etapa: os dois casos foram reproduzidos antes da correção. Depois, os testes focados passaram em 3 arquivos (134 testes), a suíte OMNI passou em 99 arquivos (3.290 testes), `npx tsc --noEmit` e `git diff --check` sem erros.
+
 ### Lacunas que seguem abertas
 
 O caminho direto legado `lerCaminhoOmni` ainda retorna zero para nomes desconhecidos por compatibilidade; consultas naturais estritas e o avaliador de fórmulas já oferecem erro/diagnóstico. Ainda falta auditar todos os consumidores que recebem esse diagnóstico, revisar a autorização no backend e certificar comportamento de ponta a ponta para gatilhos, ações e variáveis do catálogo. A lista histórica de 345 entradas continua sendo uma sondagem derivada do rascunho; ela não certifica todas as keys da versão atual.

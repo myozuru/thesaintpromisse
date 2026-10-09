@@ -10,6 +10,7 @@ import { novaEntidade, type CombatEffect, type EntidadeOmni, type AcaoLogica } f
 import type { GatilhoId } from '@/lib/omni/constantesDoSistema';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
+import { useLogStore } from '@/stores/useLogStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useOmniRuntimeStore } from '@/stores/useOmniRuntimeStore';
 import { useOmniSpatialStore } from '@/stores/useOmniSpatialStore';
@@ -136,6 +137,27 @@ describe('isolamento do dono de eventos', () => {
     }];
     expect(executarGatilho(e, 'aoMover', { usuario: pegarFicha('u') })).toBe(0);
     expect(pegarFicha('u').omniCounters?.teste).toBeUndefined();
+  });
+  it('ação visual recusa destino sem escrita em vez de registrar sucesso', () => {
+    useLogStore.getState().clearLogs();
+    const e = novaEntidade('passiva', 'Destino inválido');
+    e.gatilhos = [{ id: 'g', evento: 'aoMover', blocos: [{ id: 'b', modo: 'todas', condicoes: [], acoes: [{
+      id: 'a', acao: 'SOMAR', alvoAplicacao: 'USUARIO', caminhoAlvo: 'chave_inexistente', valor: { tipo: 'fixo', valor: 1 },
+    }] }] }];
+    executarGatilho(e, 'aoMover', { usuario: pegarFicha('u') });
+    const mensagens = useLogStore.getState().logs.map(log => log.message);
+    expect(mensagens.some(mensagem => mensagem.includes('não grava') && mensagem.includes('chave_inexistente'))).toBe(true);
+    expect(mensagens.some(mensagem => mensagem.includes('+1 em chave_inexistente'))).toBe(false);
+  });
+  it('ação visual altera usos_restantes na instância que originou o gatilho', () => {
+    const entidade = novaEntidade('item', 'Bomba'); entidade.usos = { total: 3, recarga: 'manual' };
+    const instancia = useInventoryStore.getState().add('u', entidade);
+    const e = novaEntidade('passiva', 'Gasto do item');
+    e.gatilhos = [{ id: 'g', evento: 'aoEquipar', blocos: [{ id: 'b', modo: 'todas', condicoes: [], acoes: [{
+      id: 'a', acao: 'SUBTRAIR', alvoAplicacao: 'USUARIO', caminhoAlvo: 'usos_restantes', valor: { tipo: 'fixo', valor: 1 },
+    }] }] }];
+    executarGatilho(e, 'aoEquipar', { usuario: pegarFicha('u'), sourceInstanceId: instancia.instanceId });
+    expect(useInventoryStore.getState().items[instancia.instanceId].usosRestantes).toBe(2);
   });
 });
 
