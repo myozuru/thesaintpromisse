@@ -33,6 +33,10 @@ const NOMES_TIPO_DANO: Record<string, DamageType> = {
   corte: 'DCO', perfuracao: 'DP',
   impacto: 'DI', fogo: 'DQ', chamas: 'DQ', frio: 'DCG', gelo: 'DCG', congelamento: 'DCG',
   eletrico: 'DCC', eletricidade: 'DCC', choque: 'DCC', som: 'DS', sonico: 'DS',
+  alma: 'DAL', dano_na_alma: 'DAL', 'dano na alma': 'DAL',
+  reversa: 'DNR', energia_reversa: 'DNR',
+  energia_amaldicoada: 'DE', 'energia amaldicoada': 'DE',
+  luz: 'DR', trevas: 'DN',
   mental: 'DPS', psiquico: 'DPS', necro: 'DN', veneno: 'DV',
 };
 

@@ -14,7 +14,10 @@ describe('aliases de tipos de dano OMNI', () => {
     ['Psíquico', 'DPS'], ['mental', 'DPS'], ['psíquico', 'DPS'],
     ['Radiante', 'DR'], ['Necrótico', 'DN'], ['necro', 'DN'],
     ['Venenoso', 'DV'], ['veneno', 'DV'],
-    ['na Alma', 'DAL'], ['Energia Reversa', 'DNR'], ['Energético', 'DE'],
+    ['alma', 'DAL'], ['na Alma', 'DAL'], ['dano_na_alma', 'DAL'],
+    ['Energia Reversa', 'DNR'], ['energia_reversa', 'DNR'], ['reversa', 'DNR'],
+    ['Energético', 'DE'], ['energia_amaldicoada', 'DE'], ['energia amaldicoada', 'DE'],
+    ['Radiante', 'DR'], ['luz', 'DR'], ['Necrótico', 'DN'], ['trevas', 'DN'], ['necro', 'DN'],
   ] as const)('resolve %s para o tipo canônico %s', (nome, esperado) => {
     expect(resolverTipoDano(nome)).toBe(esperado);
   });

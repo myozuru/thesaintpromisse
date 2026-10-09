@@ -6,6 +6,7 @@ vi.mock('@/integrations/supabase/safeClient', async () => ({ hasWorkspaceCloud: 
 vi.mock('@/lib/socket', () => ({ getSocket: () => null }));
 import inventory from '../../docs/omni/inventario-natural.json';
 import { ficha, montarMesa, pegarFicha, limparMesa } from './helpers/mesaReal';
+import { useCharacterStore } from '@/stores/useCharacterStore';
 import { montarVariaveisDoPersonagem, lerCaminhoOmni } from '@/lib/omni/resolvedor';
 import { avaliarFormula } from '@/lib/omni/parser';
 import { canonicalizarChave } from '@/lib/omni/keyAliases';
@@ -70,12 +71,27 @@ describe('inventário natural: sondagem da implementação existente', () => {
     expect(pegarFicha(c.id)).toEqual(before);
   });
 
-  it('distingue alias de tipo aprovado de alias ainda ausente', () => {
+  it('resolve aliases oficiais de tipos de dano e rejeita tipo sem correspondência', () => {
     expect(resolverTipoDano('corte')).toBe('DCO');
     expect(resolverTipoDano('Energético')).toBe('DE');
-    expect(resolverTipoDano('energia_amaldicoada')).toBeUndefined();
-    expect(resolverTipoDano('energia_reversa')).toBeUndefined();
+    expect(resolverTipoDano('energia_amaldicoada')).toBe('DE');
+    expect(resolverTipoDano('energia_reversa')).toBe('DNR');
     expect(resolverTipoDano('forca')).toBeUndefined();
+  });
+
+  it.each([
+    ['energia_reversa', 'DNR'],
+    ['energia_amaldicoada', 'DE'],
+  ] as const)('%s chega ao pipeline de dano como %s', (alias, codigo) => {
+    const c = ficha('damage-alias');
+    montarMesa([c], {});
+    const applyDamage = vi.spyOn(useCharacterStore.getState(), 'applyDamage').mockResolvedValue(undefined);
+    aplicarEfeitoNoPersonagem(c.id, 'SUBTRAIR', 'vida', 1, { damageType: alias });
+    expect(applyDamage).toHaveBeenCalledWith(c.id, 1, codigo, {
+      source: 'omni',
+      attackerId: undefined,
+    });
+    applyDamage.mockRestore();
   });
 
   it('contador_<nome>: lê e consome a instância nominal sem alterar outra', () => {

@@ -73,6 +73,12 @@ O executor agora restringe a escrita às chaves derivadas de `SISTEMA_PERICIAS` 
 
 Validação após a correção: `npx tsc --noEmit` concluiu sem erros; os dois arquivos focados passaram (28 testes); a suíte OMNI passou em 104 arquivos (3.320 testes). A correção foi publicada na `main` em `2e6c8ec`.
 
+### Aliases canônicos de dano corrigidos
+
+O catálogo oficial associa `energia_reversa` a `DNR` e `energia_amaldicoada` a `DE`; também define `dano_na_alma`, `luz` e `trevas` como aliases de `DAL`, `DR` e `DN`. O resolvedor reconhecia os rótulos apresentados pela ficha, mas deixava alguns desses nomes fora da tabela de aliases. Agora todos os nomes canônicos e aliases definidos no contrato são resolvidos, inclusive com sublinhado. Testes de integração confirmam que os aliases de energia chegam ao pipeline de dano como `DNR` e `DE`.
+
+Validação depois desta etapa: 3 arquivos focados, 92 testes aprovados; suíte OMNI em 104 arquivos, 3.333 testes aprovados; `npx tsc --noEmit` sem erros.
+
 ### Lacunas que seguem abertas
 
-A correção de perícias não fecha as outras incompatibilidades da tabela deste documento. Continuam em investigação os aliases de tipo de dano, os destinos que o parser aceita sem efeito persistido, a equivalência de leitura/escrita de proteções, os diagnósticos explícitos para nomes desconhecidos e os limites de autorização no backend. A lista de 345 entradas permanece uma sondagem derivada do rascunho, não uma certificação exaustiva do catálogo efetivamente exposto pela versão atual.
+A correção de perícias e a dos aliases de dano não fecham as outras incompatibilidades da tabela deste documento. Continuam em investigação os destinos que o parser aceita sem efeito persistido, a equivalência de leitura/escrita de proteções, os diagnósticos explícitos para nomes desconhecidos e os limites de autorização no backend. A lista de 345 entradas permanece uma sondagem derivada do rascunho, não uma certificação exaustiva do catálogo efetivamente exposto pela versão atual.
