@@ -77,6 +77,85 @@ export function erroDestinoCombatEffect(
   return undefined;
 }
 
+export type ResultadoValidacaoEfeitosFicha =
+  | { ok: true; ignorados: number[] }
+  | { ok: false; detalhe: string };
+
+/** Pré-valida efeitos de item antes de rolar ou aplicar qualquer um deles na ficha. */
+export function validarEfeitosAtivosDaFicha(
+  efeitos: readonly CombatEffect[],
+  ctx: Pick<ExecucaoContexto, 'usuarioId' | 'alvoId' | 'usuarioVars' | 'alvoVars' | 'itemVars' | 'resultados' | 'sourceInstanceId' | 'dano'>,
+  multiplicadorCritico = 1,
+): ResultadoValidacaoEfeitosFicha {
+  const resultados = [...(ctx.resultados ?? [])];
+  const ignorados: number[] = [];
+  const extras = () => ({
+    alvo: ctx.alvoVars ?? ctx.usuarioVars,
+    item: ctx.itemVars,
+    resultados,
+    dano: ctx.dano ? { ...ctx.dano } : undefined,
+  });
+  const avaliar = (expressao: string, rotulo: string): { ok: true; valor: number } | { ok: false; erro: string } => {
+    const r = avaliarFormula(expressao || '0', ctx.usuarioVars, () => 0.5, extras());
+    if (r.diagnosticos.length || !Number.isFinite(r.valor)) {
+      return { ok: false, erro: `${rotulo}: ${r.diagnosticos.map(d => d.mensagem).join('; ') || 'resultado não finito.'}` };
+    }
+    return { ok: true, valor: r.valor };
+  };
+
+  for (const [indice, eff] of efeitos.entries()) {
+    let condicaoFalsa = false;
+    if (eff.condition?.trim()) {
+      const condicao = avaliar(eff.condition, `Condição do efeito ${indice + 1}`);
+      if (!condicao.ok) return { ok: false, detalhe: condicao.erro };
+      condicaoFalsa = condicao.valor <= 0;
+      const dependeDoResultado = /@?RESULTADO[_ .]/i.test(eff.condition);
+      if (condicaoFalsa && !dependeDoResultado) {
+        ignorados.push(indice);
+        resultados.push(0);
+        continue;
+      }
+    }
+
+    if (eff.conditionApply) {
+      if (!ALL_CONDITIONS.some(c => c.id === eff.conditionApply!.id)) {
+        return { ok: false, detalhe: `Condição desconhecida: ${eff.conditionApply.id}` };
+      }
+      resultados.push(0);
+      continue;
+    }
+    if (eff.buttonOnly) {
+      resultados.push(0);
+      continue;
+    }
+    if (eff.diceSwitch) {
+      const dado = avaliar(eff.diceSwitch.dice, `Dado de seleção do efeito ${indice + 1}`);
+      if (!dado.ok) return { ok: false, detalhe: dado.erro };
+      resultados.push(Math.round(dado.valor));
+      continue;
+    }
+
+    const erroDestino = erroDestinoCombatEffect(eff, ctx.usuarioId, ctx.sourceInstanceId);
+    if (erroDestino) return { ok: false, detalhe: erroDestino };
+    const destino = validarDestinoAplicacao(eff.resourcePath);
+    if (destino.ok && destino.canal !== 'item' && !eff.transferencia && eff.target === 'ALVO' && !ctx.alvoId) {
+      return { ok: false, detalhe: 'Esta ação de ficha não tem um alvo selecionado para o efeito.' };
+    }
+    if (destino.ok && destino.canal !== 'item' && !eff.transferencia && eff.target === 'AREA') {
+      return { ok: false, detalhe: 'Esta ação de ficha não tem um seletor de área para o efeito.' };
+    }
+    const formula = avaliar(eff.formula || '0', `Fórmula do efeito ${indice + 1}`);
+    if (!formula.ok) return { ok: false, detalhe: formula.erro };
+    const teto = eff.counterCap ? avaliar(eff.counterCap, `Teto do efeito ${indice + 1}`) : undefined;
+    if (teto && !teto.ok) return { ok: false, detalhe: teto.erro };
+    const tetoFonte = eff.counterSourceLimit ? avaliar(eff.counterSourceLimit, `Teto por fonte do efeito ${indice + 1}`) : undefined;
+    if (tetoFonte && !tetoFonte.ok) return { ok: false, detalhe: tetoFonte.erro };
+    const valor = Math.round(formula.valor * (eff.type === 'SUBTRAIR' ? multiplicadorCritico : 1));
+    resultados.push(valor);
+  }
+  return { ok: true, ignorados };
+}
+
 /**
  * Decide o `targetId` final de um efeito.
  * - target = USUARIO → usuarioId

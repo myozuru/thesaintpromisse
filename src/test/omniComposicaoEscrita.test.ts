@@ -12,7 +12,7 @@ import { ficha, montarMesa, pegarFicha, limparMesa } from "./helpers/mesaReal";
 import { aplicarEfeitoNoPersonagem } from "@/lib/omni/aplicarEfeito";
 import { parseOmniScript } from "@/lib/omni/omniScript";
 import { destinoComposto } from "@/lib/omni/componentes/escrita";
-import { executarCombatEffect } from "@/lib/omni/executarSubEfeito";
+import { executarCombatEffect, validarEfeitosAtivosDaFicha } from "@/lib/omni/executarSubEfeito";
 import { lerCaminhoOmni, montarVariaveisDoPersonagem } from "@/lib/omni/resolvedor";
 import { validarDestinoEscritaNatural } from "@/lib/omni/politicaEscritaNatural";
 import { SISTEMA_PERICIAS } from "@/lib/omni/constantesDoSistema";
@@ -312,6 +312,28 @@ describe("destinos compostos graváveis", () => {
     });
     expect(result).toMatchObject({ aplicado: 0, invalido: true });
     expect(pegarFicha("item-owner").omniCounters).toBeUndefined();
+  });
+  it("reconhece o destino de uso do item mesmo com escopo @ITEM", () => {
+    expect(validarDestinoEscritaNatural("@ITEM.usos_restantes")).toMatchObject({
+      ok: true,
+      caminho: "usos_restantes",
+      canal: "item",
+    });
+  });
+  it("pré-valida fórmulas, condições e alvos antes do uso do item", () => {
+    montarMesa([ficha("item-owner", { hpCurrent: 20, hpMax: 20 })], {});
+    const parsed = parseOmniScript("somar 1 em pe", { defaultTarget: "USUARIO" });
+    const base = parsed.efeitos[0];
+    const contexto = { usuarioId: "item-owner", usuarioVars: montarVariaveisDoPersonagem(pegarFicha("item-owner")) };
+    expect(validarEfeitosAtivosDaFicha([{ ...base, formula: "@USUARIO.chave_inexistente + 2" }], contexto)).toMatchObject({
+      ok: false,
+      detalhe: expect.stringContaining("chave_inexistente"),
+    });
+    expect(validarEfeitosAtivosDaFicha([{ ...base, condition: "@USUARIO.vida < 10" }], contexto)).toEqual({ ok: true, ignorados: [0] });
+    expect(validarEfeitosAtivosDaFicha([{ ...base, target: "ALVO" }], contexto)).toMatchObject({
+      ok: false,
+      detalhe: expect.stringContaining("alvo selecionado"),
+    });
   });
   it("concede e consome vida temporária mesmo sem teto de escudo configurado", () => {
     montarMesa([ficha("sem-teto", { hpCurrent: 20, hpMax: 20, escCurrent: 0, escMax: 0 })], {});

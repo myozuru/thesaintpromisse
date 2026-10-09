@@ -31,8 +31,9 @@ import {
   aplicarEfeitoNoPersonagem,
   descreverAcaoEfeito,
   recursoBonito,
+  validarDestinoAplicacao,
 } from '@/lib/omni/aplicarEfeito';
-import { executarCombatEffect, erroDestinoCombatEffect } from '@/lib/omni/executarSubEfeito';
+import { executarCombatEffect, validarEfeitosAtivosDaFicha } from '@/lib/omni/executarSubEfeito';
 import { useSpellProposalStore } from '@/stores/useSpellProposalStore';
 import { usePassiveProposalStore } from '@/stores/usePassiveProposalStore';
 import { rollD20Com, rollDiceCom } from '@/lib/dice';
@@ -615,17 +616,6 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     const efeitosAtivos = cd?.effectsActive ?? [];
     if (!cd || efeitosAtivos.length === 0) return;
 
-    const efeitoComDestinoInvalido = efeitosAtivos.find((eff) =>
-      !eff.diceSwitch && !eff.conditionApply && !eff.buttonOnly
-        ? erroDestinoCombatEffect(eff, c.id, instance?.instanceId)
-        : false,
-    );
-    if (efeitoComDestinoInvalido) {
-      const motivo = erroDestinoCombatEffect(efeitoComDestinoInvalido, c.id, instance?.instanceId);
-      addLog('system', `⛔ ${nome}: destino de efeito inválido — ${motivo ?? 'verifique a configuração do item.'}`);
-      return;
-    }
-
     // ─── Gate de usos ────────────────────────────────────────────────
     if (instance && instance.usosTotais !== undefined) {
       if ((instance.usosRestantes ?? 0) <= 0) {
@@ -642,15 +632,55 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
           usos_totais: instance.usosTotais ?? 0,
         }
       : {};
+    const validacaoEfeitos = validarEfeitosAtivosDaFicha(efeitosAtivos, {
+      usuarioId: c.id,
+      usuarioVars,
+      alvoVars,
+      itemVars,
+      sourceInstanceId: instance?.instanceId,
+    });
+    if (!validacaoEfeitos.ok) {
+      addLog('system', `⛔ ${nome}: efeito inválido — ${validacaoEfeitos.detalhe}`);
+      return;
+    }
+    const efeitosIgnorados = new Set(validacaoEfeitos.ignorados);
+    if (efeitosIgnorados.size === efeitosAtivos.length) {
+      addLog('system', `ℹ️ ${nome}: nenhuma condição do item foi atendida.`);
+      return;
+    }
     const d20 = await rollD20Com(c.id);
     const isCrit = d20 >= (cd.critRange ?? 20);
     const mult = isCrit ? (cd.critMultiplier ?? 2) : 1;
     const resultados: number[] = [];
     const linhas: string[] = [];
+    let erroExecucao: string | undefined;
+    let efeitosExecutados = 0;
+    const indicesExecutados = new Set<number>();
     efeitosAtivos.forEach((eff, idx) => {
+      if (erroExecucao) { resultados.push(0); return; }
+      if (efeitosIgnorados.has(idx)) {
+        resultados.push(0);
+        linhas.push(`#${idx + 1} condição não atendida`);
+        return;
+      }
+      if (eff.condition?.trim()) {
+        const condicao = avaliarFormula(eff.condition, usuarioVars, () => 0.5, {
+          alvo: alvoVars, item: itemVars, resultados,
+        });
+        if (condicao.diagnosticos.length || !Number.isFinite(condicao.valor)) {
+          erroExecucao = `Condição inválida: ${condicao.diagnosticos.map(d => d.mensagem).join('; ') || 'resultado não finito.'}`;
+          resultados.push(0);
+          return;
+        }
+        if (condicao.valor <= 0) {
+          resultados.push(0);
+          linhas.push(`#${idx + 1} condição não atendida`);
+          return;
+        }
+      }
       // ─── 🎭 Keys especiais (diceSwitch / conditionApply / buttonOnly) ──
       // Roteiam pelo runtime unificado em vez do caminho numérico clássico.
-      if (eff.diceSwitch || eff.conditionApply || eff.buttonOnly) {
+      if (eff.diceSwitch || eff.conditionApply || eff.buttonOnly || eff.transferencia) {
         const r = executarCombatEffect(eff, {
           usuarioId: c.id,
           alvoId: c.id, // ficha não tem picker de alvo — herda do CharacterCard
@@ -662,7 +692,15 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
           sourceEntityId: instance?.entity.id,
           sourceInstanceId: instance?.instanceId,
         });
+        if (r.invalido) {
+          erroExecucao = r.detalhe ?? 'O efeito especial não pôde ser executado.';
+          resultados.push(0);
+          linhas.push(`#${idx + 1} inválido: ${erroExecucao}`);
+          return;
+        }
         resultados.push(r.aplicado);
+        efeitosExecutados++;
+        indicesExecutados.add(idx);
         const recipiente =
           eff.target === 'USUARIO' ? c.name
           : eff.target === 'AREA' ? 'Área'
@@ -677,6 +715,12 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
         item: itemVars,
         resultados,
       });
+      if (out.diagnosticos.length || !Number.isFinite(out.valor)) {
+        erroExecucao = `Fórmula inválida: ${out.diagnosticos.map(d => d.mensagem).join('; ') || 'resultado não finito.'}`;
+        resultados.push(0);
+        linhas.push(`#${idx + 1} inválido: ${erroExecucao}`);
+        return;
+      }
       const total = eff.type === 'SUBTRAIR' ? Math.round(out.valor * mult) : Math.round(out.valor);
       resultados.push(total);
       const rollsTxt = out.rolagens.map((r) => `${r.notacao}=[${r.rolls.join(',')}]`).join(' ');
@@ -690,9 +734,25 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
       // Caso especial: efeito mira `usos_restantes` do próprio item.
       const recursoLower = (eff.resourcePath || '').toLowerCase();
       let absorvidoPorBloqueio = false;
+      const limitesVars = { alvo: alvoVars, item: itemVars, resultados: resultados.slice(0, -1) };
+      const teto = eff.counterCap ? avaliarFormula(eff.counterCap, usuarioVars, undefined, limitesVars) : undefined;
+      const limiteFonte = eff.counterSourceLimit ? avaliarFormula(eff.counterSourceLimit, usuarioVars, undefined, limitesVars) : undefined;
+      if (teto?.diagnosticos.length || limiteFonte?.diagnosticos.length
+        || teto && !Number.isFinite(teto.valor) || limiteFonte && !Number.isFinite(limiteFonte.valor)) {
+        erroExecucao = `Teto inválido: ${[...(teto?.diagnosticos ?? []), ...(limiteFonte?.diagnosticos ?? [])].map(d => d.mensagem).join('; ') || 'resultado não finito.'}`;
+        resultados[resultados.length - 1] = 0;
+        linhas.push(`#${idx + 1} inválido: ${erroExecucao}`);
+        return;
+      }
       if (recursoLower === 'usos_restantes' && instance) {
-        const r = aplicarEfeitoNoPersonagem(c.id, eff.type, eff.resourcePath, total, {
+        aplicarEfeitoNoPersonagem(c.id, eff.type, eff.resourcePath, total, {
+          peSpellReduction: eff.peSpellReduction,
+          immunityGrant: eff.immunityGrant,
+          sourceName: nome,
+          damageType: eff.damageType,
+          attackerId: c.id,
           itemInstanceId: instance.instanceId,
+          contador: { teto: teto?.valor, porFonte: eff.counterPerSource, fonteId: c.id, limiteFonte: limiteFonte?.valor, periodoFonte: eff.counterSourcePeriod },
         });
       } else if (eff.target === 'USUARIO') {
         const r = aplicarEfeitoNoPersonagem(c.id, eff.type, eff.resourcePath, total, {
@@ -702,8 +762,13 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
           damageType: eff.damageType,
           attackerId: c.id,
           itemInstanceId: instance?.instanceId,
+          contador: { teto: teto?.valor, porFonte: eff.counterPerSource, fonteId: c.id, limiteFonte: limiteFonte?.valor, periodoFonte: eff.counterSourcePeriod },
         });
         if (r?.absorvidoPorBloqueio) absorvidoPorBloqueio = true;
+      }
+      if (recursoLower === 'usos_restantes' && instance || eff.target === 'USUARIO') {
+        efeitosExecutados++;
+        indicesExecutados.add(idx);
       }
       const sinal =
         absorvidoPorBloqueio ? '∅(bloqueio)' :
@@ -716,10 +781,21 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
       );
     });
 
+    if (erroExecucao) {
+      addLog('system', `⛔ ${nome}: ação interrompida — ${erroExecucao}`);
+      return;
+    }
+    if (efeitosExecutados === 0) {
+      addLog('system', `ℹ️ ${nome}: nenhuma condição do item foi atendida.`);
+      return;
+    }
+
     // ─── Consumo automático de uso (se o script não decrementou) ─────
-    const scriptDecrementou = efeitosAtivos.some(
-      (e) => (e.resourcePath || '').toLowerCase() === 'usos_restantes' && e.type === 'SUBTRAIR',
-    );
+    const scriptDecrementou = efeitosAtivos.some((e, idx) => {
+      if (!indicesExecutados.has(idx) || e.type !== 'SUBTRAIR') return false;
+      const destino = validarDestinoAplicacao(e.resourcePath);
+      return destino.ok && destino.canal === 'item';
+    });
     const usoDepoisDosEfeitos = instance
       ? useInventoryStore.getState().items[instance.instanceId]?.usosRestantes
       : undefined;

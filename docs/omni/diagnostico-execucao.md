@@ -151,3 +151,11 @@ Regressões adicionadas: destino desconhecido em watcher e gatilho não altera a
 Validação desta etapa: testes focados em 3 arquivos, 75 testes aprovados; suíte OMNI em 99 arquivos, 3.293 testes aprovados; `npx tsc --noEmit` e `git diff --check` sem erros. A suíte ampla foi executada com `--no-file-parallelism` para evitar erros de teardown do ambiente Vitest observados quando dois arquivos dependentes dos stores eram executados em workers paralelos.
 
 Esta etapa fecha a validação dos destinos numéricos nesses caminhos. A auditoria ainda não certifica todos os consumidores de fórmulas: por exemplo, a execução numérica manual da ficha precisa rejeitar fórmulas com diagnóstico, e o switch de dados precisa propagar falhas de subefeitos sem anunciar sucesso. Esses são os próximos casos a verificar.
+
+### Fórmulas, condições e custos no botão Usar item
+
+O uso direto de efeitos ativos da ficha tinha um caminho próprio. Ele podia rolar o d20 antes de descobrir uma fórmula inválida, ignorava condições numéricas, deixava passar destino ALVO sem alvo selecionado e não encaminhava limites de contador ao writer. Efeitos especiais de transferência também não passavam pelo executor compartilhado. Além disso, o teste de consumo automático não normalizava `@ITEM.usos_restantes`, podendo descontar o uso novamente.
+
+Agora a ficha pré-valida condições, fórmulas, tetos, destinos e contexto de alvo antes do d20. Condições falsas são ignoradas; se nenhuma for atendida, não há rolagem nem consumo. Erros encontrados durante a execução interrompem o restante da ação e não geram mensagem de sucesso. Limites de contador são encaminhados ao writer, transferências usam o executor compartilhado e o consumo automático reconhece `@ITEM.usos_restantes`.
+
+Validação desta etapa: suíte OMNI em 99 arquivos, 3.295 testes aprovados; `npx tsc --noEmit` sem erros. O teste específico de alias `@ITEM.usos_restantes` também passou. A pré-validação cobre o seletor do `diceSwitch`, mas ainda não percorre recursivamente todos os subefeitos dos ramos; a propagação de falhas nesses ramos permanece na próxima auditoria.
