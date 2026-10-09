@@ -109,6 +109,39 @@ describe('mescla de alterações concorrentes por campo', () => {
     expect(merged.omniCounters).toEqual({ rancor: 2, foco: 4 });
   });
 
+  it('soma contribuições de fontes distintas ao mesclar o mesmo contador', () => {
+    type Ficha = { id: string; omniCounters: Record<string, number>; _syncAt?: number; _syncFields?: Record<string, number> };
+    const base = { id: 'a', omniCounters: { rancor: 1, rancor__fonte__geral: 1 } };
+    const local: Ficha = {
+      ...base,
+      omniCounters: { ...base.omniCounters, rancor: 2, rancor__fonte__aliado_a: 1 },
+      _syncAt: 200,
+      _syncFields: {
+        [campo('omniCounters', 'rancor')]: 200,
+        [campo('omniCounters', 'rancor__fonte__geral')]: 100,
+        [campo('omniCounters', 'rancor__fonte__aliado_a')]: 200,
+      },
+    };
+    const remote: Ficha = {
+      ...base,
+      omniCounters: { ...base.omniCounters, rancor: 2, rancor__fonte__aliado_b: 1 },
+      _syncAt: 250,
+      _syncFields: {
+        [campo('omniCounters', 'rancor')]: 250,
+        [campo('omniCounters', 'rancor__fonte__geral')]: 100,
+        [campo('omniCounters', 'rancor__fonte__aliado_b')]: 250,
+      },
+    };
+
+    const merged = mergeIncomingCharacters([local], [remote])[0];
+    expect(merged.omniCounters).toEqual({
+      rancor: 3,
+      rancor__fonte__geral: 1,
+      rancor__fonte__aliado_a: 1,
+      rancor__fonte__aliado_b: 1,
+    });
+  });
+
   it('preserva exclusão explícita de um campo contra uma cópia antiga', () => {
     type Ficha = { id: string; notes?: string; _syncAt?: number; _syncFields?: Record<string, number> };
     const local: Ficha = { id: 'a', _syncAt: 200, _syncFields: { [campo('notes')]: 200 } };

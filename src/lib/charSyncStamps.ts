@@ -12,6 +12,7 @@ const FIELD_STORAGE_KEY = 'rpg-char-sync-field-stamps';
 /** Fichas criadas agora e ainda ausentes na cópia remota são mantidas. */
 const NEW_LOCAL_GRACE_MS = 15000;
 const META_FIELDS = new Set(['id', '_syncAt', '_syncFields']);
+const COUNTER_SOURCE_SEPARATOR = '__fonte__';
 
 const stamps = new Map<string, number>();
 const fieldStamps = new Map<string, Record<string, number>>();
@@ -199,6 +200,35 @@ function deletePath(target: JsonRecord, path: string[]) {
   }
 }
 
+/**
+ * Para contadores com contribuição por fonte, o total é derivado das parcelas.
+ * Mesclar o campo total por LWW perderia uma carga se dois aliados contribuíssem
+ * ao mesmo tempo em clientes diferentes, mesmo que cada parcela tivesse chave própria.
+ */
+function reconcileCounterTotals(character: JsonRecord, versions: Record<string, number>) {
+  const counters = asRecord(character.omniCounters);
+  if (!counters) return;
+
+  const names = new Set<string>();
+  for (const key of Object.keys(counters)) {
+    const separatorAt = key.indexOf(COUNTER_SOURCE_SEPARATOR);
+    if (separatorAt > 0) names.add(key.slice(0, separatorAt));
+  }
+
+  for (const name of names) {
+    const prefix = `${name}${COUNTER_SOURCE_SEPARATOR}`;
+    let total = 0;
+    let version = versions[pathKey(['omniCounters', name])] ?? 0;
+    for (const [key, value] of Object.entries(counters)) {
+      if (!key.startsWith(prefix) || typeof value !== 'number' || !Number.isFinite(value)) continue;
+      total += value;
+      version = Math.max(version, versions[pathKey(['omniCounters', key])] ?? 0);
+    }
+    defineOwn(counters, name, total);
+    versions[pathKey(['omniCounters', name])] = version;
+  }
+}
+
 function mergeCharacter<T extends WithId>(localInput: T, remoteInput: T, localIsMine: boolean): T {
   const local = withMetadata(localInput, localIsMine);
   const remote = withMetadata(remoteInput, false);
@@ -239,6 +269,8 @@ function mergeCharacter<T extends WithId>(localInput: T, remoteInput: T, localIs
     if (winner.exists) writePath(merged, winner.path, winner.value);
     else deletePath(merged, winner.path);
   }
+
+  reconcileCounterTotals(merged, mergedVersions);
 
   const syncAt = Math.max(local._syncAt ?? 0, remote._syncAt ?? 0, ...Object.values(mergedVersions), 0);
   (merged as WithId)._syncAt = syncAt;
