@@ -143,6 +143,41 @@ describe('mescla de alterações concorrentes por campo', () => {
     });
   });
 
+  it('revisão transacional vence snapshot antigo sem apagar outros campos', () => {
+    type Ficha = {
+      id: string;
+      hpCurrent: number;
+      omniCounters: Record<string, number>;
+      _omniCounterRevision?: number;
+      _syncAt?: number;
+      _syncFields?: Record<string, number>;
+    };
+    const local: Ficha = {
+      id: 'a', hpCurrent: 12, omniCounters: { rancor: 1 },
+      _omniCounterRevision: 8, _syncAt: 900,
+      _syncFields: { [campo('hpCurrent')]: 900, [campo('omniCounters', 'rancor')]: 900 },
+    };
+    const snapshotAntigo: Ficha = {
+      id: 'a', hpCurrent: 30, omniCounters: { rancor: 0 },
+      _omniCounterRevision: 7, _syncAt: 1200,
+      _syncFields: { [campo('hpCurrent')]: 700, [campo('omniCounters', 'rancor')]: 1200 },
+    };
+    const mergedAntigo = mergeIncomingCharacters([local], [snapshotAntigo])[0];
+    expect(mergedAntigo.omniCounters.rancor).toBe(1);
+    expect(mergedAntigo.hpCurrent).toBe(12);
+
+    const estadoCanonico: Ficha = {
+      ...snapshotAntigo,
+      hpCurrent: 30,
+      omniCounters: { rancor: 4 },
+      _omniCounterRevision: 9,
+    };
+    const mergedCanonico = mergeIncomingCharacters([mergedAntigo], [estadoCanonico])[0];
+    expect(mergedCanonico.omniCounters.rancor).toBe(4);
+    expect(mergedCanonico.hpCurrent).toBe(12);
+    expect(mergedCanonico._omniCounterRevision).toBe(9);
+  });
+
   it('respeita o teto global ao mesclar fontes que incrementaram em paralelo', () => {
     type Ficha = {
       id: string;

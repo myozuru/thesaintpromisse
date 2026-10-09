@@ -74,6 +74,12 @@ export type Database = {
         }
         Relationships: []
       }
+      omni_counter_states: {
+        Row: { character_id: string; counters: Json; revision: number; source_usage: Json; updated_at: string }
+        Insert: { character_id: string; counters?: Json; revision?: number; source_usage?: Json; updated_at?: string }
+        Update: { character_id?: string; counters?: Json; revision?: number; source_usage?: Json; updated_at?: string }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -106,6 +112,10 @@ export type Database = {
         Returns: boolean
       }
       list_masters: { Args: never; Returns: string[] }
+      apply_omni_counter_operation: {
+        Args: { p_actor_character_id: string; p_character_id: string; p_mutations: Json; p_operation_id: string }
+        Returns: Json
+      }
       set_master: {
         Args: { _make: boolean; _target: string }
         Returns: undefined

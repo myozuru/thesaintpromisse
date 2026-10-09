@@ -401,6 +401,14 @@ export const useCombatStore = create<CombatStore>()(
             ...c.omniCounters, __omni_rodada: 1, cura_recebida_nesta_rodada: 0,
             dano_recebido_nesta_rodada: 0, vida_perdida_nesta_rodada: 0,
           }, ...(omniActionCost ? { omniActionCost } : {}) });
+          void import('@/lib/omni/contadorSync').then(({ sincronizarOperacoesContadorOmni }) => {
+            sincronizarOperacoesContadorOmni(c.id, [
+              { action: 'DEFINIR_CONTADOR', name: '__omni_rodada', amount: 1 },
+              { action: 'DEFINIR_CONTADOR', name: 'cura_recebida_nesta_rodada', amount: 0 },
+              { action: 'DEFINIR_CONTADOR', name: 'dano_recebido_nesta_rodada', amount: 0 },
+              { action: 'DEFINIR_CONTADOR', name: 'vida_perdida_nesta_rodada', amount: 0 },
+            ], c.id);
+          }).catch(() => {});
         }
         const sorted = [...entries].sort((a, b) => b.total - a.total);
         set((s) => ({

@@ -13,7 +13,7 @@ import { destinoComposto } from "./componentes/escrita";
  * Reuso: chamado pelo CharacterCard (handleAttackWithItem) e por qualquer
  * outro consumidor do Omni-Engine que precise materializar um efeito.
  */
-import { calcularContador } from "./contadores";
+import { aplicarOperacoesContadorOmni } from "./contadorSync";
 import { useCharacterStore } from "@/stores/useCharacterStore";
 import { useCombatStore } from "@/stores/useCombatStore";
 import { useInventoryStore } from "@/stores/useInventoryStore";
@@ -194,20 +194,20 @@ export function aplicarEfeitoNoPersonagem(
         : periodoFonte === 'descanso'
           ? `descanso:${c.omniCounterRestCycle ?? 0}`
           : undefined;
-      const res = calcularContador(c.omniCounters ?? {}, nome, acao, {
-        valor,
-        teto: extras?.contador?.teto,
-        escopoTeto: "global",
-        rastrearFonte: Boolean(destino?.contador?.fonte || extras?.contador?.porFonte || limiteFonte !== undefined),
-        limiteFonte,
-        cicloFonte,
-        usoPorFonte: c.omniCounterSourceUsage,
-        fonteId: destino?.contador?.fonte ?? extras?.contador?.fonteId,
-        fonteExata: Boolean(destino?.contador?.fonte),
-      });
-      store.updateCharacter(charId, { omniCounters: res.counters, omniCounterSourceUsage: res.usoPorFonte });
-      notificarAtualizacaoContadores(charId, c.omniCounters, res.counters);
-      return { aplicado: res.counters[nome] ?? 0, consumido: res.consumido };
+      const res = aplicarOperacoesContadorOmni(charId, [{
+        action: acao,
+        name: nome,
+        amount: valor,
+        cap: extras?.contador?.teto,
+        scope: 'global',
+        trackSource: Boolean(destino?.contador?.fonte || extras?.contador?.porFonte || limiteFonte !== undefined),
+        sourceLimit: limiteFonte,
+        cycle: cicloFonte,
+        sourceId: destino?.contador?.fonte ?? extras?.contador?.fonteId,
+        exactSource: Boolean(destino?.contador?.fonte),
+      }], extras?.attackerId ?? charId)[0];
+      if (res) notificarAtualizacaoContadores(charId, c.omniCounters, res.counters);
+      return { aplicado: res?.counters[nome] ?? 0, consumido: res?.consumido ?? 0 };
     }
   }
 
@@ -255,14 +255,16 @@ export function aplicarEfeitoNoPersonagem(
 
   // ─── 🥵 Fadiga / Exaustão ───────────────────────────────────────────
   if (path === "fadiga") {
-    const counters = { ...(c.omniCounters ?? {}) };
-    const atual = counters.fadiga ?? 0;
-    let novo: number;
-    if (tipo === "SUBTRAIR") novo = Math.max(0, atual - Math.round(valor));
-    else if (tipo === "ADICIONAR") novo = atual + Math.round(valor);
-    else novo = Math.max(0, Math.round(valor));
-    counters.fadiga = novo;
-    store.updateCharacter(charId, { omniCounters: counters });
+    if (tipo === "SUBTRAIR" && Math.round(valor) <= 0)
+      return { aplicado: c.omniCounters?.fadiga ?? 0 };
+    const action = tipo === "SUBTRAIR" ? "CONSUMIR_CONTADOR" : tipo === "ADICIONAR" ? "INCREMENTAR_CONTADOR" : "DEFINIR_CONTADOR";
+    const res = aplicarOperacoesContadorOmni(
+      charId,
+      [{ action, name: "fadiga", amount: Math.max(0, Math.round(valor)) }],
+      extras?.attackerId ?? charId,
+    )[0];
+    const novo = res?.counters.fadiga ?? c.omniCounters?.fadiga ?? 0;
+    if (res) notificarAtualizacaoContadores(charId, c.omniCounters, res.counters);
     return { aplicado: novo };
   }
   if (path === "exaustao" || path === "exhaustion") {

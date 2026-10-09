@@ -41,7 +41,7 @@ import { useLogStore } from '@/stores/useLogStore';
 import { useOmniRuntimeStore } from '@/stores/useOmniRuntimeStore';
 import { grantAdvantage, clearAllAdvantage, type AdvScope } from './rollAdvantage';
 import { adicionarImunidade, removerImunidade, formatarImunidade } from './immunity';
-import { calcularContador } from './contadores';
+import { aplicarOperacoesContadorOmni } from './contadorSync';
 import { normalizarIdentificadorCustoAcao } from './custosAtivos';
 import { aplicarEfeitoNoPersonagem } from './aplicarEfeito';
 import { avaliarComposicao } from './componentes/avaliar';
@@ -614,26 +614,26 @@ function executarAcao(a: AcaoLogica, ctx: ContextoRuntime, log: (m: string) => v
         : a.periodoFonte === 'descanso'
           ? `descanso:${fresh.omniCounterRestCycle ?? 0}`
           : undefined;
-      const res = calcularContador(fresh.omniCounters ?? {}, key, a.acao, {
-        valor: a.acao === 'INCREMENTAR_CONTADOR' && !a.valor ? 1 : valor,
-        teto: a.teto ? resolverValorDinamico(a.teto, ctx) : undefined,
-        escopoTeto: 'global',
-        rastrearFonte: a.escopoTeto === 'porFonte' || limiteFonte !== undefined,
-        limiteFonte,
-        cicloFonte,
-        usoPorFonte: fresh.omniCounterSourceUsage,
-        fonteId: fonteDoContador(ctx.evento, ctx.usuario?.id, ctx.alvo?.id),
-      });
-      const counters = res.counters;
-      useCharacterStore.getState().updateCharacter(alvoChar.id, { omniCounters: counters, omniCounterSourceUsage: res.usoPorFonte });
+      const res = aplicarOperacoesContadorOmni(alvoChar.id, [{
+        action: a.acao,
+        name: key,
+        amount: a.acao === 'INCREMENTAR_CONTADOR' && !a.valor ? 1 : valor,
+        cap: a.teto ? resolverValorDinamico(a.teto, ctx) : undefined,
+        scope: 'global',
+        trackSource: a.escopoTeto === 'porFonte' || limiteFonte !== undefined,
+        sourceLimit: limiteFonte,
+        cycle: cicloFonte,
+        sourceId: fonteDoContador(ctx.evento, ctx.usuario?.id, ctx.alvo?.id),
+      }], ctx.usuario?.id ?? alvoChar.id)[0];
+      const counters = useCharacterStore.getState().characters.find(x => x.id === alvoChar.id)?.omniCounters ?? fresh.omniCounters ?? {};
       if (a.acao === 'CONSUMIR_CONTADOR') {
         // Disponível para as próximas ações do mesmo bloco: @CENA.consumido
-        ctx.cena = { ...(ctx.cena ?? {}), consumido: res.consumido };
-        log(`${nomeOrigem}: ${nomeAlvo} consumiu ${res.consumido} de ${key} (restam ${counters[key] ?? 0})`);
+        ctx.cena = { ...(ctx.cena ?? {}), consumido: res?.consumido ?? 0 };
+        log(`${nomeOrigem}: ${nomeAlvo} consumiu ${res?.consumido ?? 0} de ${key} (restam ${counters[key] ?? 0})`);
       } else {
         log(`${nomeOrigem}: ${nomeAlvo}.contador.${key} = ${counters[key]}`);
       }
-      notificarAtualizacaoContadores(alvoChar.id, fresh.omniCounters, counters, true);
+      if (res) notificarAtualizacaoContadores(alvoChar.id, fresh.omniCounters, res.counters, true);
       break;
     }
     // ── Redutor de custo de recurso ─────────────────────────────────────

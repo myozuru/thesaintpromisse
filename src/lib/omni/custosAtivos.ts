@@ -3,7 +3,7 @@ import type { Character } from '@/types';
 import type { AcaoAtivaConfig } from './tipos';
 import { avaliarFormula } from './parser';
 import { montarVariaveisDoPersonagem } from './resolvedor';
-import { calcularContador } from './contadores';
+import { aplicarOperacoesContadorOmni } from './contadorSync';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
@@ -191,7 +191,6 @@ export function patchCustosAtivos(u: Character, p: PlanoCustosAtivos): Partial<C
   if (p.acao === 'completa') patch.actionsCurrent = Math.max(0, (u.actionsCurrent ?? 1) - 2);
   if (p.acao === 'bonus') patch.bonusActionsCurrent = Math.max(0, (u.bonusActionsCurrent ?? 1) - 1);
   if (p.acao === 'reacao') patch.reactionsCurrent = Math.max(0, (u.reactionsCurrent ?? u.reactionsMax ?? 1) - 1);
-  if (p.contador && p.cargas > 0) patch.omniCounters = calcularContador(u.omniCounters ?? {}, p.contador, 'CONSUMIR_CONTADOR', { valor: p.cargas }).counters;
   if (p.custoAcaoOmniKey) {
     const atual = u.omniActionCost?.[p.custoAcaoOmniKey];
     if (atual) patch.omniActionCost = {
@@ -243,10 +242,7 @@ export function nomeContadorAtivo(nome: string): string {
 
 /** Zera um contador e sua contabilidade por fonte. */
 export function zerarContadorAtivo(charId: string, nome: string): void {
-  const store = useCharacterStore.getState(), u = store.characters.find(c => c.id === charId);
-  if (!u?.omniCounters) return;
-  const counters = Object.fromEntries(Object.entries(u.omniCounters).filter(([k]) => k !== nome && !k.startsWith(`${nome}__`)));
-  store.updateCharacter(charId, { omniCounters: counters });
+  aplicarOperacoesContadorOmni(charId, [{ action: 'ZERAR_CONTADOR', name: nome, amount: 0 }], charId);
 }
 
 type Sustentacao = NonNullable<Character['omniSustentacoes']>[number];

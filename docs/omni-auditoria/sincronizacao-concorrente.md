@@ -21,9 +21,13 @@ A sincronização anterior escolhia uma ficha inteira pelo `_syncAt`. Duas telas
 - `npx tsc --noEmit` — aprovado.
 - `git diff --check` nos arquivos da etapa — aprovado.
 
-## Limite remanescente
+## Operações atômicas dos contadores
 
-Contadores com fontes diferentes preservam contribuições distintas e respeitam o teto global sincronizado. Ainda não existe soma segura para operações concorrentes no mesmo caminho de fonte nem para contadores sem rastreamento por fonte: nesses casos prevalece a versão determinística do caminho. Gastos e redefinições concorrentes também não preservam a intenção de cada operação. Resolver todos esses casos exige persistir operações idempotentes (incremento, gasto e redefinição) com identidade própria e aplicação atômica; inferir a intenção apenas pela diferença entre snapshots não é seguro. Arrays continuam sendo valores atômicos.
+O estado autoritativo agora fica em `omni_counter_states`, separado do snapshot completo de `realtime_world.characters`. Cada incremento, consumo ou redefinição usa `apply_omni_counter_operation`: o banco trava a linha da ficha, aplica a operação e grava o ID idempotente e o resultado na mesma transação. Histórico de dano e cura também usa a mesma sequência transacional.
+
+A operação informa a ficha de origem. O banco só aceita a gravação quando a conta controla essa ficha ou é Mestre. A leitura do saldo continua restrita ao Mestre e ao dono da ficha afetada; outros clientes recebem somente uma confirmação sem saldo. A revisão autoritativa impede que snapshots antigos sobrescrevam o estado transacional.
+
+A migração ainda precisa ser aplicada ao Supabase. Até isso acontecer, o cliente mantém a atualização otimista local e registra falhas da RPC. O teste local não comprova concorrência real entre duas sessões. Custos de PE, PV, ação e munição continuam armazenados no fluxo de ficha; esta transação garante atomicidade entre operações de contador, mas ainda não combina esses custos em uma única transação.
 
 ## Supabase
 

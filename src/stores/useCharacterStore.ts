@@ -2664,6 +2664,18 @@ export const useCharacterStore = create<CharacterStore>()(
           void import('@/lib/portasDaMorte').then((m) => m.aposDano(id, hpAntesPorta, danoPorta)).catch(() => {});
         }
         const postSet = get().characters.find((c) => c.id === id);
+        if (damageResolved && postSet) {
+          const danoRegistrado = Math.max(0, preEsc - (postSet.escCurrent ?? 0)) + Math.max(0, preHp - postSet.hpCurrent);
+          const danoTemporario = Math.max(0, preEsc - (postSet.escCurrent ?? 0));
+          void import('@/lib/omni/contadorSync').then(({ sincronizarOperacoesContadorOmni }) => {
+            sincronizarOperacoesContadorOmni(id, [{
+              action: 'DAMAGE_HISTORY',
+              amount: danoRegistrado,
+              temporary: danoTemporario,
+              round: useCombatStore.getState().round,
+            }], opts?.attackerId ?? id);
+          }).catch(() => {});
+        }
         // ─── Suporte — Protetor (aliado adjacente sofreu dano) ─────────────
         // Se um Suporte com a habilidade, escudo equipado e PE estiver a até
         // 1,5 m do alvo, oferece a redução retroativa (Xd10 + mod) ao dono da
@@ -2912,6 +2924,15 @@ export const useCharacterStore = create<CharacterStore>()(
             return { ...c, hpCurrent: newHp, omniCounters };
           }),
         }));
+        if (healedAmount > 0) {
+          void import('@/lib/omni/contadorSync').then(({ sincronizarOperacoesContadorOmni }) => {
+            sincronizarOperacoesContadorOmni(
+              id,
+              [{ action: 'HEALING_HISTORY', amount: healedAmount, round: useCombatStore.getState().round }],
+              healerId ?? id,
+            );
+          }).catch(() => {});
+        }
         if (healedAmount > 0) void import('@/lib/portasDaMorte').then((m) => m.aposCura(id)).catch(() => {});
         // ─── Omni-Engine: emite gatilho de cura recebida ───────────────────
         if (healedAmount > 0) {

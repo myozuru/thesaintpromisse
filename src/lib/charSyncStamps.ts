@@ -5,7 +5,7 @@ import { CHAVE_TETO_GLOBAL_CONTADOR, CICLO_TETO_GLOBAL_CONTADOR } from './omni/c
  * compatibilidade; `_syncFields` guarda versões por caminho para que uma
  * alteração em Vida não apague, por exemplo, uma alteração concorrente em PE.
  */
-type WithId = { id: string; _syncAt?: number; _syncFields?: Record<string, number> };
+type WithId = { id: string; _syncAt?: number; _syncFields?: Record<string, number>; _omniCounterRevision?: number };
 type JsonRecord = Record<string, unknown>;
 type FieldValues = Map<string, unknown>;
 
@@ -13,7 +13,7 @@ const STORAGE_KEY = 'rpg-char-sync-stamps';
 const FIELD_STORAGE_KEY = 'rpg-char-sync-field-stamps';
 /** Fichas criadas agora e ainda ausentes na cópia remota são mantidas. */
 const NEW_LOCAL_GRACE_MS = 15000;
-const META_FIELDS = new Set(['id', '_syncAt', '_syncFields']);
+const META_FIELDS = new Set(['id', '_syncAt', '_syncFields', '_omniCounterRevision']);
 const COUNTER_SOURCE_SEPARATOR = '__fonte__';
 
 const stamps = new Map<string, number>();
@@ -275,6 +275,8 @@ function mergeCharacter<T extends WithId>(localInput: T, remoteInput: T, localIs
   const remoteValues = valuesOf(remote);
   const localVersions = cleanFieldStamps(local._syncFields);
   const remoteVersions = cleanFieldStamps(remote._syncFields);
+  const localCounterRevision = Math.max(0, local._omniCounterRevision ?? 0);
+  const remoteCounterRevision = Math.max(0, remote._omniCounterRevision ?? 0);
   const keys = new Set([
     ...localValues.keys(), ...remoteValues.keys(),
     ...Object.keys(localVersions), ...Object.keys(remoteVersions),
@@ -296,7 +298,10 @@ function mergeCharacter<T extends WithId>(localInput: T, remoteInput: T, localIs
     const localTieKey = `${lv.exists ? '1' : '0'}:${lv.exists ? stableSerialize(lv.value) : ''}`;
     const remoteTieKey = `${rv.exists ? '1' : '0'}:${rv.exists ? stableSerialize(rv.value) : ''}`;
     const chooseLocal = ls > rs || (ls === rs && localTieKey >= remoteTieKey);
-    const chosen = localOnlyValue ? lv : remoteOnlyValue ? rv : chooseLocal ? lv : rv;
+    const isCounterState = path[0] === 'omniCounters' || path[0] === 'omniCounterSourceUsage';
+    const remoteCounterIsNewer = isCounterState && remoteCounterRevision > localCounterRevision;
+    const localCounterIsNewer = isCounterState && localCounterRevision > remoteCounterRevision;
+    const chosen = remoteCounterIsNewer ? rv : localCounterIsNewer ? lv : localOnlyValue ? lv : remoteOnlyValue ? rv : chooseLocal ? lv : rv;
     const version = Math.max(ls, rs);
     mergedVersions[key] = version;
     winners.push({ key, path, exists: chosen.exists, value: chosen.value, version });
@@ -314,6 +319,7 @@ function mergeCharacter<T extends WithId>(localInput: T, remoteInput: T, localIs
   const syncAt = Math.max(local._syncAt ?? 0, remote._syncAt ?? 0, ...Object.values(mergedVersions), 0);
   (merged as WithId)._syncAt = syncAt;
   (merged as WithId)._syncFields = mergedVersions;
+  (merged as WithId)._omniCounterRevision = Math.max(localCounterRevision, remoteCounterRevision);
   stamps.set(local.id, Math.max(stamps.get(local.id) ?? 0, syncAt));
   fieldStamps.set(local.id, mergedVersions);
   return merged as T;

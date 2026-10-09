@@ -38,6 +38,7 @@ import { assetDB } from '@/components/mapa/assetDB';
 import { assetCache } from '@/components/mapa/assetCache';
 import { hasWorkspaceCloud, supabase } from '@/integrations/supabase/safeClient';
 import { useFogStore } from '@/stores/fogStore';
+import { aplicarEventoContadorOmni, aplicarSnapshotContadoresOmni, type SnapshotContadoresOmni } from '@/lib/omni/contadorSync';
 import { mergeTempTemplates, useTempTemplateStore, type TempTemplate } from '@/stores/useTempTemplateStore';
 import { getProtectedRemoteEntityPatchIds, getRecentLocalEntityEdits, markLocalEntityEdits, shouldIgnoreRemoteMapScene } from '@/components/mapa/mapSyncGuards';
 
@@ -597,6 +598,9 @@ export function useMultiplayerSync() {
       if (hasWorkspaceCloud && isMasterControlledWorldSlice(p.slice)) return;
       applyRemote(p.slice, p.data);
     });
+    worldBus.on('postgres_changes', { event: '*', schema: 'public', table: 'omni_counter_states' }, ({ new: row }) => {
+      aplicarEventoContadorOmni(row as SnapshotContadoresOmni | null);
+    });
     worldBus.on('broadcast', { event: 'amizade' }, ({ payload }) => {
       void import('@/lib/suporteNivel2').then(({ useAmizadePromptStore, shouldSeeAmizadePrompt, reduceAmizadeMessage }) => {
         const st = useAmizadePromptStore.getState();
@@ -890,6 +894,13 @@ export function useMultiplayerSync() {
         if (row.slice === 'tempTemplates' || row.slice === 'worldBosses' || row.slice === 'worldBossesMaster') continue;
         if (row.data !== null) applyRemote(row.slice as WorldSlice, row.data);
       }
+      void supabase.from('omni_counter_states').select('character_id,counters,source_usage,revision').then(({ data: counterRows, error: counterError }) => {
+        if (counterError) {
+          console.warn('[sync] falha ao carregar contadores OMNI:', counterError.message);
+          return;
+        }
+        aplicarSnapshotContadoresOmni((counterRows ?? []) as SnapshotContadoresOmni[]);
+      });
       if (privateBossRow?.data && useRoleStore.getState().role === 'MASTER') {
         applyRemote('worldBossesMaster', privateBossRow.data);
         const masterBossState = useBossStore.getState();

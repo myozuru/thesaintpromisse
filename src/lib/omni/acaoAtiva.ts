@@ -11,6 +11,7 @@ import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useReactionStore } from '@/stores/useReactionStore';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { nomeContadorAtivo, planejarCustosAtivos, validarRecursosAtivos, patchCustosAtivos, consumirUsosItemAtivo, consumirMunicaoAtiva, type ContextoCustosAtivos } from './custosAtivos';
+import { aplicarOperacoesContadorOmni } from './contadorSync';
 import { prepararMovimentosAtivos, aplicarMovimentoAtivo, validarPlanoMovimento, type PlanoMovimentoAtivo, type OpcoesMovimentoAtivo } from './movimentosAtivos';
 import { avaliarCondicionaisAtivos } from './condicionaisAtivos';
 import { applyAdvantageToD20, consumeAdvantageFor, consumeFlatBonusFor } from './rollAdvantage';
@@ -519,7 +520,15 @@ async function executarAcaoAtivaInterna(
     if (!consumirMunicaoAtiva(p)) return { ok: false, reason: 'A munição mudou antes de a ação ser concluída.' };
     store.updateCharacter(u.id, patchPago);
   }
-  if (patchPago.omniCounters) notificarAtualizacaoContadores(u.id, u.omniCounters, patchPago.omniCounters);
+  if (p.contador && p.cargas > 0) {
+    const antes = useCharacterStore.getState().characters.find(c => c.id === u.id)?.omniCounters ?? u.omniCounters;
+    const resultadoContador = aplicarOperacoesContadorOmni(u.id, [{
+      action: 'CONSUMIR_CONTADOR',
+      name: p.contador,
+      amount: p.cargas,
+    }], u.id)[0];
+    if (resultadoContador) notificarAtualizacaoContadores(u.id, antes, resultadoContador.counters);
+  }
   const fonte = ent?.nome ?? cfg.nome;
   if (ent?.categoria === 'feitico') notificarEventoPersonagem('aoConjurarFeitico', u.id, fonte, { custoPE: p.pe });
   else if (ent?.categoria === 'talento') notificarEventoPersonagem('aoUsarTalento', u.id, fonte);
@@ -779,8 +788,12 @@ async function executarAcaoAtivaInterna(
     const qtd = quantidadeValida ? quantidade.valor : 0;
     if (atual && qtd > 0) {
       const antes = atual.omniCounters ?? {};
-      const depois = { ...antes, [contadorGerado]: (gerar.modo === 'somar' ? (antes[contadorGerado] ?? 0) : 0) + qtd };
-      useCharacterStore.getState().updateCharacter(usuarioId, { omniCounters: depois });
+      aplicarOperacoesContadorOmni(usuarioId, [{
+        action: gerar.modo === 'somar' ? 'INCREMENTAR_CONTADOR' : 'DEFINIR_CONTADOR',
+        name: contadorGerado,
+        amount: qtd,
+      }], usuarioId);
+      const depois = useCharacterStore.getState().characters.find(c => c.id === usuarioId)?.omniCounters ?? antes;
       notificarAtualizacaoContadores(usuarioId, antes, depois);
       const msg = `✨ ${atual.name}: ${cfg.nome} gera ${qtd} carga(s) de ${contadorGerado} (total ${depois[contadorGerado]}).`;
       log(msg); detalhes.push(msg);
