@@ -174,6 +174,90 @@ describe('Runtime executarCombatEffect: diceSwitch', () => {
       Math.random = orig;
     }
   });
+
+  it('recusa subefeito inválido em switch aninhado antes de mutar a ficha', () => {
+    const root = parseOmniScript('rolar 1d4 entao ( 1: aplicar cego em usuario )').efeitos[0];
+    const condicao = parseOmniScript('aplicar cego em usuario').efeitos[0];
+    const folhaInvalida = {
+      ...parseOmniScript('somar 1 em vida', { defaultTarget: 'USUARIO' }).efeitos[0],
+      formula: '@USUARIO.chave_inexistente + 2',
+    };
+    const switchInterno = {
+      ...root,
+      diceSwitch: {
+        dice: '1d2',
+        branches: [{ values: [1], effects: [folhaInvalida] }],
+      },
+    };
+    const efeito = {
+      ...root,
+      diceSwitch: {
+        dice: '1d4',
+        branches: [{ values: [1], effects: [condicao, switchInterno] }],
+      },
+    };
+    const orig = Math.random;
+    try {
+      Math.random = () => 0;
+      const resultado = executarCombatEffect(efeito, { usuarioId: 'c1', usuarioVars: {} });
+      expect(resultado).toMatchObject({ invalido: true, aplicado: 0 });
+      expect(resultado.detalhe).toMatch(/chave_inexistente/);
+      const c = useCharacterStore.getState().characters.find((x) => x.id === 'c1')!;
+      expect(c.activeConditions).toEqual([]);
+    } finally {
+      Math.random = orig;
+    }
+  });
+
+  it('avalia condições dos subefeitos dentro do ramo', () => {
+    const efeito = parseOmniScript('rolar 1d4 entao ( 1: aplicar cego em usuario )').efeitos[0];
+    const aplicar = parseOmniScript('aplicar cego em usuario').efeitos[0];
+    const condicionado = {
+      ...efeito,
+      diceSwitch: {
+        dice: '1d4',
+        branches: [{ values: [1], effects: [{ ...aplicar, condition: '0' }] }],
+      },
+    };
+    const orig = Math.random;
+    try {
+      Math.random = () => 0;
+      const resultado = executarCombatEffect(condicionado, { usuarioId: 'c1', usuarioVars: {} });
+      expect(resultado.invalido).toBeFalsy();
+      expect(resultado.detalhe).toMatch(/condição falsa/);
+      const c = useCharacterStore.getState().characters.find((x) => x.id === 'c1')!;
+      expect(c.activeConditions).toEqual([]);
+    } finally {
+      Math.random = orig;
+    }
+  });
+
+  it('recusa transferência inválida do ramo antes de mutar subefeitos anteriores', () => {
+    const root = parseOmniScript('rolar 1d4 entao ( 1: aplicar cego em usuario )').efeitos[0];
+    const condicao = parseOmniScript('aplicar cego em usuario').efeitos[0];
+    const transferenciaInvalida = {
+      ...parseOmniScript('somar 1 em pe', { defaultTarget: 'USUARIO' }).efeitos[0],
+      transferencia: { origem: 'vida', destino: 'pe' },
+    };
+    const efeito = {
+      ...root,
+      diceSwitch: {
+        dice: '1d4',
+        branches: [{ values: [1], effects: [condicao, transferenciaInvalida] }],
+      },
+    };
+    const orig = Math.random;
+    try {
+      Math.random = () => 0;
+      const resultado = executarCombatEffect(efeito, { usuarioId: 'c1', usuarioVars: {} });
+      expect(resultado).toMatchObject({ invalido: true, aplicado: 0 });
+      expect(resultado.detalhe).toMatch(/transferência inválida/i);
+      const c = useCharacterStore.getState().characters.find((x) => x.id === 'c1')!;
+      expect(c.activeConditions).toEqual([]);
+    } finally {
+      Math.random = orig;
+    }
+  });
 });
 
 describe('Runtime executarCombatEffect: buttonOnly', () => {

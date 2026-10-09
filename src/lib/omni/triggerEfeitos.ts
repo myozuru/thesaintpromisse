@@ -214,7 +214,10 @@ export function dispararGatilhoEfeitosItens(
           sourceInstanceId: inst.instanceId,
           dano: opts.dano,
         });
-        if (r.invalido) continue;
+        if (r.invalido) {
+          log(`⛔ ${fresco.nome} (${evento}): subefeito inválido — ${r.detalhe ?? 'verifique o ramo do dado.'}`);
+          continue;
+        }
         console.log(`    ↳ ✓ key especial → ${r.detalhe ?? '(sem detalhe)'}`);
         aplicados++;
         consumiuUso = true;

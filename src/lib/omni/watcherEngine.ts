@@ -192,7 +192,10 @@ function processarPersonagemNaCadeia(c: Character, apenasSnapshot: boolean) {
           sourceEntityId: fresco.id,
           sourceInstanceId: inst.instanceId,
         });
-        if (r.invalido) continue;
+        if (r.invalido) {
+          useLogStore.getState().addLog('system', `⛔ ${fresco.nome}: subefeito de watcher inválido — ${r.detalhe ?? 'verifique o ramo do dado.'}`);
+          continue;
+        }
         consumiuUso = true;
         useLogStore.getState().addLog(
           'system',

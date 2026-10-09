@@ -131,6 +131,13 @@ export function validarEfeitosAtivosDaFicha(
     if (eff.diceSwitch) {
       const dado = avaliar(eff.diceSwitch.dice, `Dado de seleção do efeito ${indice + 1}`);
       if (!dado.ok) return { ok: false, detalhe: dado.erro };
+      const erroRamos = validarRamosDiceSwitch(
+        eff.diceSwitch,
+        { ...ctx, resultados },
+        eff.target,
+        `Efeito ${indice + 1}`,
+      );
+      if (erroRamos) return { ok: false, detalhe: erroRamos };
       resultados.push(Math.round(dado.valor));
       continue;
     }
@@ -235,7 +242,7 @@ export function executarCombatEffect(
     const store = useCharacterStore.getState();
     const c = store.characters.find(x => x.id === targetId);
     const plano = c && !out.diagnosticos.length ? planejarTransferencia(c, eff.transferencia.origem, eff.transferencia.destino, valor) : undefined;
-    if (!plano) return { aplicado: 0, detalhe: 'Transferência inválida: selecione dois saldos compatíveis.' };
+    if (!plano) return { aplicado: 0, invalido: true, detalhe: 'Transferência inválida: selecione dois saldos compatíveis.' };
     store.updateCharacter(targetId, plano.patch);
     return { aplicado: plano.valor };
   }
@@ -257,6 +264,10 @@ export function executarCombatEffect(
 
 function executarDiceSwitch(eff: CombatEffect, ctx: ExecucaoContexto): ExecucaoResultado {
   const ds = eff.diceSwitch!;
+  const erroRamos = validarRamosDiceSwitch(ds, ctx, eff.target);
+  if (erroRamos) {
+    return { aplicado: 0, invalido: true, detalhe: erroRamos };
+  }
   // Rola o dado e escolhe a branch.
   const out = avaliarFormula(ds.dice, ctx.usuarioVars, undefined, {
     alvo: ctx.alvoVars ?? ctx.usuarioVars, item: ctx.itemVars, resultados: ctx.resultados,
@@ -270,15 +281,110 @@ function executarDiceSwitch(eff: CombatEffect, ctx: ExecucaoContexto): ExecucaoR
   }
   // Executa cada sub-efeito sequencialmente, herdando o contexto.
   const detalhes: string[] = [`🎲 ${ds.dice} = ${valor}`];
-  for (const sub of branch.effects) {
+  for (const [indice, sub] of branch.effects.entries()) {
     // Sub-efeitos sempre miram o MESMO target do diceSwitch a menos que
     // declarem o seu próprio. Isso preserva semântica: "rolar 1d4 entao
     // 1: aplicar morte" = morte no MESMO alvo do efeito-pai.
     const subEff: CombatEffect = sub.target ? sub : { ...sub, target: eff.target };
+    if (subEff.condition?.trim()) {
+      const condicao = avaliarFormula(subEff.condition, ctx.usuarioVars, undefined, {
+        alvo: ctx.alvoVars ?? ctx.usuarioVars,
+        item: ctx.itemVars,
+        resultados: ctx.resultados,
+        dano: ctx.dano ? { ...ctx.dano } : undefined,
+      });
+      if (condicao.diagnosticos.length || !Number.isFinite(condicao.valor)) {
+        return { aplicado: 0, invalido: true, detalhe: `Condição inválida no subefeito ${indice + 1} do resultado ${valor}.` };
+      }
+      if (condicao.valor <= 0) {
+        detalhes.push(`subefeito ${indice + 1} ignorado (condição falsa)`);
+        continue;
+      }
+    }
     const r = executarCombatEffect(subEff, ctx);
+    if (r.invalido) {
+      return {
+        aplicado: 0,
+        invalido: true,
+        detalhe: `Subefeito ${indice + 1} do resultado ${valor} inválido: ${r.detalhe ?? 'execução recusada.'}`,
+      };
+    }
     if (r.detalhe) detalhes.push(r.detalhe);
   }
   return { aplicado: valor, detalhe: detalhes.join(' → ') };
+}
+
+/** Valida todos os ramos antes de sortear, para não mutar parcialmente uma ação mal configurada. */
+function validarRamosDiceSwitch(
+  diceSwitch: NonNullable<CombatEffect['diceSwitch']>,
+  ctx: ExecucaoContexto,
+  alvoPai: CombatEffect['target'],
+  trilha = 'diceSwitch',
+): string | undefined {
+  const extras = () => ({
+    alvo: ctx.alvoVars ?? ctx.usuarioVars,
+    item: ctx.itemVars,
+    resultados: ctx.resultados,
+    dano: ctx.dano ? { ...ctx.dano } : undefined,
+  });
+  const seletor = avaliarFormula(diceSwitch.dice, ctx.usuarioVars, () => 0.5, extras());
+  if (seletor.diagnosticos.length || !Number.isFinite(seletor.valor)) {
+    return `${trilha}: fórmula do dado de seleção inválida — ${seletor.diagnosticos.map(d => d.mensagem).join('; ') || 'resultado não finito.'}`;
+  }
+
+  for (const ramo of diceSwitch.branches) {
+    for (const [indiceEfeito, original] of ramo.effects.entries()) {
+      const efeito = original.target ? original : { ...original, target: alvoPai };
+      const caminho = `${trilha}, ramo ${ramo.values.join('/')}, subefeito ${indiceEfeito + 1}`;
+      if (efeito.condition?.trim()) {
+        const condicao = avaliarFormula(efeito.condition, ctx.usuarioVars, () => 0.5, extras());
+        if (condicao.diagnosticos.length || !Number.isFinite(condicao.valor)) {
+          return `${caminho}: condição inválida — ${condicao.diagnosticos.map(d => d.mensagem).join('; ') || 'resultado não finito.'}`;
+        }
+      }
+
+      if (efeito.conditionApply) {
+        if (!ALL_CONDITIONS.some(c => c.id === efeito.conditionApply!.id)) {
+          return `${caminho}: condição desconhecida: ${efeito.conditionApply.id}`;
+        }
+        continue;
+      }
+      if (efeito.buttonOnly) continue;
+      if (efeito.diceSwitch) {
+        const erroAninhado = validarRamosDiceSwitch(efeito.diceSwitch, ctx, efeito.target, caminho);
+        if (erroAninhado) return erroAninhado;
+        continue;
+      }
+
+      const erroDestino = erroDestinoCombatEffect(efeito, ctx.usuarioId, ctx.sourceInstanceId);
+      if (erroDestino) return `${caminho}: ${erroDestino}`;
+      const formula = avaliarFormula(efeito.formula || '0', ctx.usuarioVars, () => 0.5, extras());
+      const teto = efeito.counterCap ? avaliarFormula(efeito.counterCap, ctx.usuarioVars, () => 0.5, extras()) : undefined;
+      const limiteFonte = efeito.counterSourceLimit ? avaliarFormula(efeito.counterSourceLimit, ctx.usuarioVars, () => 0.5, extras()) : undefined;
+      const diagnosticos = [
+        ...formula.diagnosticos,
+        ...(teto?.diagnosticos ?? []),
+        ...(limiteFonte?.diagnosticos ?? []),
+      ];
+      if (diagnosticos.length || !Number.isFinite(formula.valor)
+        || teto && !Number.isFinite(teto.valor)
+        || limiteFonte && !Number.isFinite(limiteFonte.valor)) {
+        return `${caminho}: fórmula ou limite inválido — ${diagnosticos.map(d => d.mensagem).join('; ') || 'resultado não finito.'}`;
+      }
+      if (efeito.transferencia && !efeito.transferencia.moedaId) {
+        const alvoId = resolverTargetId(efeito, ctx);
+        const ficha = useCharacterStore.getState().characters.find(c => c.id === alvoId);
+        const plano = ficha && planejarTransferencia(
+          ficha,
+          efeito.transferencia.origem,
+          efeito.transferencia.destino,
+          formula.valor,
+        );
+        if (!plano) return `${caminho}: transferência inválida — escolha dois saldos compatíveis e um valor não negativo.`;
+      }
+    }
+  }
+  return undefined;
 }
 
 function executarConditionApply(eff: CombatEffect, ctx: ExecucaoContexto): ExecucaoResultado {

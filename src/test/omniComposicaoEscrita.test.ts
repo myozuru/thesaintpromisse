@@ -334,6 +334,16 @@ describe("destinos compostos graváveis", () => {
       ok: false,
       detalhe: expect.stringContaining("alvo selecionado"),
     });
+    expect(validarEfeitosAtivosDaFicha([{
+      ...base,
+      diceSwitch: {
+        dice: "1d2",
+        branches: [{ values: [1], effects: [{ ...base, formula: "@USUARIO.chave_inexistente" }] }],
+      },
+    }], contexto)).toMatchObject({
+      ok: false,
+      detalhe: expect.stringContaining("chave_inexistente"),
+    });
   });
   it("concede e consome vida temporária mesmo sem teto de escudo configurado", () => {
     montarMesa([ficha("sem-teto", { hpCurrent: 20, hpMax: 20, escCurrent: 0, escMax: 0 })], {});

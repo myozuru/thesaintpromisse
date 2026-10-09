@@ -150,7 +150,7 @@ Regressões adicionadas: destino desconhecido em watcher e gatilho não altera a
 
 Validação desta etapa: testes focados em 3 arquivos, 75 testes aprovados; suíte OMNI em 99 arquivos, 3.293 testes aprovados; `npx tsc --noEmit` e `git diff --check` sem erros. A suíte ampla foi executada com `--no-file-parallelism` para evitar erros de teardown do ambiente Vitest observados quando dois arquivos dependentes dos stores eram executados em workers paralelos.
 
-Esta etapa fecha a validação dos destinos numéricos nesses caminhos. A auditoria ainda não certifica todos os consumidores de fórmulas: por exemplo, a execução numérica manual da ficha precisa rejeitar fórmulas com diagnóstico, e o switch de dados precisa propagar falhas de subefeitos sem anunciar sucesso. Esses são os próximos casos a verificar.
+Esta etapa fecha a validação dos destinos numéricos nesses caminhos. A auditoria ainda não certifica todos os consumidores de fórmulas: por exemplo, a execução numérica manual da ficha precisa rejeitar fórmulas com diagnóstico, e o switch de dados precisa propagar falhas de subefeitos sem anunciar sucesso. Esse diagnóstico levou à etapa do `diceSwitch` documentada abaixo.
 
 ### Fórmulas, condições e custos no botão Usar item
 
@@ -158,4 +158,14 @@ O uso direto de efeitos ativos da ficha tinha um caminho próprio. Ele podia rol
 
 Agora a ficha pré-valida condições, fórmulas, tetos, destinos e contexto de alvo antes do d20. Condições falsas são ignoradas; se nenhuma for atendida, não há rolagem nem consumo. Erros encontrados durante a execução interrompem o restante da ação e não geram mensagem de sucesso. Limites de contador são encaminhados ao writer, transferências usam o executor compartilhado e o consumo automático reconhece `@ITEM.usos_restantes`.
 
-Validação desta etapa: suíte OMNI em 99 arquivos, 3.295 testes aprovados; `npx tsc --noEmit` sem erros. O teste específico de alias `@ITEM.usos_restantes` também passou. A pré-validação cobre o seletor do `diceSwitch`, mas ainda não percorre recursivamente todos os subefeitos dos ramos; a propagação de falhas nesses ramos permanece na próxima auditoria.
+Validação desta etapa: suíte OMNI em 99 arquivos, 3.295 testes aprovados; `npx tsc --noEmit` sem erros. O teste específico de alias `@ITEM.usos_restantes` também passou. Naquele ponto, a pré-validação cobria apenas o seletor do `diceSwitch`; a etapa seguinte fechou a validação recursiva dos subefeitos, descrita abaixo.
+
+### Falhas recursivas de `diceSwitch` chegam ao chamador
+
+O executor ignorava `invalido` quando um subefeito de ramo falhava e retornava o valor do dado como se o `diceSwitch` tivesse sido executado com sucesso. Subefeitos aninhados também não aplicavam suas próprias condições. Em um ramo com mais de um efeito, isso podia mutar a ficha antes de descobrir uma fórmula inválida em um switch interno.
+
+Agora os seletores e todos os descendentes de todos os ramos são pré-validados antes da rolagem. A verificação inclui condições, IDs de condição, fórmulas, limites de contadores, destino de uso do item e compatibilidade de transferências entre recursos. Assim, configuração inválida é recusada antes da primeira mutação, inclusive quando o problema está em uma ramificação aninhada ou que não foi sorteada. Durante a execução, condições falsas nos subefeitos são puladas, e uma falha de execução retorna `invalido` com ramo e posição do subefeito. Gatilhos e watchers registram essa falha em vez de anunciar sucesso.
+
+Validação desta etapa: suíte OMNI em 99 arquivos, 3.298 testes aprovados; `npx tsc --noEmit` e `git diff --check` sem erros. Os testes cobrem key inexistente em switch aninhado, transferência incompatível antes de qualquer mutação, condições falsas em subefeitos e pré-validação da ficha.
+
+Limite restante: a pré-validação detecta erros de configuração e fórmulas antes de mutar, mas falhas que dependem do estado alterado em tempo de execução — por exemplo, uma carteira que fique sem saldo por um efeito anterior do mesmo ramo — são propagadas e registradas, sem rollback de efeitos irmãos já concluídos. A atomicidade de ramos com mutações heterogêneas ainda precisa ser especificada e coberta por transação ou planejamento. A certificação ponta a ponta do catálogo segue aberta.
