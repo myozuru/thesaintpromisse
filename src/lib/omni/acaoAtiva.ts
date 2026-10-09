@@ -282,6 +282,15 @@ export function podeUsarAtiva(u: Character, alvo: Character | undefined, cfg: Ac
     }
     if (ef.tipo === 'remover_condicao' && ef.condicao !== 'todas' && !resolverCondicaoOmni(ef.condicao)) return { ok: false, reason: 'Condição a remover não reconhecida.' };
   }
+  const gerarCargas = cfg.custo_recursos?.gerar_cargas;
+  if (gerarCargas) {
+    const contador = nomeContadorAtivo(gerarCargas.nome);
+    if (!contador || !gerarCargas.quantidade.trim()) return { ok: false, reason: 'Configure o nome do contador e a quantidade a gerar.' };
+    const r = avaliarFormulaAtiva(gerarCargas.quantidade, u, u, arma, () => 0.5);
+    if (r.diagnosticos.length || !Number.isSafeInteger(r.valor) || r.valor < 0) {
+      return { ok: false, reason: 'Quantidade de cargas inválida: use uma fórmula válida, inteira e não negativa.' };
+    }
+  }
   const formulasArma = [cfg.dano, cfg.dadosPorCarga, ...(cfg.condicionais ?? []).map(b => b.dano_extra), ...Object.values(cfg.desfechosTR ?? {}).map(r => r?.dano_extra)]
     .filter((f): f is string => !!f && /@ARMA\./i.test(f));
   for (const expressao of formulasArma) {
@@ -762,7 +771,12 @@ async function executarAcaoAtivaInterna(
   const contadorGerado = gerar?.nome.trim() ? nomeContadorAtivo(gerar.nome) : undefined;
   if (gerar && contadorGerado) {
     const atual = useCharacterStore.getState().characters.find(c => c.id === usuarioId);
-    const qtd = atual ? Math.max(0, Math.floor(avaliarFormulaAtiva(gerar.quantidade || '1', atual, atual, arma).valor || 0)) : 0;
+    const quantidade = atual ? avaliarFormulaAtiva(gerar.quantidade || '1', atual, atual, arma) : undefined;
+    const quantidadeValida = quantidade && !quantidade.diagnosticos.length && Number.isSafeInteger(quantidade.valor) && quantidade.valor >= 0;
+    if (atual && !quantidadeValida) {
+      log(`⛔ ${cfg.nome}: não foi possível gerar ${contadorGerado}; a fórmula de quantidade ficou inválida após resolver a ação.`);
+    }
+    const qtd = quantidadeValida ? quantidade.valor : 0;
     if (atual && qtd > 0) {
       const antes = atual.omniCounters ?? {};
       const depois = { ...antes, [contadorGerado]: (gerar.modo === 'somar' ? (antes[contadorGerado] ?? 0) : 0) + qtd };

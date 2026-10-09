@@ -169,3 +169,13 @@ Agora os seletores e todos os descendentes de todos os ramos são pré-validados
 Validação desta etapa: suíte OMNI em 99 arquivos, 3.298 testes aprovados; `npx tsc --noEmit` e `git diff --check` sem erros. Os testes cobrem key inexistente em switch aninhado, transferência incompatível antes de qualquer mutação, condições falsas em subefeitos e pré-validação da ficha.
 
 Limite restante: a pré-validação detecta erros de configuração e fórmulas antes de mutar, mas falhas que dependem do estado alterado em tempo de execução — por exemplo, uma carteira que fique sem saldo por um efeito anterior do mesmo ramo — são propagadas e registradas, sem rollback de efeitos irmãos já concluídos. A atomicidade de ramos com mutações heterogêneas ainda precisa ser especificada e coberta por transação ou planejamento. A certificação ponta a ponta do catálogo segue aberta.
+
+### Fórmula de cargas geradas validada antes do custo
+
+`gerar_cargas.quantidade` só era avaliada depois de a ação ativa aplicar seus efeitos e cobrar PE. Se a fórmula contivesse uma key desconhecida, o parser devolvia diagnóstico junto com valor parcial e o fluxo usava esse valor como zero; a ação era concluída sem gerar cargas e sem explicar o erro.
+
+Agora `podeUsarAtiva` valida o nome do contador e a fórmula de quantidade antes de pagar custos. A quantidade precisa resolver para inteiro não negativo; fórmulas com dados seguem permitidas e são amostradas sem rolagem durante a validação. A execução repete a avaliação no momento previsto para gerar as cargas e registra erro explícito se a fórmula se tornar inválida com o estado atualizado.
+
+Validação desta etapa: 4 arquivos de ações ativas, 106 testes aprovados; `npx tsc --noEmit` e `git diff --check` sem erros. A regressão confirma que key desconhecida impede a ação antes de cobrar PE, criar contador ou iniciar sustentação.
+
+Limite restante: se o estado do personagem mudar durante a ação e a fórmula de geração passar a falhar só depois da aplicação dos efeitos, o erro é registrado, mas a ação e seus efeitos já concluídos não são revertidos. A validação inicial impede keys ausentes e fórmulas malformadas no estado de declaração.

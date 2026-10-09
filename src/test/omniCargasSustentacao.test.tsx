@@ -30,6 +30,23 @@ beforeEach(() => { comoTela({ profileId: null, role: 'MASTER' }); useInventorySt
 afterEach(async () => { await esperar(); limparMesa(); });
 
 describe('cargas geradas por sustentação', () => {
+  it('recusa uma key inválida na quantidade antes de cobrar PE ou abrir sustentação', async () => {
+    const config: AcaoAtivaConfig = {
+      ...invocar,
+      custo_recursos: {
+        ...invocar.custo_recursos,
+        gerar_cargas: { nome: 'espiritos_fogo', quantidade: '@USUARIO.chave_inexistente + 2' },
+      },
+    };
+    const peAntes = pegarFicha('u').peCurrent;
+    const resultado = await executarAcaoAtiva('u', config, 'u');
+    expect(resultado).toMatchObject({ ok: false });
+    if (!resultado.ok) expect(resultado.reason).toMatch(/quantidade de cargas inválida/i);
+    expect(pegarFicha('u').peCurrent).toBe(peAntes);
+    expect(pegarFicha('u').omniCounters?.espiritos_fogo).toBeUndefined();
+    expect(pegarFicha('u').omniSustentacoes ?? []).toEqual([]);
+  });
+
   it('invocar gera 2 cargas e cria a sustentação vinculada ao contador', async () => {
     const r = await executarAcaoAtiva('u', invocar, 'u');
     expect(r.ok).toBe(true);
