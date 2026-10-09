@@ -2894,8 +2894,8 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
             </Section>
           )}
 
-          {c.specialization === 'Controlador' && !c.isGrimorioCreature && (
-            <Section icon={<Sparkles className="h-4 w-4" />} title="Shikigamis">
+          {!c.isGrimorioCreature && (
+            <Section icon={<Sparkles className="h-4 w-4" />} title="Invocações e Shikigamis">
               <ControladorShikigamisAba character={c} />
             </Section>
           )}
