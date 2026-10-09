@@ -4,7 +4,7 @@ import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { invocarControlador, recolherInvocacao, limparInvocacoesDerrotadas, comandarReposicionamento, comandarAtaque, type DirecaoInvocacao } from '@/lib/controlador/mapa';
-import { limiteInvocacoesConhecidas, limiteInvocacoesAtivas, validarCatalogoControlador, type InvocacaoControlador, type TipoInvocacaoControlador } from '@/lib/controlador/tipos';
+import { limiteInvocacoesConhecidas, limiteAtivasPersonagem, validarCatalogoControlador, type InvocacaoControlador, type TipoInvocacaoControlador } from '@/lib/controlador/tipos';
 
 type Fonte = { id: string; nome: string; tipo: 'grimorio' | 'omni'; hp: number; defesa: number; deslocamento: number; porte: InvocacaoControlador['porte']; acoes: InvocacaoControlador['acoes'] };
 const numero = (valor: unknown, padrao: number): number => {
@@ -76,8 +76,9 @@ export function ControladorInvocacoesSection({ character }: { character: Charact
     if (recolherInvocacao(character.id, id)) { setErro(''); setMensagem('Invocação recolhida.'); }
   };
   const catalogo = character.invocacoesConhecidas ?? [];
-  const max = limiteInvocacoesConhecidas(character.level);
-  const ativas = limiteInvocacoesAtivas(character.treinoControle ?? 1);
+  const controlador = character.specialization === 'Controlador';
+  const max = controlador ? limiteInvocacoesConhecidas(character.level) : null;
+  const ativas = limiteAtivasPersonagem(character.specialization, character.treinoControle ?? 0);
   const fontes: Fonte[] = [
     ...criaturasGrimorio(),
     ...Object.values(entidades).filter(e => e.categoria !== 'condicao' && e.categoria !== 'voto').map(e => ({
@@ -102,7 +103,7 @@ export function ControladorInvocacoesSection({ character }: { character: Charact
     };
     const resultado = validarCatalogoControlador(character.id, character.level, [...catalogo, novo]);
     if (!resultado.ok) { setErro(resultado.motivo); return; }
-    updateCharacter(character.id, { invocacoesConhecidas: [...catalogo, novo], limiteInvocacoesConhecidas: max, limiteInvocacoesAtivas: ativas });
+    updateCharacter(character.id, { invocacoesConhecidas: [...catalogo, novo], limiteInvocacoesConhecidas: max ?? undefined, limiteInvocacoesAtivas: ativas });
     setFonte(''); setNome(''); setErro('');
   };
   const adicionarAtaque = (id: string) => {
@@ -131,7 +132,7 @@ export function ControladorInvocacoesSection({ character }: { character: Charact
   };
   return (
     <div className="space-y-3 rounded-lg border border-border p-3 text-sm">
-      <div className="font-semibold">Invocações conhecidas: {catalogo.length}/{max} · Em campo: {ativos.length}/{ativas}</div>
+      <div className="font-semibold">Invocações conhecidas: {catalogo.length}/{max ?? 'Interlúdio'} · Em campo: {ativos.length}/{ativas}</div>
       <label className="block text-xs">Posicionar na célula adjacente ao Controlador
         <select aria-label="Direção da invocação" value={direcao} onChange={e => setDirecao(e.target.value as DirecaoInvocacao)} className="mt-1 w-full rounded border border-input bg-background p-2">
           <option value="norte">Norte</option><option value="sul">Sul</option><option value="leste">Leste</option><option value="oeste">Oeste</option>
@@ -220,8 +221,9 @@ export function ControladorInvocacoesSection({ character }: { character: Charact
         </>}
         <label className="block text-xs">Custo de invocação (PE)<input type="number" min="0" value={custoPE} onChange={e => setCustoPE(Number(e.target.value))} className="mt-1 w-full rounded border bg-background p-2" /></label>
         {erro && <p role="alert" className="text-xs text-destructive">{erro}</p>}
-        <button type="button" disabled={catalogo.length >= max} onClick={salvar} className="rounded bg-primary px-3 py-2 text-xs text-primary-foreground disabled:opacity-50">Adicionar ao catálogo</button>
+        <button type="button" disabled={false} onClick={salvar} className="rounded bg-primary px-3 py-2 text-xs text-primary-foreground disabled:opacity-50">Adicionar ao catálogo</button>
       </div>
+      <p className="text-xs text-amber-600">{controlador ? `Progressão do livro: ${max} invocações; além disso exige Interlúdio. Limite simultâneo: ${ativas}.` : 'Outras especializações obtêm Shikigamis durante Interlúdios; podem manter apenas 1 invocação em campo por padrão.'}</p>
       <p className="text-xs text-muted-foreground">Invocar gasta PE e cria um token no mapa. Reposicionamento comandado custa uma Ação Bônus no turno do Controlador. Ataques comandados gastam uma Ação Comum e utilizam a bandeja 3D, alcance real e defesa do alvo.</p>
     </div>
   );
