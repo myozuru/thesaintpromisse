@@ -37,6 +37,7 @@ import { ALL_CONDITIONS } from "@/types/conditions";
 import { canonicalizarChave, expandirParaCaminhoLegado } from "./keyAliases";
 import { effectiveMovement } from "@/lib/movementBudget";
 import { shownHpMax, shownPeMax } from "@/lib/peDisplay";
+import { getActiveConcentrationCount } from "@/lib/concentration";
 
 // Leitura de caminho "dot.path" em um objeto qualquer.
 function lerCaminho(obj: unknown, caminho: string): unknown {
@@ -529,9 +530,8 @@ export function montarVariaveisDoPersonagem(
           ? `legado:${b.sourceCharId ?? ''}:${b.spellName}`
           : `legado:${b.sourceCharId ?? ''}:${(b as { id?: string }).id ?? index}`),
       )).size;
-      // lastSpellUsedId é histórico de lançamento, não representa concentração ativa.
-      // O modelo de concentração ainda não tem estado persistido no personagem.
-      const qtdConc = 0;
+      // Concentração ativa é persistida separadamente de lastSpellUsedId e dos sustentados.
+      const qtdConc = getActiveConcentrationCount(c);
       const maxConc = c.maxConcentrationSlots ?? 1;
       const maxSust = c.maxSustainedSpells ?? 1;
       return {
@@ -1081,7 +1081,7 @@ export function montarVariaveisDoPersonagem(
     CATEGORIA: categoria,
 
     // ─── 🔮 ESPECIALIZAÇÃO ──────────────────────────────────────────────
-    CONCENTRANDO: c.lastSpellUsedId ? 1 : 0,
+    CONCENTRANDO: getActiveConcentrationCount(c) > 0 ? 1 : 0,
     EMPOLGACAO: empolgacao,
     EMPOLGACAO_NIVEL: empolgacao,
 

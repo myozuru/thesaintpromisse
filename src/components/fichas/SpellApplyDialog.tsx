@@ -32,6 +32,7 @@ import { prepareCast, applyCast, applyDamageMods, type RolledDie } from '@/lib/s
 import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import { aplicarReducaoCustoFeitico } from '@/lib/omni/spellCostReduction';
 import { selectOmniModifiers } from '@/lib/omni/omniBridge';
+import { canStartConcentration, concentrationLimit, createActiveConcentration, getActiveConcentrationCount } from '@/lib/concentration';
 
 interface Props {
   spell: Spell;
@@ -317,6 +318,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
     const source = useCharacterStore.getState().characters.find(c => c.id === sourceCharId);
     if (!source || (source.hpCurrent ?? 1) <= 0) return false;
     if (!spellLevelAllowed) return false;
+    if (!canStartConcentration(source, spell)) return false;
     if (currentCooldown > 0) return false;
     if (source.peCurrent < effectiveCostPE) return false;
     if (effectiveActionType === 'bonus' && source.bonusActionsCurrent <= 0) return false;
@@ -328,6 +330,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
 
   const getBlockReason = () => {
     if (!spellLevelAllowed) return `Feitiço Nv ${spell.spellLevel} bloqueado — seu personagem (Nv ${source.level}) só pode lançar até Nv ${getMaxSpellLevel(source.level, source.specialization)}`;
+    if (!canStartConcentration(source, spell)) return `Sem slots de concentração (${getActiveConcentrationCount(source)}/${concentrationLimit(source)}). Encerre uma concentração ativa antes de lançar este feitiço.`;
     if (currentCooldown > 0) return `Em recarga: faltam ${currentCooldown} turno(s)`;
     if (source.peCurrent < effectiveCostPE) {
       const erHint = isErHealing ? ` — ER: ${baseEffectiveCostPE} PER × 2 = ${effectiveCostPE} PE` : '';
@@ -368,10 +371,35 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
   const isPureBuff = spell.spellType === 'buff';
   // Sustentado = durationRounds === -1 (sentinel "Cena"). Regra: 1 sustentado por player por vez.
   const isSustainedSpell = spell.durationRounds === -1;
-  // Todas as parcelas desta conjuração compartilham o mesmo custo de manutenção.
-  const sustainInstanceIdRef = useRef<string | undefined>(undefined);
-  if (isSustainedSpell && !sustainInstanceIdRef.current) sustainInstanceIdRef.current = crypto.randomUUID();
-  const sustainInstanceId = isSustainedSpell ? sustainInstanceIdRef.current : undefined;
+  const hasConcentration = !!spell.requiresConcentration;
+  // IDs de ciclo são distintos de lastSpellUsedId; um mesmo feitiço pode
+  // compartilhar o ID entre concentração e sustentação sem fundir os contadores.
+  const spellInstanceIdRef = useRef<string | undefined>(undefined);
+  if ((isSustainedSpell || hasConcentration) && !spellInstanceIdRef.current) spellInstanceIdRef.current = crypto.randomUUID();
+  const spellInstanceId = isSustainedSpell || hasConcentration ? spellInstanceIdRef.current : undefined;
+  const sustainInstanceId = isSustainedSpell ? spellInstanceId : undefined;
+  const concentrationInstanceId = hasConcentration ? spellInstanceId : undefined;
+  const effectInstanceId = concentrationInstanceId ?? sustainInstanceId;
+
+  const buildCastUpdates = (): Partial<typeof source> | null => {
+    const current = useCharacterStore.getState().characters.find((c) => c.id === sourceCharId);
+    if (!current || !canStartConcentration(current, spell)) return null;
+    const updates: Partial<typeof source> = { peCurrent: current.peCurrent - effectiveCostPE };
+    if (hasConcentration && concentrationInstanceId
+      && !current.activeConcentrations?.some((entry) => entry.instanceId === concentrationInstanceId)) {
+      updates.activeConcentrations = [
+        ...(current.activeConcentrations ?? []),
+        createActiveConcentration(spell, concentrationInstanceId, selectedIds),
+      ];
+    }
+    return updates;
+  };
+
+  const logConcentrationStarted = () => {
+    if (!hasConcentration) return;
+    const current = useCharacterStore.getState().characters.find((c) => c.id === sourceCharId);
+    addLog('spell', `🌀 ${source.name} mantém ${spell.name}; concentração ${getActiveConcentrationCount(current ?? { activeConcentrations: [] })}/${concentrationLimit(source)}.`);
+  };
 
   /** Antes de aplicar buffs sustentados, remove os anteriores do mesmo lançador (apenas players). */
   const enforceSingleSustained = () => {
@@ -429,11 +457,12 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
         : await abrirJanelaReacaoAtiva(evento);
       if (!montadoRef.current) return;
       if (janela.cancelado || !canCast()) { onClose(); return; }
-      const updates: Partial<typeof source> = { peCurrent: (useCharacterStore.getState().characters.find(c => c.id === sourceCharId)?.peCurrent ?? 0) - effectiveCostPE };
-      if (!consumeActionUpdates(updates)) { onClose(); return; }
+      const updates = buildCastUpdates();
+      if (!updates || !consumeActionUpdates(updates)) { onClose(); return; }
       updateCharacter(sourceCharId, withTecnicaMaximaCooldown(updates));
       emitFundLogLines();
       applySpecPostCast();
+      logConcentrationStarted();
       addLog('spell', `✨ ${source.name} lança ${spell.name} em área — nenhum alvo atingido.`);
       onClose();
       })();
@@ -840,10 +869,11 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
     if (!canCast()) return;
     // Consume PE and actions
     const updates: Partial<typeof source> = { peCurrent: (useCharacterStore.getState().characters.find(c => c.id === sourceCharId)?.peCurrent ?? 0) - effectiveCostPE };
-    if (!consumeActionUpdates(updates)) return;
+    if (!updates || !consumeActionUpdates(updates)) return;
     updateCharacter(sourceCharId, withTecnicaMaximaCooldown(updates));
     emitFundLogLines();
     applySpecPostCast();
+    logConcentrationStarted();
     for (const t of targetAttacks) if (t.result === 'miss') await abrirJanelaReacaoAtiva({ gatilho: 'quando_ataque_errar', origemId: sourceCharId, protegidoId: t.id });
     if (!montadoRef.current) return;
 
@@ -959,7 +989,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
         if (spell.buffs && spell.buffs.length > 0) {
           const pePerRound = isSustainedSpell ? getSustainedPEPerRound(spell.spellLevel) : 0;
           enforceSingleSustained();
-          spell.buffs.forEach(buff => addBuff(ta.id, { ...buff, id: crypto.randomUUID(), spellName: spell.name, remainingTurns: buff.durationTurns, peCostPerRound: pePerRound, sourceCharId, isSustained: isSustainedSpell, sustainInstanceId }));
+          spell.buffs.forEach(buff => addBuff(ta.id, { ...buff, id: crypto.randomUUID(), spellName: spell.name, remainingTurns: hasConcentration ? -1 : buff.durationTurns, peCostPerRound: pePerRound, sourceCharId, isSustained: isSustainedSpell, sustainInstanceId, concentrationInstanceId }));
         }
 
         if (applyConditions && spell.conditions && spell.conditions.length > 0) {
@@ -974,12 +1004,12 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
               conditionId: condDef.id,
               name: condDef.name,
               icon: condDef.icon,
-              remainingTurns: isAtePassar ? -1 : (sc.durationTurns || 1),
-              remainingRounds: sc.durationRounds > 0 ? sc.durationRounds : -1,
+              remainingTurns: hasConcentration || isAtePassar ? -1 : (sc.durationTurns || 1),
+              remainingRounds: hasConcentration ? -1 : (sc.durationRounds > 0 ? sc.durationRounds : -1),
               sourceCharName: source.name,
               sourceCharId: source.id,
               sourceEntityId: spell.id,
-              sourceInstanceId: sustainInstanceId,
+              sourceInstanceId: effectInstanceId,
               durationMode: mode,
               endCD: expiry.endCD,
               endTrType: expiry.endTrType,
@@ -1014,6 +1044,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
     updateCharacter(sourceCharId, withTecnicaMaximaCooldown(updates));
     emitFundLogLines();
     applySpecPostCast();
+    logConcentrationStarted();
 
     // Extract source buffs
     const activeBuffs = source.activeBuffs || [];
@@ -1173,6 +1204,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
             sourceCharId,
             isSustained: isSustainedSpell,
             sustainInstanceId,
+            concentrationInstanceId,
           });
         });
       }
@@ -1192,8 +1224,8 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
             conditionId: condDef.id,
             name: condDef.name,
             icon: condDef.icon,
-            remainingTurns: isAtePassar ? -1 : baseTurns,
-            remainingRounds: sc.durationRounds > 0 ? sc.durationRounds + extraRounds : -1,
+            remainingTurns: hasConcentration || isAtePassar ? -1 : baseTurns,
+            remainingRounds: hasConcentration ? -1 : (sc.durationRounds > 0 ? sc.durationRounds + extraRounds : -1),
             sourceCharName: source.name,
               sourceCharId: source.id,
             sourceEntityId: spell.id,
@@ -1226,6 +1258,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
     updateCharacter(sourceCharId, withTecnicaMaximaCooldown(updates));
     emitFundLogLines();
     applySpecPostCast();
+    logConcentrationStarted();
 
     // Pula a rolagem completa de dano para buffs puros / condições sem dado.
     const baseRoll = skipDamageRoll
@@ -1319,7 +1352,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
             conditionId: condDef.id,
             name: condDef.name,
             icon: condDef.icon,
-            remainingTurns: isAtePassar ? -1 : (sc.durationTurns > 0 ? sc.durationTurns : -1),
+            remainingTurns: hasConcentration || isAtePassar ? -1 : (sc.durationTurns > 0 ? sc.durationTurns : -1),
             remainingRounds: sc.durationRounds > 0 ? sc.durationRounds : -1,
             sourceCharName: source.name,
               sourceCharId: source.id,

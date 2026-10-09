@@ -265,6 +265,8 @@ export function SpellCreationAssistant({
     initialSpell?.durationRounds === -1 ? 'sustentada' : initialSpell?.durationRounds === 1 ? 'imediata' : 'duradoura'
   );
 
+  const [requiresConcentration, setRequiresConcentration] = useState(!!initialSpell?.requiresConcentration);
+
   const [duradouraRounds, setDuradouraRounds] = useState<number>(
     initialSpell?.durationRounds && initialSpell.durationRounds > 1 ? initialSpell.durationRounds : 1
   );
@@ -675,6 +677,7 @@ export function SpellCreationAssistant({
       conditions: finalConditions,
       spellLevel,
       durationRounds: finalDurationRounds,
+      requiresConcentration: requiresConcentration || undefined,
       range: isLine ? `Linha ${effectiveLineLength}m` : effectiveRange,
       targetMode,
       bonusDC: effectiveCDBonus !== 0 ? effectiveCDBonus : undefined,
@@ -1263,6 +1266,24 @@ export function SpellCreationAssistant({
         )}
       </div>
 
+      <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-primary/30 bg-primary/5 p-2">
+        <input
+          type="checkbox"
+          checked={requiresConcentration}
+          onChange={(e) => {
+            const checked = e.target.checked;
+            setRequiresConcentration(checked);
+            if (checked && durationKind === 'sustentada') setDurationKind('duradoura');
+          }}
+          className="mt-0.5 accent-primary"
+        />
+        <span className="space-y-0.5">
+          <span className="block text-sm font-medium text-foreground">Exige concentração</span>
+          <span className="block text-xs text-muted-foreground">
+            Mantém os efeitos até ser encerrada e ocupa um slot. Não cobra PE por rodada; sustentação é uma opção separada.
+          </span>
+        </span>
+      </label>
       {/* === DURATION KIND (Buff/Debuff) === */}
       {isBuffOrDebuff && (
         <div className="space-y-2 rounded-lg border p-2" style={{ borderColor: '#7C3AED66', backgroundColor: '#7C3AED10' }}>
@@ -1276,7 +1297,7 @@ export function SpellCreationAssistant({
           >
             <option value="imediata">⚡ Imediata — 1 ataque/rodada (pode ser Reação)</option>
             <option value="duradoura">⌛ Duradoura — máx {getMaxDuradouraRounds(spellLevel)} rodadas</option>
-            <option value="sustentada">♾ Sustentada — Cena ({getSustainedPEPerRound(spellLevel)} PE/rd)</option>
+            <option value="sustentada" disabled={requiresConcentration}>♾ Sustentada — Cena ({getSustainedPEPerRound(spellLevel)} PE/rd)</option>
           </select>
           <div className="text-xs text-muted-foreground">{DURATION_KIND_DESCRIPTIONS[durationKind]}</div>
 

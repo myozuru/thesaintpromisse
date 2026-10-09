@@ -952,6 +952,8 @@ interface CharacterStore {
   removeSpell: (charId: string, spellId: string) => void;
   addBuff: (charId: string, buff: ActiveBuff) => void;
   removeBuff: (charId: string, buffId: string) => void;
+  /** Encerra uma concentração e remove os buffs/condições ligados à instância. */
+  endConcentration: (charId: string, instanceId: string) => boolean;
   /** Remove all sustained buffs cast by a given source character (across every target). */
   removeSustainedBuffsFrom: (sourceCharId: string) => void;
   /** Adiciona ou renova uma condição; retorna a ID da instância canônica ativa. */
@@ -4512,6 +4514,42 @@ export const useCharacterStore = create<CharacterStore>()(
       removeBuff: (charId, buffId) => set((state) => ({
         characters: state.characters.map((c) => c.id === charId ? { ...c, activeBuffs: (c.activeBuffs || []).filter(b => b.id !== buffId) } : c),
       })),
+      endConcentration: (charId, instanceId) => {
+        if (!instanceId) return false;
+        let found = false;
+        set((state) => {
+          const caster = state.characters.find((c) => c.id === charId);
+          if (!caster?.activeConcentrations?.some((entry) => entry.instanceId === instanceId)) return state;
+          found = true;
+          return {
+            characters: state.characters.map((c) => {
+              const activeConcentrations = c.id === charId
+                ? (c.activeConcentrations ?? []).filter((entry) => entry.instanceId !== instanceId)
+                : c.activeConcentrations;
+              const activeBuffs = (c.activeBuffs ?? []).filter(
+                (buff) => buff.concentrationInstanceId !== instanceId,
+              );
+              const activeConditions = (c.activeConditions ?? []).flatMap((condition) => {
+                if (condition.sourceApplications?.length) {
+                  const remaining = condition.sourceApplications.filter(
+                    (source) => source.sourceInstanceId !== instanceId,
+                  );
+                  if (remaining.length === condition.sourceApplications.length) return [condition];
+                  return remaining.length ? [agregarFontesCondicao(condition, remaining)] : [];
+                }
+                return condition.sourceInstanceId === instanceId ? [] : [condition];
+              });
+              return {
+                ...c,
+                activeBuffs,
+                activeConditions,
+                ...(c.id === charId ? { activeConcentrations } : {}),
+              };
+            }),
+          };
+        });
+        return found;
+      },
       removeSustainedBuffsFrom: (sourceCharId) => set((state) => {
         const instances = new Set(state.characters.flatMap((c) => (c.activeBuffs || [])
           .filter((b) => b.isSustained && b.sourceCharId === sourceCharId && b.sustainInstanceId)
@@ -4528,7 +4566,15 @@ export const useCharacterStore = create<CharacterStore>()(
                 return condition.sourceInstanceId && instances.has(condition.sourceInstanceId) ? [] : [condition];
               })
             : c.activeConditions;
-          return { ...c, activeBuffs, ...(activeConditions ? { activeConditions } : {}) };
+          const activeConcentrations = instances.size
+            ? (c.activeConcentrations ?? []).filter((entry) => !instances.has(entry.instanceId))
+            : c.activeConcentrations;
+          return {
+            ...c,
+            activeBuffs,
+            ...(activeConditions ? { activeConditions } : {}),
+            ...(activeConcentrations ? { activeConcentrations } : {}),
+          };
         }) };
       }),
       addCondition: (charId, rawCondition) => {

@@ -6,7 +6,7 @@
 - A visibilidade da lista de fichas é decidida por papel com falha fechada: Mestre recebe a mesa completa, Player recebe as fichas públicas de jogadores do próprio perfil e a consulta sem papel recebe uma lista vazia.
 - O teste do contra-ataque agora posiciona o alvo dentro do alcance da Espada Curta. A ação era corretamente recusada fora do alcance; o cenário de teste anterior esperava dano a 3 m.
 - O teste de conjuração aguarda a transição assíncrona para a etapa de ataque, evitando consultar o botão antes de a janela de reação terminar.
-- A auditoria de responsividade separa `qtd_concentrando` das chaves implementadas, pois o modelo ainda não persiste concentração. O hint continua declarando a lacuna; concentração não é inferida de `lastSpellUsedId` ou de sustentação.
+- A concentração agora é persistida por instância e tem capacidade, painel de encerramento e limpeza dos efeitos ligados. `concentrando` e `qtd_concentrando` consultam esse estado real; não inferem concentração de `lastSpellUsedId` nem da sustentação.
 - O slice compartilhado `profiles` agora publica apenas `id`, `name`, `avatar` e `createdAt`. Senhas permanecem locais; payloads antigos que ainda tragam `password` não sobrescrevem a senha local nem importam uma senha remota.
 - A migration `20261006020000_remove_profile_passwords_from_shared_snapshot.sql` remove o campo `password` do snapshot antigo já persistido na tabela compartilhada.
 - O sync de Chefes separa a ficha completa (`worldBossesMaster`) da projeção pública (`worldBosses`). A projeção remove Chefes não publicados, marcadores correspondentes, atributos sem revelação, resistências/fragilidades ocultas, habilidades não reveladas, tática, segredos e recompensas. O estado local do Mestre continua completo.

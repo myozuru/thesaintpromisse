@@ -61,6 +61,7 @@ import { ExhaustionControl } from './ExhaustionControl';
 import { getExhaustionHpReduction } from '@/lib/exhaustionEffects';
 import { DeleteConfirm } from './DeleteConfirm';
 import { SpellApplyDialog } from './SpellApplyDialog';
+import { ActiveConcentrationPanel } from './ActiveConcentrationPanel';
 import { SpellLevelGuide } from './SpellLevelGuide';
 import { LevelUpDialog } from './LevelUpDialog';
 import { CamCoreTabs } from './CamCoreTabs';
@@ -2096,6 +2097,9 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
           )}
         </div>
       </div>
+      {canManageThisCharacter && (c.activeConcentrations || []).length > 0 && (
+        <ActiveConcentrationPanel character={c} />
+      )}
       {/* Active Buffs */}
       {activeBuffs.length > 0 && (
         <div className="px-4 pb-2 flex flex-wrap gap-1">
@@ -4236,6 +4240,11 @@ function SpellCard({ spell: s, editMode, onRemove, onUse, onEdit, cooldown = 0 }
         <div>
           <span className="font-bold text-foreground">{s.name}</span>
           <span className="ml-1 text-xs rounded bg-primary/20 text-primary px-1 py-0.5 font-mono">Nv.{levelLabel}</span>
+          {s.requiresConcentration && (
+            <span className="ml-1 rounded-full border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary" title="Este feitiço ocupa um slot de concentração enquanto ativo">
+              Concentração
+            </span>
+          )}
           {s.targetMode === 'single_atk' && (
             <span className="ml-1 text-xs rounded-full bg-primary/15 text-primary border border-primary/40 px-1.5 py-0.5 font-extrabold tracking-wider" title="Alvo Único (Ataque)">AUA</span>
           )}

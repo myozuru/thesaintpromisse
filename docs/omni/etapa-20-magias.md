@@ -9,19 +9,27 @@
 - Substituir a sustentação de um jogador também remove condições aplicadas pela conjuração anterior, preservando aplicações de outras fontes.
 - `qtd_sustentados` conta conjurações, não cada buff individual. Buffs legados sem ID são agrupados por conjurador e nome do feitiço.
 - `qtd_concentrando` não usa mais `lastSpellUsedId`: esse campo registra histórico, não concentração ativa.
+- Feitiços podem declarar `requiresConcentration`; o lançamento verifica slots antes de cobrar PE/ação e grava uma instância ativa na ficha.
+- Buffs e condições de uma concentração ficam ativos até a instância ser encerrada. `endConcentration` remove somente os efeitos vinculados àquela instância e preserva aplicações de outras fontes.
+- O painel da ficha mostra as concentrações e permite encerrá-las. Encerrar uma sustentação remove a concentração quando ambas compartilham a mesma instância.
+- `concentrando` indica pelo menos uma concentração ativa; `qtd_concentrando` conta IDs únicos. Ambos ignoram `lastSpellUsedId` e feitiços sustentados que não exigem concentração.
 
-## Limite encontrado
+## Limite restante
 
-O modelo atual de magia não possui um estado persistido para concentração ativa nem uma propriedade que declare que um feitiço exige concentração. Por isso, o OMNI retorna zero para `qtd_concentrando` até existir uma fonte de estado real. Os slots de concentração continuam calculados a partir do limite configurado, mas o projeto ainda precisa definir e persistir os efeitos que os ocupam.
+O repositório não define a CD/fórmula canônica para o teste de quebra de concentração após dano. Por isso, esta etapa não inventa uma CD nem quebra a concentração automaticamente com base em dano; a ficha permite encerrar manualmente e expõe o estado persistido às regras OMNI. A integração desse teste depende da fórmula oficial do livro.
 
 ## Arquivos e validação
 
 - `src/components/fichas/SpellApplyDialog.tsx`
+- `src/components/fichas/SpellCreationAssistant.tsx`
+- `src/components/fichas/ActiveConcentrationPanel.tsx`
 - `src/stores/useCharacterStore.ts`
 - `src/types/index.ts`
+- `src/lib/concentration.ts`
 - `src/lib/omni/resolvedor.ts`
 - `src/lib/omni/constantesDoSistema.ts`
+- `src/test/concentrationLifecycle.test.ts`
 - `src/test/spellSustainAccounting.test.ts`
 - `src/test/omniBlocks/01-visao-ado-identidade-concentracao.test.ts`
 
-Testes focados e `tsc --noEmit` passaram. Dois testes já existentes de `omniSpellDamageContext.test.tsx` continuam falhando porque procuram o botão `/^Rolar$/`, mas a tela exibe `Lançar Dano`; esse problema é anterior e não faz parte da sustentação de magia.
+Testes focados, regressões de sustentação, `tsc --noEmit` e `git diff --check` passaram.

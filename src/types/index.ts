@@ -169,8 +169,19 @@ export interface ActiveBuff {
   sourceCharId?: string;
   /** Identifica uma conjuração sustentada, mesmo quando afeta vários alvos/buffs. */
   sustainInstanceId?: string;
+  /** Identifica a concentração que mantém este efeito ativo, quando aplicável. */
+  concentrationInstanceId?: string;
   /** True if this buff comes from a sustained spell (durationRounds === -1). */
   isSustained?: boolean;
+}
+
+/** Uma fonte de concentração ativa, independente de feitiços sustentados. */
+export interface ActiveConcentration {
+  instanceId: string;
+  spellId: string;
+  spellName: string;
+  targetIds: string[];
+  startedAt: number;
 }
 
 export type SpellTargetMode = 'single_atk' | 'single_tr' | 'area_tr';
@@ -208,6 +219,8 @@ export interface Spell {
   conditions: import('./conditions').SpellCondition[];
   spellLevel: import('./conditions').SpellLevel;
   durationRounds: number;
+  /** Ocupa um slot de concentração até a fonte ser encerrada ou quebrada. */
+  requiresConcentration?: boolean;
   range: string;
   targetMode?: SpellTargetMode;
   bonusDC?: number;
@@ -374,6 +387,8 @@ export interface Character {
   savingThrows: Attribute[];
   passives: Passive[];
   spells: Spell[];
+  /** Concentrações ativas lançadas por esta ficha; distinto de buffs sustentados. */
+  activeConcentrations?: ActiveConcentration[];
   equippedItems: string[];
   customHitBonus: number;
   meleeAttackBonus: number;

@@ -150,7 +150,21 @@ describe('🌀 Concentração & Sustentados', () => {
   it('lastSpellUsedId é histórico e não marca concentração ativa', () => {
     const c = makeChar({ lastSpellUsedId: 'fb1', maxConcentrationSlots: 3 } as never);
     expect(vEval(c, 'USUARIO', 'qtd_concentrando')).toBe(0);
+    expect(vEval(c, 'USUARIO', 'concentrando')).toBe(0);
     expect(vEval(c, 'USUARIO', 'slots_concentracao_livres')).toBe(3);
+  });
+
+  it('concentrações ativas persistidas alimentam quantidade, estado e slots livres', () => {
+    const c = makeChar({
+      maxConcentrationSlots: 2,
+      activeConcentrations: [
+        { instanceId: 'c1', spellId: 's1', spellName: 'Névoa', targetIds: [], startedAt: 1 },
+        { instanceId: 'c2', spellId: 's2', spellName: 'Barreira', targetIds: ['ally'], startedAt: 2 },
+      ],
+    } as never);
+    expect(vEval(c, 'USUARIO', 'qtd_concentrando')).toBe(2);
+    expect(vEval(c, 'USUARIO', 'concentrando')).toBe(1);
+    expect(vEval(c, 'USUARIO', 'slots_concentracao_livres')).toBe(0);
   });
 
   it('vários buffs de uma mesma conjuração ocupam um único espaço sustentado', () => {

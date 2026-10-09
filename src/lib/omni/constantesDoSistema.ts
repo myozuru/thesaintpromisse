@@ -669,7 +669,7 @@ const ESTADO_OMNI: ChaveOmniOpcao[] = [
   { id: 'inconsciente',    label: 'Inconsciente',          hint: '1 se inconsciente.' },
   { id: 'escudo_equipado', label: 'Escudo Equipado',       hint: '1 se proficiente/usando escudo.' },
   { id: 'categoria',       label: 'Categoria',             hint: '1=PLAYER, 2=NPC, 3=INIMIGO.' },
-  { id: 'concentrando',    label: 'Concentrando',          hint: '1 se mantém feitiço sustentado.' },
+  { id: 'concentrando',    label: 'Concentrando',          hint: '1 se mantém ao menos uma fonte de concentração ativa.' },
   { id: 'empolgacao',      label: 'Empolgação (Lutador)',  hint: 'Nível de empolgação 1..5.' },
   { id: 'vendado',         label: 'Vendado',               hint: '1 se o slot de Venda está equipado.' },
   { id: 'descoberto',      label: 'Descoberto',            hint: '1 se o slot de Venda está vazio.' },
@@ -802,7 +802,7 @@ const CONDICOES_OMNI: ChaveOmniOpcao[] = [
 
 // ── PR-3: Concentração & Sustentados ───────────────────────────────────
 const CONCENTRACAO_OMNI: ChaveOmniOpcao[] = [
-  { id: 'qtd_concentrando',         label: 'Qtd. Concentrando',     hint: 'Estado de concentração ainda não é persistido; não inferido do último feitiço lançado.' },
+  { id: 'qtd_concentrando',         label: 'Qtd. Concentrando',     hint: 'Quantidade de fontes de concentração ativas; não inclui feitiços sustentados.' },
   { id: 'qtd_sustentados',          label: 'Qtd. Sustentados',      hint: 'Conjurações sustentadas ativas; vários buffs/alvos da mesma conjuração contam uma vez.' },
   { id: 'slots_concentracao_livres',label: 'Slots Concentração Livres', hint: 'max_concentracao - qtd_concentrando.' },
   { id: 'slots_sustentado_livres',  label: 'Slots Sustentado Livres',   hint: 'max_sustentados - qtd_sustentados.' },
