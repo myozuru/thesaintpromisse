@@ -19,6 +19,7 @@ export function invocarControlador(donoId: string, invocacaoId: string, direcao:
   if (!dono) return { ok: false, motivo: 'Personagem não encontrado.' };
   const modelo = dono.invocacoesConhecidas?.find(i => i.id === invocacaoId && i.donoCharacterId === donoId);
   if (!modelo) return { ok: false, motivo: 'Invocação não pertence ao catálogo.' };
+  if (modelo.aprovacaoMestre && modelo.aprovacaoMestre !== 'aprovada') return { ok: false, motivo: 'Invocação ainda não aprovada pelo Mestre.' };
   if (modelo.hpAtual <= 0) return { ok: false, motivo: 'A invocação precisa ter PV para ser materializada.' };
 
   const mapa = useMapStore.getState();
