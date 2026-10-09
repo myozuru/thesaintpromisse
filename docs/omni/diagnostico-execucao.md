@@ -257,3 +257,15 @@ Tetos global e por fonte agora precisam ser válidos, finitos, não negativos e 
 Validação desta etapa: `omniComposicaoEscrita.test.ts` (25), `omniEventosAuditoria.test.tsx` (43), `omniTerminalDiagnostics.test.tsx` (6) e `contadoresEquipamento.test.tsx` (5), total de 79 testes aprovados em execuções isoladas; `npx tsc --noEmit` e `git diff --check` sem erros. Os arquivos de teste foram executados isoladamente para evitar falhas de teardown do Vitest ao combinar ambientes jsdom com stores persistidos.
 
 Continuam pendentes a verificação dos demais leitores diretos do parser, incluindo referências de caminho legado e consumidores de ações/efeitos, e a certificação integral do catálogo de keys.
+
+### Leituras de recurso no executor distinguem zero de falha
+
+`lerCaminhoOmni` continua oferecendo zero como fallback para integrações legadas. Foi acrescentada `lerCaminhoOmniEstrito`, que diferencia zero real de key inexistente, fórmula inválida e valor não finito. O executor usa a leitura estrita ao consumir, multiplicar ou dividir um recurso; assim, um caminho não resolvido aborta a ação com diagnóstico em vez de escrever como se o saldo fosse zero. Contadores e flags nomeados ainda não criados continuam sendo zero válido.
+
+Validação desta etapa: `omniScopedKeys.test.ts` (40) e `omniComposicaoEscrita.test.ts` (25) passaram; `npx tsc --noEmit` e `git diff --check` sem erros.
+
+### O que ainda falta para certificar as keys
+
+As 345 entradas de `inventario-natural.json` são uma lista histórica de rascunho: 337 nomes simples foram sondados em uma única ficha e oito modelos que exigem argumento não foram exercitados como variáveis. A auditoria do dicionário atual também aceita qualquer número finito, inclusive um zero causado por contexto vazio; por isso ela encontra erros de parsing, mas não prova o valor semântico de cada key.
+
+Falta gerar a matriz a partir do catálogo oficial atual e dar a cada key uma expectativa de valor e contexto, cobrindo aliases, usuário/alvo/cena/item, valores ausentes, zero real, escrita permitida/proibida e fórmulas inválidas. As 34 entradas de gatilhos e 38 ações primitivas também precisam de casos de execução que verifiquem as mutações produzidas e os custos/limites, além de apenas conferir que o parser as reconhece. A revisão de autorização no backend e os testes com duas contas Supabase permanecem como validação de integração separada.

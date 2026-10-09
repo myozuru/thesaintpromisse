@@ -32,7 +32,7 @@ import {
 } from './constantesDoSistema';
 import { avaliarFormula } from './parser';
 import { canonicalizarChave } from './keyAliases';
-import { lerCaminhoOmni, montarVariaveisDoPersonagem } from './resolvedor';
+import { lerCaminhoOmniEstrito, montarVariaveisDoPersonagem } from './resolvedor';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
@@ -240,7 +240,12 @@ function lerValorDestinoEscrita(
     const item = extras?.itemInstanceId ? useInventoryStore.getState().items[extras.itemInstanceId] : undefined;
     return item?.usosRestantes ?? item?.usosTotais ?? 0;
   }
-  return lerCaminhoOmni(c, caminhoRaw);
+  const leitura = lerCaminhoOmniEstrito(c, caminhoRaw);
+  if (!leitura.ok) {
+    const diagnostico = leitura.diagnosticos.length ? ` ${leitura.diagnosticos.join('; ')}` : '';
+    throw new FormulaRuntimeInvalida(`${leitura.mensagem}${diagnostico}`);
+  }
+  return leitura.valor;
 }
 
 function aplicarPatchNumerico(

@@ -3,7 +3,7 @@ import type { Character } from '@/types';
 import type { EntidadeOmni, ValorDinamico } from '@/lib/omni/tipos';
 import { novaEntidade } from '@/lib/omni/tipos';
 import { simplificarKeysEntidade } from '@/lib/omni/simplificarKeys';
-import { lerCaminhoOmni, montarVariaveisDoPersonagem } from '@/lib/omni/resolvedor';
+import { lerCaminhoOmni, lerCaminhoOmniEstrito, montarVariaveisDoPersonagem } from '@/lib/omni/resolvedor';
 import { avaliarFormula } from '@/lib/omni/parser';
 import { executarGatilho } from '@/lib/omni/executor';
 
@@ -101,6 +101,20 @@ describe('Leitura de referências curtas do construtor', () => {
 
   it('usa a ficha recebida ao ler uma referência de alvo', () => {
     expect(lerCaminhoOmni(alvo, '@ALVO.vida')).toBe(23);
+  });
+
+  it('a leitura estrita separa zero real, namespace dinâmico e key ausente', () => {
+    expect(lerCaminhoOmniEstrito({ ...usuario, hpCurrent: 0 }, 'vida')).toEqual({ ok: true, valor: 0 });
+    expect(lerCaminhoOmniEstrito(usuario, 'contador_novo')).toEqual({ ok: true, valor: 0 });
+    expect(lerCaminhoOmniEstrito(usuario, 'key_inexistente')).toMatchObject({ ok: false });
+    // A API numérica continua disponível para consumidores legados.
+    expect(lerCaminhoOmni(usuario, 'key_inexistente')).toBe(0);
+  });
+
+  it('a leitura estrita não aceita fórmula com referência ausente como zero válido', () => {
+    const resultado = lerCaminhoOmniEstrito(usuario, '@USUARIO.vida + @USUARIO.chave_inexistente');
+    expect(resultado.ok).toBe(false);
+    if (!resultado.ok) expect(resultado.diagnosticos.join(' ')).toContain('@USUARIO.chave_inexistente');
   });
 
   it('condições do construtor mantêm o resultado após simplificação', () => {

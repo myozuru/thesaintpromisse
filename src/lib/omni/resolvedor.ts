@@ -139,12 +139,31 @@ export function projetarPersonagemParaOmni(
   return { atributos, status, pericias, tr, stats };
 }
 
-/** Lê um caminho Omni diretamente do Character. */
-export function lerCaminhoOmni(c: Character, caminho: string): number {
-  if (/\s/.test(caminho))
-    return avaliarFormula(caminho, montarVariaveisDoPersonagem(c)).valor;
+export type ResultadoLeituraOmni =
+  | { ok: true; valor: number }
+  | { ok: false; mensagem: string; diagnosticos: string[] };
+
+/**
+ * Leitura com resultado explícito para os caminhos que precisam distinguir
+ * um zero real de uma referência inexistente ou fórmula inválida.
+ */
+export function lerCaminhoOmniEstrito(c: Character, caminho: string): ResultadoLeituraOmni {
+  if (!caminho.trim()) return { ok: false, mensagem: 'Informe uma chave Omni.', diagnosticos: [] };
+  if (/\s/.test(caminho)) {
+    const resultado = avaliarFormula(caminho, montarVariaveisDoPersonagem(c));
+    if (resultado.diagnosticos.length) {
+      return {
+        ok: false,
+        mensagem: 'A fórmula contém referências ou operações inválidas.',
+        diagnosticos: resultado.diagnosticos.map(d => d.mensagem),
+      };
+    }
+    return Number.isFinite(resultado.valor)
+      ? { ok: true, valor: resultado.valor }
+      : { ok: false, mensagem: 'A fórmula não produziu um número finito.', diagnosticos: [] };
+  }
   const chave = canonicalizarChave(caminho);
-  if (!chave) return 0;
+  if (!chave) return { ok: false, mensagem: 'A chave Omni está vazia ou inválida.', diagnosticos: [] };
   let legado = expandirParaCaminhoLegado(chave);
   if (chave.startsWith("pericia_"))
     legado = `pericias.${chave.slice("pericia_".length)}`;
@@ -152,14 +171,35 @@ export function lerCaminhoOmni(c: Character, caminho: string): number {
     legado = `tr.${chave}`;
   const proj = projetarPersonagemParaOmni(c);
   const v = lerCaminho(proj, legado);
-  if (typeof v === "number") return v;
+  if (typeof v === "number") {
+    return Number.isFinite(v)
+      ? { ok: true, valor: v }
+      : { ok: false, mensagem: `A chave "${caminho}" contém um valor não finito.`, diagnosticos: [] };
+  }
   if (v && typeof v === "object" && "value" in (v as Record<string, unknown>)) {
     const inner = (v as Record<string, unknown>).value;
-    if (typeof inner === "number") return inner;
+    if (typeof inner === "number") {
+      return Number.isFinite(inner)
+        ? { ok: true, valor: inner }
+        : { ok: false, mensagem: `A chave "${caminho}" contém um valor não finito.`, diagnosticos: [] };
+    }
   }
   // Keys derivadas, flags e contadores usam a mesma fonte das fórmulas.
   const variaveis = montarVariaveisDoPersonagem(c);
-  return variaveis[chave.toUpperCase()] ?? 0;
+  const valor = variaveis[chave.toUpperCase()];
+  if (typeof valor === 'number' && Number.isFinite(valor)) return { ok: true, valor };
+  // Contadores e flags são namespaces dinâmicos: uma instância ainda não
+  // criada tem saldo/estado zero, ao contrário de uma key desconhecida.
+  if (/^contador_[a-z0-9_]+$/.test(chave) || /^flag_[a-z0-9_]+$/.test(chave)) {
+    return { ok: true, valor: 0 };
+  }
+  return { ok: false, mensagem: `A chave "${caminho}" não existe no contexto atual.`, diagnosticos: [] };
+}
+
+/** Lê um caminho Omni diretamente do Character, preservando o fallback legado. */
+export function lerCaminhoOmni(c: Character, caminho: string): number {
+  const resultado = lerCaminhoOmniEstrito(c, caminho);
+  return resultado.ok ? resultado.valor : 0;
 }
 
 /**
