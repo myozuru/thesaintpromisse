@@ -538,10 +538,51 @@ describe('Passivas contínuas condicionais', () => {
       diagnosticos: [expect.objectContaining({ tipo: 'chave_ausente' })],
     });
 
-    expect(derivarPassivasContinuas(personagem)).toEqual({
+    const derivados = derivarPassivasContinuas(personagem);
+    expect(derivados).toMatchObject({
       skillBonuses: {},
       peReductions: [],
       immunities: [],
     });
+    expect(derivados.diagnostics).toHaveLength(4);
+    expect(derivados.diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: 'condicao', message: expect.stringContaining('Condição inválida') }),
+      expect.objectContaining({ key: 'pericia_furtividade', formula: '@USUARIO.chave_inexistente + 4' }),
+      expect.objectContaining({ key: 'reducao_custo_pe', formula: '@USUARIO.chave_inexistente + 4' }),
+      expect.objectContaining({ key: 'pericia_adestramento', message: expect.stringContaining('não reconhecida') }),
+    ]));
+  });
+
+  it('diagnostica dados em fórmula contínua mesmo com a condição atualmente falsa', () => {
+    const c = baseCobaia();
+    const passiva = novaEntidade('passiva', 'Marca Instável');
+    passiva.combatData = {
+      critRange: 20,
+      critMultiplier: 2,
+      isActive: false,
+      effects: [],
+      effectsActive: [],
+      effectsPassive: [{
+        id: 'dice',
+        type: 'ADICIONAR',
+        target: 'USUARIO',
+        resourcePath: 'pericia_atletismo',
+        formula: '1d6',
+        condition: '@USUARIO.forca < 0',
+      }],
+    };
+    useOmniEntidadesStore.setState({ entidades: { [passiva.id]: passiva } });
+    const personagem = {
+      ...c,
+      omniAtivos: [{ id: passiva.id, entidadeId: passiva.id, categoria: 'passiva' as const, instanceId: passiva.id, vinculadoEm: 0 }],
+    } as Character;
+
+    const derivados = derivarPassivasContinuas(personagem);
+    expect(derivados.skillBonuses).toEqual({});
+    expect(derivados.diagnostics).toContainEqual(expect.objectContaining({
+      key: 'pericia_atletismo',
+      formula: '1d6',
+      message: expect.stringContaining('rola dados'),
+    }));
   });
 });

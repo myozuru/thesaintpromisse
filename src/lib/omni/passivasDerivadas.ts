@@ -23,20 +23,60 @@ import { montarVariaveisDoPersonagem } from './resolvedor';
 import { canonicalizarChave } from './keyAliases';
 import { SISTEMA_PERICIAS } from './constantesDoSistema';
 import { resolverAcumuloOmni } from './omniBridge';
-import type { OmniModifierContribution } from './omniBridge';
+import type { OmniModifierContribution, OmniModifierDiagnostic } from './omniBridge';
 
 export interface PassivaDerivada {
   skillBonuses: Record<string, number>;
   peReductions: Array<{ id: string; filtro: string; reduce: number; min: number; origem: string }>;
   immunities: string[];
+  diagnostics: OmniModifierDiagnostic[];
 }
 
-const VAZIO: PassivaDerivada = { skillBonuses: {}, peReductions: [], immunities: [] };
+const VAZIO: PassivaDerivada = { skillBonuses: {}, peReductions: [], immunities: [], diagnostics: [] };
 const PERICIAS_VALIDAS = new Set(
   Object.values(SISTEMA_PERICIAS).map((caminho) =>
     caminho.replace(/^pericias\./, '').toLowerCase(),
   ),
 );
+
+function registrarDiagnostico(out: PassivaDerivada, diagnostic: OmniModifierDiagnostic): void {
+  const duplicado = out.diagnostics.some((item) =>
+    item.source === diagnostic.source
+    && item.key === diagnostic.key
+    && item.formula === diagnostic.formula
+    && item.message === diagnostic.message,
+  );
+  if (!duplicado) out.diagnostics.push(diagnostic);
+}
+
+function avaliarFormulaPassiva(
+  expressao: string | undefined,
+  variaveis: Record<string, number>,
+  out: PassivaDerivada,
+  source: string,
+  key: string,
+  prefixoMensagem = '',
+): number | undefined {
+  try {
+    const result = avaliarFormula(expressao || '0', variaveis);
+    for (const diagnostic of result.diagnosticos) {
+      registrarDiagnostico(out, { source, key, formula: expressao, message: `${prefixoMensagem}${diagnostic.mensagem}` });
+    }
+    if (result.rolagens.length > 0) {
+      registrarDiagnostico(out, {
+        source,
+        key,
+        formula: expressao,
+        message: `${prefixoMensagem}Passivas contínuas precisam ser determinísticas; esta fórmula rola dados.`,
+      });
+    }
+    if (result.diagnosticos.length || result.rolagens.length || !Number.isFinite(result.valor)) return undefined;
+    return result.valor;
+  } catch {
+    registrarDiagnostico(out, { source, key, formula: expressao, message: 'Não foi possível avaliar a expressão.' });
+    return undefined;
+  }
+}
 
 export function derivarPassivasContinuas(c: Character | null | undefined): PassivaDerivada {
   if (!c?.omniAtivos?.length) return VAZIO;
@@ -46,6 +86,7 @@ export function derivarPassivasContinuas(c: Character | null | undefined): Passi
     skillBonuses: {},
     peReductions: [],
     immunities: [],
+    diagnostics: [],
   };
   const bonusPericiaPorFonte: Record<string, OmniModifierContribution[]> = {};
 
@@ -71,27 +112,23 @@ export function derivarPassivasContinuas(c: Character | null | undefined): Passi
       // sentido em scripts ATIVOS — passivas continuas as ignoram.
       if (eff.diceSwitch || eff.conditionApply || eff.buttonOnly) continue;
 
-      // Avalia condição (se houver). Falha ⇒ pula silenciosamente.
-      if (eff.condition && eff.condition.trim()) {
-        try {
-          const r = avaliarFormula(eff.condition, getVars());
-          if (r.diagnosticos.length || !Number.isFinite(r.valor) || r.valor <= 0) continue;
-        } catch {
-          continue;
-        }
-      }
-
       const sourceName = ent?.nome ?? 'Passiva';
+      const source = `✦ ${sourceName}`;
+      const resourcePath = eff.resourcePath ?? '';
+      const key = eff.peSpellReduction ? 'reducao_custo_pe' : eff.immunityGrant ? 'imunidade' : resourcePath;
+      let conditionAtiva = true;
+
+      // Registra configuração inválida mesmo quando a condição está falsa agora.
+      if (eff.condition && eff.condition.trim()) {
+        const condition = avaliarFormulaPassiva(eff.condition, getVars(), out, source, 'condicao', 'Condição inválida: ');
+        conditionAtiva = condition !== undefined && condition > 0;
+      }
 
       // Caminhos especiais (peSpellReduction, immunityGrant) não consomem
       // resourcePath numérico — vão direto pras listas derivadas.
       if (eff.peSpellReduction) {
-        let valor = 0;
-        try {
-          const r = avaliarFormula(eff.formula || '0', getVars());
-          if (r.diagnosticos.length || !Number.isFinite(r.valor)) continue;
-          valor = r.valor;
-        } catch { continue; }
+        const valor = avaliarFormulaPassiva(eff.formula, getVars(), out, source, key);
+        if (valor === undefined || !conditionAtiva) continue;
         const reduce = Math.max(0, Math.round(valor));
         if (reduce <= 0) continue;
         out.peReductions.push({
@@ -105,7 +142,7 @@ export function derivarPassivasContinuas(c: Character | null | undefined): Passi
       }
 
       if (eff.immunityGrant) {
-        if (eff.immunityGrant.mode === 'grant') {
+        if (conditionAtiva && eff.immunityGrant.mode === 'grant') {
           out.immunities.push(eff.immunityGrant.escopo);
         }
         continue;
@@ -115,13 +152,12 @@ export function derivarPassivasContinuas(c: Character | null | undefined): Passi
       const path = canonicalizarChave(eff.resourcePath ?? '');
       if (path.startsWith('pericia_')) {
         const sub = path.slice('pericia_'.length);
-        if (!PERICIAS_VALIDAS.has(sub)) continue;
-        let valor = 0;
-        try {
-          const r = avaliarFormula(eff.formula || '0', getVars());
-          if (r.diagnosticos.length || !Number.isFinite(r.valor)) continue;
-          valor = r.valor;
-        } catch { continue; }
+        if (!PERICIAS_VALIDAS.has(sub)) {
+          registrarDiagnostico(out, { source, key: resourcePath, message: `Perícia não reconhecida: ${resourcePath}.` });
+          continue;
+        }
+        const valor = avaliarFormulaPassiva(eff.formula, getVars(), out, source, resourcePath);
+        if (valor === undefined || !conditionAtiva) continue;
         const delta =
           eff.type === 'SUBTRAIR' ? -Math.round(valor) :
           eff.type === 'ADICIONAR' ? Math.round(valor) :

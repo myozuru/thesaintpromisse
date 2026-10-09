@@ -878,6 +878,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
   const omniFormulaDiagnostics = [
     ...omniModifiers.formulaDiagnostics,
     ...omniPassivasBonus.formulaDiagnostics,
+    ...omniPassivasContinuas.diagnostics,
   ];
   // Fontes Omni vinculadas e equipamentos concorrem na mesma chave; combinar
   // os arrays aqui evita somar os máximos de cada grupo novamente.

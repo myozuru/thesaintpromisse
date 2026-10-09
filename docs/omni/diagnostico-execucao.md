@@ -206,4 +206,14 @@ As bags de `selectOmniModifiers` e `selectOmniPassiveBonuses` agora incluem diag
 
 Validação desta etapa: 3 arquivos focados, 122 testes aprovados; `npx tsc --noEmit` e `git diff --check` sem erros.
 
-Ainda falta auditar o seletor paralelo `passivasDerivadas.ts`, que descarta silenciosamente fórmulas, condições e perícias contínuas inválidas, além dos demais consumidores diretos de `avaliarFormula` em gatilhos, watchers, mitigação, auras e movimento. Isso mantém aberta a certificação de todo o catálogo de keys.
+O seletor paralelo `passivasDerivadas.ts` ainda não estava coberto nessa etapa; foi corrigido na etapa seguinte, registrada abaixo. Permaneciam pendentes os demais consumidores diretos de `avaliarFormula` em gatilhos, watchers, mitigação, auras e movimento, além da certificação integral do catálogo.
+
+### Passivas contínuas reportam falhas de fórmula e key
+
+O caminho separado `derivarPassivasContinuas` ignorava silenciosamente condição ou fórmula inválida, perícia fora da lista oficial e expressão de redução de PE sem resultado. Como esse seletor roda novamente durante consultas de ficha e custo de magia, fórmulas com dados também podiam mudar o bônus a cada recálculo.
+
+O resultado agora inclui diagnósticos por fonte, key e fórmula. Condições e expressões relevantes são verificadas mesmo quando a condição atual é falsa, mas o efeito continua inativo nesse estado. Perícias desconhecidas, fórmulas inválidas e dados aleatórios deixam de produzir bônus e aparecem no aviso do Mestre; a leitura não aplica resultados parciais.
+
+Validação desta etapa: `omniBridgeE2E.test.ts`, 80 testes aprovados; `npx tsc --noEmit` e `git diff --check` sem erros.
+
+Continuam pendentes os consumidores diretos de fórmulas em gatilhos, watchers, mitigação de dano, auras, movimento e execução visual, além da varredura e certificação integral do catálogo de keys.
