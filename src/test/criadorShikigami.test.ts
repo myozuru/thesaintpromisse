@@ -70,7 +70,7 @@ describe('Editor de Shikigamis — texto original', () => {
     expect(['quarto', 'terceiro', 'segundo', 'primeiro', 'especial'].map((grau) =>
       quantidadePericiasTreinadas(grau as Parameters<typeof quantidadePericiasTreinadas>[0], 14),
     )).toEqual([3, 3, 4, 4, 5]);
-    expect(['quarto', 'terceiro', 'segundo', 'primeiro', 'especial'].map(periciasAdicionaisPorGrau))
+    expect((['quarto', 'terceiro', 'segundo', 'primeiro', 'especial'] as const).map(periciasAdicionaisPorGrau))
       .toEqual([1, 1, 2, 2, 3]);
     expect(novasPericiasAoSubirGrau('quarto', 'especial')).toBe(2);
     expect(novasPericiasAoSubirGrau('segundo', 'primeiro')).toBe(0);
