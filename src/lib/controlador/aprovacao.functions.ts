@@ -140,12 +140,24 @@ export const submeterAprovacaoInvocacao = createServerFn({ method: "POST" })
     if (policy.estado === "pendente") {
       const { data: pending, error: pendingError } = await admin
         .from("invocation_approval_requests")
-        .select("request_id")
+        .select("request_id,owner_character_id,version_submitted,snapshot,submitted_by")
         .eq("invocation_id", data.invocationId)
         .eq("status", "pendente")
         .maybeSingle();
       if (pendingError) throw new Error("Não foi possível consultar a fila de aprovações.");
-      if (pending) throw new Error("Esta invocação já tem uma solicitação pendente.");
+      if (pending) {
+        const sameSubmission = pending.submitted_by === context.userId
+          && pending.owner_character_id === data.ownerCharacterId
+          && pending.version_submitted === data.versionSubmitted
+          && canonicalJson(pending.snapshot) === canonicalJson(snapshotPersistido);
+        if (!sameSubmission) throw new Error("Esta invocação já tem outra solicitação pendente.");
+        return {
+          requestId: pending.request_id,
+          status: "pendente" as const,
+          versaoAprovada: null,
+          duplicate: true,
+        };
+      }
     }
 
     const reviewedAt = policy.estado === "aprovada" ? new Date().toISOString() : null;
