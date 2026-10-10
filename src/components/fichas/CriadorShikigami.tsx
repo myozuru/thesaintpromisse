@@ -241,14 +241,14 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
     ...(resistenciaTreinada === 'Integridade' ? [{ codigo: 'integridade_treino_legado', severidade: 'aviso' as const, detalhe: 'Integridade aparece como treino legado; a ficha atual não oferece esse teste para treinamento.' }] : []),
   ];
   const skills = Object.keys(SISTEMA_PERICIAS) as Array<keyof typeof SISTEMA_PERICIAS>;
-  const inventarioDoDono = items.filter(item => item.ownerId === character.id);
+  const inventarioDoDono = Object.values(items).filter(item => item.ownerId === character.id);
   const entidadeAutomacao = Object.values(entidades).find(entity => entity.id === omniGatilhoEntidade);
   const assetPrincipal = imagemAssetId ? assetCache.get(imagemAssetId) : null;
   const assetFallback = imagemFallbackAssetId ? assetCache.get(imagemFallbackAssetId) : null;
   const cropEntity: Entity = {
     id: initial?.id ?? 'rascunho-shikigami', shape: formaToken, x: 0, y: 0, w: 1, h: 1,
     rotation: 0, color: corIdentificacao, locked: false, assetId: imagemAssetId || undefined,
-    label: apelido || nome, nameplate, tokenCrop,
+    label: apelido || nome, nameplate: nomeplate, tokenCrop,
   };
 
   useEffect(() => {
@@ -477,7 +477,6 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
         deslocamentoM: valoresFinais.deslocamentoM, porte,
         custoInvocacaoPE: valoresFinais.custoInvocacaoPE,
         ...(extrasDerivados.custoSustentacaoPE.modo !== 'automatico' && extrasDerivados.custoSustentacaoPE.valorManual.trim() ? { custoSustentacaoPE: Number(extrasDerivados.custoSustentacaoPE.valorManual) } : {}),
-        acoes: acoesParaSalvar,
       };
       if (tipo === 'shikigami' && grau === 'quarto' && Object.values(atributos).some(value => !Number.isFinite(value))) {
         throw new Error('A ficha possui atributo não finito.');

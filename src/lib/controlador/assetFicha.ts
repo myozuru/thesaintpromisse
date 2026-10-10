@@ -26,10 +26,13 @@ function blobFromSocket(value: unknown, mime: string): Blob | null {
   if (value instanceof ArrayBuffer) return new Blob([value], { type: mime });
   if (ArrayBuffer.isView(value)) {
     const view = value as ArrayBufferView;
-    return new Blob([new Uint8Array(view.buffer, view.byteOffset, view.byteLength)], { type: mime });
+    const bytes = new Uint8Array(view.byteLength);
+    bytes.set(new Uint8Array(view.buffer, view.byteOffset, view.byteLength));
+    return new Blob([bytes.buffer as ArrayBuffer], { type: mime });
   }
   if (value && typeof value === "object" && "data" in value && Array.isArray((value as { data?: unknown }).data)) {
-    return new Blob([new Uint8Array((value as { data: number[] }).data)], { type: mime });
+    const bytes = Uint8Array.from((value as { data: number[] }).data);
+    return new Blob([bytes.buffer as ArrayBuffer], { type: mime });
   }
   return null;
 }
