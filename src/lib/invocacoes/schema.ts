@@ -392,19 +392,22 @@ export function normalizarModeloInvocacao(valor: unknown): ResultadoMigracaoInvo
         avisos.push(aviso("acao_legada_incompleta", "A ação original foi mantida no snapshot e requer revisão antes de ser usada.", "aviso", id));
         continue;
       }
-      if (textoNaoVazio(acao.entidadeOmniId)) {
-        acoes.push({
-          id: acaoId,
-          nome: acaoNome,
-          tipoExecucao: "referencia_omni",
-          entidadeOmniId: textoNaoVazio(acao.entidadeOmniId) ?? undefined,
-          acaoOmniId: acaoId,
-          payloadLegado: acaoValor,
-        });
-      } else {
-        acoes.push({ id: acaoId, nome: acaoNome, tipoExecucao: "legada", payloadLegado: acaoValor });
-        avisos.push(aviso("acao_preservada_sem_conversao", "A ação foi mantida no formato legado; a migração não altera sua semântica para OMNI.", "aviso", id));
-      }
+      const entidadeOmniId = textoNaoVazio(acao.entidadeOmniId);
+      acoes.push({
+        id: acaoId,
+        nome: acaoNome,
+        tipoExecucao: "legada",
+        ...(entidadeOmniId ? { entidadeOmniId } : {}),
+        payloadLegado: acaoValor,
+      });
+      avisos.push(aviso(
+        entidadeOmniId ? "acao_omni_parcial_preservada" : "acao_preservada_sem_conversao",
+        entidadeOmniId
+          ? "A referência de entidade OMNI foi preservada, mas o ID de ação OMNI não pode ser inferido."
+          : "A ação foi mantida no formato legado; a migração não altera sua semântica para OMNI.",
+        "aviso",
+        id,
+      ));
     }
   }
 
