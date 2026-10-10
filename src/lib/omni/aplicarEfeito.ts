@@ -13,10 +13,23 @@ import { destinoComposto } from "./componentes/escrita";
  * Reuso: chamado pelo CharacterCard (handleAttackWithItem) e por qualquer
  * outro consumidor do Omni-Engine que precise materializar um efeito.
  */
-import { aplicarOperacoesContadorOmni } from "./contadorSync";
+import { calcularContador } from "./contadores";
+import type { MutacaoContadorOmni } from "./contadorSync";
 import { useCharacterStore } from "@/stores/useCharacterStore";
 import { useCombatStore } from "@/stores/useCombatStore";
 import { useInventoryStore } from "@/stores/useInventoryStore";
+
+function sincronizarMutacaoContador(
+  charId: string,
+  actorCharacterId: string,
+  mutacao: Extract<MutacaoContadorOmni, { name: string }>,
+): void {
+  void import("./contadorSync")
+    .then(({ sincronizarOperacoesContadorOmni }) => {
+      sincronizarOperacoesContadorOmni(charId, [mutacao], actorCharacterId);
+    })
+    .catch((error) => console.warn("[omni] erro ao enfileirar mutação de contador:", error));
+}
 import type { CombatEffect } from "./tipos";
 import { canonicalizarChave } from "./keyAliases";
 import { SISTEMA_PERICIAS } from "./constantesDoSistema";
@@ -194,7 +207,7 @@ export function aplicarEfeitoNoPersonagem(
         : periodoFonte === 'descanso'
           ? `descanso:${c.omniCounterRestCycle ?? 0}`
           : undefined;
-      const res = aplicarOperacoesContadorOmni(charId, [{
+      const operacao: Extract<MutacaoContadorOmni, { name: string }> = {
         action: acao,
         name: nome,
         amount: valor,
@@ -205,9 +218,22 @@ export function aplicarEfeitoNoPersonagem(
         cycle: cicloFonte,
         sourceId: destino?.contador?.fonte ?? extras?.contador?.fonteId,
         exactSource: Boolean(destino?.contador?.fonte),
-      }], extras?.attackerId ?? charId)[0];
-      if (res) notificarAtualizacaoContadores(charId, c.omniCounters, res.counters);
-      return { aplicado: res?.counters[nome] ?? 0, consumido: res?.consumido ?? 0 };
+      };
+      const res = calcularContador(c.omniCounters ?? {}, nome, acao, {
+        valor,
+        teto: extras?.contador?.teto,
+        escopoTeto: 'global',
+        rastrearFonte: Boolean(destino?.contador?.fonte || extras?.contador?.porFonte || limiteFonte !== undefined),
+        limiteFonte,
+        cicloFonte,
+        usoPorFonte: c.omniCounterSourceUsage,
+        fonteId: destino?.contador?.fonte ?? extras?.contador?.fonteId,
+        fonteExata: Boolean(destino?.contador?.fonte),
+      });
+      store.updateCharacter(charId, { omniCounters: res.counters, omniCounterSourceUsage: res.usoPorFonte });
+      notificarAtualizacaoContadores(charId, c.omniCounters, res.counters);
+      sincronizarMutacaoContador(charId, extras?.attackerId ?? charId, operacao);
+      return { aplicado: res.counters[nome] ?? 0, consumido: res.consumido };
     }
   }
 
@@ -258,14 +284,12 @@ export function aplicarEfeitoNoPersonagem(
     if (tipo === "SUBTRAIR" && Math.round(valor) <= 0)
       return { aplicado: c.omniCounters?.fadiga ?? 0 };
     const action = tipo === "SUBTRAIR" ? "CONSUMIR_CONTADOR" : tipo === "ADICIONAR" ? "INCREMENTAR_CONTADOR" : "DEFINIR_CONTADOR";
-    const res = aplicarOperacoesContadorOmni(
-      charId,
-      [{ action, name: "fadiga", amount: Math.max(0, Math.round(valor)) }],
-      extras?.attackerId ?? charId,
-    )[0];
-    const novo = res?.counters.fadiga ?? c.omniCounters?.fadiga ?? 0;
-    if (res) notificarAtualizacaoContadores(charId, c.omniCounters, res.counters);
-    return { aplicado: novo };
+    const amount = Math.max(0, Math.round(valor));
+    const res = calcularContador(c.omniCounters ?? {}, "fadiga", action, { valor: amount });
+    store.updateCharacter(charId, { omniCounters: res.counters, omniCounterSourceUsage: res.usoPorFonte });
+    notificarAtualizacaoContadores(charId, c.omniCounters, res.counters);
+    sincronizarMutacaoContador(charId, extras?.attackerId ?? charId, { action, name: "fadiga", amount });
+    return { aplicado: res.counters.fadiga ?? 0 };
   }
   if (path === "exaustao" || path === "exhaustion") {
     const atual = c.exhaustionLevel ?? 0;
