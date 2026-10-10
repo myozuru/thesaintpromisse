@@ -16,6 +16,8 @@ import { decidirAprovacaoInvocacao, decidirAprovacaoLegadaInvocacao, submeterApr
 import { SISTEMA_PERICIAS, ROTULOS_PERICIAS } from '@/lib/omni/constantesDoSistema';
 import { invocacaoTreinadaNaPericia, parseFormulaDanoInvocacao } from '@/lib/controlador/rolagens';
 import { bonusPericiaCaracteristicas } from '@/lib/controlador/passivas';
+import { definirAutomacaoInvocacao } from '@/lib/controlador/autonomia';
+import { useProfileStore } from '@/stores/useProfileStore';
 
 type Fonte = { id: string; nome: string; tipo: 'grimorio' | 'omni'; hp: number; defesa: number; deslocamento: number; porte: InvocacaoControlador['porte']; acoes: InvocacaoControlador['acoes'] };
 const numero = (valor: unknown, padrao: number): number => {
@@ -42,6 +44,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
   const updateCharacter = useCharacterStore(s => s.updateCharacter);
   const allCharacters = useCharacterStore(s => s.characters);
   const isMaster = useRoleStore(s => s.role) === 'MASTER';
+  const activeProfileId = useProfileStore(s => s.activeProfileId);
   const entidades = useOmniEntidadesStore(s => s.entidades);
   const itensInventario = useInventoryStore(s => s.items);
   const [nome, setNome] = useState('');
@@ -488,6 +491,8 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
                 ? 'Dissipada'
                 : 'Pronta';
         const aprovado = podeUsarVersaoAprovada({ estado: inv.aprovacaoMestre, versaoAtual: inv.versaoModelo, versaoAprovada: inv.versaoAprovada });
+        const automacoesAtivas = (inv.automacoesOmni ?? []).filter(automacao => automacao.habilitada).length;
+        const podeIntervirNaAutonomia = isMaster || Boolean(character.profileId && activeProfileId === character.profileId);
         const alcanceConfigurado = Number.isFinite(inv.alcanceInvocacaoM) && (inv.alcanceInvocacaoM ?? -1) >= 0;
         const podeSelecionar = !ativo && !derrotaPendente && inv.hpAtual > 0 && aprovado && alcanceConfigurado && (estadoIntermediario.ok || (isMaster && Boolean(motivosOverride[inv.id]?.trim())));
         return (
@@ -501,6 +506,17 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
           <div className={'basis-full text-xs ' + (derrotaPendente ? 'text-destructive' : estadoInstancia === 'caida' ? 'text-amber-300' : 'text-muted-foreground')}>Estado de combate: {rotuloEstado}{estadoInstancia === 'derrotada' && instancia ? ` (PV ${instancia.hpAtual})` : ''}</div>
           <div className="basis-full text-xs text-muted-foreground">{rotuloTempo}</div>
           <div className="basis-full text-xs text-muted-foreground">Aquisição: {inv.aprovacaoMestre === 'pendente' ? 'Aguardando aprovação do Mestre' : inv.aprovacaoMestre === 'rejeitada' ? 'Rejeitada — edite e solicite novamente' : 'Aprovada'}</div>
+          {ativo && automacoesAtivas > 0 && (
+            <div className="basis-full flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-muted-foreground">Automações OMNI: {automacoesAtivas} regra(s) habilitada(s) · {instancia?.automacaoSuspensa ? 'suspensas nesta instância' : 'disponíveis conforme gatilho e política'}</span>
+              {podeIntervirNaAutonomia && <button type="button" className="rounded border px-2 py-1" onClick={() => {
+                if (!token) return;
+                const resultado = definirAutomacaoInvocacao(token.id, !instancia?.automacaoSuspensa);
+                if (!resultado.ok) setErro(resultado.motivo);
+                else { setErro(''); setMensagem(instancia?.automacaoSuspensa ? 'Automações retomadas nesta instância.' : 'Automações suspensas nesta instância.'); }
+              }}>{instancia?.automacaoSuspensa ? 'Retomar automações' : isMaster ? 'Mestre: suspender automações' : 'Suspender automações'}</button>}
+            </div>
+          )}
           <div className={'basis-full text-xs ' + (estadoIntermediario.ok ? 'text-muted-foreground' : 'text-amber-300')}>Intermediário: {estadoIntermediario.ok ? 'disponível — ' + estadoIntermediario.resumo : 'pendente de validação — ' + estadoIntermediario.motivo}</div>
           <div className={'basis-full text-xs ' + (alcanceConfigurado ? 'text-muted-foreground' : 'text-amber-300')}>Alcance de posicionamento: {alcanceConfigurado ? (inv.alcanceInvocacaoM ?? 0) + ' m' : 'não definido — edite a ficha antes de invocar'}</div>
           {inv.origemAquisicao && <div className="basis-full text-xs text-muted-foreground">Origem da aquisição: {inv.origemAquisicao === 'interludio' ? 'Interlúdio' : inv.origemAquisicao}</div>}

@@ -26,6 +26,7 @@ import { alcanceCuraInvocacao, calcularEfeitoSuporte, capacidadeEnergiaReversaIn
 import { bonusPericiaCaracteristicas, reducaoDanoCaracteristicas } from './passivas';
 import { resolverAcaoOmniInvocacao } from './omni';
 import { aceitaAlvoAtivo } from '@/lib/omni/alvosAtivos';
+import type { CadeiaOmni } from '@/lib/omni/cadeiaEventos';
 import type { AcaoAtivaConfig } from '@/lib/omni/tipos';
 import {
   aplicarCuraPVInvocacao,
@@ -102,17 +103,24 @@ function gravarInstancia(
   });
 }
 
+type ModoExecucaoComandoInvocacao = 'manual' | 'evento_automatico';
+type OpcoesComandoInvocacao = { instanciaId?: string; requestId?: string; cadeia?: CadeiaOmni };
+
 function prepararDebitoComando(
   dono: Character,
   modelo: InvocacaoControlador,
   instancia: InstanciaInvocacao,
   acao: InvocacaoControlador['acoes'][number],
   custoOverride?: number,
+  modoExecucao: ModoExecucaoComandoInvocacao = 'manual',
 ): { ok: true; peDonoRestante: number; recursosRestantes: Record<string, number> } | { ok: false; motivo: string } {
   const custo = custoOverride ?? acao.custoPE ?? 0;
   const configuracao = modelo.custosComandosConfigurados?.[acao.id];
-  if (configuracao?.execucao === 'evento_automatico') {
+  if (configuracao?.execucao === 'evento_automatico' && modoExecucao !== 'evento_automatico') {
     return { ok: false, motivo: 'Esta ação está configurada para execução por evento automático.' };
+  }
+  if (modoExecucao === 'evento_automatico' && configuracao?.execucao !== 'evento_automatico') {
+    return { ok: false, motivo: 'A ação não foi autorizada para execução por evento automático.' };
   }
   if (custo > 0 && !configuracao) {
     return { ok: false, motivo: 'A origem do custo de PE desta ação ainda precisa ser configurada.' };
@@ -1156,9 +1164,31 @@ export async function comandarAtaque(
   invocacaoId: string,
   acaoId: string,
   alvoId: string | string[] | SelecaoAlvoAreaInvocacao,
-  opcoes?: { instanciaId?: string; requestId?: string },
+  opcoes?: Pick<OpcoesComandoInvocacao, 'instanciaId' | 'requestId'>,
 ):
   Promise<ResultadoAtaqueUnicoInvocacao | ResultadoAtaqueMultiploInvocacao | { ok: false; motivo: string }> {
+  return executarAtaqueInvocacao(donoId, invocacaoId, acaoId, alvoId, opcoes, 'manual');
+}
+
+/** Caminho interno usado pelo despachante de autonomia após validar gatilho e alvo. */
+export async function executarAtaqueAutonomoInvocacao(
+  donoId: string,
+  invocacaoId: string,
+  acaoId: string,
+  alvoId: string | string[],
+  opcoes: OpcoesComandoInvocacao,
+): Promise<ResultadoAtaqueUnicoInvocacao | ResultadoAtaqueMultiploInvocacao | { ok: false; motivo: string }> {
+  return executarAtaqueInvocacao(donoId, invocacaoId, acaoId, alvoId, opcoes, 'evento_automatico');
+}
+
+async function executarAtaqueInvocacao(
+  donoId: string,
+  invocacaoId: string,
+  acaoId: string,
+  alvoId: string | string[] | SelecaoAlvoAreaInvocacao,
+  opcoes: OpcoesComandoInvocacao | undefined,
+  modoExecucao: ModoExecucaoComandoInvocacao,
+): Promise<ResultadoAtaqueUnicoInvocacao | ResultadoAtaqueMultiploInvocacao | { ok: false; motivo: string }> {
   let dono = useCharacterStore.getState().characters.find(c => c.id === donoId);
   if (!dono) return { ok: false, motivo: 'Personagem inválido.' };
   if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
@@ -1263,7 +1293,7 @@ export async function comandarAtaque(
   const chave = instancia.id + ':' + acaoId;
   if (ataquesPendentes.has(chave)) return { ok: false, motivo: 'Comando anterior ainda em andamento.' };
   if (!podeUsarAcaoDaInstancia(instancia, acaoId)) return { ok: false, motivo: 'A ação ainda está em recarga.' };
-  const debito = prepararDebitoComando(dono, modelo, instancia, acao);
+  const debito = prepararDebitoComando(dono, modelo, instancia, acao, undefined, modoExecucao);
   if (!debito.ok) return debito;
   const categoria = categoriaEconomiaDaAcao(acao, instancia.economiaAcoes);
   if (!categoria) return { ok: false, motivo: 'Categoria de ação própria não configurada.' };
@@ -1506,6 +1536,7 @@ export async function comandarAtaque(
           source: 'omni',
           isMelee: bonusAtaque!.tipo === 'corpo_a_corpo',
           attack: { critical: resultado.critico, criticalFail: resultado.falhaCritica, kind: bonusAtaque!.tipo === 'corpo_a_corpo' ? 'melee' : 'ranged' },
+          ...(opcoes?.cadeia ? { cadeia: opcoes.cadeia } : {}),
         });
       }
       useLogStore.getState().addLog('combat', `🎯 ${modelo.nome} — ${acao.nome} contra ${alvo.nome}: d20 ${natural} + ${bonusAtaque!.total} = ${resultado.total} vs Defesa ${defesa} → ${resultado.critico ? 'acerto crítico' : 'acerto'}, dano ${dano} (${acao.tipoDano ?? 'DCO'})${detalhesDanoAuxilio.length ? `; auxílio extra ${detalhesDanoAuxilio.join(', ')}` : ''}.`);

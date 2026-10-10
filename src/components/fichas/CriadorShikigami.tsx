@@ -32,6 +32,7 @@ import { carregarAssetFicha, salvarAssetFicha } from '@/lib/controlador/assetFic
 import { parseFormulaDanoInvocacao } from '@/lib/controlador/rolagens';
 import { bonusPericiaCaracteristicas, bonusPVCaracteristicas, reducaoDanoCaracteristicas } from '@/lib/controlador/passivas';
 import { resolverAcaoOmniInvocacao } from '@/lib/controlador/omni';
+import { validarCondicaoAutonomia } from '@/lib/controlador/condicaoAutonomia';
 
 const rotulosAtributos: Record<keyof AtributosShikigami, string> = {
   forca: 'Força', destreza: 'Destreza', constituicao: 'Constituição',
@@ -245,6 +246,9 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
   const [omniGatilhoId, setOmniGatilhoId] = useState(String(lerPropriedade(initial?.omniConfiguracao, 'gatilhoId') ?? ''));
   const [omniAcaoId, setOmniAcaoId] = useState(String(lerPropriedade(initial?.omniConfiguracao, 'acaoId') ?? ''));
   const [automacoesOmni, setAutomacoesOmni] = useState<(NonNullable<InvocacaoControlador['automacoesOmni']>[number])[]>(initial?.automacoesOmni ?? []);
+  const [condicoesAutomacaoJson, setCondicoesAutomacaoJson] = useState<Record<string, string>>(() => Object.fromEntries(
+    (initial?.automacoesOmni ?? []).map(item => [item.id, item.condicaoAST === undefined ? '' : JSON.stringify(item.condicaoAST, null, 2)]),
+  ));
   const [autonomiaModo, setAutonomiaModo] = useState(initial?.autonomia?.modo ?? '');
   const [autonomiaAlvo, setAutonomiaAlvo] = useState(initial?.autonomia?.politicaAlvo ?? '');
   const [autonomiaCusto, setAutonomiaCusto] = useState(initial?.autonomia?.politicaCusto ?? '');
@@ -510,14 +514,16 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
   };
   const adicionarAutomacao = () => {
     if (!entidadeAutomacao || !omniGatilhoId || !omniAcaoId) { setErro('Selecione uma entidade, um gatilho e uma ação OMNI.'); return; }
+    const id = crypto.randomUUID();
     setAutomacoesOmni(previous => [...previous, {
-      id: crypto.randomUUID(), habilitada: false, entidadeOmniId: entidadeAutomacao.id,
+      id, habilitada: false, prioridade: automacoesOmni.length, entidadeOmniId: entidadeAutomacao.id,
       gatilhoId: omniGatilhoId, acaoId: omniAcaoId,
-      ...(autonomiaCusto ? { politicaCusto: autonomiaCusto } : {}),
-      ...(autonomiaAlvo ? { politicaAlvo: autonomiaAlvo } : {}),
+      ...(autonomiaCusto ? { politicaCusto: autonomiaCusto as 'manual' | 'permitir_pe' | 'preferir_sem_custo' } : {}),
+      ...(autonomiaAlvo ? { politicaAlvo: autonomiaAlvo as 'manual' | 'prioridade' | 'ameaca_mais_proxima' } : {}),
       ...(autonomiaLimite.trim() && Number.isInteger(Number(autonomiaLimite)) ? { limitePorRodada: Number(autonomiaLimite) } : {}),
       revisao: 1,
     }]);
+    setCondicoesAutomacaoJson(previous => ({ ...previous, [id]: '' }));
   };
   const criarConfigExtra = (key: CampoExtra, campo: EstadoExtra): CampoDerivadoInvocacao => {
     if (campo.modo === 'automatico') return { modo: 'automatico' };
@@ -579,6 +585,18 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
       ) as Partial<Record<CategoriaEconomiaInvocacao, LimiteResetEconomiaInvocacao>>;
       const time = timeQty === undefined ? undefined : { quantidade: timeQty, unidade: tempoUnidade.trim() };
       const acoesParaSalvar = acoes.map(action => ({ ...action, tipoExecucao: action.tipoExecucao ?? 'legada' as const }));
+      const automacoesParaSalvar = automacoesOmni.map(item => {
+        const raw = (condicoesAutomacaoJson[item.id] ?? '').trim();
+        if (!raw) {
+          const { condicaoAST: _condicaoAST, ...semCondicao } = item;
+          return semCondicao;
+        }
+        let condicaoAST: unknown;
+        try { condicaoAST = JSON.parse(raw); }
+        catch { throw new Error(`A condição JSON da automação ${item.id} está inválida.`); }
+        if (!validarCondicaoAutonomia(condicaoAST)) throw new Error(`A condição da automação ${item.id} não usa o AST seguro aceito.`);
+        return { ...item, condicaoAST };
+      });
       const autonomous = autonomiaModo ? {
         modo: autonomiaModo as 'manual' | 'misto' | 'automatico',
         ...(autonomiaAlvo ? { politicaAlvo: autonomiaAlvo } : {}),
@@ -641,7 +659,7 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
         ...(resistenciaTreinada ? { resistenciaTreinada: { nome: resistenciaTreinada, ...(numeroOpcional(bonusResistenciaTreinada, 'Bônus de resistência') !== undefined ? { bonus: numeroOpcional(bonusResistenciaTreinada, 'Bônus de resistência') } : {}) } } : {}),
         recursosConfigurados: recursos,
         ...(Object.keys(custosComandos).length ? { custosComandosConfigurados: custosComandos } : {}),
-        acoes: acoesParaSalvar, caracteristicas: caracteristicaCompletas, possuiEnergiaReversa, reacoes, automacoesOmni,
+        acoes: acoesParaSalvar, caracteristicas: caracteristicaCompletas, possuiEnergiaReversa, reacoes, automacoesOmni: automacoesParaSalvar,
         omniConfiguracao: {
           ...(omniGatilhoEntidade ? { entidadeId: omniGatilhoEntidade } : {}),
           ...(omniAcaoId ? { acaoId: omniAcaoId } : {}),
@@ -971,20 +989,37 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
         <label className="text-xs">Ação OMNI<select value={omniAcaoId} onChange={event => setOmniAcaoId(event.target.value)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Selecione</option>{(entidadeAutomacao?.acoesAtivas ?? []).map(action => <option key={action.id} value={action.id}>{action.nome}</option>)}</select></label>
         <button type="button" className="self-end rounded border px-3 py-2 text-xs" onClick={adicionarAutomacao}>Adicionar automação OMNI</button>
       </div>
-      <ul className="mt-3 space-y-1">{automacoesOmni.map(item => <li key={item.id} className="flex items-center justify-between rounded border p-2 text-xs"><span>{item.gatilhoId} → {item.acaoId} · {item.habilitada ? 'ativa' : 'desativada para revisão'}</span><button type="button" className="rounded border px-2 py-1" onClick={() => setAutomacoesOmni(previous => previous.filter(automation => automation.id !== item.id))}>Remover</button></li>)}</ul>
-      <p className="mt-2 text-xs text-muted-foreground">As automações novas ficam desativadas até a revisão da ficha.</p>
+      <ul className="mt-3 space-y-2">{automacoesOmni.map(item => <li key={item.id} className="space-y-2 rounded border p-2 text-xs">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-1"><input type="checkbox" aria-label={`Ativar automação ${item.gatilhoId} → ${item.acaoId}`} checked={item.habilitada} onChange={event => setAutomacoesOmni(previous => previous.map(automation => automation.id === item.id ? { ...automation, habilitada: event.target.checked } : automation))} />Ativa</label>
+          <span className="min-w-0 flex-1">{item.gatilhoId} → {item.acaoId}{item.entidadeOmniId ? ` · ${entidades[item.entidadeOmniId]?.nome ?? item.entidadeOmniId}` : ''}</span>
+          <label>Prioridade<input aria-label={`Prioridade da automação ${item.id}`} type="number" step="1" value={item.prioridade ?? 0} onChange={event => {
+            const valor = event.target.value === '' ? undefined : Number(event.target.value);
+            if (valor !== undefined && !Number.isInteger(valor)) return;
+            setAutomacoesOmni(previous => previous.map(automation => automation.id === item.id ? { ...automation, prioridade: valor } : automation));
+          }} className="ml-1 w-20 rounded border bg-background px-2 py-1" /></label>
+          <button type="button" className="rounded border px-2 py-1" onClick={() => {
+            setAutomacoesOmni(previous => previous.filter(automation => automation.id !== item.id));
+            setCondicoesAutomacaoJson(previous => { const next = { ...previous }; delete next[item.id]; return next; });
+          }}>Remover</button>
+        </div>
+        <label className="block">Condição segura (JSON, opcional)
+          <textarea aria-label={`Condição segura da automação ${item.id}`} rows={2} value={condicoesAutomacaoJson[item.id] ?? ''} onChange={event => setCondicoesAutomacaoJson(previous => ({ ...previous, [item.id]: event.target.value }))} placeholder={'{"op":"compare","path":"evento.cena.rodada","cmp":"gte","value":1}'} className="mt-1 w-full rounded border bg-background p-2 font-mono text-[11px]" />
+        </label>
+      </li>)}</ul>
+      <p className="mt-2 text-xs text-muted-foreground">A automação só roda depois da aprovação do Mestre. Cada regra pode ser ativada ou pausada aqui; a condição aceita apenas comparações seguras sobre evento, dono, alvo e Shikigami.</p>
     </details>
 
     <details id="sec-K" className="rounded border border-border p-2">
       <summary className="cursor-pointer text-sm font-semibold">K · Política de autonomia</summary>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         <label className="text-xs">Modo<select value={autonomiaModo} onChange={event => setAutonomiaModo(event.target.value)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Não definido</option><option value="manual">Manual</option><option value="misto">Misto</option><option value="automatico">Automático</option></select></label>
-        <label className="text-xs">Prioridade de alvo<input value={autonomiaPrioridade} onChange={event => setAutonomiaPrioridade(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
+        <label className="text-xs">Prioridade de alvo<input value={autonomiaPrioridade} onChange={event => setAutonomiaPrioridade(event.target.value)} placeholder="IDs ou nomes, em ordem" className="mt-1 w-full rounded border bg-background p-2" /></label>
         <label className="text-xs">Política de alvo<select value={autonomiaAlvo} onChange={event => setAutonomiaAlvo(event.target.value)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Não definida</option><option value="manual">Escolha manual</option><option value="prioridade">Prioridade configurada</option><option value="ameaca_mais_proxima">Ameaça mais próxima</option></select></label>
-        <label className="text-xs">Política de custos<select value={autonomiaCusto} onChange={event => setAutonomiaCusto(event.target.value)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Não definida</option><option value="manual">Confirmar cada custo</option><option value="permitir_pe">Permitir gastar PE</option><option value="preferir_sem_custo">Preferir ações sem custo</option></select></label>
+        <label className="text-xs">Política de custos<select value={autonomiaCusto} onChange={event => setAutonomiaCusto(event.target.value)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Não definida</option><option value="manual">Pular ações com custo (manual)</option><option value="permitir_pe">Permitir custos configurados</option><option value="preferir_sem_custo">Preferir ações sem custo</option></select></label>
         <label className="text-xs">Limite por rodada<input type="number" min="0" step="1" value={autonomiaLimite} onChange={event => setAutonomiaLimite(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
       </div>
-      <p className="mt-2 text-xs text-muted-foreground">Políticas e limites ficam sem valor até serem escolhidos por ficha.</p>
+      <p className="mt-2 text-xs text-muted-foreground">Regras com prioridade maior rodam primeiro. A seleção automática só ocorre no turno do dono, com alvo visível e dentro do alcance. Custos sem autorização explícita são pulados; esta etapa não abre confirmação manual.</p>
     </details>
 
     <details id="sec-L" className="rounded border border-border p-2">

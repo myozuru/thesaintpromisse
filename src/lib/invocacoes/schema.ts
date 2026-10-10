@@ -198,11 +198,12 @@ const AutomacaoOmniSchema = z.object({
   id: idSchema,
   habilitada: z.boolean(),
   prioridade: z.number().int().optional(),
+  entidadeOmniId: idSchema.optional(),
   gatilhoId: idSchema,
   condicaoAST: z.unknown().optional(),
   acaoId: idSchema,
-  politicaCusto: z.unknown().optional(),
-  politicaAlvo: z.unknown().optional(),
+  politicaCusto: z.enum(["manual", "permitir_pe", "preferir_sem_custo"]).optional(),
+  politicaAlvo: z.enum(["manual", "prioridade", "ameaca_mais_proxima"]).optional(),
   limitePorRodada: nonNegativeIntSchema.optional(),
   revisao: z.number().int().min(1).optional(),
 }).passthrough();
@@ -210,8 +211,8 @@ const AutomacaoOmniSchema = z.object({
 const AutonomiaInvocacaoSchema = z.object({
   modo: z.enum(["manual", "misto", "automatico"]),
   prioridadeAlvo: z.string().optional(),
-  politicaAlvo: z.string().optional(),
-  politicaCusto: z.string().optional(),
+  politicaAlvo: z.enum(["manual", "prioridade", "ameaca_mais_proxima"]).optional(),
+  politicaCusto: z.enum(["manual", "permitir_pe", "preferir_sem_custo"]).optional(),
   limitePorRodada: nonNegativeIntSchema.optional(),
 }).passthrough();
 
@@ -375,6 +376,14 @@ export const InstanciaInvocacaoSchema = z.object({
     rodada: nonNegativeIntSchema,
     total: nonNegativeIntSchema.optional(),
     porEfeito: z.record(z.string(), nonNegativeIntSchema),
+  }).strict().optional(),
+  /** O dono ou o Mestre pode interromper a autonomia desta instância em campo. */
+  automacaoSuspensa: z.boolean().optional(),
+  /** Orçamento de automações da rodada; reentrada não restaura ações já executadas. */
+  usosAutomacaoRodada: z.object({
+    rodada: nonNegativeIntSchema,
+    total: nonNegativeIntSchema,
+    porAutomacao: z.record(z.string(), nonNegativeIntSchema),
   }).strict().optional(),
   recargas: z.record(z.string(), z.unknown()).optional(),
   duracoes: z.record(z.string(), z.unknown()).optional(),

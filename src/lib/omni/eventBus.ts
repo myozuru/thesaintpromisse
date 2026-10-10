@@ -46,6 +46,14 @@ function pegarChar(id?: string) {
   return useCharacterStore.getState().characters.find((c) => c.id === id);
 }
 
+function despacharAutonomias(evento: GatilhoId, opts: EmitirOpts, cadeia: CadeiaOmni): void {
+  void import('@/lib/controlador/autonomia').then(({ despacharAutonomiasInvocacao }) =>
+    despacharAutonomiasInvocacao(evento, opts, cadeia),
+  ).catch((error) => {
+    console.warn('[eventBus] erro despachando automações de invocação:', error);
+  });
+}
+
 export function emitirEvento(evento: GatilhoId, opts: EmitirOpts = {}): number {
   const cadeia = reservarPassoOmni(opts.cadeia);
   if (!cadeia) return 0;
@@ -57,7 +65,11 @@ export function emitirEvento(evento: GatilhoId, opts: EmitirOpts = {}): number {
       omniCounterRestCycle: (ficha.omniCounterRestCycle ?? 0) + 1,
     });
   }
-  return executarNaCadeiaOmni(cadeia, () => emitirEventoNaCadeia(evento, opts));
+  return executarNaCadeiaOmni(cadeia, () => {
+    const total = emitirEventoNaCadeia(evento, opts);
+    despacharAutonomias(evento, opts, cadeia);
+    return total;
+  });
 }
 
 /** Evento de uma entidade específica: não dispara outras auras do portador. */
@@ -66,7 +78,9 @@ export function emitirEventoDaEntidade(ent: EntidadeOmni, evento: GatilhoId, opt
   if (!cadeia) return 0;
   return executarNaCadeiaOmni(cadeia, () => {
     const ctx = { usuario: pegarChar(opts.usuarioId), alvo: pegarChar(opts.alvoId), cena: opts.cena, dano: opts.dano, origemNome: opts.origemNome, sourceInstanceId: opts.instanciaId, profundidade: 0 };
-    return executarGatilho(ent, evento, ctx) + (opts.usuarioId ? dispararGatilhoEfeitosItens(evento, { usuarioId: opts.usuarioId, alvoId: opts.alvoId, cena: opts.cena, dano: opts.dano, entidade: ent, instanciaId: opts.instanciaId }) : 0);
+    const total = executarGatilho(ent, evento, ctx) + (opts.usuarioId ? dispararGatilhoEfeitosItens(evento, { usuarioId: opts.usuarioId, alvoId: opts.alvoId, cena: opts.cena, dano: opts.dano, entidade: ent, instanciaId: opts.instanciaId }) : 0);
+    despacharAutonomias(evento, opts, cadeia);
+    return total;
   });
 }
 
