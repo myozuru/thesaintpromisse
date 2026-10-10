@@ -31,7 +31,7 @@ export function DiarioQuests({ aberto, onClose, charId, master }: { aberto: bool
         <DialogHeader><DialogTitle>📖 Diário de Quests</DialogTitle></DialogHeader>
         <div className="flex gap-2 border-b border-border pb-2">
           <Button size="sm" variant={aba === 'quests' ? 'default' : 'ghost'} onClick={() => setAba('quests')}>Quests</Button>
-          <Button size="sm" variant={aba === 'conquistas' ? <PainelConquistas charId={charId} master={master} /> : aba === 'guilda' ? 'default' : 'ghost'} onClick={() => setAba('guilda')}>Guilda</Button>
+          <Button size="sm" variant={aba === 'guilda' ? 'default' : 'ghost'} onClick={() => setAba('guilda')}>Guilda</Button>
           <Button size="sm" variant={aba === 'rep' ? 'default' : 'ghost'} onClick={() => setAba('rep')}>Reputação</Button>
           <Button size="sm" variant={aba === 'tempo' ? 'default' : 'ghost'} onClick={() => setAba('tempo')}>Linha do tempo</Button>
           <Button size="sm" variant={aba === 'conquistas' ? 'default' : 'ghost'} onClick={() => setAba('conquistas')}>🏆 Conquistas</Button>
