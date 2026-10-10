@@ -5,6 +5,7 @@ import { useRoleStore } from '@/stores/useRoleStore';
 import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import { ATRIBUTOS_SHIKIGAMI, atributosIniciaisShikigami, auditarFichaShikigami, grausDisponiveis, pontosRestantesShikigami, regrasGrau, validarAtributosShikigami, valoresShikigami, type GrauShikigami } from '@/lib/controlador/regrasShikigami';
 import { limiteInvocacoesConhecidas } from '@/lib/controlador/tipos';
+import { submeterAprovacaoInvocacao } from '@/lib/controlador/aprovacao.functions';
 
 const rotulos = {forca:'Força',destreza:'Destreza',constituicao:'Constituição',inteligencia:'Inteligência',sabedoria:'Sabedoria',presenca:'Presença'};
 const graus = {quarto:'Quarto Grau',terceiro:'Terceiro Grau',segundo:'Segundo Grau',primeiro:'Primeiro Grau',especial:'Grau Especial'};
@@ -16,6 +17,7 @@ export function CriadorShikigami({character}:{character:Character}){
   const [grau,setGrau]=useState<GrauShikigami>('quarto');
   const [atributos,setAtributos]=useState(atributosIniciaisShikigami);
   const [erro,setErro]=useState('');
+  const [salvando,setSalvando]=useState(false);
   const controlador=character.specialization==='Controlador';
   const disponiveis=controlador?grausDisponiveis(character.level):(['quarto','terceiro','segundo','primeiro','especial'] as GrauShikigami[]);
   const regras=regrasGrau(grau);
@@ -33,7 +35,8 @@ export function CriadorShikigami({character}:{character:Character}){
       custoInvocacaoPE:valores.custoPE,
     },
   });
-  const cadastrar=()=>{
+  const cadastrar=async()=>{
+    if(salvando)return;
     const mensagem=validarAtributosShikigami(grau,atributos);
     const catalogo=character.invocacoesConhecidas??[];
     if(!nome.trim()){setErro('Informe o nome do Shikigami.');return;}
@@ -41,14 +44,31 @@ export function CriadorShikigami({character}:{character:Character}){
     if(mensagem){setErro(mensagem);return;}
     // O livro exige Interlúdio para não Controladores e invocações extras;
     // o editor informa a regra, preservando as exceções livres autorizadas.
-    update(character.id,{invocacoesConhecidas:[...catalogo,{
-      id:crypto.randomUUID(),donoCharacterId:character.id,nome:nome.trim(),tipo:'shikigami',
-      origem:{tipo:'manual'},grau,atributos:{...atributos},aprovacaoMestre:isMaster?'aprovada':'pendente',
+    const rascunho={
+      id:crypto.randomUUID(),donoCharacterId:character.id,nome:nome.trim(),tipo:'shikigami' as const,
+      origem:{tipo:'manual'},grau,atributos:{...atributos},aprovacaoMestre:'pendente' as const,versaoModelo:1,
       hpAtual:valores.pv,hpMaximo:valores.pv,defesa:valores.defesa,
-      deslocamentoM:valores.deslocamentoM,porte:'Médio',
+      deslocamentoM:valores.deslocamentoM,porte:'Médio' as const,
       custoInvocacaoPE:valores.custoPE,acoes:[],
-    }]});
-    setNome('');setAtributos(atributosIniciaisShikigami());setErro('');
+    };
+    setSalvando(true);setErro('');
+    try{
+      const solicitacao=await submeterAprovacaoInvocacao({data:{
+        requestId:crypto.randomUUID(),invocationId:rascunho.id,ownerCharacterId:character.id,
+        versionSubmitted:1,snapshot:rascunho as unknown as Record<string,unknown>,
+      }});
+      update(character.id,{invocacoesConhecidas:[...catalogo,{
+        ...rascunho,
+        aprovacaoMestre:solicitacao.status,
+        versaoAprovada:solicitacao.versaoAprovada??undefined,
+        solicitacaoAprovacaoId:solicitacao.requestId,
+      }]});
+      setNome('');setAtributos(atributosIniciaisShikigami());setErro('');
+    }catch(error){
+      setErro(error instanceof Error?error.message:'Não foi possível enviar a solicitação ao Mestre.');
+    }finally{
+      setSalvando(false);
+    }
   };
   return <div className="space-y-3 rounded-lg border border-border p-3">
     <h3 className="font-semibold">Criar Shikigami</h3>
@@ -80,6 +100,6 @@ export function CriadorShikigami({character}:{character:Character}){
       <span>Custo base: <strong>{valores.custoPE} PE</strong></span>
     </div>
     {erro&&<p role="alert" className="text-xs text-destructive">{erro}</p>}
-    <button type="button" onClick={cadastrar} className="rounded bg-primary px-3 py-2 text-xs text-primary-foreground">{isMaster?'Salvar e aprovar Shikigami':'Solicitar aprovação do Mestre'}</button>
+    <button type="button" disabled={salvando} onClick={()=>void cadastrar()} className="rounded bg-primary px-3 py-2 text-xs text-primary-foreground disabled:opacity-50">{isMaster?'Salvar e aprovar Shikigami':'Solicitar aprovação do Mestre'}</button>
   </div>;
 }
