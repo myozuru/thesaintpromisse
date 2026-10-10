@@ -26,16 +26,7 @@ export interface PlanoCustosAtivos {
 }
 export type ResultadoCustosAtivos = { ok: true; plano: PlanoCustosAtivos } | { ok: false; reason: string };
 
-type AcaoAtivaEfetiva = AcaoAtivaConfig['acao'] | 'completa';
 
-export interface PlanoCustosAtivos {
-  pe: number; pv: number; cargas: number; contador?: string;
-  municao: number; armaMunicao?: { charId: string; nome: string; restanteAntes: number; instanceId?: string };
-  usosItem: number; instanciaItemId?: string;
-  acao: AcaoAtivaEfetiva; custoAcaoOmniKey?: string; intensificacoes: number; maxIntensificacoes: number;
-  pePorTurno: number;
-}
-export type ResultadoCustosAtivos = { ok: true; plano: PlanoCustosAtivos } | { ok: false; reason: string };
 
 /** Normaliza IDs ou nomes usados por MODIFICAR_CUSTO_ACAO e por ações ativas. */
 export function normalizarIdentificadorCustoAcao(valor: string): string {
