@@ -1,5 +1,5 @@
 import { useCharacterStore } from '@/stores/useCharacterStore';
-import { useMapStore } from '@/stores/useMapStore';
+import { useMapStore, type Entity } from '@/stores/useMapStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { validarIntermediarioInvocacao } from './intermediario';
@@ -8,6 +8,15 @@ import { limiteAtivasPersonagem, type InvocacaoControlador } from './tipos';
 import { useLogStore } from '@/stores/useLogStore';
 import { podeUsarVersaoAprovada } from '@/lib/controlador/aprovacao';
 import { WallsEngine } from '@/components/mapa/WallsEngine';
+import type { Character } from '@/types';
+import { InstanciaInvocacaoSchema, type InstanciaInvocacao } from '@/lib/invocacoes/schema';
+import {
+  aplicarCuraPVInvocacao,
+  aplicarDanoPVInvocacao,
+  levantarInstanciaInvocacao,
+  novaInstanciaInvocacao,
+  estadoPorPVInvocacao,
+} from './estadoInvocacao';
 
 export type DirecaoInvocacao = 'norte' | 'sul' | 'leste' | 'oeste';
 export type ResultadoInvocacao = { ok: true; tokenId: string } | { ok: false; motivo: string };
@@ -19,6 +28,88 @@ function novoIdInvocacao(prefixo: string): string {
     ? crypto.randomUUID()
     : Math.random().toString(36).slice(2) + Date.now().toString(36);
   return `${prefixo}-${valor}`;
+}
+
+function economiaInicialInvocacao(modelo: InvocacaoControlador): InstanciaInvocacao['economiaAcoes'] {
+  const movimento = modelo.economiaAcoesConfigurada?.acaoMovimento;
+  return movimento === undefined
+    ? undefined
+    : { acaoMovimento: { atual: movimento, maximo: movimento } };
+}
+
+function instanciasComAtualizada(
+  personagem: Character,
+  instancia: InstanciaInvocacao,
+): InstanciaInvocacao[] {
+  const anteriores = personagem.instanciasInvocacao ?? [];
+  const index = anteriores.findIndex(item => item.id === instancia.id);
+  if (index < 0) return [...anteriores, instancia];
+  return anteriores.map((item, i) => i === index ? instancia : item);
+}
+
+function gravarInstancia(
+  personagem: Character,
+  instancia: InstanciaInvocacao,
+): void {
+  const hpCatalogo = Math.max(0, Math.min(instancia.hpMaximoAtual, instancia.hpAtual));
+  useCharacterStore.getState().updateCharacter(personagem.id, {
+    instanciasInvocacao: instanciasComAtualizada(personagem, instancia),
+    invocacoesConhecidas: (personagem.invocacoesConhecidas ?? []).map(modelo => modelo.id === instancia.modeloId
+      ? { ...modelo, hpAtual: hpCatalogo }
+      : modelo),
+  });
+}
+
+function obterInstanciaDoToken(
+  personagem: Character,
+  token: Entity,
+  modelo: InvocacaoControlador,
+): InstanciaInvocacao {
+  const hpAtual = token.hp ?? modelo.hpAtual;
+  const hpMaximoAtual = token.hpMax ?? modelo.hpMaximo;
+  const id = token.invocationInstanceId ?? `legacy-instance-${token.id}`;
+  const existente = personagem.instanciasInvocacao?.find(item => item.id === id);
+  if (existente) {
+    const estado = hpAtual <= -hpMaximoAtual
+      ? 'derrotada'
+      : hpAtual <= 0
+        ? 'caida'
+        : token.invocationState === 'caida' || existente.estado === 'caida'
+          ? 'caida'
+          : 'ativa';
+    return InstanciaInvocacaoSchema.parse({
+      ...existente,
+      tokenId: token.id,
+      hpAtual,
+      hpMaximoAtual,
+      estado,
+    });
+  }
+  return novaInstanciaInvocacao({
+    id,
+    modeloId: modelo.id,
+    donoCharacterId: personagem.id,
+    donoProfileId: personagem.profileId || undefined,
+    tokenId: token.id,
+    ...(token.invocationEventId ? { eventoCriacaoId: token.invocationEventId } : {}),
+    hpAtual,
+    hpMaximoAtual,
+    estado: hpAtual <= -hpMaximoAtual
+      ? 'derrotada'
+      : hpAtual <= 0
+        ? 'caida'
+        : token.invocationState === 'caida'
+          ? 'caida'
+          : 'ativa',
+    economiaAcoes: economiaInicialInvocacao(modelo),
+  });
+}
+
+function obterModeloDoToken(
+  personagem: Character,
+  token: Entity,
+): InvocacaoControlador | undefined {
+  return personagem.invocacoesConhecidas?.find(modelo => modelo.id === token.invocationId);
 }
 
 /** Mantém tokens distintos das fichas: servos não ganham iniciativa própria. */
@@ -54,6 +145,14 @@ export function invocarControlador(
       return { ok: true, tokenId: eventoExistente.id };
     }
     return { ok: false, motivo: 'Este ID de evento já pertence a outra invocação.' };
+  }
+  const instanciaRepetida = dono.instanciasInvocacao?.find(instancia => instancia.eventoCriacaoId === eventoId);
+  if (instanciaRepetida) {
+    if (instanciaRepetida.donoCharacterId !== donoId || instanciaRepetida.modeloId !== invocacaoId) {
+      return { ok: false, motivo: 'Este ID de evento já pertence a outra invocação.' };
+    }
+    if (mapa.entities[instanciaRepetida.tokenId]) return { ok: true, tokenId: instanciaRepetida.tokenId };
+    return { ok: false, motivo: 'Este evento já foi resolvido; ele não pode materializar uma segunda instância.' };
   }
   const modelo = dono.invocacoesConhecidas?.find(i => i.id === invocacaoId && i.donoCharacterId === donoId);
   if (!modelo) return { ok: false, motivo: 'Invocação não pertence ao catálogo.' };
@@ -107,9 +206,24 @@ export function invocarControlador(
       hp: modelo.hpAtual, hpMax: modelo.hpMaximo, ownerCharId: donoId,
       ownerProfileId: dono.profileId || undefined, invocationId: modelo.id,
       invocationEventId: eventoId, invocationInstanceId: instanciaId,
+      invocationState: 'ativa',
       invocationDefense: modelo.defesa, invocationMovementM: modelo.deslocamentoM,
     });
-    cs.updateCharacter(donoId, { peCurrent: peAntes - modelo.custoInvocacaoPE });
+    const instancia = novaInstanciaInvocacao({
+      id: instanciaId,
+      modeloId: modelo.id,
+      donoCharacterId: donoId,
+      donoProfileId: dono.profileId || undefined,
+      tokenId,
+      eventoCriacaoId: eventoId,
+      hpAtual: modelo.hpAtual,
+      hpMaximoAtual: modelo.hpMaximo,
+      economiaAcoes: economiaInicialInvocacao(modelo),
+    });
+    cs.updateCharacter(donoId, {
+      peCurrent: peAntes - modelo.custoInvocacaoPE,
+      instanciasInvocacao: [...(dono.instanciasInvocacao ?? []), instancia],
+    });
   } catch {
     try {
       if (useMapStore.getState().entities[tokenId]) useMapStore.getState().removeEntities([tokenId]);
@@ -163,6 +277,24 @@ export function invocarControladores(
   }
   if (associadasAoEvento.length) return { ok: false, motivo: 'Este ID de evento já pertence a outra invocação.' };
 
+  const eventosEsperados = new Set(ids.map(id => eventoId + ':' + id));
+  const instanciasRepetidas = (dono.instanciasInvocacao ?? []).filter(instancia =>
+    instancia.eventoCriacaoId && eventosEsperados.has(instancia.eventoCriacaoId),
+  );
+  if (instanciasRepetidas.length) {
+    const mesmasInvocacoes = instanciasRepetidas.length === ids.length && ids.every(id =>
+      instanciasRepetidas.some(instancia => instancia.donoCharacterId === donoId &&
+        instancia.modeloId === id && instancia.eventoCriacaoId === eventoId + ':' + id),
+    );
+    if (!mesmasInvocacoes) return { ok: false, motivo: 'Este ID de evento já pertence a outro lote de invocações.' };
+    const tokensExistentes = ids.map(id => {
+      const instancia = instanciasRepetidas.find(item => item.modeloId === id)!;
+      return mapa.entities[instancia.tokenId];
+    });
+    if (tokensExistentes.every(Boolean)) return { ok: true, tokenIds: tokensExistentes.map(token => token!.id) };
+    return { ok: false, motivo: 'Este lote já foi resolvido; ele não pode materializar novas instâncias.' };
+  }
+
   const modelos = ids.map(id => dono.invocacoesConhecidas?.find(modelo => modelo.id === id && modelo.donoCharacterId === donoId));
   if (modelos.some(modelo => !modelo)) return { ok: false, motivo: 'Uma das invocações não pertence ao catálogo.' };
   const modelosValidos = modelos as InvocacaoControlador[];
@@ -183,7 +315,8 @@ export function invocarControladores(
     validacoesOverride.push({ modelo, motivo, override });
   }
 
-  const ativos = tokensInvocados(donoId).filter(token => (token.hp ?? 0) > 0);
+  // Uma instância Caída continua no campo e ocupa o limite simultâneo.
+  const ativos = tokensInvocados(donoId);
   if (ids.some(id => ativos.some(token => token.invocationId === id))) return { ok: false, motivo: 'Uma das invocações selecionadas já está no mapa.' };
   const limite = limiteAtivasPersonagem(dono.specialization, dono.treinoControle ?? 0);
   if (ativos.length + posicoes.length > limite) return { ok: false, motivo: 'O lote ultrapassa o limite de invocações ativas.' };
@@ -220,11 +353,13 @@ export function invocarControladores(
   }
 
   const criados: string[] = [];
+  const instanciasCriadas: InstanciaInvocacao[] = [];
   try {
     for (const { modelo, x, y } of alvos) {
       const tokenId = novoIdInvocacao('token');
       const instanciaId = novoIdInvocacao('instancia');
       criados.push(tokenId);
+      const eventoDaInstancia = eventoId + ':' + modelo.id;
       mapa.addEntity({
         id: tokenId,
         shape: modelo.formaToken ?? 'ELLIPSE', x, y, w: passo, h: passo, rotation: 0,
@@ -236,11 +371,26 @@ export function invocarControladores(
         ...(modelo.tokenCrop ? { tokenCrop: modelo.tokenCrop as import('@/stores/useMapStore').TokenCrop } : {}),
         hp: modelo.hpAtual, hpMax: modelo.hpMaximo, ownerCharId: donoId,
         ownerProfileId: dono.profileId || undefined, invocationId: modelo.id,
-        invocationEventId: eventoId + ':' + modelo.id, invocationBatchId: eventoId, invocationInstanceId: instanciaId,
+        invocationEventId: eventoDaInstancia, invocationBatchId: eventoId, invocationInstanceId: instanciaId,
+        invocationState: 'ativa',
         invocationDefense: modelo.defesa, invocationMovementM: modelo.deslocamentoM,
       });
+      instanciasCriadas.push(novaInstanciaInvocacao({
+        id: instanciaId,
+        modeloId: modelo.id,
+        donoCharacterId: donoId,
+        donoProfileId: dono.profileId || undefined,
+        tokenId,
+        eventoCriacaoId: eventoDaInstancia,
+        hpAtual: modelo.hpAtual,
+        hpMaximoAtual: modelo.hpMaximo,
+        economiaAcoes: economiaInicialInvocacao(modelo),
+      }));
     }
-    cs.updateCharacter(donoId, { peCurrent: peAntes - custoTotal });
+    cs.updateCharacter(donoId, {
+      peCurrent: peAntes - custoTotal,
+      instanciasInvocacao: [...(dono.instanciasInvocacao ?? []), ...instanciasCriadas],
+    });
   } catch {
     try { if (criados.length) useMapStore.getState().removeEntities(criados); } catch { /* rollback local best-effort */ }
     try {
@@ -261,7 +411,7 @@ export function invocarControladores(
   return { ok: true, tokenIds: criados };
 }
 
-/** Recolhe um servo real e libera o slot, sem reembolsar PE. */
+/** Recolhe um servo real sem reembolsar PE, conservando a instância como dissipada. */
 
 export function recolherInvocacao(donoId: string, invocacaoId: string): boolean {
   const dono = useCharacterStore.getState().characters.find(c => c.id === donoId);
@@ -269,19 +419,54 @@ export function recolherInvocacao(donoId: string, invocacaoId: string): boolean 
   const mapa = useMapStore.getState();
   const tokens = Object.values(mapa.entities).filter(e => e.ownerCharId === donoId && e.invocationId === invocacaoId);
   if (!tokens.length) return false;
-  const hpAtual = Math.max(0, tokens[0].hp ?? 0);
-  const catalogo = (dono.invocacoesConhecidas ?? []).map(i => i.id === invocacaoId ? { ...i, hpAtual } : i);
-  useCharacterStore.getState().updateCharacter(donoId, { invocacoesConhecidas: catalogo });
+  const token = tokens[0];
+  const modelo = obterModeloDoToken(dono, token);
+  if (!modelo) return false;
+  const instancia = obterInstanciaDoToken(dono, token, modelo);
+  if (instancia.estado === 'derrotada') return false;
+  const dissipada = InstanciaInvocacaoSchema.parse({
+    ...instancia,
+    version: instancia.version + 1,
+    estado: 'dissipada',
+  });
+  gravarInstancia(dono, dissipada);
   mapa.removeEntities(tokens.map(t => t.id));
   return true;
 }
 
-/** Desfaz tokens destruídos e registra a perda de PV no catálogo. */
+/** Normaliza tokens legados em 0 PV e remove somente os que cruzaram o limiar de −PV máximo. */
 export function limparInvocacoesDerrotadas(donoId: string): number {
   let removidos = 0;
   for (const token of tokensInvocados(donoId)) {
-    if ((token.hp ?? 0) > 0) continue;
-    if (recolherInvocacao(donoId, token.invocationId!)) removidos++;
+    const personagem = useCharacterStore.getState().characters.find(c => c.id === donoId);
+    if (!personagem) continue;
+    const modelo = obterModeloDoToken(personagem, token);
+    if (!modelo) continue;
+    const instancia = obterInstanciaDoToken(personagem, token, modelo);
+    const hpAtual = token.hp ?? instancia.hpAtual;
+    const estado = estadoPorPVInvocacao(hpAtual, token.hpMax ?? modelo.hpMaximo);
+    if (estado === 'derrotada') {
+      const derrotada = InstanciaInvocacaoSchema.parse({
+        ...instancia,
+        version: instancia.version + 1,
+        hpAtual,
+        estado,
+      });
+      gravarInstancia(personagem, derrotada);
+      useMapStore.getState().removeEntities([token.id]);
+      removidos++;
+      continue;
+    }
+    if (estado === 'caida' && (token.invocationState !== 'caida' || instancia.estado !== 'caida')) {
+      const caida = InstanciaInvocacaoSchema.parse({
+        ...instancia,
+        version: instancia.version + 1,
+        hpAtual,
+        estado: 'caida',
+      });
+      gravarInstancia(personagem, caida);
+      useMapStore.getState().updateEntity(token.id, { hp: hpAtual, invocationState: 'caida' });
+    }
   }
   return removidos;
 }
@@ -293,22 +478,70 @@ export function podeComandarInvocacao(donoId: string): boolean {
 }
 
 
-/** Dano direcionado a um token real de invocação; nunca altera PV da ficha do dono. */
+/** Dano direcionado a uma instância; 0 PV deixa a criatura Caída, −PV máximo a derrota. */
 export function causarDanoInvocacao(tokenId: string, dano: number): { ok: true; hpRestante: number; destruida: boolean } | { ok: false; motivo: string } {
   const mapa = useMapStore.getState();
   const token = mapa.entities[tokenId];
   if (!token?.ownerCharId || !token.invocationId) return { ok: false, motivo: 'Token não pertence a uma invocação.' };
-  if (!Number.isFinite(dano) || dano < 0) return { ok: false, motivo: 'Dano inválido.' };
-  const hpRestante = Math.max(0, (token.hp ?? 0) - Math.floor(dano));
-  mapa.updateEntity(tokenId, { hp: hpRestante });
   const dono = useCharacterStore.getState().characters.find(c => c.id === token.ownerCharId);
-  if (dono) {
-    useCharacterStore.getState().updateCharacter(dono.id, {
-      invocacoesConhecidas: (dono.invocacoesConhecidas ?? []).map(i => i.id === token.invocationId ? { ...i, hpAtual: hpRestante } : i),
-    });
+  if (!dono) return { ok: false, motivo: 'Dono da invocação não encontrado.' };
+  const modelo = obterModeloDoToken(dono, token);
+  if (!modelo) return { ok: false, motivo: 'Modelo da invocação não encontrado.' };
+  const atual = obterInstanciaDoToken(dono, token, modelo);
+  const resultado = aplicarDanoPVInvocacao(atual, dano);
+  if (!resultado.ok) return resultado;
+  gravarInstancia(dono, resultado.instancia);
+  if (resultado.instancia.estado === 'derrotada') {
+    mapa.removeEntities([tokenId]);
+    return { ok: true, hpRestante: resultado.instancia.hpAtual, destruida: true };
   }
-  if (hpRestante === 0) mapa.removeEntities([tokenId]);
-  return { ok: true, hpRestante, destruida: hpRestante === 0 };
+  mapa.updateEntity(tokenId, {
+    hp: resultado.instancia.hpAtual,
+    invocationState: resultado.instancia.estado,
+    invocationInstanceId: resultado.instancia.id,
+  });
+  return { ok: true, hpRestante: resultado.instancia.hpAtual, destruida: false };
+}
+
+/** Cura PV da instância sem levantar automaticamente uma criatura que já estava Caída. */
+export function curarInvocacao(tokenId: string, cura: number): { ok: true; hpRestante: number; caida: boolean } | { ok: false; motivo: string } {
+  const mapa = useMapStore.getState();
+  const token = mapa.entities[tokenId];
+  if (!token?.ownerCharId || !token.invocationId) return { ok: false, motivo: 'Token não pertence a uma invocação.' };
+  const dono = useCharacterStore.getState().characters.find(c => c.id === token.ownerCharId);
+  if (!dono) return { ok: false, motivo: 'Dono da invocação não encontrado.' };
+  const modelo = obterModeloDoToken(dono, token);
+  if (!modelo) return { ok: false, motivo: 'Modelo da invocação não encontrado.' };
+  const atual = obterInstanciaDoToken(dono, token, modelo);
+  const resultado = aplicarCuraPVInvocacao(atual, cura);
+  if (!resultado.ok) return resultado;
+  gravarInstancia(dono, resultado.instancia);
+  mapa.updateEntity(tokenId, {
+    hp: resultado.instancia.hpAtual,
+    invocationState: resultado.instancia.estado,
+    invocationInstanceId: resultado.instancia.id,
+  });
+  return { ok: true, hpRestante: resultado.instancia.hpAtual, caida: resultado.instancia.estado === 'caida' };
+}
+
+/** Levantar exige PV acima de 0 e uma Ação de Movimento disponível na própria instância. */
+export function levantarInvocacao(donoId: string, invocacaoId: string): { ok: true } | { ok: false; motivo: string } {
+  const dono = useCharacterStore.getState().characters.find(c => c.id === donoId);
+  if (!dono) return { ok: false, motivo: 'Personagem inválido.' };
+  const token = tokensInvocados(donoId).find(entity => entity.invocationId === invocacaoId);
+  if (!token) return { ok: false, motivo: 'A instância não está no mapa.' };
+  const modelo = obterModeloDoToken(dono, token);
+  if (!modelo) return { ok: false, motivo: 'Modelo da invocação não encontrado.' };
+  const atual = obterInstanciaDoToken(dono, token, modelo);
+  const resultado = levantarInstanciaInvocacao(atual);
+  if (!resultado.ok) return resultado;
+  gravarInstancia(dono, resultado.instancia);
+  useMapStore.getState().updateEntity(token.id, {
+    hp: resultado.instancia.hpAtual,
+    invocationState: 'ativa',
+    invocationInstanceId: resultado.instancia.id,
+  });
+  return { ok: true };
 }
 
 /** Primeiro comando da Fase 4: uma ação bônus reposiciona um servo em

@@ -6,7 +6,7 @@ import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { validarIntermediarioInvocacao } from '@/lib/controlador/intermediario';
-import { invocarControladores, recolherInvocacao, limparInvocacoesDerrotadas, comandarReposicionamento, comandarAtaque, type DirecaoInvocacao } from '@/lib/controlador/mapa';
+import { invocarControladores, recolherInvocacao, limparInvocacoesDerrotadas, levantarInvocacao, comandarReposicionamento, comandarAtaque, type DirecaoInvocacao } from '@/lib/controlador/mapa';
 import { limiteInvocacoesConhecidas, limiteAtivasPersonagem, validarCatalogoControlador, type InvocacaoControlador, type TipoInvocacaoControlador } from '@/lib/controlador/tipos';
 import { podeUsarVersaoAprovada } from '@/lib/controlador/aprovacao';
 import { carregarAssetFicha } from '@/lib/controlador/assetFicha';
@@ -127,6 +127,11 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
   };
   const recolher = (id: string) => {
     if (recolherInvocacao(character.id, id)) { setErro(''); setMensagem('Invocação recolhida.'); }
+  };
+  const levantar = (id: string) => {
+    const resultado = levantarInvocacao(character.id, id);
+    if (!resultado.ok) { setErro(resultado.motivo); return; }
+    setErro(''); setMensagem('Invocação levantada; Ação de Movimento própria consumida.');
   };
   const catalogo = character.invocacoesConhecidas ?? [];
   const assetForFicha = (inv: InvocacaoControlador) => {
@@ -325,6 +330,10 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
       setErro('Aguarde a decisão do Mestre antes de remover esta invocação.');
       return;
     }
+    if (character.instanciasInvocacao?.some(instancia => instancia.modeloId === id && instancia.estado === 'derrotada')) {
+      setErro('A ficha derrotada precisa permanecer no catálogo até a resolução do Mestre/Controlador.');
+      return;
+    }
     updateCharacter(character.id, { invocacoesConhecidas: catalogo.filter(i => i.id !== id) });
     setErro('');
   };
@@ -346,10 +355,26 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
       {catalogo.map(inv => {
         const arte = assetForFicha(inv);
         const estadoIntermediario = validarIntermediarioInvocacao(inv, character, itensInventario, catalogo);
-        const ativo = ativos.some(entity => entity.invocationId === inv.id);
+        const token = ativos.find(entity => entity.invocationId === inv.id);
+        const ativo = Boolean(token);
+        const instancia = token
+          ? character.instanciasInvocacao?.find(item => item.id === token.invocationInstanceId || item.tokenId === token.id)
+          : [...(character.instanciasInvocacao ?? [])].reverse().find(item => item.modeloId === inv.id);
+        const estadoInstancia = token?.invocationState ?? instancia?.estado;
+        const derrotaPendente = estadoInstancia === 'derrotada';
+        const movimentoDisponivel = (instancia?.economiaAcoes?.acaoMovimento?.atual ?? 0) > 0;
+        const rotuloEstado = estadoInstancia === 'derrotada'
+          ? 'Derrotada — aguardando resolução'
+          : estadoInstancia === 'caida'
+            ? 'Caída — cura acima de 0 PV e Ação de Movimento própria para levantar'
+            : estadoInstancia === 'ativa'
+              ? 'Ativa no mapa'
+              : estadoInstancia === 'dissipada'
+                ? 'Dissipada'
+                : 'Pronta';
         const aprovado = podeUsarVersaoAprovada({ estado: inv.aprovacaoMestre, versaoAtual: inv.versaoModelo, versaoAprovada: inv.versaoAprovada });
         const alcanceConfigurado = Number.isFinite(inv.alcanceInvocacaoM) && (inv.alcanceInvocacaoM ?? -1) >= 0;
-        const podeSelecionar = !ativo && aprovado && alcanceConfigurado && (estadoIntermediario.ok || (isMaster && Boolean(motivosOverride[inv.id]?.trim())));
+        const podeSelecionar = !ativo && !derrotaPendente && inv.hpAtual > 0 && aprovado && alcanceConfigurado && (estadoIntermediario.ok || (isMaster && Boolean(motivosOverride[inv.id]?.trim())));
         return (
         <div key={inv.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border p-2">
           <div className="flex items-center gap-2">
@@ -358,6 +383,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
             </div>
             <div><strong>{inv.apelido?.trim() || inv.nome}</strong><div className="text-xs text-muted-foreground">{inv.tipo === 'shikigami' ? 'Shikigami' : 'Corpo Amaldiçoado'} · PV {inv.hpAtual}/{inv.hpMaximo} · Defesa {inv.defesa} · {inv.deslocamentoM} m · {inv.custoInvocacaoPE} PE · {inv.acoes.length} ações</div></div>
           </div>
+          <div className={'basis-full text-xs ' + (derrotaPendente ? 'text-destructive' : estadoInstancia === 'caida' ? 'text-amber-300' : 'text-muted-foreground')}>Estado de combate: {rotuloEstado}{estadoInstancia === 'derrotada' && instancia ? ` (PV ${instancia.hpAtual})` : ''}</div>
           <div className="basis-full text-xs text-muted-foreground">Aquisição: {inv.aprovacaoMestre === 'pendente' ? 'Aguardando aprovação do Mestre' : inv.aprovacaoMestre === 'rejeitada' ? 'Rejeitada — edite e solicite novamente' : 'Aprovada'}</div>
           <div className={'basis-full text-xs ' + (estadoIntermediario.ok ? 'text-muted-foreground' : 'text-amber-300')}>Intermediário: {estadoIntermediario.ok ? 'disponível — ' + estadoIntermediario.resumo : 'pendente de validação — ' + estadoIntermediario.motivo}</div>
           <div className={'basis-full text-xs ' + (alcanceConfigurado ? 'text-muted-foreground' : 'text-amber-300')}>Alcance de posicionamento: {alcanceConfigurado ? (inv.alcanceInvocacaoM ?? 0) + ' m' : 'não definido — edite a ficha antes de invocar'}</div>
@@ -387,14 +413,18 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
           <div className="flex shrink-0 flex-wrap gap-1">
             {onEditFicha && <button type="button" disabled={busyAprovacao || inv.aprovacaoMestre === 'pendente'} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={() => onEditFicha(inv.id)}>Editar ficha</button>}
             {ativo ? (
-              <><button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => comandar(inv.id)}>Comandar movimento (bônus)</button><button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => recolher(inv.id)}>Recolher</button></>
+              <>
+                {estadoInstancia === 'caida' && <button type="button" disabled={(token?.hp ?? 0) <= 0 || !movimentoDisponivel} title={!movimentoDisponivel ? 'Ação de Movimento própria indisponível.' : undefined} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={() => levantar(inv.id)}>Levantar (Ação de Movimento)</button>}
+                <button type="button" disabled={estadoInstancia === 'caida'} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={() => comandar(inv.id)}>Comandar movimento (bônus)</button>
+                <button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => recolher(inv.id)}>Recolher</button>
+              </>
             ) : (
                 <label className="flex items-center gap-2 rounded border border-primary px-2 py-1 text-xs">
                   <input type="checkbox" aria-label={'Selecionar ' + inv.nome + ' para invocar'} checked={invocacoesSelecionadas.includes(inv.id)} disabled={!!carregandoArteId || !podeSelecionar} onChange={event => setInvocacoesSelecionadas(current => event.target.checked ? (current.includes(inv.id) || current.length >= 2 ? current : [...current, inv.id]) : current.filter(id => id !== inv.id))} />
                   Selecionar para invocar
                 </label>
             )}
-            <button type="button" disabled={ativos.some(e => e.invocationId === inv.id) || inv.aprovacaoMestre === 'pendente' || busyAprovacao} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={() => remover(inv.id)}>Remover</button>
+            <button type="button" disabled={ativo || derrotaPendente || inv.aprovacaoMestre === 'pendente' || busyAprovacao} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={() => remover(inv.id)}>Remover</button>
           </div>
           <div className="basis-full space-y-2 border-t border-border/60 pt-2">
             <div className="flex items-center justify-between gap-2">

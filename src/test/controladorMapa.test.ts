@@ -7,7 +7,7 @@ import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useLogStore } from '@/stores/useLogStore';
 import type { EntidadeOmni } from '@/lib/omni/tipos';
-import { invocarControlador, invocarControladores, recolherInvocacao, tokensInvocados, limparInvocacoesDerrotadas, causarDanoInvocacao, comandarReposicionamento, comandarAtaque, comandosPorAcao } from '@/lib/controlador/mapa';
+import { invocarControlador, invocarControladores, recolherInvocacao, tokensInvocados, limparInvocacoesDerrotadas, causarDanoInvocacao, curarInvocacao, levantarInvocacao, comandarReposicionamento, comandarAtaque, comandosPorAcao } from '@/lib/controlador/mapa';
 import type { InvocacaoControlador } from '@/lib/controlador/tipos';
 
 let numeroFixture = 0;
@@ -103,6 +103,27 @@ describe('Controlador — materialização real no mapa', () => {
     if (!primeira.ok) throw new Error(primeira.motivo);
     const repetida = invocarControladores('dono', posicoes, { eventoId: 'lote-idempotente' });
     expect(repetida).toEqual(primeira);
+    expect(tokensInvocados('dono')).toHaveLength(2);
+    expect(pegarFicha('dono').peCurrent).toBe(4);
+  });
+  it('não duplica uma invocação derrotada quando o mesmo pedido é reenviado', () => {
+    const r = invocarControlador('dono', 'a', 'leste', { eventoId: 'invocacao-antes-da-derrota' });
+    if (!r.ok) throw new Error(r.motivo);
+    expect(causarDanoInvocacao(r.tokenId, 24)).toEqual({ ok: true, hpRestante: -12, destruida: true });
+    expect(invocarControlador('dono', 'a', 'leste', { eventoId: 'invocacao-antes-da-derrota' })).toEqual({
+      ok: false,
+      motivo: 'Este evento já foi resolvido; ele não pode materializar uma segunda instância.',
+    });
+    expect(tokensInvocados('dono')).toHaveLength(0);
+    expect(pegarFicha('dono').peCurrent).toBe(7);
+    expect(pegarFicha('dono').instanciasInvocacao).toHaveLength(1);
+  });
+  it('conta uma instância caída ainda presente no limite simultâneo', () => {
+    const a = invocarControlador('dono', 'a', 'leste');
+    const b = invocarControlador('dono', 'b', 'sul');
+    if (!a.ok || !b.ok) throw new Error('As duas invocações iniciais deveriam ser aceitas.');
+    expect(causarDanoInvocacao(a.tokenId, 12)).toMatchObject({ ok: true, hpRestante: 0, destruida: false });
+    expect(invocarControlador('dono', 'c', 'oeste')).toEqual({ ok: false, motivo: 'Limite de invocações ativas atingido.' });
     expect(tokensInvocados('dono')).toHaveLength(2);
     expect(pegarFicha('dono').peCurrent).toBe(4);
   });
@@ -279,14 +300,49 @@ describe('Controlador — materialização real no mapa', () => {
     expect(pegarFicha('dono').peCurrent).toBe(7);
     expect(invocarControlador('dono', 'b', 'leste').ok).toBe(true);
   });
-  it('aplica dano no token, preserva PV do dono e remove ao chegar a zero', () => {
+  it('mantém a instância no mapa a 0 PV e só a remove ao atingir -PV máximo', () => {
     const r = invocarControlador('dono', 'a', 'leste');
     if (!r.ok) throw new Error(r.motivo);
     expect(causarDanoInvocacao(r.tokenId, 5)).toEqual({ ok: true, hpRestante: 7, destruida: false });
     expect(pegarFicha('dono').invocacoesConhecidas?.find(i => i.id === 'a')?.hpAtual).toBe(7);
-    expect(causarDanoInvocacao(r.tokenId, 7)).toEqual({ ok: true, hpRestante: 0, destruida: true });
+    expect(causarDanoInvocacao(r.tokenId, 7)).toEqual({ ok: true, hpRestante: 0, destruida: false });
+    expect(useMapStore.getState().entities[r.tokenId].invocationState).toBe('caida');
+    expect(tokensInvocados('dono')).toHaveLength(1);
+    expect(pegarFicha('dono').instanciasInvocacao?.[0]).toMatchObject({ estado: 'caida', hpAtual: 0 });
+    expect(causarDanoInvocacao(r.tokenId, 11)).toEqual({ ok: true, hpRestante: -11, destruida: false });
+    expect(tokensInvocados('dono')).toHaveLength(1);
+    expect(causarDanoInvocacao(r.tokenId, 1)).toEqual({ ok: true, hpRestante: -12, destruida: true });
     expect(tokensInvocados('dono')).toHaveLength(0);
     expect(pegarFicha('dono').invocacoesConhecidas?.find(i => i.id === 'a')?.hpAtual).toBe(0);
+    expect(pegarFicha('dono').instanciasInvocacao?.[0]).toMatchObject({ estado: 'derrotada', hpAtual: -12 });
+    expect(pegarFicha('dono').invocacoesConhecidas).toHaveLength(3);
+  });
+  it('cura PV negativos até o máximo sem levantar; levantar gasta movimento próprio', () => {
+    const dono = pegarFicha('dono');
+    const inv = modelo('a', numeroFixture);
+    useCharacterStore.getState().updateCharacter('dono', {
+      invocacoesConhecidas: (dono.invocacoesConhecidas ?? []).map(item => item.id === 'a'
+        ? { ...inv, economiaAcoesConfigurada: { acaoMovimento: 1 } }
+        : item),
+    });
+    const r = invocarControlador('dono', 'a', 'leste');
+    if (!r.ok) throw new Error(r.motivo);
+    expect(causarDanoInvocacao(r.tokenId, 17)).toMatchObject({ ok: true, hpRestante: -5, destruida: false });
+    expect(curarInvocacao(r.tokenId, 8)).toEqual({ ok: true, hpRestante: 3, caida: true });
+    expect(curarInvocacao(r.tokenId, 50)).toEqual({ ok: true, hpRestante: 12, caida: true });
+    expect(useMapStore.getState().entities[r.tokenId].invocationState).toBe('caida');
+    expect(levantarInvocacao('dono', 'a')).toEqual({ ok: true });
+    expect(useMapStore.getState().entities[r.tokenId].invocationState).toBe('ativa');
+    expect(pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoMovimento).toEqual({ atual: 0, maximo: 1 });
+    expect(levantarInvocacao('dono', 'a')).toMatchObject({ ok: false });
+  });
+  it('exige cura acima de zero e Ação de Movimento própria para levantar', () => {
+    const r = invocarControlador('dono', 'a', 'leste');
+    if (!r.ok) throw new Error(r.motivo);
+    expect(causarDanoInvocacao(r.tokenId, 12)).toMatchObject({ ok: true, hpRestante: 0, destruida: false });
+    expect(levantarInvocacao('dono', 'a')).toEqual({ ok: false, motivo: 'É preciso curar a invocação acima de 0 PV antes de levantá-la.' });
+    expect(curarInvocacao(r.tokenId, 4)).toEqual({ ok: true, hpRestante: 4, caida: true });
+    expect(levantarInvocacao('dono', 'a')).toEqual({ ok: false, motivo: 'Ação de Movimento própria indisponível.' });
   });
   it('bloqueia comandos fora do turno e cobra apenas uma ação bônus válida', () => {
     const r = invocarControlador('dono', 'a', 'leste');
@@ -383,13 +439,18 @@ describe('Controlador — materialização real no mapa', () => {
     useCombatStore.setState({ inCombat: false } as never);
     vi.restoreAllMocks();
   });
-  it('remove token com 0 PV e registra o estado no catálogo', () => {
+  it('normaliza estado legado: 0 PV permanece Caído e −PV máximo registra derrota sem apagar a ficha', () => {
     const r = invocarControlador('dono', 'a', 'leste');
     if (!r.ok) throw new Error(r.motivo);
     useMapStore.getState().updateEntity(r.tokenId, { hp: 0 });
+    expect(limparInvocacoesDerrotadas('dono')).toBe(0);
+    expect(tokensInvocados('dono')).toHaveLength(1);
+    expect(useMapStore.getState().entities[r.tokenId].invocationState).toBe('caida');
+    useMapStore.getState().updateEntity(r.tokenId, { hp: -12 });
     expect(limparInvocacoesDerrotadas('dono')).toBe(1);
     expect(tokensInvocados('dono')).toHaveLength(0);
     expect(pegarFicha('dono').invocacoesConhecidas?.find(i => i.id === 'a')?.hpAtual).toBe(0);
+    expect(pegarFicha('dono').instanciasInvocacao?.[0]).toMatchObject({ estado: 'derrotada', hpAtual: -12 });
     expect(invocarControlador('dono', 'a', 'leste').ok).toBe(false);
   });
 });

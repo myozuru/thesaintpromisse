@@ -135,6 +135,8 @@ export interface Entity {
   invocationEventId?: string;
   invocationBatchId?: string;
   invocationInstanceId?: string;
+  /** Estado de PV da instância materializada (não é o estado de aquisição do modelo). */
+  invocationState?: 'ativa' | 'caida' | 'derrotada' | 'dissipada';
   /** Defesa e deslocamento próprios do servo (sem criar turno separado). */
   invocationDefense?: number;
   invocationMovementM?: number;

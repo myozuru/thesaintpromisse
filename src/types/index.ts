@@ -818,6 +818,8 @@ export interface Character {
   keyAttribute?: 'Inteligência' | 'Sabedoria' | 'Presença' | 'Força' | 'Destreza';
   /** Catálogo do Controlador; invocações são modelos persistidos, ainda não tokens em campo. */
   invocacoesConhecidas?: import('@/lib/controlador/tipos').InvocacaoControlador[];
+  /** Instâncias de combate de Invocação, separadas do estado de aquisição do catálogo. */
+  instanciasInvocacao?: import('@/lib/invocacoes/schema').InstanciaInvocacao[];
   /** Treinamento específico em Controle (distinto do bônus geral de Treinamento). */
   treinoControle?: number;
   /** Saldo de ordens complexas financiadas pela última Ação Comum, por rodada. */
