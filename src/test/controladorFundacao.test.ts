@@ -10,6 +10,7 @@ import {
 } from '@/lib/controlador/tipos';
 import type { Attribute, Character } from '@/types';
 import { specDCFor } from '@/lib/golpeEspecial';
+import { avaliarSubmissaoAprovacao, validarDecisaoAprovacao, podeUsarVersaoAprovada } from '@/lib/controlador/aprovacao';
 
 const attrs = [
   { id: 'sab', name: 'Sabedoria', value: 18 },
@@ -70,5 +71,69 @@ describe('Controlador — catálogo', () => {
     const tres = [shikigami, { ...shikigami, id: 'b' }, { ...shikigami, id: 'c' }];
     expect(validarCatalogoControlador('mestre', 1, tres).ok).toBe(true); // Excesso de catálogo é aviso, não bloqueio
     expect(validarCatalogoControlador('mestre', 3, tres).ok).toBe(true);
+  });
+});
+
+
+describe('Controlador — política pura de aprovação', () => {
+  const submissao = {
+    requesterUserId: 'player-1',
+    requesterIsMaster: false,
+    ownerUserId: 'player-1',
+    ownerCharacterId: 'ficha-1',
+    invocationOwnerCharacterId: 'ficha-1',
+  };
+
+  it('jogador dono pode submeter para revisão, outro jogador não', () => {
+    expect(avaliarSubmissaoAprovacao(submissao)).toEqual({ ok: true, estado: 'pendente' });
+    expect(avaliarSubmissaoAprovacao({ ...submissao, requesterUserId: 'player-2' })).toMatchObject({ ok: false });
+  });
+
+  it('Mestre pode aprovar uma submissão em qualquer ficha', () => {
+    expect(avaliarSubmissaoAprovacao({
+      ...submissao,
+      requesterUserId: 'master-1',
+      requesterIsMaster: true,
+      ownerUserId: 'player-2',
+    })).toEqual({ ok: true, estado: 'aprovada' });
+  });
+
+  it('rejeita conta ausente e invocação ligada a outra ficha', () => {
+    expect(avaliarSubmissaoAprovacao({ ...submissao, requesterUserId: ' ' })).toMatchObject({ ok: false });
+    expect(avaliarSubmissaoAprovacao({ ...submissao, invocationOwnerCharacterId: 'ficha-2' })).toMatchObject({ ok: false });
+  });
+
+  it('somente Mestre decide uma solicitação pendente e rejeição exige motivo', () => {
+    expect(validarDecisaoAprovacao({
+      requesterIsMaster: false, estadoAtual: 'pendente', decisao: 'aprovada',
+    })).toMatchObject({ ok: false });
+    expect(validarDecisaoAprovacao({
+      requesterIsMaster: true, estadoAtual: 'pendente', decisao: 'aprovada',
+    })).toEqual({ ok: true, estado: 'aprovada' });
+    expect(validarDecisaoAprovacao({
+      requesterIsMaster: true, estadoAtual: 'pendente', decisao: 'rejeitada',
+    })).toMatchObject({ ok: false });
+    expect(validarDecisaoAprovacao({
+      requesterIsMaster: true, estadoAtual: 'pendente', decisao: 'rejeitada', motivo: 'Ajustar a ficha.',
+    })).toEqual({ ok: true, estado: 'rejeitada' });
+  });
+
+  it('impede nova decisão depois que a solicitação saiu de pendente', () => {
+    expect(validarDecisaoAprovacao({
+      requesterIsMaster: true, estadoAtual: 'aprovada', decisao: 'rejeitada', motivo: 'Revisar.',
+    })).toMatchObject({ ok: false });
+    expect(validarDecisaoAprovacao({
+      requesterIsMaster: true, estadoAtual: 'rejeitada', decisao: 'aprovada',
+    })).toMatchObject({ ok: false });
+  });
+
+  it('libera somente a versão aprovada e mantém compatibilidade com fichas legadas', () => {
+    expect(podeUsarVersaoAprovada({ estado: 'aprovada', versaoAtual: 2, versaoAprovada: 2 })).toBe(true);
+    expect(podeUsarVersaoAprovada({ estado: 'aprovada', versaoAtual: 3, versaoAprovada: 2 })).toBe(false);
+    expect(podeUsarVersaoAprovada({ estado: 'pendente', versaoAtual: 1 })).toBe(false);
+    expect(podeUsarVersaoAprovada({ estado: 'rejeitada', versaoAtual: 1 })).toBe(false);
+    expect(podeUsarVersaoAprovada({})).toBe(true);
+    expect(podeUsarVersaoAprovada({ estado: 'aprovada' })).toBe(true);
+    expect(podeUsarVersaoAprovada({ estado: 'aprovada', versaoAtual: 0, versaoAprovada: 0 })).toBe(false);
   });
 });
