@@ -70,7 +70,13 @@ export const submeterAprovacaoInvocacao = createServerFn({ method: "POST" })
       || data.snapshot.donoCharacterId !== data.ownerCharacterId) {
       throw new Error("O snapshot não corresponde à invocação e à ficha informadas.");
     }
-    const snapshotJson = JSON.stringify(data.snapshot);
+    const snapshotPersistido: Record<string, unknown> = { ...data.snapshot };
+    for (const campo of ["aprovacaoMestre", "versaoAprovada", "solicitacaoAprovacaoId", "motivoRejeicao"]) {
+      delete snapshotPersistido[campo];
+    }
+    // O servidor fixa a versão do snapshot; estado de aprovação nunca vem do cliente.
+    snapshotPersistido.versaoModelo = data.versionSubmitted;
+    const snapshotJson = JSON.stringify(snapshotPersistido);
     if (!snapshotJson || snapshotJson.length > 100_000) {
       throw new Error("O snapshot da invocação excede o tamanho permitido.");
     }
@@ -106,7 +112,7 @@ export const submeterAprovacaoInvocacao = createServerFn({ method: "POST" })
         && existing.invocation_id === data.invocationId
         && existing.owner_character_id === data.ownerCharacterId
         && existing.version_submitted === data.versionSubmitted
-        && canonicalJson(existing.snapshot) === canonicalJson(data.snapshot);
+        && canonicalJson(existing.snapshot) === canonicalJson(snapshotPersistido);
       if (!sameRequest) throw new Error("Este identificador já foi usado por outra solicitação.");
       return {
         requestId: existing.request_id,
@@ -135,7 +141,7 @@ export const submeterAprovacaoInvocacao = createServerFn({ method: "POST" })
         invocation_id: data.invocationId,
         owner_character_id: data.ownerCharacterId,
         version_submitted: data.versionSubmitted,
-        snapshot: data.snapshot,
+        snapshot: snapshotPersistido,
         submitted_by: context.userId,
         status: policy.estado,
         reviewed_by: policy.estado === "aprovada" ? context.userId : null,
