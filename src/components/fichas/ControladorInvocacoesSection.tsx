@@ -6,13 +6,15 @@ import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { validarIntermediarioInvocacao } from '@/lib/controlador/intermediario';
-import { invocarControladores, recolherInvocacao, limparInvocacoesDerrotadas, levantarInvocacao, comandarReposicionamento, comandarAtaque, type DirecaoInvocacao } from '@/lib/controlador/mapa';
+import { invocarControladores, recolherInvocacao, limparInvocacoesDerrotadas, levantarInvocacao, comandarReposicionamento, comandarAtaque, rolarPericiaInvocacao, type DirecaoInvocacao } from '@/lib/controlador/mapa';
 import { limiteInvocacoesConhecidas, limiteAtivasPersonagem, validarCatalogoControlador, type InvocacaoControlador, type TipoInvocacaoControlador } from '@/lib/controlador/tipos';
 import { podeUsarVersaoAprovada } from '@/lib/controlador/aprovacao';
 import { carregarAssetFicha } from '@/lib/controlador/assetFicha';
 import { formatarSegundosTempoInvocacao, tempoAdicionalEmSegundos } from '@/lib/controlador/tempo';
 import { assetCache } from '@/components/mapa/assetCache';
 import { decidirAprovacaoInvocacao, decidirAprovacaoLegadaInvocacao, submeterAprovacaoInvocacao } from '@/lib/controlador/aprovacao.functions';
+import { SISTEMA_PERICIAS, ROTULOS_PERICIAS } from '@/lib/omni/constantesDoSistema';
+import { invocacaoTreinadaNaPericia, parseFormulaDanoInvocacao } from '@/lib/controlador/rolagens';
 
 type Fonte = { id: string; nome: string; tipo: 'grimorio' | 'omni'; hp: number; defesa: number; deslocamento: number; porte: InvocacaoControlador['porte']; acoes: InvocacaoControlador['acoes'] };
 const numero = (valor: unknown, padrao: number): number => {
@@ -65,6 +67,14 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
   const [alcanceAtaque, setAlcanceAtaque] = useState(1.5);
   const [bonusAtaque, setBonusAtaque] = useState(0);
   const [tipoDanoAtaque, setTipoDanoAtaque] = useState<import('@/types').DamageType>('DCO');
+  const [tipoAtaqueAtaque, setTipoAtaqueAtaque] = useState<'corpo_a_corpo' | 'distancia'>('corpo_a_corpo');
+  const [atributoAtaqueAtaque, setAtributoAtaqueAtaque] = useState<'forca' | 'destreza'>('forca');
+  const [margemCriticoAtaque, setMargemCriticoAtaque] = useState(20);
+  const [multiplicadorCriticoAtaque, setMultiplicadorCriticoAtaque] = useState(2);
+  const [atributoDanoAtaque, setAtributoDanoAtaque] = useState<'' | 'forca' | 'destreza' | 'constituicao' | 'inteligencia' | 'sabedoria' | 'presenca'>('');
+  const [multiplicadorDanoAtributoAtaque, setMultiplicadorDanoAtributoAtaque] = useState('');
+  const [periciasSelecionadas, setPericiasSelecionadas] = useState<Record<string, string>>({});
+  const [busyPericia, setBusyPericia] = useState<Record<string, boolean>>({});
 
   const entities = useMapStore(s => s.entities);
   const ativos = Object.values(entities).filter(e => e.ownerCharId === character.id && !!e.invocationId);
@@ -123,8 +133,28 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
     try {
       const r = await comandarAtaque(character.id, invocacaoId, acaoId, alvoId);
       if (!r.ok) { setErro(r.motivo); return; }
-      setMensagem(r.acertou ? `Acertou! Dano rolado: ${r.dano}. Ataque: ${r.totalAtaque}.` : `Ataque errou (resultado ${r.totalAtaque}).`);
+      setMensagem(r.testePendente
+        ? `Teste de ${r.cd ? `CD ${r.cd}` : 'resistência'} enviado ao alvo. O efeito será aplicado após a rolagem.`
+        : r.acertou
+          ? `${r.critico ? 'Acerto crítico! ' : 'Acertou! '}Dano aplicado: ${r.dano}. Resultado: ${r.totalAtaque}.`
+          : `Ataque errou (resultado ${r.totalAtaque}).`);
     } finally { setBusyAtaque(false); }
+  };
+  const rolarPericia = async (invocacaoId: string) => {
+    const pericia = periciasSelecionadas[invocacaoId];
+    if (!pericia || busyPericia[invocacaoId]) return;
+    setBusyPericia(current => ({ ...current, [invocacaoId]: true }));
+    setErro(''); setMensagem('');
+    try {
+      const resultado = await rolarPericiaInvocacao(character.id, invocacaoId, pericia);
+      if (!resultado.ok) { setErro(resultado.motivo); return; }
+      const nome = ROTULOS_PERICIAS[pericia as keyof typeof ROTULOS_PERICIAS] ?? pericia;
+      setMensagem(`${nome}: ${resultado.d20} + ${resultado.bonus} = ${resultado.total}${resultado.treinada ? ' (treinada)' : ''}.`);
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : 'Não foi possível rolar a perícia do Shikigami.');
+    } finally {
+      setBusyPericia(current => ({ ...current, [invocacaoId]: false }));
+    }
   };
   const recolher = (id: string) => {
     if (recolherInvocacao(character.id, id)) { setErro(''); setMensagem('Invocação recolhida.'); }
@@ -229,9 +259,11 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
   };
   const adicionarAtaque = async (id: string) => {
     if (busyAprovacao) return;
-    if (!nomeAtaque.trim() || !/^\d+d(?:4|6|8|10|12|20)(?:\+\d+)?$/i.test(formulaAtaque.trim())
-      || !Number.isFinite(alcanceAtaque) || alcanceAtaque <= 0 || !Number.isFinite(bonusAtaque)) {
-      setErro('Informe nome, dados no formato 1d6+2, alcance e bônus válidos.'); return;
+    if (!nomeAtaque.trim() || !parseFormulaDanoInvocacao(formulaAtaque)
+      || !Number.isFinite(alcanceAtaque) || alcanceAtaque <= 0 || !Number.isFinite(bonusAtaque)
+      || !Number.isInteger(margemCriticoAtaque) || margemCriticoAtaque < 2 || margemCriticoAtaque > 20
+      || !Number.isInteger(multiplicadorCriticoAtaque) || multiplicadorCriticoAtaque < 1 || multiplicadorCriticoAtaque > 5) {
+      setErro('Informe nome, dano como 2d12+1d6+3, alcance, bônus e crítico válidos.'); return;
     }
     const original = catalogo.find(inv => inv.id === id);
     if (!original || original.aprovacaoMestre === 'pendente') {
@@ -241,6 +273,10 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
       ...original,
       acoes: [...original.acoes, {
         id: crypto.randomUUID(), nome: nomeAtaque.trim(), tipo: 'ataque' as const,
+        teste: 'ataque' as const, tipoAtaque: tipoAtaqueAtaque, atributoAtaque: atributoAtaqueAtaque,
+        ...(atributoDanoAtaque ? { atributoDano: atributoDanoAtaque } : {}),
+        ...(multiplicadorDanoAtributoAtaque !== '' ? { multiplicadorDanoAtributo: Number(multiplicadorDanoAtributoAtaque) } : {}),
+        margemCritico: margemCriticoAtaque, multiplicadorCritico: multiplicadorCriticoAtaque,
         dano: formulaAtaque.trim(), alcanceM: alcanceAtaque, bonusAtaque, tipoDano: tipoDanoAtaque,
       }],
     };
@@ -448,7 +484,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
               <strong className="text-xs">Ataques personalizados</strong>
               <button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => setEditando(editando === inv.id ? null : inv.id)}>Adicionar ataque</button>
             </div>
-            {inv.acoes.filter(a => a.tipo === 'ataque').map(a => (
+            {inv.acoes.filter(a => a.tipo === 'ataque' || a.teste === 'ataque' || a.teste === 'resistencia').map(a => (
               <div key={a.id} className="flex items-center justify-between text-xs">
                 <span>{a.nome}: {a.dano ?? 'sem dano'} · {a.alcanceM ?? 1.5} m · acerto {a.bonusAtaque ?? 0}</span>
                 <button type="button" className="rounded border px-2 py-1" onClick={() => removerAtaque(inv.id, a.id)}>Excluir</button>
@@ -457,9 +493,15 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
             {editando === inv.id && (
               <div className="grid grid-cols-2 gap-2">
                 <label className="text-xs">Nome<input aria-label="Nome do ataque" value={nomeAtaque} onChange={e => setNomeAtaque(e.target.value)} className="w-full rounded border bg-background p-2" /></label>
-                <label className="text-xs">Dano<input aria-label="Dados de dano" value={formulaAtaque} onChange={e => setFormulaAtaque(e.target.value)} className="w-full rounded border bg-background p-2" /></label>
+                <label className="text-xs">Dano<input aria-label="Dados de dano" value={formulaAtaque} onChange={e => setFormulaAtaque(e.target.value)} placeholder="2d12+1d6+3" className="w-full rounded border bg-background p-2" /></label>
                 <label className="text-xs">Alcance (m)<input type="number" min="0.1" step="0.5" value={alcanceAtaque} onChange={e => setAlcanceAtaque(Number(e.target.value))} className="w-full rounded border bg-background p-2" /></label>
                 <label className="text-xs">Bônus de acerto<input type="number" value={bonusAtaque} onChange={e => setBonusAtaque(Number(e.target.value))} className="w-full rounded border bg-background p-2" /></label>
+                <label className="text-xs">Tipo de ataque<select value={tipoAtaqueAtaque} onChange={e => setTipoAtaqueAtaque(e.target.value as 'corpo_a_corpo' | 'distancia')} className="w-full rounded border bg-background p-2"><option value="corpo_a_corpo">Corpo a corpo</option><option value="distancia">À distância</option></select></label>
+                <label className="text-xs">Atributo do ataque<select value={atributoAtaqueAtaque} onChange={e => setAtributoAtaqueAtaque(e.target.value as 'forca' | 'destreza')} className="w-full rounded border bg-background p-2"><option value="forca">Força</option><option value="destreza">Destreza</option></select></label>
+                <label className="text-xs">Atributo do dano<select value={atributoDanoAtaque} onChange={e => setAtributoDanoAtaque(e.target.value as typeof atributoDanoAtaque)} className="w-full rounded border bg-background p-2"><option value="">Igual ao atributo do ataque</option><option value="forca">Força</option><option value="destreza">Destreza</option><option value="constituicao">Constituição</option><option value="inteligencia">Inteligência</option><option value="sabedoria">Sabedoria</option><option value="presenca">Presença</option></select></label>
+                <label className="text-xs">Multiplicador do atributo no dano<select value={multiplicadorDanoAtributoAtaque} onChange={e => setMultiplicadorDanoAtributoAtaque(e.target.value)} className="w-full rounded border bg-background p-2"><option value="">Padrão do grau</option><option value="0">Nenhum</option><option value="1">1×</option><option value="2">2×</option></select></label>
+                <label className="text-xs">Margem de crítico<input type="number" min="2" max="20" value={margemCriticoAtaque} onChange={e => setMargemCriticoAtaque(Number(e.target.value))} className="w-full rounded border bg-background p-2" /></label>
+                <label className="text-xs">Multiplicador crítico<input type="number" min="1" max="5" value={multiplicadorCriticoAtaque} onChange={e => setMultiplicadorCriticoAtaque(Number(e.target.value))} className="w-full rounded border bg-background p-2" /></label>
                 <label className="text-xs">Tipo de dano<select value={tipoDanoAtaque} onChange={e => setTipoDanoAtaque(e.target.value as import('@/types').DamageType)} className="w-full rounded border bg-background p-2">
                   {(['DCO','DP','DI','DA','DCG','DCC','DQ','DS','DAL','DNR','DE','DPS','DR','DN','DV'] as const).map(d => <option key={d} value={d}>{d}</option>)}
                 </select></label>
@@ -467,7 +509,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
               </div>
             )}
           </div>
-          {ativos.some(e => e.invocationId === inv.id) && inv.acoes.some(a => a.tipo === 'ataque') && (
+          {ativos.some(e => e.invocationId === inv.id) && inv.acoes.some(a => a.tipo === 'ataque' || a.teste === 'ataque' || a.teste === 'resistencia') && (
             <div className="basis-full space-y-2 border-t border-border/60 pt-2">
               <label className="block text-xs">Alvo para ataque
                 <select aria-label={`Alvo de ${inv.nome}`} className="mt-1 w-full rounded border border-input bg-background p-2"
@@ -479,14 +521,33 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
                 </select>
               </label>
               <div className="flex flex-wrap gap-1">
-                {inv.acoes.filter(a => a.tipo === 'ataque').map(a => (
+                {inv.acoes.filter(a => a.tipo === 'ataque' || a.teste === 'ataque' || a.teste === 'resistencia').map(a => (
                   <button key={a.id} type="button" disabled={busyAtaque || !alvosAtaque[inv.id]}
                     onClick={() => void atacar(inv.id, a.id)}
                     className="rounded border border-primary px-2 py-1 text-xs disabled:opacity-50">
-                    Comandar ataque: {a.nome} (Ação Comum)
+                    Usar ação: {a.nome}
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+          {ativos.some(e => e.invocationId === inv.id) && (
+            <div className="basis-full space-y-2 border-t border-border/60 pt-2">
+              <label className="block text-xs">Teste de perícia do Shikigami
+                <select aria-label={`Perícia de ${inv.nome}`} className="mt-1 w-full rounded border border-input bg-background p-2"
+                  value={periciasSelecionadas[inv.id] ?? ''}
+                  onChange={event => setPericiasSelecionadas(current => ({ ...current, [inv.id]: event.target.value }))}>
+                  <option value="">Selecione uma perícia</option>
+                  {(Object.keys(SISTEMA_PERICIAS) as Array<keyof typeof SISTEMA_PERICIAS>).filter(key => invocacaoTreinadaNaPericia(inv, key)).map(key => (
+                    <option key={key} value={key}>{ROTULOS_PERICIAS[key]} · treinada</option>
+                  ))}
+                  {!Object.keys(SISTEMA_PERICIAS).some(key => invocacaoTreinadaNaPericia(inv, key)) && <option disabled value="">Sem perícias treinadas</option>}
+                </select>
+              </label>
+              <button type="button" disabled={!periciasSelecionadas[inv.id] || !!busyPericia[inv.id]}
+                onClick={() => void rolarPericia(inv.id)} className="rounded border px-2 py-1 text-xs disabled:opacity-50">
+                {busyPericia[inv.id] ? 'Rolando…' : 'Rolar perícia em 3D'}
+              </button>
             </div>
           )}
         </div>

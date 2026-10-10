@@ -90,6 +90,18 @@ export const AcaoInvocacaoSchema = z.object({
   nome: textSchema,
   tipoExecucao: z.enum(["omni", "referencia_omni", "manual", "legada"]),
   tipo: z.enum(["ataque", "habilidade", "movimento", "bonus", "suporte"]).optional(),
+  /** Fluxo de rolagem usado pela ação manual desta ficha. */
+  teste: z.enum(["ataque", "resistencia"]).optional(),
+  tipoAtaque: z.enum(["corpo_a_corpo", "distancia"]).optional(),
+  atributoAtaque: z.enum(["forca", "destreza"]).optional(),
+  atributoDano: z.enum(["forca", "destreza", "constituicao", "inteligencia", "sabedoria", "presenca"]).optional(),
+  /** Multiplicador do modificador do atributo no dano; ausente usa a regra do grau. */
+  multiplicadorDanoAtributo: z.number().int().min(0).max(5).optional(),
+  resistenciaAlvo: z.string().trim().min(1).max(80).optional(),
+  atributoCD: z.enum(["forca", "destreza", "constituicao", "inteligencia", "sabedoria", "presenca"]).optional(),
+  danoNoSucesso: z.enum(["nenhum", "metade"]).optional(),
+  margemCritico: z.number().int().min(2).max(20).optional(),
+  multiplicadorCritico: z.number().int().min(1).max(5).optional(),
   categoriaAcao: z.enum(["acao_comum", "acao_simples", "acao_complexa", "acao_bonus", "movimento", "livre", "reacao"]).optional(),
   custoPE: nonNegativeNumberSchema.optional(),
   /** Descrição textual legada; não é interpretada como regra de recarga. */

@@ -27,6 +27,7 @@ import { assetCache } from '@/components/mapa/assetCache';
 import { TokenCropDialog } from '@/components/mapa/ui/TokenCropDialog';
 import type { Entity, TokenCrop } from '@/stores/useMapStore';
 import { carregarAssetFicha, salvarAssetFicha } from '@/lib/controlador/assetFicha';
+import { parseFormulaDanoInvocacao } from '@/lib/controlador/rolagens';
 
 const rotulosAtributos: Record<keyof AtributosShikigami, string> = {
   forca: 'Força', destreza: 'Destreza', constituicao: 'Constituição',
@@ -171,6 +172,16 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
   const [acaoCategoria, setAcaoCategoria] = useState('');
   const [acaoExecucao, setAcaoExecucao] = useState<'manual' | 'omni' | 'referencia_omni'>('manual');
   const [acaoTipo, setAcaoTipo] = useState<NonNullable<AcaoFicha['tipo']>>('habilidade');
+  const [acaoTeste, setAcaoTeste] = useState<'nenhum' | 'ataque' | 'resistencia'>('nenhum');
+  const [acaoTipoAtaque, setAcaoTipoAtaque] = useState<'corpo_a_corpo' | 'distancia'>('corpo_a_corpo');
+  const [acaoAtributoAtaque, setAcaoAtributoAtaque] = useState<'forca' | 'destreza'>('forca');
+  const [acaoAtributoDano, setAcaoAtributoDano] = useState<keyof AtributosShikigami | ''>('');
+  const [acaoMultiplicadorDanoAtributo, setAcaoMultiplicadorDanoAtributo] = useState('');
+  const [acaoResistenciaAlvo, setAcaoResistenciaAlvo] = useState(DEFAULT_SAVING_THROWS[1]);
+  const [acaoAtributoCD, setAcaoAtributoCD] = useState<keyof AtributosShikigami>('presenca');
+  const [acaoDanoNoSucesso, setAcaoDanoNoSucesso] = useState<'nenhum' | 'metade'>('nenhum');
+  const [acaoMargemCritico, setAcaoMargemCritico] = useState('20');
+  const [acaoMultiplicadorCritico, setAcaoMultiplicadorCritico] = useState('2');
   const [acaoTipoDano, setAcaoTipoDano] = useState('');
   const [acaoDano, setAcaoDano] = useState('');
   const [acaoAlvo, setAcaoAlvo] = useState('');
@@ -313,7 +324,16 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
     const recargaQuantidade = inteiroOpcional(acaoRecargaQuantidade, 'Quantidade da recarga');
     const alcance = acaoAlcance.trim() === '' ? undefined : Number(acaoAlcance);
     const bonus = acaoBonus.trim() === '' ? undefined : Number(acaoBonus);
+    const margemCritico = inteiroOpcional(acaoMargemCritico, 'Margem de crítico');
+    const multiplicadorCritico = inteiroOpcional(acaoMultiplicadorCritico, 'Multiplicador de crítico');
+    const multiplicadorDanoAtributo = acaoMultiplicadorDanoAtributo === '' ? undefined : inteiroOpcional(acaoMultiplicadorDanoAtributo, 'Multiplicador de atributo no dano');
     if ([custo, custoDono, custoRecurso, alcance, bonus].some(value => value !== undefined && !Number.isFinite(value)) || [custo, custoDono, custoRecurso, alcance].some(value => value !== undefined && value < 0)) { setErro('Custos e alcance precisam ser números finitos e não negativos; bônus precisa ser finito.'); return; }
+    if (margemCritico === undefined || margemCritico < 2 || margemCritico > 20 || multiplicadorCritico === undefined || multiplicadorCritico < 1 || multiplicadorCritico > 5) { setErro('Margem de crítico precisa ser 2–20 e multiplicador, 1–5.'); return; }
+    if (acaoMultiplicadorDanoAtributo !== '' && (multiplicadorDanoAtributo === undefined || multiplicadorDanoAtributo < 0 || multiplicadorDanoAtributo > 5)) { setErro('Multiplicador do atributo no dano precisa ser de 0 a 5.'); return; }
+    if (acaoTipo === 'ataque' && acaoTeste !== 'ataque') { setErro('Ações do tipo Ataque precisam usar uma rolagem contra Defesa.'); return; }
+    if (acaoTeste === 'ataque' && !parseFormulaDanoInvocacao(acaoDano)) { setErro('Dano inválido. Use dados como 2d12+1d6+3.'); return; }
+    if (acaoTeste === 'resistencia' && !DEFAULT_SAVING_THROWS.includes(acaoResistenciaAlvo)) { setErro('Escolha um Teste de Resistência válido.'); return; }
+    if (acaoTeste === 'resistencia' && acaoDano.trim() && !parseFormulaDanoInvocacao(acaoDano)) { setErro('Dano inválido. Use dados como 2d12+1d6+3.'); return; }
     if ((custoRecurso === undefined) !== !acaoCustoRecursoId) { setErro('Selecione o recurso próprio e informe o valor a debitar juntos.'); return; }
     if ((recargaQuantidade === undefined) !== !acaoRecargaUnidade) { setErro('Preencha quantidade e marco da recarga juntos.'); return; }
     if (recargaQuantidade !== undefined && recargaQuantidade < 1) { setErro('A recarga precisa ser de pelo menos um turno ou rodada.'); return; }
@@ -327,6 +347,11 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
     const action: AcaoFicha = {
       id: actionId, nome: acaoNome.trim(), tipo: category === 'movimento' ? 'movimento' : acaoTipo,
       tipoExecucao: acaoExecucao, categoriaAcao: category,
+      ...(acaoTeste !== 'nenhum' ? { teste: acaoTeste } : {}),
+      ...(acaoTeste === 'ataque' ? { tipoAtaque: acaoTipoAtaque, atributoAtaque: acaoAtributoAtaque, margemCritico, multiplicadorCritico } : {}),
+      ...(acaoTeste === 'resistencia' ? { resistenciaAlvo: acaoResistenciaAlvo, atributoCD: acaoAtributoCD, danoNoSucesso: acaoDanoNoSucesso } : {}),
+      ...(acaoTeste !== 'nenhum' && acaoAtributoDano ? { atributoDano: acaoAtributoDano } : {}),
+      ...(acaoTeste !== 'nenhum' && multiplicadorDanoAtributo !== undefined ? { multiplicadorDanoAtributo } : {}),
       ...(acaoDano.trim() ? { dano: acaoDano.trim() } : {}),
       ...(acaoTipoDano ? { tipoDano: acaoTipoDano as import('@/types').DamageType } : {}),
       ...(alcance !== undefined ? { alcanceM: alcance } : {}),
@@ -742,8 +767,28 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
         <label className="text-xs">Nome<input value={acaoNome} onChange={event => setAcaoNome(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
         <label className="text-xs">Categoria<select value={acaoCategoria} onChange={event => setAcaoCategoria(event.target.value)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Selecione</option><option value="acao_comum">Comum</option><option value="acao_simples">Simples</option><option value="acao_complexa">Complexa</option><option value="acao_bonus">Bônus</option><option value="movimento">Movimento</option><option value="livre">Livre</option><option value="reacao">Reação</option></select></label>
         <label className="text-xs">Execução<select value={acaoExecucao} onChange={event => setAcaoExecucao(event.target.value as 'manual' | 'omni' | 'referencia_omni')} className="mt-1 w-full rounded border bg-background p-2"><option value="manual">Manual</option><option value="omni">OMNI</option><option value="referencia_omni">Referência OMNI</option></select></label>
-        <label className="text-xs">Tipo de ação<select value={acaoTipo} onChange={event => setAcaoTipo(event.target.value as NonNullable<AcaoFicha['tipo']>)} className="mt-1 w-full rounded border bg-background p-2"><option value="ataque">Ataque</option><option value="habilidade">Habilidade</option><option value="movimento">Movimento</option><option value="bonus">Bônus</option><option value="suporte">Suporte</option></select></label>
-        <label className="text-xs">Dano ou efeito<input value={acaoDano} onChange={event => setAcaoDano(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
+        <label className="text-xs">Tipo de ação<select value={acaoTipo} onChange={event => {
+          const next = event.target.value as NonNullable<AcaoFicha['tipo']>;
+          setAcaoTipo(next);
+          setAcaoTeste(next === 'ataque' ? 'ataque' : 'nenhum');
+        }} className="mt-1 w-full rounded border bg-background p-2"><option value="ataque">Ataque</option><option value="habilidade">Habilidade</option><option value="movimento">Movimento</option><option value="bonus">Bônus</option><option value="suporte">Suporte</option></select></label>
+        <label className="text-xs">Rolagem da ação<select value={acaoTeste} onChange={event => setAcaoTeste(event.target.value as 'nenhum' | 'ataque' | 'resistencia')} className="mt-1 w-full rounded border bg-background p-2"><option value="nenhum">Sem rolagem automática</option><option value="ataque">Ataque contra Defesa</option><option value="resistencia">Teste de Resistência do alvo</option></select></label>
+        <label className="text-xs">Dano ou efeito<input aria-label="Fórmula de dano" value={acaoDano} onChange={event => setAcaoDano(event.target.value)} placeholder="Ex.: 2d12+1d6+3" className="mt-1 w-full rounded border bg-background p-2" /><span className="mt-1 block text-muted-foreground">O modificador do atributo é somado separadamente.</span></label>
+        {acaoTeste === 'ataque' && <>
+          <label className="text-xs">Tipo de ataque<select value={acaoTipoAtaque} onChange={event => setAcaoTipoAtaque(event.target.value as 'corpo_a_corpo' | 'distancia')} className="mt-1 w-full rounded border bg-background p-2"><option value="corpo_a_corpo">Corpo a corpo</option><option value="distancia">À distância</option></select></label>
+          <label className="text-xs">Atributo do ataque<select value={acaoAtributoAtaque} onChange={event => setAcaoAtributoAtaque(event.target.value as 'forca' | 'destreza')} className="mt-1 w-full rounded border bg-background p-2"><option value="forca">Força</option><option value="destreza">Destreza</option></select></label>
+          <label className="text-xs">Margem de crítico<input type="number" min="2" max="20" step="1" value={acaoMargemCritico} onChange={event => setAcaoMargemCritico(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
+          <label className="text-xs">Multiplicador crítico<input type="number" min="1" max="5" step="1" value={acaoMultiplicadorCritico} onChange={event => setAcaoMultiplicadorCritico(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
+        </>}
+        {acaoTeste === 'resistencia' && <>
+          <label className="text-xs">TR do alvo<select value={acaoResistenciaAlvo} onChange={event => setAcaoResistenciaAlvo(event.target.value)} className="mt-1 w-full rounded border bg-background p-2">{DEFAULT_SAVING_THROWS.map(nome => <option key={nome} value={nome}>{nome}</option>)}</select></label>
+          <label className="text-xs">Atributo da CD<select value={acaoAtributoCD} onChange={event => setAcaoAtributoCD(event.target.value as keyof AtributosShikigami)} className="mt-1 w-full rounded border bg-background p-2">{ATRIBUTOS_SHIKIGAMI.map(atributo => <option key={atributo} value={atributo}>{rotulosAtributos[atributo]}</option>)}</select></label>
+          <label className="text-xs">Dano no sucesso do TR<select value={acaoDanoNoSucesso} onChange={event => setAcaoDanoNoSucesso(event.target.value as 'nenhum' | 'metade')} className="mt-1 w-full rounded border bg-background p-2"><option value="nenhum">Nenhum</option><option value="metade">Metade</option></select></label>
+        </>}
+        {acaoTeste !== 'nenhum' && <>
+          <label className="text-xs">Atributo do dano<select value={acaoAtributoDano} onChange={event => setAcaoAtributoDano(event.target.value as keyof AtributosShikigami | '')} className="mt-1 w-full rounded border bg-background p-2"><option value="">Igual ao atributo do ataque/CD</option>{ATRIBUTOS_SHIKIGAMI.map(atributo => <option key={atributo} value={atributo}>{rotulosAtributos[atributo]}</option>)}</select></label>
+          <label className="text-xs">Multiplicador do atributo no dano<select value={acaoMultiplicadorDanoAtributo} onChange={event => setAcaoMultiplicadorDanoAtributo(event.target.value)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Padrão do grau</option><option value="0">Nenhum</option><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option><option value="4">4×</option><option value="5">5×</option></select></label>
+        </>}
         <label className="text-xs">Tipo de dano<select value={acaoTipoDano} onChange={event => setAcaoTipoDano(event.target.value)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Não definido</option>{(['DCO','DP','DI','DA','DCG','DCC','DQ','DS','DAL','DNR','DE','DPS','DR','DN','DV'] as const).map(value => <option key={value} value={value}>{value}</option>)}</select></label>
         <label className="text-xs">Alcance (m)<input type="number" step="any" value={acaoAlcance} onChange={event => setAcaoAlcance(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
         <label className="text-xs">Bônus de acerto<input type="number" step="any" value={acaoBonus} onChange={event => setAcaoBonus(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>

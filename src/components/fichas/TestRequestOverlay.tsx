@@ -43,6 +43,9 @@ import { guardaEstudadaTrBonus } from '@/lib/guardaEstudada';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { selectOmniModifiers } from '@/lib/omni/omniBridge';
 import { resolveAuraTurnTest } from '@/lib/auraTurnResolution';
+import { resolverDanoAposTRInvocacao } from '@/lib/controlador/resolucaoTR';
+
+const invocationRequestsResolving = new Set<string>();
 
 /** Modificadores externos de combate que valem para qualquer teste pedido. */
 function bonusDeCombate(c: Character, req: TestRequest): { bonus: number; parts: string[] } {
@@ -257,6 +260,22 @@ export function TestRequestOverlay() {
       if (request.auraResolution && request.result && !request.resolutionApplied) {
         resolveAuraTurnTest(request);
       }
+    }
+  }, [isMaster, requests]);
+
+  useEffect(() => {
+    if (!isMaster) return;
+    for (const request of requests) {
+      if (!request.invocationResolution || !request.result || request.resolutionApplied || invocationRequestsResolving.has(request.id)) continue;
+      invocationRequestsResolving.add(request.id);
+      void resolverDanoAposTRInvocacao(request)
+        .catch((error) => {
+          useLogStore.getState().addLog('combat', `⛔ ${request.invocationResolution?.sourceName ?? 'Ação de Shikigami'}: não foi possível aplicar o efeito após o TR de ${request.charName}. ${error instanceof Error ? error.message : ''}`);
+        })
+        .finally(() => {
+          useTestRequestStore.getState().markResolutionApplied(request.id);
+          invocationRequestsResolving.delete(request.id);
+        });
     }
   }, [isMaster, requests]);
 

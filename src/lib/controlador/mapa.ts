@@ -6,13 +6,17 @@ import { validarIntermediarioInvocacao } from './intermediario';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { limiteAtivasPersonagem, type InvocacaoControlador } from './tipos';
 import { useLogStore } from '@/stores/useLogStore';
+import { useTestRequestStore } from '@/stores/useTestRequestStore';
 import { podeUsarVersaoAprovada } from '@/lib/controlador/aprovacao';
+import { computeTotalDefense } from '@/lib/defenseCalc';
+import { rollD20Autonomo, rollDiceGroups } from '@/lib/dice';
+import { SISTEMA_PERICIAS, ROTULOS_PERICIAS } from '@/lib/omni/constantesDoSistema';
 import { WallsEngine } from '@/components/mapa/WallsEngine';
 import { prepareCollisionCache, resolveCollisionMove, tokenFootprintSegments, type MapCollisionToken } from '@/lib/mapCollision';
 import { buildSegments as buildFogSegments } from '@/lib/fog/visibility';
 import { useFogStore } from '@/stores/fogStore';
 import { isFreeformFor } from '@/lib/freeformMode';
-import type { Character } from '@/types';
+import { DEFAULT_SAVING_THROWS, type Character } from '@/types';
 import { InstanciaInvocacaoSchema, type InstanciaInvocacao } from '@/lib/invocacoes/schema';
 import {
   aplicarCuraPVInvocacao,
@@ -35,6 +39,16 @@ import {
   registrarRecargaDaAcao,
   recursosInvocacaoIniciais,
 } from './economiaAcoes';
+import {
+  calcularBonusAtaqueInvocacao,
+  calcularBonusPericiaInvocacao,
+  calcularBonusDanoInvocacao,
+  calcularCDInvocacao,
+  invocacaoTreinadaNaPericia,
+  multiplicarDadosCriticos,
+  parseFormulaDanoInvocacao,
+  resolverAcertoInvocacao,
+} from './rolagens';
 
 export type DirecaoInvocacao = 'norte' | 'sul' | 'leste' | 'oeste';
 export type ResultadoInvocacao = { ok: true; tokenId: string } | { ok: false; motivo: string };
@@ -931,13 +945,20 @@ export async function comandarAtaque(
   alvoId: string,
   opcoes?: { instanciaId?: string; requestId?: string },
 ):
-  Promise<{ ok: true; acertou: boolean; totalAtaque: number; dano: number } | { ok: false; motivo: string }> {
+  Promise<{ ok: true; acertou: boolean; totalAtaque: number; dano: number; critico?: boolean; testePendente?: boolean; requestId?: string; cd?: number } | { ok: false; motivo: string }> {
   const dono = useCharacterStore.getState().characters.find(c => c.id === donoId);
   if (!dono) return { ok: false, motivo: 'Personagem inválido.' };
   if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
   const inv = dono.invocacoesConhecidas?.find(i => i.id === invocacaoId && i.donoCharacterId === donoId);
-  const acao = inv?.acoes.find(a => a.id === acaoId && a.tipo === 'ataque');
-  if (!acao || !acao.dano) return { ok: false, motivo: 'Ataque não configurado para esta invocação.' };
+  const acao = inv?.acoes.find(a => a.id === acaoId);
+  const tipoTeste = acao?.teste ?? (acao?.tipo === 'ataque' ? 'ataque' : undefined);
+  if (!acao || (tipoTeste !== 'ataque' && tipoTeste !== 'resistencia')) return { ok: false, motivo: 'Ação sem ataque ou teste de resistência configurado.' };
+  if (acao.tipoExecucao === 'omni' || acao.tipoExecucao === 'referencia_omni') return { ok: false, motivo: 'Esta ação está vinculada ao OMNI e deve ser resolvida pelo executor OMNI.' };
+  if (tipoTeste === 'ataque' && !acao.dano) return { ok: false, motivo: 'Configure a fórmula de dano deste ataque.' };
+  if (tipoTeste === 'resistencia' && !acao.resistenciaAlvo?.trim()) return { ok: false, motivo: 'Configure qual Teste de Resistência o alvo fará.' };
+  if (tipoTeste === 'resistencia' && !DEFAULT_SAVING_THROWS.some(nome => nome.toLocaleLowerCase('pt-BR') === acao.resistenciaAlvo!.trim().toLocaleLowerCase('pt-BR'))) {
+    return { ok: false, motivo: 'Teste de Resistência não reconhecido para esta ação.' };
+  }
   const mapa = useMapStore.getState();
   const servo = tokensInvocados(donoId).find(e => e.invocationId === invocacaoId && (!opcoes?.instanciaId || e.invocationInstanceId === opcoes.instanciaId) && (e.hp ?? 0) > 0);
   if (!servo) return { ok: false, motivo: 'Servo ou alvo ausente do mapa.' };
@@ -959,12 +980,20 @@ export async function comandarAtaque(
   const distancia = Math.hypot((servo.x + servo.w / 2) - (tokenAlvo.x + tokenAlvo.w / 2),
     (servo.y + servo.h / 2) - (tokenAlvo.y + tokenAlvo.h / 2)) * escala;
   if (distancia > (acao.alcanceM ?? 1.5) + 1e-6) return { ok: false, motivo: 'Alvo fora do alcance.' };
-  const notacao = acao.dano.replace(/\s+/g, '');
-  if (!/^\d+d(?:4|6|8|10|12|20)(?:\+\d+)?$/i.test(notacao)) return { ok: false, motivo: 'Dano inválido; configure NdN ou NdN+N.' };
-  if (!Number.isFinite(acao.bonusAtaque ?? 0)) return { ok: false, motivo: 'Bônus de ataque inválido.' };
-  const [dados, bonusStr] = notacao.split('+');
-  const quantidade = parseInt(dados.split('d')[0], 10);
-  if (quantidade < 1 || quantidade > 40) return { ok: false, motivo: 'Quantidade de dados inválida.' };
+  const formula = acao.dano ? parseFormulaDanoInvocacao(acao.dano) : null;
+  if (tipoTeste === 'ataque' && !formula) return { ok: false, motivo: 'Dano inválido; use dados como 2d12+1d6+3.' };
+  if (tipoTeste === 'resistencia' && acao.dano && !formula) return { ok: false, motivo: 'Dano inválido; use dados como 2d12+1d6+3.' };
+  const bonusAtaque = tipoTeste === 'ataque' ? calcularBonusAtaqueInvocacao(dono, modelo, acao) : null;
+  if (tipoTeste === 'ataque' && (!bonusAtaque || !Number.isFinite(bonusAtaque.total))) {
+    return { ok: false, motivo: 'Defina um atributo de ataque válido na ficha do Shikigami.' };
+  }
+  if (acao.margemCritico !== undefined && (!Number.isInteger(acao.margemCritico) || acao.margemCritico < 2 || acao.margemCritico > 20)) {
+    return { ok: false, motivo: 'Margem de crítico precisa estar entre 2 e 20.' };
+  }
+  const cd = tipoTeste === 'resistencia' ? calcularCDInvocacao(dono, modelo, acao.atributoCD) : null;
+  if (tipoTeste === 'resistencia' && cd === null) return { ok: false, motivo: 'Defina o atributo usado para calcular a CD da ação.' };
+  const kind = bonusAtaque?.tipo === 'distancia' ? 'ranged' : 'melee';
+  const defesa = computeTotalDefense(alvo, {}, kind);
   const gasto = gastarAcaoDaInstancia(instancia, categoria, 1, opcoes?.requestId);
   if (!gasto.ok) return gasto;
   const comRecursosDebitados = { ...gasto.instancia, recursosAtuais: debito.recursosRestantes };
@@ -972,23 +1001,84 @@ export async function comandarAtaque(
   gravarInstancia(dono, comRecarga, { peCurrent: debito.peDonoRestante });
   ataquesPendentes.add(chave);
   try {
-    const { rollD20Com, rollDiceCom } = await import('@/lib/dice');
-    const natural = await rollD20Com(donoId, 0, { label: 'Ataque de ' + modelo.nome + ': ' + acao.nome });
-    const totalAtaque = natural + (acao.bonusAtaque ?? 0);
-    const acertou = natural === 20 || (natural !== 1 && totalAtaque >= (alvo.ca ?? 10));
-    if (!acertou) {
-      useLogStore.getState().addLog('combat', `🎯 ${inv!.nome} — ${acao.nome} contra ${alvo.name}: ${totalAtaque} (erro).`);
-      return { ok: true, acertou: false, totalAtaque, dano: 0 };
+    if (tipoTeste === 'resistencia') {
+      const requestId = useTestRequestStore.getState().enqueue({
+        charId: alvo.id,
+        charName: alvo.name,
+        targetProfileId: alvo.profileId,
+        kind: 'save',
+        testName: acao.resistenciaAlvo!,
+        dc: cd!,
+        note: `${modelo.nome} — ${acao.nome}`,
+        originId: donoId,
+        sourceTag: `shikigami:${instancia.id}:${acao.id}:${opcoes?.requestId ?? novoIdInvocacao('tr')}`,
+        ...(formula ? {
+          invocationResolution: {
+            kind: 'shikigami_damage_after_save' as const,
+            ownerCharacterId: donoId,
+            invocationId: modelo.id,
+            invocationInstanceId: instancia.id,
+            actionId: acao.id,
+            sourceName: `${modelo.nome} — ${acao.nome}`,
+            damageFormula: acao.dano!,
+            damageBonus: calcularBonusDanoInvocacao(modelo, acao, 'resistencia'),
+            damageType: acao.tipoDano,
+            damageOnSuccess: acao.danoNoSucesso ?? 'nenhum',
+          },
+        } : {}),
+      });
+      useLogStore.getState().addLog('combat', `🛡️ ${modelo.nome} — ${acao.nome} exige TR ${acao.resistenciaAlvo} contra CD ${cd} de ${alvo.name}.`);
+      return { ok: true, acertou: false, totalAtaque: 0, dano: 0, testePendente: true, requestId, cd: cd! };
     }
-    const rolagem = await rollDiceCom(donoId, dados, { label: 'Dano de ' + modelo.nome });
-    const dano = rolagem.total + Number(bonusStr ?? 0);
-    await useCharacterStore.getState().applyDamage(alvoId, dano, acao.tipoDano ?? 'DCO', { attackerId: donoId });
-    useLogStore.getState().addLog('combat', `🎯 ${inv!.nome} — ${acao.nome} contra ${alvo.name}: acerto ${totalAtaque}, dano rolado ${dano} (${acao.tipoDano ?? 'DCO'}).`);
-    return { ok: true, acertou: true, totalAtaque, dano };
+    const natural = await rollD20Autonomo(bonusAtaque!.total, { label: `Ataque de ${modelo.nome}: ${acao.nome}` });
+    const resultado = resolverAcertoInvocacao(natural, bonusAtaque!.total, defesa, acao.margemCritico ?? 20);
+    if (!resultado.acertou) {
+      useLogStore.getState().addLog('combat', `🎯 ${modelo.nome} — ${acao.nome} contra ${alvo.name}: d20 ${natural} + ${bonusAtaque!.total} = ${resultado.total} vs Defesa ${defesa} (${resultado.falhaCritica ? 'falha crítica' : 'erro'}).`);
+      return { ok: true, acertou: false, totalAtaque: resultado.total, dano: 0 };
+    }
+    const dadosDano = resultado.critico
+      ? multiplicarDadosCriticos(formula!.dados, acao.multiplicadorCritico ?? 2)
+      : formula!.dados;
+    const rolagem = await rollDiceGroups(dadosDano, { label: `Dano de ${modelo.nome}: ${acao.nome}` });
+    const dano = Math.max(0, rolagem.total + formula!.fixo + calcularBonusDanoInvocacao(modelo, acao, 'ataque'));
+    await useCharacterStore.getState().applyDamage(alvoId, dano, acao.tipoDano ?? 'DCO', {
+      attackerId: donoId,
+      source: 'omni',
+      isMelee: bonusAtaque!.tipo === 'corpo_a_corpo',
+      attack: { critical: resultado.critico, criticalFail: resultado.falhaCritica, kind: bonusAtaque!.tipo === 'corpo_a_corpo' ? 'melee' : 'ranged' },
+    });
+    useLogStore.getState().addLog('combat', `🎯 ${modelo.nome} — ${acao.nome} contra ${alvo.name}: d20 ${natural} + ${bonusAtaque!.total} = ${resultado.total} vs Defesa ${defesa} → ${resultado.critico ? 'acerto crítico' : 'acerto'}, dano ${dano} (${acao.tipoDano ?? 'DCO'}).`);
+    return { ok: true, acertou: true, totalAtaque: resultado.total, dano, ...(resultado.critico ? { critico: true } : {}) };
   } catch {
     // A execução pode ter chegado ao dano antes da falha. Não duplicar ação nem dano.
     return { ok: false, motivo: 'Falha ao resolver ataque; confira o log de combate.' };
   } finally {
     ataquesPendentes.delete(chave);
   }
+}
+
+/** Teste de perícia feito pelo Shikigami: usa a ficha da própria invocação e
+ * não consome vantagens, recursos nem rerrolagens do dono. */
+export async function rolarPericiaInvocacao(
+  donoId: string,
+  invocacaoId: string,
+  pericia: string,
+  opcoes?: { instanciaId?: string },
+): Promise<{ ok: true; d20: number; bonus: number; total: number; treinada: boolean } | { ok: false; motivo: string }> {
+  const dono = useCharacterStore.getState().characters.find(character => character.id === donoId);
+  if (!dono) return { ok: false, motivo: 'Personagem proprietário não encontrado.' };
+  const modelo = dono.invocacoesConhecidas?.find(item => item.id === invocacaoId && item.donoCharacterId === donoId);
+  if (!modelo) return { ok: false, motivo: 'Modelo da invocação não encontrado.' };
+  if (!Object.hasOwn(SISTEMA_PERICIAS, pericia)) return { ok: false, motivo: 'Perícia não reconhecida.' };
+  const token = tokensInvocados(donoId).find(item => item.invocationId === invocacaoId && (!opcoes?.instanciaId || item.invocationInstanceId === opcoes.instanciaId) && (item.hp ?? 0) > 0);
+  if (!token) return { ok: false, motivo: 'O Shikigami precisa estar ativo no mapa para fazer o teste.' };
+  if (useCombatStore.getState().inCombat && !podeComandarInvocacao(donoId)) return { ok: false, motivo: 'O teste só pode ser rolado no turno do dono durante o combate.' };
+  const bonus = calcularBonusPericiaInvocacao(dono, modelo, pericia);
+  if (!bonus) return { ok: false, motivo: 'Defina Inteligência ou Sabedoria como atributo-base das perícias na ficha.' };
+  if (!invocacaoTreinadaNaPericia(modelo, pericia)) return { ok: false, motivo: 'O Shikigami precisa ser treinado nessa perícia para fazer um teste independente.' };
+  const nomePericia = ROTULOS_PERICIAS[pericia as keyof typeof ROTULOS_PERICIAS] ?? pericia;
+  const d20 = await rollD20Autonomo(bonus.total, { label: `${nomePericia} — ${modelo.nome}` });
+  const total = d20 + bonus.total;
+  useLogStore.getState().addLog('combat', `🎲 ${modelo.nome} — ${nomePericia}: d20 ${d20} + ${bonus.total} = ${total}${bonus.treinada ? ' (treinada)' : ''}.`);
+  return { ok: true, d20, bonus: bonus.total, total, treinada: bonus.treinada };
 }

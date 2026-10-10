@@ -93,6 +93,20 @@ export async function rollD20Com(charId: string | undefined, bonus?: number, opt
   }
 }
 
+/** Rola um d20 para uma entidade independente, sem consumir vantagens,
+ * rerrolagens ou negações críticas da ficha do proprietário. */
+export async function rollD20Autonomo(
+  bonus?: number,
+  options?: { label?: string; layout?: DiceOverlayLayout; drama?: DiceDrama; cinematicFocus?: boolean },
+): Promise<number> {
+  return whileCombatClockPaused(async () => {
+    const [value] = await useDice3DStore.getState().requestRoll(
+      ['D20'], options?.label ?? 'd20', bonus, options?.layout, options?.drama, options?.cinematicFocus,
+    );
+    return value ?? 0;
+  });
+}
+
 /**
  * Rola VÁRIOS grupos de dados de tipos diferentes em UMA ÚNICA jogada na
  * bandeja 3D (ex.: 2d6 + 1d8 caem juntos), devolvendo os resultados já

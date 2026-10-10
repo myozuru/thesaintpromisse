@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useCombatStore } from '@/stores/useCombatStore';
+import type { DamageType } from '@/types';
 
 /**
  * Pedidos de teste do Mestre → Jogador.
@@ -60,6 +61,19 @@ export interface TestRequest {
     conditionName: string;
     conditionIcon: string;
   };
+  /** Efeito de dano de uma ação de Shikigami após o alvo resolver o TR. */
+  invocationResolution?: {
+    kind: 'shikigami_damage_after_save';
+    ownerCharacterId: string;
+    invocationId: string;
+    invocationInstanceId: string;
+    actionId: string;
+    sourceName: string;
+    damageFormula: string;
+    damageBonus: number;
+    damageType?: DamageType;
+    damageOnSuccess: 'nenhum' | 'metade';
+  };
   resolutionApplied?: boolean;
   createdAt: number;
   /**
@@ -87,7 +101,7 @@ export interface TestRequest {
 
 interface TestRequestState {
   requests: TestRequest[];
-  enqueue: (r: Omit<TestRequest, 'id' | 'createdAt' | 'result'>) => void;
+  enqueue: (r: Omit<TestRequest, 'id' | 'createdAt' | 'result'>) => string;
   setResult: (id: string, result: NonNullable<TestRequest['result']>) => void;
   markResolutionApplied: (id: string) => void;
   /** Jogador confirma que viu o resultado (não remove — o mestre ainda vê). */
@@ -100,13 +114,16 @@ export const useTestRequestStore = create<TestRequestState>()(
   persist(
     (set) => ({
       requests: [],
-      enqueue: (r) =>
+      enqueue: (r) => {
+        const id = `tr_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
         set((s) => ({
           requests: [
             ...s.requests,
-            { ...r, id: `tr_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`, createdAt: Date.now() },
+            { ...r, id, createdAt: Date.now() },
           ],
-        })),
+        }));
+        return id;
+      },
       setResult: (id, result) =>
         set((s) => ({
           requests: s.requests.map((x) => (x.id === id ? { ...x, result } : x)),

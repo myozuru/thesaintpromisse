@@ -6,8 +6,9 @@ import { useCombatStore } from '@/stores/useCombatStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useLogStore } from '@/stores/useLogStore';
+import { useTestRequestStore } from '@/stores/useTestRequestStore';
 import type { EntidadeOmni } from '@/lib/omni/tipos';
-import { invocarControlador, invocarControladores, recolherInvocacao, tokensInvocados, limparInvocacoesDerrotadas, causarDanoInvocacao, curarInvocacao, levantarInvocacao, comandarReposicionamento, comandarAtaque, comandosPorAcao, confirmarMovimentoInvocacao } from '@/lib/controlador/mapa';
+import { invocarControlador, invocarControladores, recolherInvocacao, tokensInvocados, limparInvocacoesDerrotadas, causarDanoInvocacao, curarInvocacao, levantarInvocacao, comandarReposicionamento, comandarAtaque, comandosPorAcao, confirmarMovimentoInvocacao, rolarPericiaInvocacao } from '@/lib/controlador/mapa';
 import type { InvocacaoControlador } from '@/lib/controlador/tipos';
 
 let numeroFixture = 0;
@@ -59,6 +60,7 @@ beforeEach(() => {
   numeroFixture += 1;
   useInventoryStore.getState().resetAll();
   useLogStore.getState().clearLogs();
+  useTestRequestStore.getState().clearAll();
   montarMesa([ficha('dono', {
     specialization: 'Controlador', profileId: 'perfil-dono', level: 1,
     peCurrent: 10, treinoControle: 1,
@@ -651,10 +653,89 @@ describe('Controlador — materialização real no mapa', () => {
     const damage = vi.spyOn(useCharacterStore.getState(), 'applyDamage').mockResolvedValue();
     const result = await comandarAtaque('dono', 'a', 'mordida', 'inimigo');
     expect(result).toEqual({ ok: true, acertou: true, totalAtaque: 15, dano: 6 });
-    expect(damage).toHaveBeenCalledWith('inimigo', 6, 'DP', { attackerId: 'dono' });
+    expect(damage).toHaveBeenCalledWith('inimigo', 6, 'DP', {
+      attackerId: 'dono', source: 'omni', isMelee: true,
+      attack: { critical: false, criticalFail: false, kind: 'melee' },
+    });
     expect(pegarFicha('dono').actionsCurrent).toBe(1);
     expect(pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoComum).toEqual({ atual: 0, maximo: 1 });
     useCombatStore.setState({ inCombat: false } as never);
+    vi.restoreAllMocks();
+  });
+  it('usa atributo/treino do Shikigami e dobra somente os dados em crítico 3D', async () => {
+    const inv = {
+      ...modelo('a'),
+      atributos: { forca: 16, destreza: 10, constituicao: 10, inteligencia: 10, sabedoria: 10, presenca: 10 },
+      ataqueTreinado: { tipo: 'corpo_a_corpo', atributo: 'forca' },
+      economiaAcoesConfigurada: { acaoComum: 1 },
+      acoes: [{ id: 'mordida', nome: 'Mordida', tipo: 'ataque' as const, tipoAtaque: 'corpo_a_corpo' as const,
+        atributoAtaque: 'forca' as const, alcanceM: 1.5, dano: '1d6+1d4+2', bonusAtaque: 2, tipoDano: 'DP' as const }],
+    };
+    useCharacterStore.getState().updateCharacter('dono', { level: 6, invocacoesConhecidas: [inv] });
+    useCharacterStore.setState({ characters: [...useCharacterStore.getState().characters, ficha('inimigo', { hpCurrent: 15, hpMax: 15, ca: 19 })] });
+    useMapStore.getState().addEntity({ shape: 'ELLIPSE', x: 280, y: 140, w: 70, h: 70, rotation: 0,
+      color: '#000', locked: false, characterId: 'inimigo' });
+    expect(invocarControlador('dono', 'a', 'leste').ok).toBe(true);
+    useCombatStore.setState({ inCombat: true, initiativeOrder: [{ charId: 'dono', initiative: 10 }], currentTurnIndex: 0 } as never);
+    const { useDice3DStore } = await import('@/stores/useDice3DStore');
+    const d20 = vi.spyOn(useDice3DStore.getState(), 'requestRoll').mockResolvedValue([20]);
+    const damageDice = vi.spyOn(useDice3DStore.getState(), 'requestNotation').mockResolvedValue([1, 2, 3, 4]);
+    const damage = vi.spyOn(useCharacterStore.getState(), 'applyDamage').mockResolvedValue();
+    const result = await comandarAtaque('dono', 'a', 'mordida', 'inimigo');
+    expect(result).toEqual({ ok: true, acertou: true, totalAtaque: 31, dano: 15, critico: true });
+    expect(d20).toHaveBeenCalledWith(['D20'], 'Ataque de a: Mordida', 11, undefined, undefined, undefined);
+    expect(damageDice).toHaveBeenCalledWith('2d6+2d4', 'Dano de a: Mordida', undefined);
+    expect(damage).toHaveBeenCalledWith('inimigo', 15, 'DP', expect.objectContaining({
+      attackerId: 'dono', attack: expect.objectContaining({ critical: true }),
+    }));
+    useCombatStore.setState({ inCombat: false } as never);
+    vi.restoreAllMocks();
+  });
+  it('envia o TR ao perfil do alvo com CD calculada pela ficha da invocação', async () => {
+    const inv = {
+      ...modelo('a'),
+      atributos: { forca: 10, destreza: 10, constituicao: 10, inteligencia: 10, sabedoria: 10, presenca: 14 },
+      economiaAcoesConfigurada: { acaoComum: 1 },
+      acoes: [{ id: 'rugido', nome: 'Rugido', tipo: 'habilidade' as const, teste: 'resistencia' as const,
+        categoriaAcao: 'acao_comum' as const, resistenciaAlvo: 'Fortitude', atributoCD: 'presenca' as const,
+        dano: '1d6+2', danoNoSucesso: 'metade' as const, alcanceM: 1.5 }],
+    };
+    useCharacterStore.getState().updateCharacter('dono', { level: 4, invocacoesConhecidas: [inv] });
+    const alvo = ficha('inimigo', { category: 'PLAYER', profileId: 'perfil-alvo', hpCurrent: 15, hpMax: 15 });
+    useCharacterStore.setState({ characters: [...useCharacterStore.getState().characters, alvo] });
+    useMapStore.getState().addEntity({ shape: 'ELLIPSE', x: 280, y: 140, w: 70, h: 70, rotation: 0,
+      color: '#000', locked: false, characterId: 'inimigo' });
+    expect(invocarControlador('dono', 'a', 'leste').ok).toBe(true);
+    useCombatStore.setState({ inCombat: true, initiativeOrder: [{ charId: 'dono', initiative: 10 }], currentTurnIndex: 0 } as never);
+    const result = await comandarAtaque('dono', 'a', 'rugido', 'inimigo');
+    expect(result).toMatchObject({ ok: true, testePendente: true, cd: 14 });
+    expect(useTestRequestStore.getState().requests).toHaveLength(1);
+    expect(useTestRequestStore.getState().requests[0]).toMatchObject({
+      charId: 'inimigo', targetProfileId: 'perfil-alvo', kind: 'save', testName: 'Fortitude', dc: 14,
+      invocationResolution: { kind: 'shikigami_damage_after_save', ownerCharacterId: 'dono', damageFormula: '1d6+2', damageBonus: 2, damageOnSuccess: 'metade' },
+    });
+    useTestRequestStore.getState().clearAll();
+    useCombatStore.setState({ inCombat: false } as never);
+  });
+  it('rola perícia com atributo, treinamento e nível do Shikigami sem usar bônus do dono', async () => {
+    const inv = {
+      ...modelo('a'),
+      atributos: { forca: 10, destreza: 10, constituicao: 10, inteligencia: 16, sabedoria: 10, presenca: 10 },
+      atributoBasePericias: 'inteligencia' as const,
+      periciasTreinadas: ['ATLETISMO'],
+    };
+    useCharacterStore.getState().updateCharacter('dono', { level: 6, invocacoesConhecidas: [inv] });
+    expect(invocarControlador('dono', 'a', 'leste').ok).toBe(true);
+    useCombatStore.setState({ inCombat: false } as never);
+    const { useDice3DStore } = await import('@/stores/useDice3DStore');
+    const d20 = vi.spyOn(useDice3DStore.getState(), 'requestRoll').mockResolvedValue([10]);
+
+    await expect(rolarPericiaInvocacao('dono', 'a', 'FURTIVIDADE')).resolves.toMatchObject({ ok: false });
+    expect(d20).not.toHaveBeenCalled();
+    await expect(rolarPericiaInvocacao('dono', 'a', 'ATLETISMO')).resolves.toEqual({
+      ok: true, d20: 10, bonus: 9, total: 19, treinada: true,
+    });
+    expect(d20).toHaveBeenCalledWith(['D20'], 'Atletismo — a', 9, undefined, undefined, undefined);
     vi.restoreAllMocks();
   });
   it('debita custos de comando da origem configurada sem cobrar recursos não selecionados', async () => {

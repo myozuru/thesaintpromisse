@@ -79,6 +79,16 @@ export interface InvocacaoControlador {
     id: string;
     nome: string;
     tipo?: 'ataque' | 'habilidade' | 'movimento' | 'bonus' | 'suporte';
+    teste?: 'ataque' | 'resistencia';
+    tipoAtaque?: 'corpo_a_corpo' | 'distancia';
+    atributoAtaque?: 'forca' | 'destreza';
+    atributoDano?: 'forca' | 'destreza' | 'constituicao' | 'inteligencia' | 'sabedoria' | 'presenca';
+    multiplicadorDanoAtributo?: number;
+    resistenciaAlvo?: string;
+    atributoCD?: 'forca' | 'destreza' | 'constituicao' | 'inteligencia' | 'sabedoria' | 'presenca';
+    danoNoSucesso?: 'nenhum' | 'metade';
+    margemCritico?: number;
+    multiplicadorCritico?: number;
     alcanceM?: number;
     /** Bônus específico de acerto do servo, sem herdar o acerto do Controlador. */
     bonusAtaque?: number;
