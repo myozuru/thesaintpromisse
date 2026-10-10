@@ -55,6 +55,13 @@ export function ShopModal({ aberto, onClose, shopId, characterId }: Props) {
   const [rolando, setRolando] = useState(false);
   const [resultado, setResultado] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!aberto || !shop) return;
+    const txt = [shop.nome ?? '', ...(shop.categorias ?? [])].join(' ').toLowerCase();
+    if (/comida|padaria|taverna|restaurante|lanch|mercado(?!_negro)/.test(txt)) {
+      void import('@/lib/conquistas/motor').then((m) => m.dispararGatilhoConquista('loja_comida', [characterId])).catch(() => {});
+    }
+  }, [aberto, shop?.id, characterId]);
   const walletId = useMemo(() => (character ? ensurePersonal(character.id, character.name) : null), [character, ensurePersonal]);
   if (!shop || shop.deletedAt || !character || !walletId) return null;
 
