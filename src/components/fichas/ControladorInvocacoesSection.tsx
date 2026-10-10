@@ -7,7 +7,7 @@ import { useMapStore } from '@/stores/useMapStore';
 import { invocarControlador, recolherInvocacao, limparInvocacoesDerrotadas, comandarReposicionamento, comandarAtaque, type DirecaoInvocacao } from '@/lib/controlador/mapa';
 import { limiteInvocacoesConhecidas, limiteAtivasPersonagem, validarCatalogoControlador, type InvocacaoControlador, type TipoInvocacaoControlador } from '@/lib/controlador/tipos';
 import { podeUsarVersaoAprovada } from '@/lib/controlador/aprovacao';
-import { decidirAprovacaoInvocacao, submeterAprovacaoInvocacao } from '@/lib/controlador/aprovacao.functions';
+import { decidirAprovacaoInvocacao, decidirAprovacaoLegadaInvocacao, submeterAprovacaoInvocacao } from '@/lib/controlador/aprovacao.functions';
 
 type Fonte = { id: string; nome: string; tipo: 'grimorio' | 'omni'; hp: number; defesa: number; deslocamento: number; porte: InvocacaoControlador['porte']; acoes: InvocacaoControlador['acoes'] };
 const numero = (valor: unknown, padrao: number): number => {
@@ -209,20 +209,29 @@ export function ControladorInvocacoesSection({ character }: { character: Charact
   const decidirAprovacao = async (id: string, estado: 'aprovada' | 'rejeitada') => {
     if (!isMaster || busyAprovacao) return;
     const invocacao = catalogo.find(inv => inv.id === id);
-    if (!invocacao?.solicitacaoAprovacaoId) {
-      setErro('Esta solicitação não tem registro no servidor. Envie uma nova versão para aprovação.');
-      return;
-    }
+    if (!invocacao) return;
     setBusyAprovacao(true); setErro('');
     try {
-      const resultado = await decidirAprovacaoInvocacao({ data: {
-        requestId: invocacao.solicitacaoAprovacaoId,
-        decisao: estado,
-        ...(estado === 'rejeitada' ? { motivo: motivosRejeicao[id] ?? '' } : {}),
-      } });
+      const motivo = estado === 'rejeitada' ? (motivosRejeicao[id] ?? '') : undefined;
+      const resultado = invocacao.solicitacaoAprovacaoId
+        ? await decidirAprovacaoInvocacao({ data: {
+            requestId: invocacao.solicitacaoAprovacaoId,
+            decisao: estado,
+            ...(motivo !== undefined ? { motivo } : {}),
+          } })
+        : await decidirAprovacaoLegadaInvocacao({ data: {
+            requestId: crypto.randomUUID(),
+            invocationId: invocacao.id,
+            ownerCharacterId: character.id,
+            versionSubmitted: invocacao.versaoModelo ?? 1,
+            snapshot: invocacao as unknown as Record<string, unknown>,
+            decisao: estado,
+            ...(motivo !== undefined ? { motivo } : {}),
+          } });
       updateCharacter(character.id, { invocacoesConhecidas: catalogo.map(inv => inv.id !== id ? inv : {
         ...inv,
         aprovacaoMestre: resultado.status,
+        solicitacaoAprovacaoId: resultado.requestId,
         versaoAprovada: resultado.versaoAprovada ?? undefined,
         motivoRejeicao: resultado.motivo ?? undefined,
       }) });
@@ -274,7 +283,7 @@ export function ControladorInvocacoesSection({ character }: { character: Charact
           {inv.referenciaInterludio && <div className="basis-full text-xs text-muted-foreground">Referência do Interlúdio: {inv.referenciaInterludio}</div>}
           {inv.aprovacaoMestre === 'rejeitada' && inv.motivoRejeicao && <div className="basis-full text-xs text-destructive">Motivo da rejeição: {inv.motivoRejeicao}</div>}
           {inv.aprovacaoMestre === 'rejeitada' && <button type="button" disabled={busyAprovacao} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={() => void reenviarAprovacao(inv.id)}>Solicitar nova aprovação</button>}
-          {isMaster && inv.aprovacaoMestre === 'pendente' && inv.solicitacaoAprovacaoId && (
+          {isMaster && inv.aprovacaoMestre === 'pendente' && (
             <div className="flex flex-wrap gap-2">
               <button type="button" disabled={busyAprovacao} className="rounded border border-primary px-2 py-1 text-xs disabled:opacity-50" onClick={() => void decidirAprovacao(inv.id, 'aprovada')}>Aprovar</button>
               <input
