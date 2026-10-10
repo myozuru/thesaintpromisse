@@ -1,14 +1,10 @@
 // Sem configuração própria do Cloud, o clone usa apenas o stub offline.
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase as workspaceClient } from './client';
+import { hasWorkspaceCloud, workspaceCloudConfig } from './workspaceCloudConfig';
 
-const env = (typeof import.meta !== 'undefined' ? import.meta.env : undefined) as
-  | Record<string, string | undefined>
-  | undefined;
-const url = env?.VITE_SUPABASE_URL;
-const key = env?.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-export const hasWorkspaceCloud = Boolean(url && key);
+const { url, key } = workspaceCloudConfig;
+export { hasWorkspaceCloud };
 
 function buildStub(): SupabaseClient {
   const offlineResult = Promise.resolve({ data: null, error: null });

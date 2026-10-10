@@ -58,6 +58,13 @@ const cobaia: Character = {
   bonusReleaseSlots: 2,
   aptitudeOnlyTempPE: 5,
   lastSpellUsedId: 'feiticoX',
+  activeConcentrations: [{
+    instanceId: 'conc-1',
+    spellId: 'feiticoX',
+    spellName: 'Feitiço X',
+    targetIds: [],
+    startedAt: 0,
+  }],
   // Aptidões
   cursedAptitudes: { AU: 2, CL: 3, BAR: 4, DOM: 5, ER: 6 } as Character['cursedAptitudes'],
   chosenAuraAptitudes: ['aptA', 'aptB'],
@@ -141,7 +148,7 @@ describe('🎒 Equipamento & Categoria', () => {
 });
 
 describe('🔮 Especialização', () => {
-  it('concentrando = 1 (tem lastSpellUsedId)', () => expect(get('concentrando')).toBe(1));
+  it('concentrando = 1 (tem activeConcentrations)', () => expect(get('concentrando')).toBe(1));
   it('empolgacao', () => expect(get('empolgacao')).toBe(3));
   it('empolgacao_nivel', () => expect(get('empolgacao_nivel')).toBe(3));
   it('max_concentracao', () => expect(get('max_concentracao')).toBe(4));

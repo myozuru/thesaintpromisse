@@ -15,6 +15,7 @@ import { destinoComposto } from "./componentes/escrita";
  */
 import { calcularContador } from "./contadores";
 import type { MutacaoContadorOmni } from "./contadorSync";
+import { hasWorkspaceCloud } from "@/integrations/supabase/workspaceCloudConfig";
 import { useCharacterStore } from "@/stores/useCharacterStore";
 import { useCombatStore } from "@/stores/useCombatStore";
 import { useInventoryStore } from "@/stores/useInventoryStore";
@@ -24,6 +25,7 @@ function sincronizarMutacaoContador(
   actorCharacterId: string,
   mutacao: Extract<MutacaoContadorOmni, { name: string }>,
 ): void {
+  if (!hasWorkspaceCloud) return;
   void import("./contadorSync")
     .then(({ sincronizarOperacoesContadorOmni }) => {
       sincronizarOperacoesContadorOmni(charId, [mutacao], actorCharacterId);
