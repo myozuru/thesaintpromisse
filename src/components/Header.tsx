@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  LogOut, Clock, Users, Swords, CalendarDays, Settings, BookOpen, Wand2, Coins, Store, GripVertical, Sparkles, Library, Map as MapIcon, Globe, Archive, Skull,
+  LogOut, Clock, Users, Swords, CalendarDays, Settings, BookOpen, Wand2, Coins, Store, GripVertical, Sparkles, Library, Map as MapIcon, Globe, Archive, Skull, Ghost,
 } from 'lucide-react';
 import { RIcon } from '@/components/icons/RIcon';
 import { useRoleStore, type UserRole } from '@/stores/useRoleStore';
@@ -12,11 +12,12 @@ import { MasterAccountsDialog } from '@/components/MasterAccountsDialog';
 import { signOutAll } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 
-export type TabId = 'relogio' | 'fichas' | 'itens' | 'baus' | 'calendario' | 'sistema' | 'guia' | 'feiticos-players' | 'money' | 'cardapios' | 'omni' | 'catalogo' | 'testes' | 'mapa' | 'mundo' | 'grimorio';
+export type TabId = 'relogio' | 'fichas' | 'invocacoes' | 'itens' | 'baus' | 'calendario' | 'sistema' | 'guia' | 'feiticos-players' | 'money' | 'cardapios' | 'omni' | 'catalogo' | 'testes' | 'mapa' | 'mundo' | 'grimorio';
 
 const TAB_LABELS: Record<TabId, string> = {
   relogio: 'Relógio',
   fichas: 'Fichas',
+  invocacoes: 'Invocações',
   'feiticos-players': 'Debates',
   itens: 'Itens',
   baus: 'Baús',
@@ -36,6 +37,7 @@ const TAB_LABELS: Record<TabId, string> = {
 const TAB_ICONS: Record<TabId, React.ElementType> = {
   relogio: Clock,
   fichas: Users,
+  invocacoes: Ghost,
   'feiticos-players': Wand2,
   itens: Swords,
   baus: Archive,
@@ -52,8 +54,8 @@ const TAB_ICONS: Record<TabId, React.ElementType> = {
   grimorio: Skull,
 };
 
-const PLAYER_TABS: TabId[] = ['relogio', 'fichas', 'feiticos-players', 'money', 'cardapios', 'calendario', 'omni', 'mapa', 'guia'];
-const ALL_TABS: TabId[] = ['relogio', 'fichas', 'feiticos-players', 'itens', 'baus', 'money', 'cardapios', 'calendario', 'omni', 'catalogo', 'mapa', 'grimorio', 'sistema', 'guia'];
+const PLAYER_TABS: TabId[] = ['relogio', 'fichas', 'invocacoes', 'feiticos-players', 'money', 'cardapios', 'calendario', 'omni', 'mapa', 'guia'];
+const ALL_TABS: TabId[] = ['relogio', 'fichas', 'invocacoes', 'feiticos-players', 'itens', 'baus', 'money', 'cardapios', 'calendario', 'omni', 'catalogo', 'mapa', 'grimorio', 'sistema', 'guia'];
 
 export function getTabsForRole(role: UserRole): TabId[] {
   if (role === 'PLAYER') return PLAYER_TABS;

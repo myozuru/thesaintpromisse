@@ -1,6 +1,7 @@
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useMapStore, type Entity } from '@/stores/useMapStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
+import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { validarIntermediarioInvocacao } from './intermediario';
 import { useCombatStore } from '@/stores/useCombatStore';
@@ -20,6 +21,7 @@ import { DEFAULT_SAVING_THROWS, type ActiveBuff, type Character, type DamageType
 import { InstanciaInvocacaoSchema, type InstanciaInvocacao } from '@/lib/invocacoes/schema';
 import { alcanceCuraInvocacao, calcularEfeitoSuporte, capacidadeEnergiaReversaInvocacao } from './suporte';
 import { bonusPericiaCaracteristicas, reducaoDanoCaracteristicas } from './passivas';
+import { resolverAcaoOmniInvocacao } from './omni';
 import {
   aplicarCuraPVInvocacao,
   aplicarDanoPVInvocacao,
@@ -1005,10 +1007,15 @@ export async function comandarAtaque(
   if (!dono) return { ok: false, motivo: 'Personagem inválido.' };
   if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
   const inv = dono.invocacoesConhecidas?.find(i => i.id === invocacaoId && i.donoCharacterId === donoId);
-  const acao = inv?.acoes.find(a => a.id === acaoId);
+  const acaoOriginal = inv?.acoes.find(a => a.id === acaoId);
+  if (!inv || !acaoOriginal) return { ok: false, motivo: 'Ação ou invocação não encontrada.' };
+  const resolucaoOmni = acaoOriginal.tipoExecucao === 'omni' || acaoOriginal.tipoExecucao === 'referencia_omni'
+    ? resolverAcaoOmniInvocacao(acaoOriginal, useOmniEntidadesStore.getState().entidades)
+    : undefined;
+  if (resolucaoOmni && !resolucaoOmni.ok) return { ok: false, motivo: resolucaoOmni.motivo };
+  const acao = resolucaoOmni?.ok ? resolucaoOmni.acao : acaoOriginal;
   const tipoTeste = acao?.teste ?? (acao?.tipo === 'ataque' ? 'ataque' : undefined);
-  if (!acao || (tipoTeste !== 'ataque' && tipoTeste !== 'resistencia')) return { ok: false, motivo: 'Ação sem ataque ou teste de resistência configurado.' };
-  if (acao.tipoExecucao === 'omni' || acao.tipoExecucao === 'referencia_omni') return { ok: false, motivo: 'Esta ação está vinculada ao OMNI e deve ser resolvida pelo executor OMNI.' };
+  if (tipoTeste !== 'ataque' && tipoTeste !== 'resistencia') return { ok: false, motivo: 'Ação sem ataque ou teste de resistência configurado.' };
   if (tipoTeste === 'ataque' && !acao.dano) return { ok: false, motivo: 'Configure a fórmula de dano deste ataque.' };
   if (tipoTeste === 'resistencia' && !acao.resistenciaAlvo?.trim()) return { ok: false, motivo: 'Configure qual Teste de Resistência o alvo fará.' };
   if (tipoTeste === 'resistencia' && !DEFAULT_SAVING_THROWS.some(nome => nome.toLocaleLowerCase('pt-BR') === acao.resistenciaAlvo!.trim().toLocaleLowerCase('pt-BR'))) {
@@ -1162,12 +1169,17 @@ export async function comandarSuporte(
   if (!dono) return { ok: false, motivo: 'Personagem inválido.' };
   if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
   const modelo = dono.invocacoesConhecidas?.find(item => item.id === invocacaoId && item.donoCharacterId === donoId);
-  const acao = modelo?.acoes.find(item => item.id === acaoId);
-  if (!modelo || !acao || acao.tipo !== 'suporte' || !acao.efeitoSuporte) {
-    return { ok: false, motivo: 'Ação sem um efeito de suporte estruturado.' };
+  const acaoOriginal = modelo?.acoes.find(item => item.id === acaoId);
+  if (!modelo || !acaoOriginal) {
+    return { ok: false, motivo: 'Ação ou invocação não encontrada.' };
   }
-  if (acao.tipoExecucao === 'omni' || acao.tipoExecucao === 'referencia_omni') {
-    return { ok: false, motivo: 'Esta ação está vinculada ao OMNI e deve ser resolvida pelo executor OMNI.' };
+  const resolucaoOmni = acaoOriginal.tipoExecucao === 'omni' || acaoOriginal.tipoExecucao === 'referencia_omni'
+    ? resolverAcaoOmniInvocacao(acaoOriginal, useOmniEntidadesStore.getState().entidades)
+    : undefined;
+  if (resolucaoOmni && !resolucaoOmni.ok) return { ok: false, motivo: resolucaoOmni.motivo };
+  const acao = resolucaoOmni?.ok ? resolucaoOmni.acao : acaoOriginal;
+  if (acao.tipo !== 'suporte' || !acao.efeitoSuporte) {
+    return { ok: false, motivo: 'Ação sem um efeito de suporte estruturado.' };
   }
 
   const mapa = useMapStore.getState();

@@ -28,6 +28,7 @@ const ZOOM_LABELS = ["55%", "65%", "75%", "85%", "100%", "115%"];
 // only on first access. Once mounted, we keep them alive (see render below) so
 // returning to a tab is instant.
 const FichasModule = lazyWithReload(() => import("@/components/fichas/FichasModule").then(m => ({ default: m.FichasModule })));
+const InvocacoesModule = lazyWithReload(() => import("@/components/invocacoes/InvocacoesModule").then(m => ({ default: m.InvocacoesModule })));
 const ChronosModule = lazyWithReload(() => import("@/components/chronos/ChronosModule").then(m => ({ default: m.ChronosModule })));
 const ItensModule = lazyWithReload(() => import("@/components/itens/ItensModule").then(m => ({ default: m.ItensModule })));
 const BausModule = lazyWithReload(() => import("@/components/baus/BausModule").then(m => ({ default: m.BausModule })));
@@ -45,6 +46,7 @@ const GrimorioModule = lazyWithReload(() => import("@/components/grimorio/Grimor
 const MODULES: Partial<Record<TabId, React.ComponentType>> = {
   relogio: ChronosModule,
   fichas: FichasModule,
+  invocacoes: InvocacoesModule,
   "feiticos-players": SpellProposalsModule,
   itens: ItensModule,
   baus: BausModule,
@@ -59,7 +61,7 @@ const MODULES: Partial<Record<TabId, React.ComponentType>> = {
   guia: GuiaModule,
 };
 
-const TABS: TabId[] = ["relogio", "fichas", "feiticos-players", "itens", "baus", "money", "cardapios", "calendario", "omni", "catalogo", "mapa", "grimorio", "sistema", "guia"];
+const TABS: TabId[] = ["relogio", "fichas", "invocacoes", "feiticos-players", "itens", "baus", "money", "cardapios", "calendario", "omni", "catalogo", "mapa", "grimorio", "sistema", "guia"];
 
 export default function Index() {
   const role = useRoleStore((s) => s.role);

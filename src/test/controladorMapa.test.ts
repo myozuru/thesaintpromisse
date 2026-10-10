@@ -7,6 +7,7 @@ import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { useTestRequestStore } from '@/stores/useTestRequestStore';
+import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import type { EntidadeOmni } from '@/lib/omni/tipos';
 import { invocarControlador, invocarControladores, recolherInvocacao, tokensInvocados, limparInvocacoesDerrotadas, causarDanoInvocacao, curarInvocacao, levantarInvocacao, comandarReposicionamento, comandarAtaque, comandarSuporte, expirarEfeitosSuporteInvocacoes, comandosPorAcao, confirmarMovimentoInvocacao, rolarPericiaInvocacao } from '@/lib/controlador/mapa';
 import type { InvocacaoControlador } from '@/lib/controlador/tipos';
@@ -61,6 +62,7 @@ beforeEach(() => {
   useInventoryStore.getState().resetAll();
   useLogStore.getState().clearLogs();
   useTestRequestStore.getState().clearAll();
+  useOmniEntidadesStore.setState({ entidades: {} });
   montarMesa([ficha('dono', {
     specialization: 'Controlador', profileId: 'perfil-dono', level: 1,
     peCurrent: 10, treinoControle: 1,
@@ -803,6 +805,84 @@ describe('Controlador — materialização real no mapa', () => {
     expect(await comandarAtaque('dono', 'a', 'mordida', 'inimigo')).toMatchObject({ ok: false });
     expect(pegarFicha('dono').peCurrent).toBe(7);
     expect(pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoComum).toEqual({ atual: 1, maximo: 1 });
+    useCombatStore.setState({ inCombat: false } as never);
+  });
+  it('executa uma ação OMNI vinculada usando a ficha e a economia da invocação', async () => {
+    const entidade: EntidadeOmni = {
+      id: 'ent-omni-invocacao', nome: 'Técnica Sombria', categoria: 'talento',
+      acoesAtivas: [{
+        id: 'acao-omni', nome: 'Rugido Sombrio', acao: 'comum', custoPE: '2', alcanceM: 9,
+        teste: 'tr', tr: 'fortitude', dano: '1d6+2', tipoDano: 'DI', metadeNoSucesso: true,
+        tipo_efeito: 'dano', tipo_alvo: 'unico', filtro_alvo: 'todos_exceto_si', max_alvos: '1',
+      }],
+    } as unknown as EntidadeOmni;
+    useOmniEntidadesStore.setState({ entidades: { [entidade.id]: entidade } });
+    const acao = {
+      id: 'rugido', nome: 'Rugido antigo', tipoExecucao: 'referencia_omni' as const,
+      entidadeOmniId: entidade.id, acaoOmniId: 'acao-omni',
+    };
+    const inv = {
+      ...modelo('a'), custoInvocacaoPE: 0,
+      atributos: { forca: 10, destreza: 10, constituicao: 10, inteligencia: 10, sabedoria: 10, presenca: 14 },
+      economiaAcoesConfigurada: { acaoComum: 1 }, acoes: [acao],
+      custosComandosConfigurados: {
+        rugido: { execucao: 'manual' as const, debitos: [{ entidade: 'dono' as const, recurso: 'pe' as const, quantidade: 2 }] },
+      },
+    };
+    useCharacterStore.getState().updateCharacter('dono', { level: 4, invocacoesConhecidas: [inv] });
+    const alvo = ficha('inimigo', { category: 'PLAYER', profileId: 'perfil-alvo', hpCurrent: 15, hpMax: 15 });
+    useCharacterStore.setState({ characters: [...useCharacterStore.getState().characters, alvo] });
+    useMapStore.getState().addEntity({ shape: 'ELLIPSE', x: 280, y: 140, w: 70, h: 70, rotation: 0,
+      color: '#000', locked: false, characterId: 'inimigo' });
+    const summoned = invocarControlador('dono', 'a', 'leste');
+    if (!summoned.ok) throw new Error(summoned.motivo);
+    const peAntesDaAcao = pegarFicha('dono').peCurrent;
+    useCombatStore.setState({ inCombat: true, initiativeOrder: [{ charId: 'dono', initiative: 10 }], currentTurnIndex: 0 } as never);
+
+    const resultado = await comandarAtaque('dono', 'a', 'rugido', 'inimigo');
+
+    if (!resultado.ok) throw new Error(`comandarAtaque OMNI falhou: ${resultado.motivo}`);
+    expect(resultado).toMatchObject({ ok: true, testePendente: true, cd: 14 });
+    expect(useTestRequestStore.getState().requests[0]).toMatchObject({
+      charId: 'inimigo', kind: 'save', testName: 'Fortitude',
+      invocationResolution: { kind: 'shikigami_damage_after_save', damageFormula: '1d6+2', damageBonus: 2, damageOnSuccess: 'metade' },
+    });
+    expect(pegarFicha('dono').peCurrent).toBe(peAntesDaAcao - 2);
+    expect(pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoComum).toEqual({ atual: 0, maximo: 1 });
+    useCombatStore.setState({ inCombat: false } as never);
+  });
+  it('recusa uma referência OMNI incompatível sem debitar PE ou ações da invocação', async () => {
+    const entidade: EntidadeOmni = {
+      id: 'ent-omni-invalida', nome: 'Técnica Condicional', categoria: 'talento',
+      acoesAtivas: [{
+        id: 'acao-omni', nome: 'Marca', acao: 'comum', custoPE: '2', alcanceM: 9,
+        teste: 'tr', tr: 'fortitude', dano: '1d6', tipo_efeito: 'dano', tipo_alvo: 'unico',
+        efeitos: [{ tipo: 'condicao', condicao: 'agarrado', rodadas: 2 }],
+      }],
+    } as unknown as EntidadeOmni;
+    useOmniEntidadesStore.setState({ entidades: { [entidade.id]: entidade } });
+    const inv = {
+      ...modelo('a'), custoInvocacaoPE: 0, economiaAcoesConfigurada: { acaoComum: 1 },
+      acoes: [{
+        id: 'marca', nome: 'Marca', tipoExecucao: 'omni' as const,
+        entidadeOmniId: entidade.id, acaoOmniId: 'acao-omni',
+      }],
+      custosComandosConfigurados: {
+        marca: { execucao: 'manual' as const, debitos: [{ entidade: 'dono' as const, recurso: 'pe' as const, quantidade: 2 }] },
+      },
+    };
+    useCharacterStore.getState().updateCharacter('dono', { invocacoesConhecidas: [inv] });
+    const summoned = invocarControlador('dono', 'a', 'leste');
+    if (!summoned.ok) throw new Error(summoned.motivo);
+    const peAntesDaAcao = pegarFicha('dono').peCurrent;
+    useCombatStore.setState({ inCombat: true, initiativeOrder: [{ charId: 'dono', initiative: 10 }], currentTurnIndex: 0 } as never);
+
+    await expect(comandarAtaque('dono', 'a', 'marca', 'alvo-ainda-nao-selecionado')).resolves.toMatchObject({
+      ok: false, motivo: 'A ação OMNI inclui custos, efeitos ou duração que o fluxo de invocação ainda não consegue resolver; nada foi executado.',
+    });
+    expect(pegarFicha('dono').peCurrent).toBe(peAntesDaAcao);
+    expect(pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoComum).toEqual({ atual: 1, maximo: 1 });
+    expect(useTestRequestStore.getState().requests).toHaveLength(0);
     useCombatStore.setState({ inCombat: false } as never);
   });
   it('progride a cota de comandos nos níveis 1, 6, 12 e 18', () => {

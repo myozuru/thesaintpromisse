@@ -31,6 +31,7 @@ import type { Entity, TokenCrop } from '@/stores/useMapStore';
 import { carregarAssetFicha, salvarAssetFicha } from '@/lib/controlador/assetFicha';
 import { parseFormulaDanoInvocacao } from '@/lib/controlador/rolagens';
 import { bonusPericiaCaracteristicas, bonusPVCaracteristicas, reducaoDanoCaracteristicas } from '@/lib/controlador/passivas';
+import { resolverAcaoOmniInvocacao } from '@/lib/controlador/omni';
 
 const rotulosAtributos: Record<keyof AtributosShikigami, string> = {
   forca: 'Força', destreza: 'Destreza', constituicao: 'Constituição',
@@ -203,6 +204,14 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
   const [acaoRecargaUnidade, setAcaoRecargaUnidade] = useState<'inicio_turno_dono' | 'inicio_rodada' | 'manual' | ''>('');
   const [acaoOmniEntidade, setAcaoOmniEntidade] = useState('');
   const [acaoOmniId, setAcaoOmniId] = useState('');
+  const entidadeOmniSelecionada = acaoOmniEntidade ? entidades[acaoOmniEntidade] : undefined;
+  const configOmniSelecionada = entidadeOmniSelecionada?.acoesAtivas?.find(item => item.id === acaoOmniId);
+  const previewOmni = configOmniSelecionada && entidadeOmniSelecionada
+    ? resolverAcaoOmniInvocacao({
+        id: 'rascunho', nome: configOmniSelecionada.nome, tipoExecucao: acaoExecucao,
+        entidadeOmniId: entidadeOmniSelecionada.id, acaoOmniId: configOmniSelecionada.id,
+      }, entidades)
+    : undefined;
   const [caracteristicas, setCaracteristicas] = useState<CaracteristicaFicha[]>(() => (initial?.caracteristicas ?? []) as CaracteristicaFicha[]);
   const [possuiEnergiaReversa, setPossuiEnergiaReversa] = useState(initial?.possuiEnergiaReversa ?? false);
   const [caracteristicaNome, setCaracteristicaNome] = useState('');
@@ -328,8 +337,44 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
       setAssetErro(error instanceof Error ? error.message : 'Não foi possível guardar a imagem.');
     } finally { setAssetBusy(false); }
   };
+  const selecionarAcaoOmni = (id: string) => {
+    setAcaoOmniId(id);
+    setErro('');
+    const entidade = entidades[acaoOmniEntidade];
+    const config = entidade?.acoesAtivas?.find(item => item.id === id);
+    if (!entidade || !config) return;
+    const resolvida = resolverAcaoOmniInvocacao({
+      id: 'rascunho', nome: config.nome, tipoExecucao: acaoExecucao,
+      entidadeOmniId: entidade.id, acaoOmniId: config.id,
+    }, entidades);
+    if (!resolvida.ok) {
+      setAcaoNome(config.nome);
+      setErro(resolvida.motivo);
+      return;
+    }
+    const acao = resolvida.acao;
+    setAcaoNome(acao.nome);
+    setAcaoCategoria(acao.categoriaAcao ?? '');
+    setAcaoTipo(acao.tipo ?? 'habilidade');
+    setAcaoTeste(acao.teste ?? 'nenhum');
+    setAcaoDano(acao.dano ?? '');
+    setAcaoTipoDano(acao.tipoDano ?? '');
+    setAcaoAlcance(acao.alcanceM?.toString() ?? '');
+    setAcaoBonus(acao.bonusAtaque?.toString() ?? '0');
+    setAcaoCusto(acao.custoPE?.toString() ?? '0');
+    setAcaoResistenciaAlvo(acao.resistenciaAlvo ?? DEFAULT_SAVING_THROWS[0]);
+    setAcaoDanoNoSucesso(acao.danoNoSucesso ?? 'nenhum');
+    if (acao.alcanceM !== undefined) setAcaoTipoAtaque(acao.alcanceM > 1.5 ? 'distancia' : 'corpo_a_corpo');
+  };
   const adicionarAcao = () => {
-    if (!acaoNome.trim() || !acaoCategoria) { setErro('Informe o nome e a categoria da ação.'); return; }
+    if (acaoExecucao === 'manual' && (!acaoNome.trim() || !acaoCategoria)) { setErro('Informe o nome e a categoria da ação.'); return; }
+    if (acaoExecucao !== 'manual' && (!acaoOmniEntidade || !acaoOmniId)) { setErro('Selecione uma entidade e uma ação OMNI.'); return; }
+    const resolucaoOmni = acaoExecucao === 'manual' ? undefined : resolverAcaoOmniInvocacao({
+      id: 'rascunho', nome: acaoNome.trim() || 'Ação OMNI', tipoExecucao: acaoExecucao,
+      entidadeOmniId: acaoOmniEntidade, acaoOmniId,
+    }, entidades);
+    if (resolucaoOmni && !resolucaoOmni.ok) { setErro(resolucaoOmni.motivo); return; }
+    const acaoOmniResolvida = resolucaoOmni?.ok ? resolucaoOmni.acao : undefined;
     const custo = acaoCusto.trim() === '' ? undefined : Number(acaoCusto);
     const custoDono = numeroOpcional(acaoCustoDonoPE, 'Débito de PE do dono');
     const custoRecurso = numeroOpcional(acaoCustoRecurso, 'Débito do recurso próprio');
@@ -342,10 +387,10 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
     if ([custo, custoDono, custoRecurso, alcance, bonus].some(value => value !== undefined && !Number.isFinite(value)) || [custo, custoDono, custoRecurso, alcance].some(value => value !== undefined && value < 0)) { setErro('Custos e alcance precisam ser números finitos e não negativos; bônus precisa ser finito.'); return; }
     if (margemCritico === undefined || margemCritico < 2 || margemCritico > 20 || multiplicadorCritico === undefined || multiplicadorCritico < 1 || multiplicadorCritico > 5) { setErro('Margem de crítico precisa ser 2–20 e multiplicador, 1–5.'); return; }
     if (acaoMultiplicadorDanoAtributo !== '' && (multiplicadorDanoAtributo === undefined || multiplicadorDanoAtributo < 0 || multiplicadorDanoAtributo > 5)) { setErro('Multiplicador do atributo no dano precisa ser de 0 a 5.'); return; }
-    if (acaoTipo === 'ataque' && acaoTeste !== 'ataque') { setErro('Ações do tipo Ataque precisam usar uma rolagem contra Defesa.'); return; }
-    if (acaoTeste === 'ataque' && !parseFormulaDanoInvocacao(acaoDano)) { setErro('Dano inválido. Use dados como 2d12+1d6+3.'); return; }
-    if (acaoTeste === 'resistencia' && !DEFAULT_SAVING_THROWS.includes(acaoResistenciaAlvo)) { setErro('Escolha um Teste de Resistência válido.'); return; }
-    if (acaoTeste === 'resistencia' && acaoDano.trim() && !parseFormulaDanoInvocacao(acaoDano)) { setErro('Dano inválido. Use dados como 2d12+1d6+3.'); return; }
+    if (acaoExecucao === 'manual' && acaoTipo === 'ataque' && acaoTeste !== 'ataque') { setErro('Ações do tipo Ataque precisam usar uma rolagem contra Defesa.'); return; }
+    if (acaoExecucao === 'manual' && acaoTeste === 'ataque' && !parseFormulaDanoInvocacao(acaoDano)) { setErro('Dano inválido. Use dados como 2d12+1d6+3.'); return; }
+    if (acaoExecucao === 'manual' && acaoTeste === 'resistencia' && !DEFAULT_SAVING_THROWS.includes(acaoResistenciaAlvo)) { setErro('Escolha um Teste de Resistência válido.'); return; }
+    if (acaoExecucao === 'manual' && acaoTeste === 'resistencia' && acaoDano.trim() && !parseFormulaDanoInvocacao(acaoDano)) { setErro('Dano inválido. Use dados como 2d12+1d6+3.'); return; }
     if ((custoRecurso === undefined) !== !acaoCustoRecursoId) { setErro('Selecione o recurso próprio e informe o valor a debitar juntos.'); return; }
     if ((recargaQuantidade === undefined) !== !acaoRecargaUnidade) { setErro('Preencha quantidade e marco da recarga juntos.'); return; }
     if (recargaQuantidade !== undefined && recargaQuantidade < 1) { setErro('A recarga precisa ser de pelo menos um turno ou rodada.'); return; }
@@ -353,10 +398,10 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
     const recursoSelecionado = recursos.find(recurso => recurso.id === acaoCustoRecursoId);
     const peDistribuido = (custoDono ?? 0) + (recursoSelecionado?.id === 'pe' ? custoRecurso ?? 0 : 0);
     if (Math.abs(peDistribuido - (custo ?? 0)) > 1e-9) { setErro('Distribua o custo total de PE entre o dono e o recurso próprio com ID "pe".'); return; }
-    const category = acaoCategoria as NonNullable<AcaoFicha['categoriaAcao']>;
+    const category = (acaoOmniResolvida?.categoriaAcao ?? acaoCategoria) as NonNullable<AcaoFicha['categoriaAcao']>;
+    if (!category) { setErro('A categoria da ação precisa estar configurada.'); return; }
     let efeitoSuporte: ConfiguracaoEfeitoSuporteInvocacao | undefined;
-    if (acaoTipo === 'suporte') {
-      if (acaoExecucao !== 'manual') { setErro('O executor atual só permite executar suporte estruturado como ação manual; vincule ações OMNI pelo catálogo OMNI.'); return; }
+    if (acaoTipo === 'suporte' && acaoExecucao === 'manual') {
       if (!acaoEfeitoSuporte) { setErro('Escolha o efeito tabelado desta ação de suporte.'); return; }
       if (acaoEfeitoSuporte === 'cura' && !['acao_complexa', 'acao_comum'].includes(category)) { setErro('A cura exige uma Ação Complexa.'); return; }
       if (['defesa', 'acerto'].includes(acaoEfeitoSuporte) && !['acao_simples', 'acao_bonus'].includes(category)) {
@@ -373,29 +418,35 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
         ...(acaoEfeitoSuporte === 'reducao_dano' ? { tiposDano: acaoTiposDanoRD } : {}),
       };
     }
-    if (acaoExecucao !== 'manual' && (!acaoOmniEntidade || !acaoOmniId)) { setErro('A execução OMNI precisa de entidade e ID da ação.'); return; }
     const actionId = crypto.randomUUID();
-    const action: AcaoFicha = {
-      id: actionId, nome: acaoNome.trim(), tipo: category === 'movimento' ? 'movimento' : acaoTipo,
+    const testeSalvo = acaoOmniResolvida?.teste ?? (acaoTeste === 'nenhum' ? undefined : acaoTeste);
+    const actionDraft: AcaoFicha = {
+      id: actionId, nome: acaoOmniResolvida?.nome ?? acaoNome.trim(), tipo: acaoOmniResolvida?.tipo ?? (category === 'movimento' ? 'movimento' : acaoTipo),
       tipoExecucao: acaoExecucao, categoriaAcao: category,
       ...(efeitoSuporte ? { efeitoSuporte } : {}),
-      ...(acaoTeste !== 'nenhum' ? { teste: acaoTeste } : {}),
+      ...(testeSalvo ? { teste: testeSalvo } : {}),
       ...(acaoTeste === 'ataque' ? { tipoAtaque: acaoTipoAtaque, atributoAtaque: acaoAtributoAtaque, margemCritico, multiplicadorCritico } : {}),
       ...(acaoTeste === 'resistencia' ? { resistenciaAlvo: acaoResistenciaAlvo, atributoCD: acaoAtributoCD, danoNoSucesso: acaoDanoNoSucesso } : {}),
       ...(acaoTeste !== 'nenhum' && acaoAtributoDano ? { atributoDano: acaoAtributoDano } : {}),
       ...(acaoTeste !== 'nenhum' && multiplicadorDanoAtributo !== undefined ? { multiplicadorDanoAtributo } : {}),
-      ...(acaoDano.trim() ? { dano: acaoDano.trim() } : {}),
+      ...((acaoOmniResolvida?.dano ?? acaoDano.trim()) ? { dano: acaoOmniResolvida?.dano ?? acaoDano.trim() } : {}),
       ...(acaoTipoDano ? { tipoDano: acaoTipoDano as import('@/types').DamageType } : {}),
       ...(alcance !== undefined ? { alcanceM: alcance } : {}),
-      ...(bonus !== undefined ? { bonusAtaque: bonus } : {}),
-      ...(custo !== undefined ? { custoPE: custo } : {}),
+      ...(acaoOmniResolvida ? { alcanceM: acaoOmniResolvida.alcanceM, bonusAtaque: acaoOmniResolvida.bonusAtaque ?? 0, custoPE: acaoOmniResolvida.custoPE } : {}),
+      ...(!acaoOmniResolvida && bonus !== undefined ? { bonusAtaque: bonus } : {}),
+      ...(!acaoOmniResolvida && custo !== undefined ? { custoPE: custo } : {}),
       ...(recargaQuantidade !== undefined && acaoRecargaUnidade
         ? { recargaConfigurada: { quantidade: recargaQuantidade, unidade: acaoRecargaUnidade } }
         : {}),
-      ...(acaoOmniEntidade ? { entidadeOmniId: acaoOmniEntidade } : {}),
-      ...(acaoOmniId ? { acaoOmniId: acaoOmniId } : {}),
+      ...(acaoExecucao !== 'manual' ? { entidadeOmniId: acaoOmniEntidade, acaoOmniId } : {}),
       ...(acaoAlvo.trim() ? { alvo: acaoAlvo.trim() } : {}),
       ...(category === 'acao_simples' || category === 'acao_complexa' ? { opcaoInvocacao: category } : {}),
+    };
+    const action: AcaoFicha = {
+      ...actionDraft,
+      ...(acaoOmniResolvida?.tipoDano ? { tipoDano: acaoOmniResolvida.tipoDano } : {}),
+      ...(acaoOmniResolvida?.resistenciaAlvo ? { resistenciaAlvo: acaoOmniResolvida.resistenciaAlvo } : {}),
+      ...(acaoOmniResolvida?.danoNoSucesso ? { danoNoSucesso: acaoOmniResolvida.danoNoSucesso } : {}),
     };
     setAcoes(previous => [...previous, action]);
     const debitos: CustoComandoInvocacao['debitos'] = [];
@@ -804,15 +855,22 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
     <details id="sec-G" className="rounded border border-border p-2">
       <summary className="cursor-pointer text-sm font-semibold">G · Catálogo de ações</summary>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        <label className="text-xs">Nome<input value={acaoNome} onChange={event => setAcaoNome(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
-        <label className="text-xs">Categoria<select value={acaoCategoria} onChange={event => setAcaoCategoria(event.target.value)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Selecione</option><option value="acao_comum">Comum</option><option value="acao_simples">Simples</option><option value="acao_complexa">Complexa</option><option value="acao_bonus">Bônus</option><option value="movimento">Movimento</option><option value="livre">Livre</option><option value="reacao">Reação</option></select></label>
         <label className="text-xs">Execução<select value={acaoExecucao} onChange={event => setAcaoExecucao(event.target.value as 'manual' | 'omni' | 'referencia_omni')} className="mt-1 w-full rounded border bg-background p-2"><option value="manual">Manual</option><option value="omni">OMNI</option><option value="referencia_omni">Referência OMNI</option></select></label>
-        <label className="text-xs">Tipo de ação<select value={acaoTipo} onChange={event => {
+        {acaoExecucao === 'manual' ? <>
+          <label className="text-xs">Nome<input value={acaoNome} onChange={event => setAcaoNome(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
+          <label className="text-xs">Categoria<select value={acaoCategoria} onChange={event => setAcaoCategoria(event.target.value)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Selecione</option><option value="acao_comum">Comum</option><option value="acao_simples">Simples</option><option value="acao_complexa">Complexa</option><option value="acao_bonus">Bônus</option><option value="movimento">Movimento</option><option value="livre">Livre</option><option value="reacao">Reação</option></select></label>
+        </> : <>
+          <label className="text-xs">Entidade OMNI<select value={acaoOmniEntidade} onChange={event => { setAcaoOmniEntidade(event.target.value); setAcaoOmniId(''); setErro(''); }} className="mt-1 w-full rounded border bg-background p-2"><option value="">Selecione uma entidade</option>{Object.values(entidades).map(entity => <option key={entity.id} value={entity.id}>{entity.nome}</option>)}</select></label>
+          <label className="text-xs">Ação OMNI<select value={acaoOmniId} onChange={event => selecionarAcaoOmni(event.target.value)} disabled={!entidadeOmniSelecionada} className="mt-1 w-full rounded border bg-background p-2"><option value="">Selecione uma ação</option>{(entidadeOmniSelecionada?.acoesAtivas ?? []).map(action => <option key={action.id} value={action.id}>{action.nome}</option>)}</select></label>
+          <p className="sm:col-span-2 rounded border border-border p-2 text-xs text-muted-foreground">A entidade OMNI define nome, categoria, teste, dano, alcance, bônus e custo. A ficha do Shikigami define seus atributos; distribua o custo fixo de PE entre controlador e recurso próprio.</p>
+          {previewOmni && !previewOmni.ok && <p role="alert" className="sm:col-span-2 text-xs text-destructive">{previewOmni.motivo}</p>}
+        </>}
+        {acaoExecucao === 'manual' && <label className="text-xs">Tipo de ação<select value={acaoTipo} onChange={event => {
           const next = event.target.value as NonNullable<AcaoFicha['tipo']>;
           setAcaoTipo(next);
           setAcaoTeste(next === 'ataque' ? 'ataque' : 'nenhum');
-        }} className="mt-1 w-full rounded border bg-background p-2"><option value="ataque">Ataque</option><option value="habilidade">Habilidade</option><option value="movimento">Movimento</option><option value="bonus">Bônus</option><option value="suporte">Suporte</option></select></label>
-        {acaoTipo === 'suporte' && <>
+        }} className="mt-1 w-full rounded border bg-background p-2"><option value="ataque">Ataque</option><option value="habilidade">Habilidade</option><option value="movimento">Movimento</option><option value="bonus">Bônus</option><option value="suporte">Suporte</option></select></label>}
+        {acaoExecucao === 'manual' && acaoTipo === 'suporte' && <>
           <label className="text-xs">Efeito tabelado<select value={acaoEfeitoSuporte} onChange={event => setAcaoEfeitoSuporte(event.target.value as typeof acaoEfeitoSuporte)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Selecione</option><option value="cura">Cura / PVT</option><option value="defesa">Bônus de Defesa</option><option value="acerto">Bônus de Acerto</option><option value="dano_adicional">Dano adicional no próximo ataque</option><option value="reducao_dano">Redução de Dano</option></select></label>
           {acaoEfeitoSuporte === 'cura' && <>
             <label className="text-xs">Alvos da cura<select value={acaoAlvosSuporte} onChange={event => setAcaoAlvosSuporte(event.target.value as 'unico' | 'multiplos')} className="mt-1 w-full rounded border bg-background p-2"><option value="unico">Alvo único</option><option value="multiplos">Múltiplos alvos</option></select></label>
@@ -821,8 +879,10 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
           {acaoEfeitoSuporte === 'reducao_dano' && <label className="text-xs">Tipos de dano cobertos (Ctrl/Cmd para vários)<select multiple value={acaoTiposDanoRD} onChange={event => setAcaoTiposDanoRD(Array.from(event.target.selectedOptions, option => option.value as import('@/types').DamageType))} className="mt-1 min-h-24 w-full rounded border bg-background p-2">{(['DCO','DP','DI','DA','DCG','DCC','DQ','DS','DAL','DNR','DE','DPS','DR','DN','DV'] as const).map(tipo => <option key={tipo} value={tipo}>{tipo}</option>)}</select></label>}
           <p className="text-xs text-muted-foreground">A cura exige Ação Complexa. Defesa e Acerto usam Ação Simples; Dano adicional e RD aceitam ação simples ou complexa. O alcance do auxílio é 1,5 m por padrão; cure usa o alcance do grau.</p>
         </>}
-        <label className="text-xs">Rolagem da ação<select value={acaoTeste} onChange={event => setAcaoTeste(event.target.value as 'nenhum' | 'ataque' | 'resistencia')} className="mt-1 w-full rounded border bg-background p-2"><option value="nenhum">Sem rolagem automática</option><option value="ataque">Ataque contra Defesa</option><option value="resistencia">Teste de Resistência do alvo</option></select></label>
-        <label className="text-xs">Dano ou efeito<input aria-label="Fórmula de dano" value={acaoDano} onChange={event => setAcaoDano(event.target.value)} placeholder="Ex.: 2d12+1d6+3" className="mt-1 w-full rounded border bg-background p-2" /><span className="mt-1 block text-muted-foreground">O modificador do atributo é somado separadamente.</span></label>
+        {acaoExecucao === 'manual' && <>
+          <label className="text-xs">Rolagem da ação<select value={acaoTeste} onChange={event => setAcaoTeste(event.target.value as 'nenhum' | 'ataque' | 'resistencia')} className="mt-1 w-full rounded border bg-background p-2"><option value="nenhum">Sem rolagem automática</option><option value="ataque">Ataque contra Defesa</option><option value="resistencia">Teste de Resistência do alvo</option></select></label>
+          <label className="text-xs">Dano ou efeito<input aria-label="Fórmula de dano" value={acaoDano} onChange={event => setAcaoDano(event.target.value)} placeholder="Ex.: 2d12+1d6+3" className="mt-1 w-full rounded border bg-background p-2" /><span className="mt-1 block text-muted-foreground">O modificador do atributo é somado separadamente.</span></label>
+        </>}
         {acaoTeste === 'ataque' && <>
           <label className="text-xs">Tipo de ataque<select value={acaoTipoAtaque} onChange={event => setAcaoTipoAtaque(event.target.value as 'corpo_a_corpo' | 'distancia')} className="mt-1 w-full rounded border bg-background p-2"><option value="corpo_a_corpo">Corpo a corpo</option><option value="distancia">À distância</option></select></label>
           <label className="text-xs">Atributo do ataque<select value={acaoAtributoAtaque} onChange={event => setAcaoAtributoAtaque(event.target.value as 'forca' | 'destreza')} className="mt-1 w-full rounded border bg-background p-2"><option value="forca">Força</option><option value="destreza">Destreza</option></select></label>
@@ -830,27 +890,27 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
           <label className="text-xs">Multiplicador crítico<input type="number" min="1" max="5" step="1" value={acaoMultiplicadorCritico} onChange={event => setAcaoMultiplicadorCritico(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
         </>}
         {acaoTeste === 'resistencia' && <>
-          <label className="text-xs">TR do alvo<select value={acaoResistenciaAlvo} onChange={event => setAcaoResistenciaAlvo(event.target.value)} className="mt-1 w-full rounded border bg-background p-2">{DEFAULT_SAVING_THROWS.map(nome => <option key={nome} value={nome}>{nome}</option>)}</select></label>
+          {acaoExecucao === 'manual' && <label className="text-xs">TR do alvo<select value={acaoResistenciaAlvo} onChange={event => setAcaoResistenciaAlvo(event.target.value)} className="mt-1 w-full rounded border bg-background p-2">{DEFAULT_SAVING_THROWS.map(nome => <option key={nome} value={nome}>{nome}</option>)}</select></label>}
           <label className="text-xs">Atributo da CD<select value={acaoAtributoCD} onChange={event => setAcaoAtributoCD(event.target.value as keyof AtributosShikigami)} className="mt-1 w-full rounded border bg-background p-2">{ATRIBUTOS_SHIKIGAMI.map(atributo => <option key={atributo} value={atributo}>{rotulosAtributos[atributo]}</option>)}</select></label>
-          <label className="text-xs">Dano no sucesso do TR<select value={acaoDanoNoSucesso} onChange={event => setAcaoDanoNoSucesso(event.target.value as 'nenhum' | 'metade')} className="mt-1 w-full rounded border bg-background p-2"><option value="nenhum">Nenhum</option><option value="metade">Metade</option></select></label>
+          {acaoExecucao === 'manual' && <label className="text-xs">Dano no sucesso do TR<select value={acaoDanoNoSucesso} onChange={event => setAcaoDanoNoSucesso(event.target.value as 'nenhum' | 'metade')} className="mt-1 w-full rounded border bg-background p-2"><option value="nenhum">Nenhum</option><option value="metade">Metade</option></select></label>}
         </>}
         {acaoTeste !== 'nenhum' && <>
           <label className="text-xs">Atributo do dano<select value={acaoAtributoDano} onChange={event => setAcaoAtributoDano(event.target.value as keyof AtributosShikigami | '')} className="mt-1 w-full rounded border bg-background p-2"><option value="">Igual ao atributo do ataque/CD</option>{ATRIBUTOS_SHIKIGAMI.map(atributo => <option key={atributo} value={atributo}>{rotulosAtributos[atributo]}</option>)}</select></label>
           <label className="text-xs">Multiplicador do atributo no dano<select value={acaoMultiplicadorDanoAtributo} onChange={event => setAcaoMultiplicadorDanoAtributo(event.target.value)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Padrão do grau</option><option value="0">Nenhum</option><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option><option value="4">4×</option><option value="5">5×</option></select></label>
         </>}
-        <label className="text-xs">Tipo de dano<select value={acaoTipoDano} onChange={event => setAcaoTipoDano(event.target.value)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Não definido</option>{(['DCO','DP','DI','DA','DCG','DCC','DQ','DS','DAL','DNR','DE','DPS','DR','DN','DV'] as const).map(value => <option key={value} value={value}>{value}</option>)}</select></label>
-        <label className="text-xs">Alcance (m)<input type="number" step="any" value={acaoAlcance} onChange={event => setAcaoAlcance(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
-        <label className="text-xs">Bônus de acerto<input type="number" step="any" value={acaoBonus} onChange={event => setAcaoBonus(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
-        <label className="text-xs">Custo total em PE<input type="number" min="0" step="any" value={acaoCusto} onChange={event => setAcaoCusto(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
+        {acaoExecucao === 'manual' && <>
+          <label className="text-xs">Tipo de dano<select value={acaoTipoDano} onChange={event => setAcaoTipoDano(event.target.value)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Não definido</option>{(['DCO','DP','DI','DA','DCG','DCC','DQ','DS','DAL','DNR','DE','DPS','DR','DN','DV'] as const).map(value => <option key={value} value={value}>{value}</option>)}</select></label>
+          <label className="text-xs">Alcance (m)<input type="number" step="any" value={acaoAlcance} onChange={event => setAcaoAlcance(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
+          <label className="text-xs">Bônus de acerto<input type="number" step="any" value={acaoBonus} onChange={event => setAcaoBonus(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
+        </>}
+        <label className="text-xs">Custo total em PE<input type="number" min="0" step="any" readOnly={acaoExecucao !== 'manual'} value={acaoCusto} onChange={event => setAcaoCusto(event.target.value)} className="mt-1 w-full rounded border bg-background p-2 read-only:opacity-70" /></label>
         <label className="text-xs">PE debitado do dono<input type="number" min="0" step="any" value={acaoCustoDonoPE} onChange={event => setAcaoCustoDonoPE(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
         <label className="text-xs">Recurso debitado da invocação<select value={acaoCustoRecursoId} onChange={event => setAcaoCustoRecursoId(event.target.value)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Nenhum</option>{recursos.map(recurso => <option key={recurso.id} value={recurso.id}>{recurso.nome} · {recurso.id}</option>)}</select></label>
         <label className="text-xs">Quantidade do recurso próprio<input type="number" min="0" step="any" value={acaoCustoRecurso} onChange={event => setAcaoCustoRecurso(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
         <label className="text-xs">Execução do comando<select value={acaoModoCusto} onChange={event => setAcaoModoCusto(event.target.value as 'manual' | 'evento_automatico')} className="mt-1 w-full rounded border bg-background p-2"><option value="manual">Manual, sob comando</option><option value="evento_automatico">Somente por evento automático</option></select></label>
         <label className="text-xs">Recarga em turnos ou rodadas<input type="number" min="1" step="1" value={acaoRecargaQuantidade} onChange={event => setAcaoRecargaQuantidade(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
         <label className="text-xs">Marco da recarga<select value={acaoRecargaUnidade} onChange={event => setAcaoRecargaUnidade(event.target.value as 'inicio_turno_dono' | 'inicio_rodada' | 'manual' | '')} className="mt-1 w-full rounded border bg-background p-2"><option value="">Sem recarga</option><option value="inicio_turno_dono">Turnos do dono</option><option value="inicio_rodada">Rodadas</option><option value="manual">Manual</option></select></label>
-        <label className="text-xs">Alvo<input value={acaoAlvo} onChange={event => setAcaoAlvo(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
-        <label className="text-xs">Entidade OMNI<select value={acaoOmniEntidade} onChange={event => setAcaoOmniEntidade(event.target.value)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Nenhuma</option>{Object.values(entidades).map(entity => <option key={entity.id} value={entity.id}>{entity.nome}</option>)}</select></label>
-        <label className="text-xs">ID de ação OMNI<input value={acaoOmniId} onChange={event => setAcaoOmniId(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
+        {acaoExecucao === 'manual' && <label className="text-xs">Alvo<input value={acaoAlvo} onChange={event => setAcaoAlvo(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>}
         <button type="button" className="self-end rounded bg-primary px-3 py-2 text-xs text-primary-foreground" onClick={adicionarAcao}>Adicionar ação</button>
       </div>
       <p className="mt-2 text-xs text-muted-foreground">Se a ação custa PE, distribua o total entre PE do dono e um recurso próprio com ID “pe”. Outros recursos podem ser debitados à parte. Sem distribuição, uma ação com custo PE não será executada.</p>
