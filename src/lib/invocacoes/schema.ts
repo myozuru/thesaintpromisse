@@ -73,8 +73,11 @@ const RecursoInvocacaoSchema = z.object({
 
 const EconomiaConfiguradaSchema = z.object({
   acaoComum: nonNegativeIntSchema.optional(),
+  acaoSimples: nonNegativeIntSchema.optional(),
+  acaoComplexa: nonNegativeIntSchema.optional(),
   acaoMovimento: nonNegativeIntSchema.optional(),
   acaoBonus: nonNegativeIntSchema.optional(),
+  acaoLivre: nonNegativeIntSchema.optional(),
   reacao: nonNegativeIntSchema.optional(),
 }).strict();
 
@@ -89,6 +92,14 @@ const AutomacaoOmniSchema = z.object({
   politicaAlvo: z.unknown().optional(),
   limitePorRodada: nonNegativeIntSchema.optional(),
   revisao: z.number().int().min(1).optional(),
+}).passthrough();
+
+const AutonomiaInvocacaoSchema = z.object({
+  modo: z.enum(["manual", "misto", "automatico"]),
+  prioridadeAlvo: z.string().optional(),
+  politicaAlvo: z.string().optional(),
+  politicaCusto: z.string().optional(),
+  limitePorRodada: nonNegativeIntSchema.optional(),
 }).passthrough();
 
 const EstadoLegadoSchema = z.object({
@@ -108,12 +119,22 @@ export const ModeloInvocacaoSchema = z.object({
   donoProfileId: idSchema.optional(),
   tipo: TipoModeloInvocacaoSchema,
   nome: textSchema.max(160),
+  apelido: z.string().max(160).optional(),
+  nivelEvolucao: nonNegativeIntSchema.optional(),
+  atributoBasePericias: z.enum(["inteligencia", "sabedoria"]).optional(),
+  subcategoria: z.string().max(160).optional(),
   descricao: z.string().optional(),
+  historico: z.string().optional(),
   origem: z.object({ tipo: textSchema }).passthrough().optional(),
   origemAquisicao: z.string().optional(),
   referenciaInterludio: idSchema.optional(),
   grau: z.string().optional(),
   imagemAssetId: idSchema.optional(),
+  imagemFallbackAssetId: idSchema.optional(),
+  imagemAltText: z.string().optional(),
+  corIdentificacao: z.string().optional(),
+  nomeplate: z.boolean().optional(),
+  formaToken: z.enum(["ELLIPSE", "RECT"]).optional(),
   tokenCrop: z.unknown().optional(),
   estiloToken: z.string().optional(),
   tamanho: z.string().optional(),
@@ -129,7 +150,11 @@ export const ModeloInvocacaoSchema = z.object({
   caracteristicas: z.array(z.unknown()).optional(),
   reacoes: z.array(z.unknown()).optional(),
   automacoesOmni: z.array(AutomacaoOmniSchema).optional(),
+  omniConfiguracao: z.object({ entidadeId: idSchema.optional(), acaoId: idSchema.optional(), gatilhoId: idSchema.optional(), chave: z.string().optional(), formula: z.string().optional(), efeito: z.string().optional(), alvos: z.string().optional(), area: z.string().optional(), sustentacao: z.string().optional(), contador: z.string().optional(), diagnosticos: z.string().optional() }).passthrough().optional(),
+  autonomia: AutonomiaInvocacaoSchema.optional(),
   economiaAcoesConfigurada: EconomiaConfiguradaSchema.optional(),
+  registroEvolucao: z.array(z.unknown()).optional(),
+  regrasRecuperacao: z.object({ derrotaPorPVNegativo: z.literal("menos_cem_por_cento_pv_maximo"), curaAcimaDeZeroLevanta: z.literal(false), acaoParaLevantar: z.literal("acao_de_movimento_propria"), dissipacaoVoluntariaMinSegundos: z.literal(10), contribuicaoNaDerrotaDefinitiva: z.literal("preservar_saldo_restante") }).strict().optional(),
   custosComandosConfigurados: z.record(z.string(), z.unknown()).optional(),
   tempoAdicional: ConfiguracaoTempoInvocacaoSchema.optional(),
   aquisicao: EstadoAquisicaoInvocacaoSchema,

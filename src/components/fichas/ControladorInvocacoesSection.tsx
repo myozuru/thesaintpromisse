@@ -30,7 +30,7 @@ function criaturasGrimorio(): Fonte[] {
     }));
   } catch { return []; }
 }
-export function ControladorInvocacoesSection({ character }: { character: Character }) {
+export function ControladorInvocacoesSection({ character, onEditFicha }: { character: Character; onEditFicha?: (id: string) => void }) {
   const updateCharacter = useCharacterStore(s => s.updateCharacter);
   const isMaster = useRoleStore(s => s.role) === 'MASTER';
   const entidades = useOmniEntidadesStore(s => s.entidades);
@@ -297,6 +297,7 @@ export function ControladorInvocacoesSection({ character }: { character: Charact
             </div>
           )}
           <div className="flex shrink-0 flex-wrap gap-1">
+            {onEditFicha && <button type="button" disabled={busyAprovacao || inv.aprovacaoMestre === 'pendente'} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={() => onEditFicha(inv.id)}>Editar ficha</button>}
             {ativos.some(e => e.invocationId === inv.id) ? (
               <><button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => comandar(inv.id)}>Comandar movimento (bônus)</button><button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => recolher(inv.id)}>Recolher</button></>
             ) : (

@@ -1,3 +1,9 @@
+import type {
+  CampoDerivadoInvocacao,
+  EstadoAquisicaoInvocacao,
+  ModeloInvocacao,
+} from "@/lib/invocacoes/schema";
+
 /** Catálogo persistente de invocações do Controlador.
  * A materialização em tokens e os comandos pertencem às fases seguintes.
  * Referências preservam a origem no Grimório/OMNI sem duplicar entidades.
@@ -8,6 +14,42 @@ export interface InvocacaoControlador {
   id: string;
   donoCharacterId: string;
   nome: string;
+  schemaVersion?: 1;
+  version?: number;
+  donoProfileId?: string;
+  apelido?: string;
+  nivelEvolucao?: number;
+  atributoBasePericias?: "inteligencia" | "sabedoria";
+  subcategoria?: string;
+  descricao?: string;
+  historico?: string;
+  imagemAssetId?: string;
+  imagemFallbackAssetId?: string;
+  imagemAltText?: string;
+  corIdentificacao?: string;
+  nomeplate?: boolean;
+  formaToken?: "ELLIPSE" | "RECT";
+  tokenCrop?: unknown;
+  estiloToken?: string;
+  tamanho?: string;
+  intermediario?: ModeloInvocacao["intermediario"];
+  valoresDerivados?: Record<string, CampoDerivadoInvocacao>;
+  estadoLegado?: ModeloInvocacao["estadoLegado"];
+  periciasTreinadas?: string[];
+  ataqueTreinado?: unknown;
+  resistenciaTreinada?: unknown;
+  recursosConfigurados?: ModeloInvocacao["recursosConfigurados"];
+  caracteristicas?: unknown[];
+  reacoes?: unknown[];
+  automacoesOmni?: ModeloInvocacao["automacoesOmni"];
+  omniConfiguracao?: ModeloInvocacao["omniConfiguracao"];
+  autonomia?: ModeloInvocacao["autonomia"];
+  economiaAcoesConfigurada?: ModeloInvocacao["economiaAcoesConfigurada"];
+  custosComandosConfigurados?: Record<string, unknown>;
+  tempoAdicional?: ModeloInvocacao["tempoAdicional"];
+  aquisicao?: EstadoAquisicaoInvocacao;
+  registroEvolucao?: unknown[];
+  regrasRecuperacao?: ModeloInvocacao["regrasRecuperacao"];
   /** Aquisição depende de aprovação do Mestre. Ausência em saves antigos equivale a legado já adquirido. */
   aprovacaoMestre?: 'pendente' | 'aprovada' | 'rejeitada';
   /** Versão do snapshot atualmente editado e versão liberada pelo Mestre. */
@@ -34,13 +76,21 @@ export interface InvocacaoControlador {
   acoes: Array<{
     id: string;
     nome: string;
-    tipo: 'ataque' | 'habilidade' | 'movimento' | 'bonus';
+    tipo?: 'ataque' | 'habilidade' | 'movimento' | 'bonus' | 'suporte';
     alcanceM?: number;
     /** Bônus específico de acerto do servo, sem herdar o acerto do Controlador. */
     bonusAtaque?: number;
     dano?: string;
     tipoDano?: import('@/types').DamageType;
     entidadeOmniId?: string;
+    acaoOmniId?: string;
+    tipoExecucao?: 'omni' | 'referencia_omni' | 'manual' | 'legada';
+    categoriaAcao?: 'acao_comum' | 'acao_simples' | 'acao_complexa' | 'acao_bonus' | 'movimento' | 'livre' | 'reacao';
+    opcaoInvocacao?: 'acao_simples' | 'acao_complexa' | 'caracteristica';
+    custoPE?: number;
+    recarga?: string;
+    alvo?: string;
+    [campo: string]: unknown;
   }>;
 }
 
