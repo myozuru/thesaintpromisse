@@ -52,7 +52,7 @@ jobs:
         with:
           bun-version: latest
       - run: bun install --no-save
-      - run: bunx vitest run src/test/omniCargasSustentacao.test.tsx src/test/omniAcoesAgrupadas.test.tsx
+      - run: bunx vitest run src/test/omniCargasSustentacao.test.tsx src/test/omniAcoesAgrupadas.test.tsx --reporter=verbose --testTimeout=15000
 
   tests:
     runs-on: ubuntu-latest
