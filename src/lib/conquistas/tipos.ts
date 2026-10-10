@@ -108,4 +108,41 @@ export const CONQUISTAS_PADRAO: ConquistaDef[] = [
   // Impossível
   d('voto-quebrado', 'O Preço da Palavra', 'Quebre um Voto de Restrição e sobreviva às consequências.', '💔', 'impossivel', 'manual', true),
   d('derrotar-santo', 'Abaixo dos Céus', 'Derrote sozinho um chefe de patamar Santo.', '👑', 'impossivel', 'manual', true, [titulo('O Impossível')]),
+  // Expansão do catálogo (lista revisada) — Comum
+  d('nivel-2', 'Subindo os Degraus da Loucura', 'Sobreviva o suficiente para chegar ao Nível 2.', '🪜', 'comum', 'manual', false, [pe(3)]),
+  d('ferramenta-incomum', 'O Mercado das Sombras', 'Adquira ou forje sua primeira Ferramenta Amaldiçoada Incomum ou Rara.', '🕯️', 'comum', 'manual', false, [pe(2)]),
+  d('pegadas-espectrais', 'Pegadas Espectrais', 'Seja rastreado por resquícios de energia amaldiçoada nas ruínas da cidade.', '👣', 'comum', 'manual', true),
+  d('exaustao-1', 'Cansaço ou Maldição?', 'Atinja o Nível 1 de Exaustão e sofra suas primeiras penalidades.', '😮‍💨', 'comum', 'manual', false, [pvt(3)]),
+  d('desastre-natural', 'Acidente de Percurso', 'Tire um 1 natural, sofra um Desastre e crie uma brecha na sua Guarda.', '💥', 'comum', 'manual', false, [vida(4)]),
+  d('voto-leve', 'Pequenos Sacrifícios', 'Sele o seu primeiro Voto de Restrição de Peso Leve com o Mestre.', '🤝', 'comum', 'manual', false, [pe(2)]),
+  d('sentido-perigo', 'O Cheiro da Decomposição', 'Perceba uma ameaça letal pelos indícios sensoriais antes da emboscada.', '👃', 'comum', 'manual', false, [pvt(3)]),
+  d('portas-primeira-vez', 'À Beira do Abismo', 'Atinja 0 Pontos de Vida e transite para as Portas da Morte pela primeira vez.', '🕳️', 'comum', 'manual', true, [vida(5)]),
+  d('exorcismo-g4', 'Limpando a Sujeira Urbana', 'Exorcize um Espírito Amaldiçoado de Grau 4.', '🧹', 'comum', 'manual', false, [pe(3)]),
+  d('pagamento-cupula', 'Dinheiro Sujo de Sangue', 'Receba seu primeiro financiamento ou pagamento da Cúpula Jujutsu.', '💴', 'comum', 'manual', false, [pe(2)]),
+  // Raro
+  d('voto-medio', 'O Preço do Poder', 'Sele um Voto de Restrição de Peso Médio, trocando uma deficiência tática por vantagens.', '⚖️', 'raro'),
+  d('dominio-simples', 'O Domínio dos Fracos', 'Use a Cesta Oca de Vime ou o Domínio Simples para anular um acerto garantido.', '🧺', 'raro'),
+  d('atributo-maximo', 'Extrapolando os Limites Humanos', 'Alcance o limite máximo natural de um Atributo.', '💪', 'raro'),
+  d('ameaca-g2', 'Ameaça Contida', 'Exorcize uma Maldição ou derrote um Feiticeiro de Grau 2.', '🎖️', 'raro'),
+  d('reanimacao-aliado', 'Choque de Realidade', 'Salve um aliado nas Portas da Morte com a reanimação cardíaca amaldiçoada do Suporte.', '💓', 'raro'),
+  d('lenda-urbana', 'Lenda Urbana Letal', 'Derrote um Espírito Amaldiçoado Vingativo Imaginário nascido do medo do folclore local.', '👻', 'raro', 'manual', true),
+  // Épico
+  d('dominio-incompleto', 'Uma Tela em Branco', 'Manifeste seu Domínio Interno ativando uma Expansão de Domínio Incompleta.', '⬜', 'epico'),
+  d('elite-grau-1', 'Elite da Feitiçaria', 'Derrote sozinho um inimigo de Grau 1 ou equivalente.', '🥋', 'epico'),
+  d('consciencia-absoluta', 'Amado pelas Faíscas Negras', 'Entre no Estado de Consciência Absoluta após acertar Raios Negros em combate.', '🖤', 'epico', 'manual', true),
+  d('tecnica-maxima', 'A Quintessência do Jujutsu', 'Aprenda e utilize a Técnica Máxima da sua árvore de habilidades.', '🌟', 'epico'),
+  d('energia-reversa', 'Positivo Atrai Positivo', 'Utilize a Energia Reversa para regenerar seu próprio corpo.', '➕', 'epico'),
+  d('ferramenta-epica', 'O Peso do Grau 1', 'Adquira, saqueie ou forje uma Ferramenta Amaldiçoada de raridade Épica.', '🗝️', 'epico'),
+  d('origem-derivada', 'Anomalia Genética', 'Desbloqueie o potencial extremo de uma Origem Derivada ou Restringida.', '🧬', 'epico', 'manual', true),
+  d('exaustao-4', 'À Beira da Falência Mental', 'Atinja o Nível 4 de Exaustão e lute sob Condenado e Desorientado.', '🌀', 'epico', 'manual', true),
+  // Lendário
+  d('voto-extremo', 'O Peso da Minha Alma', 'Sele um Voto de Restrição de Peso Extremo, sofrendo mutilação irreversível por um pulso letal único.', '🩸', 'lendario', 'manual', true),
+  d('milagreiro', 'Milagreiro nas Ruínas', 'Cure a alma ou regenere membros perdidos de aliados com Energia Reversa avançada.', '😇', 'lendario'),
+  d('colapso-metropole', 'O Colapso da Metrópole', 'Zere os pontos de vida de um edifício massivo, aplicando os catastróficos 20d10 de Dano Externo na área.', '🌆', 'lendario'),
+  d('reversao-tecnica', 'Inversão Conceitual', 'Compreenda o âmago do jujutsu e conjure uma Reversão de Técnica.', '🔄', 'lendario'),
+  d('desafiando-ceifador', 'Desafiando o Ceifador', 'Sobreviva ao limite das Portas da Morte com PVs negativos quase igualando sua vida máxima.', '💀', 'lendario', 'manual', true),
+  // Impossível
+  d('dominio-sem-barreira', 'Uma Obra Divina', 'Manifeste uma Expansão de Domínio Sem Barreira, projetando destruição sobre o mundo real.', '🌐', 'impossivel', 'manual', true),
+  d('voto-emergencial', 'Letalidade Cármica Absoluta', 'Quebre os termos de um Voto Emergencial e sobreviva à punição absoluta imposta pelo sistema.', '☠️', 'impossivel', 'manual', true),
+  d('quatro-raios', 'A Zona Absoluta', 'Desafie a probabilidade e acerte quatro Raios Negros em um único combate letal.', '⚡', 'impossivel', 'manual', true, [titulo('A Zona')]),
 ];
