@@ -4,7 +4,7 @@
  */
 import { useQuestStore } from '@/stores/useQuestStore';
 import { nivelReputacao, repEfetiva } from '@/lib/economia/reputacao';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
