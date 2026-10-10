@@ -17,13 +17,17 @@ export type EventoResetEconomia = Exclude<LimiteResetEconomiaInvocacao, 'manual'
 const CATEGORIAS: readonly CategoriaEconomiaInvocacao[] = CategoriaEconomiaInvocacaoSchema.options;
 
 /** Copia os limites configurados para o estado inicial da instância. Campos ausentes seguem indefinidos. */
-export function economiaAcoesInicial(modelo: Pick<ModeloInvocacao, 'economiaAcoesConfigurada'>): NonNullable<InstanciaInvocacao['economiaAcoes']> | undefined {
+export function economiaAcoesInicial(modelo: Pick<ModeloInvocacao, 'economiaAcoesConfigurada' | 'reacoes'>): NonNullable<InstanciaInvocacao['economiaAcoes']> | undefined {
   const configuracao = modelo.economiaAcoesConfigurada;
-  if (!configuracao) return undefined;
   const saldos: NonNullable<InstanciaInvocacao['economiaAcoes']> = {};
   for (const categoria of CATEGORIAS) {
-    const maximo = configuracao[categoria];
+    const maximo = configuracao?.[categoria];
     if (maximo !== undefined) saldos[categoria] = { atual: maximo, maximo };
+  }
+  // A reação é uma reserva própria da instância. Fichas antigas que já
+  // vinculavam uma reação recebem um uso por turno, salvo limite explícito.
+  if ((modelo.reacoes ?? []).some(reacao => !!reacao.acaoId) && configuracao?.reacao === undefined) {
+    saldos.reacao = { atual: 1, maximo: 1 };
   }
   return Object.keys(saldos).length ? saldos : undefined;
 }
@@ -153,7 +157,11 @@ export function processarResetEconomiaInstancia(
   const economiaAcoes = { ...instancia.economiaAcoes };
   for (const categoria of CATEGORIAS) {
     const saldo = economiaAcoes[categoria];
-    if (saldo && modelo.economiaAcoesConfigurada?.resetPorCategoria?.[categoria] === escopo) {
+    // A reação própria recupera no turno do dono por regra-base; uma política
+    // explícita (inclusive manual) sempre prevalece.
+    const resetConfigurado = modelo.economiaAcoesConfigurada?.resetPorCategoria?.[categoria]
+      ?? (categoria === 'reacao' ? 'inicio_turno_dono' : undefined);
+    if (saldo && resetConfigurado === escopo) {
       economiaAcoes[categoria] = { ...saldo, atual: saldo.maximo };
     }
   }

@@ -216,6 +216,13 @@ const AutonomiaInvocacaoSchema = z.object({
   limitePorRodada: nonNegativeIntSchema.optional(),
 }).passthrough();
 
+const ReacaoInvocacaoSchema = z.object({
+  id: idSchema,
+  /** A reação aponta para uma ação OMNI da própria ficha. */
+  acaoId: idSchema.optional(),
+  solicitarConfirmacao: z.boolean().default(true),
+}).passthrough();
+
 const EstadoLegadoSchema = z.object({
   hpAtual: finiteNumberSchema.optional(),
   hpMaximo: finiteNumberSchema.optional(),
@@ -264,7 +271,7 @@ export const ModeloInvocacaoSchema = z.object({
   recursosConfigurados: z.array(RecursoInvocacaoSchema).optional(),
   acoes: z.array(AcaoInvocacaoSchema).optional(),
   caracteristicas: z.array(z.unknown()).optional(),
-  reacoes: z.array(z.unknown()).optional(),
+  reacoes: z.array(ReacaoInvocacaoSchema).optional(),
   automacoesOmni: z.array(AutomacaoOmniSchema).optional(),
   omniConfiguracao: z.object({ entidadeId: idSchema.optional(), acaoId: idSchema.optional(), gatilhoId: idSchema.optional(), chave: z.string().optional(), formula: z.string().optional(), efeito: z.string().optional(), alvos: z.string().optional(), area: z.string().optional(), sustentacao: z.string().optional(), contador: z.string().optional(), diagnosticos: z.string().optional() }).passthrough().optional(),
   autonomia: AutonomiaInvocacaoSchema.optional(),
@@ -277,7 +284,17 @@ export const ModeloInvocacaoSchema = z.object({
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
   snapshotLegado: z.record(z.string(), z.unknown()).optional(),
-}).passthrough();
+}).passthrough().superRefine((modelo, ctx) => {
+  for (const [index, reacao] of (modelo.reacoes ?? []).entries()) {
+    if (!reacao.acaoId) continue; // preserva reações textuais antigas sem executá-las.
+    const acao = modelo.acoes?.find(item => item.id === reacao.acaoId);
+    if (!acao) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["reacoes", index, "acaoId"], message: "A reação precisa apontar para uma ação da ficha." });
+    } else if (acao.categoriaAcao !== "reacao" || (acao.tipoExecucao !== "omni" && acao.tipoExecucao !== "referencia_omni")) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["reacoes", index, "acaoId"], message: "A ação vinculada precisa ser uma ação OMNI da categoria Reação." });
+    }
+  }
+});
 export type ModeloInvocacao = z.infer<typeof ModeloInvocacaoSchema>;
 
 const SaldoAcaoSchema = z.object({

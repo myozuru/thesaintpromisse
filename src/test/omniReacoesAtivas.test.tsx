@@ -15,7 +15,7 @@ import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { useReactionStore } from '@/stores/useReactionStore';
-import { abrirJanelaReacaoAtiva, ofertasReacaoAtiva, receberRespostaRemota, receberSondagemRemota, useReacoesAtivasStore, responderReacaoAtiva, cancelarJanelasReacoesAtivas, PRAZO_SONDAGEM_REACAO_MS } from '@/lib/omni/reacoesAtivas';
+import { abrirJanelaReacaoAtiva, ofertasReacaoAtiva, receberRespostaRemota, receberSondagemRemota, useReacoesAtivasStore, responderReacaoAtiva, responderOfertaRemota, cancelarJanelasReacoesAtivas, PRAZO_SONDAGEM_REACAO_MS } from '@/lib/omni/reacoesAtivas';
 import { ReacoesAtivasOverlay } from '@/components/omni/ReacoesAtivasOverlay';
 import { EditorAcoesAtivas } from '@/components/omni/EditorAcoesAtivas';
 import { PendingMoveOverlay } from '@/components/mapa/ui/PendingMoveOverlay';
@@ -25,9 +25,55 @@ import { buildAttackContext, rollAttack } from '@/lib/combatEngine';
 import { findWeaponByName } from '@/lib/weapons';
 import { novaEntidade, type AcaoAtivaConfig, type EntidadeOmni, type ReacaoAtivaConfig } from '@/lib/omni/tipos';
 import { PacoteOmniSchema } from '@/lib/omni/validacao';
+import { invocarControlador } from '@/lib/controlador/mapa';
+import type { InvocacaoControlador } from '@/lib/controlador/tipos';
 import type { Spell } from '@/types';
 const config = (r: Partial<ReacaoAtivaConfig> = {}, p: Partial<AcaoAtivaConfig> = {}): AcaoAtivaConfig => ({ id: 'r', nome: 'Responder', acao: 'reacao', custoPE: '2', alcanceM: 0, teste: 'nenhum', tipo_alvo: 'unico', reacao: { gatilho: 'quando_alvo_declarar_ataque', alcance_m: 6, protegido: 'usuario', alvo: 'origem', ...r }, ...p });
 const add = (c = config(), owner = 'u') => useInventoryStore.getState().add(owner, { ...novaEntidade('item'), acoesAtivas: [c] });
+function adicionarShikigamiReativo(cancelarEvento = true) {
+  const talisma = useInventoryStore.getState().add('u', { ...novaEntidade('item'), nome: 'Talismã do teste' }, { instanceId: 'talisma-shiki-' + crypto.randomUUID() });
+  useInventoryStore.getState().definirEmMaos(talisma.instanceId, true);
+  const configOmni = config(
+    { gatilho: 'quando_sofrer_dano', protegido: 'usuario', alvo: 'origem', alcance_m: 9, cancelar_evento: cancelarEvento },
+    { id: 'acao-omni-shiki', nome: 'Contra-ataque', custoPE: '0', alcanceM: 9, teste: 'ataque', tipo_alvo: 'unico', filtro_alvo: 'inimigos', tipo_efeito: 'dano', dano: '1d4', mod_acerto: 99 },
+  );
+  const entidade: EntidadeOmni = { ...novaEntidade('talento'), id: 'entidade-omni-shiki', nome: 'Técnica do Shiki', acoesAtivas: [configOmni] };
+  useOmniEntidadesStore.setState({ entidades: { [entidade.id]: entidade } });
+  const acao = {
+    id: 'acao-reacao-shiki',
+    nome: 'Contra-ataque',
+    tipo: 'ataque' as const,
+    tipoExecucao: 'omni' as const,
+    categoriaAcao: 'reacao' as const,
+    entidadeOmniId: entidade.id,
+    acaoOmniId: configOmni.id,
+    custoPE: 0,
+  };
+  const modelo: InvocacaoControlador = {
+    id: 'shiki-reativo',
+    donoCharacterId: 'u',
+    nome: 'Shiki Teste',
+    tipo: 'shikigami',
+    hpAtual: 12,
+    hpMaximo: 12,
+    defesa: 12,
+    deslocamentoM: 9,
+    porte: 'Médio',
+    custoInvocacaoPE: 0,
+    alcanceInvocacaoM: 3,
+    intermediario: { tipo: 'talisma', itemInventarioId: talisma.instanceId },
+    acoes: [acao],
+    reacoes: [{ id: 'vinculo-reacao-shiki', acaoId: acao.id, solicitarConfirmacao: true }],
+  };
+  useCharacterStore.setState(state => ({
+    characters: state.characters.map(character => character.id === 'u'
+      ? { ...character, specialization: 'Controlador', treinoControle: 1, invocacoesConhecidas: [modelo], peCurrent: 20, actionsCurrent: 1 }
+      : character),
+  }));
+  const invocado = invocarControlador('u', modelo.id, 'leste');
+  if (!invocado.ok) throw new Error(invocado.motivo);
+  return invocado;
+}
 const evento = { gatilho: 'quando_alvo_declarar_ataque' as const, origemId: 'a', protegidoId: 'u' };
 const ataque = () => rollAttack(buildAttackContext({ attacker: pegarFicha('a'), weapon: findWeaponByName('Espada Curta')!, targetDefense: 10, targetId: 'u' }));
 beforeEach(() => {
@@ -37,7 +83,7 @@ beforeEach(() => {
   useMapStore.setState({ pendingMove: null, walls: [], initiative: { ...useMapStore.getState().initiative, entries: [] } });
   useCombatStore.setState({ inCombat: true, movementUsedByChar: {}, initiativeOrder: [], currentTurnIndex: 0 });
 });
-afterEach(async () => { vi.unstubAllGlobals(); cancelarJanelasReacoesAtivas(); useReacoesAtivasStore.setState({ janelas: [], ofertasRemotas: [] }); cleanup(); await import('@/lib/omni/eventBus'); await import('@/lib/omni/observadores'); await esperar(); useCombatStore.setState({ inCombat: false }); limparMesa(); });
+afterEach(async () => { vi.unstubAllGlobals(); cancelarJanelasReacoesAtivas(); useReacoesAtivasStore.setState({ janelas: [], ofertasRemotas: [] }); cleanup(); await import('@/lib/controlador/autonomia'); await import('@/lib/omni/eventBus'); await import('@/lib/omni/observadores'); await esperar(); useCombatStore.setState({ inCombat: false }); limparMesa(); });
 
 describe('janelas de reação', () => {
   it('preserva a barreira sem_recursao no contexto de um ataque adicional', () => {
@@ -319,22 +365,102 @@ it('resposta remota durante a reação local não deixa janela vazia presa', asy
 });
 
 describe('novos momentos de reação', () => {
-  it('sofrer dano de inimigo abre a janela depois do dano, com dano mínimo', async () => {
+  it('sofrer dano abre a janela antes de aplicar dano e respeita o dano mínimo', async () => {
     add(config({ gatilho: 'quando_sofrer_dano', dano_minimo: 5 }));
     await useCharacterStore.getState().applyDamage('u', 3, 'DCO', { attackerId: 'a' });
     await esperar();
     expect(useReacoesAtivasStore.getState().janelas).toHaveLength(0);
-    await useCharacterStore.getState().applyDamage('u', 8, 'DCO', { attackerId: 'a' });
+    let concluiu = false;
+    const dano = useCharacterStore.getState().applyDamage('u', 8, 'DCO', { attackerId: 'a' }).then(() => { concluiu = true; });
     await waitFor(() => expect(useReacoesAtivasStore.getState().janelas[0]?.evento.gatilho).toBe('quando_sofrer_dano'));
+    expect(concluiu).toBe(false);
+    expect(pegarFicha('u').hpCurrent).toBe(47);
+    await responderReacaoAtiva(useReacoesAtivasStore.getState().janelas[0].id);
+    await dano;
+    expect(pegarFicha('u').hpCurrent).toBe(39);
   });
   it('causar dano oferece reação ao atacante e efeitos da reação não encadeiam', async () => {
     add(config({ gatilho: 'quando_causar_dano' }, { dano: '5', tipoDano: 'DCO' }));
-    await useCharacterStore.getState().applyDamage('a', 6, 'DCO', { attackerId: 'u' });
+    const dano = useCharacterStore.getState().applyDamage('a', 6, 'DCO', { attackerId: 'u' });
     await waitFor(() => expect(useReacoesAtivasStore.getState().janelas).toHaveLength(1));
     const j = useReacoesAtivasStore.getState().janelas[0];
     await responderReacaoAtiva(j.id, j.ofertas[0].id);
+    await dano;
     await esperar();
     expect(useReacoesAtivasStore.getState().janelas).toHaveLength(0);
+  });
+  it('o Mestre pode usar a reação do Shikigami, cancelar o dano e gastar só a economia da instância', async () => {
+    adicionarShikigamiReativo();
+    const ownerAntes = pegarFicha('u');
+    const instanciaAntes = ownerAntes.instanciasInvocacao?.[0];
+    expect(instanciaAntes?.economiaAcoes?.reacao).toEqual({ atual: 1, maximo: 1 });
+    useCombatStore.setState({
+      inCombat: true,
+      currentTurnIndex: 0,
+      initiativeOrder: [{ charId: 'a', charName: 'a', roll: 10, bonus: 0, total: 10 }],
+    } as never);
+    forcarDados(20, 4);
+    let concluiu = false;
+    const dano = useCharacterStore.getState().applyDamage('u', 8, 'DCO', { attackerId: 'a' }).then(() => { concluiu = true; });
+    await waitFor(() => expect(useReacoesAtivasStore.getState().janelas[0]?.ofertas[0]?.fonte).toBe('invocacao'));
+    const janela = useReacoesAtivasStore.getState().janelas[0];
+    expect(janela.expiresAt).toBeUndefined();
+    expect(pegarFicha('u').hpCurrent).toBe(50);
+    expect(useCombatStore.getState().reactionPauseIds).toContain('omni-active:' + janela.id);
+    await responderReacaoAtiva(janela.id, janela.ofertas[0].id);
+    await dano;
+    expect(concluiu).toBe(true);
+    expect(pegarFicha('u').hpCurrent).toBe(50);
+    expect(pegarFicha('a').hpCurrent).toBeLessThan(50);
+    expect(pegarFicha('u').peCurrent).toBe(ownerAntes.peCurrent);
+    expect(pegarFicha('u').actionsCurrent).toBe(ownerAntes.actionsCurrent);
+    expect(pegarFicha('u').instanciasInvocacao?.[0].economiaAcoes?.reacao?.atual).toBe(0);
+    expect(useCombatStore.getState().reactionPauseIds).not.toContain('omni-active:' + janela.id);
+  });
+  it('passar a reação de Shikigami não gasta economia própria e o dano continua', async () => {
+    adicionarShikigamiReativo();
+    let concluiu = false;
+    const dano = useCharacterStore.getState().applyDamage('u', 8, 'DCO', { attackerId: 'a' }).then(() => { concluiu = true; });
+    await waitFor(() => expect(useReacoesAtivasStore.getState().janelas[0]?.ofertas[0]?.fonte).toBe('invocacao'));
+    const janela = useReacoesAtivasStore.getState().janelas[0];
+    await responderReacaoAtiva(janela.id);
+    await dano;
+    expect(concluiu).toBe(true);
+    expect(pegarFicha('u').hpCurrent).toBe(42);
+    expect(pegarFicha('u').instanciasInvocacao?.[0].economiaAcoes?.reacao?.atual).toBe(1);
+  });
+  it('resposta remota de Shikigami não expira e remove a cópia visível ao Mestre após executar', async () => {
+    vi.stubGlobal('__worldBus', { send: vi.fn() });
+    adicionarShikigamiReativo(false);
+    useCharacterStore.getState().updateCharacter('u', { profileId: 'perfil-u' });
+    const enviados: CustomEvent[] = [];
+    const capturar = (evento: Event) => enviados.push(evento as CustomEvent);
+    window.addEventListener('omni-reaction:send', capturar);
+    try {
+      const promessa = abrirJanelaReacaoAtiva({ gatilho: 'quando_sofrer_dano', origemId: 'a', protegidoId: 'u', dano: 8 });
+      await waitFor(() => expect(useReacoesAtivasStore.getState().janelas[0]?.ofertas[0]?.fonte).toBe('invocacao'));
+      const janela = useReacoesAtivasStore.getState().janelas[0];
+      const sondagem = enviados.find(evento => evento.detail.tipo === 'sondar')!.detail;
+      comoTela({ role: 'PLAYER', profileId: 'perfil-u' });
+      receberSondagemRemota({ ...sondagem, clienteOrigem: 'origem' });
+      const ofertaRemota = useReacoesAtivasStore.getState().ofertasRemotas.find(item => item.janelaId === janela.id)!;
+      expect(ofertaRemota.expiresAt).toBeUndefined();
+      expect(janela.ofertas[0].id).toBe(ofertaRemota.ofertas[0].id);
+      forcarDados(20, 4);
+      await responderOfertaRemota(janela.id, ofertaRemota.ofertas[0].id, 'perfil-u', 'origem');
+      const processando = enviados.find(evento => evento.detail.tipo === 'processando')!.detail;
+      const resposta = enviados.find(evento => evento.detail.tipo === 'resultado')!.detail;
+      expect(resposta.ofertaId).toBe(ofertaRemota.ofertas[0].id);
+      comoTela({ role: 'MASTER', profileId: null });
+      await receberRespostaRemota(processando, 'origem');
+      expect(useReacoesAtivasStore.getState().janelas[0]).toMatchObject({ busy: true, expiresAt: undefined });
+      await receberRespostaRemota(resposta, 'origem');
+      expect(await promessa).toEqual({ cancelado: false, defesaBonus: 0, testeBonus: 0 });
+      expect(useReacoesAtivasStore.getState().janelas).toHaveLength(0);
+      expect(pegarFicha('u').hpCurrent).toBe(50);
+      expect(pegarFicha('a').hpCurrent).toBeLessThan(50);
+      expect(pegarFicha('u').instanciasInvocacao?.[0].economiaAcoes?.reacao?.atual).toBe(0);
+    } finally { window.removeEventListener('omni-reaction:send', capturar); }
   });
   it('TR forçado por inimigo recebe o bônus da reação', async () => {
     add(config({ gatilho: 'quando_alvo_de_tr', bonus_teste: 4 }));

@@ -103,8 +103,8 @@ function gravarInstancia(
   });
 }
 
-type ModoExecucaoComandoInvocacao = 'manual' | 'evento_automatico';
-type OpcoesComandoInvocacao = { instanciaId?: string; requestId?: string; cadeia?: CadeiaOmni };
+type ModoExecucaoComandoInvocacao = 'manual' | 'evento_automatico' | 'reacao';
+type OpcoesComandoInvocacao = { instanciaId?: string; requestId?: string; cadeia?: CadeiaOmni; validarReacao?: () => boolean };
 
 function prepararDebitoComando(
   dono: Character,
@@ -1181,6 +1181,21 @@ export async function executarAtaqueAutonomoInvocacao(
   return executarAtaqueInvocacao(donoId, invocacaoId, acaoId, alvoId, opcoes, 'evento_automatico');
 }
 
+/** Executa uma ação reativa já aceita pelo controlador; a economia é da instância. */
+export async function executarReacaoInvocacao(
+  donoId: string,
+  invocacaoId: string,
+  acaoId: string,
+  alvoId: string,
+  opcoes: OpcoesComandoInvocacao,
+  gatilho: import('@/lib/omni/tipos').GatilhoReacaoAtiva,
+): Promise<ResultadoAtaqueUnicoInvocacao | { ok: false; motivo: string }> {
+  const resultado = await executarAtaqueInvocacao(donoId, invocacaoId, acaoId, alvoId, opcoes, 'reacao', gatilho);
+  if (!resultado.ok) return resultado;
+  if ('resultados' in resultado) return { ok: false, motivo: 'Uma reação da invocação só pode resolver um alvo.' };
+  return resultado;
+}
+
 async function executarAtaqueInvocacao(
   donoId: string,
   invocacaoId: string,
@@ -1188,17 +1203,30 @@ async function executarAtaqueInvocacao(
   alvoId: string | string[] | SelecaoAlvoAreaInvocacao,
   opcoes: OpcoesComandoInvocacao | undefined,
   modoExecucao: ModoExecucaoComandoInvocacao,
+  gatilhoReacao?: import('@/lib/omni/tipos').GatilhoReacaoAtiva,
 ): Promise<ResultadoAtaqueUnicoInvocacao | ResultadoAtaqueMultiploInvocacao | { ok: false; motivo: string }> {
   let dono = useCharacterStore.getState().characters.find(c => c.id === donoId);
   if (!dono) return { ok: false, motivo: 'Personagem inválido.' };
-  if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
+  if (modoExecucao !== 'reacao' && !podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
   let inv = dono.invocacoesConhecidas?.find(i => i.id === invocacaoId && i.donoCharacterId === donoId);
   let acaoOriginal = inv?.acoes.find(a => a.id === acaoId);
   if (!inv || !acaoOriginal) return { ok: false, motivo: 'Ação ou invocação não encontrada.' };
+  if (modoExecucao === 'reacao' && (acaoOriginal.categoriaAcao !== 'reacao' || (acaoOriginal.tipoExecucao !== 'omni' && acaoOriginal.tipoExecucao !== 'referencia_omni'))) {
+    return { ok: false, motivo: 'A ação vinculada não está configurada como reação OMNI.' };
+  }
   let resolucaoOmni = acaoOriginal.tipoExecucao === 'omni' || acaoOriginal.tipoExecucao === 'referencia_omni'
-    ? resolverAcaoOmniInvocacao(acaoOriginal, useOmniEntidadesStore.getState().entidades)
+    ? resolverAcaoOmniInvocacao(acaoOriginal, useOmniEntidadesStore.getState().entidades, { permitirReacao: modoExecucao === 'reacao' })
     : undefined;
   if (resolucaoOmni && !resolucaoOmni.ok) return { ok: false, motivo: resolucaoOmni.motivo };
+  if (modoExecucao === 'reacao' && (!resolucaoOmni?.ok || resolucaoOmni.config.acao !== 'reacao' || !resolucaoOmni.config.reacao)) {
+    return { ok: false, motivo: 'A ação deixou de ser uma reação OMNI válida.' };
+  }
+  if (modoExecucao === 'reacao' && (!gatilhoReacao || !resolucaoOmni?.ok || resolucaoOmni.config.reacao?.gatilho !== gatilhoReacao)) {
+    return { ok: false, motivo: 'O gatilho da reação mudou enquanto a oferta estava aberta.' };
+  }
+  if (modoExecucao === 'reacao' && !opcoes?.validarReacao?.()) {
+    return { ok: false, motivo: 'A reação perdeu sua condição antes da execução.' };
+  }
   let acao = resolucaoOmni?.ok ? resolucaoOmni.acao : acaoOriginal;
   const selecaoArea = !Array.isArray(alvoId) && typeof alvoId === 'object' && alvoId.tipo === 'area';
   const areaConfigurada = resolucaoOmni?.ok && resolucaoOmni.config.tipo_alvo === 'area';
@@ -1211,6 +1239,9 @@ async function executarAtaqueInvocacao(
   let servo = tokensInvocados(donoId).find(e => e.invocationId === invocacaoId && (!opcoes?.instanciaId || e.invocationInstanceId === opcoes.instanciaId) && (e.hp ?? 0) > 0);
   if (!servo || (selecaoArea && (servo.hidden || mapa.layerVisible[servo.layer ?? 'tokens'] === false))) {
     return { ok: false, motivo: 'Servo ou alvo ausente do mapa.' };
+  }
+  if (modoExecucao === 'reacao' && (servo.hidden || mapa.layerVisible[servo.layer ?? 'tokens'] === false)) {
+    return { ok: false, motivo: 'A invocação reativa está oculta ou fora de uma camada visível.' };
   }
   let idsAlvo: string[];
   let resultadoEmLista = Array.isArray(alvoId) || selecaoArea;

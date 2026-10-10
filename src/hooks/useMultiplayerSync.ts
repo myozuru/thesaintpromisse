@@ -627,7 +627,7 @@ export function useMultiplayerSync() {
       });
     });
     worldBus.on('broadcast', { event: 'omni-reaction' }, ({ payload }) => {
-      const msg = payload as { clientId?: string; tipo?: string; janelaId?: string; perfilId?: string; evento?: unknown; expiresAt?: number; clienteOrigem?: string; resultado?: unknown } | null;
+      const msg = payload as { clientId?: string; tipo?: string; janelaId?: string; perfilId?: string; ofertaId?: string; evento?: unknown; expiresAt?: number; clienteOrigem?: string; resultado?: unknown } | null;
       if (!msg || msg.clientId === clientId || !msg.tipo || !msg.janelaId) return;
       if (msg.tipo === 'sondar' && msg.perfilId && podeResponderReacao(msg.perfilId) && msg.evento) {
         void import('@/lib/omni/reacoesAtivas').then(({ receberSondagemRemota }) => receberSondagemRemota({
@@ -637,7 +637,7 @@ export function useMultiplayerSync() {
         void import('@/lib/omni/reacoesAtivas').then(({ useReacoesAtivasStore }) => useReacoesAtivasStore.getState().fecharOfertaRemota(msg.janelaId!));
       } else if ((msg.tipo === 'resultado' || msg.tipo === 'passar' || msg.tipo === 'indisponivel' || msg.tipo === 'disponivel' || msg.tipo === 'processando') && msg.clienteOrigem === clientId && msg.perfilId) {
         void import('@/lib/omni/reacoesAtivas').then(({ receberRespostaRemota }) => receberRespostaRemota({
-          tipo: msg.tipo as 'resultado' | 'passar' | 'indisponivel' | 'disponivel' | 'processando', janelaId: msg.janelaId!, perfilId: msg.perfilId!, clienteOrigem: msg.clienteOrigem!, resultado: msg.resultado as never,
+          tipo: msg.tipo as 'resultado' | 'passar' | 'indisponivel' | 'disponivel' | 'processando', janelaId: msg.janelaId!, perfilId: msg.perfilId!, clienteOrigem: msg.clienteOrigem!, ofertaId: msg.ofertaId, resultado: msg.resultado as never,
         }, clientId));
       }
     });

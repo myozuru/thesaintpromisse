@@ -42,7 +42,7 @@ export interface InvocacaoControlador {
   recursosConfigurados?: ModeloInvocacao["recursosConfigurados"];
   caracteristicas?: unknown[];
   possuiEnergiaReversa?: boolean;
-  reacoes?: unknown[];
+  reacoes?: ModeloInvocacao["reacoes"];
   automacoesOmni?: ModeloInvocacao["automacoesOmni"];
   omniConfiguracao?: ModeloInvocacao["omniConfiguracao"];
   autonomia?: ModeloInvocacao["autonomia"];

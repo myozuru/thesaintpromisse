@@ -52,6 +52,17 @@ describe('economia própria por instância de Shikigami', () => {
     expect(economiaAcoesInicial({ economiaAcoesConfigurada: undefined })).toBeUndefined();
   });
 
+  it('dá uma reação própria por turno apenas às fichas com reação vinculada', () => {
+    expect(economiaAcoesInicial({
+      economiaAcoesConfigurada: undefined,
+      reacoes: [{ id: 'reacao-a', acaoId: 'acao-reacao', solicitarConfirmacao: true }],
+    })).toEqual({ reacao: { atual: 1, maximo: 1 } });
+    expect(economiaAcoesInicial({
+      economiaAcoesConfigurada: { reacao: 2, resetPorCategoria: { reacao: 'manual' } },
+      reacoes: [{ id: 'reacao-a', acaoId: 'acao-reacao', solicitarConfirmacao: true }],
+    })).toEqual({ reacao: { atual: 2, maximo: 2 } });
+  });
+
   it('traduz ação complexa para o saldo comum quando a ficha usa a referência do livro', () => {
     const economy = economiaAcoesInicial({ economiaAcoesConfigurada: { acaoComum: 1 } });
     expect(categoriaEconomiaDaAcao({ tipo: 'ataque' }, economy)).toBe('acaoComum');

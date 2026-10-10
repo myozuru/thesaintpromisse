@@ -2535,6 +2535,32 @@ export const useCharacterStore = create<CharacterStore>()(
           }
         }
 
+        // Reações de dano interrompem a aplicação, em uma janela só, depois
+        // de reduções prévias e antes de PV/Escudo serem debitados.
+        if (rawDamage > 0 && opts?.attackerId && opts.attackerId !== id && !reacaoEmCurso()) {
+          const { abrirJanelaReacaoAtiva } = await import('@/lib/omni/reacoesAtivas');
+          const sofreu = await abrirJanelaReacaoAtiva({
+            gatilho: 'quando_sofrer_dano',
+            origemId: opts.attackerId,
+            protegidoId: id,
+            dano: rawDamage,
+          });
+          if (sofreu.cancelado) {
+            useLogStore.getState().addLog('combat', 'Reação: o dano foi interrompido antes de atingir o alvo.');
+            return;
+          }
+          const causou = await abrirJanelaReacaoAtiva({
+            gatilho: 'quando_causar_dano',
+            origemId: id,
+            protegidoId: opts.attackerId,
+            dano: rawDamage,
+          });
+          if (causou.cancelado) {
+            useLogStore.getState().addLog('combat', 'Reação: o dano foi interrompido antes de atingir o alvo.');
+            return;
+          }
+        }
+
         // Snapshot pré-set para diff de dano (Cobrir-se reativo).
         const preSet = get().characters.find((c) => c.id === id);
         const preEsc = preSet?.escCurrent ?? 0;
@@ -2714,18 +2740,15 @@ export const useCharacterStore = create<CharacterStore>()(
           }, 0);
         }
 
-        // ─── Reações OMNI pós-dano (sofrer/causar dano, cair a 0 PV) ───────
+        // ─── Reações OMNI pós-dano (alvo reduzido a 0 PV) ─────────────────
         if (postSet && protDealt > 0 && opts?.attackerId && opts.attackerId !== id && !reacaoEmCurso()) {
           const atkId = opts.attackerId, alvoId = id, dano = protDealt;
           const caiu = preHp > 0 && (postSet.hpCurrent ?? 0) <= 0;
-          void import('@/lib/omni/reacoesAtivas').then(async ({ abrirJanelaReacaoAtiva }) => {
-            await abrirJanelaReacaoAtiva({ gatilho: 'quando_sofrer_dano', origemId: atkId, protegidoId: alvoId, dano });
-            await abrirJanelaReacaoAtiva({ gatilho: 'quando_causar_dano', origemId: alvoId, protegidoId: atkId, dano });
-            if (caiu) {
-              await abrirJanelaReacaoAtiva({ gatilho: 'quando_reduzido_0_pv', origemId: atkId, protegidoId: alvoId, dano });
-              await abrirJanelaReacaoAtiva({ gatilho: 'quando_derrubar_inimigo', origemId: alvoId, protegidoId: atkId, dano });
-            }
-          }).catch(() => {});
+          if (caiu) {
+            const { abrirJanelaReacaoAtiva } = await import('@/lib/omni/reacoesAtivas');
+            await abrirJanelaReacaoAtiva({ gatilho: 'quando_reduzido_0_pv', origemId: atkId, protegidoId: alvoId, dano });
+            await abrirJanelaReacaoAtiva({ gatilho: 'quando_derrubar_inimigo', origemId: alvoId, protegidoId: atkId, dano });
+          }
         }
 
         // ─── Omni-Engine: emite gatilhos de dano ─────────────────────────────

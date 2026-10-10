@@ -28,6 +28,11 @@ export type ResultadoResolucaoOmniInvocacao =
   | { ok: true; acao: AcaoCatalogoInvocacao; entidade: EntidadeOmni; config: AcaoAtivaConfig }
   | { ok: false; motivo: string };
 
+export interface OpcoesResolucaoOmniInvocacao {
+  /** Ação reativa só pode ser resolvida dentro de um prompt de reação. */
+  permitirReacao?: boolean;
+}
+
 /**
  * Resolve uma referência OMNI para o contrato de ataque/TR que o controlador
  * já executa com estatísticas, alcance, custos e economia próprios do Shikigami.
@@ -36,6 +41,7 @@ export type ResultadoResolucaoOmniInvocacao =
 export function resolverAcaoOmniInvocacao(
   acao: AcaoCatalogoInvocacao,
   entidades: Record<string, EntidadeOmni>,
+  opcoes: OpcoesResolucaoOmniInvocacao = {},
 ): ResultadoResolucaoOmniInvocacao {
   if (acao.tipoExecucao !== "omni" && acao.tipoExecucao !== "referencia_omni") {
     return { ok: false, motivo: "Esta ação não é uma referência OMNI." };
@@ -60,17 +66,26 @@ export function resolverAcaoOmniInvocacao(
       motivo: "Esta versão de Invocações executa ações OMNI de Ataque ou Teste de Resistência.",
     };
   }
-  if (config.acao === "reacao")
+  const reacaoConfigurada = config.acao === "reacao" && !!config.reacao;
+  if (config.acao === "reacao" && (!opcoes.permitirReacao || !reacaoConfigurada))
     return {
       ok: false,
-      motivo: "Ações OMNI de reação ainda não podem ser comandadas manualmente por uma invocação.",
+      motivo: opcoes.permitirReacao
+        ? "A ação OMNI de reação precisa ter gatilho e parâmetros reativos configurados."
+        : "A ação OMNI de reação só pode ser resolvida dentro de um prompt de reação.",
     };
+  if (opcoes.permitirReacao && config.acao !== "reacao")
+    return { ok: false, motivo: "A ação vinculada ao prompt não pertence à categoria Reação." };
+  if (opcoes.permitirReacao && config.teste !== "ataque")
+    return { ok: false, motivo: "Nesta etapa, a ação reativa da invocação precisa ser um ataque." };
   if (config.tipo_efeito && config.tipo_efeito !== "dano")
     return {
       ok: false,
       motivo: "A ação OMNI precisa ter efeito de dano para usar o fluxo de ataque/TR da invocação.",
     };
   const tipoAlvo = config.tipo_alvo ?? "unico";
+  if (opcoes.permitirReacao && tipoAlvo !== "unico")
+    return { ok: false, motivo: "A reação da invocação precisa apontar para um único alvo fixo." };
   if (tipoAlvo !== "unico" && tipoAlvo !== "multiplo" && tipoAlvo !== "area")
     return {
       ok: false,
@@ -128,7 +143,7 @@ export function resolverAcaoOmniInvocacao(
     config.margemCritico ||
     config.tr_apos_acerto ||
     config.desfechosTR ||
-    config.reacao ||
+    (config.reacao && !opcoes.permitirReacao) ||
     config.cura?.trim()
   ) {
     return {

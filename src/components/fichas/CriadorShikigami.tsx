@@ -52,7 +52,7 @@ type CampoExtra = 'custoSustentacaoPE' | 'alcanceM' | 'resistencias';
 type EstadoExtra = { modo: ModoDerivado; valorManual: string; motivo: string };
 type AcaoFicha = InvocacaoControlador['acoes'][number];
 type CaracteristicaFicha = { id: string; nome: string; descricao: string; condicao?: string; bonus?: string; resistencia?: string; reducaoDano?: string; sentidos?: string; propriedades?: string; efeitoOperacional?: EfeitoPassivoInvocacao };
-type ReacaoFicha = { id: string; nome: string; gatilho: string; alcance: string; custo: string; condicao: string; alvo: string; solicitarConfirmacao: boolean };
+type ReacaoFicha = NonNullable<InvocacaoControlador['reacoes']>[number];
 type ModoOrigem = 'manual' | 'grimorio' | 'omni';
 
 function numeroFinito(value: unknown): number | null {
@@ -207,11 +207,12 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
   const [acaoOmniId, setAcaoOmniId] = useState('');
   const entidadeOmniSelecionada = acaoOmniEntidade ? entidades[acaoOmniEntidade] : undefined;
   const configOmniSelecionada = entidadeOmniSelecionada?.acoesAtivas?.find(item => item.id === acaoOmniId);
+  const previewOmniReacao = configOmniSelecionada?.acao === 'reacao';
   const previewOmni = configOmniSelecionada && entidadeOmniSelecionada
     ? resolverAcaoOmniInvocacao({
         id: 'rascunho', nome: configOmniSelecionada.nome, tipoExecucao: acaoExecucao,
         entidadeOmniId: entidadeOmniSelecionada.id, acaoOmniId: configOmniSelecionada.id,
-      }, entidades)
+      }, entidades, { permitirReacao: previewOmniReacao })
     : undefined;
   const [caracteristicas, setCaracteristicas] = useState<CaracteristicaFicha[]>(() => (initial?.caracteristicas ?? []) as CaracteristicaFicha[]);
   const [possuiEnergiaReversa, setPossuiEnergiaReversa] = useState(initial?.possuiEnergiaReversa ?? false);
@@ -227,13 +228,7 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
   const [caracteristicaSentidos, setCaracteristicaSentidos] = useState('');
   const [caracteristicaPropriedades, setCaracteristicaPropriedades] = useState('');
   const [reacoes, setReacoes] = useState<ReacaoFicha[]>(() => (initial?.reacoes ?? []) as ReacaoFicha[]);
-  const [reacaoNome, setReacaoNome] = useState('');
-  const [reacaoGatilho, setReacaoGatilho] = useState('');
-  const [reacaoAlcance, setReacaoAlcance] = useState('');
-  const [reacaoCusto, setReacaoCusto] = useState('');
-  const [reacaoCondicao, setReacaoCondicao] = useState('');
-  const [reacaoAlvo, setReacaoAlvo] = useState('');
-  const [reacaoPrompt, setReacaoPrompt] = useState(true);
+  const [reacaoAcaoId, setReacaoAcaoId] = useState('');
   const [omniChave, setOmniChave] = useState(String(lerPropriedade(initial?.omniConfiguracao, 'chave') ?? ''));
   const [omniFormula, setOmniFormula] = useState(String(lerPropriedade(initial?.omniConfiguracao, 'formula') ?? ''));
   const [omniEfeito, setOmniEfeito] = useState(String(lerPropriedade(initial?.omniConfiguracao, 'efeito') ?? ''));
@@ -256,11 +251,13 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
   const [autonomiaLimite, setAutonomiaLimite] = useState(initial?.autonomia?.limitePorRodada?.toString() ?? '');
   const [economia, setEconomia] = useState<Record<string, string>>(() => {
     const values = initial?.economiaAcoesConfigurada ?? {};
-    return { acaoComum: values.acaoComum?.toString() ?? '', acaoSimples: values.acaoSimples?.toString() ?? '', acaoComplexa: values.acaoComplexa?.toString() ?? '', acaoMovimento: values.acaoMovimento?.toString() ?? '', acaoBonus: values.acaoBonus?.toString() ?? '', acaoLivre: values.acaoLivre?.toString() ?? '', reacao: values.reacao?.toString() ?? '' };
+    const temReacaoVinculada = (initial?.reacoes ?? []).some(item => !!item.acaoId);
+    return { acaoComum: values.acaoComum?.toString() ?? '', acaoSimples: values.acaoSimples?.toString() ?? '', acaoComplexa: values.acaoComplexa?.toString() ?? '', acaoMovimento: values.acaoMovimento?.toString() ?? '', acaoBonus: values.acaoBonus?.toString() ?? '', acaoLivre: values.acaoLivre?.toString() ?? '', reacao: values.reacao?.toString() ?? (temReacaoVinculada ? '1' : '') };
   });
-  const [resetEconomia, setResetEconomia] = useState<Partial<Record<CategoriaEconomiaInvocacao, LimiteResetEconomiaInvocacao>>>(() => ({
-    ...initial?.economiaAcoesConfigurada?.resetPorCategoria,
-  }));
+  const [resetEconomia, setResetEconomia] = useState<Partial<Record<CategoriaEconomiaInvocacao, LimiteResetEconomiaInvocacao>>>(() => {
+    const reset = initial?.economiaAcoesConfigurada?.resetPorCategoria ?? {};
+    return { ...reset, ...(initial?.economiaAcoesConfigurada?.reacao !== undefined && reset.reacao === undefined ? { reacao: 'inicio_turno_dono' as const } : {}) };
+  });
   const [recursos, setRecursos] = useState<RecursoInvocacao[]>(() => [...(initial?.recursosConfigurados ?? [])]);
   const [recursoId, setRecursoId] = useState('');
   const [recursoNome, setRecursoNome] = useState('');
@@ -350,7 +347,7 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
     const resolvida = resolverAcaoOmniInvocacao({
       id: 'rascunho', nome: config.nome, tipoExecucao: acaoExecucao,
       entidadeOmniId: entidade.id, acaoOmniId: config.id,
-    }, entidades);
+    }, entidades, { permitirReacao: config.acao === 'reacao' });
     if (!resolvida.ok) {
       setAcaoNome(config.nome);
       setErro(resolvida.motivo);
@@ -376,7 +373,7 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
     const resolucaoOmni = acaoExecucao === 'manual' ? undefined : resolverAcaoOmniInvocacao({
       id: 'rascunho', nome: acaoNome.trim() || 'Ação OMNI', tipoExecucao: acaoExecucao,
       entidadeOmniId: acaoOmniEntidade, acaoOmniId,
-    }, entidades);
+    }, entidades, { permitirReacao: configOmniSelecionada?.acao === 'reacao' });
     if (resolucaoOmni && !resolucaoOmni.ok) { setErro(resolucaoOmni.motivo); return; }
     const acaoOmniResolvida = resolucaoOmni?.ok ? resolucaoOmni.acao : undefined;
     const custo = acaoCusto.trim() === '' ? undefined : Number(acaoCusto);
@@ -505,12 +502,18 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
     setCaracteristicaNome(''); setCaracteristicaDescricao(''); setCaracteristicaCondicao(''); setCaracteristicaBonus(''); setCaracteristicaRD(''); setCaracteristicaResistencia(''); setCaracteristicaSentidos(''); setCaracteristicaPropriedades(''); setCaracteristicaEfeito('');
   };
   const adicionarReacao = () => {
-    if (!reacaoNome.trim() || !reacaoGatilho.trim()) { setErro('Informe o nome e o gatilho da reação.'); return; }
-    setReacoes(previous => [...previous, {
-      id: crypto.randomUUID(), nome: reacaoNome.trim(), gatilho: reacaoGatilho.trim(),
-      alcance: reacaoAlcance, custo: reacaoCusto, condicao: reacaoCondicao, alvo: reacaoAlvo, solicitarConfirmacao: reacaoPrompt,
-    }]);
-    setReacaoNome(''); setReacaoGatilho(''); setReacaoAlcance(''); setReacaoCusto(''); setReacaoCondicao(''); setReacaoAlvo('');
+    const acao = acoes.find(item => item.id === reacaoAcaoId);
+    if (!acao || acao.categoriaAcao !== 'reacao' || (acao.tipoExecucao !== 'omni' && acao.tipoExecucao !== 'referencia_omni')) {
+      setErro('Escolha uma ação OMNI da categoria Reação antes de adicioná-la.'); return;
+    }
+    const resolvida = resolverAcaoOmniInvocacao(acao, entidades, { permitirReacao: true });
+    if (!resolvida.ok || !resolvida.config.reacao) { setErro(resolvida.ok ? 'Configure o gatilho da reação no editor OMNI.' : resolvida.motivo); return; }
+    if (reacoes.some(item => item.acaoId === acao.id)) { setErro('Esta ação já está vinculada à ficha como reação.'); return; }
+    setReacoes(previous => [...previous, { id: crypto.randomUUID(), acaoId: acao.id, solicitarConfirmacao: true }]);
+    if (!economia.reacao?.trim()) setEconomia(previous => ({ ...previous, reacao: '1' }));
+    if (!resetEconomia.reacao) setResetEconomia(previous => ({ ...previous, reacao: 'inicio_turno_dono' }));
+    setReacaoAcaoId('');
+    setErro('');
   };
   const adicionarAutomacao = () => {
     if (!entidadeAutomacao || !omniGatilhoId || !omniAcaoId) { setErro('Selecione uma entidade, um gatilho e uma ação OMNI.'); return; }
@@ -934,6 +937,7 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
       <p className="mt-2 text-xs text-muted-foreground">Se a ação custa PE, distribua o total entre PE do dono e um recurso próprio com ID “pe”. Outros recursos podem ser debitados à parte. Sem distribuição, uma ação com custo PE não será executada.</p>
       <ul className="mt-3 space-y-1">{acoes.map(action => <li key={action.id} className="flex flex-wrap items-center justify-between gap-2 rounded border p-2 text-xs"><span>{action.nome} · {action.categoriaAcao ?? action.tipo ?? 'sem categoria'}{action.custoPE !== undefined ? ' · ' + action.custoPE + ' PE' : ''}{custosComandos[action.id]?.execucao === 'evento_automatico' ? ' · somente evento automático' : custosComandos[action.id]?.debitos.length ? ' · débitos configurados' : ''}{action.recargaConfigurada ? ` · recarga ${action.recargaConfigurada.quantidade} (${action.recargaConfigurada.unidade})` : ''}</span><button type="button" className="rounded border px-2 py-1" onClick={() => {
         setAcoes(previous => previous.filter(item => item.id !== action.id));
+        setReacoes(previous => previous.filter(item => item.acaoId !== action.id));
         setCustosComandos(previous => { const next = { ...previous }; delete next[action.id]; return next; });
       }}>Remover</button></li>)}</ul>
     </details>
@@ -961,16 +965,23 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
     <details id="sec-I" className="rounded border border-border p-2">
       <summary className="cursor-pointer text-sm font-semibold">I · Reações</summary>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        <label className="text-xs">Nome<input value={reacaoNome} onChange={event => setReacaoNome(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
-        <label className="text-xs">Gatilho<input value={reacaoGatilho} onChange={event => setReacaoGatilho(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
-        <label className="text-xs">Alcance<input value={reacaoAlcance} onChange={event => setReacaoAlcance(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
-        <label className="text-xs">Custo<input value={reacaoCusto} onChange={event => setReacaoCusto(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
-        <label className="text-xs">Condição<input value={reacaoCondicao} onChange={event => setReacaoCondicao(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
-        <label className="text-xs">Alvo<input value={reacaoAlvo} onChange={event => setReacaoAlvo(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
-        <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={reacaoPrompt} onChange={event => setReacaoPrompt(event.target.checked)} />Pedir confirmação ao jogador</label>
-        <button type="button" className="rounded bg-primary px-3 py-2 text-xs text-primary-foreground" onClick={adicionarReacao}>Adicionar reação</button>
+        <label className="text-xs">Ação OMNI reativa
+          <select value={reacaoAcaoId} onChange={event => setReacaoAcaoId(event.target.value)} className="mt-1 w-full rounded border bg-background p-2">
+            <option value="">Selecione uma ação da categoria Reação</option>
+            {acoes.filter(action => action.categoriaAcao === 'reacao' && (action.tipoExecucao === 'omni' || action.tipoExecucao === 'referencia_omni')).map(action => <option key={action.id} value={action.id}>{action.nome}</option>)}
+          </select>
+        </label>
+        <button type="button" className="self-end rounded bg-primary px-3 py-2 text-xs text-primary-foreground disabled:opacity-50" disabled={!reacaoAcaoId} onClick={adicionarReacao}>Vincular reação</button>
       </div>
-      <ul className="mt-3 space-y-1">{reacoes.map(item => <li key={item.id} className="flex items-center justify-between gap-2 rounded border p-2 text-xs"><span>{item.nome} · {item.gatilho}{item.alcance ? ' · ' + item.alcance : ''}{item.custo ? ' · ' + item.custo : ''}{item.condicao ? ' · ' + item.condicao : ''}{item.alvo ? ' · alvo ' + item.alvo : ''}</span><button type="button" className="rounded border px-2 py-1" onClick={() => setReacoes(previous => previous.filter(reaction => reaction.id !== item.id))}>Remover</button></li>)}</ul>
+      <p className="mt-2 text-xs text-muted-foreground">Gatilho, alcance, alvo e efeitos vêm da configuração da ação OMNI. Cada reação abre uma decisão para o controlador; o Mestre também pode resolvê-la.</p>
+      <ul className="mt-3 space-y-1">{reacoes.map(item => {
+        const action = acoes.find(candidate => candidate.id === item.acaoId);
+        const resolved = action ? resolverAcaoOmniInvocacao(action, entidades, { permitirReacao: true }) : undefined;
+        const reactionText = resolved?.ok && resolved.config.reacao
+          ? `${action!.nome} · ${resolved.config.reacao.gatilho} · ${resolved.config.reacao.alcance_m} m · ${resolved.config.custoPE} PE`
+          : String(item.nome ?? 'Reação antiga sem ação OMNI vinculada');
+        return <li key={item.id} className="flex items-center justify-between gap-2 rounded border p-2 text-xs"><span>{reactionText}</span><button type="button" className="rounded border px-2 py-1" onClick={() => setReacoes(previous => previous.filter(reaction => reaction.id !== item.id))}>Remover</button></li>;
+      })}</ul>
     </details>
 
     <details id="sec-J" className="rounded border border-border p-2">
