@@ -270,6 +270,8 @@ export function ControladorInvocacoesSection({ character }: { character: Charact
         <div key={inv.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border p-2">
           <div><strong>{inv.nome}</strong><div className="text-xs text-muted-foreground">{inv.tipo === 'shikigami' ? 'Shikigami' : 'Corpo Amaldiçoado'} · PV {inv.hpAtual}/{inv.hpMaximo} · Defesa {inv.defesa} · {inv.deslocamentoM} m · {inv.custoInvocacaoPE} PE · {inv.acoes.length} ações</div></div>
           <div className="basis-full text-xs text-muted-foreground">Aquisição: {inv.aprovacaoMestre === 'pendente' ? 'Aguardando aprovação do Mestre' : inv.aprovacaoMestre === 'rejeitada' ? 'Rejeitada — edite e solicite novamente' : 'Aprovada'}</div>
+          {inv.origemAquisicao && <div className="basis-full text-xs text-muted-foreground">Origem da aquisição: {inv.origemAquisicao === 'interludio' ? 'Interlúdio' : inv.origemAquisicao}</div>}
+          {inv.referenciaInterludio && <div className="basis-full text-xs text-muted-foreground">Referência do Interlúdio: {inv.referenciaInterludio}</div>}
           {inv.aprovacaoMestre === 'rejeitada' && inv.motivoRejeicao && <div className="basis-full text-xs text-destructive">Motivo da rejeição: {inv.motivoRejeicao}</div>}
           {inv.aprovacaoMestre === 'rejeitada' && <button type="button" disabled={busyAprovacao} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={() => void reenviarAprovacao(inv.id)}>Solicitar nova aprovação</button>}
           {isMaster && inv.aprovacaoMestre === 'pendente' && inv.solicitacaoAprovacaoId && (
