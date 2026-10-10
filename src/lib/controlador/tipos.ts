@@ -10,6 +10,12 @@ export interface InvocacaoControlador {
   nome: string;
   /** Aquisição depende de aprovação do Mestre. Ausência em saves antigos equivale a legado já adquirido. */
   aprovacaoMestre?: 'pendente' | 'aprovada' | 'rejeitada';
+  /** Versão do snapshot atualmente editado e versão liberada pelo Mestre. */
+  versaoModelo?: number;
+  versaoAprovada?: number;
+  /** ID persistente da solicitação, usado para registrar a decisão do Mestre. */
+  solicitacaoAprovacaoId?: string;
+  motivoRejeicao?: string;
   tipo: TipoInvocacaoControlador;
   origem?: { tipo: 'grimorio' | 'omni' | 'manual'; entidadeId?: string };
   hpAtual: number;
