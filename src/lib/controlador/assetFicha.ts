@@ -83,7 +83,7 @@ export async function carregarAssetFicha(id: string): Promise<void> {
       if (payload.id !== id) return;
       const blob = blobFromSocket(payload.buffer, payload.mime || "application/octet-stream");
       if (!blob) return;
-      void assetCache.putWithId(id, blob, payload.mime).finally(finalizar);
+      void assetCache.putWithId(id, blob, payload.mime).then(finalizar, finalizar);
     };
     const timer = setTimeout(finalizar, 3000);
     socket.on("asset:put", onAssetPut);

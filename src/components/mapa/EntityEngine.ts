@@ -276,8 +276,9 @@ export function drawEntity(ctx: CanvasRenderingContext2D, e: Entity, scale: numb
 
   // Imagem (assetId) — se disponível no cache e carregada.
   const cached = e.assetId ? assetCache.get(e.assetId) : null;
+  const cachedFallback = e.invocationFallbackAssetId ? assetCache.get(e.invocationFallbackAssetId) : null;
   const imagemChao = e.groundItem && 'item' in e.groundItem ? imagemPronta(imagemDaEntidade(e.groundItem.item.entity)) : null;
-  const image = cached?.ready ? cached.img : imagemChao;
+  const image = cached?.ready ? cached.img : cachedFallback?.ready ? cachedFallback.img : imagemChao;
 
   if (image) {
     // Clip pelo shape para imagem respeitar elipse.
@@ -289,7 +290,7 @@ export function drawEntity(ctx: CanvasRenderingContext2D, e: Entity, scale: numb
     }
     if (e.flipX) ctx.scale(-1, 1);
     try {
-      if (e.shape === 'ELLIPSE' && e.tokenCrop) {
+      if (e.tokenCrop) {
         const rect = getTokenImageRect(
           image.naturalWidth,
           image.naturalHeight,
@@ -450,7 +451,7 @@ export function drawNameplate(
   if (showHp && typeof hp === 'number' && typeof hpMax === 'number') {
     topY -= barH;
     // HP = vermelho (--hp: 0 75% 55%)
-    drawBar(topY, hp, hpMax, 'hsl(0, 75%, 55%)');
+    drawBar(topY, hp, hpMax, e.invocationId ? 'hsl(153, 72%, 43%)' : 'hsl(0, 75%, 55%)');
   }
 
 

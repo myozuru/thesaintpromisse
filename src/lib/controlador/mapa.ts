@@ -46,8 +46,13 @@ export function invocarControlador(donoId: string, invocacaoId: string, direcao:
   if (ocupado) return { ok: false, motivo: 'A célula escolhida está ocupada.' };
 
   const tokenId = mapa.addEntity({
-    shape: 'ELLIPSE', x, y, w: passo, h: passo, rotation: 0, color: '#8055bd',
-    label: modelo.nome, locked: false, layer: 'tokens', nameplate: true,
+    shape: modelo.formaToken ?? 'ELLIPSE', x, y, w: passo, h: passo, rotation: 0,
+    color: modelo.corIdentificacao ?? '#8055bd',
+    label: modelo.apelido?.trim() || modelo.nome, locked: false, layer: 'tokens',
+    nameplate: modelo.nomeplate ?? true,
+    ...(modelo.imagemAssetId ? { assetId: modelo.imagemAssetId } : modelo.imagemFallbackAssetId ? { assetId: modelo.imagemFallbackAssetId } : {}),
+    ...(modelo.imagemFallbackAssetId ? { invocationFallbackAssetId: modelo.imagemFallbackAssetId } : {}),
+    ...(modelo.tokenCrop ? { tokenCrop: modelo.tokenCrop as import('@/stores/useMapStore').TokenCrop } : {}),
     hp: modelo.hpAtual, hpMax: modelo.hpMaximo, ownerCharId: donoId,
     ownerProfileId: dono.profileId || undefined, invocationId: modelo.id,
     invocationDefense: modelo.defesa, invocationMovementM: modelo.deslocamentoM,

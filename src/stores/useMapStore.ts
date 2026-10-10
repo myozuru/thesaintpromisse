@@ -94,6 +94,8 @@ export interface Entity {
   locked: boolean;
   /** referência a um Blob armazenado no IndexedDB via assetDB */
   assetId?: string;
+  /** Fallback da arte do token de uma invocação, usado quando a imagem principal não está disponível. */
+  invocationFallbackAssetId?: string;
   /** Camada semântica. Default 'tokens'. */
   layer?: EntityLayer;
   /** Quando true, não renderiza nem aceita hit-test. */

@@ -38,6 +38,26 @@ describe('Controlador — materialização real no mapa', () => {
     expect(invocarControlador('dono', 'a', 'sul').ok).toBe(false);
     expect(pegarFicha('dono').peCurrent).toBe(7);
   });
+  it('materializa arte, recorte, forma, cor e nomeplate da ficha', () => {
+    const dono = pegarFicha('dono');
+    useCharacterStore.getState().updateCharacter('dono', {
+      invocacoesConhecidas: (dono.invocacoesConhecidas ?? []).map(inv => inv.id === 'a' ? {
+        ...inv, apelido: 'Sombra', imagemAssetId: 'arte-principal', imagemFallbackAssetId: 'arte-alternativa',
+        formaToken: 'RECT', corIdentificacao: '#123456', nomeplate: false,
+        tokenCrop: { zoom: 1.5, offsetX: 12, offsetY: -4 },
+      } : inv),
+    });
+    const resultado = invocarControlador('dono', 'a', 'leste');
+    if (!resultado.ok) throw new Error(resultado.motivo);
+    const token = useMapStore.getState().entities[resultado.tokenId];
+    expect(token.shape).toBe('RECT');
+    expect(token.assetId).toBe('arte-principal');
+    expect(token.invocationFallbackAssetId).toBe('arte-alternativa');
+    expect(token.tokenCrop).toEqual({ zoom: 1.5, offsetX: 12, offsetY: -4 });
+    expect(token.color).toBe('#123456');
+    expect(token.label).toBe('Sombra');
+    expect(token.nameplate).toBe(false);
+  });
   it('não permite materializar sem aprovação do Mestre', () => {
     const dono = pegarFicha('dono');
     useCharacterStore.getState().updateCharacter('dono', {

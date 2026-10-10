@@ -1252,16 +1252,28 @@ export function MapaModule() {
       st.ensureScenes();
       const ids = new Set<string>();
       // entidades da cena ativa
-      for (const e of Object.values(useMapStore.getState().entities))
+      for (const e of Object.values(useMapStore.getState().entities)) {
         if (e.assetId) ids.add(e.assetId);
+        if (e.invocationFallbackAssetId) ids.add(e.invocationFallbackAssetId);
+      }
       // background da cena ativa
       const bgActive = useMapStore.getState().background;
       if (bgActive?.assetId) ids.add(bgActive.assetId);
       // demais cenas: entidades + background (para GC)
       const scenes = useMapStore.getState().scenes;
       for (const sc of Object.values(scenes)) {
-        for (const e of Object.values(sc.entities)) if (e.assetId) ids.add(e.assetId);
+        for (const e of Object.values(sc.entities)) {
+          if (e.assetId) ids.add(e.assetId);
+          if (e.invocationFallbackAssetId) ids.add(e.invocationFallbackAssetId);
+        }
         if (sc.background?.assetId) ids.add(sc.background.assetId);
+      }
+      // Arte de modelos permanece referenciada mesmo antes da primeira invocação.
+      for (const character of useCharacterStore.getState().characters) {
+        for (const invocation of character.invocacoesConhecidas ?? []) {
+          if (invocation.imagemAssetId) ids.add(invocation.imagemAssetId);
+          if (invocation.imagemFallbackAssetId) ids.add(invocation.imagemFallbackAssetId);
+        }
       }
       await Promise.all(Array.from(ids).map((id) => assetCache.load(id)));
       if (cancelled) return;
@@ -1281,7 +1293,10 @@ export function MapaModule() {
     if (!activeSceneId) return;
     const st = useMapStore.getState();
     const ids = new Set<string>();
-    for (const e of Object.values(st.entities)) if (e.assetId) ids.add(e.assetId);
+    for (const e of Object.values(st.entities)) {
+      if (e.assetId) ids.add(e.assetId);
+      if (e.invocationFallbackAssetId) ids.add(e.invocationFallbackAssetId);
+    }
     if (st.background?.assetId) ids.add(st.background.assetId);
     void Promise.all(Array.from(ids).map((id) => assetCache.load(id)));
   }, [activeSceneId]);

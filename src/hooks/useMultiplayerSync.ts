@@ -91,7 +91,10 @@ function pickMapScene(): MapSceneSync {
 function collectMapAssetIds(map: MapSceneSync): string[] {
   const ids = new Set<string>();
   for (const scene of Object.values(map.scenes)) {
-    for (const entity of Object.values(scene.entities ?? {})) if (entity.assetId) ids.add(entity.assetId);
+    for (const entity of Object.values(scene.entities ?? {})) {
+      if (entity.assetId) ids.add(entity.assetId);
+      if (entity.invocationFallbackAssetId) ids.add(entity.invocationFallbackAssetId);
+    }
     if (scene.background?.assetId) ids.add(scene.background.assetId);
   }
   return Array.from(ids);

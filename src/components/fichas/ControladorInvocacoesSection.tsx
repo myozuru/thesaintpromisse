@@ -7,6 +7,8 @@ import { useMapStore } from '@/stores/useMapStore';
 import { invocarControlador, recolherInvocacao, limparInvocacoesDerrotadas, comandarReposicionamento, comandarAtaque, type DirecaoInvocacao } from '@/lib/controlador/mapa';
 import { limiteInvocacoesConhecidas, limiteAtivasPersonagem, validarCatalogoControlador, type InvocacaoControlador, type TipoInvocacaoControlador } from '@/lib/controlador/tipos';
 import { podeUsarVersaoAprovada } from '@/lib/controlador/aprovacao';
+import { carregarAssetFicha } from '@/lib/controlador/assetFicha';
+import { assetCache } from '@/components/mapa/assetCache';
 import { decidirAprovacaoInvocacao, decidirAprovacaoLegadaInvocacao, submeterAprovacaoInvocacao } from '@/lib/controlador/aprovacao.functions';
 
 type Fonte = { id: string; nome: string; tipo: 'grimorio' | 'omni'; hp: number; defesa: number; deslocamento: number; porte: InvocacaoControlador['porte']; acoes: InvocacaoControlador['acoes'] };
@@ -43,6 +45,8 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
   const [fonte, setFonte] = useState('');
   const [erro, setErro] = useState('');
   const [busyAprovacao, setBusyAprovacao] = useState(false);
+  const [carregandoArteId, setCarregandoArteId] = useState<string | null>(null);
+  const [assetsTick, setAssetsTick] = useState(0);
   const [motivosRejeicao, setMotivosRejeicao] = useState<Record<string, string>>({});
   const [direcao, setDirecao] = useState<DirecaoInvocacao>('leste');
   const [mensagem, setMensagem] = useState('');
@@ -58,10 +62,23 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
   const entities = useMapStore(s => s.entities);
   const ativos = Object.values(entities).filter(e => e.ownerCharId === character.id && !!e.invocationId);
   useEffect(() => { if (ativos.some(e => (e.hp ?? 0) <= 0)) limparInvocacoesDerrotadas(character.id); }, [entities, character.id]);
-  const invocar = (id: string) => {
-    const resultado = invocarControlador(character.id, id, direcao);
-    if (!resultado.ok) { setErro(resultado.motivo); return; }
-    setErro(''); setMensagem('Invocação materializada no mapa.');
+  const invocar = async (id: string) => {
+    if (carregandoArteId) return;
+    const modelo = character.invocacoesConhecidas?.find(item => item.id === id);
+    const assetIds = [modelo?.imagemAssetId, modelo?.imagemFallbackAssetId].filter((assetId): assetId is string => Boolean(assetId));
+    try {
+      if (assetIds.length) {
+        setCarregandoArteId(id);
+        await Promise.all(assetIds.map(assetId => carregarAssetFicha(assetId)));
+      }
+      const resultado = invocarControlador(character.id, id, direcao);
+      if (!resultado.ok) { setErro(resultado.motivo); return; }
+      setErro(''); setMensagem('Invocação materializada no mapa.');
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : 'Não foi possível carregar a arte da invocação.');
+    } finally {
+      setCarregandoArteId(null);
+    }
   };
   const comandar = (id: string) => {
     const r = comandarReposicionamento(character.id, id, direcao);
@@ -82,6 +99,19 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
     if (recolherInvocacao(character.id, id)) { setErro(''); setMensagem('Invocação recolhida.'); }
   };
   const catalogo = character.invocacoesConhecidas ?? [];
+  const assetForFicha = (inv: InvocacaoControlador) => {
+    const principal = inv.imagemAssetId ? assetCache.get(inv.imagemAssetId) : null;
+    const fallback = inv.imagemFallbackAssetId ? assetCache.get(inv.imagemFallbackAssetId) : null;
+    return principal?.ready ? principal : fallback ?? principal;
+  };
+  useEffect(() => {
+    let mounted = true;
+    const ids = Array.from(new Set(catalogo.flatMap(inv => [inv.imagemAssetId, inv.imagemFallbackAssetId].filter((id): id is string => Boolean(id)))));
+    if (ids.length) void Promise.all(ids.map(id => carregarAssetFicha(id)))
+      .then(() => { if (mounted) setAssetsTick(value => value + 1); })
+      .catch(() => undefined);
+    return () => { mounted = false; };
+  }, [catalogo]);
   const controlador = character.specialization === 'Controlador';
   const max = controlador ? limiteInvocacoesConhecidas(character.level) : null;
   const ativas = limiteAtivasPersonagem(character.specialization, character.treinoControle ?? 0);
@@ -275,9 +305,16 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
         </select>
       </label>
       {mensagem && <p role="status" className="text-xs text-muted-foreground">{mensagem}</p>}
-      {catalogo.map(inv => (
+      {catalogo.map(inv => {
+        const arte = assetForFicha(inv);
+        return (
         <div key={inv.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border p-2">
-          <div><strong>{inv.nome}</strong><div className="text-xs text-muted-foreground">{inv.tipo === 'shikigami' ? 'Shikigami' : 'Corpo Amaldiçoado'} · PV {inv.hpAtual}/{inv.hpMaximo} · Defesa {inv.defesa} · {inv.deslocamentoM} m · {inv.custoInvocacaoPE} PE · {inv.acoes.length} ações</div></div>
+          <div className="flex items-center gap-2">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded border" style={{ borderColor: inv.corIdentificacao ?? '#8055bd' }}>
+              {arte ? <img key={assetsTick} src={arte.url} alt={inv.imagemAltText || inv.apelido || inv.nome} className="h-full w-full object-cover" /> : <span className="text-xs text-muted-foreground">Sem arte</span>}
+            </div>
+            <div><strong>{inv.apelido?.trim() || inv.nome}</strong><div className="text-xs text-muted-foreground">{inv.tipo === 'shikigami' ? 'Shikigami' : 'Corpo Amaldiçoado'} · PV {inv.hpAtual}/{inv.hpMaximo} · Defesa {inv.defesa} · {inv.deslocamentoM} m · {inv.custoInvocacaoPE} PE · {inv.acoes.length} ações</div></div>
+          </div>
           <div className="basis-full text-xs text-muted-foreground">Aquisição: {inv.aprovacaoMestre === 'pendente' ? 'Aguardando aprovação do Mestre' : inv.aprovacaoMestre === 'rejeitada' ? 'Rejeitada — edite e solicite novamente' : 'Aprovada'}</div>
           {inv.origemAquisicao && <div className="basis-full text-xs text-muted-foreground">Origem da aquisição: {inv.origemAquisicao === 'interludio' ? 'Interlúdio' : inv.origemAquisicao}</div>}
           {inv.referenciaInterludio && <div className="basis-full text-xs text-muted-foreground">Referência do Interlúdio: {inv.referenciaInterludio}</div>}
@@ -301,7 +338,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
             {ativos.some(e => e.invocationId === inv.id) ? (
               <><button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => comandar(inv.id)}>Comandar movimento (bônus)</button><button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => recolher(inv.id)}>Recolher</button></>
             ) : (
-              <button type="button" className="rounded border border-primary px-2 py-1 text-xs" disabled={!podeUsarVersaoAprovada({ estado: inv.aprovacaoMestre, versaoAtual: inv.versaoModelo, versaoAprovada: inv.versaoAprovada })} onClick={() => invocar(inv.id)}>Invocar</button>
+              <button type="button" className="rounded border border-primary px-2 py-1 text-xs" disabled={!!carregandoArteId || !podeUsarVersaoAprovada({ estado: inv.aprovacaoMestre, versaoAtual: inv.versaoModelo, versaoAprovada: inv.versaoAprovada })} onClick={() => void invocar(inv.id)}>{carregandoArteId === inv.id ? 'Carregando arte…' : 'Invocar'}</button>
             )}
             <button type="button" disabled={ativos.some(e => e.invocationId === inv.id) || inv.aprovacaoMestre === 'pendente' || busyAprovacao} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={() => remover(inv.id)}>Remover</button>
           </div>
@@ -352,7 +389,8 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
             </div>
           )}
         </div>
-      ))}
+        );
+      })}
       <div className="space-y-2 rounded border border-border p-2">
         <strong>Adicionar invocação</strong>
         <label className="block text-xs">Importar do Grimório ou OMNI
