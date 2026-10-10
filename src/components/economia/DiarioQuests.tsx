@@ -10,6 +10,7 @@ import { toTimelineSeconds } from '@/lib/omni/tempo';
 import { ICONES_QUEST, STATUS_LABEL, formatarRestante } from '@/lib/economia/quests';
 import { LinhaDoTempo, PainelReputacao } from './FaccoesTempo';
 import { PainelGuilda } from './PainelGuilda';
+import { PainelConquistas } from '@/components/conquistas/PainelConquistas';
 
 export function DiarioQuests({ aberto, onClose, charId, master }: { aberto: boolean; onClose: () => void; charId?: string; master: boolean }) {
   const questsMap = useQuestStore((s) => s.quests);
@@ -17,7 +18,7 @@ export function DiarioQuests({ aberto, onClose, charId, master }: { aberto: bool
   const faccoes = useQuestStore((s) => s.faccoes);
   const currencies = useMoneyStore((s) => s.currencies);
   const agora = toTimelineSeconds(useChronosStore());
-  const [aba, setAba] = useState<'quests' | 'guilda' | 'rep' | 'tempo'>('quests');
+  const [aba, setAba] = useState<'quests' | 'guilda' | 'rep' | 'tempo' | 'conquistas'>('quests');
   const [verAntigas, setVerAntigas] = useState(false);
   const minhas = useMemo(() => Object.values(questsMap)
     .filter((q) => !q.deletedAt && (master ? q.aceitaPor.length > 0 : !!charId && q.aceitaPor.includes(charId)))
@@ -30,12 +31,13 @@ export function DiarioQuests({ aberto, onClose, charId, master }: { aberto: bool
         <DialogHeader><DialogTitle>📖 Diário de Quests</DialogTitle></DialogHeader>
         <div className="flex gap-2 border-b border-border pb-2">
           <Button size="sm" variant={aba === 'quests' ? 'default' : 'ghost'} onClick={() => setAba('quests')}>Quests</Button>
-          <Button size="sm" variant={aba === 'guilda' ? 'default' : 'ghost'} onClick={() => setAba('guilda')}>Guilda</Button>
+          <Button size="sm" variant={aba === 'conquistas' ? <PainelConquistas charId={charId} master={master} /> : aba === 'guilda' ? 'default' : 'ghost'} onClick={() => setAba('guilda')}>Guilda</Button>
           <Button size="sm" variant={aba === 'rep' ? 'default' : 'ghost'} onClick={() => setAba('rep')}>Reputação</Button>
           <Button size="sm" variant={aba === 'tempo' ? 'default' : 'ghost'} onClick={() => setAba('tempo')}>Linha do tempo</Button>
+          <Button size="sm" variant={aba === 'conquistas' ? 'default' : 'ghost'} onClick={() => setAba('conquistas')}>🏆 Conquistas</Button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-          {aba === 'guilda' ? <PainelGuilda charId={charId} master={master} /> : aba === 'rep' ? <PainelReputacao charId={charId} /> : aba === 'tempo' ? <LinhaDoTempo /> : (
+          {aba === 'conquistas' ? <PainelConquistas charId={charId} master={master} /> : aba === 'guilda' ? <PainelGuilda charId={charId} master={master} /> : aba === 'rep' ? <PainelReputacao charId={charId} /> : aba === 'tempo' ? <LinhaDoTempo /> : (
             <div className="space-y-2 text-sm">
               <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={verAntigas} onChange={(e) => setVerAntigas(e.target.checked)} /> Mostrar concluídas, falhas e expiradas</label>
               {!minhas.length && <p className="py-6 text-center text-muted-foreground">Nenhuma quest aceita. Procure um mural!</p>}
