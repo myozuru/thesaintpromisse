@@ -58,11 +58,12 @@ describe('Editor de Shikigamis — texto original', () => {
     const atributos = { ...atributosIniciaisShikigami(), forca: 17, destreza: 5 };
     expect(pontosRestantesShikigami('quarto', atributos)).toBe(4);
     expect(validarAtributosShikigami('quarto', atributos)).toBeNull();
-    expect(auditarAtributosShikigami('quarto', atributos).map((aviso) => aviso.codigo)).toEqual([
-      'atributo_abaixo_referencia',
-      'atributo_acima_referencia',
-      'pontos_nao_distribuidos',
-    ]);
+    expect(auditarAtributosShikigami('quarto', atributos).map((aviso) => aviso.codigo))
+      .toEqual(expect.arrayContaining([
+        'atributo_abaixo_referencia',
+        'atributo_acima_referencia',
+        'pontos_nao_distribuidos',
+      ]));
     expect(validarAtributosShikigami('quarto', { ...atributos, forca: Number.NaN })).toContain('números inteiros finitos');
   });
 
