@@ -25,6 +25,7 @@ import { useBossStore } from '@/stores/useBossStore';
 import { useShopStore } from '@/stores/useShopStore';
 import { useQuestStore } from '@/stores/useQuestStore';
 import { mergeByUpdatedAt } from '@/lib/economia/syncMerge';
+import { useConquistaStore } from '@/stores/useConquistaStore';
 import { useSpellProposalStore } from '@/stores/useSpellProposalStore';
 import { useMenuStore } from '@/stores/useMenuStore';
 import { useDiscountStore } from '@/stores/useDiscountStore';
@@ -545,6 +546,15 @@ function aplicarRemoteInterno(slice: WorldSlice, data: unknown) {
         guildas: mergeByUpdatedAt(cur.guildas ?? {}, d.guildas ?? {}),
         notas: mergeByUpdatedAt(cur.notas ?? {}, d.notas ?? {}),
         ...(d.viagem && (d.viagem.updatedAt ?? 0) > (cur.viagem?.updatedAt ?? 0) ? { viagem: d.viagem as typeof cur.viagem } : {}),
+      });
+    }
+    else if (slice === 'conquistas' && data && typeof data === 'object') {
+      const d = data as { defs?: Record<string, never>; desbloqueios?: Record<string, never>; titulos?: Record<string, never> };
+      const cur = useConquistaStore.getState();
+      useConquistaStore.setState({
+        defs: mergeByUpdatedAt(cur.defs, d.defs ?? {}),
+        desbloqueios: mergeByUpdatedAt(cur.desbloqueios, d.desbloqueios ?? {}),
+        titulos: mergeByUpdatedAt(cur.titulos, d.titulos ?? {}),
       });
     }
     else if (slice === 'fog' && data && typeof data === 'object') {
@@ -1278,6 +1288,15 @@ export function useMultiplayerSync() {
       socket.emit('state:update', { slice: 'quests', data: next });
     });
 
+    const pickConquistas = (st: ReturnType<typeof useConquistaStore.getState>) => ({ defs: st.defs, desbloqueios: st.desbloqueios, titulos: st.titulos });
+    let lastConquistas = JSON.stringify(pickConquistas(useConquistaStore.getState()));
+    const unsubConquistas = useConquistaStore.subscribe((state) => {
+      const next = pickConquistas(state); const s = JSON.stringify(next);
+      if (s === lastConquistas) return; lastConquistas = s;
+      if (applyingRemote) return;
+      socket.emit('state:update', { slice: 'conquistas', data: next });
+    });
+
     let lastCalendar = JSON.stringify(pickCalendar(useCalendarStore.getState()));
     const unsubCalendar = useCalendarStore.subscribe((state) => {
       const next = pickCalendar(state);
@@ -1533,6 +1552,7 @@ export function useMultiplayerSync() {
       unsubWorld();
       unsubEconomia();
       unsubQuests();
+      unsubConquistas();
       unsubRole();
       unsubProposals();
       unsubEsts();

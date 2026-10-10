@@ -4,7 +4,7 @@
  */
 import { useQuestStore } from '@/stores/useQuestStore';
 import { nivelReputacao, repEfetiva } from '@/lib/economia/reputacao';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -55,6 +55,13 @@ export function ShopModal({ aberto, onClose, shopId, characterId }: Props) {
   const [rolando, setRolando] = useState(false);
   const [resultado, setResultado] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!aberto || !shop) return;
+    const txt = [shop.name ?? '', ...(shop.categorias ?? [])].join(' ').toLowerCase();
+    if (/comida|padaria|taverna|restaurante|lanch|mercado(?!_negro)/.test(txt)) {
+      void import('@/lib/conquistas/motor').then((m) => m.dispararGatilhoConquista('loja_comida', [characterId])).catch(() => {});
+    }
+  }, [aberto, shop?.id, characterId]);
   const walletId = useMemo(() => (character ? ensurePersonal(character.id, character.name) : null), [character, ensurePersonal]);
   if (!shop || shop.deletedAt || !character || !walletId) return null;
 

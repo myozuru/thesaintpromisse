@@ -466,3 +466,15 @@ input[type="radio"]:checked::after {
   60% { transform: translate(-4px, 2px); }
   80% { transform: translate(3px, -1px); }
 }
+
+/* Conquistas: cor de cada raridade (HSL) */
+:root {
+  --raridade-comum: 210 12% 70%;
+  --raridade-raro: 205 85% 58%;
+  --raridade-epico: 280 70% 62%;
+  --raridade-lendario: 40 95% 55%;
+  --raridade-impossivel: 352 85% 55%;
+}
+@keyframes conquista-entrada { 0% { opacity: 0; transform: translateY(-24px) scale(.92); } 60% { opacity: 1; transform: translateY(4px) scale(1.02); } 100% { transform: none; } }
+@keyframes conquista-brilho { 0%,100% { box-shadow: 0 0 18px hsl(var(--rar) / .35); } 50% { box-shadow: 0 0 46px hsl(var(--rar) / .8); } }
+.conquista-banner { animation: conquista-entrada .7s cubic-bezier(.2,.9,.3,1.2) both, conquista-brilho 2.4s ease-in-out infinite .7s; }

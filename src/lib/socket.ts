@@ -73,4 +73,5 @@ export type WorldSlice =
   | 'worldBosses'
   | 'worldBossesMaster'
   | 'economia'
-  | 'quests';
+  | 'quests'
+  | 'conquistas';
