@@ -14,7 +14,7 @@ const submitSchema = z.object({
   requestId: z.string().uuid(),
   invocationId: idSchema,
   ownerCharacterId: idSchema,
-  versionSubmitted: z.number().int().min(1),
+  versionSubmitted: z.number().int().min(1).max(2_147_483_647),
   snapshot: z.record(z.string(), z.unknown()),
 }).strict();
 
@@ -28,7 +28,7 @@ const legacyReviewSchema = z.object({
   requestId: z.string().uuid(),
   invocationId: idSchema,
   ownerCharacterId: idSchema,
-  versionSubmitted: z.number().int().min(1),
+  versionSubmitted: z.number().int().min(1).max(2_147_483_647),
   snapshot: z.record(z.string(), z.unknown()),
   decisao: z.enum(["aprovada", "rejeitada"]),
   motivo: z.string().trim().max(2000).optional(),
