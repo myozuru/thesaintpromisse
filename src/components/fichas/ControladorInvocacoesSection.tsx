@@ -99,7 +99,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
       });
       if (!posicoes) { setMensagem('Posicionamento cancelado.'); return; }
       const motivos = Object.fromEntries(ids.map(id => [id, motivosOverride[id] ?? '']));
-      const resultado = invocarControladores(character.id, posicoes, { eventoId, motivosOverrideIntermediario: motivos });
+      const resultado = invocarControladores(character.id, posicoes.map(posicao => ({ invocacaoId: posicao.invocationId, x: posicao.x, y: posicao.y })), { eventoId, motivosOverrideIntermediario: motivos });
       if (!resultado.ok) { setErro(resultado.motivo); return; }
       setInvocacoesSelecionadas([]);
       setErro('');

@@ -29,6 +29,7 @@ beforeEach(() => {
     peCurrent: 10, treinoControle: 1,
     invocacoesConhecidas: [modelo('a', numeroFixture), modelo('b', numeroFixture), modelo('c', numeroFixture)],
   })], { dono: [2, 2] });
+  useMapStore.getState().clearWalls();
   for (const id of ['a', 'b', 'c']) {
     const entidade: EntidadeOmni = { id: 'talisma-' + id, versao: 1, nome: 'Talismã ' + id, categoria: 'item', descricao: '', tags: [], criadoEm: 1, atualizadoEm: 1, duracao: { tipo: 'instantaneo' }, custos: [], gatilhos: [] };
     const item = useInventoryStore.getState().add('dono', entidade, { instanceId: `item-${numeroFixture}-${id}` });
