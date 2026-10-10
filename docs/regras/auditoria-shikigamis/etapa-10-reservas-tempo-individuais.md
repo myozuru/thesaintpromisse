@@ -1,7 +1,7 @@
 # Etapa 10 — Reservas de tempo individuais
 
-**Data:** 2026-10-10  
-**Branch de entrega:** `main`  
+**Data:** 2026-10-10
+**Branch de entrega:** `main`
 **Escopo:** configurar, conceder, consumir e retirar reservas individuais de tempo das instâncias de invocação, integradas ao cronômetro de turno do dono.
 
 ## Regras cobertas
