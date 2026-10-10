@@ -45,7 +45,18 @@ export function ConquistaBanner() {
   if (!atual) return null;
   const info = RARIDADE_INFO[atual.def.raridade];
   const cor = `hsl(var(--raridade-${atual.def.raridade}))`;
-  const premios = atual.def.recompensas.map((r) => r.tipo === 'dinheiro' ? `💰 ${r.valor}` : r.tipo === 'item' ? `🎒 item ×${r.quantidade}` : r.tipo === 'titulo' ? `👑 ${r.texto}` : `📜 ${r.texto}`);
+  const premios = atual.def.recompensas.map((r) => {
+    switch (r.tipo) {
+      case 'dinheiro': return `💰 ${r.valor}`;
+      case 'item': return `🎒 item ×${r.quantidade}`;
+      case 'titulo': return `👑 ${r.texto}`;
+      case 'texto': return `📜 ${r.texto}`;
+      case 'recuperar_pe': return `⚡ +${r.valor} PE`;
+      case 'recuperar_vida': return `💚 +${r.valor} vida`;
+      case 'pvt': return `🛡️ +${r.valor} PVT`;
+      case 'reduzir_exaustao': return `✨ −${r.niveis} Exaustão`;
+    }
+  });
   return (
     <div className="pointer-events-none fixed inset-x-0 top-6 z-[200] flex justify-center px-4">
       <button type="button" onClick={() => setFila((f) => f.slice(1))} data-conquista-banner={atual.def.id}
