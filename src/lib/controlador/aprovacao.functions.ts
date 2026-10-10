@@ -181,25 +181,6 @@ export const submeterAprovacaoInvocacao = createServerFn({ method: "POST" })
     }
 
     const reviewedAt = policy.estado === "aprovada" ? new Date().toISOString() : null;
-    const { data: sameVersion, error: sameVersionError } = await admin
-      .from("invocation_approval_requests")
-      .select("request_id,owner_character_id,version_submitted,snapshot,status,approved_version,reason")
-      .eq("invocation_id", data.invocationId)
-      .eq("version_submitted", data.versionSubmitted)
-      .maybeSingle();
-    if (sameVersionError) throw new Error("Não foi possível consultar a versão registrada.");
-    if (sameVersion) {
-      const matches = sameVersion.owner_character_id === data.ownerCharacterId
-        && canonicalJson(sameVersion.snapshot) === canonicalJson(snapshotPersistido)
-        && sameVersion.status === data.decisao;
-      if (!matches) throw new Error("Esta versão já possui uma decisão diferente.");
-      return {
-        requestId: sameVersion.request_id,
-        status: sameVersion.status as EstadoAprovacaoInvocacao,
-        versaoAprovada: sameVersion.approved_version as number | null,
-        motivo: sameVersion.reason as string | null,
-      };
-    }
 
     const { data: created, error } = await admin
       .from("invocation_approval_requests")
