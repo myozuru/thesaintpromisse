@@ -210,11 +210,11 @@ export const InstanciaInvocacaoSchema = z.object({
   causasSaida: z.array(z.string()).optional(),
   createdAt: z.string().optional(),
 }).passthrough().superRefine((instancia, ctx) => {
-  if (instancia.hpAtual > instancia.hpMaximoAtual || instancia.hpAtual < -instancia.hpMaximoAtual) {
+  if (instancia.hpAtual > instancia.hpMaximoAtual) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["hpAtual"],
-      message: "PV da instância precisa estar entre −PV máximo e PV máximo.",
+      message: "PV da instância não pode exceder o PV máximo.",
     });
   }
   if (instancia.estado === "ativa" && instancia.hpAtual <= 0) {
@@ -375,8 +375,12 @@ export function normalizarModeloInvocacao(valor: unknown): ResultadoMigracaoInvo
   if (!registro.intermediario) {
     avisos.push(aviso("intermediario_nao_configurado", "A ficha antiga não contém vínculo de intermediário; nenhuma referência foi inventada.", "aviso", id));
   }
-  if (registro.tempoAdicional === undefined && registro.tempoExtraSegundos === undefined) {
-    avisos.push(aviso("tempo_nao_configurado", "Nenhum valor ou unidade de tempo foi inferido para a ficha antiga.", "aviso", id));
+  if (registro.tempoAdicional === undefined) {
+    if (registro.tempoExtraSegundos === undefined) {
+      avisos.push(aviso("tempo_nao_configurado", "Nenhum valor ou unidade de tempo foi inferido para a ficha antiga.", "aviso", id));
+    } else {
+      avisos.push(aviso("tempo_legado_requer_revisao", "O tempo legado permanece no snapshot; sua semântica precisa ser confirmada antes de configurar uma contribuição.", "aviso", id));
+    }
   }
   if (!Array.isArray(registro.acoes)) {
     avisos.push(aviso("acoes_ausentes", "A ficha não possui uma lista de ações legada reconhecível; os dados originais foram preservados.", "aviso", id));
@@ -465,7 +469,22 @@ export function normalizarInstanciaInvocacao(
         aviso("instancia_atual_invalida", issue.message, "erro", textoNaoVazio(registro.id) ?? undefined),
       ));
     }
+    if (atual.data.modeloId !== modelo.id) {
+      return resultadoFalho(valor, [
+        aviso("modelo_instancia_invalido", "A instância atual aponta para um modelo diferente do fornecido.", "erro", atual.data.id),
+      ]);
+    }
+    if (atual.data.donoCharacterId !== modelo.donoCharacterId) {
+      return resultadoFalho(valor, [
+        aviso("dono_instancia_invalido", "O dono da instância atual não corresponde ao dono do modelo.", "erro", atual.data.id),
+      ]);
+    }
     return { ok: true, dados: atual.data, original: valor, avisos: [] };
+  }
+  if (registro.schemaVersion !== undefined) {
+    return resultadoFalho(valor, [
+      aviso("schema_version_desconhecida", "A versão desta instância não pode ser migrada por esta versão do leitor.", "erro", textoNaoVazio(registro.id) ?? undefined),
+    ]);
   }
 
   const tokenId = textoNaoVazio(registro.id);
@@ -490,10 +509,10 @@ export function normalizarInstanciaInvocacao(
   ) {
     return resultadoFalho(valor, avisos);
   }
-  if (hpAtual > hpMaximoAtual || hpAtual < -hpMaximoAtual) {
+  if (hpAtual > hpMaximoAtual) {
     return resultadoFalho(valor, [
       ...avisos,
-      aviso("pv_instancia_fora_da_faixa", "O token permanece preservado para reconciliação; PV fora da faixa não será ajustado automaticamente.", "erro", tokenId),
+      aviso("pv_instancia_acima_do_maximo", "O token permanece preservado para reconciliação; PV acima do máximo não será ajustado automaticamente.", "erro", tokenId),
     ]);
   }
 
