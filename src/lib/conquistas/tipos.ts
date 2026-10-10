@@ -7,7 +7,10 @@ export type GatilhoConquista = 'manual' | 'primeiro_combate' | 'loja_comida' | '
 export type RecompensaConquista =
   | { tipo: 'dinheiro'; valor: number; currencyId: string }
   | { tipo: 'item'; entidadeId: string; quantidade: number }
-  | { tipo: 'titulo'; texto: string }
+  /** entidadeId opcional: buff OMNI ativo enquanto o título estiver equipado. */
+  | { tipo: 'titulo'; texto: string; entidadeId?: string }
+  /** Concede uma entidade OMNI (feitiço/passiva/talento/aura) direto na ficha. */
+  | { tipo: 'omni'; entidadeId: string }
   | { tipo: 'texto'; texto: string }
   /** Recompensas imediatas na ficha — usar só em conquistas simples. */
   | { tipo: 'recuperar_pe'; valor: number }

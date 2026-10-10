@@ -3,8 +3,44 @@ import { useConquistaStore, listarConquistas, desbloqueioAtivo } from '@/stores/
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useMoneyStore } from '@/stores/useMoneyStore';
 import { useOmniCatalogStore } from '@/stores/useOmniCatalogStore';
+import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { RARIDADE_INFO, type GatilhoConquista, type RecompensaConquista } from './tipos';
+
+type CatOmni = 'feitico' | 'talento' | 'passiva' | 'aura' | 'condicao' | 'voto';
+const CATS: CatOmni[] = ['feitico', 'talento', 'passiva', 'aura', 'condicao', 'voto'];
+
+/** Vincula uma entidade OMNI à ficha (idempotente por instanceId). Retorna o nome ou null. */
+export function vincularOmni(charId: string, entidadeId: string, instanceId: string): string | null {
+  const ent = useOmniEntidadesStore.getState().entidades[entidadeId];
+  const cs = useCharacterStore.getState();
+  const c = cs.characters.find((x) => x.id === charId);
+  if (!ent || !c) return null;
+  const atuais = c.omniAtivos ?? [];
+  if (atuais.some((a) => a.instanceId === instanceId)) return ent.nome;
+  const categoria = (CATS as string[]).includes(ent.categoria) ? (ent.categoria as CatOmni) : 'passiva';
+  cs.updateCharacter(charId, { omniAtivos: [...atuais, { id: crypto.randomUUID(), categoria, entidadeId, instanceId, vinculadoEm: Date.now() }] });
+  return ent.nome;
+}
+
+export const instanciaTitulo = (charId: string) => `titulo:${charId}`;
+
+/** Equipa um título e troca o buff OMNI ligado a ele (remove o anterior). */
+export function equiparTituloComBuff(charId: string, texto: string) {
+  useConquistaStore.getState().equiparTitulo(charId, texto);
+  const cs = useCharacterStore.getState();
+  const c = cs.characters.find((x) => x.id === charId);
+  if (!c) return;
+  const inst = instanciaTitulo(charId);
+  cs.updateCharacter(charId, { omniAtivos: (c.omniAtivos ?? []).filter((a) => a.instanceId !== inst) });
+  if (!texto) return;
+  const st = useConquistaStore.getState();
+  for (const def of listarConquistas(st.defs)) {
+    if (!desbloqueioAtivo(st, charId, def.id)) continue;
+    const r = def.recompensas.find((x) => x.tipo === 'titulo' && x.texto === texto);
+    if (r && r.tipo === 'titulo' && r.entidadeId) { vincularOmni(charId, r.entidadeId, inst); return; }
+  }
+}
 
 export function entregarRecompensas(charId: string, recompensas: RecompensaConquista[], motivo: string): string[] {
   const char = useCharacterStore.getState().characters.find((c) => c.id === charId);
@@ -23,6 +59,9 @@ export function entregarRecompensas(charId: string, recompensas: RecompensaConqu
       for (let i = 0; i < Math.max(1, r.quantidade); i++) if (useOmniCatalogStore.getState().entregarParaJogador(r.entidadeId, charId)) ok++;
       const nome = useOmniCatalogStore.getState().obter(r.entidadeId)?.nome ?? 'item';
       if (ok) feitas.push(`${ok}× ${nome}`);
+    } else if (r.tipo === 'omni' && r.entidadeId) {
+      const nome = vincularOmni(charId, r.entidadeId, `conquista:${r.entidadeId}`);
+      if (nome) feitas.push(`✨ ${nome}`);
     } else if (r.tipo === 'titulo' && r.texto.trim()) {
       feitas.push(`Título "${r.texto}"`);
     } else if (r.tipo === 'texto' && r.texto.trim()) {
