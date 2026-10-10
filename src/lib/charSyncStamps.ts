@@ -92,6 +92,76 @@ function stableSerialize(value: unknown): string {
   return serialized === undefined ? 'undefined' : serialized;
 }
 
+/**
+ * Instâncias são histórico append-only e têm ID e versão próprios. Tratar a
+ * lista toda como um único campo fazia uma instância nova apagar alterações
+ * recentes de outra quando dois clientes sincronizavam em paralelo.
+ * Revisões iguais convergem pelo conteúdo serializado, mas essa escolha não
+ * preserva edições concorrentes diferentes da mesma instância nem substitui
+ * uma gravação autoritativa com compare-and-swap no servidor.
+ */
+function mergeInstanciasInvocacao(
+  local: unknown,
+  remote: unknown,
+  localStamp: number,
+  remoteStamp: number,
+): unknown[] | undefined {
+  if (!Array.isArray(local) || !Array.isArray(remote)) return undefined;
+  const ordemBase = localStamp > remoteStamp
+    ? local
+    : remoteStamp > localStamp
+      ? remote
+      : stableSerialize(local) >= stableSerialize(remote) ? local : remote;
+  const posicaoBase = new Map<string, number>();
+  for (const item of ordemBase) {
+    const record = asRecord(item);
+    if (record && typeof record.id === 'string' && !posicaoBase.has(record.id)) {
+      posicaoBase.set(record.id, posicaoBase.size);
+    }
+  }
+  const porId = new Map<string, JsonRecord>();
+  for (const item of [...local, ...remote]) {
+    const record = asRecord(item);
+    if (!record || typeof record.id !== 'string' || !record.id.trim()) return undefined;
+    const anterior = porId.get(record.id);
+    if (!anterior) {
+      porId.set(record.id, record);
+      continue;
+    }
+
+    const versaoAnterior = typeof anterior.version === 'number' && Number.isInteger(anterior.version)
+      ? anterior.version
+      : 0;
+    const versaoAtual = typeof record.version === 'number' && Number.isInteger(record.version)
+      ? record.version
+      : 0;
+    if (versaoAtual > versaoAnterior || (versaoAtual === versaoAnterior && stableSerialize(record) > stableSerialize(anterior))) {
+      porId.set(record.id, record);
+    }
+  }
+
+  const criadoEm = (item: JsonRecord): number | undefined => {
+    const tempo = typeof item.createdAt === 'string'
+      ? item.createdAt
+      : asRecord(item.contribuicaoTempo)?.createdAt;
+    if (typeof tempo !== 'string') return undefined;
+    const parsed = Date.parse(tempo);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+  return [...porId.values()].sort((a, b) => {
+    const tempoA = criadoEm(a);
+    const tempoB = criadoEm(b);
+    if (tempoA === undefined && tempoB === undefined) {
+      return (posicaoBase.get(String(a.id)) ?? Number.MAX_SAFE_INTEGER)
+        - (posicaoBase.get(String(b.id)) ?? Number.MAX_SAFE_INTEGER)
+        || String(a.id).localeCompare(String(b.id));
+    }
+    if (tempoA === undefined) return -1;
+    if (tempoB === undefined) return 1;
+    return tempoA - tempoB || String(a.id).localeCompare(String(b.id));
+  });
+}
+
 function sameValue(aExists: boolean, a: unknown, bExists: boolean, b: unknown): boolean {
   return aExists === bExists && (!aExists || stableSerialize(a) === stableSerialize(b));
 }
@@ -301,7 +371,12 @@ function mergeCharacter<T extends WithId>(localInput: T, remoteInput: T, localIs
     const isCounterState = path[0] === 'omniCounters' || path[0] === 'omniCounterSourceUsage';
     const remoteCounterIsNewer = isCounterState && remoteCounterRevision > localCounterRevision;
     const localCounterIsNewer = isCounterState && localCounterRevision > remoteCounterRevision;
-    const chosen = remoteCounterIsNewer ? rv : localCounterIsNewer ? lv : localOnlyValue ? lv : remoteOnlyValue ? rv : chooseLocal ? lv : rv;
+    const instanciasMescladas = path.length === 1 && path[0] === 'instanciasInvocacao'
+      ? mergeInstanciasInvocacao(lv.value, rv.value, ls, rs)
+      : undefined;
+    const chosen = instanciasMescladas !== undefined
+      ? { exists: true, value: instanciasMescladas }
+      : remoteCounterIsNewer ? rv : localCounterIsNewer ? lv : localOnlyValue ? lv : remoteOnlyValue ? rv : chooseLocal ? lv : rv;
     const version = Math.max(ls, rs);
     mergedVersions[key] = version;
     winners.push({ key, path, exists: chosen.exists, value: chosen.value, version });

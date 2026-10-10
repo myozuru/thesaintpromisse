@@ -259,3 +259,63 @@ describe('mescla de alterações concorrentes por campo', () => {
     expect(ab.notes).toBe(ba.notes);
   });
 });
+
+describe('mescla de instâncias de invocação entre clientes', () => {
+  beforeEach(() => __resetCharSyncStamps());
+
+  it('preserva instâncias criadas em paralelo e mantém a revisão mais nova de cada uma', () => {
+    type Instancia = { id: string; version: number; hpAtual: number; createdAt: string };
+    type Ficha = {
+      id: string;
+      instanciasInvocacao: Instancia[];
+      _syncAt?: number;
+      _syncFields?: Record<string, number>;
+    };
+    const stamp = campo('instanciasInvocacao');
+    const local: Ficha = {
+      id: 'dono',
+      instanciasInvocacao: [
+        { id: 'compartilhada', version: 4, hpAtual: 7, createdAt: '2026-10-10T10:00:00.000Z' },
+        { id: 'criada-local', version: 1, hpAtual: 12, createdAt: '2026-10-10T10:02:00.000Z' },
+      ],
+      _syncAt: 2000,
+      _syncFields: { [stamp]: 2000 },
+    };
+    const remote: Ficha = {
+      id: 'dono',
+      instanciasInvocacao: [
+        { id: 'compartilhada', version: 3, hpAtual: 2, createdAt: '2026-10-10T10:00:00.000Z' },
+        { id: 'criada-remoto', version: 1, hpAtual: 9, createdAt: '2026-10-10T10:01:00.000Z' },
+      ],
+      _syncAt: 3000,
+      _syncFields: { [stamp]: 3000 },
+    };
+
+    const merged = mergeIncomingCharacters([local], [remote])[0];
+    expect(merged.instanciasInvocacao.map(({ id }) => id)).toEqual([
+      'compartilhada', 'criada-remoto', 'criada-local',
+    ]);
+    expect(merged.instanciasInvocacao[0]).toMatchObject({ version: 4, hpAtual: 7 });
+  });
+
+  it('resolve empates de revisão de forma determinística entre as duas ordens', () => {
+    type Instancia = { id: string; version: number; hpAtual: number; createdAt: string };
+    type Ficha = { id: string; instanciasInvocacao: Instancia[]; _syncFields?: Record<string, number> };
+    const stamp = campo('instanciasInvocacao');
+    const local: Ficha = {
+      id: 'dono',
+      instanciasInvocacao: [{ id: 'i-1', version: 2, hpAtual: 7, createdAt: '2026-10-10T10:00:00.000Z' }],
+      _syncFields: { [stamp]: 500 },
+    };
+    const remote: Ficha = {
+      id: 'dono',
+      instanciasInvocacao: [{ id: 'i-1', version: 2, hpAtual: 9, createdAt: '2026-10-10T10:00:00.000Z' }],
+      _syncFields: { [stamp]: 500 },
+    };
+
+    const localFirst = mergeIncomingCharacters([local], [remote])[0].instanciasInvocacao;
+    __resetCharSyncStamps();
+    const remoteFirst = mergeIncomingCharacters([remote], [local])[0].instanciasInvocacao;
+    expect(localFirst).toEqual(remoteFirst);
+  });
+});

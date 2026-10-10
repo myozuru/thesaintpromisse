@@ -51,6 +51,21 @@ precisa introduzir um caminho de escrita confiável que valide dono, entidade,
 operação, versão e idempotência, depois restringir as gravações diretas sem
 interromper os fluxos legítimos.
 
+## Mitigação S19-02 — mesclagem concorrente de instâncias
+
+`src/lib/charSyncStamps.ts` agora mescla `instanciasInvocacao` por ID próprio:
+preserva instâncias novas criadas por clientes diferentes e, para a mesma
+instância, prefere a revisão maior. Empates de revisão convergem pelo conteúdo
+serializado para que os clientes terminem com o mesmo estado. `createdAt` é
+registrado ao criar uma instância para manter a ordem do histórico.
+
+Isso reduz a perda de instâncias distintas por sobrescrita de uma lista inteira.
+Empates de revisão ainda podem descartar uma das duas edições concorrentes da
+mesma instância; a escolha determinística garante convergência, não preservação
+semântica. A mesclagem também roda no cliente e não prova propriedade, não impede
+escritas diretas de terceiros e não substitui a validação autoritativa com
+compare-and-swap no servidor. O achado S19-01 permanece aberto.
+
 ## Verificação local sem Supabase
 
 Comando executado:
@@ -62,6 +77,14 @@ npx vitest run src/test/worldSliceAuthorization.test.ts src/test/combatActionPro
 Resultado: **4 arquivos e 52 testes passaram**. Nenhuma conexão ou sessão
 Supabase foi iniciada. Esses testes validam regras puras e não comprovam as
 políticas de banco nem a autorização no transporte multiplayer.
+
+Verificação incremental da S19-02:
+
+- `npx vitest run src/test/charSyncStamps.test.ts src/test/controladorResolucaoDerrota.test.ts`: **2 arquivos e 24 testes passaram**.
+- `npx tsc --noEmit --pretty false`: passou.
+- `npm run build`: passou.
+
+Essas verificações foram executadas localmente, offline e sem Supabase.
 
 ## Próximo incremento
 

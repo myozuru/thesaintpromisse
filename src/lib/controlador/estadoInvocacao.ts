@@ -107,11 +107,13 @@ export function novaInstanciaInvocacao(input: {
   turnoCriacao?: number;
   rodadaCriacao?: number;
   contribuicaoTempo?: InstanciaInvocacao['contribuicaoTempo'];
+  createdAt?: string;
 }): InstanciaInvocacao {
   return InstanciaInvocacaoSchema.parse({
     schemaVersion: INVOCACAO_SCHEMA_VERSION,
     version: 1,
     ...input,
+    createdAt: input.createdAt ?? new Date().toISOString(),
     estado: input.estado ?? estadoPorPVInvocacao(input.hpAtual, input.hpMaximoAtual),
   });
 }
