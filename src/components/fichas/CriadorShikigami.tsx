@@ -3,7 +3,7 @@ import type { Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { getTrainingBonusByLevel } from '@/lib/levelEngine';
-import { ATRIBUTOS_SHIKIGAMI, atributosIniciaisShikigami, grausDisponiveis, pontosRestantesShikigami, regrasGrau, validarAtributosShikigami, valoresShikigami, type GrauShikigami } from '@/lib/controlador/regrasShikigami';
+import { ATRIBUTOS_SHIKIGAMI, atributosIniciaisShikigami, auditarFichaShikigami, grausDisponiveis, pontosRestantesShikigami, regrasGrau, validarAtributosShikigami, valoresShikigami, type GrauShikigami } from '@/lib/controlador/regrasShikigami';
 import { limiteInvocacoesConhecidas } from '@/lib/controlador/tipos';
 
 const rotulos = {forca:'Força',destreza:'Destreza',constituicao:'Constituição',inteligencia:'Inteligência',sabedoria:'Sabedoria',presenca:'Presença'};
@@ -21,6 +21,18 @@ export function CriadorShikigami({character}:{character:Character}){
   const regras=regrasGrau(grau);
   const saldo=pontosRestantesShikigami(grau,atributos);
   const valores=valoresShikigami(grau,atributos,character.level,getTrainingBonusByLevel(character.level));
+  const avisos=auditarFichaShikigami({
+    grau,
+    nivelUsuario:character.level,
+    bonusTreinamentoUsuario:getTrainingBonusByLevel(character.level),
+    atributos,
+    valoresAtuais:{
+      pv:valores.pv,
+      defesa:valores.defesa,
+      deslocamentoM:valores.deslocamentoM,
+      custoInvocacaoPE:valores.custoPE,
+    },
+  });
   const cadastrar=()=>{
     const mensagem=validarAtributosShikigami(grau,atributos);
     const catalogo=character.invocacoesConhecidas??[];
@@ -51,6 +63,9 @@ export function CriadorShikigami({character}:{character:Character}){
       </select>
     </label>
     <p className="text-xs">Pontos restantes: <strong>{saldo}</strong> de {regras.pontos} · Máximo por atributo: {regras.maximo} · Mínimo: 6</p>
+    {avisos.length>0&&<ul aria-label="Avisos de regras do Shikigami" className="space-y-1 rounded border border-amber-500/40 bg-amber-500/5 p-2 text-xs text-amber-700">
+      {avisos.map((aviso,index)=><li key={aviso.codigo+index} role={aviso.severidade==='erro'?'alert':'status'}>{aviso.detalhe}</li>)}
+    </ul>}
     <div className="grid grid-cols-2 gap-2">
       {ATRIBUTOS_SHIKIGAMI.map(k=><label key={k} className="text-xs">{rotulos[k]}
         <input aria-label={rotulos[k]} type="number" min={6} max={regras.maximo} step={1}
