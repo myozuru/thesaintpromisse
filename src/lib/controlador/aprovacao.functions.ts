@@ -24,6 +24,16 @@ const reviewSchema = z.object({
   motivo: z.string().trim().max(2000).optional(),
 }).strict();
 
+const legacyReviewSchema = z.object({
+  requestId: z.string().uuid(),
+  invocationId: idSchema,
+  ownerCharacterId: idSchema,
+  versionSubmitted: z.number().int().min(1),
+  snapshot: z.record(z.string(), z.unknown()),
+  decisao: z.enum(["aprovada", "rejeitada"]),
+  motivo: z.string().trim().max(2000).optional(),
+}).strict();
+
 type AuthContext = {
   userId: string;
   supabase: SupabaseClient;
@@ -39,6 +49,16 @@ function canonicalJson(value: unknown): string {
       .join(",")}}`;
   }
   return JSON.stringify(value) ?? "undefined";
+}
+
+function prepararSnapshot(snapshot: Record<string, unknown>, versionSubmitted: number): Record<string, unknown> {
+  const snapshotPersistido = { ...snapshot };
+  for (const campo of ["aprovacaoMestre", "versaoAprovada", "solicitacaoAprovacaoId", "motivoRejeicao"]) {
+    delete snapshotPersistido[campo];
+  }
+  // O servidor fixa a versão do snapshot; estado de aprovação nunca vem do cliente.
+  snapshotPersistido.versaoModelo = versionSubmitted;
+  return snapshotPersistido;
 }
 
 async function getAdminClient() {
@@ -70,12 +90,7 @@ export const submeterAprovacaoInvocacao = createServerFn({ method: "POST" })
       || data.snapshot.donoCharacterId !== data.ownerCharacterId) {
       throw new Error("O snapshot não corresponde à invocação e à ficha informadas.");
     }
-    const snapshotPersistido: Record<string, unknown> = { ...data.snapshot };
-    for (const campo of ["aprovacaoMestre", "versaoAprovada", "solicitacaoAprovacaoId", "motivoRejeicao"]) {
-      delete snapshotPersistido[campo];
-    }
-    // O servidor fixa a versão do snapshot; estado de aprovação nunca vem do cliente.
-    snapshotPersistido.versaoModelo = data.versionSubmitted;
+    const snapshotPersistido = prepararSnapshot(data.snapshot, data.versionSubmitted);
     const snapshotJson = JSON.stringify(snapshotPersistido);
     if (!snapshotJson || snapshotJson.length > 100_000) {
       throw new Error("O snapshot da invocação excede o tamanho permitido.");
@@ -144,6 +159,7 @@ export const submeterAprovacaoInvocacao = createServerFn({ method: "POST" })
         snapshot: snapshotPersistido,
         submitted_by: context.userId,
         status: policy.estado,
+        submission_origin: isMaster ? "mestre" : "jogador",
         reviewed_by: policy.estado === "aprovada" ? context.userId : null,
         reviewed_at: reviewedAt,
         approved_version: policy.estado === "aprovada" ? data.versionSubmitted : null,
@@ -211,5 +227,121 @@ export const decidirAprovacaoInvocacao = createServerFn({ method: "POST" })
       status: updated.status as EstadoAprovacaoInvocacao,
       versaoAprovada: updated.approved_version as number | null,
       motivo: updated.reason as string | null,
+    };
+  });
+
+
+/**
+ * Registra uma decisão explícita do Mestre para uma pendência antiga que ainda
+ * não possuía requestId. Se uma solicitação do servidor já existir, seu snapshot
+ * precisa coincidir; caso contrário a decisão é recusada.
+ */
+export const decidirAprovacaoLegadaInvocacao = createServerFn({ method: "POST" })
+  .middleware([forwardSupabaseFunctionAuth, requireSupabaseAuth])
+  .validator((input: unknown) => legacyReviewSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const isMaster = await requesterIsMaster(context);
+    if (!isMaster) throw new Error("Apenas o Mestre pode revisar uma invocação.");
+
+    if (data.snapshot.id !== data.invocationId
+      || data.snapshot.donoCharacterId !== data.ownerCharacterId) {
+      throw new Error("O snapshot não corresponde à invocação e à ficha informadas.");
+    }
+    const policy = validarDecisaoAprovacao({
+      requesterIsMaster: true,
+      estadoAtual: "pendente",
+      decisao: data.decisao,
+      motivo: data.motivo,
+    });
+    if (!policy.ok) throw new Error(policy.motivo);
+
+    const snapshotPersistido = prepararSnapshot(data.snapshot, data.versionSubmitted);
+    const snapshotJson = JSON.stringify(snapshotPersistido);
+    if (!snapshotJson || snapshotJson.length > 100_000) {
+      throw new Error("O snapshot da invocação excede o tamanho permitido.");
+    }
+
+    const admin = await getAdminClient();
+    const { data: sameId, error: sameIdError } = await admin
+      .from("invocation_approval_requests")
+      .select("request_id,invocation_id,owner_character_id,version_submitted,snapshot,status,approved_version,reason")
+      .eq("request_id", data.requestId)
+      .maybeSingle();
+    if (sameIdError) throw new Error("Não foi possível consultar a solicitação legada.");
+    if (sameId) {
+      const matches = sameId.invocation_id === data.invocationId
+        && sameId.owner_character_id === data.ownerCharacterId
+        && sameId.version_submitted === data.versionSubmitted
+        && canonicalJson(sameId.snapshot) === canonicalJson(snapshotPersistido);
+      if (!matches || sameId.status !== data.decisao) {
+        throw new Error("Este identificador já foi usado por outra decisão.");
+      }
+      return {
+        requestId: sameId.request_id,
+        status: sameId.status as EstadoAprovacaoInvocacao,
+        versaoAprovada: sameId.approved_version as number | null,
+        motivo: sameId.reason as string | null,
+      };
+    }
+
+    const { data: pendente, error: pendingError } = await admin
+      .from("invocation_approval_requests")
+      .select("request_id,owner_character_id,version_submitted,snapshot")
+      .eq("invocation_id", data.invocationId)
+      .eq("status", "pendente")
+      .maybeSingle();
+    if (pendingError) throw new Error("Não foi possível consultar a fila de aprovações.");
+
+    const reviewedAt = new Date().toISOString();
+    const camposDecisao = {
+      status: data.decisao,
+      reviewed_by: context.userId,
+      reviewed_at: reviewedAt,
+      reason: data.decisao === "rejeitada" ? data.motivo!.trim() : null,
+      approved_version: data.decisao === "aprovada" ? data.versionSubmitted : null,
+    };
+
+    if (pendente) {
+      const matches = pendente.owner_character_id === data.ownerCharacterId
+        && pendente.version_submitted === data.versionSubmitted
+        && canonicalJson(pendente.snapshot) === canonicalJson(snapshotPersistido);
+      if (!matches) throw new Error("Existe uma solicitação pendente com outro snapshot; revise a versão registrada.");
+      const { data: updated, error } = await admin
+        .from("invocation_approval_requests")
+        .update(camposDecisao)
+        .eq("request_id", pendente.request_id)
+        .eq("status", "pendente")
+        .select("request_id,status,approved_version,reason")
+        .maybeSingle();
+      if (error) throw new Error("Não foi possível registrar a decisão do Mestre.");
+      if (!updated) throw new Error("A solicitação já foi revisada por outra ação.");
+      return {
+        requestId: updated.request_id,
+        status: updated.status as EstadoAprovacaoInvocacao,
+        versaoAprovada: updated.approved_version as number | null,
+        motivo: updated.reason as string | null,
+      };
+    }
+
+    const { data: created, error } = await admin
+      .from("invocation_approval_requests")
+      .insert({
+        request_id: data.requestId,
+        invocation_id: data.invocationId,
+        owner_character_id: data.ownerCharacterId,
+        version_submitted: data.versionSubmitted,
+        snapshot: snapshotPersistido,
+        submitted_by: context.userId,
+        submission_origin: "legado",
+        ...camposDecisao,
+      })
+      .select("request_id,status,approved_version,reason")
+      .single();
+    if (error) throw new Error("Não foi possível registrar a decisão legada.");
+    return {
+      requestId: created.request_id,
+      status: created.status as EstadoAprovacaoInvocacao,
+      versaoAprovada: created.approved_version as number | null,
+      motivo: created.reason as string | null,
     };
   });
