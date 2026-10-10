@@ -10,25 +10,28 @@ import type { EntidadeOmni } from '@/lib/omni/tipos';
 import { invocarControlador, recolherInvocacao, tokensInvocados, limparInvocacoesDerrotadas, causarDanoInvocacao, comandarReposicionamento, comandarAtaque, comandosPorAcao } from '@/lib/controlador/mapa';
 import type { InvocacaoControlador } from '@/lib/controlador/tipos';
 
-function modelo(id: string): InvocacaoControlador {
+let numeroFixture = 0;
+
+function modelo(id: string, rodada: number): InvocacaoControlador {
   return {
     id, nome: id, donoCharacterId: 'dono', tipo: 'shikigami',
     hpAtual: 12, hpMaximo: 12, defesa: 14, deslocamentoM: 9,
     porte: 'Médio', custoInvocacaoPE: 3, acoes: [],
-    intermediario: { tipo: 'talisma', itemInventarioId: `item-${id}` },
+    intermediario: { tipo: 'talisma', itemInventarioId: `item-${rodada}-${id}` },
   };
 }
 beforeEach(() => {
+  numeroFixture += 1;
   useInventoryStore.getState().resetAll();
   useLogStore.getState().clearLogs();
   montarMesa([ficha('dono', {
     specialization: 'Controlador', profileId: 'perfil-dono', level: 1,
     peCurrent: 10, treinoControle: 1,
-    invocacoesConhecidas: [modelo('a'), modelo('b'), modelo('c')],
+    invocacoesConhecidas: [modelo('a', numeroFixture), modelo('b', numeroFixture), modelo('c', numeroFixture)],
   })], { dono: [2, 2] });
   for (const id of ['a', 'b', 'c']) {
-    const entidade: EntidadeOmni = { id: 'talisma-' + id, versao: 1, nome: 'Talismã ' + id, categoria: 'item', descricao: '', tags: [], duracao: { tipo: 'instantaneo' }, custos: [], gatilhos: [] };
-    const item = useInventoryStore.getState().add('dono', entidade, { instanceId: 'item-' + id });
+    const entidade: EntidadeOmni = { id: 'talisma-' + id, versao: 1, nome: 'Talismã ' + id, categoria: 'item', descricao: '', tags: [], criadoEm: 1, atualizadoEm: 1, duracao: { tipo: 'instantaneo' }, custos: [], gatilhos: [] };
+    const item = useInventoryStore.getState().add('dono', entidade, { instanceId: `item-${numeroFixture}-${id}` });
     useInventoryStore.getState().definirEmMaos(item.instanceId, true);
   }
   comoTela({ profileId: 'perfil-dono', role: 'PLAYER' });
@@ -50,7 +53,7 @@ describe('Controlador — materialização real no mapa', () => {
     expect(pegarFicha('dono').peCurrent).toBe(7);
   });
   it('bloqueia o uso sem intermediário em mãos e registra o override do Mestre', () => {
-    useInventoryStore.getState().definirEmMaos('item-a', false);
+    useInventoryStore.getState().definirEmMaos(`item-${numeroFixture}-a`, false);
     const bloqueada = invocarControlador('dono', 'a', 'leste');
     expect(bloqueada.ok).toBe(false);
     expect(pegarFicha('dono').peCurrent).toBe(10);
