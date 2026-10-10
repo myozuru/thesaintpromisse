@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import type { Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
-import { useRoleStore } from '@/stores/useRoleStore';
 import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import { ATRIBUTOS_SHIKIGAMI, atributosIniciaisShikigami, auditarFichaShikigami, grausDisponiveis, pontosRestantesShikigami, regrasGrau, validarAtributosShikigami, valoresShikigami, type GrauShikigami } from '@/lib/controlador/regrasShikigami';
 import { limiteInvocacoesConhecidas } from '@/lib/controlador/tipos';
@@ -12,11 +11,11 @@ const graus = {quarto:'Quarto Grau',terceiro:'Terceiro Grau',segundo:'Segundo Gr
 
 export function CriadorShikigami({character}:{character:Character}){
   const update=useCharacterStore(s=>s.updateCharacter);
-  const isMaster=useRoleStore(s=>s.role)==='MASTER';
   const [nome,setNome]=useState('');
   const [grau,setGrau]=useState<GrauShikigami>('quarto');
   const [atributos,setAtributos]=useState(atributosIniciaisShikigami);
   const [erro,setErro]=useState('');
+  const [mensagem,setMensagem]=useState('');
   const [salvando,setSalvando]=useState(false);
   const controlador=character.specialization==='Controlador';
   const disponiveis=controlador?grausDisponiveis(character.level):(['quarto','terceiro','segundo','primeiro','especial'] as GrauShikigami[]);
@@ -51,7 +50,7 @@ export function CriadorShikigami({character}:{character:Character}){
       deslocamentoM:valores.deslocamentoM,porte:'Médio' as const,
       custoInvocacaoPE:valores.custoPE,acoes:[],
     };
-    setSalvando(true);setErro('');
+    setSalvando(true);setErro('');setMensagem('');
     try{
       const solicitacao=await submeterAprovacaoInvocacao({data:{
         requestId:crypto.randomUUID(),invocationId:rascunho.id,ownerCharacterId:character.id,
@@ -64,6 +63,7 @@ export function CriadorShikigami({character}:{character:Character}){
         solicitacaoAprovacaoId:solicitacao.requestId,
       }]});
       setNome('');setAtributos(atributosIniciaisShikigami());setErro('');
+      setMensagem(solicitacao.status==='aprovada'?'Shikigami aprovado pelo Mestre.':'Solicitação enviada ao Mestre.');
     }catch(error){
       setErro(error instanceof Error?error.message:'Não foi possível enviar a solicitação ao Mestre.');
     }finally{
@@ -100,6 +100,7 @@ export function CriadorShikigami({character}:{character:Character}){
       <span>Custo base: <strong>{valores.custoPE} PE</strong></span>
     </div>
     {erro&&<p role="alert" className="text-xs text-destructive">{erro}</p>}
-    <button type="button" disabled={salvando} onClick={()=>void cadastrar()} className="rounded bg-primary px-3 py-2 text-xs text-primary-foreground disabled:opacity-50">{isMaster?'Salvar e aprovar Shikigami':'Solicitar aprovação do Mestre'}</button>
+    {mensagem&&<p role="status" className="text-xs text-muted-foreground">{mensagem}</p>}
+    <button type="button" disabled={salvando} onClick={()=>void cadastrar()} className="rounded bg-primary px-3 py-2 text-xs text-primary-foreground disabled:opacity-50">Criar Shikigami</button>
   </div>;
 }
