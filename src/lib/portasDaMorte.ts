@@ -81,6 +81,7 @@ export function aposDano(id: string, hpAntes: number, danoFinal: number) {
     upd(c.id, { portasMorte: { sucessos: 0, falhas: pm.falhas } });
     cond(c.id, 'inconsciente', 'Inconsciente', '😵');
     log(`🚪 ${c.name} caiu nas Portas da Morte (${pm.falhas} falha(s) acumulada(s)).`);
+    void import('@/lib/conquistas/motor').then((m) => m.dispararGatilhoConquista('portas_da_morte', [c.id])).catch(() => {});
     if (pm.falhas >= 3) morrer(c, '3 falhas');
     return;
   }

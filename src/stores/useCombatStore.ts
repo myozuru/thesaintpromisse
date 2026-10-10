@@ -393,6 +393,7 @@ export const useCombatStore = create<CombatStore>()(
       setParticipants: (ids) => set({ participantIds: ids }),
       clearParticipants: () => set({ participantIds: [] }),
       startCombat: (entries) => {
+        void import('@/lib/conquistas/motor').then((m) => m.dispararGatilhoConquista('primeiro_combate', entries.map((e) => (e as { characterId?: string }).characterId).filter(Boolean) as string[])).catch(() => {});
         for (const c of useCharacterStore.getState().characters) {
           const omniActionCost = c.omniActionCost
             ? Object.fromEntries(Object.entries(c.omniActionCost).map(([key, value]) => [key, { ...value, usedThisRound: 0 }]))

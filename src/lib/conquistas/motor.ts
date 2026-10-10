@@ -42,7 +42,7 @@ export function desbloquearConquista(charId: string, conquistaId: string, opts: 
   const entregues = entregarRecompensas(charId, def.recompensas, `Conquista: ${def.titulo}`);
   st.registrar({ charId, conquistaId, em: Date.now(), relato: opts.relato, concedidaPor: opts.por ?? 'auto', recompensasEntregues: true, updatedAt: Date.now() });
   const extra = entregues.length ? ` Recompensas: ${entregues.join(', ')}.` : '';
-  useLogStore.getState().addLog('system' as never, `🏆 ${char.name} desbloqueou "${def.titulo}" (${RARIDADE_INFO[def.raridade].nome}).${extra}`);
+  useLogStore.getState().addLog('system', `🏆 ${char.name} desbloqueou "${def.titulo}" (${RARIDADE_INFO[def.raridade].nome}).${extra}`);
   return true;
 }
 
@@ -56,9 +56,4 @@ export function dispararGatilhoConquista(gatilho: GatilhoConquista, charIds: str
     if (!c || c.category !== 'PLAYER') continue;
     for (const def of defs) desbloquearConquista(id, def.id, { por: 'auto' });
   }
-}
-
-/** Atalho seguro para chamar de stores sem criar ciclos de importação. */
-export function gatilhoConquistaAsync(gatilho: GatilhoConquista, charIds: string[]) {
-  void import('./motor').then((m) => m.dispararGatilhoConquista(gatilho, charIds)).catch(() => {});
 }
