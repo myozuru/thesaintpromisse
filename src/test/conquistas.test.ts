@@ -21,3 +21,23 @@ describe('conquistas', () => {
     expect(comBonus.every((c) => c.raridade === 'comum')).toBe(true);
   });
 });
+
+describe('títulos com buff OMNI', () => {
+  it('equipar título vincula o buff e trocar remove o anterior', async () => {
+    const { useCharacterStore } = await import('@/stores/useCharacterStore');
+    const { useOmniEntidadesStore } = await import('@/stores/useOmniEntidadesStore');
+    const { useConquistaStore } = await import('@/stores/useConquistaStore');
+    const { equiparTituloComBuff, instanciaTitulo } = await import('@/lib/conquistas/motor');
+    const ent = useOmniEntidadesStore.getState().criar('passiva', 'Buff Teste');
+    useCharacterStore.setState({ characters: [{ id: 'cT', name: 'T', category: 'PLAYER', omniAtivos: [] } as never] });
+    useConquistaStore.setState({
+      defs: { tt: { id: 'tt', titulo: 'x', descricao: '', requisito: '', icone: '', raridade: 'raro', secreta: false, gatilho: 'manual', recompensas: [{ tipo: 'titulo', texto: 'Herói', entidadeId: ent.id }], updatedAt: 1 } },
+      desbloqueios: { 'cT:tt': { charId: 'cT', conquistaId: 'tt', em: 1, concedidaPor: 'mestre', recompensasEntregues: true, updatedAt: 1 } },
+    });
+    equiparTituloComBuff('cT', 'Herói');
+    const ativos = () => useCharacterStore.getState().characters[0].omniAtivos ?? [];
+    expect(ativos().filter((a) => a.instanceId === instanciaTitulo('cT')).map((a) => a.entidadeId)).toEqual([ent.id]);
+    equiparTituloComBuff('cT', '');
+    expect(ativos().length).toBe(0);
+  });
+});

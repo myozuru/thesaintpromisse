@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useMoneyStore } from '@/stores/useMoneyStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
-import { desbloquearConquista } from '@/lib/conquistas/motor';
+import { desbloquearConquista, equiparTituloComBuff } from '@/lib/conquistas/motor';
 import { RARIDADES, RARIDADE_INFO, type ConquistaDef, type RaridadeConquista, type RecompensaConquista } from '@/lib/conquistas/tipos';
 
 const rarStyle = (r: RaridadeConquista) => ({ ['--rar' as string]: `var(--raridade-${r})`, borderColor: `hsl(var(--raridade-${r}))` });
@@ -18,7 +18,8 @@ function rotuloRecompensa(r: RecompensaConquista, currencies: { id: string; name
   switch (r.tipo) {
     case 'dinheiro': return `💰 ${r.valor} ${currencies.find((c) => c.id === r.currencyId)?.name ?? ''}`.trim();
     case 'item': return `🎒 ${r.quantidade}× ${entidades[r.entidadeId]?.nome ?? 'item'}`;
-    case 'titulo': return `👑 Título “${r.texto}”`;
+    case 'titulo': return `👑 Título “${r.texto}”${r.entidadeId ? ` + ${entidades[r.entidadeId]?.nome ?? 'buff'}` : ''}`;
+    case 'omni': return `✨ ${entidades[r.entidadeId]?.nome ?? 'Poder OMNI'}`;
     case 'texto': return `📜 ${r.texto}`;
     case 'recuperar_pe': return `⚡ +${r.valor} PE`;
     case 'recuperar_vida': return `💚 +${r.valor} Vida`;
@@ -108,7 +109,7 @@ export function PainelConquistas({ charId, master }: { charId?: string; master: 
           </div>
           {titulosDisp.length > 0 && (
             <label className="flex items-center gap-2 text-xs">Título equipado:
-              <select className="rounded border border-border bg-background px-2 py-1" value={titulos[atual]?.texto ?? ''} onChange={(e) => useConquistaStore.getState().equiparTitulo(atual, e.target.value)}>
+              <select className="rounded border border-border bg-background px-2 py-1" value={titulos[atual]?.texto ?? ''} onChange={(e) => equiparTituloComBuff(atual, e.target.value)}>
                 <option value="">— nenhum —</option>
                 {titulosDisp.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
@@ -167,6 +168,7 @@ function EditorConquista({ def, onClose }: { def: ConquistaDef; onClose: () => v
   const currencies = useMoneyStore((s) => s.currencies);
   const entidades = useOmniEntidadesStore((s) => s.entidades);
   const itens = useMemo(() => Object.values(entidades).sort((a, b) => a.nome.localeCompare(b.nome)), [entidades]);
+  const poderes = useMemo(() => itens.filter((it) => it.categoria !== 'item'), [itens]);
   const setR = (i: number, r: RecompensaConquista) => setF({ ...f, recompensas: f.recompensas.map((x, j) => (j === i ? r : x)) });
   const sel = 'rounded border border-border bg-background px-2 py-1 text-xs';
   return (
@@ -191,6 +193,8 @@ function EditorConquista({ def, onClose }: { def: ConquistaDef; onClose: () => v
             {r.tipo === 'item' && <><span>🎒</span><select className={sel} value={r.entidadeId} onChange={(e) => setR(i, { ...r, entidadeId: e.target.value })}><option value="">— escolha —</option>{itens.map((it) => <option key={it.id} value={it.id}>{it.nome}</option>)}</select>
               <Input type="number" min={1} className="h-7 w-16" value={r.quantidade} onChange={(e) => setR(i, { ...r, quantidade: Math.max(1, Number(e.target.value) || 1) })} /></>}
             {(r.tipo === 'titulo' || r.tipo === 'texto') && <><span>{r.tipo === 'titulo' ? '👑' : '📜'}</span><Input className="h-7 flex-1" placeholder={r.tipo === 'titulo' ? 'Título/alcunha' : 'Prêmio narrativo'} value={r.texto} onChange={(e) => setR(i, { ...r, texto: e.target.value })} /></>}
+            {r.tipo === 'titulo' && <select aria-label="Buff do título" className={sel} value={r.entidadeId ?? ''} onChange={(e) => setR(i, { ...r, entidadeId: e.target.value || undefined })}><option value="">Sem buff OMNI</option>{poderes.map((it) => <option key={it.id} value={it.id}>{it.nome}</option>)}</select>}
+            {r.tipo === 'omni' && <><span>✨ Poder OMNI</span><select className={sel} value={r.entidadeId} onChange={(e) => setR(i, { ...r, entidadeId: e.target.value })}><option value="">— escolha —</option>{poderes.map((it) => <option key={it.id} value={it.id}>{it.nome} ({it.categoria})</option>)}</select></>}
             {(r.tipo === 'recuperar_pe' || r.tipo === 'recuperar_vida' || r.tipo === 'pvt') && <><span>{r.tipo === 'recuperar_pe' ? '⚡ PE' : r.tipo === 'pvt' ? '🛡️ PVT' : '💚 Vida'}</span>
               <Input type="number" min={1} className="h-7 w-20" value={r.valor} onChange={(e) => setR(i, { ...r, valor: Math.max(1, Number(e.target.value) || 1) })} /></>}
             {r.tipo === 'reduzir_exaustao' && <><span>✨ Exaustão −</span><Input type="number" min={1} max={6} className="h-7 w-16" value={r.niveis} onChange={(e) => setR(i, { ...r, niveis: Math.max(1, Number(e.target.value) || 1) })} /></>}
@@ -201,6 +205,7 @@ function EditorConquista({ def, onClose }: { def: ConquistaDef; onClose: () => v
           <Button size="sm" variant="outline" onClick={() => setF({ ...f, recompensas: [...f.recompensas, { tipo: 'dinheiro', valor: 100, currencyId: currencies[0]?.id ?? '' }] })}>+ Dinheiro</Button>
           <Button size="sm" variant="outline" onClick={() => setF({ ...f, recompensas: [...f.recompensas, { tipo: 'item', entidadeId: '', quantidade: 1 }] })}>+ Item</Button>
           <Button size="sm" variant="outline" onClick={() => setF({ ...f, recompensas: [...f.recompensas, { tipo: 'titulo', texto: '' }] })}>+ Título</Button>
+          <Button size="sm" variant="outline" onClick={() => setF({ ...f, recompensas: [...f.recompensas, { tipo: 'omni', entidadeId: '' }] })}>+ Poder OMNI</Button>
           <Button size="sm" variant="outline" onClick={() => setF({ ...f, recompensas: [...f.recompensas, { tipo: 'texto', texto: '' }] })}>+ Outro</Button>
           <Button size="sm" variant="outline" onClick={() => setF({ ...f, recompensas: [...f.recompensas, { tipo: 'recuperar_pe', valor: 3 }] })}>+ PE</Button>
           <Button size="sm" variant="outline" onClick={() => setF({ ...f, recompensas: [...f.recompensas, { tipo: 'recuperar_vida', valor: 5 }] })}>+ Vida</Button>
