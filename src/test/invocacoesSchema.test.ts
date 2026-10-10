@@ -91,7 +91,13 @@ describe("contratos e migração legada de invocações", () => {
       id: "mordida",
       tipoExecucao: "legada",
       entidadeOmniId: "entidade-omni-1",
-      payloadLegado: original.acoes[0],
+      payloadLegado: {
+        id: "mordida",
+        nome: "Mordida",
+        tipo: "ataque",
+        dano: "1d6",
+        entidadeOmniId: "entidade-omni-1",
+      },
     });
     expect(modelo.acoes?.[0].acaoOmniId).toBeUndefined();
   });
@@ -145,16 +151,66 @@ describe("contratos e migração legada de invocações", () => {
     expect(resultado.avisos.map((item) => item.codigo)).toContain("tempo_instancia_ausente");
   });
 
-  it("marca derrota definitiva no limiar de -PV máximo e recusa PV fora da faixa", () => {
+  it("marca derrota definitiva no limiar ou abaixo dele e recusa PV acima do máximo", () => {
     const modelo = normalizarModeloInvocacao(modeloLegado()).dados!;
-    const derrota = normalizarInstanciaInvocacao(tokenLegado({ hp: -20 }), modelo);
-    expect(derrota.ok).toBe(true);
-    expect(derrota.dados?.estado).toBe("derrotada");
+    const derrotaNoLimiar = normalizarInstanciaInvocacao(tokenLegado({ hp: -20 }), modelo);
+    expect(derrotaNoLimiar.ok).toBe(true);
+    expect(derrotaNoLimiar.dados?.estado).toBe("derrotada");
 
-    const foraDaFaixa = normalizarInstanciaInvocacao(tokenLegado({ hp: -21 }), modelo);
-    expect(foraDaFaixa.ok).toBe(false);
-    expect(foraDaFaixa.original).toMatchObject({ id: "token-1", hp: -21 });
-    expect(foraDaFaixa.avisos.map((item) => item.codigo)).toContain("pv_instancia_fora_da_faixa");
+    const derrotaAbaixoDoLimiar = normalizarInstanciaInvocacao(tokenLegado({ hp: -25 }), modelo);
+    expect(derrotaAbaixoDoLimiar.ok).toBe(true);
+    expect(derrotaAbaixoDoLimiar.dados).toMatchObject({ estado: "derrotada", hpAtual: -25 });
+
+    const acimaDoMaximo = normalizarInstanciaInvocacao(tokenLegado({ hp: 21 }), modelo);
+    expect(acimaDoMaximo.ok).toBe(false);
+    expect(acimaDoMaximo.original).toMatchObject({ id: "token-1", hp: 21 });
+    expect(acimaDoMaximo.avisos.map((item) => item.codigo)).toContain("pv_instancia_acima_do_maximo");
+  });
+
+  it("não interpreta versão futura de instância como registro legado", () => {
+    const modelo = normalizarModeloInvocacao(modeloLegado()).dados!;
+    const futura = tokenLegado({ schemaVersion: 99 });
+    const resultado = normalizarInstanciaInvocacao(futura, modelo);
+
+    expect(resultado.ok).toBe(false);
+    expect(resultado.original).toBe(futura);
+    expect(resultado.avisos.map((item) => item.codigo)).toContain("schema_version_desconhecida");
+  });
+
+  it("rejeita instância atual ligada a outro modelo ou dono", () => {
+    const modelo = normalizarModeloInvocacao(modeloLegado()).dados!;
+    const atual = {
+      schemaVersion: 1,
+      version: 1,
+      id: "instance-atual",
+      modeloId: "outro-modelo",
+      donoCharacterId: "personagem-1",
+      tokenId: "token-atual",
+      estado: "ativa",
+      hpAtual: 10,
+      hpMaximoAtual: 20,
+    };
+    const resultado = normalizarInstanciaInvocacao(atual, modelo);
+
+    expect(resultado.ok).toBe(false);
+    expect(resultado.avisos.map((item) => item.codigo)).toContain("modelo_instancia_invalido");
+
+    const donoDivergente = normalizarInstanciaInvocacao({
+      ...atual,
+      modeloId: modelo.id,
+      donoCharacterId: "outro-personagem",
+    }, modelo);
+    expect(donoDivergente.ok).toBe(false);
+    expect(donoDivergente.avisos.map((item) => item.codigo)).toContain("dono_instancia_invalido");
+  });
+
+  it("mantém tempo legado só no snapshot para revisão, sem configurar duração", () => {
+    const resultado = normalizarModeloInvocacao(modeloLegado({ tempoExtraSegundos: 30 }));
+
+    expect(resultado.ok).toBe(true);
+    expect(resultado.dados?.tempoAdicional).toBeUndefined();
+    expect(resultado.dados?.snapshotLegado?.tempoExtraSegundos).toBe(30);
+    expect(resultado.avisos.map((item) => item.codigo)).toContain("tempo_legado_requer_revisao");
   });
 
   it("valida o limiar de PV da instância materializada", () => {
