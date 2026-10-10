@@ -46,7 +46,7 @@ export function CriadorShikigami({character}:{character:Character}){
     // o editor informa a regra, preservando as exceções livres autorizadas.
     const rascunho={
       id:crypto.randomUUID(),donoCharacterId:character.id,nome:nome.trim(),tipo:'shikigami' as const,
-      origem:{tipo:'manual'},grau,atributos:{...atributos},aprovacaoMestre:'pendente' as const,versaoModelo:1,
+      origem:{tipo:'manual' as const},grau,atributos:{...atributos},aprovacaoMestre:'pendente' as const,versaoModelo:1,
       hpAtual:valores.pv,hpMaximo:valores.pv,defesa:valores.defesa,
       deslocamentoM:valores.deslocamentoM,porte:'Médio' as const,
       custoInvocacaoPE:valores.custoPE,acoes:[],
