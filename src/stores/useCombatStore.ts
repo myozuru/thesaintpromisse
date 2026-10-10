@@ -24,6 +24,8 @@ import { persist } from 'zustand/middleware';
 import { useCharacterStore } from './useCharacterStore';
 import { ladoIniciativaPorFicha } from '@/lib/mapa/ladoIniciativa';
 import { useReactionStore } from './useReactionStore';
+import type { InstanciaInvocacao } from '@/lib/invocacoes/schema';
+import { consumoPorTempoDecorrido, reservaTempoAtivaNoCombate } from '@/lib/controlador/tempo';
 
 /**
  * Para cada condição ativa em `charId` cujo `durationMode` exija TR no turno do
@@ -240,6 +242,12 @@ interface CombatStore {
   turnDurationSec: number;
   /** Quanto tempo (s) restava no momento em que `turnStartedAt` foi setado. */
   turnRemainingAtStart: number;
+  /** Parte não consumida do tempo-base; o excedente é atribuído às reservas FIFO. */
+  turnBaseRemainingAtStart: number;
+  /** Personagem dono do relógio corrente, distinto do dono das reservas futuras. */
+  turnClockOwnerCharId: string | null;
+  /** Grants já somados ao relógio corrente; evita soma duplicada por replay. */
+  turnTimeGrantEventIds: string[];
   /** Timestamp (ms) de quando a contagem corrente começou. */
   turnStartedAt: number;
   /** Se o cronômetro está pausado. */
@@ -279,6 +287,142 @@ interface CombatStore {
   resetTurnTimer: () => void;
   /** Retorna o tempo restante computado agora. */
   getTurnRemaining: () => number;
+  /** Assenta o tempo decorrido no tempo-base e nas reservas individuais FIFO. */
+  settleTurnTimer: () => void;
+  /** Registra um grant idempotente após a contribuição ser salva na instância. */
+  registerInvocationTimeGrant: (ownerCharId: string, grantEventId: string, seconds: number) => number;
+  /** Retira a reserva de uma invocação voluntariamente dissipada, respeitando o piso. */
+  removeInvocationTimeReservation: (ownerCharId: string, instanceId: string, floorSeconds?: number) => { removedSeconds: number; discardedSeconds: number; clockBefore: number; clockAfter: number; appliedToCurrentClock: boolean };
+}
+
+function activeTurnOwner(state: Pick<CombatStore, 'initiativeOrder' | 'currentTurnIndex'>): string | null {
+  return state.initiativeOrder[state.currentTurnIndex]?.charId ?? null;
+}
+
+export function migrarEstadoCombatPersistido(persistedState: unknown, version: number): unknown {
+  if (!persistedState || typeof persistedState !== 'object') return persistedState;
+  const estado = persistedState as Record<string, unknown>;
+  if (version >= 1) return estado;
+  const ordem = Array.isArray(estado.initiativeOrder) ? estado.initiativeOrder as Array<{ charId?: unknown }> : [];
+  const indice = typeof estado.currentTurnIndex === 'number' ? estado.currentTurnIndex : 0;
+  const turnoRestante = typeof estado.turnRemainingAtStart === 'number' && Number.isFinite(estado.turnRemainingAtStart)
+    ? estado.turnRemainingAtStart
+    : typeof estado.turnDurationSec === 'number' && Number.isFinite(estado.turnDurationSec)
+      ? estado.turnDurationSec
+      : 60;
+  return {
+    ...estado,
+    // Antes da reserva individual, todo o relógio restante era tempo-base.
+    turnBaseRemainingAtStart: turnoRestante,
+    turnClockOwnerCharId: typeof estado.turnClockOwnerCharId === 'string'
+      ? estado.turnClockOwnerCharId
+      : typeof ordem[indice]?.charId === 'string' ? ordem[indice]?.charId : null,
+    turnTimeGrantEventIds: Array.isArray(estado.turnTimeGrantEventIds) ? estado.turnTimeGrantEventIds : [],
+  };
+}
+
+function reservasTempoDoDono(ownerCharId: string, combatId: string | null | undefined) {
+  const character = useCharacterStore.getState().characters.find(item => item.id === ownerCharId);
+  if (!character) return [] as Array<{ instancia: InstanciaInvocacao; createdAt: string; segundos: number }>;
+  return (character.instanciasInvocacao ?? [])
+    .filter(instancia => reservaTempoAtivaNoCombate(instancia.contribuicaoTempo, combatId))
+    .map(instancia => ({
+      instancia,
+      createdAt: instancia.contribuicaoTempo!.createdAt ?? '',
+      segundos: instancia.contribuicaoTempo!.quantidadeRestante,
+    }))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.instancia.id.localeCompare(b.instancia.id));
+}
+
+function totalReservasTempoDoDono(ownerCharId: string | null | undefined, combatId: string | null | undefined): number {
+  if (!ownerCharId) return 0;
+  return reservasTempoDoDono(ownerCharId, combatId).reduce((total, item) => total + item.segundos, 0);
+}
+
+function consumirReservasTempoDoDono(ownerCharId: string, combatId: string | null | undefined, segundos: number, agora: number): void {
+  let faltam = Math.max(0, segundos);
+  if (faltam <= 0) return;
+  const character = useCharacterStore.getState().characters.find(item => item.id === ownerCharId);
+  if (!character?.instanciasInvocacao?.length) return;
+  const instante = new Date(agora).toISOString();
+  let alterou = false;
+  const reservas = reservasTempoDoDono(ownerCharId, combatId);
+  const novasPorId = new Map<string, InstanciaInvocacao>();
+  for (const { instancia } of reservas) {
+    if (faltam <= 1e-9) break;
+    const contribuicao = instancia.contribuicaoTempo!;
+    const consumido = Math.min(faltam, contribuicao.quantidadeRestante);
+    const quantidadeRestante = Math.max(0, contribuicao.quantidadeRestante - consumido);
+    faltam = Math.max(0, faltam - consumido);
+    alterou = true;
+    novasPorId.set(instancia.id, {
+      ...instancia,
+      version: instancia.version + 1,
+      contribuicaoTempo: {
+        ...contribuicao,
+        quantidadeRestante,
+        estado: quantidadeRestante <= 1e-9 ? 'consumida' : contribuicao.estado,
+        lastAccountingAt: instante,
+        ...(quantidadeRestante <= 1e-9 ? { removedAt: instante, removalReason: 'tempo_consumido' } : {}),
+      },
+    });
+  }
+  if (!alterou) return;
+  useCharacterStore.getState().updateCharacter(ownerCharId, {
+    instanciasInvocacao: character.instanciasInvocacao.map(instancia => novasPorId.get(instancia.id) ?? instancia),
+  });
+}
+
+function associarReservasPendentesAoCombate(combatId: string): void {
+  const characterStore = useCharacterStore.getState();
+  for (const character of characterStore.characters) {
+    const instancias = character.instanciasInvocacao;
+    if (!instancias?.length) continue;
+    let alterou = false;
+    const novas = instancias.map(instancia => {
+      const contribuicao = instancia.contribuicaoTempo;
+      if (!contribuicao || contribuicao.combatId || contribuicao.estado !== 'ativa') return instancia;
+      alterou = true;
+      return {
+        ...instancia,
+        version: instancia.version + 1,
+        combateId: instancia.combateId ?? combatId,
+        contribuicaoTempo: { ...contribuicao, combatId },
+      };
+    });
+    if (alterou) characterStore.updateCharacter(character.id, { instanciasInvocacao: novas });
+  }
+}
+
+function encerrarReservasDoCombate(combatId: string | null | undefined, agora: number): void {
+  if (!combatId) return;
+  const characterStore = useCharacterStore.getState();
+  const instante = new Date(agora).toISOString();
+  for (const character of characterStore.characters) {
+    const instancias = character.instanciasInvocacao;
+    if (!instancias?.length) continue;
+    let alterou = false;
+    const novas = instancias.map(instancia => {
+      const contribuicao = instancia.contribuicaoTempo;
+      if (!contribuicao || contribuicao.combatId !== combatId ||
+        (contribuicao.estado !== 'ativa' && contribuicao.estado !== 'consolacao') ||
+        contribuicao.quantidadeRestante <= 0) return instancia;
+      alterou = true;
+      return {
+        ...instancia,
+        version: instancia.version + 1,
+        contribuicaoTempo: {
+          ...contribuicao,
+          quantidadeRestante: 0,
+          estado: 'consumida' as const,
+          lastAccountingAt: instante,
+          removedAt: instante,
+          removalReason: 'fim_combate',
+        },
+      };
+    });
+    if (alterou) characterStore.updateCharacter(character.id, { instanciasInvocacao: novas });
+  }
 }
 
 export const useCombatStore = create<CombatStore>()(
@@ -294,42 +438,60 @@ export const useCombatStore = create<CombatStore>()(
       turnTimerEnabled: false,
       turnDurationSec: 60,
       turnRemainingAtStart: 60,
+      turnBaseRemainingAtStart: 60,
+      turnClockOwnerCharId: null,
+      turnTimeGrantEventIds: [],
       turnStartedAt: 0,
       turnPaused: true,
       reactionPauseIds: [],
       freeformMode: false,
       setFreeformMode: (v) => set({ freeformMode: !!v }),
-      setTurnTimerEnabled: (v) =>
-        set((s) => ({
-          turnTimerEnabled: v,
-          turnRemainingAtStart: s.turnDurationSec,
+      setTurnTimerEnabled: (v) => {
+        if (!v) {
+          get().settleTurnTimer();
+          set({ turnTimerEnabled: false, turnPaused: true, turnStartedAt: Date.now() });
+          return;
+        }
+        const s = get();
+        const ownerCharId = activeTurnOwner(s);
+        const base = s.turnDurationSec;
+        set({
+          turnTimerEnabled: true,
+          turnClockOwnerCharId: ownerCharId,
+          turnBaseRemainingAtStart: base,
+          turnRemainingAtStart: base + totalReservasTempoDoDono(ownerCharId, s.combatId),
           turnStartedAt: Date.now(),
           // Ao ligar durante combate, começa a contar; caso contrário fica em standby.
-          turnPaused: v ? !s.inCombat : true,
-        })),
+          turnPaused: !s.inCombat,
+        });
+      },
       setTurnDuration: (sec) => {
         const dur = Math.max(5, Math.min(3600, Math.round(sec)));
+        get().settleTurnTimer();
+        const s = get();
+        const ownerCharId = s.turnClockOwnerCharId ?? activeTurnOwner(s);
         set(() => ({
           turnDurationSec: dur,
-          turnRemainingAtStart: dur,
+          turnClockOwnerCharId: ownerCharId,
+          turnBaseRemainingAtStart: dur,
+          turnRemainingAtStart: dur + totalReservasTempoDoDono(ownerCharId, s.combatId),
           turnStartedAt: Date.now(),
         }));
       },
       pauseTurnTimer: () => {
-        const remaining = get().getTurnRemaining();
-        set({ turnPaused: true, turnRemainingAtStart: remaining, turnStartedAt: Date.now() });
+        get().settleTurnTimer();
+        set({ turnPaused: true, turnStartedAt: Date.now() });
       },
       resumeTurnTimer: () =>
         set({ turnPaused: false, turnStartedAt: Date.now() }),
-      pauseTurnTimerForReaction: (id) => set((s) => {
-        if (s.reactionPauseIds.includes(id)) return s;
-        const remaining = s.reactionPauseIds.length ? s.turnRemainingAtStart : get().getTurnRemaining();
-        return {
+      pauseTurnTimerForReaction: (id) => {
+        if (get().reactionPauseIds.includes(id)) return;
+        if (!get().reactionPauseIds.length) get().settleTurnTimer();
+        set((s) => s.reactionPauseIds.includes(id) ? s : {
           reactionPauseIds: [...s.reactionPauseIds, id],
-          turnRemainingAtStart: s.turnTimerEnabled ? remaining : s.turnRemainingAtStart,
           turnStartedAt: Date.now(),
-        };
-      }),
+        });
+      },
       resumeTurnTimerForReaction: (id) => set((s) => {
         if (!s.reactionPauseIds.includes(id)) return s;
         const reactionPauseIds = s.reactionPauseIds.filter((x) => x !== id);
@@ -340,24 +502,125 @@ export const useCombatStore = create<CombatStore>()(
         };
       }),
       adjustTurnTime: (deltaSec) => {
-        const remaining = get().getTurnRemaining();
-        const next = Math.max(0, Math.min(3600, remaining + deltaSec));
-        set({ turnRemainingAtStart: next, turnStartedAt: Date.now() });
+        if (!Number.isFinite(deltaSec) || deltaSec === 0) return;
+        get().settleTurnTimer();
+        const s = get();
+        const ownerCharId = s.turnClockOwnerCharId ?? activeTurnOwner(s);
+        let base = s.turnBaseRemainingAtStart;
+        let total = s.turnRemainingAtStart;
+        if (deltaSec > 0) {
+          base += deltaSec;
+          total += deltaSec;
+        } else {
+          const requested = Math.min(total, -deltaSec);
+          const fromBase = Math.min(base, requested);
+          const fromReservations = requested - fromBase;
+          base = Math.max(0, base - fromBase);
+          total = Math.max(0, total - requested);
+          if (fromReservations > 0 && ownerCharId) {
+            consumirReservasTempoDoDono(ownerCharId, s.combatId, fromReservations, Date.now());
+          }
+        }
+        set({ turnBaseRemainingAtStart: base, turnRemainingAtStart: total, turnStartedAt: Date.now() });
       },
-      resetTurnTimer: () =>
-        set((s) => ({
-          turnRemainingAtStart: s.turnDurationSec,
+      resetTurnTimer: () => {
+        get().settleTurnTimer();
+        const s = get();
+        const ownerCharId = activeTurnOwner(s);
+        const base = s.turnDurationSec;
+        set({
+          turnClockOwnerCharId: ownerCharId,
+          turnBaseRemainingAtStart: base,
+          turnRemainingAtStart: base + totalReservasTempoDoDono(ownerCharId, s.combatId),
           turnStartedAt: Date.now(),
           // Em combate, ao reiniciar o cronômetro ele já volta a contar
           // automaticamente (despausa). Fora de combate fica pausado.
           turnPaused: !s.inCombat,
-        })),
+        });
+      },
       getTurnRemaining: () => {
         const s = get();
         if (!s.turnTimerEnabled) return 0;
         if (s.turnPaused || s.reactionPauseIds.length > 0) return Math.max(0, s.turnRemainingAtStart);
         const elapsed = (Date.now() - s.turnStartedAt) / 1000;
         return Math.max(0, s.turnRemainingAtStart - elapsed);
+      },
+      settleTurnTimer: () => {
+        const s = get();
+        const agora = Date.now();
+        const ativo = s.turnTimerEnabled && !s.turnPaused && s.reactionPauseIds.length === 0;
+        const decorrido = ativo ? Math.max(0, (agora - s.turnStartedAt) / 1000) : 0;
+        const alocacao = consumoPorTempoDecorrido({
+          baseRestante: s.turnBaseRemainingAtStart,
+          segundosDecorridos: decorrido,
+        });
+        const ownerCharId = s.turnClockOwnerCharId ?? activeTurnOwner(s);
+        if (alocacao.consumirReservas > 0 && ownerCharId) {
+          consumirReservasTempoDoDono(ownerCharId, s.combatId, alocacao.consumirReservas, agora);
+        }
+        set({
+          turnClockOwnerCharId: ownerCharId,
+          turnBaseRemainingAtStart: alocacao.baseRestante,
+          turnRemainingAtStart: Math.max(0, s.turnRemainingAtStart - decorrido),
+          turnStartedAt: agora,
+        });
+      },
+      registerInvocationTimeGrant: (ownerCharId, grantEventId, seconds) => {
+        if (!Number.isFinite(seconds) || seconds <= 0 || !grantEventId.trim()) return 0;
+        const s = get();
+        if (s.turnTimeGrantEventIds.includes(grantEventId)) return 0;
+        const ownerIsCurrent = s.inCombat && activeTurnOwner(s) === ownerCharId;
+        const addToCurrentClock = ownerIsCurrent && s.turnTimerEnabled &&
+          (!s.turnClockOwnerCharId || s.turnClockOwnerCharId === ownerCharId);
+        set({
+          turnTimeGrantEventIds: [...s.turnTimeGrantEventIds, grantEventId],
+          ...(addToCurrentClock ? {
+            turnClockOwnerCharId: ownerCharId,
+            turnRemainingAtStart: s.turnRemainingAtStart + seconds,
+            turnStartedAt: Date.now(),
+          } : {}),
+        });
+        return addToCurrentClock ? seconds : 0;
+      },
+      removeInvocationTimeReservation: (ownerCharId, instanceId, floorSeconds = 10) => {
+        get().settleTurnTimer();
+        const s = get();
+        const character = useCharacterStore.getState().characters.find(item => item.id === ownerCharId);
+        const index = character?.instanciasInvocacao?.findIndex(item => item.id === instanceId) ?? -1;
+        const instance = index >= 0 ? character?.instanciasInvocacao?.[index] : undefined;
+        const contribution = instance?.contribuicaoTempo;
+        const clockBefore = s.turnTimerEnabled ? s.getTurnRemaining() : 0;
+        if (!character || !instance || !contribution || contribution.estado !== 'ativa') {
+          return { removedSeconds: 0, discardedSeconds: 0, clockBefore, clockAfter: clockBefore, appliedToCurrentClock: false };
+        }
+        const balance = contribution.quantidadeRestante;
+        const ownerClockIsCurrent = s.inCombat && s.turnTimerEnabled && activeTurnOwner(s) === ownerCharId &&
+          (contribution.combatId ?? undefined) === (s.combatId ?? undefined);
+        const removable = ownerClockIsCurrent
+          ? Math.min(balance, Math.max(0, clockBefore - Math.max(0, floorSeconds)))
+          : balance;
+        const discardedSeconds = Math.max(0, balance - removable);
+        const now = Date.now();
+        const instante = new Date(now).toISOString();
+        const instancias = [...(character.instanciasInvocacao ?? [])];
+        instancias[index] = {
+          ...instance,
+          version: instance.version + 1,
+          contribuicaoTempo: {
+            ...contribution,
+            quantidadeRestante: 0,
+            estado: 'retirada',
+            lastAccountingAt: instante,
+            removedAt: instante,
+            removalReason: 'dissipacao_voluntaria',
+          },
+        };
+        useCharacterStore.getState().updateCharacter(ownerCharId, { instanciasInvocacao: instancias });
+        const clockAfter = ownerClockIsCurrent ? Math.max(0, clockBefore - removable) : clockBefore;
+        if (ownerClockIsCurrent && removable > 0) {
+          set({ turnRemainingAtStart: clockAfter, turnStartedAt: now });
+        }
+        return { removedSeconds: removable, discardedSeconds, clockBefore, clockAfter, appliedToCurrentClock: ownerClockIsCurrent };
       },
       setMovementUsed: (charId, m) =>
         set((s) => ({ movementUsedByChar: { ...s.movementUsedByChar, [charId]: m } })),
@@ -412,15 +675,21 @@ export const useCombatStore = create<CombatStore>()(
           }).catch(() => {});
         }
         const sorted = [...entries].sort((a, b) => b.total - a.total);
+        const combatId = `cb-${Date.now().toString(36)}`;
+        associarReservasPendentesAoCombate(combatId);
+        const firstOwnerCharId = sorted[0]?.charId ?? null;
         set((s) => ({
           inCombat: true,
-          combatId: `cb-${Date.now().toString(36)}`,
+          combatId,
           round: 1,
           currentTurnIndex: 0,
           initiativeOrder: sorted,
           movementUsedByChar: {},
           movementActionUsedByChar: {},
-          turnRemainingAtStart: s.turnDurationSec,
+          turnClockOwnerCharId: firstOwnerCharId,
+          turnBaseRemainingAtStart: s.turnDurationSec,
+          turnRemainingAtStart: s.turnDurationSec + totalReservasTempoDoDono(firstOwnerCharId, combatId),
+          turnTimeGrantEventIds: [],
           turnStartedAt: Date.now(),
           turnPaused: !s.turnTimerEnabled,
         }));
@@ -499,6 +768,7 @@ export const useCombatStore = create<CombatStore>()(
         }
       },
       nextTurn: () => {
+        get().settleTurnTimer();
         // Omni-Engine: recalcula auras a cada virada de turno.
         import('@/lib/omni/auras').then(({ recalcularAuras }) => recalcularAuras());
         // Reset de grants de Ataque de Oportunidade (1 por rodada/turno).
@@ -582,7 +852,9 @@ export const useCombatStore = create<CombatStore>()(
             round: newRound,
             movementUsedByChar: {},
             movementActionUsedByChar: {},
-            turnRemainingAtStart: s.turnDurationSec,
+            turnClockOwnerCharId: us.ordem[0]?.charId ?? null,
+            turnBaseRemainingAtStart: s.turnDurationSec,
+            turnRemainingAtStart: s.turnDurationSec + totalReservasTempoDoDono(us.ordem[0]?.charId, s.combatId),
             turnStartedAt: Date.now(),
             turnPaused: !s.turnTimerEnabled,
           }));
@@ -657,7 +929,9 @@ export const useCombatStore = create<CombatStore>()(
             currentTurnIndex: nextIndex,
             movementUsedByChar: {},
             movementActionUsedByChar,
-            turnRemainingAtStart: s.turnDurationSec,
+            turnClockOwnerCharId: nextCharId ?? null,
+            turnBaseRemainingAtStart: s.turnDurationSec,
+            turnRemainingAtStart: s.turnDurationSec + totalReservasTempoDoDono(nextCharId, s.combatId),
             turnStartedAt: Date.now(),
             turnPaused: !s.turnTimerEnabled,
           };
@@ -706,9 +980,11 @@ export const useCombatStore = create<CombatStore>()(
         return { endOfRound: false };
       },
       endCombat: () => {
+        get().settleTurnTimer();
         const charStore = useCharacterStore.getState();
-        const { initiativeOrder, round } = get();
+        const { initiativeOrder, round, combatId } = get();
         const participants = initiativeOrder.map((e) => e.charId);
+        encerrarReservasDoCombate(combatId, Date.now());
         // Limpa todos os AdO ao fim do combate.
         import('@/stores/useOpportunityStore').then(({ useOpportunityStore }) =>
           useOpportunityStore.getState().clearAllGrants(),
@@ -751,12 +1027,16 @@ export const useCombatStore = create<CombatStore>()(
         // Limpa estado de combate
         set((s) => ({
           inCombat: false,
+          combatId: null,
           round: 1,
           currentTurnIndex: 0,
           initiativeOrder: [],
           movementUsedByChar: {},
           movementActionUsedByChar: {},
           turnPaused: true,
+          turnClockOwnerCharId: null,
+          turnBaseRemainingAtStart: s.turnDurationSec,
+          turnTimeGrantEventIds: [],
           turnRemainingAtStart: s.turnDurationSec,
           turnStartedAt: Date.now(),
         }));
@@ -764,9 +1044,12 @@ export const useCombatStore = create<CombatStore>()(
     }),
     {
       name: 'rpg-combat',
+      version: 1,
+      migrate: (persistedState, version) => migrarEstadoCombatPersistido(persistedState, version) as never,
       partialize: (s) => ({
         participantIds: s.participantIds,
         inCombat: s.inCombat,
+        combatId: s.combatId,
         round: s.round,
         currentTurnIndex: s.currentTurnIndex,
         initiativeOrder: s.initiativeOrder,
@@ -774,6 +1057,9 @@ export const useCombatStore = create<CombatStore>()(
         turnTimerEnabled: s.turnTimerEnabled,
         turnDurationSec: s.turnDurationSec,
         turnRemainingAtStart: s.turnRemainingAtStart,
+        turnBaseRemainingAtStart: s.turnBaseRemainingAtStart,
+        turnClockOwnerCharId: s.turnClockOwnerCharId,
+        turnTimeGrantEventIds: s.turnTimeGrantEventIds,
         turnStartedAt: s.turnStartedAt,
         turnPaused: s.turnPaused,
         freeformMode: s.freeformMode,

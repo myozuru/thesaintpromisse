@@ -20,6 +20,14 @@ function modelo(id: string, rodada = numeroFixture): InvocacaoControlador {
     intermediario: { tipo: 'talisma', itemInventarioId: `item-${rodada}-${id}` },
   };
 }
+function configurarTempo(id: string, quantidade: number, unidade = 'turnos') {
+  const personagem = pegarFicha('dono');
+  useCharacterStore.getState().updateCharacter('dono', {
+    invocacoesConhecidas: (personagem.invocacoesConhecidas ?? []).map(item => item.id === id
+      ? { ...item, tempoAdicional: { quantidade, unidade } }
+      : item),
+  });
+}
 beforeEach(() => {
   numeroFixture += 1;
   useInventoryStore.getState().resetAll();
@@ -38,6 +46,64 @@ beforeEach(() => {
   comoTela({ profileId: 'perfil-dono', role: 'PLAYER' });
 });
 describe('Controlador — materialização real no mapa', () => {
+  it('concede o tempo configurado uma vez quando a instância é invocada no turno do dono', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-10T10:00:00.000Z'));
+    configurarTempo('a', 2);
+    useCombatStore.setState({
+      inCombat: true, combatId: 'combate-tempo', round: 1, currentTurnIndex: 0,
+      initiativeOrder: [{ charId: 'dono', charName: 'Dono', roll: 10, bonus: 0, total: 10 }],
+      turnTimerEnabled: true, turnDurationSec: 60, turnBaseRemainingAtStart: 60,
+      turnRemainingAtStart: 60, turnClockOwnerCharId: 'dono', turnTimeGrantEventIds: [],
+      turnStartedAt: Date.now(), turnPaused: false, reactionPauseIds: [],
+    } as never);
+    try {
+      const r = invocarControlador('dono', 'a', 'leste', { eventoId: 'evento-tempo-unico' });
+      if (!r.ok) throw new Error(r.motivo);
+      expect(useCombatStore.getState().turnRemainingAtStart).toBe(72);
+      expect(pegarFicha('dono').instanciasInvocacao?.[0].contribuicaoTempo).toMatchObject({
+        grantEventId: 'evento-tempo-unico', quantidadeConcedida: 12, quantidadeRestante: 12, estado: 'ativa',
+      });
+      expect(invocarControlador('dono', 'a', 'leste', { eventoId: 'evento-tempo-unico' })).toEqual(r);
+      expect(useCombatStore.getState().turnRemainingAtStart).toBe(72);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('dissipação voluntária retira a reserva sem baixar o relógio abaixo de 10 segundos', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-10T10:00:00.000Z'));
+    configurarTempo('a', 2);
+    useCombatStore.setState({
+      inCombat: true, combatId: 'combate-tempo', round: 1, currentTurnIndex: 0,
+      initiativeOrder: [{ charId: 'dono', charName: 'Dono', roll: 10, bonus: 0, total: 10 }],
+      turnTimerEnabled: true, turnDurationSec: 8, turnBaseRemainingAtStart: 8,
+      turnRemainingAtStart: 8, turnClockOwnerCharId: 'dono', turnTimeGrantEventIds: [],
+      turnStartedAt: Date.now(), turnPaused: false, reactionPauseIds: [],
+    } as never);
+    try {
+      expect(invocarControlador('dono', 'a', 'leste').ok).toBe(true);
+      expect(useCombatStore.getState().turnRemainingAtStart).toBe(20);
+      expect(recolherInvocacao('dono', 'a')).toBe(true);
+      expect(useCombatStore.getState().turnRemainingAtStart).toBe(10);
+      expect(pegarFicha('dono').instanciasInvocacao?.[0].contribuicaoTempo).toMatchObject({ estado: 'retirada', quantidadeRestante: 0 });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('converte em consolação o saldo de tempo restante quando a instância é derrotada', () => {
+    configurarTempo('a', 2);
+    useCombatStore.setState({ inCombat: false, combatId: null, turnTimerEnabled: false, turnPaused: true, reactionPauseIds: [], turnTimeGrantEventIds: [] } as never);
+    const r = invocarControlador('dono', 'a', 'leste');
+    if (!r.ok) throw new Error(r.motivo);
+    expect(causarDanoInvocacao(r.tokenId, 24)).toMatchObject({ ok: true, hpRestante: -12, destruida: true });
+    expect(pegarFicha('dono').instanciasInvocacao?.[0].contribuicaoTempo).toMatchObject({
+      estado: 'consolacao', quantidadeConcedida: 12, quantidadeRestante: 12, removalReason: 'derrota_definitiva',
+    });
+  });
+
   it('cria token próprio na célula adjacente, preserva posse e desconta PE uma só vez', () => {
     const r = invocarControlador('dono', 'a', 'leste');
     expect(r.ok).toBe(true);

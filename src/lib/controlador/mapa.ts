@@ -17,6 +17,11 @@ import {
   novaInstanciaInvocacao,
   estadoPorPVInvocacao,
 } from './estadoInvocacao';
+import {
+  criarContribuicaoTempoInvocacao,
+  formatarSegundosTempoInvocacao,
+  tempoAdicionalEmSegundos,
+} from './tempo';
 
 export type DirecaoInvocacao = 'norte' | 'sul' | 'leste' | 'oeste';
 export type ResultadoInvocacao = { ok: true; tokenId: string } | { ok: false; motivo: string };
@@ -112,6 +117,23 @@ function obterModeloDoToken(
   return personagem.invocacoesConhecidas?.find(modelo => modelo.id === token.invocationId);
 }
 
+function preservarContribuicaoNaDerrota(instancia: InstanciaInvocacao): InstanciaInvocacao {
+  const contribuicao = instancia.contribuicaoTempo;
+  if (!contribuicao || contribuicao.estado !== 'ativa' || contribuicao.quantidadeRestante <= 0) return instancia;
+  const instante = new Date().toISOString();
+  return InstanciaInvocacaoSchema.parse({
+    ...instancia,
+    version: instancia.version + 1,
+    contribuicaoTempo: {
+      ...contribuicao,
+      estado: 'consolacao',
+      lastAccountingAt: instante,
+      removedAt: instante,
+      removalReason: 'derrota_definitiva',
+    },
+  });
+}
+
 /** Mantém tokens distintos das fichas: servos não ganham iniciativa própria. */
 export function tokensInvocados(donoCharacterId: string) {
   return Object.values(useMapStore.getState().entities).filter(e => e.ownerCharId === donoCharacterId && !!e.invocationId);
@@ -163,6 +185,8 @@ export function invocarControlador(
   if (!validacaoIntermediario.ok && !motivoOverride) return { ok: false, motivo: validacaoIntermediario.motivo };
   if (overrideIntermediario && useRoleStore.getState().role !== 'MASTER') return { ok: false, motivo: 'Somente o Mestre pode ignorar a validação do intermediário.' };
   if (modelo.hpAtual <= 0) return { ok: false, motivo: 'A invocação precisa ter PV para ser materializada.' };
+  const tempoAdicional = tempoAdicionalEmSegundos(modelo.tempoAdicional);
+  if (!tempoAdicional.ok) return { ok: false, motivo: tempoAdicional.motivo };
 
   const ativos = tokensInvocados(donoId);
   if (ativos.some(e => e.invocationId === invocacaoId)) return { ok: false, motivo: 'Essa invocação já está no mapa.' };
@@ -190,9 +214,24 @@ export function invocarControlador(
   const paredesAtivas = WallsEngine.blockingSegments(mapa.walls, 'sight');
   if (WallsEngine.minDistanceToSegments({ x, y }, paredesAtivas) < passo * Math.SQRT1_2) return { ok: false, motivo: 'A célula escolhida está bloqueada por uma parede ou obstáculo.' };
 
+  useCombatStore.getState().settleTurnTimer();
+  const donoAtual = useCharacterStore.getState().characters.find(c => c.id === donoId);
+  if (!donoAtual) return { ok: false, motivo: 'Personagem não encontrado.' };
   const instanciaId = novoIdInvocacao('instancia');
   const tokenId = novoIdInvocacao('token');
-  const peAntes = Number.isFinite(dono.peCurrent) ? dono.peCurrent : 0;
+  const peAntes = Number.isFinite(donoAtual.peCurrent) ? donoAtual.peCurrent : 0;
+  if (peAntes < modelo.custoInvocacaoPE) return { ok: false, motivo: 'PE insuficiente.' };
+  const combat = useCombatStore.getState();
+  const contribuicaoResult = criarContribuicaoTempoInvocacao({
+    grantEventId: eventoId,
+    ownerCharacterId: donoId,
+    ...(combat.inCombat && combat.combatId ? { combatId: combat.combatId } : {}),
+    instanceId: instanciaId,
+    invocationId: modelo.id,
+    tempoAdicional: modelo.tempoAdicional,
+  });
+  if (!contribuicaoResult.ok) return { ok: false, motivo: contribuicaoResult.motivo };
+  const contribuicaoTempo = contribuicaoResult.contribuicao;
   try {
     mapa.addEntity({
       id: tokenId,
@@ -219,22 +258,44 @@ export function invocarControlador(
       hpAtual: modelo.hpAtual,
       hpMaximoAtual: modelo.hpMaximo,
       economiaAcoes: economiaInicialInvocacao(modelo),
+      ...(combat.inCombat && combat.combatId ? { combateId: combat.combatId } : {}),
+      ...(combat.inCombat ? { turnoCriacao: combat.currentTurnIndex, rodadaCriacao: combat.round } : {}),
+      ...(contribuicaoTempo ? { contribuicaoTempo } : {}),
     });
     cs.updateCharacter(donoId, {
       peCurrent: peAntes - modelo.custoInvocacaoPE,
-      instanciasInvocacao: [...(dono.instanciasInvocacao ?? []), instancia],
+      instanciasInvocacao: [...(donoAtual.instanciasInvocacao ?? []), instancia],
     });
   } catch {
     try {
       if (useMapStore.getState().entities[tokenId]) useMapStore.getState().removeEntities([tokenId]);
     } catch { /* mantém a falha original; compensação best-effort */ }
     try {
-      const donoAtual = useCharacterStore.getState().characters.find(c => c.id === donoId);
-      if (donoAtual && donoAtual.peCurrent === peAntes - modelo.custoInvocacaoPE) {
-        useCharacterStore.getState().updateCharacter(donoId, { peCurrent: peAntes });
+      const donoDepoisFalha = useCharacterStore.getState().characters.find(c => c.id === donoId);
+      if (donoDepoisFalha && donoDepoisFalha.peCurrent === peAntes - modelo.custoInvocacaoPE) {
+        useCharacterStore.getState().updateCharacter(donoId, {
+          peCurrent: peAntes,
+          instanciasInvocacao: donoAtual.instanciasInvocacao,
+        });
       }
     } catch { /* mantém a falha original; compensação best-effort */ }
     return { ok: false, motivo: 'Não foi possível concluir a invocação; os efeitos locais foram desfeitos.' };
+  }
+  if (contribuicaoTempo) {
+    const segundosAplicados = useCombatStore.getState().registerInvocationTimeGrant(
+      donoId,
+      contribuicaoTempo.grantEventId,
+      contribuicaoTempo.quantidadeConcedida,
+    );
+    try {
+      useLogStore.getState().addLog(
+        'combat',
+        `⏱️ ${modelo.apelido?.trim() || modelo.nome}: +${formatarSegundosTempoInvocacao(contribuicaoTempo.quantidadeConcedida)} s de tempo adicional.`,
+        segundosAplicados > 0
+          ? `Reserva individual de ${modelo.nome} adicionada ao relógio do turno do dono.`
+          : `Reserva individual de ${modelo.nome} registrada para o próximo turno do dono.`,
+      );
+    } catch { /* o log não desfaz uma invocação já materializada */ }
   }
   if (overrideIntermediario) {
     useLogStore.getState().addLog(
@@ -309,6 +370,8 @@ export function invocarControladores(
     if (!validacao.ok && !motivo) return { ok: false, motivo: validacao.motivo };
     if (override && useRoleStore.getState().role !== 'MASTER') return { ok: false, motivo: 'Somente o Mestre pode ignorar a validação do intermediário.' };
     if (modelo.hpAtual <= 0) return { ok: false, motivo: 'A invocação ' + modelo.nome + ' precisa ter PV para ser materializada.' };
+    const tempoAdicional = tempoAdicionalEmSegundos(modelo.tempoAdicional);
+    if (!tempoAdicional.ok) return { ok: false, motivo: modelo.nome + ': ' + tempoAdicional.motivo };
     const alcance = modelo.alcanceInvocacaoM;
     if (!Number.isFinite(alcance) || (alcance ?? -1) < 0) return { ok: false, motivo: 'Defina o alcance de posicionamento na ficha ' + modelo.nome + ' antes de invocar.' };
     if (!Number.isFinite(modelo.custoInvocacaoPE) || modelo.custoInvocacaoPE < 0) return { ok: false, motivo: 'Custo de PE inválido para ' + modelo.nome + '.' };
@@ -320,9 +383,7 @@ export function invocarControladores(
   if (ids.some(id => ativos.some(token => token.invocationId === id))) return { ok: false, motivo: 'Uma das invocações selecionadas já está no mapa.' };
   const limite = limiteAtivasPersonagem(dono.specialization, dono.treinoControle ?? 0);
   if (ativos.length + posicoes.length > limite) return { ok: false, motivo: 'O lote ultrapassa o limite de invocações ativas.' };
-  const peAntes = Number.isFinite(dono.peCurrent) ? dono.peCurrent : 0;
   const custoTotal = modelosValidos.reduce((total, modelo) => total + modelo.custoInvocacaoPE, 0);
-  if (peAntes < custoTotal) return { ok: false, motivo: 'PE insuficiente para o lote selecionado.' };
 
   const origem = Object.values(mapa.entities).find(entity => entity.characterId === donoId && !entity.invocationId);
   if (!origem) return { ok: false, motivo: 'Coloque o token do Controlador no mapa primeiro.' };
@@ -352,6 +413,13 @@ export function invocarControladores(
     alvos.push({ modelo, x: posicao.x, y: posicao.y });
   }
 
+  useCombatStore.getState().settleTurnTimer();
+  const donoAtual = useCharacterStore.getState().characters.find(character => character.id === donoId);
+  if (!donoAtual) return { ok: false, motivo: 'Personagem não encontrado.' };
+  const peAntes = Number.isFinite(donoAtual.peCurrent) ? donoAtual.peCurrent : 0;
+  if (peAntes < custoTotal) return { ok: false, motivo: 'PE insuficiente para o lote selecionado.' };
+  const combat = useCombatStore.getState();
+
   const criados: string[] = [];
   const instanciasCriadas: InstanciaInvocacao[] = [];
   try {
@@ -360,6 +428,16 @@ export function invocarControladores(
       const instanciaId = novoIdInvocacao('instancia');
       criados.push(tokenId);
       const eventoDaInstancia = eventoId + ':' + modelo.id;
+      const contribuicaoResult = criarContribuicaoTempoInvocacao({
+        grantEventId: eventoDaInstancia,
+        ownerCharacterId: donoId,
+        ...(combat.inCombat && combat.combatId ? { combatId: combat.combatId } : {}),
+        instanceId: instanciaId,
+        invocationId: modelo.id,
+        tempoAdicional: modelo.tempoAdicional,
+      });
+      if (!contribuicaoResult.ok) throw new Error(contribuicaoResult.motivo);
+      const contribuicaoTempo = contribuicaoResult.contribuicao;
       mapa.addEntity({
         id: tokenId,
         shape: modelo.formaToken ?? 'ELLIPSE', x, y, w: passo, h: passo, rotation: 0,
@@ -385,19 +463,47 @@ export function invocarControladores(
         hpAtual: modelo.hpAtual,
         hpMaximoAtual: modelo.hpMaximo,
         economiaAcoes: economiaInicialInvocacao(modelo),
+        ...(combat.inCombat && combat.combatId ? { combateId: combat.combatId } : {}),
+        ...(combat.inCombat ? { turnoCriacao: combat.currentTurnIndex, rodadaCriacao: combat.round } : {}),
+        ...(contribuicaoTempo ? { contribuicaoTempo } : {}),
       }));
     }
     cs.updateCharacter(donoId, {
       peCurrent: peAntes - custoTotal,
-      instanciasInvocacao: [...(dono.instanciasInvocacao ?? []), ...instanciasCriadas],
+      instanciasInvocacao: [...(donoAtual.instanciasInvocacao ?? []), ...instanciasCriadas],
     });
   } catch {
     try { if (criados.length) useMapStore.getState().removeEntities(criados); } catch { /* rollback local best-effort */ }
     try {
-      const donoAtual = useCharacterStore.getState().characters.find(character => character.id === donoId);
-      if (donoAtual && donoAtual.peCurrent === peAntes - custoTotal) useCharacterStore.getState().updateCharacter(donoId, { peCurrent: peAntes });
+      const donoDepoisFalha = useCharacterStore.getState().characters.find(character => character.id === donoId);
+      if (donoDepoisFalha && donoDepoisFalha.peCurrent === peAntes - custoTotal) {
+        useCharacterStore.getState().updateCharacter(donoId, {
+          peCurrent: peAntes,
+          instanciasInvocacao: donoAtual.instanciasInvocacao,
+        });
+      }
     } catch { /* rollback local best-effort */ }
     return { ok: false, motivo: 'Não foi possível concluir o lote; os efeitos locais foram desfeitos.' };
+  }
+
+  for (const instancia of instanciasCriadas) {
+    const contribuicao = instancia.contribuicaoTempo;
+    if (!contribuicao) continue;
+    const segundosAplicados = useCombatStore.getState().registerInvocationTimeGrant(
+      donoId,
+      contribuicao.grantEventId,
+      contribuicao.quantidadeConcedida,
+    );
+    const modelo = modelosValidos.find(item => item.id === instancia.modeloId);
+    try {
+      useLogStore.getState().addLog(
+        'combat',
+        `⏱️ ${modelo?.apelido?.trim() || modelo?.nome || instancia.modeloId}: +${formatarSegundosTempoInvocacao(contribuicao.quantidadeConcedida)} s de tempo adicional.`,
+        segundosAplicados > 0
+          ? `Reserva individual registrada no relógio do turno do dono (${instancia.id}).`
+          : `Reserva individual registrada para o próximo turno do dono (${instancia.id}).`,
+      );
+    } catch { /* o log não desfaz um lote já materializado */ }
   }
 
   for (const { modelo, motivo, override } of validacoesOverride) {
@@ -424,18 +530,32 @@ export function recolherInvocacao(donoId: string, invocacaoId: string): boolean 
   if (!modelo) return false;
   const instancia = obterInstanciaDoToken(dono, token, modelo);
   if (instancia.estado === 'derrotada') return false;
+  const tempo = useCombatStore.getState().removeInvocationTimeReservation(donoId, instancia.id);
+  const donoAtual = useCharacterStore.getState().characters.find(c => c.id === donoId);
+  const instanciaAtual = donoAtual?.instanciasInvocacao?.find(item => item.id === instancia.id) ?? instancia;
   const dissipada = InstanciaInvocacaoSchema.parse({
-    ...instancia,
-    version: instancia.version + 1,
+    ...instanciaAtual,
+    version: instanciaAtual.version + 1,
     estado: 'dissipada',
   });
-  gravarInstancia(dono, dissipada);
+  gravarInstancia(donoAtual ?? dono, dissipada);
   mapa.removeEntities(tokens.map(t => t.id));
+  if (tempo.removedSeconds > 0 || tempo.discardedSeconds > 0) {
+    const detalheRelogio = tempo.appliedToCurrentClock
+      ? `Relógio do dono: ${formatarSegundosTempoInvocacao(tempo.clockBefore)} s → ${formatarSegundosTempoInvocacao(tempo.clockAfter)} s.`
+      : 'A reserva foi cancelada para o próximo turno do dono.';
+    useLogStore.getState().addLog(
+      'combat',
+      `⏱️ ${modelo.apelido?.trim() || modelo.nome} dissipado: ${formatarSegundosTempoInvocacao(tempo.removedSeconds)} s retirados${tempo.discardedSeconds > 0 ? `; ${formatarSegundosTempoInvocacao(tempo.discardedSeconds)} s permaneceram pelo piso de 10 s` : ''}.`,
+      detalheRelogio,
+    );
+  }
   return true;
 }
 
 /** Normaliza tokens legados em 0 PV e remove somente os que cruzaram o limiar de −PV máximo. */
 export function limparInvocacoesDerrotadas(donoId: string): number {
+  useCombatStore.getState().settleTurnTimer();
   let removidos = 0;
   for (const token of tokensInvocados(donoId)) {
     const personagem = useCharacterStore.getState().characters.find(c => c.id === donoId);
@@ -446,14 +566,18 @@ export function limparInvocacoesDerrotadas(donoId: string): number {
     const hpAtual = token.hp ?? instancia.hpAtual;
     const estado = estadoPorPVInvocacao(hpAtual, token.hpMax ?? modelo.hpMaximo);
     if (estado === 'derrotada') {
-      const derrotada = InstanciaInvocacaoSchema.parse({
+      const derrotadaBase = InstanciaInvocacaoSchema.parse({
         ...instancia,
         version: instancia.version + 1,
         hpAtual,
         estado,
       });
+      const derrotada = preservarContribuicaoNaDerrota(derrotadaBase);
       gravarInstancia(personagem, derrotada);
       useMapStore.getState().removeEntities([token.id]);
+      if (derrotada.contribuicaoTempo?.estado === 'consolacao' && derrotada.contribuicaoTempo.quantidadeRestante > 0) {
+        useLogStore.getState().addLog('combat', `⏱️ ${modelo.apelido?.trim() || modelo.nome} foi derrotado; ${formatarSegundosTempoInvocacao(derrotada.contribuicaoTempo.quantidadeRestante)} s restantes preservados.`, 'A contribuição temporal foi mantida no relógio do dono até o fim do combate.');
+      }
       removidos++;
       continue;
     }
@@ -483,6 +607,7 @@ export function causarDanoInvocacao(tokenId: string, dano: number): { ok: true; 
   const mapa = useMapStore.getState();
   const token = mapa.entities[tokenId];
   if (!token?.ownerCharId || !token.invocationId) return { ok: false, motivo: 'Token não pertence a uma invocação.' };
+  useCombatStore.getState().settleTurnTimer();
   const dono = useCharacterStore.getState().characters.find(c => c.id === token.ownerCharId);
   if (!dono) return { ok: false, motivo: 'Dono da invocação não encontrado.' };
   const modelo = obterModeloDoToken(dono, token);
@@ -490,17 +615,30 @@ export function causarDanoInvocacao(tokenId: string, dano: number): { ok: true; 
   const atual = obterInstanciaDoToken(dono, token, modelo);
   const resultado = aplicarDanoPVInvocacao(atual, dano);
   if (!resultado.ok) return resultado;
-  gravarInstancia(dono, resultado.instancia);
-  if (resultado.instancia.estado === 'derrotada') {
+  const instanciaAtualizada = resultado.instancia.estado === 'derrotada'
+    ? preservarContribuicaoNaDerrota(resultado.instancia)
+    : resultado.instancia;
+  gravarInstancia(dono, instanciaAtualizada);
+  if (instanciaAtualizada.estado === 'derrotada') {
     mapa.removeEntities([tokenId]);
-    return { ok: true, hpRestante: resultado.instancia.hpAtual, destruida: true };
+    const restante = instanciaAtualizada.contribuicaoTempo?.estado === 'consolacao'
+      ? instanciaAtualizada.contribuicaoTempo.quantidadeRestante
+      : 0;
+    if (restante > 0) {
+      useLogStore.getState().addLog(
+        'combat',
+        `⏱️ ${modelo.apelido?.trim() || modelo.nome} foi derrotado; ${formatarSegundosTempoInvocacao(restante)} s restantes preservados.`,
+        'A contribuição temporal foi mantida no relógio do dono até o fim do combate.',
+      );
+    }
+    return { ok: true, hpRestante: instanciaAtualizada.hpAtual, destruida: true };
   }
   mapa.updateEntity(tokenId, {
-    hp: resultado.instancia.hpAtual,
-    invocationState: resultado.instancia.estado,
-    invocationInstanceId: resultado.instancia.id,
+    hp: instanciaAtualizada.hpAtual,
+    invocationState: instanciaAtualizada.estado,
+    invocationInstanceId: instanciaAtualizada.id,
   });
-  return { ok: true, hpRestante: resultado.instancia.hpAtual, destruida: false };
+  return { ok: true, hpRestante: instanciaAtualizada.hpAtual, destruida: false };
 }
 
 /** Cura PV da instância sem levantar automaticamente uma criatura que já estava Caída. */

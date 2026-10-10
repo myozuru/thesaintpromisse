@@ -208,6 +208,7 @@ function pickCharacters(s: ReturnType<typeof useCharacterStore.getState>) {
 function pickCombat(s: ReturnType<typeof useCombatStore.getState>) {
   return {
     inCombat: s.inCombat,
+    combatId: s.combatId,
     round: s.round,
     currentTurnIndex: s.currentTurnIndex,
     initiativeOrder: s.initiativeOrder,
@@ -216,6 +217,9 @@ function pickCombat(s: ReturnType<typeof useCombatStore.getState>) {
     turnTimerEnabled: s.turnTimerEnabled,
     turnDurationSec: s.turnDurationSec,
     turnRemainingAtStart: s.turnRemainingAtStart,
+    turnBaseRemainingAtStart: s.turnBaseRemainingAtStart,
+    turnClockOwnerCharId: s.turnClockOwnerCharId,
+    turnTimeGrantEventIds: s.turnTimeGrantEventIds,
     turnStartedAt: s.turnStartedAt,
     turnPaused: s.turnPaused,
     // Só sincroniza os bloqueios do fluxo que originou a reação. O bloqueio

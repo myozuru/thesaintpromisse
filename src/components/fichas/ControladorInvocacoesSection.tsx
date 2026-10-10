@@ -10,6 +10,7 @@ import { invocarControladores, recolherInvocacao, limparInvocacoesDerrotadas, le
 import { limiteInvocacoesConhecidas, limiteAtivasPersonagem, validarCatalogoControlador, type InvocacaoControlador, type TipoInvocacaoControlador } from '@/lib/controlador/tipos';
 import { podeUsarVersaoAprovada } from '@/lib/controlador/aprovacao';
 import { carregarAssetFicha } from '@/lib/controlador/assetFicha';
+import { formatarSegundosTempoInvocacao, tempoAdicionalEmSegundos } from '@/lib/controlador/tempo';
 import { assetCache } from '@/components/mapa/assetCache';
 import { decidirAprovacaoInvocacao, decidirAprovacaoLegadaInvocacao, submeterAprovacaoInvocacao } from '@/lib/controlador/aprovacao.functions';
 
@@ -361,6 +362,21 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
           ? character.instanciasInvocacao?.find(item => item.id === token.invocationInstanceId || item.tokenId === token.id)
           : [...(character.instanciasInvocacao ?? [])].reverse().find(item => item.modeloId === inv.id);
         const estadoInstancia = token?.invocationState ?? instancia?.estado;
+        const contribuicaoTempo = instancia?.contribuicaoTempo;
+        const tempoConfigurado = tempoAdicionalEmSegundos(inv.tempoAdicional);
+        const rotuloTempo = contribuicaoTempo?.estado === 'consolacao'
+          ? `Reserva preservada após derrota: ${formatarSegundosTempoInvocacao(contribuicaoTempo.quantidadeRestante)} s`
+          : contribuicaoTempo?.estado === 'ativa'
+            ? `Reserva desta instância: ${formatarSegundosTempoInvocacao(contribuicaoTempo.quantidadeRestante)} s`
+            : contribuicaoTempo?.estado === 'retirada'
+              ? 'Reserva desta instância: retirada por dissipação'
+              : contribuicaoTempo?.estado === 'consumida'
+                ? 'Reserva desta instância: consumida ou encerrada'
+                : !inv.tempoAdicional
+                  ? 'Tempo extra: não configurado'
+                  : tempoConfigurado.ok
+                    ? `Tempo por invocação: +${formatarSegundosTempoInvocacao(tempoConfigurado.segundos)} s`
+                    : `Tempo extra inválido: ${tempoConfigurado.motivo}`;
         const derrotaPendente = estadoInstancia === 'derrotada';
         const movimentoDisponivel = (instancia?.economiaAcoes?.acaoMovimento?.atual ?? 0) > 0;
         const rotuloEstado = estadoInstancia === 'derrotada'
@@ -384,6 +400,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
             <div><strong>{inv.apelido?.trim() || inv.nome}</strong><div className="text-xs text-muted-foreground">{inv.tipo === 'shikigami' ? 'Shikigami' : 'Corpo Amaldiçoado'} · PV {inv.hpAtual}/{inv.hpMaximo} · Defesa {inv.defesa} · {inv.deslocamentoM} m · {inv.custoInvocacaoPE} PE · {inv.acoes.length} ações</div></div>
           </div>
           <div className={'basis-full text-xs ' + (derrotaPendente ? 'text-destructive' : estadoInstancia === 'caida' ? 'text-amber-300' : 'text-muted-foreground')}>Estado de combate: {rotuloEstado}{estadoInstancia === 'derrotada' && instancia ? ` (PV ${instancia.hpAtual})` : ''}</div>
+          <div className="basis-full text-xs text-muted-foreground">{rotuloTempo}</div>
           <div className="basis-full text-xs text-muted-foreground">Aquisição: {inv.aprovacaoMestre === 'pendente' ? 'Aguardando aprovação do Mestre' : inv.aprovacaoMestre === 'rejeitada' ? 'Rejeitada — edite e solicite novamente' : 'Aprovada'}</div>
           <div className={'basis-full text-xs ' + (estadoIntermediario.ok ? 'text-muted-foreground' : 'text-amber-300')}>Intermediário: {estadoIntermediario.ok ? 'disponível — ' + estadoIntermediario.resumo : 'pendente de validação — ' + estadoIntermediario.motivo}</div>
           <div className={'basis-full text-xs ' + (alcanceConfigurado ? 'text-muted-foreground' : 'text-amber-300')}>Alcance de posicionamento: {alcanceConfigurado ? (inv.alcanceInvocacaoM ?? 0) + ' m' : 'não definido — edite a ficha antes de invocar'}</div>

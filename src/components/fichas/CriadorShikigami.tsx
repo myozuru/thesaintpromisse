@@ -753,10 +753,10 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
     <details id="sec-M" className="rounded border border-border p-2">
       <summary className="cursor-pointer text-sm font-semibold">M · Tempo adicional por invocação</summary>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        <label className="text-xs">Quantidade<input type="number" min="0" step="any" value={tempoQuantidade} onChange={event => setTempoQuantidade(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
-        <label className="text-xs">Unidade<input value={tempoUnidade} onChange={event => setTempoUnidade(event.target.value)} placeholder="Defina a unidade" className="mt-1 w-full rounded border bg-background p-2" /></label>
+        <label className="text-xs">Quantidade<input aria-label="Tempo adicional" type="number" min="0" step="any" value={tempoQuantidade} onChange={event => setTempoQuantidade(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
+        <label className="text-xs">Unidade<select aria-label="Unidade do tempo adicional" value={tempoUnidade} onChange={event => setTempoUnidade(event.target.value)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Não configurado</option><option value="segundos">Segundos</option><option value="minutos">Minutos</option><option value="horas">Horas</option><option value="turnos">Turnos (6 s)</option><option value="rodadas">Rodadas (6 s)</option></select></label>
       </div>
-      <p className="mt-2 text-xs text-muted-foreground">A unidade e a quantidade não recebem valores padrão. A configuração só será consumida quando a invocação for executada.</p>
+      <p className="mt-2 text-xs text-muted-foreground">Sem configuração, a invocação não recebe tempo extra. Turnos e rodadas equivalem a 6 s; o valor é concedido uma vez por instância.</p>
     </details>
 
     <details id="sec-N" className="rounded border border-border p-2">

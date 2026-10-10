@@ -208,6 +208,7 @@ export const ContribuicaoTempoInvocacaoSchema = z.object({
     });
   }
 });
+export type ContribuicaoTempoInvocacao = z.infer<typeof ContribuicaoTempoInvocacaoSchema>;
 
 export const InstanciaInvocacaoSchema = z.object({
   schemaVersion: z.literal(INVOCACAO_SCHEMA_VERSION),

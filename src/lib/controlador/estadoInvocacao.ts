@@ -25,6 +25,10 @@ export function novaInstanciaInvocacao(input: {
   hpMaximoAtual: number;
   estado?: InstanciaInvocacao['estado'];
   economiaAcoes?: InstanciaInvocacao['economiaAcoes'];
+  combateId?: string;
+  turnoCriacao?: number;
+  rodadaCriacao?: number;
+  contribuicaoTempo?: InstanciaInvocacao['contribuicaoTempo'];
 }): InstanciaInvocacao {
   return InstanciaInvocacaoSchema.parse({
     schemaVersion: INVOCACAO_SCHEMA_VERSION,
