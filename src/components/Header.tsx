@@ -10,6 +10,7 @@ import { MiniClock } from '@/components/chronos/MiniClock';
 import { usePendingDebates } from '@/hooks/usePendingDebates';
 import { MasterAccountsDialog } from '@/components/MasterAccountsDialog';
 import { signOutAll } from '@/lib/auth';
+import { Button } from '@/components/ui/button';
 
 export type TabId = 'relogio' | 'fichas' | 'itens' | 'baus' | 'calendario' | 'sistema' | 'guia' | 'feiticos-players' | 'money' | 'cardapios' | 'omni' | 'catalogo' | 'testes' | 'mapa' | 'mundo' | 'grimorio';
 
@@ -64,12 +65,13 @@ interface HeaderProps {
   onTabChange: (tab: TabId) => void;
   testsOpen?: boolean;
   onToggleTests?: () => void;
+  onOpenDiary?: () => void;
 }
 
 /**
  * Topbar global com navegação horizontal de módulos (drag-and-drop preservado).
  */
-export function Header({ activeTab, onTabChange, testsOpen = false, onToggleTests }: HeaderProps) {
+export function Header({ activeTab, onTabChange, testsOpen = false, onToggleTests, onOpenDiary }: HeaderProps) {
   const role = useRoleStore((s) => s.role);
   const logout = useRoleStore((s) => s.logout);
   const [accountsOpen, setAccountsOpen] = useState(false);
@@ -231,6 +233,11 @@ export function Header({ activeTab, onTabChange, testsOpen = false, onToggleTest
             })}
           </div>
         </nav>
+
+        <Button size="sm" variant="outline" onClick={onOpenDiary} title="Diário e Conquistas" className="shrink-0 border-accent/50 text-accent gap-1.5 px-2 sm:px-3">
+          <BookOpen aria-hidden />
+          Diário
+        </Button>
 
         {role === 'MASTER' && (
           <button

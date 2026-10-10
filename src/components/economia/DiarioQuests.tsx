@@ -12,13 +12,15 @@ import { LinhaDoTempo, PainelReputacao } from './FaccoesTempo';
 import { PainelGuilda } from './PainelGuilda';
 import { PainelConquistas } from '@/components/conquistas/PainelConquistas';
 
-export function DiarioQuests({ aberto, onClose, charId, master }: { aberto: boolean; onClose: () => void; charId?: string; master: boolean }) {
+type AbaDiario = 'quests' | 'guilda' | 'rep' | 'tempo' | 'conquistas';
+
+export function DiarioQuests({ aberto, onClose, charId, master, abaInicial = 'quests' }: { aberto: boolean; onClose: () => void; charId?: string; master: boolean; abaInicial?: AbaDiario }) {
   const questsMap = useQuestStore((s) => s.quests);
   const notas = useQuestStore((s) => s.notas);
   const faccoes = useQuestStore((s) => s.faccoes);
   const currencies = useMoneyStore((s) => s.currencies);
   const agora = toTimelineSeconds(useChronosStore());
-  const [aba, setAba] = useState<'quests' | 'guilda' | 'rep' | 'tempo' | 'conquistas'>('quests');
+  const [aba, setAba] = useState<AbaDiario>(abaInicial);
   const [verAntigas, setVerAntigas] = useState(false);
   const minhas = useMemo(() => Object.values(questsMap)
     .filter((q) => !q.deletedAt && (master ? q.aceitaPor.length > 0 : !!charId && q.aceitaPor.includes(charId)))
@@ -28,8 +30,8 @@ export function DiarioQuests({ aberto, onClose, charId, master }: { aberto: bool
   return (
     <Dialog open={aberto} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
-        <DialogHeader><DialogTitle>📖 Diário de Quests</DialogTitle></DialogHeader>
-        <div className="flex gap-2 border-b border-border pb-2">
+        <DialogHeader><DialogTitle>{aba === 'conquistas' ? '🏆 Conquistas' : '📖 Diário'}</DialogTitle></DialogHeader>
+        <div className="flex shrink-0 gap-2 overflow-x-auto border-b border-border pb-2">
           <Button size="sm" variant={aba === 'quests' ? 'default' : 'ghost'} onClick={() => setAba('quests')}>Quests</Button>
           <Button size="sm" variant={aba === 'guilda' ? 'default' : 'ghost'} onClick={() => setAba('guilda')}>Guilda</Button>
           <Button size="sm" variant={aba === 'rep' ? 'default' : 'ghost'} onClick={() => setAba('rep')}>Reputação</Button>
