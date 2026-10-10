@@ -20,6 +20,8 @@ import {
   type LimiteResetEconomiaInvocacao,
   type RecursoInvocacao,
   type CustoComandoInvocacao,
+  type ConfiguracaoEfeitoSuporteInvocacao,
+  type EfeitoPassivoInvocacao,
 } from '@/lib/invocacoes/schema';
 import { resolverValoresDerivados, type CampoDerivadoShikigami, type EstadoEdicaoDerivado, type EstadosEdicaoDerivados } from '@/lib/controlador/fichaShikigami';
 import { SISTEMA_PERICIAS, ROTULOS_PERICIAS } from '@/lib/omni/constantesDoSistema';
@@ -28,6 +30,7 @@ import { TokenCropDialog } from '@/components/mapa/ui/TokenCropDialog';
 import type { Entity, TokenCrop } from '@/stores/useMapStore';
 import { carregarAssetFicha, salvarAssetFicha } from '@/lib/controlador/assetFicha';
 import { parseFormulaDanoInvocacao } from '@/lib/controlador/rolagens';
+import { bonusPericiaCaracteristicas, bonusPVCaracteristicas, reducaoDanoCaracteristicas } from '@/lib/controlador/passivas';
 
 const rotulosAtributos: Record<keyof AtributosShikigami, string> = {
   forca: 'Força', destreza: 'Destreza', constituicao: 'Constituição',
@@ -46,7 +49,7 @@ type ModoDerivado = EstadoEdicaoDerivado['modo'];
 type CampoExtra = 'custoSustentacaoPE' | 'alcanceM' | 'resistencias';
 type EstadoExtra = { modo: ModoDerivado; valorManual: string; motivo: string };
 type AcaoFicha = InvocacaoControlador['acoes'][number];
-type CaracteristicaFicha = { id: string; nome: string; descricao: string; condicao?: string; bonus?: string; resistencia?: string; reducaoDano?: string; sentidos?: string; propriedades?: string };
+type CaracteristicaFicha = { id: string; nome: string; descricao: string; condicao?: string; bonus?: string; resistencia?: string; reducaoDano?: string; sentidos?: string; propriedades?: string; efeitoOperacional?: EfeitoPassivoInvocacao };
 type ReacaoFicha = { id: string; nome: string; gatilho: string; alcance: string; custo: string; condicao: string; alvo: string; solicitarConfirmacao: boolean };
 type ModoOrigem = 'manual' | 'grimorio' | 'omni';
 
@@ -172,6 +175,10 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
   const [acaoCategoria, setAcaoCategoria] = useState('');
   const [acaoExecucao, setAcaoExecucao] = useState<'manual' | 'omni' | 'referencia_omni'>('manual');
   const [acaoTipo, setAcaoTipo] = useState<NonNullable<AcaoFicha['tipo']>>('habilidade');
+  const [acaoEfeitoSuporte, setAcaoEfeitoSuporte] = useState<ConfiguracaoEfeitoSuporteInvocacao['efeito'] | ''>('');
+  const [acaoAlvosSuporte, setAcaoAlvosSuporte] = useState<'unico' | 'multiplos'>('unico');
+  const [acaoAtributoCura, setAcaoAtributoCura] = useState<'sabedoria' | 'presenca'>('sabedoria');
+  const [acaoTiposDanoRD, setAcaoTiposDanoRD] = useState<import('@/types').DamageType[]>(['DCO']);
   const [acaoTeste, setAcaoTeste] = useState<'nenhum' | 'ataque' | 'resistencia'>('nenhum');
   const [acaoTipoAtaque, setAcaoTipoAtaque] = useState<'corpo_a_corpo' | 'distancia'>('corpo_a_corpo');
   const [acaoAtributoAtaque, setAcaoAtributoAtaque] = useState<'forca' | 'destreza'>('forca');
@@ -197,7 +204,11 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
   const [acaoOmniEntidade, setAcaoOmniEntidade] = useState('');
   const [acaoOmniId, setAcaoOmniId] = useState('');
   const [caracteristicas, setCaracteristicas] = useState<CaracteristicaFicha[]>(() => (initial?.caracteristicas ?? []) as CaracteristicaFicha[]);
+  const [possuiEnergiaReversa, setPossuiEnergiaReversa] = useState(initial?.possuiEnergiaReversa ?? false);
   const [caracteristicaNome, setCaracteristicaNome] = useState('');
+  const [caracteristicaEfeito, setCaracteristicaEfeito] = useState<EfeitoPassivoInvocacao['tipo'] | ''>('');
+  const [caracteristicaPericia, setCaracteristicaPericia] = useState('percepcao');
+  const [caracteristicaTipoDano, setCaracteristicaTipoDano] = useState<import('@/types').DamageType>('DCO');
   const [caracteristicaDescricao, setCaracteristicaDescricao] = useState('');
   const [caracteristicaCondicao, setCaracteristicaCondicao] = useState('');
   const [caracteristicaBonus, setCaracteristicaBonus] = useState('');
@@ -267,6 +278,7 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
     try { return resolverValoresDerivados(automaticos, derivados); } catch { return null; }
   })();
   const valoresFinais = resolvidos?.valores ?? automaticos;
+  const hpMaximoComCaracteristicas = valoresFinais.hpMaximo + bonusPVCaracteristicas({ grau, caracteristicas });
   const alertas = [
     ...auditarFichaShikigami({
       grau, nivelUsuario: character.level, bonusTreinamentoUsuario: bonusTreinamento, atributos,
@@ -342,11 +354,31 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
     const peDistribuido = (custoDono ?? 0) + (recursoSelecionado?.id === 'pe' ? custoRecurso ?? 0 : 0);
     if (Math.abs(peDistribuido - (custo ?? 0)) > 1e-9) { setErro('Distribua o custo total de PE entre o dono e o recurso próprio com ID "pe".'); return; }
     const category = acaoCategoria as NonNullable<AcaoFicha['categoriaAcao']>;
+    let efeitoSuporte: ConfiguracaoEfeitoSuporteInvocacao | undefined;
+    if (acaoTipo === 'suporte') {
+      if (acaoExecucao !== 'manual') { setErro('O executor atual só permite executar suporte estruturado como ação manual; vincule ações OMNI pelo catálogo OMNI.'); return; }
+      if (!acaoEfeitoSuporte) { setErro('Escolha o efeito tabelado desta ação de suporte.'); return; }
+      if (acaoEfeitoSuporte === 'cura' && !['acao_complexa', 'acao_comum'].includes(category)) { setErro('A cura exige uma Ação Complexa.'); return; }
+      if (['defesa', 'acerto'].includes(acaoEfeitoSuporte) && !['acao_simples', 'acao_bonus'].includes(category)) {
+        setErro('Os bônus de Defesa e Acerto precisam ser ações simples; a conversão complexa depende de regra de arredondamento.'); return;
+      }
+      if (acaoAlvosSuporte === 'multiplos' && acaoEfeitoSuporte !== 'cura') { setErro('Apenas ações de cura podem selecionar múltiplos alvos.'); return; }
+      if (acaoEfeitoSuporte === 'reducao_dano' && acaoTiposDanoRD.length === 0) { setErro('Escolha ao menos um tipo de dano para reduzir.'); return; }
+      const trueHealing = acaoEfeitoSuporte === 'cura' && (character.hasEnergiaReversa || possuiEnergiaReversa);
+      if (trueHealing && custo !== 2) { setErro('Esta ficha pode curar PV reais; configure o custo da ação como exatamente 2 PE e distribua o débito entre dono e/ou recurso próprio.'); return; }
+      efeitoSuporte = {
+        efeito: acaoEfeitoSuporte,
+        alvos: acaoAlvosSuporte,
+        ...(acaoEfeitoSuporte === 'cura' ? { atributoCura: acaoAtributoCura } : {}),
+        ...(acaoEfeitoSuporte === 'reducao_dano' ? { tiposDano: acaoTiposDanoRD } : {}),
+      };
+    }
     if (acaoExecucao !== 'manual' && (!acaoOmniEntidade || !acaoOmniId)) { setErro('A execução OMNI precisa de entidade e ID da ação.'); return; }
     const actionId = crypto.randomUUID();
     const action: AcaoFicha = {
       id: actionId, nome: acaoNome.trim(), tipo: category === 'movimento' ? 'movimento' : acaoTipo,
       tipoExecucao: acaoExecucao, categoriaAcao: category,
+      ...(efeitoSuporte ? { efeitoSuporte } : {}),
       ...(acaoTeste !== 'nenhum' ? { teste: acaoTeste } : {}),
       ...(acaoTeste === 'ataque' ? { tipoAtaque: acaoTipoAtaque, atributoAtaque: acaoAtributoAtaque, margemCritico, multiplicadorCritico } : {}),
       ...(acaoTeste === 'resistencia' ? { resistenciaAlvo: acaoResistenciaAlvo, atributoCD: acaoAtributoCD, danoNoSucesso: acaoDanoNoSucesso } : {}),
@@ -375,7 +407,7 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
     if (acaoModoCusto === 'evento_automatico' || debitos.length) {
       setCustosComandos(previous => ({ ...previous, [actionId]: { execucao: acaoModoCusto, debitos } }));
     }
-    setAcaoNome(''); setAcaoDano(''); setAcaoAlcance(''); setAcaoBonus(''); setAcaoCusto(''); setAcaoCustoDonoPE(''); setAcaoCustoRecursoId(''); setAcaoCustoRecurso(''); setAcaoModoCusto('manual'); setAcaoRecargaQuantidade(''); setAcaoRecargaUnidade(''); setAcaoTipoDano(''); setAcaoAlvo('');
+    setAcaoNome(''); setAcaoDano(''); setAcaoAlcance(''); setAcaoBonus(''); setAcaoCusto(''); setAcaoCustoDonoPE(''); setAcaoCustoRecursoId(''); setAcaoCustoRecurso(''); setAcaoModoCusto('manual'); setAcaoRecargaQuantidade(''); setAcaoRecargaUnidade(''); setAcaoTipoDano(''); setAcaoAlvo(''); setAcaoEfeitoSuporte(''); setAcaoAlvosSuporte('unico'); setAcaoAtributoCura('sabedoria'); setAcaoTiposDanoRD(['DCO']);
     setErro('');
   };
   const adicionarRecurso = () => {
@@ -399,8 +431,15 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
   };
   const adicionarCaracteristica = () => {
     if (!caracteristicaNome.trim()) { setErro('Informe o nome da característica.'); return; }
+    let efeitoOperacional: EfeitoPassivoInvocacao | undefined;
+    if (caracteristicaEfeito === 'pv_maximo') efeitoOperacional = { tipo: 'pv_maximo' };
+    else if (caracteristicaEfeito === 'bonus_pericia') {
+      if (!Object.hasOwn(SISTEMA_PERICIAS, caracteristicaPericia)) { setErro('Escolha uma perícia válida para o bônus da característica.'); return; }
+      efeitoOperacional = { tipo: 'bonus_pericia', pericia: caracteristicaPericia };
+    } else if (caracteristicaEfeito === 'reducao_dano') efeitoOperacional = { tipo: 'reducao_dano', tipoDano: caracteristicaTipoDano };
     setCaracteristicas(previous => [...previous, {
       id: crypto.randomUUID(), nome: caracteristicaNome.trim(), descricao: caracteristicaDescricao,
+      ...(efeitoOperacional ? { efeitoOperacional } : {}),
       ...(caracteristicaCondicao ? { condicao: caracteristicaCondicao } : {}),
       ...(caracteristicaBonus ? { bonus: caracteristicaBonus } : {}),
       ...(caracteristicaRD ? { reducaoDano: caracteristicaRD } : {}),
@@ -408,7 +447,7 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
       ...(caracteristicaSentidos ? { sentidos: caracteristicaSentidos } : {}),
       ...(caracteristicaPropriedades ? { propriedades: caracteristicaPropriedades } : {}),
     }]);
-    setCaracteristicaNome(''); setCaracteristicaDescricao(''); setCaracteristicaCondicao(''); setCaracteristicaBonus(''); setCaracteristicaRD(''); setCaracteristicaResistencia(''); setCaracteristicaSentidos(''); setCaracteristicaPropriedades('');
+    setCaracteristicaNome(''); setCaracteristicaDescricao(''); setCaracteristicaCondicao(''); setCaracteristicaBonus(''); setCaracteristicaRD(''); setCaracteristicaResistencia(''); setCaracteristicaSentidos(''); setCaracteristicaPropriedades(''); setCaracteristicaEfeito('');
   };
   const adicionarReacao = () => {
     if (!reacaoNome.trim() || !reacaoGatilho.trim()) { setErro('Informe o nome e o gatilho da reação.'); return; }
@@ -462,11 +501,11 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
     const tecnicaIntermediario = character.tecnicaAmaldicoada?.trim() ?? '';
     const erroAtributos = validarAtributosShikigami(grau, atributos);
     if (erroAtributos) { setErro(erroAtributos); return; }
-    if (Number.isFinite(valoresFinais.hpMaximo) && valoresFinais.hpMaximo < 1) { setErro('PV máximo precisa ser maior que zero.'); return; }
+    if (Number.isFinite(hpMaximoComCaracteristicas) && hpMaximoComCaracteristicas < 1) { setErro('PV máximo precisa ser maior que zero.'); return; }
     setSalvando(true); setErro(''); setMensagem('');
     try {
       if (!resolvidos) throw new Error('Resolva os valores derivados manuais antes de salvar.');
-      const maxHP = valoresFinais.hpMaximo;
+      const maxHP = hpMaximoComCaracteristicas;
       const atualHP = pvAtual.trim() === '' && !initial ? maxHP : Number(pvAtual);
       if (!Number.isFinite(atualHP) || atualHP < 0 || atualHP > maxHP) throw new Error('PV atual precisa ficar entre zero e o PV máximo.');
       if (valoresFinais.defesa < 0 || valoresFinais.deslocamentoM < 0 || valoresFinais.custoInvocacaoPE < 0) throw new Error('Defesa, deslocamento e custos derivados não podem ser negativos.');
@@ -551,7 +590,7 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
         ...(resistenciaTreinada ? { resistenciaTreinada: { nome: resistenciaTreinada, ...(numeroOpcional(bonusResistenciaTreinada, 'Bônus de resistência') !== undefined ? { bonus: numeroOpcional(bonusResistenciaTreinada, 'Bônus de resistência') } : {}) } } : {}),
         recursosConfigurados: recursos,
         ...(Object.keys(custosComandos).length ? { custosComandosConfigurados: custosComandos } : {}),
-        acoes: acoesParaSalvar, caracteristicas: caracteristicaCompletas, reacoes, automacoesOmni,
+        acoes: acoesParaSalvar, caracteristicas: caracteristicaCompletas, possuiEnergiaReversa, reacoes, automacoesOmni,
         omniConfiguracao: {
           ...(omniGatilhoEntidade ? { entidadeId: omniGatilhoEntidade } : {}),
           ...(omniAcaoId ? { acaoId: omniAcaoId } : {}),
@@ -739,7 +778,8 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
         {renderExtra('resistencias', 'Resistências', '', false)}
       </div>
       <label className="mt-2 block text-xs">PV atual
-        <input type="number" step="any" min="0" max={valoresFinais.hpMaximo} value={pvAtual || (!initial ? valoresFinais.hpMaximo : '')} onChange={event => setPvAtual(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" />
+        <input type="number" step="any" min="0" max={hpMaximoComCaracteristicas} value={pvAtual || (!initial ? hpMaximoComCaracteristicas : '')} onChange={event => setPvAtual(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" />
+        {bonusPVCaracteristicas({ grau, caracteristicas }) > 0 && <span className="mt-1 block text-xs text-muted-foreground">Inclui +{bonusPVCaracteristicas({ grau, caracteristicas })} PV da característica operacional.</span>}
       </label>
       <label className="mt-2 block text-xs">Porte<select value={porte} onChange={event => setPorte(event.target.value as InvocacaoControlador['porte'])} className="mt-1 w-full rounded border bg-background p-2"><option>Pequeno</option><option>Médio</option><option>Grande</option></select></label>
     </details>
@@ -772,6 +812,15 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
           setAcaoTipo(next);
           setAcaoTeste(next === 'ataque' ? 'ataque' : 'nenhum');
         }} className="mt-1 w-full rounded border bg-background p-2"><option value="ataque">Ataque</option><option value="habilidade">Habilidade</option><option value="movimento">Movimento</option><option value="bonus">Bônus</option><option value="suporte">Suporte</option></select></label>
+        {acaoTipo === 'suporte' && <>
+          <label className="text-xs">Efeito tabelado<select value={acaoEfeitoSuporte} onChange={event => setAcaoEfeitoSuporte(event.target.value as typeof acaoEfeitoSuporte)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Selecione</option><option value="cura">Cura / PVT</option><option value="defesa">Bônus de Defesa</option><option value="acerto">Bônus de Acerto</option><option value="dano_adicional">Dano adicional no próximo ataque</option><option value="reducao_dano">Redução de Dano</option></select></label>
+          {acaoEfeitoSuporte === 'cura' && <>
+            <label className="text-xs">Alvos da cura<select value={acaoAlvosSuporte} onChange={event => setAcaoAlvosSuporte(event.target.value as 'unico' | 'multiplos')} className="mt-1 w-full rounded border bg-background p-2"><option value="unico">Alvo único</option><option value="multiplos">Múltiplos alvos</option></select></label>
+            <label className="text-xs">Atributo somado à cura<select value={acaoAtributoCura} onChange={event => setAcaoAtributoCura(event.target.value as 'sabedoria' | 'presenca')} className="mt-1 w-full rounded border bg-background p-2"><option value="sabedoria">Sabedoria</option><option value="presenca">Presença</option></select></label>
+          </>}
+          {acaoEfeitoSuporte === 'reducao_dano' && <label className="text-xs">Tipos de dano cobertos (Ctrl/Cmd para vários)<select multiple value={acaoTiposDanoRD} onChange={event => setAcaoTiposDanoRD(Array.from(event.target.selectedOptions, option => option.value as import('@/types').DamageType))} className="mt-1 min-h-24 w-full rounded border bg-background p-2">{(['DCO','DP','DI','DA','DCG','DCC','DQ','DS','DAL','DNR','DE','DPS','DR','DN','DV'] as const).map(tipo => <option key={tipo} value={tipo}>{tipo}</option>)}</select></label>}
+          <p className="text-xs text-muted-foreground">A cura exige Ação Complexa. Defesa e Acerto usam Ação Simples; Dano adicional e RD aceitam ação simples ou complexa. O alcance do auxílio é 1,5 m por padrão; cure usa o alcance do grau.</p>
+        </>}
         <label className="text-xs">Rolagem da ação<select value={acaoTeste} onChange={event => setAcaoTeste(event.target.value as 'nenhum' | 'ataque' | 'resistencia')} className="mt-1 w-full rounded border bg-background p-2"><option value="nenhum">Sem rolagem automática</option><option value="ataque">Ataque contra Defesa</option><option value="resistencia">Teste de Resistência do alvo</option></select></label>
         <label className="text-xs">Dano ou efeito<input aria-label="Fórmula de dano" value={acaoDano} onChange={event => setAcaoDano(event.target.value)} placeholder="Ex.: 2d12+1d6+3" className="mt-1 w-full rounded border bg-background p-2" /><span className="mt-1 block text-muted-foreground">O modificador do atributo é somado separadamente.</span></label>
         {acaoTeste === 'ataque' && <>
@@ -814,8 +863,12 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
     <details id="sec-H" className="rounded border border-border p-2">
       <summary className="cursor-pointer text-sm font-semibold">H · Passivas e características condicionais</summary>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <label className="flex items-center gap-2 text-xs sm:col-span-2"><input type="checkbox" checked={possuiEnergiaReversa} onChange={event => setPossuiEnergiaReversa(event.target.checked)} />Capacidade inata de Energia Reversa (permite cura real)</label>
         <label className="text-xs">Nome<input value={caracteristicaNome} onChange={event => setCaracteristicaNome(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
         <label className="text-xs">Descrição<textarea value={caracteristicaDescricao} onChange={event => setCaracteristicaDescricao(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
+        <label className="text-xs">Efeito operacional<select value={caracteristicaEfeito} onChange={event => setCaracteristicaEfeito(event.target.value as typeof caracteristicaEfeito)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Somente descritiva</option><option value="pv_maximo">Aumento de PV máximo</option><option value="bonus_pericia">Bônus em perícia específica</option><option value="reducao_dano">RD contra tipo específico</option></select></label>
+        {caracteristicaEfeito === 'bonus_pericia' && <label className="text-xs">Perícia<select value={caracteristicaPericia} onChange={event => setCaracteristicaPericia(event.target.value)} className="mt-1 w-full rounded border bg-background p-2">{Object.keys(SISTEMA_PERICIAS).map(key => <option key={key} value={key}>{ROTULOS_PERICIAS[key as keyof typeof ROTULOS_PERICIAS] ?? key}</option>)}</select></label>}
+        {caracteristicaEfeito === 'reducao_dano' && <label className="text-xs">Tipo de dano<select value={caracteristicaTipoDano} onChange={event => setCaracteristicaTipoDano(event.target.value as import('@/types').DamageType)} className="mt-1 w-full rounded border bg-background p-2">{(['DCO','DP','DI','DA','DCG','DCC','DQ','DS','DAL','DNR','DE','DPS','DR','DN','DV'] as const).map(tipo => <option key={tipo} value={tipo}>{tipo}</option>)}</select></label>}
         <label className="text-xs">Condição<input value={caracteristicaCondicao} onChange={event => setCaracteristicaCondicao(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
         <label className="text-xs">Bônus condicional<input value={caracteristicaBonus} onChange={event => setCaracteristicaBonus(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
         <label className="text-xs">Redução de dano<input value={caracteristicaRD} onChange={event => setCaracteristicaRD(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
@@ -824,7 +877,7 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
         <label className="text-xs">Propriedades<input value={caracteristicaPropriedades} onChange={event => setCaracteristicaPropriedades(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
         <button type="button" className="self-end rounded bg-primary px-3 py-2 text-xs text-primary-foreground" onClick={adicionarCaracteristica}>Adicionar característica</button>
       </div>
-      <ul className="mt-3 space-y-1">{caracteristicas.map(item => <li key={item.id} className="flex items-center justify-between gap-2 rounded border p-2 text-xs"><span>{item.nome}{item.condicao ? ' · se ' + item.condicao : ''}{item.bonus ? ' · bônus ' + item.bonus : ''}{item.reducaoDano ? ' · RD ' + item.reducaoDano : ''}{item.resistencia ? ' · resistência ' + item.resistencia : ''}{item.sentidos ? ' · sentidos ' + item.sentidos : ''}{item.propriedades ? ' · ' + item.propriedades : ''}</span><button type="button" className="rounded border px-2 py-1" onClick={() => setCaracteristicas(previous => previous.filter(feature => feature.id !== item.id))}>Remover</button></li>)}</ul>
+      <ul className="mt-3 space-y-1">{caracteristicas.map(item => <li key={item.id} className="flex items-center justify-between gap-2 rounded border p-2 text-xs"><span>{item.nome}{item.condicao ? ' · se ' + item.condicao : ''}{item.bonus ? ' · bônus ' + item.bonus : ''}{item.reducaoDano ? ' · RD ' + item.reducaoDano : ''}{item.resistencia ? ' · resistência ' + item.resistencia : ''}{item.sentidos ? ' · sentidos ' + item.sentidos : ''}{item.propriedades ? ' · ' + item.propriedades : ''}{item.efeitoOperacional?.tipo === 'pv_maximo' ? ` · PV máximo +${bonusPVCaracteristicas({ grau, caracteristicas: [item] })}` : item.efeitoOperacional?.tipo === 'bonus_pericia' ? ` · +${bonusPericiaCaracteristicas({ grau, caracteristicas: [item] }, item.efeitoOperacional.pericia)} em ${ROTULOS_PERICIAS[item.efeitoOperacional.pericia as keyof typeof ROTULOS_PERICIAS] ?? item.efeitoOperacional.pericia}` : item.efeitoOperacional?.tipo === 'reducao_dano' ? ` · RD ${reducaoDanoCaracteristicas({ grau, caracteristicas: [item] }, item.efeitoOperacional.tipoDano)} contra ${item.efeitoOperacional.tipoDano}` : ''}</span><button type="button" className="rounded border px-2 py-1" onClick={() => setCaracteristicas(previous => previous.filter(feature => feature.id !== item.id))}>Remover</button></li>)}</ul>
     </details>
 
     <details id="sec-I" className="rounded border border-border p-2">

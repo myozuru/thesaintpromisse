@@ -54,6 +54,35 @@ export const TipoModeloInvocacaoSchema = z.enum([
 ]);
 export type TipoModeloInvocacao = z.infer<typeof TipoModeloInvocacaoSchema>;
 
+const TipoDanoInvocacaoSchema = z.enum([
+  "DCO", "DP", "DI", "DA", "DCG", "DCC", "DQ", "DS", "DAL", "DNR", "DE", "DPS", "DR", "DN", "DV",
+]);
+
+export const ConfiguracaoEfeitoSuporteInvocacaoSchema = z.object({
+  efeito: z.enum(["cura", "defesa", "acerto", "dano_adicional", "reducao_dano"]),
+  alvos: z.enum(["unico", "multiplos"]).default("unico"),
+  atributoCura: z.enum(["sabedoria", "presenca"]).optional(),
+  tiposDano: z.array(TipoDanoInvocacaoSchema).min(1).max(15).optional(),
+}).strict().superRefine((config, ctx) => {
+  if (config.efeito !== "cura" && config.alvos === "multiplos") {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["alvos"], message: "Apenas ações de cura podem afetar múltiplos alvos nesta versão." });
+  }
+  if (config.efeito === "reducao_dano" && !config.tiposDano?.length) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["tiposDano"], message: "Escolha ao menos um tipo de dano para reduzir." });
+  }
+  if (config.efeito !== "reducao_dano" && config.tiposDano?.length) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["tiposDano"], message: "Tipos de dano só se aplicam à redução de dano." });
+  }
+});
+export type ConfiguracaoEfeitoSuporteInvocacao = z.infer<typeof ConfiguracaoEfeitoSuporteInvocacaoSchema>;
+
+export const EfeitoPassivoInvocacaoSchema = z.discriminatedUnion("tipo", [
+  z.object({ tipo: z.literal("pv_maximo") }).strict(),
+  z.object({ tipo: z.literal("bonus_pericia"), pericia: idSchema }).strict(),
+  z.object({ tipo: z.literal("reducao_dano"), tipoDano: TipoDanoInvocacaoSchema }).strict(),
+]);
+export type EfeitoPassivoInvocacao = z.infer<typeof EfeitoPassivoInvocacaoSchema>;
+
 export const EstadoAquisicaoInvocacaoSchema = z.object({
   estado: z.enum(["pendente", "aprovada", "rejeitada"]),
   fonte: z.enum(["mestre", "legado"]),
@@ -90,6 +119,7 @@ export const AcaoInvocacaoSchema = z.object({
   nome: textSchema,
   tipoExecucao: z.enum(["omni", "referencia_omni", "manual", "legada"]),
   tipo: z.enum(["ataque", "habilidade", "movimento", "bonus", "suporte"]).optional(),
+  efeitoSuporte: ConfiguracaoEfeitoSuporteInvocacaoSchema.optional(),
   /** Fluxo de rolagem usado pela ação manual desta ficha. */
   teste: z.enum(["ataque", "resistencia"]).optional(),
   tipoAtaque: z.enum(["corpo_a_corpo", "distancia"]).optional(),
@@ -212,6 +242,8 @@ export const ModeloInvocacaoSchema = z.object({
   origemAquisicao: z.string().optional(),
   referenciaInterludio: idSchema.optional(),
   grau: z.string().optional(),
+  /** Capacidade inata que permite converter ações de suporte em cura real. */
+  possuiEnergiaReversa: z.boolean().optional(),
   imagemAssetId: idSchema.optional(),
   imagemFallbackAssetId: idSchema.optional(),
   imagemAltText: z.string().optional(),
@@ -270,6 +302,24 @@ const EconomiaInstanciaSchema = z.object({
   reacao: SaldoAcaoSchema.optional(),
 }).strict();
 
+export const EfeitoSuporteAtivoInvocacaoSchema = z.object({
+  id: idSchema,
+  tipo: z.enum(["defesa", "acerto", "dano_adicional", "reducao_dano"]),
+  valor: nonNegativeNumberSchema,
+  formula: z.string().max(160).optional(),
+  tiposDano: z.array(TipoDanoInvocacaoSchema).max(15).optional(),
+  expiraNaRodada: nonNegativeIntSchema,
+  consomeNoAtaque: z.boolean().optional(),
+}).strict().superRefine((efeito, ctx) => {
+  if (efeito.tipo === "dano_adicional" && !efeito.formula) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["formula"], message: "O bônus de dano precisa de uma fórmula." });
+  }
+  if (efeito.tipo === "reducao_dano" && !efeito.tiposDano?.length) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["tiposDano"], message: "A redução precisa de ao menos um tipo de dano." });
+  }
+});
+export type EfeitoSuporteAtivoInvocacao = z.infer<typeof EfeitoSuporteAtivoInvocacaoSchema>;
+
 export const ContribuicaoTempoInvocacaoSchema = z.object({
   id: idSchema,
   grantEventId: idSchema,
@@ -308,6 +358,9 @@ export const InstanciaInvocacaoSchema = z.object({
   estado: z.enum(["ativa", "caida", "derrotada", "dissipada"]),
   hpAtual: finiteNumberSchema,
   hpMaximoAtual: finiteNumberSchema.min(1),
+  /** Camada de Pontos de Vida Temporários absorvida antes dos PV. */
+  pvTemporarios: nonNegativeNumberSchema.optional(),
+  efeitosSuporteAtivos: z.array(EfeitoSuporteAtivoInvocacaoSchema).max(100).optional(),
   condicoes: z.array(z.unknown()).optional(),
   economiaAcoes: EconomiaInstanciaSchema.optional(),
   recursosAtuais: z.record(z.string(), finiteNumberSchema).optional(),
@@ -317,6 +370,12 @@ export const InstanciaInvocacaoSchema = z.object({
   eventosAcoesProcessados: z.array(idSchema).optional(),
   deslocamentoUsado: z.boolean().optional(),
   usoAcaoComCusto: z.record(z.string(), z.unknown()).optional(),
+  /** Contagem persistente por tipo de auxílio e rodada, individual desta instância. */
+  usosAuxilioRodada: z.object({
+    rodada: nonNegativeIntSchema,
+    total: nonNegativeIntSchema.optional(),
+    porEfeito: z.record(z.string(), nonNegativeIntSchema),
+  }).strict().optional(),
   recargas: z.record(z.string(), z.unknown()).optional(),
   duracoes: z.record(z.string(), z.unknown()).optional(),
   turnoCriacao: nonNegativeIntSchema.optional(),

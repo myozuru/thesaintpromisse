@@ -852,6 +852,16 @@ export const useCombatStore = create<CombatStore>()(
           }
           useCharacterStore.getState().tickRoundConditions();
           useCharacterStore.getState().tickSacrificioCooldown();
+          for (const character of useCharacterStore.getState().characters) {
+            for (const buff of character.activeBuffs ?? []) {
+              if (buff.expiraNaRodada !== undefined && buff.expiraNaRodada <= round) {
+                useCharacterStore.getState().removeBuff(character.id, buff.id);
+              }
+            }
+          }
+          import('@/lib/controlador/mapa').then(({ expirarEfeitosSuporteInvocacoes }) => {
+            expirarEfeitosSuporteInvocacoes(round);
+          });
           const newRound = round + 1;
           const charStore = useCharacterStore.getState();
           charStore.characters.forEach((c) => {
@@ -1022,6 +1032,14 @@ export const useCombatStore = create<CombatStore>()(
         get().settleTurnTimer();
         const charStore = useCharacterStore.getState();
         const { initiativeOrder, round, combatId } = get();
+        for (const character of charStore.characters) {
+          for (const buff of character.activeBuffs ?? []) {
+            if (buff.expiraNaRodada !== undefined) charStore.removeBuff(character.id, buff.id);
+          }
+        }
+        import('@/lib/controlador/mapa').then(({ expirarEfeitosSuporteInvocacoes }) => {
+          expirarEfeitosSuporteInvocacoes(round, true);
+        });
         const participants = initiativeOrder.map((e) => e.charId);
         encerrarReservasDoCombate(combatId, Date.now());
         // Limpa todos os AdO ao fim do combate.

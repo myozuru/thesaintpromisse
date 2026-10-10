@@ -2,6 +2,7 @@ import type { Character } from '@/types';
 import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import { ROTULOS_PERICIAS } from '@/lib/omni/constantesDoSistema';
 import type { InvocacaoControlador } from './tipos';
+import { bonusPericiaCaracteristicas } from './passivas';
 
 type AcaoComRolagem = InvocacaoControlador['acoes'][number];
 
@@ -78,6 +79,7 @@ export interface BonusPericiaInvocacao {
   metadeNivel: number;
   treinamento: number;
   treinada: boolean;
+  bonusCaracteristica?: number;
 }
 
 export function invocacaoTreinadaNaPericia(modelo: InvocacaoControlador, pericia: string): boolean {
@@ -101,13 +103,15 @@ export function calcularBonusPericiaInvocacao(
   const metadeNivel = Math.floor(nivel / 2);
   const treinamento = treinada ? getTrainingBonusByLevel(nivel) : 0;
   const modificadorAtributo = modificadorAtributoInvocacao(valorAtributo);
+  const bonusCaracteristica = bonusPericiaCaracteristicas(modelo, pericia);
   return {
-    total: modificadorAtributo + metadeNivel + treinamento,
+    total: modificadorAtributo + metadeNivel + treinamento + bonusCaracteristica,
     atributo,
     modificadorAtributo,
     metadeNivel,
     treinamento,
     treinada,
+    ...(bonusCaracteristica > 0 ? { bonusCaracteristica } : {}),
   };
 }
 

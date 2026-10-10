@@ -7,7 +7,7 @@ import { consumeCritNegated } from '@/lib/suporteNegacao';
 import { implementoMarcialBonus } from '@/lib/golpeEspecial';
 import { InspiradoButton } from './SuporteNivel4Sections';
 import { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
-import { Character, Attribute, Passive, Spell, DAMAGE_TYPES, DAMAGE_TYPE_LABELS, DAMAGE_TYPE_ABBR, DamageType, SpellBuff, createEmptyRdByType, CHARACTER_CLASSES, CharacterClass, SPECIALIZATIONS, Specialization, MOTIVATIONS, Motivation, ORIGINS, Origin, createEmptyAccessorySlots, AccessorySlots, ItemSlotType, ITEM_SLOT_LABELS, ALL_CONDITIONS, SPELL_LEVELS, SpellLevel, SpellCondition, SPELL_RANGES, SPELL_TARGET_MODES, SpellTargetMode, getTrainingBonus, getMasteryBonus, getLevelSkillBonus, getBaseAttackBonus, getTrainingValue, SaveAttr, SAVE_ATTRS, APTITUDE_KEYS, APTITUDE_LABELS, APTITUDE_MAX, createDefaultCursedAptitudes, type AptitudeKey } from '@/types';
+import { Character, Attribute, Passive, Spell, ActiveBuff, DAMAGE_TYPES, DAMAGE_TYPE_LABELS, DAMAGE_TYPE_ABBR, DamageType, SpellBuff, createEmptyRdByType, CHARACTER_CLASSES, CharacterClass, SPECIALIZATIONS, Specialization, MOTIVATIONS, Motivation, ORIGINS, Origin, createEmptyAccessorySlots, AccessorySlots, ItemSlotType, ITEM_SLOT_LABELS, ALL_CONDITIONS, SPELL_LEVELS, SpellLevel, SpellCondition, SPELL_RANGES, SPELL_TARGET_MODES, SpellTargetMode, getTrainingBonus, getMasteryBonus, getLevelSkillBonus, getBaseAttackBonus, getTrainingValue, SaveAttr, SAVE_ATTRS, APTITUDE_KEYS, APTITUDE_LABELS, APTITUDE_MAX, createDefaultCursedAptitudes, type AptitudeKey } from '@/types';
 import { SpellCreationAssistant } from './SpellCreationAssistant';
 import { OmniVinculadosList } from './OmniVinculadosList';
 import { ControladorShikigamisAba } from './ControladorShikigamisAba';
@@ -955,7 +955,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
   const caVsMelee = totalCA + conditionMods.defenseMelee;
   const caVsRanged = totalCA + conditionMods.defenseRanged;
   const hasDirectionalDef = conditionMods.defenseMelee !== 0 || conditionMods.defenseRanged !== 0;
-  const totalBuffRD = (c.activeBuffs || []).filter(b => b.type === 'rd').reduce((s, b) => s + b.value, 0);
+  const totalBuffRD = (c.activeBuffs || []).filter(b => b.type === 'rd' && !b.rdDamageTypes?.length).reduce((s, b) => s + b.value, 0);
   const negacaoRDBuff = (c.activeBuffs || []).filter(b => b.type === 'negacaoRd').reduce((s, b) => s + b.value, 0);
   const totalRD = Math.max(0, c.rd + passiveBonuses.rd + itemBonuses.rd + totalBuffRD + negacaoRDBuff);
   const talentBonuses = aggregateTalentBonuses(c);
@@ -1212,6 +1212,26 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     return base + bonus + attrMod + trainBonus + buffHit + faiscasHit + conditionMods.attack;
   };
 
+  const rollDamageAssist = async (buffs: ActiveBuff[]): Promise<string[]> => {
+    const lines: string[] = [];
+    for (const buff of buffs) {
+      if (buff.type !== 'extraDiceAfter') continue;
+      const formula = buff.extraDamageFormula ?? (buff.extraDiceCount && buff.extraDiceSides
+        ? `${buff.extraDiceCount}d${buff.extraDiceSides}`
+        : undefined);
+      if (!formula) continue;
+      const { rolls, total } = await rollDice(formula);
+      lines.push(`➕ Dano Extra: ${total} [${formula}(${rolls.join(',')})]`);
+    }
+    return lines;
+  };
+
+  const consumeSupportAttackBuffs = (buffs: ActiveBuff[]) => {
+    const atuais = useCharacterStore.getState().characters.find(character => character.id === c.id)?.activeBuffs ?? [];
+    const ids = new Set(buffs.filter(buff => buff.consumeOnAttack).map(buff => buff.id));
+    for (const buff of atuais) if (ids.has(buff.id)) useCharacterStore.getState().removeBuff(c.id, buff.id);
+  };
+
   // Alvos por tipo de ataque (Corpo a Corpo / Distância / Amaldiçoado)
   const [attackTargets, setAttackTargets] = useState<Record<'melee' | 'ranged' | 'cursed', string[]>>({
     melee: [], ranged: [], cursed: [],
@@ -1309,16 +1329,20 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
       }
     }
 
+    const buffsConsumedByThisAttack = activeBuffs.filter(buff => buff.consumeOnAttack);
+
     setRollAnimating(true);
     let count = 0;
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
       setRollResult({ label, d20: Math.floor(Math.random() * 20) + 1, bonus: totalBonus, total: Math.floor(Math.random() * 30) });
       count++;
       if (count >= 15) {
         clearInterval(interval);
         setRollResult({ label, d20, bonus: totalBonus, total: finalResult, hitResults: hitResultsList });
         setRollAnimating(false);
-        addLog('roll', `🎲 ${c.name} → ${label}: d20(${d20}) + ${totalBonus} = ${finalResult}\n${hitLogResults.join('\n')}`);
+        const extraAfter = anyHit ? await rollDamageAssist(buffsConsumedByThisAttack) : [];
+        consumeSupportAttackBuffs(buffsConsumedByThisAttack);
+        addLog('roll', `🎲 ${c.name} → ${label}: d20(${d20}) + ${totalBonus} = ${finalResult}${extraAfter.length ? ` | ${extraAfter.join(' | ')}` : ''}\n${hitLogResults.join('\n')}`);
       }
     }, 80);
     setOpenTargetPicker(null);
@@ -1419,14 +1443,15 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
         let extraAfterStr = '';
         if (extraDiceAfterBuffs.length > 0) {
           for (const b of extraDiceAfterBuffs) {
-            if (b.extraDiceCount && b.extraDiceSides) {
-              const { rolls, total } = await rollDice(`${b.extraDiceCount}d${b.extraDiceSides}`);
-              extraAfterStr += ` | ➕ Dano Extra: ${total} [${b.extraDiceCount}d${b.extraDiceSides}(${rolls.join(',')})]`;
-            }
+            const formula = b.extraDamageFormula ?? (b.extraDiceCount && b.extraDiceSides ? `${b.extraDiceCount}d${b.extraDiceSides}` : undefined);
+            if (!formula) continue;
+            const { rolls, total } = await rollDice(formula);
+            extraAfterStr += ` | ➕ Dano Extra: ${total} [${formula}(${rolls.join(',')})]`;
           }
         }
 
         const extraStr = extraDiceDetails.length > 0 ? ` + ${extraDiceDetails.join(' + ')}` : '';
+        consumeSupportAttackBuffs(extraDiceAfterBuffs);
         addLog('roll', `🎲 ${c.name} → Acerto: d20(${d20}) + ${totalHitBonus}${extraStr} = ${finalResult}${extraAfterStr}\n${hitLogResults.join('\n')}`);
       }
     }, 80);
@@ -2116,9 +2141,11 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
             const desc = b.type === 'ca' ? `CA+${b.value}`
               : b.type === 'hit' ? `Acerto+${b.value}`
               : b.type === 'extraDice' ? `+${b.extraDiceCount}d${b.extraDiceSides}`
+              : b.type === 'extraDiceAfter' ? `Dano extra ${b.extraDamageFormula ?? `${b.extraDiceCount ?? 0}d${b.extraDiceSides ?? 0}`}`
+              : b.type === 'rd' ? `RD+${b.value}${b.rdDamageTypes?.length ? ` (${b.rdDamageTypes.join('/')})` : ''}`
               : (b.targetName || '');
             const isSus = b.isSustained || b.remainingTurns === -1;
-            const durLabel = isSus ? '♾' : `${b.remainingTurns}t`;
+            const durLabel = b.expiraNaRodada !== undefined ? `R${b.expiraNaRodada}` : isSus ? '♾' : `${b.remainingTurns}t`;
             return (
               <span
                 key={b.id}

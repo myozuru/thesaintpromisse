@@ -6,7 +6,7 @@ import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { validarIntermediarioInvocacao } from '@/lib/controlador/intermediario';
-import { invocarControladores, recolherInvocacao, limparInvocacoesDerrotadas, levantarInvocacao, comandarReposicionamento, comandarAtaque, rolarPericiaInvocacao, type DirecaoInvocacao } from '@/lib/controlador/mapa';
+import { invocarControladores, recolherInvocacao, limparInvocacoesDerrotadas, levantarInvocacao, comandarReposicionamento, comandarAtaque, comandarSuporte, rolarPericiaInvocacao, type DirecaoInvocacao } from '@/lib/controlador/mapa';
 import { limiteInvocacoesConhecidas, limiteAtivasPersonagem, validarCatalogoControlador, type InvocacaoControlador, type TipoInvocacaoControlador } from '@/lib/controlador/tipos';
 import { podeUsarVersaoAprovada } from '@/lib/controlador/aprovacao';
 import { carregarAssetFicha } from '@/lib/controlador/assetFicha';
@@ -15,6 +15,7 @@ import { assetCache } from '@/components/mapa/assetCache';
 import { decidirAprovacaoInvocacao, decidirAprovacaoLegadaInvocacao, submeterAprovacaoInvocacao } from '@/lib/controlador/aprovacao.functions';
 import { SISTEMA_PERICIAS, ROTULOS_PERICIAS } from '@/lib/omni/constantesDoSistema';
 import { invocacaoTreinadaNaPericia, parseFormulaDanoInvocacao } from '@/lib/controlador/rolagens';
+import { bonusPericiaCaracteristicas } from '@/lib/controlador/passivas';
 
 type Fonte = { id: string; nome: string; tipo: 'grimorio' | 'omni'; hp: number; defesa: number; deslocamento: number; porte: InvocacaoControlador['porte']; acoes: InvocacaoControlador['acoes'] };
 const numero = (valor: unknown, padrao: number): number => {
@@ -39,6 +40,7 @@ function criaturasGrimorio(): Fonte[] {
 }
 export function ControladorInvocacoesSection({ character, onEditFicha }: { character: Character; onEditFicha?: (id: string) => void }) {
   const updateCharacter = useCharacterStore(s => s.updateCharacter);
+  const allCharacters = useCharacterStore(s => s.characters);
   const isMaster = useRoleStore(s => s.role) === 'MASTER';
   const entidades = useOmniEntidadesStore(s => s.entidades);
   const itensInventario = useInventoryStore(s => s.items);
@@ -61,6 +63,8 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
   const [mensagem, setMensagem] = useState('');
   const [alvosAtaque, setAlvosAtaque] = useState<Record<string, string>>({});
   const [busyAtaque, setBusyAtaque] = useState(false);
+  const [alvosSuporte, setAlvosSuporte] = useState<Record<string, string[]>>({});
+  const [busySuporte, setBusySuporte] = useState(false);
   const [editando, setEditando] = useState<string | null>(null);
   const [nomeAtaque, setNomeAtaque] = useState('');
   const [formulaAtaque, setFormulaAtaque] = useState('1d6');
@@ -139,6 +143,20 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
           ? `${r.critico ? 'Acerto crítico! ' : 'Acertou! '}Dano aplicado: ${r.dano}. Resultado: ${r.totalAtaque}.`
           : `Ataque errou (resultado ${r.totalAtaque}).`);
     } finally { setBusyAtaque(false); }
+  };
+  const executarSuporte = async (invocacaoId: string, acaoId: string) => {
+    const chave = `${invocacaoId}:${acaoId}`;
+    const selecionados = alvosSuporte[chave] ?? [];
+    if (!selecionados.length || busySuporte) return;
+    setBusySuporte(true); setErro(''); setMensagem('');
+    try {
+      const r = await comandarSuporte(character.id, invocacaoId, acaoId, selecionados);
+      if (!r.ok) { setErro(r.motivo); return; }
+      const resumoValor = r.efeito.startsWith('dano adicional') ? (r.formula ?? '') : String(r.valor);
+      setMensagem(`${r.efeito}: ${resumoValor}${r.curaReal === false ? ' PVT' : ''} em ${r.alvos} alvo(s).`);
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : 'Não foi possível executar a ação de suporte.');
+    } finally { setBusySuporte(false); }
   };
   const rolarPericia = async (invocacaoId: string) => {
     const pericia = periciasSelecionadas[invocacaoId];
@@ -414,6 +432,19 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
                     ? `Tempo por invocação: +${formatarSegundosTempoInvocacao(tempoConfigurado.segundos)} s`
                     : `Tempo extra inválido: ${tempoConfigurado.motivo}`;
         const derrotaPendente = estadoInstancia === 'derrotada';
+        const personagensAlvoSuporte = [...new Map(Object.values(entities)
+          .filter(entity => entity.characterId && !entity.invocationId && !entity.hidden &&
+            (allCharacters.find(alvo => alvo.id === entity.characterId)?.category !== 'INIMIGO' || entity.characterId === character.id))
+          .map(entity => [entity.characterId!, { id: entity.characterId!, nome: entity.label || entity.characterId! }])).values()];
+        const invocacoesAlvoSuporte = Object.values(entities)
+          .filter(entity => entity.invocationId && entity.ownerCharId && !entity.hidden &&
+            (allCharacters.find(alvo => alvo.id === entity.ownerCharId)?.category !== 'INIMIGO' || entity.ownerCharId === character.id))
+          .flatMap(entity => {
+            const donoAlvo = allCharacters.find(alvo => alvo.id === entity.ownerCharId);
+            const modeloAlvo = donoAlvo?.invocacoesConhecidas?.find(modelo => modelo.id === entity.invocationId);
+            return modeloAlvo ? [{ id: `invoc:${entity.id}`, nome: `${modeloAlvo.apelido?.trim() || modeloAlvo.nome}${entity.invocationState === 'caida' ? ' · Caído' : ''}` }] : [];
+          });
+        const opcoesAlvoSuporte = [...personagensAlvoSuporte, ...invocacoesAlvoSuporte];
         const movimentoDisponivel = (instancia?.economiaAcoes?.acaoMovimento?.atual ?? 0) > 0;
         const rotuloEstado = estadoInstancia === 'derrotada'
           ? 'Derrotada — aguardando resolução'
@@ -538,8 +569,8 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
                   value={periciasSelecionadas[inv.id] ?? ''}
                   onChange={event => setPericiasSelecionadas(current => ({ ...current, [inv.id]: event.target.value }))}>
                   <option value="">Selecione uma perícia</option>
-                  {(Object.keys(SISTEMA_PERICIAS) as Array<keyof typeof SISTEMA_PERICIAS>).filter(key => invocacaoTreinadaNaPericia(inv, key)).map(key => (
-                    <option key={key} value={key}>{ROTULOS_PERICIAS[key]} · treinada</option>
+                  {(Object.keys(SISTEMA_PERICIAS) as Array<keyof typeof SISTEMA_PERICIAS>).filter(key => invocacaoTreinadaNaPericia(inv, key) || bonusPericiaCaracteristicas(inv, key) > 0).map(key => (
+                    <option key={key} value={key}>{ROTULOS_PERICIAS[key]}{invocacaoTreinadaNaPericia(inv, key) ? ' · treinada' : ` · característica +${bonusPericiaCaracteristicas(inv, key)}`}</option>
                   ))}
                   {!Object.keys(SISTEMA_PERICIAS).some(key => invocacaoTreinadaNaPericia(inv, key)) && <option disabled value="">Sem perícias treinadas</option>}
                 </select>
@@ -548,6 +579,34 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
                 onClick={() => void rolarPericia(inv.id)} className="rounded border px-2 py-1 text-xs disabled:opacity-50">
                 {busyPericia[inv.id] ? 'Rolando…' : 'Rolar perícia em 3D'}
               </button>
+            </div>
+          )}
+          {ativo && inv.acoes.some(acao => acao.tipo === 'suporte' && acao.efeitoSuporte) && (
+            <div className="basis-full space-y-2 border-t border-border/60 pt-2">
+              <strong className="text-xs">Ações de suporte</strong>
+              {inv.acoes.filter(acao => acao.tipo === 'suporte' && acao.efeitoSuporte).map(acao => {
+                const chave = `${inv.id}:${acao.id}`;
+                const alvos = alvosSuporte[chave] ?? [];
+                const multiplos = acao.efeitoSuporte?.alvos === 'multiplos';
+                return <div key={acao.id} className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                  <label className="block text-xs">{acao.nome} · {acao.efeitoSuporte?.efeito}
+                    <select aria-label={`Alvo de suporte ${acao.nome}`} multiple={multiplos} className="mt-1 min-h-9 w-full rounded border border-input bg-background p-2"
+                      value={multiplos ? alvos : (alvos[0] ?? '')}
+                      onChange={event => {
+                        const valores = multiplos
+                          ? Array.from(event.target.selectedOptions, option => option.value).filter(Boolean)
+                          : event.target.value ? [event.target.value] : [];
+                        setAlvosSuporte(atual => ({ ...atual, [chave]: valores }));
+                      }}>
+                      <option value="">{multiplos ? 'Selecione um ou mais alvos no mapa' : 'Selecione uma ficha no mapa'}</option>
+                      {opcoesAlvoSuporte.map(alvo => <option key={alvo.id} value={alvo.id}>{alvo.nome}</option>)}
+                    </select>
+                  </label>
+                  <button type="button" disabled={busySuporte || alvos.length === 0} className="self-end rounded border border-primary px-2 py-2 text-xs disabled:opacity-50" onClick={() => void executarSuporte(inv.id, acao.id)}>
+                    Usar suporte
+                  </button>
+                </div>;
+              })}
             </div>
           )}
         </div>

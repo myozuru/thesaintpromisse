@@ -2575,7 +2575,6 @@ export const useCharacterStore = create<CharacterStore>()(
               return { ...c, ...soulPatch, omniCounters: registrarHistorico(c.omniCounters, 'dano', perdaVida, useCombatStore.getState().round) };
             }
             const activeBuffs = c.activeBuffs || [];
-            const buffRD = activeBuffs.filter(b => b.type === 'rd').reduce((s, b) => s + b.value, 0);
             const negacaoRD = activeBuffs.filter(b => b.type === 'negacaoRd').reduce((s, b) => s + b.value, 0);
 
             // RD e resistências são avaliadas parcela a parcela. Escudos e PV
@@ -2600,6 +2599,8 @@ export const useCharacterStore = create<CharacterStore>()(
               const parcelaShieldRD = parcela.tipo === 'DAL' ? 0 : shieldRD;
               const typeRd = parcela.tipo ? (rdByType[parcela.tipo] || 0) : 0;
               const baseRd = (c.rd || 0) + typeRd;
+              const buffRD = activeBuffs.filter(b => b.type === 'rd' && (!b.rdDamageTypes?.length || (!!parcela.tipo && b.rdDamageTypes.includes(parcela.tipo))))
+                .reduce((s, b) => s + b.value, 0);
               const effectiveRd = opts?.ignoresRD ? 0 : Math.max(0, baseRd + buffRD + negacaoRD + revestimentoRD + parcelaShieldRD - Math.max(0, opts?.rdIgnore ?? 0));
               let mitigado = Math.max(0, parcela.valor - effectiveRd);
               rdApplied += Math.min(parcela.valor, effectiveRd);

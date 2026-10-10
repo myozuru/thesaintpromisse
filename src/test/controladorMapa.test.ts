@@ -8,7 +8,7 @@ import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { useTestRequestStore } from '@/stores/useTestRequestStore';
 import type { EntidadeOmni } from '@/lib/omni/tipos';
-import { invocarControlador, invocarControladores, recolherInvocacao, tokensInvocados, limparInvocacoesDerrotadas, causarDanoInvocacao, curarInvocacao, levantarInvocacao, comandarReposicionamento, comandarAtaque, comandosPorAcao, confirmarMovimentoInvocacao, rolarPericiaInvocacao } from '@/lib/controlador/mapa';
+import { invocarControlador, invocarControladores, recolherInvocacao, tokensInvocados, limparInvocacoesDerrotadas, causarDanoInvocacao, curarInvocacao, levantarInvocacao, comandarReposicionamento, comandarAtaque, comandarSuporte, expirarEfeitosSuporteInvocacoes, comandosPorAcao, confirmarMovimentoInvocacao, rolarPericiaInvocacao } from '@/lib/controlador/mapa';
 import type { InvocacaoControlador } from '@/lib/controlador/tipos';
 
 let numeroFixture = 0;
@@ -807,6 +807,100 @@ describe('Controlador — materialização real no mapa', () => {
   });
   it('progride a cota de comandos nos níveis 1, 6, 12 e 18', () => {
     expect([1, 6, 12, 18].map(comandosPorAcao)).toEqual([1, 2, 3, 4]);
+  });
+  it('cura PV reais com Energia Reversa, debita 2 PE e consome a ação da instância', async () => {
+    const acaoCura = {
+      id: 'cura', nome: 'Cura', tipo: 'suporte' as const, tipoExecucao: 'manual' as const,
+      categoriaAcao: 'acao_complexa' as const, custoPE: 2, alcanceM: 6,
+      efeitoSuporte: { efeito: 'cura' as const, alvos: 'unico' as const, atributoCura: 'sabedoria' as const },
+    };
+    useCharacterStore.getState().updateCharacter('dono', {
+      hasEnergiaReversa: true,
+      invocacoesConhecidas: [
+        { ...modelo('a'), grau: 'quarto', atributos: { forca: 10, destreza: 10, constituicao: 10, inteligencia: 10, sabedoria: 16, presenca: 10 }, economiaAcoesConfigurada: { acaoComplexa: 1 }, acoes: [acaoCura], custosComandosConfigurados: { cura: { execucao: 'manual', debitos: [{ entidade: 'dono', recurso: 'pe', quantidade: 2 }] } } },
+        ...pegarFicha('dono').invocacoesConhecidas!.filter(item => item.id !== 'a'),
+      ],
+    });
+    useCharacterStore.setState({ characters: [...useCharacterStore.getState().characters, ficha('aliado', { hpCurrent: 1, hpMax: 20 })] });
+    useMapStore.getState().addEntity({ shape: 'ELLIPSE', x: 280, y: 140, w: 70, h: 70, rotation: 0, color: '#44aa88', locked: false, characterId: 'aliado' });
+    const invocacao = invocarControlador('dono', 'a', 'leste');
+    if (!invocacao.ok) throw new Error(invocacao.motivo);
+    useCombatStore.setState({ inCombat: true, round: 1, initiativeOrder: [{ charId: 'dono', charName: 'Dono', roll: 10, bonus: 0, total: 10 }], currentTurnIndex: 0 } as never);
+    const { useDice3DStore } = await import('@/stores/useDice3DStore');
+    vi.spyOn(useDice3DStore.getState(), 'requestRoll').mockResolvedValue([4]);
+
+    await expect(comandarSuporte('dono', 'a', 'cura', ['aliado'])).resolves.toMatchObject({ ok: true, curaReal: true, valor: 7, alvos: 1 });
+    expect(pegarFicha('aliado').hpCurrent).toBe(8);
+    expect(pegarFicha('dono').peCurrent).toBe(5);
+    expect(pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoComplexa).toEqual({ atual: 0, maximo: 1 });
+    useCombatStore.setState({ inCombat: false } as never);
+    vi.restoreAllMocks();
+  });
+  it('concede PVT a um Shikigami, absorve o próximo dano e expira sua defesa na rodada correta', async () => {
+    const cura = {
+      id: 'cura', nome: 'Cura', tipo: 'suporte' as const, tipoExecucao: 'manual' as const,
+      categoriaAcao: 'acao_complexa' as const, custoPE: 2, alcanceM: 9,
+      efeitoSuporte: { efeito: 'cura' as const, alvos: 'unico' as const, atributoCura: 'sabedoria' as const },
+    };
+    const defesa = {
+      id: 'defesa', nome: 'Defesa', tipo: 'suporte' as const, tipoExecucao: 'manual' as const,
+      categoriaAcao: 'acao_simples' as const, alcanceM: 3,
+      efeitoSuporte: { efeito: 'defesa' as const, alvos: 'unico' as const },
+    };
+    const acerto = {
+      id: 'acerto', nome: 'Acerto', tipo: 'suporte' as const, tipoExecucao: 'manual' as const,
+      categoriaAcao: 'acao_simples' as const, alcanceM: 3,
+      efeitoSuporte: { efeito: 'acerto' as const, alvos: 'unico' as const },
+    };
+    const danoExtra = {
+      id: 'dano-extra', nome: 'Dano Extra', tipo: 'suporte' as const, tipoExecucao: 'manual' as const,
+      categoriaAcao: 'acao_simples' as const, alcanceM: 3,
+      efeitoSuporte: { efeito: 'dano_adicional' as const, alvos: 'unico' as const },
+    };
+    const ataque = {
+      id: 'mordida', nome: 'Mordida', tipo: 'ataque' as const, tipoExecucao: 'manual' as const,
+      categoriaAcao: 'acao_comum' as const, dano: '1d4', tipoAtaque: 'corpo_a_corpo' as const,
+      atributoAtaque: 'forca' as const, alcanceM: 3,
+    };
+    useCharacterStore.getState().updateCharacter('dono', {
+      invocacoesConhecidas: [
+        { ...modelo('a'), grau: 'quarto', atributos: { forca: 10, destreza: 10, constituicao: 10, inteligencia: 10, sabedoria: 16, presenca: 10 }, economiaAcoesConfigurada: { acaoComplexa: 1, acaoSimples: 3 }, acoes: [cura, defesa, acerto, danoExtra] },
+        { ...pegarFicha('dono').invocacoesConhecidas!.find(item => item.id === 'b')!, grau: 'quarto', atributos: { forca: 10, destreza: 10, constituicao: 10, inteligencia: 10, sabedoria: 10, presenca: 10 }, economiaAcoesConfigurada: { acaoComum: 1 }, acoes: [ataque] },
+        ...pegarFicha('dono').invocacoesConhecidas!.filter(item => item.id !== 'a' && item.id !== 'b'),
+      ],
+    });
+    const fonte = invocarControlador('dono', 'a', 'leste');
+    const alvo = invocarControlador('dono', 'b', 'norte');
+    if (!fonte.ok) throw new Error(fonte.motivo);
+    if (!alvo.ok) throw new Error(alvo.motivo);
+    useCombatStore.setState({ inCombat: true, round: 1, initiativeOrder: [{ charId: 'dono', charName: 'Dono', roll: 10, bonus: 0, total: 10 }], currentTurnIndex: 0 } as never);
+    useCharacterStore.setState({ characters: [...useCharacterStore.getState().characters, ficha('inimigo', { category: 'INIMIGO', hpCurrent: 30, hpMax: 30, ca: 10 })] });
+    useMapStore.getState().addEntity({ shape: 'ELLIPSE', x: 210, y: 70, w: 70, h: 70, rotation: 0, color: '#aa4444', locked: false, characterId: 'inimigo' });
+    const { useDice3DStore } = await import('@/stores/useDice3DStore');
+    vi.spyOn(useDice3DStore.getState(), 'requestRoll').mockImplementation(async (tipos) => tipos.map(tipo => tipo === 'D20' ? 15 : tipo === 'D4' ? 3 : tipo === 'D6' ? 5 : 1));
+
+    await expect(comandarSuporte('dono', 'a', 'cura', [`invoc:${alvo.tokenId}`])).resolves.toMatchObject({ ok: true, curaReal: false, valor: 6 });
+    expect(pegarFicha('dono').peCurrent).toBe(4);
+    expect(pegarFicha('dono').instanciasInvocacao?.find(item => item.id === useMapStore.getState().entities[alvo.tokenId].invocationInstanceId)?.pvTemporarios).toBe(6);
+    expect(causarDanoInvocacao(alvo.tokenId, 2, 'DCO')).toMatchObject({ ok: true, hpRestante: 12 });
+    expect(useMapStore.getState().entities[alvo.tokenId].invocationTempHp).toBe(4);
+
+    await expect(comandarSuporte('dono', 'a', 'acerto', [`invoc:${alvo.tokenId}`])).resolves.toMatchObject({ ok: true, efeito: 'Acerto', valor: 1 });
+    expect(pegarFicha('dono').instanciasInvocacao?.find(item => item.tokenId === fonte.tokenId)?.usosAuxilioRodada).toMatchObject({ rodada: 1, total: 1 });
+    await expect(comandarSuporte('dono', 'a', 'defesa', [`invoc:${alvo.tokenId}`])).resolves.toMatchObject({ ok: true, efeito: 'Defesa', valor: 0 });
+    await expect(comandarSuporte('dono', 'a', 'dano-extra', [`invoc:${alvo.tokenId}`])).resolves.toMatchObject({ ok: true, efeito: 'dano adicional 1d4', formula: '1d4' });
+    expect(useMapStore.getState().entities[alvo.tokenId].invocationDefense).toBe(14);
+    await import('@/lib/omni/eventBus');
+    const resultadoAtaque = await comandarAtaque('dono', 'b', 'mordida', 'inimigo');
+    expect(resultadoAtaque).toMatchObject({ ok: true, acertou: true, dano: 6 });
+    expect(pegarFicha('dono').instanciasInvocacao?.find(item => item.id === useMapStore.getState().entities[alvo.tokenId].invocationInstanceId)?.efeitosSuporteAtivos?.map(efeito => efeito.tipo)).toEqual(['defesa']);
+    expirarEfeitosSuporteInvocacoes(1);
+    expect(useMapStore.getState().entities[alvo.tokenId].invocationDefense).toBe(14);
+    expirarEfeitosSuporteInvocacoes(2);
+    expect(useMapStore.getState().entities[alvo.tokenId].invocationDefense).toBe(14);
+    expect(pegarFicha('dono').instanciasInvocacao?.find(item => item.id === useMapStore.getState().entities[alvo.tokenId].invocationInstanceId)?.efeitosSuporteAtivos).toEqual([]);
+    useCombatStore.setState({ inCombat: false } as never);
+    vi.restoreAllMocks();
   });
   it('cada instância gasta seu próprio saldo e não usa os créditos de ação do dono', async () => {
     const inv = { ...modelo('a'), economiaAcoesConfigurada: { acaoComum: 2 }, acoes: [{ id: 'mordida', nome: 'Mordida', tipo: 'ataque' as const, alcanceM: 1.5, dano: '1d6' }] };

@@ -2,6 +2,7 @@ import type {
   CampoDerivadoInvocacao,
   EstadoAquisicaoInvocacao,
   ModeloInvocacao,
+  ConfiguracaoEfeitoSuporteInvocacao,
 } from "@/lib/invocacoes/schema";
 
 /** Catálogo persistente de invocações do Controlador.
@@ -40,6 +41,7 @@ export interface InvocacaoControlador {
   resistenciaTreinada?: unknown;
   recursosConfigurados?: ModeloInvocacao["recursosConfigurados"];
   caracteristicas?: unknown[];
+  possuiEnergiaReversa?: boolean;
   reacoes?: unknown[];
   automacoesOmni?: ModeloInvocacao["automacoesOmni"];
   omniConfiguracao?: ModeloInvocacao["omniConfiguracao"];
@@ -79,6 +81,7 @@ export interface InvocacaoControlador {
     id: string;
     nome: string;
     tipo?: 'ataque' | 'habilidade' | 'movimento' | 'bonus' | 'suporte';
+    efeitoSuporte?: ConfiguracaoEfeitoSuporteInvocacao;
     teste?: 'ataque' | 'resistencia';
     tipoAtaque?: 'corpo_a_corpo' | 'distancia';
     atributoAtaque?: 'forca' | 'destreza';

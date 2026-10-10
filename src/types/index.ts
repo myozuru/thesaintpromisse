@@ -167,6 +167,14 @@ export interface ActiveBuff {
   peCostPerRound?: number;
   /** Caster id — used to enforce "1 sustentado por player". */
   sourceCharId?: string;
+  /** Expiração por rodada usada por bônus concedidos por suporte de Shikigami. */
+  expiraNaRodada?: number;
+  /** Bônus de um ataque consome o efeito mesmo se o ataque errar. */
+  consumeOnAttack?: boolean;
+  /** Fórmula do dano adicional gerado pelo próximo ataque. */
+  extraDamageFormula?: string;
+  /** RD temporária limitada a estes tipos de dano; ausente significa todos. */
+  rdDamageTypes?: DamageType[];
   /** Identifica uma conjuração sustentada, mesmo quando afeta vários alvos/buffs. */
   sustainInstanceId?: string;
   /** Identifica a concentração que mantém este efeito ativo, quando aplicável. */

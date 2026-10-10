@@ -76,6 +76,7 @@ export function ShikigamiOwnerPanel({ tokenId }: { tokenId: string }) {
           <h3 className="truncate text-sm font-semibold text-foreground">{model.apelido?.trim() || model.nome}</h3>
           <p className="text-xs text-muted-foreground">
             {owner.name} · PV {token.hp ?? instance?.hpAtual ?? model.hpAtual}/{token.hpMax ?? instance?.hpMaximoAtual ?? model.hpMaximo}
+            {(instance?.pvTemporarios ?? token.invocationTempHp ?? 0) > 0 && <> · PVT {instance?.pvTemporarios ?? token.invocationTempHp}</>}
             {' · '}Defesa {token.invocationDefense ?? model.defesa}
           </p>
         </div>

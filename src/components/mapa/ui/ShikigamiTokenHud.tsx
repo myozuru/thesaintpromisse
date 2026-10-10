@@ -23,6 +23,7 @@ export function ShikigamiTokenHud() {
       <div className="rounded-md border border-violet-400/40 bg-card/95 px-2 py-1 text-[10px] text-foreground shadow-lg backdrop-blur whitespace-nowrap">
         <strong>{token.label || 'Shikigami'}</strong>
         <span className="ml-2 text-muted-foreground">PV {token.hp ?? '—'}/{token.hpMax ?? '—'}</span>
+        {(token.invocationTempHp ?? 0) > 0 && <span className="ml-2 text-sky-200">PVT {token.invocationTempHp}</span>}
         {token.invocationDefense !== undefined && <span className="ml-2 text-muted-foreground">Def. {token.invocationDefense}</span>}
         {token.invocationMovementM !== undefined && <span className="ml-2 text-violet-200">Mov. {token.invocationMovementM} m</span>}
         {token.invocationState === 'caida' && <span className="ml-2 text-amber-300">Caído</span>}

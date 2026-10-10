@@ -16,8 +16,10 @@ import { prepareCollisionCache, resolveCollisionMove, tokenFootprintSegments, ty
 import { buildSegments as buildFogSegments } from '@/lib/fog/visibility';
 import { useFogStore } from '@/stores/fogStore';
 import { isFreeformFor } from '@/lib/freeformMode';
-import { DEFAULT_SAVING_THROWS, type Character } from '@/types';
+import { DEFAULT_SAVING_THROWS, type ActiveBuff, type Character, type DamageType } from '@/types';
 import { InstanciaInvocacaoSchema, type InstanciaInvocacao } from '@/lib/invocacoes/schema';
+import { alcanceCuraInvocacao, calcularEfeitoSuporte, capacidadeEnergiaReversaInvocacao } from './suporte';
+import { bonusPericiaCaracteristicas, reducaoDanoCaracteristicas } from './passivas';
 import {
   aplicarCuraPVInvocacao,
   aplicarDanoPVInvocacao,
@@ -81,10 +83,11 @@ function gravarInstancia(
   instancia: InstanciaInvocacao,
   extras: Partial<Character> = {},
 ): void {
+  const personagemAtual = useCharacterStore.getState().characters.find(item => item.id === personagem.id) ?? personagem;
   const hpCatalogo = Math.max(0, Math.min(instancia.hpMaximoAtual, instancia.hpAtual));
-  useCharacterStore.getState().updateCharacter(personagem.id, {
-    instanciasInvocacao: instanciasComAtualizada(personagem, instancia),
-    invocacoesConhecidas: (personagem.invocacoesConhecidas ?? []).map(modelo => modelo.id === instancia.modeloId
+  useCharacterStore.getState().updateCharacter(personagemAtual.id, {
+    instanciasInvocacao: instanciasComAtualizada(personagemAtual, instancia),
+    invocacoesConhecidas: (personagemAtual.invocacoesConhecidas ?? []).map(modelo => modelo.id === instancia.modeloId
       ? { ...modelo, hpAtual: hpCatalogo }
       : modelo),
     ...extras,
@@ -96,8 +99,9 @@ function prepararDebitoComando(
   modelo: InvocacaoControlador,
   instancia: InstanciaInvocacao,
   acao: InvocacaoControlador['acoes'][number],
+  custoOverride?: number,
 ): { ok: true; peDonoRestante: number; recursosRestantes: Record<string, number> } | { ok: false; motivo: string } {
-  const custo = acao.custoPE ?? 0;
+  const custo = custoOverride ?? acao.custoPE ?? 0;
   const configuracao = modelo.custosComandosConfigurados?.[acao.id];
   if (configuracao?.execucao === 'evento_automatico') {
     return { ok: false, motivo: 'Esta ação está configurada para execução por evento automático.' };
@@ -109,7 +113,7 @@ function prepararDebitoComando(
   let peDono = 0;
   let peInvocacao = 0;
   const recursosRestantes = { ...instancia.recursosAtuais };
-  for (const debito of configuracao?.debitos ?? []) {
+  for (const debito of custoOverride === 0 ? [] : configuracao?.debitos ?? []) {
     if (!Number.isFinite(debito.quantidade) || debito.quantidade < 0) return { ok: false, motivo: 'Débito de recurso inválido.' };
     if (debito.entidade === 'dono') {
       if (debito.recurso !== 'pe') return { ok: false, motivo: 'Esta versão só pode debitar PE do personagem dono.' };
@@ -809,7 +813,7 @@ export function resetarEconomiaManualInvocacao(
 
 
 /** Dano direcionado a uma instância; 0 PV deixa a criatura Caída, −PV máximo a derrota. */
-export function causarDanoInvocacao(tokenId: string, dano: number): { ok: true; hpRestante: number; destruida: boolean } | { ok: false; motivo: string } {
+export function causarDanoInvocacao(tokenId: string, dano: number, tipoDano?: DamageType): { ok: true; hpRestante: number; destruida: boolean } | { ok: false; motivo: string } {
   const mapa = useMapStore.getState();
   const token = mapa.entities[tokenId];
   if (!token?.ownerCharId || !token.invocationId) return { ok: false, motivo: 'Token não pertence a uma invocação.' };
@@ -819,11 +823,20 @@ export function causarDanoInvocacao(tokenId: string, dano: number): { ok: true; 
   const modelo = obterModeloDoToken(dono, token);
   if (!modelo) return { ok: false, motivo: 'Modelo da invocação não encontrado.' };
   const atual = obterInstanciaDoToken(dono, token, modelo);
-  const resultado = aplicarDanoPVInvocacao(atual, dano);
+  const rdCaracteristica = reducaoDanoCaracteristicas(modelo, tipoDano);
+  const rdAuxilio = (atual.efeitosSuporteAtivos ?? []).filter(efeito =>
+    efeito.tipo === 'reducao_dano' && efeito.expiraNaRodada >= (useCombatStore.getState().round ?? 1) &&
+    (!efeito.tiposDano?.length || (!!tipoDano && efeito.tiposDano.includes(tipoDano)))
+  ).reduce((total, efeito) => total + efeito.valor, 0);
+  const danoFinal = Math.max(0, Math.floor(dano) - rdCaracteristica - rdAuxilio);
+  const pvTemporarios = Math.max(0, atual.pvTemporarios ?? 0);
+  const absorvido = Math.min(pvTemporarios, danoFinal);
+  const resultado = aplicarDanoPVInvocacao(atual, danoFinal - absorvido);
   if (!resultado.ok) return resultado;
-  const instanciaAtualizada = resultado.instancia.estado === 'derrotada'
-    ? preservarContribuicaoNaDerrota(resultado.instancia)
-    : resultado.instancia;
+  const comTemporarios = InstanciaInvocacaoSchema.parse({ ...resultado.instancia, pvTemporarios: pvTemporarios - absorvido });
+  const instanciaAtualizada = comTemporarios.estado === 'derrotada'
+    ? preservarContribuicaoNaDerrota(comTemporarios)
+    : comTemporarios;
   gravarInstancia(dono, instanciaAtualizada);
   if (instanciaAtualizada.estado === 'derrotada') {
     mapa.removeEntities([tokenId]);
@@ -841,10 +854,50 @@ export function causarDanoInvocacao(tokenId: string, dano: number): { ok: true; 
   }
   mapa.updateEntity(tokenId, {
     hp: instanciaAtualizada.hpAtual,
+    invocationTempHp: instanciaAtualizada.pvTemporarios ?? 0,
     invocationState: instanciaAtualizada.estado,
     invocationInstanceId: instanciaAtualizada.id,
   });
   return { ok: true, hpRestante: instanciaAtualizada.hpAtual, destruida: false };
+}
+
+function atualizarEfeitosSuporteInvocacao(
+  personagem: Character,
+  modelo: InvocacaoControlador,
+  tokenId: string,
+  instancia: InstanciaInvocacao,
+  efeitos: NonNullable<InstanciaInvocacao['efeitosSuporteAtivos']>,
+): InstanciaInvocacao {
+  const atualizada = InstanciaInvocacaoSchema.parse({
+    ...instancia,
+    version: instancia.version + 1,
+    efeitosSuporteAtivos: efeitos,
+  });
+  gravarInstancia(personagem, atualizada);
+  const bonusDefesa = efeitos
+    .filter(efeito => efeito.tipo === 'defesa' && efeito.expiraNaRodada >= (useCombatStore.getState().round ?? 1))
+    .reduce((total, efeito) => total + efeito.valor, 0);
+  useMapStore.getState().updateEntity(tokenId, { invocationDefense: modelo.defesa + bonusDefesa });
+  return atualizada;
+}
+
+/** Remove bônus expirados de todas as instâncias e atualiza a CA dos tokens. */
+export function expirarEfeitosSuporteInvocacoes(ateRodada: number, limparTudo = false): void {
+  const personagens = [...useCharacterStore.getState().characters];
+  for (const snapshot of personagens) {
+    for (const instanciaSnapshot of snapshot.instanciasInvocacao ?? []) {
+      const efeitos = instanciaSnapshot.efeitosSuporteAtivos;
+      if (!efeitos?.length) continue;
+      const restantes = limparTudo ? [] : efeitos.filter(efeito => efeito.expiraNaRodada > ateRodada);
+      if (restantes.length === efeitos.length) continue;
+      const personagem = useCharacterStore.getState().characters.find(item => item.id === snapshot.id);
+      if (!personagem) continue;
+      const instancia = personagem.instanciasInvocacao?.find(item => item.id === instanciaSnapshot.id);
+      const modelo = personagem.invocacoesConhecidas?.find(item => item.id === instanciaSnapshot.modeloId);
+      if (!instancia || !modelo) continue;
+      atualizarEfeitosSuporteInvocacao(personagem, modelo, instancia.tokenId, instancia, restantes);
+    }
+  }
 }
 
 /** Cura PV da instância sem levantar automaticamente uma criatura que já estava Caída. */
@@ -862,6 +915,7 @@ export function curarInvocacao(tokenId: string, cura: number): { ok: true; hpRes
   gravarInstancia(dono, resultado.instancia);
   mapa.updateEntity(tokenId, {
     hp: resultado.instancia.hpAtual,
+    invocationTempHp: resultado.instancia.pvTemporarios ?? 0,
     invocationState: resultado.instancia.estado,
     invocationInstanceId: resultado.instancia.id,
   });
@@ -934,6 +988,7 @@ export function comandosPorAcao(nivel: number): number {
 }
 
 const ataquesPendentes = new Set<string>();
+const suportesPendentes = new Set<string>();
 
 /** Ataque de servo comandado no turno do Controlador. O alvo utiliza uma ficha
  * real, portanto o dano percorre applyDamage (reações, RD e demais regras).
@@ -965,6 +1020,21 @@ export async function comandarAtaque(
   const modelo = obterModeloDoToken(dono, servo);
   if (!modelo) return { ok: false, motivo: 'Modelo da invocação não encontrado.' };
   const instancia = obterInstanciaDoToken(dono, servo, modelo);
+  const rodadaAtual = useCombatStore.getState().round ?? 1;
+  const efeitosDeAtaque = (instancia.efeitosSuporteAtivos ?? []).filter(efeito =>
+    efeito.expiraNaRodada >= rodadaAtual && (efeito.tipo === 'acerto' || efeito.tipo === 'dano_adicional'),
+  );
+  const bonusAcertoAuxilio = efeitosDeAtaque
+    .filter(efeito => efeito.tipo === 'acerto')
+    .reduce((total, efeito) => total + efeito.valor, 0);
+  const efeitosDanoAdicional = efeitosDeAtaque.filter(efeito => efeito.tipo === 'dano_adicional');
+  const formulasDanoAdicional = efeitosDanoAdicional.map(efeito => ({
+    efeito,
+    formula: parseFormulaDanoInvocacao(efeito.formula ?? ''),
+  }));
+  if (formulasDanoAdicional.some(item => !item.formula)) {
+    return { ok: false, motivo: 'Uma fórmula de dano adicional ativa está inválida.' };
+  }
   const chave = instancia.id + ':' + acaoId;
   if (ataquesPendentes.has(chave)) return { ok: false, motivo: 'Comando anterior ainda em andamento.' };
   if (!podeUsarAcaoDaInstancia(instancia, acaoId)) return { ok: false, motivo: 'A ação ainda está em recarga.' };
@@ -983,7 +1053,10 @@ export async function comandarAtaque(
   const formula = acao.dano ? parseFormulaDanoInvocacao(acao.dano) : null;
   if (tipoTeste === 'ataque' && !formula) return { ok: false, motivo: 'Dano inválido; use dados como 2d12+1d6+3.' };
   if (tipoTeste === 'resistencia' && acao.dano && !formula) return { ok: false, motivo: 'Dano inválido; use dados como 2d12+1d6+3.' };
-  const bonusAtaque = tipoTeste === 'ataque' ? calcularBonusAtaqueInvocacao(dono, modelo, acao) : null;
+  const bonusAtaqueBase = tipoTeste === 'ataque' ? calcularBonusAtaqueInvocacao(dono, modelo, acao) : null;
+  const bonusAtaque = bonusAtaqueBase
+    ? { ...bonusAtaqueBase, total: bonusAtaqueBase.total + bonusAcertoAuxilio }
+    : null;
   if (tipoTeste === 'ataque' && (!bonusAtaque || !Number.isFinite(bonusAtaque.total))) {
     return { ok: false, motivo: 'Defina um atributo de ataque válido na ficha do Shikigami.' };
   }
@@ -1000,6 +1073,15 @@ export async function comandarAtaque(
   const comRecarga = registrarRecargaDaAcao(comRecursosDebitados, acao);
   gravarInstancia(dono, comRecarga, { peCurrent: debito.peDonoRestante });
   ataquesPendentes.add(chave);
+  const consumirAuxiliosDeAtaque = () => {
+    if (!efeitosDeAtaque.length) return;
+    const ids = new Set(efeitosDeAtaque.map(efeito => efeito.id));
+    const atual = useCharacterStore.getState().characters.find(character => character.id === donoId);
+    const instanciaAtual = atual?.instanciasInvocacao?.find(item => item.id === instancia.id);
+    if (!atual || !instanciaAtual) return;
+    const restantes = (instanciaAtual.efeitosSuporteAtivos ?? []).filter(efeito => !ids.has(efeito.id));
+    atualizarEfeitosSuporteInvocacao(atual, modelo, servo.id, instanciaAtual, restantes);
+  };
   try {
     if (tipoTeste === 'resistencia') {
       const requestId = useTestRequestStore.getState().enqueue({
@@ -1033,6 +1115,7 @@ export async function comandarAtaque(
     const natural = await rollD20Autonomo(bonusAtaque!.total, { label: `Ataque de ${modelo.nome}: ${acao.nome}` });
     const resultado = resolverAcertoInvocacao(natural, bonusAtaque!.total, defesa, acao.margemCritico ?? 20);
     if (!resultado.acertou) {
+      consumirAuxiliosDeAtaque();
       useLogStore.getState().addLog('combat', `🎯 ${modelo.nome} — ${acao.nome} contra ${alvo.name}: d20 ${natural} + ${bonusAtaque!.total} = ${resultado.total} vs Defesa ${defesa} (${resultado.falhaCritica ? 'falha crítica' : 'erro'}).`);
       return { ok: true, acertou: false, totalAtaque: resultado.total, dano: 0 };
     }
@@ -1040,20 +1123,219 @@ export async function comandarAtaque(
       ? multiplicarDadosCriticos(formula!.dados, acao.multiplicadorCritico ?? 2)
       : formula!.dados;
     const rolagem = await rollDiceGroups(dadosDano, { label: `Dano de ${modelo.nome}: ${acao.nome}` });
-    const dano = Math.max(0, rolagem.total + formula!.fixo + calcularBonusDanoInvocacao(modelo, acao, 'ataque'));
+    let bonusDanoAuxilio = 0;
+    const detalhesDanoAuxilio: string[] = [];
+    for (const { efeito, formula: formulaAuxilio } of formulasDanoAdicional) {
+      if (!formulaAuxilio) continue;
+      const rolagemAuxilio = await rollDiceGroups(formulaAuxilio.dados, { label: `${modelo.nome}: auxílio de dano` });
+      bonusDanoAuxilio += rolagemAuxilio.total + formulaAuxilio.fixo;
+      detalhesDanoAuxilio.push(`${efeito.formula} = ${rolagemAuxilio.total + formulaAuxilio.fixo}`);
+    }
+    const dano = Math.max(0, rolagem.total + formula!.fixo + calcularBonusDanoInvocacao(modelo, acao, 'ataque') + bonusDanoAuxilio);
+    consumirAuxiliosDeAtaque();
     await useCharacterStore.getState().applyDamage(alvoId, dano, acao.tipoDano ?? 'DCO', {
       attackerId: donoId,
       source: 'omni',
       isMelee: bonusAtaque!.tipo === 'corpo_a_corpo',
       attack: { critical: resultado.critico, criticalFail: resultado.falhaCritica, kind: bonusAtaque!.tipo === 'corpo_a_corpo' ? 'melee' : 'ranged' },
     });
-    useLogStore.getState().addLog('combat', `🎯 ${modelo.nome} — ${acao.nome} contra ${alvo.name}: d20 ${natural} + ${bonusAtaque!.total} = ${resultado.total} vs Defesa ${defesa} → ${resultado.critico ? 'acerto crítico' : 'acerto'}, dano ${dano} (${acao.tipoDano ?? 'DCO'}).`);
+    useLogStore.getState().addLog('combat', `🎯 ${modelo.nome} — ${acao.nome} contra ${alvo.name}: d20 ${natural} + ${bonusAtaque!.total} = ${resultado.total} vs Defesa ${defesa} → ${resultado.critico ? 'acerto crítico' : 'acerto'}, dano ${dano} (${acao.tipoDano ?? 'DCO'})${detalhesDanoAuxilio.length ? `; auxílio extra ${detalhesDanoAuxilio.join(', ')}` : ''}.`);
     return { ok: true, acertou: true, totalAtaque: resultado.total, dano, ...(resultado.critico ? { critico: true } : {}) };
   } catch {
     // A execução pode ter chegado ao dano antes da falha. Não duplicar ação nem dano.
     return { ok: false, motivo: 'Falha ao resolver ataque; confira o log de combate.' };
   } finally {
     ataquesPendentes.delete(chave);
+  }
+}
+
+/** Executa uma ação de auxílio configurada na ficha, debitando a economia da
+ * instância e aplicando cura, PVT ou um ActiveBuff temporizado ao aliado. */
+export async function comandarSuporte(
+  donoId: string,
+  invocacaoId: string,
+  acaoId: string,
+  alvosIds: string[],
+  opcoes?: { instanciaId?: string; requestId?: string },
+): Promise<{ ok: true; efeito: string; valor: number; alvos: number; curaReal?: boolean; formula?: string } | { ok: false; motivo: string }> {
+  const dono = useCharacterStore.getState().characters.find(character => character.id === donoId);
+  if (!dono) return { ok: false, motivo: 'Personagem inválido.' };
+  if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
+  const modelo = dono.invocacoesConhecidas?.find(item => item.id === invocacaoId && item.donoCharacterId === donoId);
+  const acao = modelo?.acoes.find(item => item.id === acaoId);
+  if (!modelo || !acao || acao.tipo !== 'suporte' || !acao.efeitoSuporte) {
+    return { ok: false, motivo: 'Ação sem um efeito de suporte estruturado.' };
+  }
+  if (acao.tipoExecucao === 'omni' || acao.tipoExecucao === 'referencia_omni') {
+    return { ok: false, motivo: 'Esta ação está vinculada ao OMNI e deve ser resolvida pelo executor OMNI.' };
+  }
+
+  const mapa = useMapStore.getState();
+  const servo = tokensInvocados(donoId).find(entity => entity.invocationId === invocacaoId &&
+    (!opcoes?.instanciaId || entity.invocationInstanceId === opcoes.instanciaId) &&
+    (entity.hp ?? 0) > 0 && entity.invocationState !== 'caida');
+  if (!servo) return { ok: false, motivo: 'A invocação precisa estar ativa no mapa.' };
+  const instancia = obterInstanciaDoToken(dono, servo, modelo);
+  const alvosUnicos = [...new Set(alvosIds)];
+  if (!alvosUnicos.length || alvosUnicos.length > 50) return { ok: false, motivo: 'Selecione entre 1 e 50 alvos no mapa.' };
+  if (acao.efeitoSuporte.alvos === 'unico' && alvosUnicos.length !== 1) {
+    return { ok: false, motivo: 'Esta ação atende um único alvo.' };
+  }
+  if (acao.efeitoSuporte.alvos === 'multiplos' && acao.efeitoSuporte.efeito !== 'cura') {
+    return { ok: false, motivo: 'Apenas cura pode afetar múltiplos alvos nesta versão.' };
+  }
+  if (!podeUsarAcaoDaInstancia(instancia, acaoId)) return { ok: false, motivo: 'A ação ainda está em recarga.' };
+  const categoria = categoriaEconomiaDaAcao(acao, instancia.economiaAcoes);
+  if (!categoria) return { ok: false, motivo: 'Categoria de ação própria não configurada.' };
+
+  const characterStore = useCharacterStore.getState();
+  type AlvoSuporte =
+    | { tipo: 'personagem'; personagem: Character; token: Entity; nome: string }
+    | { tipo: 'invocacao'; personagem: Character; modelo: InvocacaoControlador; instancia: InstanciaInvocacao; token: Entity; nome: string };
+  const alvosBrutos: Array<AlvoSuporte | null> = alvosUnicos.map(id => {
+    if (id.startsWith('invoc:')) {
+      const token = mapa.entities[id.slice('invoc:'.length)];
+      if (!token?.ownerCharId || !token.invocationId || token.hidden) return null;
+      const personagem = characterStore.characters.find(item => item.id === token.ownerCharId);
+      if (!personagem) return null;
+      const modeloAlvo = personagem.invocacoesConhecidas?.find(item => item.id === token.invocationId);
+      if (!modeloAlvo) return null;
+      const instanciaAlvo = obterInstanciaDoToken(personagem, token, modeloAlvo);
+      return { tipo: 'invocacao', personagem, modelo: modeloAlvo, instancia: instanciaAlvo, token, nome: modeloAlvo.apelido?.trim() || modeloAlvo.nome };
+    }
+    const personagem = characterStore.characters.find(item => item.id === id);
+    const token = Object.values(mapa.entities).find(entity => entity.characterId === id && !entity.invocationId && !entity.hidden);
+    return personagem && token ? { tipo: 'personagem', personagem, token, nome: personagem.name } : null;
+  });
+  if (alvosBrutos.some(alvo => !alvo)) return { ok: false, motivo: 'Todos os alvos precisam ter uma ficha e um token visível no mapa.' };
+  const alvos = alvosBrutos as AlvoSuporte[];
+  if (alvos.some(alvo => alvo.personagem.category === 'INIMIGO' && alvo.personagem.id !== donoId)) {
+    return { ok: false, motivo: 'Ações de suporte só podem escolher o próprio Controlador ou aliados.' };
+  }
+  if (alvos.some(alvo => alvo.tipo === 'invocacao' &&
+    (acao.efeitoSuporte!.efeito === 'cura'
+      ? alvo.instancia.estado === 'derrotada' || alvo.instancia.estado === 'dissipada'
+      : alvo.instancia.estado !== 'ativa'))) {
+    return { ok: false, motivo: 'A invocação-alvo precisa estar em um estado válido para receber este auxílio.' };
+  }
+  const escala = mapa.gridConfig.metersPerCell / mapa.gridConfig.dpi;
+  if (!(escala > 0)) return { ok: false, motivo: 'Grade inválida.' };
+  const alcance = acao.alcanceM ?? (acao.efeitoSuporte.efeito === 'cura' ? alcanceCuraInvocacao(modelo.grau) : 1.5);
+  if (!Number.isFinite(alcance) || (alcance ?? -1) < 0) return { ok: false, motivo: 'Alcance de suporte inválido.' };
+  for (const alvo of alvos) {
+    const distancia = Math.hypot((servo.x + servo.w / 2) - (alvo.token.x + alvo.token.w / 2),
+      (servo.y + servo.h / 2) - (alvo.token.y + alvo.token.h / 2)) * escala;
+    if (distancia > alcance! + 1e-6) return { ok: false, motivo: `${alvo.nome} está fora do alcance de ${alcance} m.` };
+  }
+
+  const marcadorUso = instancia.usosAuxilioRodada;
+  const rodada = useCombatStore.getState().round ?? 1;
+  const repeticoes = acao.efeitoSuporte.efeito === 'cura' || marcadorUso?.rodada !== rodada
+    ? 0
+    : marcadorUso.total ?? Object.values(marcadorUso.porEfeito).reduce((total, quantidade) => total + quantidade, 0);
+  const calculado = calcularEfeitoSuporte(modelo, acao, repeticoes);
+  if (!calculado.ok) return calculado;
+  const possuiEnergiaReversa = capacidadeEnergiaReversaInvocacao(modelo, dono);
+  const curaReal = calculado.efeito.tipo === 'cura' && possuiEnergiaReversa;
+  let custoOverride: number | undefined;
+  if (curaReal) {
+    if (acao.custoPE !== 2) return { ok: false, motivo: 'A cura real por Energia Reversa precisa custar exatamente 2 PE.' };
+    custoOverride = 2;
+  } else if (calculado.efeito.tipo === 'cura' && acao.custoPE === 2) {
+    // Sem Energia Reversa, o efeito previsto é PVT e a regra não exige os 2 PE da cura real.
+    custoOverride = 0;
+  }
+  const debito = prepararDebitoComando(dono, modelo, instancia, acao, custoOverride);
+  if (!debito.ok) return debito;
+
+  const chave = `${instancia.id}:${acaoId}`;
+  if (suportesPendentes.has(chave)) return { ok: false, motivo: 'Comando anterior ainda em andamento.' };
+  suportesPendentes.add(chave);
+  try {
+    let valor: number;
+    let formula: string | undefined;
+    if (calculado.efeito.tipo === 'cura') {
+      formula = `${calculado.efeito.dados.map(dado => `${dado.count}d${dado.sides}`).join('+')}${calculado.efeito.bonus < 0 ? calculado.efeito.bonus : `+${calculado.efeito.bonus}`}`;
+      const rolagem = await rollDiceGroups(calculado.efeito.dados, { label: `${modelo.nome} — ${acao.nome}` });
+      valor = Math.max(0, Math.floor(rolagem.total + calculado.efeito.bonus));
+    } else if (calculado.efeito.tipo === 'dano_adicional') {
+      valor = 0;
+      formula = calculado.efeito.formula;
+    } else {
+      valor = calculado.efeito.valor;
+    }
+
+    const gasto = gastarAcaoDaInstancia(instancia, categoria, 1, opcoes?.requestId);
+    if (!gasto.ok) return gasto;
+    const usosPorEfeito = marcadorUso?.rodada === rodada ? { ...marcadorUso.porEfeito } : {};
+    const totalUsosAuxilio = marcadorUso?.rodada === rodada ? repeticoes + 1 : 1;
+    if (acao.efeitoSuporte.efeito !== 'cura') usosPorEfeito[acao.efeitoSuporte.efeito] = (usosPorEfeito[acao.efeitoSuporte.efeito] ?? 0) + 1;
+    const comDebitos = {
+      ...gasto.instancia,
+      recursosAtuais: debito.recursosRestantes,
+      ...(acao.efeitoSuporte.efeito !== 'cura' ? { usosAuxilioRodada: { rodada, total: totalUsosAuxilio, porEfeito: usosPorEfeito } } : {}),
+    };
+    const comRecarga = registrarRecargaDaAcao(comDebitos, acao);
+    gravarInstancia(dono, comRecarga, { peCurrent: debito.peDonoRestante });
+
+    const roundExpiry = rodada + 1;
+    for (const alvo of alvos) {
+      if (calculado.efeito.tipo === 'cura') {
+        if (alvo.tipo === 'personagem') {
+          if (curaReal) characterStore.applyHealing(alvo.personagem.id, valor, 'cursed_energy_external', donoId);
+          else characterStore.applyShield(alvo.personagem.id, valor);
+        } else if (curaReal) {
+          const curada = curarInvocacao(alvo.token.id, valor);
+          if (!curada.ok) return curada;
+        } else {
+          const instanciaAtualizada = InstanciaInvocacaoSchema.parse({
+            ...alvo.instancia,
+            version: alvo.instancia.version + 1,
+            pvTemporarios: (alvo.instancia.pvTemporarios ?? 0) + valor,
+          });
+          gravarInstancia(alvo.personagem, instanciaAtualizada);
+          mapa.updateEntity(alvo.token.id, { invocationTempHp: instanciaAtualizada.pvTemporarios ?? 0 });
+        }
+        continue;
+      }
+      const origem = `${modelo.nome} — ${acao.nome}`;
+      let buff: ActiveBuff | undefined;
+      let efeitoInvocacao: NonNullable<InstanciaInvocacao['efeitosSuporteAtivos']>[number] | undefined;
+      if (calculado.efeito.tipo === 'defesa') {
+        buff = { id: novoIdInvocacao('auxilio-defesa'), spellName: origem, type: 'ca', value: calculado.efeito.valor, remainingTurns: -1, sourceCharId: donoId, expiraNaRodada: roundExpiry };
+        efeitoInvocacao = { id: novoIdInvocacao('auxilio-defesa'), tipo: 'defesa', valor: calculado.efeito.valor, expiraNaRodada: roundExpiry };
+      } else if (calculado.efeito.tipo === 'acerto') {
+        buff = { id: novoIdInvocacao('auxilio-acerto'), spellName: origem, type: 'hit', value: calculado.efeito.valor, remainingTurns: -1, sourceCharId: donoId, expiraNaRodada: roundExpiry, consumeOnAttack: true };
+        efeitoInvocacao = { id: novoIdInvocacao('auxilio-acerto'), tipo: 'acerto', valor: calculado.efeito.valor, expiraNaRodada: roundExpiry, consomeNoAtaque: true };
+      } else if (calculado.efeito.tipo === 'dano_adicional') {
+        buff = { id: novoIdInvocacao('auxilio-dano'), spellName: origem, type: 'extraDiceAfter', value: 0, remainingTurns: -1, sourceCharId: donoId, expiraNaRodada: roundExpiry, consumeOnAttack: true, extraDamageFormula: calculado.efeito.formula };
+        efeitoInvocacao = { id: novoIdInvocacao('auxilio-dano'), tipo: 'dano_adicional', valor: 0, formula: calculado.efeito.formula, expiraNaRodada: roundExpiry, consomeNoAtaque: true };
+      } else if (calculado.efeito.tipo === 'reducao_dano') {
+        buff = { id: novoIdInvocacao('auxilio-rd'), spellName: origem, type: 'rd', value: calculado.efeito.valor, remainingTurns: -1, sourceCharId: donoId, expiraNaRodada: roundExpiry, rdDamageTypes: calculado.efeito.tiposDano };
+        efeitoInvocacao = { id: novoIdInvocacao('auxilio-rd'), tipo: 'reducao_dano', valor: calculado.efeito.valor, tiposDano: calculado.efeito.tiposDano, expiraNaRodada: roundExpiry };
+      }
+      if (alvo.tipo === 'personagem') {
+        if (buff) characterStore.addBuff(alvo.personagem.id, buff);
+      } else if (efeitoInvocacao) {
+        const efeitosAtivos = (alvo.instancia.efeitosSuporteAtivos ?? []).filter(efeito => efeito.expiraNaRodada > rodada);
+        atualizarEfeitosSuporteInvocacao(alvo.personagem, alvo.modelo, alvo.token.id, alvo.instancia, [...efeitosAtivos, efeitoInvocacao]);
+      }
+    }
+
+    let nomeEfeito: string;
+    switch (calculado.efeito.tipo) {
+      case 'cura': nomeEfeito = curaReal ? 'cura real' : 'Pontos de Vida Temporários'; break;
+      case 'defesa': nomeEfeito = 'Defesa'; break;
+      case 'acerto': nomeEfeito = 'Acerto'; break;
+      case 'dano_adicional': nomeEfeito = `dano adicional ${formula}`; break;
+      case 'reducao_dano': nomeEfeito = `RD ${calculado.efeito.valor} contra ${calculado.efeito.tiposDano.join(', ')}`; break;
+    }
+    useLogStore.getState().addLog('combat', `🛟 ${modelo.nome} — ${acao.nome}: ${nomeEfeito}${calculado.efeito.tipo === 'cura' || calculado.efeito.tipo === 'defesa' || calculado.efeito.tipo === 'acerto' || calculado.efeito.tipo === 'reducao_dano' ? ` ${valor}` : ''} em ${alvos.map(alvo => alvo.nome).join(', ')}${formula && calculado.efeito.tipo === 'cura' ? ` (${formula})` : ''}.`);
+    return { ok: true, efeito: nomeEfeito, valor, alvos: alvos.length, ...(calculado.efeito.tipo === 'cura' ? { curaReal } : {}), ...(formula ? { formula } : {}) };
+  } catch {
+    return { ok: false, motivo: 'Falha ao resolver suporte; confira o log de combate.' };
+  } finally {
+    suportesPendentes.delete(chave);
   }
 }
 
@@ -1075,7 +1357,9 @@ export async function rolarPericiaInvocacao(
   if (useCombatStore.getState().inCombat && !podeComandarInvocacao(donoId)) return { ok: false, motivo: 'O teste só pode ser rolado no turno do dono durante o combate.' };
   const bonus = calcularBonusPericiaInvocacao(dono, modelo, pericia);
   if (!bonus) return { ok: false, motivo: 'Defina Inteligência ou Sabedoria como atributo-base das perícias na ficha.' };
-  if (!invocacaoTreinadaNaPericia(modelo, pericia)) return { ok: false, motivo: 'O Shikigami precisa ser treinado nessa perícia para fazer um teste independente.' };
+  if (!invocacaoTreinadaNaPericia(modelo, pericia) && bonusPericiaCaracteristicas(modelo, pericia) <= 0) {
+    return { ok: false, motivo: 'O Shikigami precisa ser treinado nessa perícia ou ter uma característica que conceda o teste.' };
+  }
   const nomePericia = ROTULOS_PERICIAS[pericia as keyof typeof ROTULOS_PERICIAS] ?? pericia;
   const d20 = await rollD20Autonomo(bonus.total, { label: `${nomePericia} — ${modelo.nome}` });
   const total = d20 + bonus.total;
