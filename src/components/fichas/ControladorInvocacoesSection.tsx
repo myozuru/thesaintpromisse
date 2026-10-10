@@ -161,7 +161,7 @@ export function ControladorInvocacoesSection({ character }: { character: Charact
   };
   const adicionarAtaque = async (id: string) => {
     if (busyAprovacao) return;
-    if (!nomeAtaque.trim() || !/\^\d+d(?:4|6|8|10|12|20)(?:\\+\\d+)?$/i.test(formulaAtaque.trim())
+    if (!nomeAtaque.trim() || !/^\d+d(?:4|6|8|10|12|20)(?:\+\d+)?$/i.test(formulaAtaque.trim())
       || !Number.isFinite(alcanceAtaque) || alcanceAtaque <= 0 || !Number.isFinite(bonusAtaque)) {
       setErro('Informe nome, dados no formato 1d6+2, alcance e bônus válidos.'); return;
     }
