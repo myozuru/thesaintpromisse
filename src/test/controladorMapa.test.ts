@@ -236,6 +236,9 @@ describe('Controlador — materialização real no mapa', () => {
       });
       expect(invocarControlador('dono', 'a', 'leste', { eventoId: 'evento-tempo-unico' })).toEqual(r);
       expect(useCombatStore.getState().turnRemainingAtStart).toBe(72);
+      useCombatStore.setState({ round: 2 });
+      expect(recolherInvocacao('dono', 'a')).toBe(true);
+      expect(pegarFicha('dono').instanciasInvocacao?.[0].causasSaida).toContain('dissipacao_voluntaria');
     } finally {
       vi.useRealTimers();
     }
@@ -255,6 +258,7 @@ describe('Controlador — materialização real no mapa', () => {
     try {
       expect(invocarControlador('dono', 'a', 'leste').ok).toBe(true);
       expect(useCombatStore.getState().turnRemainingAtStart).toBe(20);
+      useCombatStore.setState({ round: 2 });
       expect(recolherInvocacao('dono', 'a')).toBe(true);
       expect(useCombatStore.getState().turnRemainingAtStart).toBe(10);
       expect(pegarFicha('dono').instanciasInvocacao?.[0].contribuicaoTempo).toMatchObject({ estado: 'retirada', quantidadeRestante: 0 });
@@ -535,6 +539,20 @@ describe('Controlador — materialização real no mapa', () => {
     expect(tokensInvocados('dono')).toHaveLength(0);
     expect(pegarFicha('dono').peCurrent).toBe(7);
     expect(invocarControlador('dono', 'b', 'leste').ok).toBe(true);
+  });
+  it('mantém o token e a reserva se o dono tentar dissipar na rodada da invocação', () => {
+    useCombatStore.setState({
+      inCombat: true,
+      round: 3,
+      currentTurnIndex: 0,
+      initiativeOrder: [{ charId: 'dono', charName: 'Dono', roll: 10, bonus: 0, total: 10 }],
+    } as never);
+    const invocacao = invocarControlador('dono', 'a', 'leste');
+    if (!invocacao.ok) throw new Error(invocacao.motivo);
+
+    expect(recolherInvocacao('dono', 'a')).toBe(false);
+    expect(tokensInvocados('dono')).toHaveLength(1);
+    expect(pegarFicha('dono').instanciasInvocacao?.[0].estado).toBe('ativa');
   });
   it('mantém a instância no mapa a 0 PV e só a remove ao atingir -PV máximo', () => {
     const r = invocarControlador('dono', 'a', 'leste');

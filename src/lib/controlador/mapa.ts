@@ -34,6 +34,7 @@ import {
   levantarInstanciaInvocacao,
   novaInstanciaInvocacao,
   estadoPorPVInvocacao,
+  validarDissipacaoVoluntaria,
 } from './estadoInvocacao';
 import {
   criarContribuicaoTempoInvocacao,
@@ -619,14 +620,23 @@ export function recolherInvocacao(donoId: string, invocacaoId: string): boolean 
   const modelo = obterModeloDoToken(dono, token);
   if (!modelo) return false;
   const instancia = obterInstanciaDoToken(dono, token, modelo);
-  if (instancia.estado === 'derrotada') return false;
-  const tempo = useCombatStore.getState().removeInvocationTimeReservation(donoId, instancia.id);
+  const combate = useCombatStore.getState();
+  const validacaoDissipacao = validarDissipacaoVoluntaria({
+    estado: instancia.estado,
+    emCombate: combate.inCombat,
+    turnoDoDono: combate.initiativeOrder[combate.currentTurnIndex]?.charId === donoId,
+    rodadaAtual: combate.round,
+    rodadaCriacao: instancia.rodadaCriacao,
+  });
+  if (!validacaoDissipacao.ok) return false;
+  const tempo = combate.removeInvocationTimeReservation(donoId, instancia.id);
   const donoAtual = useCharacterStore.getState().characters.find(c => c.id === donoId);
   const instanciaAtual = donoAtual?.instanciasInvocacao?.find(item => item.id === instancia.id) ?? instancia;
   const dissipada = InstanciaInvocacaoSchema.parse({
     ...instanciaAtual,
     version: instanciaAtual.version + 1,
     estado: 'dissipada',
+    causasSaida: Array.from(new Set([...(instanciaAtual.causasSaida ?? []), 'dissipacao_voluntaria'])),
   });
   gravarInstancia(donoAtual ?? dono, dissipada);
   mapa.removeEntities(tokens.map(t => t.id));

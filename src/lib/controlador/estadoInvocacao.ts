@@ -8,6 +8,26 @@ export type ResultadoEstadoInvocacao =
   | { ok: true; instancia: InstanciaInvocacao }
   | { ok: false; motivo: string };
 
+export function validarDissipacaoVoluntaria(input: {
+  estado: InstanciaInvocacao['estado'];
+  emCombate: boolean;
+  turnoDoDono: boolean;
+  rodadaAtual?: number;
+  rodadaCriacao?: number;
+}): { ok: true } | { ok: false; motivo: string } {
+  if (input.estado === 'derrotada') {
+    return { ok: false, motivo: 'Uma invocação derrotada aguarda a resolução do Controlador ou do Mestre.' };
+  }
+  if (!input.emCombate) return { ok: true };
+  if (!input.turnoDoDono) {
+    return { ok: false, motivo: 'A dissipação voluntária só pode ocorrer no turno do dono.' };
+  }
+  if (input.rodadaCriacao !== undefined && input.rodadaAtual === input.rodadaCriacao) {
+    return { ok: false, motivo: 'A invocação não pode ser dissipada voluntariamente na rodada em que foi chamada.' };
+  }
+  return { ok: true };
+}
+
 export function estadoPorPVInvocacao(hpAtual: number, hpMaximo: number): InstanciaInvocacao['estado'] {
   if (hpAtual <= -hpMaximo) return 'derrotada';
   if (hpAtual <= 0) return 'caida';
