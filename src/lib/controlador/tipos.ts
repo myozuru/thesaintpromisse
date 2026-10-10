@@ -18,6 +18,9 @@ export interface InvocacaoControlador {
   motivoRejeicao?: string;
   tipo: TipoInvocacaoControlador;
   origem?: { tipo: 'grimorio' | 'omni' | 'manual'; entidadeId?: string };
+  /** Proveniência declarada; a aprovação não infere regras nem libera uso por si só. */
+  origemAquisicao?: string;
+  referenciaInterludio?: string;
   hpAtual: number;
   hpMaximo: number;
   defesa: number;
