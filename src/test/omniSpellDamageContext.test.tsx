@@ -17,7 +17,9 @@ import { useMapStore } from '@/stores/useMapStore';
 import { useTestRequestStore } from '@/stores/useTestRequestStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
+import { useOmniRuntimeStore } from '@/stores/useOmniRuntimeStore';
 import { useDice3DStore } from '@/stores/useDice3DStore';
+import { grantAdvantage, grantFlatBonus, peekAdvantageFor } from '@/lib/omni/rollAdvantage';
 import * as eventBus from '@/lib/omni/eventBus';
 import { CODIGOS_TIPO_DANO, montarMetadadosDano, resolverTipoDano } from '@/lib/omni/contextoDano';
 import { executarAcaoAtiva } from '@/lib/omni/acaoAtiva';
@@ -50,7 +52,7 @@ beforeEach(() => {
   useTestRequestStore.getState().clearAll();
   for (const method of ['log', 'group', 'groupEnd'] as const) vi.spyOn(console, method).mockImplementation(() => {});
 });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); limparMesa(); useTestRequestStore.getState().clearAll(); useOmniEntidadesStore.setState({ entidades: {} }); useDice3DStore.setState({ requestRoll: originalRoll }); vi.restoreAllMocks(); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); limparMesa(); useTestRequestStore.getState().clearAll(); useOmniEntidadesStore.setState({ entidades: {} }); useOmniRuntimeStore.setState({ efeitos: {} } as never); useDice3DStore.setState({ requestRoll: originalRoll }); vi.restoreAllMocks(); });
 
 async function resultadoCausado(spy: ReturnType<typeof vi.spyOn>) {
   await waitFor(() => expect(spy.mock.calls.some(([e]) => e === 'aoCausarDano')).toBe(true), { timeout: 4000 });
@@ -130,6 +132,51 @@ describe('Feitiços reais pela UI', () => {
     const ctx = await resultadoCausado(spy);
     expect(ctx).toMatchObject({ tipo: 7, fonte: 2, id_origem: 1, tipo_ataque: 3, valor_inicial: 7, valor_final: 4 });
     expect(ctx).not.toHaveProperty('foi_falha_critica');
+  });
+
+  it('jogador rola pelo Shikigami com o bônus dele sem gastar vantagem ou bônus do dono', async () => {
+    const dono = ficha('dono', {
+      profileId: 'perfil-dono', level: 4, peCurrent: 20,
+      attributes: [{ name: 'CON', value: 30 }],
+    });
+    montarMesa([dono], { dono: [0, 0] });
+    comoTela({ role: 'PLAYER', profileId: 'perfil-dono' });
+    const vantagemId = grantAdvantage('dono', 'advantage', 'next_save', { source: 'vantagem do dono' });
+    const bonusId = grantFlatBonus('dono', 'next_save', 5, { source: 'bônus do dono' });
+    useOmniRuntimeStore.setState({ efeitos: {
+      'reroll-dono': {
+        id: 'reroll-dono', entidadeId: 'reroll', nomeSnapshot: 'Rerrolagem do dono',
+        targetCharId: 'dono', iniciadoEm: 0, expiraEm: null, meta: { rerollPendente: 1 },
+      },
+    } });
+    useTestRequestStore.getState().enqueue({
+      charId: 'dono', charName: 'Guardião', targetProfileId: 'perfil-dono',
+      kind: 'save', testName: 'Fortitude', dc: 14,
+      bonusOverride: 4, bonusBreakdownOverride: 'mod. constituição +2 · ½ nível +2',
+      invocationResolution: {
+        kind: 'shikigami_damage_after_save', ownerCharacterId: 'origem',
+        invocationId: 'shiki-origem', invocationInstanceId: 'origem-instance',
+        actionId: 'rugido', sourceName: 'Atacante — Rugido', damageFormula: '1d6',
+        damageOnSuccess: 'nenhum',
+        targetInvocation: {
+          tokenId: 'token-guardiao', ownerCharacterId: 'dono',
+          invocationId: 'shiki-alvo', invocationInstanceId: 'guardiao-instance', name: 'Guardião',
+        },
+      },
+    });
+    const d20 = vi.spyOn(useDice3DStore.getState(), 'requestRoll').mockResolvedValueOnce([10]).mockResolvedValueOnce([20]);
+    render(<TestRequestOverlay />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /Rolar d20/i }));
+
+    await waitFor(() => expect(useTestRequestStore.getState().requests[0].result).toMatchObject({ d20: 10, bonus: 4, total: 14 }));
+    expect(d20).toHaveBeenCalledTimes(1);
+    expect(d20).toHaveBeenCalledWith(['D20'], 'Fortitude — Guardião', undefined, 'test-request', 0, undefined);
+    expect(peekAdvantageFor('dono', { kind: 'save', name: 'Fortitude' })).toBe('advantage');
+    expect((pegarFicha('dono') as unknown as { omniAdvMods: Record<string, unknown> }).omniAdvMods).toHaveProperty(vantagemId);
+    expect((pegarFicha('dono') as unknown as { omniAdvMods: Record<string, unknown> }).omniAdvMods).toHaveProperty(bonusId);
+    expect(useOmniRuntimeStore.getState().efeitos['reroll-dono'].meta?.rerollPendente).toBe(1);
+    expect(pegarFicha('dono').peCurrent).toBe(20);
   });
 
   it('ataque em área importado do Grimório percorre mapa, TR do jogador e dano real', async () => {

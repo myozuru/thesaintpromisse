@@ -20,7 +20,7 @@ import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { useProfileStore } from '@/stores/useProfileStore';
 import { useLogStore } from '@/stores/useLogStore';
-import { rollD20Com } from '@/lib/dice';
+import { rollD20Autonomo, rollD20Com } from '@/lib/dice';
 import { perguntarFortuna } from '@/lib/fortuna';
 import { perguntarIndomavel } from '@/lib/indomavel';
 import { posturaPericia } from '@/lib/posturas';
@@ -160,7 +160,7 @@ function MasterWatchPanel() {
         const passed = r.result
           ? (r.result.forced
               ? r.result.forced.kind === 'success'
-              : (r.dc != null ? r.result.total >= r.dc : null))
+              : (r.dc != null ? !(r.kind === 'save' && r.result.d20 === 1) && r.result.total >= r.dc : null))
           : null;
         const showOutcome = r.dc != null;
         return (
@@ -368,16 +368,19 @@ export function TestRequestOverlay() {
     setRolling(true);
     playDiceSound();
 
+    const alvoInvocacao = current.invocationResolution?.targetInvocation;
     // 1) Sucesso/falha garantida (Omni) tem prioridade — pula a rolagem.
     const ctx = buildRollContext(current);
     const outCtx: OutcomeContext =
       current.kind === 'save' ? { kind: 'save', name: current.testName }
       : current.kind === 'skill' ? { kind: 'skill', name: current.testName }
       : { kind: 'attribute', name: current.testName };
-    let auto = consumeAutoOutcomeFor(char.id, outCtx);
+    let auto = alvoInvocacao
+      ? { outcome: undefined, note: undefined }
+      : consumeAutoOutcomeFor(char.id, outCtx);
     // Teste forçado por uma ficha: aliados podem reagir antes da rolagem.
     let preReacao = { cancelado: false, testeBonus: 0 };
-    if (current.originId && current.kind !== 'attribute' && !auto.outcome) {
+    if (!alvoInvocacao && current.originId && current.kind !== 'attribute' && !auto.outcome) {
       const { abrirJanelaReacaoAtiva } = await import('@/lib/omni/reacoesAtivas');
       preReacao = await abrirJanelaReacaoAtiva({ gatilho: current.kind === 'save' ? 'quando_alvo_de_tr' : 'quando_alvo_de_pericia', origemId: current.originId, protegidoId: char.id });
       if (preReacao.cancelado) auto = { outcome: 'success', note: 'anulado por reação' } as typeof auto;
@@ -391,6 +394,14 @@ export function TestRequestOverlay() {
       // Forja um d20 cosmético: 20 (ou 1) — não passa por rollD20Com
       // pra evitar consumo indevido de rerolls.
       d20 = auto.outcome === 'success' ? 20 : 1;
+      rolls = [d20];
+    } else if (alvoInvocacao) {
+      d20 = await rollD20Autonomo(undefined, {
+        label: `${current.testName} — ${alvoInvocacao.name}`,
+        layout: 'test-request',
+        drama: current.drama ?? 0,
+        cinematicFocus: current.cinematicFocus,
+      });
       rolls = [d20];
     } else {
       // 2) Vantagem/desvantagem normal.
@@ -412,7 +423,7 @@ export function TestRequestOverlay() {
     }
 
     // Bônus fixos (ex: Apoio Focado do Suporte) somam no total e são consumidos.
-    const flat = consumeFlatBonusFor(char.id, ctx);
+    const flat = alvoInvocacao ? { bonus: 0, notes: [] as string[] } : consumeFlatBonusFor(char.id, ctx);
     const masterBonus = current.masterBonus ?? 0;
     const totalBonus = bonus + flat.bonus + masterBonus + preReacao.testeBonus + (current.kind === 'skill' ? posturaPericia(char) : 0);
 
@@ -426,7 +437,7 @@ export function TestRequestOverlay() {
 
     // Indomável (Especialista em Combate): falhou no TR → pode gastar 1 PE
     // para rolar de novo e ficar com o melhor resultado.
-    if (!auto.outcome && current.kind === 'save' && current.dc != null) {
+    if (!alvoInvocacao && !auto.outcome && current.kind === 'save' && current.dc != null) {
       const melhor = await perguntarIndomavel(
         char.id, current.testName, d20, total, current.dc,
         () => rollD20Com(char.id, undefined, { label: `${current.testName} — Indomável`, layout: 'test-request' }),
@@ -455,9 +466,9 @@ export function TestRequestOverlay() {
         forced: auto.outcome ? { kind: auto.outcome, note: auto.note } : undefined,
       });
       const passedFinal = current.dc != null
-        ? (auto.outcome ? auto.outcome === 'success' : total >= current.dc)
+        ? (auto.outcome ? auto.outcome === 'success' : !(current.kind === 'save' && d20 === 1) && total >= current.dc)
         : null;
-      if (current.originId && current.kind === 'save' && passedFinal != null) {
+      if (!alvoInvocacao && current.originId && current.kind === 'save' && passedFinal != null) {
         void import('@/lib/omni/reacoesAtivas').then(({ abrirJanelaReacaoAtiva }) => abrirJanelaReacaoAtiva({ gatilho: passedFinal ? 'quando_passar_tr' : 'quando_falhar_tr', origemId: current.originId!, protegidoId: char.id }));
       }
       if (showOutcome && passedFinal != null) {
@@ -476,8 +487,8 @@ export function TestRequestOverlay() {
         : '';
       addLog(
         'combat',
-        `🎲 ${char.name} — ${kindLabel} (${current.testName}): d20 ${d20}${advTxt} ${totalBonus >= 0 ? '+' : ''}${totalBonus} = ${total}${flatTxt}${forcedTxt}${dcTxt}`,
-        char.category === 'INIMIGO' ? `🎲 ${char.name} — ${kindLabel} (${current.testName}): teste realizado.` : `🎲 ${char.name} — ${kindLabel} (${current.testName}): d20 ${d20} ${totalBonus >= 0 ? '+' : ''}${totalBonus} = ${total}${!current.hideDcFromPlayer && current.dc != null ? ` vs CD ${current.dc}` : ''}${!current.hideOutcomeFromPlayer && current.dc != null ? (passedFinal ? ' → SUCESSO' : ' → FALHA') : ''}`
+        `🎲 ${current.charName || char.name} — ${kindLabel} (${current.testName}): d20 ${d20}${advTxt} ${totalBonus >= 0 ? '+' : ''}${totalBonus} = ${total}${flatTxt}${forcedTxt}${dcTxt}`,
+        char.category === 'INIMIGO' ? `🎲 ${current.charName || char.name} — ${kindLabel} (${current.testName}): teste realizado.` : `🎲 ${current.charName || char.name} — ${kindLabel} (${current.testName}): d20 ${d20} ${totalBonus >= 0 ? '+' : ''}${totalBonus} = ${total}${!current.hideDcFromPlayer && current.dc != null ? ` vs CD ${current.dc}` : ''}${!current.hideOutcomeFromPlayer && current.dc != null ? (passedFinal ? ' → SUCESSO' : ' → FALHA') : ''}`
       );
       // Recompensa pelo Sucesso: rolagem sob Comando reduzido → +2 PE.
       // Com CD conhecida exige sucesso; sem CD (CD oculta) o Mestre confirma

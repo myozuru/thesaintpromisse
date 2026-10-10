@@ -3,6 +3,7 @@ import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { rollDiceGroups } from '@/lib/dice';
 import { parseFormulaDanoInvocacao } from './rolagens';
+import { causarDanoInvocacao } from './mapa';
 
 /** Resolve o dano de uma ação de Shikigami depois que o alvo conclui o TR. */
 export async function resolverDanoAposTRInvocacao(request: TestRequest): Promise<{
@@ -26,10 +27,20 @@ export async function resolverDanoAposTRInvocacao(request: TestRequest): Promise
     dano = Math.max(0, rolled.total + formula.fixo + (resolution.damageBonus ?? 0));
     if (passou) dano = Math.floor(dano / 2);
     if (dano > 0) {
-      await useCharacterStore.getState().applyDamage(request.charId, dano, resolution.damageType, {
-        attackerId: resolution.ownerCharacterId,
-        source: 'omni',
-      });
+      if (resolution.targetInvocation) {
+        const aplicado = causarDanoInvocacao(
+          resolution.targetInvocation.tokenId,
+          dano,
+          resolution.damageType,
+          resolution.targetInvocation.invocationInstanceId,
+        );
+        if (!aplicado.ok) throw new Error(aplicado.motivo);
+      } else {
+        await useCharacterStore.getState().applyDamage(request.charId, dano, resolution.damageType, {
+          attackerId: resolution.ownerCharacterId,
+          source: 'omni',
+        });
+      }
     }
   }
 

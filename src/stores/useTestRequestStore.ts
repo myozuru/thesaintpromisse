@@ -73,6 +73,14 @@ export interface TestRequest {
     damageBonus: number;
     damageType?: DamageType;
     damageOnSuccess: 'nenhum' | 'metade';
+    /** Quando presente, o teste e o dano têm como alvo um Shikigami no mapa. */
+    targetInvocation?: {
+      tokenId: string;
+      ownerCharacterId: string;
+      invocationId: string;
+      invocationInstanceId: string;
+      name: string;
+    };
   };
   resolutionApplied?: boolean;
   createdAt: number;

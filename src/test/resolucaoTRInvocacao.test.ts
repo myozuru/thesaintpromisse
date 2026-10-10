@@ -7,7 +7,10 @@ import { resolverDanoAposTRInvocacao } from '@/lib/controlador/resolucaoTR';
 import type { TestRequest } from '@/stores/useTestRequestStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useDice3DStore } from '@/stores/useDice3DStore';
-import { comoTela, ficha } from './helpers/mesaReal';
+import { useMapStore } from '@/stores/useMapStore';
+import { invocarControlador } from '@/lib/controlador/mapa';
+import type { InvocacaoControlador } from '@/lib/controlador/tipos';
+import { comoTela, ficha, montarMesa } from './helpers/mesaReal';
 
 function pedidoTR(result: NonNullable<TestRequest['result']>, damageOnSuccess: 'nenhum' | 'metade' = 'nenhum', damageBonus = 0): TestRequest {
   return {
@@ -55,5 +58,47 @@ describe('resolução de dano após TR de Shikigami', () => {
     await expect(resolverDanoAposTRInvocacao(request)).resolves.toEqual({ passou: true, dano: 0 });
     expect(damageDice).not.toHaveBeenCalled();
     expect(useCharacterStore.getState().characters.find(c => c.id === 'inimigo')?.hpCurrent).toBe(15);
+  });
+
+  it('aplica o dano pós-TR à instância de Shikigami em vez da ficha do dono que rolou', async () => {
+    vi.spyOn(useDice3DStore.getState(), 'requestNotation').mockResolvedValue([4]);
+    const modelo = {
+      id: 'shiki-alvo', donoCharacterId: 'dono', tipo: 'shikigami', nome: 'Guardião',
+      hpAtual: 12, hpMaximo: 12, defesa: 14, deslocamentoM: 9, porte: 'Médio',
+      custoInvocacaoPE: 0, alcanceInvocacaoM: 3, acoes: [],
+      intermediario: { tipo: 'tecnica', tecnicaId: 'tecnica-inata' },
+    } as unknown as InvocacaoControlador;
+    const dono = ficha('dono', {
+      profileId: 'perfil-dono', hpCurrent: 20, hpMax: 20,
+      tecnicaAmaldicoada: 'tecnica-inata', invocacoesConhecidas: [modelo],
+    });
+    const inimigo = ficha('inimigo', { hpCurrent: 15, hpMax: 15 });
+    montarMesa([dono, inimigo], { dono: [2, 2], inimigo: [20, 20] });
+    const summoned = invocarControlador('dono', modelo.id, 'leste');
+    if (!summoned.ok) throw new Error(summoned.motivo);
+    const token = useMapStore.getState().entities[summoned.tokenId];
+    const request: TestRequest = {
+      ...pedidoTR({ d20: 1, bonus: 20, total: 21, rolledAt: Date.now() }),
+      charId: 'dono', charName: 'Guardião',
+      invocationResolution: {
+        ...pedidoTR({ d20: 1, bonus: 20, total: 21, rolledAt: Date.now() }).invocationResolution!,
+        targetInvocation: {
+          tokenId: token.id,
+          ownerCharacterId: 'dono',
+          invocationId: modelo.id,
+          invocationInstanceId: token.invocationInstanceId!,
+          name: 'Guardião',
+        },
+      },
+    };
+
+    await expect(resolverDanoAposTRInvocacao(request)).resolves.toEqual({ passou: false, dano: 6 });
+
+    expect(useCharacterStore.getState().characters.find(c => c.id === 'dono')?.hpCurrent).toBe(20);
+    expect(useCharacterStore.getState().characters.find(c => c.id === 'inimigo')?.hpCurrent).toBe(15);
+    expect(useCharacterStore.getState().characters.find(c => c.id === 'dono')?.instanciasInvocacao?.[0]).toMatchObject({
+      id: token.invocationInstanceId, modeloId: modelo.id, hpAtual: 6, estado: 'ativa',
+    });
+    expect(useMapStore.getState().entities[token.id]?.hp).toBe(6);
   });
 });

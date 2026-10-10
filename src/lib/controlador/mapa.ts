@@ -50,6 +50,7 @@ import {
 } from './economiaAcoes';
 import {
   calcularBonusAtaqueInvocacao,
+  calcularBonusResistenciaInvocacao,
   calcularBonusPericiaInvocacao,
   calcularBonusDanoInvocacao,
   calcularCDInvocacao,
@@ -820,16 +821,24 @@ export function resetarEconomiaManualInvocacao(
 
 
 /** Dano direcionado a uma instância; 0 PV deixa a criatura Caída, −PV máximo a derrota. */
-export function causarDanoInvocacao(tokenId: string, dano: number, tipoDano?: DamageType): { ok: true; hpRestante: number; destruida: boolean } | { ok: false; motivo: string } {
+export function causarDanoInvocacao(
+  tokenId: string,
+  dano: number,
+  tipoDano?: DamageType,
+  instanciaEsperadaId?: string,
+): { ok: true; hpRestante: number; destruida: boolean } | { ok: false; motivo: string } {
   const mapa = useMapStore.getState();
   const token = mapa.entities[tokenId];
   if (!token?.ownerCharId || !token.invocationId) return { ok: false, motivo: 'Token não pertence a uma invocação.' };
-  useCombatStore.getState().settleTurnTimer();
   const dono = useCharacterStore.getState().characters.find(c => c.id === token.ownerCharId);
   if (!dono) return { ok: false, motivo: 'Dono da invocação não encontrado.' };
   const modelo = obterModeloDoToken(dono, token);
   if (!modelo) return { ok: false, motivo: 'Modelo da invocação não encontrado.' };
   const atual = obterInstanciaDoToken(dono, token, modelo);
+  if (instanciaEsperadaId && atual.id !== instanciaEsperadaId) {
+    return { ok: false, motivo: 'A instância da invocação mudou antes da aplicação do dano.' };
+  }
+  useCombatStore.getState().settleTurnTimer();
   const rdCaracteristica = reducaoDanoCaracteristicas(modelo, tipoDano);
   const rdAuxilio = (atual.efeitosSuporteAtivos ?? []).filter(efeito =>
     efeito.tipo === 'reducao_dano' && efeito.expiraNaRodada >= (useCombatStore.getState().round ?? 1) &&
@@ -1099,29 +1108,32 @@ function resolverAlvosDaAreaInvocacao(
   const mapa = useMapStore.getState();
   const characters = useCharacterStore.getState().characters;
   const entidadesVisiveis = Object.fromEntries(Object.entries(mapa.entities)
-    .filter(([, entity]) => mapa.layerVisible[entity.layer ?? 'tokens'] !== false));
+    .filter(([, entity]) => !entity.hidden && mapa.layerVisible[entity.layer ?? 'tokens'] !== false));
   const entityIds = findEntitiesInTemplate(template, entidadesVisiveis);
   const filtro = cfg.filtro_alvo ?? 'todos_exceto_si';
-  const outrosServosAtingidos = entityIds
+  const servosAtingidos = entityIds
     .map(id => mapa.entities[id])
-    .filter((entity): entity is Entity => Boolean(entity?.invocationId && entity.id !== servo.id))
-    .filter(entity => {
-      if (filtro === 'todos' || filtro === 'todos_exceto_si') return true;
-      const donoAlvo = characters.find(character => character.id === entity.ownerCharId);
-      return donoAlvo ? aceitaAlvoAtivo(dono, donoAlvo, { ...cfg, filtro_alvo: filtro }) : true;
-    });
-  if (outrosServosAtingidos.length) {
-    return {
-      ok: false,
-      motivo: 'A área também atinge outra invocação; dano em área contra invocações ainda não está disponível. Nada foi executado.',
-    };
+    .filter((entity): entity is Entity => Boolean(entity?.invocationId && entity.id !== servo.id));
+  const idsServos: string[] = [];
+  for (const entity of servosAtingidos) {
+    const donoAlvo = entity.ownerCharId
+      ? characters.find(character => character.id === entity.ownerCharId)
+      : undefined;
+    if (!donoAlvo || !donoAlvo.invocacoesConhecidas?.some(item => item.id === entity.invocationId)) {
+      return { ok: false, motivo: 'A área atingiu uma invocação sem ficha ou dono válido. Nada foi executado.' };
+    }
+    if (filtro !== 'todos' && filtro !== 'todos_exceto_si' &&
+      !aceitaAlvoAtivo(dono, donoAlvo, { ...cfg, filtro_alvo: filtro })) continue;
+    idsServos.push(`invoc:${entity.id}`);
   }
 
-  const resolvidos = resolveAreaTargetCharacters(entityIds, mapa.entities, characters, undefined, servo.id);
-  const ids = [...new Set(resolvidos.characterIds)].filter(id => {
+  const entityIdsPersonagens = entityIds.filter(id => !mapa.entities[id]?.invocationId);
+  const resolvidos = resolveAreaTargetCharacters(entityIdsPersonagens, mapa.entities, characters, undefined, servo.id);
+  const idsPersonagens = [...new Set(resolvidos.characterIds)].filter(id => {
     const alvo = characters.find(character => character.id === id);
     return alvo && filtroAceitaPersonagemNaArea(dono, alvo, cfg);
   });
+  const ids = [...idsPersonagens, ...idsServos];
   if (!ids.length) return { ok: false, motivo: 'Nenhum alvo válido dentro da área.' };
 
   if (cfg.area?.forma === 'raio_no_ponto') {
@@ -1255,12 +1267,57 @@ export async function comandarAtaque(
   if (!debito.ok) return debito;
   const categoria = categoriaEconomiaDaAcao(acao, instancia.economiaAcoes);
   if (!categoria) return { ok: false, motivo: 'Categoria de ação própria não configurada.' };
-  const alvos = idsAlvo.map(id => {
+  const idsInvocacoesAlvo = selecaoArea ? idsAlvo.filter(id => id.startsWith('invoc:')) : [];
+  const idsPersonagensAlvo = idsAlvo.filter(id => !id.startsWith('invoc:'));
+  if (!selecaoArea && idsInvocacoesAlvo.length) {
+    return { ok: false, motivo: 'Invocações só podem ser alvos desta ação pela geometria da área.' };
+  }
+  const alvos = idsPersonagensAlvo.map(id => {
     const personagem = useCharacterStore.getState().characters.find(c => c.id === id);
     const token = personagem ? resolverTokenDaFicha(personagem, mapa.entities, mapa.layerVisible) : undefined;
     return personagem && token ? { personagem, token } : null;
   });
-  if (alvos.some(alvo => !alvo) || (!selecaoArea && idsAlvo.includes(donoId))) return { ok: false, motivo: 'Servo ou alvo ausente do mapa.' };
+  if (alvos.some(alvo => !alvo) || (!selecaoArea && idsPersonagensAlvo.includes(donoId))) return { ok: false, motivo: 'Servo ou alvo ausente do mapa.' };
+  const personagens = useCharacterStore.getState().characters;
+  const alvosInvocacaoBrutos = idsInvocacoesAlvo.map(id => {
+    const token = mapa.entities[id.slice('invoc:'.length)];
+    if (!token?.ownerCharId || !token.invocationId || token.hidden ||
+      mapa.layerVisible[token.layer ?? 'tokens'] === false) return null;
+    const donoAlvo = personagens.find(character => character.id === token.ownerCharId);
+    const modeloAlvo = donoAlvo?.invocacoesConhecidas?.find(item => item.id === token.invocationId);
+    if (!donoAlvo || !modeloAlvo) return null;
+    const instanciaAlvo = obterInstanciaDoToken(donoAlvo, token, modeloAlvo);
+    if (instanciaAlvo.estado === 'derrotada' || instanciaAlvo.estado === 'dissipada') return null;
+    const defesa = Number.isFinite(token.invocationDefense)
+      ? token.invocationDefense!
+      : modeloAlvo.defesa;
+    if (!Number.isFinite(defesa) || defesa < 0) return null;
+    const bonusResistencia = tipoTeste === 'resistencia'
+      ? calcularBonusResistenciaInvocacao(donoAlvo, modeloAlvo, acao.resistenciaAlvo!)
+      : undefined;
+    if (tipoTeste === 'resistencia' && !bonusResistencia) return null;
+    return {
+      alvoId: `invoc:${token.id}`,
+      dono: donoAlvo,
+      modelo: modeloAlvo,
+      instancia: instanciaAlvo,
+      token,
+      nome: modeloAlvo.apelido?.trim() || modeloAlvo.nome,
+      defesa,
+      bonusResistencia,
+    };
+  });
+  if (alvosInvocacaoBrutos.some(alvo => !alvo)) {
+    return {
+      ok: false,
+      motivo: tipoTeste === 'resistencia'
+        ? 'Uma invocação na área não tem dados válidos para resolver esse Teste de Resistência. Nada foi executado.'
+        : 'Uma invocação na área não tem ficha, Defesa ou estado válido. Nada foi executado.',
+    };
+  }
+  const alvosInvocacaoValidados = alvosInvocacaoBrutos.filter(
+    (alvo): alvo is NonNullable<typeof alvo> => alvo !== null,
+  );
   const escala = mapa.gridConfig.metersPerCell / mapa.gridConfig.dpi;
   if (!(escala > 0)) return { ok: false, motivo: 'Grade inválida.' };
   const alvosValidados = alvos.filter((alvo): alvo is NonNullable<typeof alvo> => alvo !== null).map(alvo => {
@@ -1268,12 +1325,16 @@ export async function comandarAtaque(
       (servo.y + servo.h / 2) - (alvo.token.y + alvo.token.h / 2)) * escala;
     return { ...alvo, distancia, defesa: computeTotalDefense(alvo.personagem, {}, tipoTeste === 'ataque' && acao.tipoAtaque === 'distancia' ? 'ranged' : 'melee') };
   });
-  if (alvosValidados.length !== idsAlvo.length) return { ok: false, motivo: 'Alvo inválido.' };
+  if (alvosValidados.length + alvosInvocacaoValidados.length !== idsAlvo.length) return { ok: false, motivo: 'Alvo inválido.' };
   if (!selecaoArea && alvosValidados.some(alvo => alvo.distancia > (acao.alcanceM ?? 1.5) + 1e-6)) return { ok: false, motivo: 'Um ou mais alvos estão fora do alcance.' };
   if (resolucaoOmni?.ok && alvosValidados.some(alvo => selecaoArea
     ? !filtroAceitaPersonagemNaArea(dono, alvo.personagem, resolucaoOmni.config)
     : !aceitaAlvoAtivo(dono, alvo.personagem, resolucaoOmni.config))) {
     return { ok: false, motivo: 'Um ou mais alvos não atendem ao filtro OMNI.' };
+  }
+  if (resolucaoOmni?.ok && alvosInvocacaoValidados.some(alvo =>
+    !filtroAceitaPersonagemNaArea(dono, alvo.dono, resolucaoOmni.config))) {
+    return { ok: false, motivo: 'Uma invocação atingida não atende ao filtro OMNI.' };
   }
   const formula = acao.dano ? parseFormulaDanoInvocacao(acao.dano) : null;
   if (tipoTeste === 'ataque' && !formula) return { ok: false, motivo: 'Dano inválido; use dados como 2d12+1d6+3.' };
@@ -1336,6 +1397,56 @@ export async function comandarAtaque(
         useLogStore.getState().addLog('combat', `🛡️ ${modelo.nome} — ${acao.nome} exige TR ${acao.resistenciaAlvo} contra CD ${cd} de ${alvo.name}.`);
         return { alvoId: alvo.id, nomeAlvo: alvo.name, acertou: false, totalAtaque: 0, dano: 0, testePendente: true, requestId, cd: cd! };
       });
+      for (const alvo of alvosInvocacaoValidados) {
+        const requestId = useTestRequestStore.getState().enqueue({
+          charId: alvo.dono.id,
+          charName: alvo.nome,
+          targetProfileId: alvo.dono.profileId,
+          kind: 'save',
+          testName: acao.resistenciaAlvo!,
+          dc: cd!,
+          note: `${alvo.nome} (Shikigami) — ${modelo.nome}: ${acao.nome}`,
+          bonusOverride: alvo.bonusResistencia!.total,
+          bonusBreakdownOverride: alvo.bonusResistencia!.breakdown,
+          originId: donoId,
+          sourceTag: `shikigami:${instancia.id}:${acao.id}:${opcoes?.requestId ?? novoIdInvocacao('tr')}:${alvo.instancia.id}`,
+          ...(formula ? {
+            invocationResolution: {
+              kind: 'shikigami_damage_after_save' as const,
+              ownerCharacterId: donoId,
+              invocationId: modelo.id,
+              invocationInstanceId: instancia.id,
+              actionId: acao.id,
+              sourceName: `${modelo.nome} — ${acao.nome}`,
+              damageFormula: acao.dano!,
+              damageBonus: calcularBonusDanoInvocacao(modelo, acao, 'resistencia'),
+              damageType: acao.tipoDano,
+              damageOnSuccess: acao.danoNoSucesso ?? 'nenhum',
+              targetInvocation: {
+                tokenId: alvo.token.id,
+                ownerCharacterId: alvo.dono.id,
+                invocationId: alvo.modelo.id,
+                invocationInstanceId: alvo.instancia.id,
+                name: alvo.nome,
+              },
+            },
+          } : {}),
+        });
+        useLogStore.getState().addLog(
+          'combat',
+          `🛡️ ${modelo.nome} — ${acao.nome} exige TR ${acao.resistenciaAlvo} contra CD ${cd} de ${alvo.nome}.`,
+        );
+        resultados.push({
+          alvoId: alvo.alvoId,
+          nomeAlvo: alvo.nome,
+          acertou: false,
+          totalAtaque: 0,
+          dano: 0,
+          testePendente: true,
+          requestId,
+          cd: cd!,
+        });
+      }
       return resultadoEmLista
         ? { ok: true, resultados }
         : {
@@ -1347,12 +1458,30 @@ export async function comandarAtaque(
         };
     }
     const resultados: ResultadoAlvoAtaqueInvocacao[] = [];
-    for (const { personagem: alvo, defesa } of alvosValidados) {
+    const alvosParaAtaque = [
+      ...alvosValidados.map(alvo => ({
+        tipo: 'personagem' as const,
+        alvoId: alvo.personagem.id,
+        nome: alvo.personagem.name,
+        defesa: alvo.defesa,
+        personagem: alvo.personagem,
+      })),
+      ...alvosInvocacaoValidados.map(alvo => ({
+        tipo: 'invocacao' as const,
+        alvoId: alvo.alvoId,
+        nome: alvo.nome,
+        defesa: alvo.defesa,
+        token: alvo.token,
+        instanciaId: alvo.instancia.id,
+      })),
+    ];
+    for (const alvo of alvosParaAtaque) {
+      const { defesa } = alvo;
       const natural = await rollD20Autonomo(bonusAtaque!.total, { label: `Ataque de ${modelo.nome}: ${acao.nome}` });
       const resultado = resolverAcertoInvocacao(natural, bonusAtaque!.total, defesa, acao.margemCritico ?? 20);
       if (!resultado.acertou) {
-        useLogStore.getState().addLog('combat', `🎯 ${modelo.nome} — ${acao.nome} contra ${alvo.name}: d20 ${natural} + ${bonusAtaque!.total} = ${resultado.total} vs Defesa ${defesa} (${resultado.falhaCritica ? 'falha crítica' : 'erro'}).`);
-        resultados.push({ alvoId: alvo.id, nomeAlvo: alvo.name, acertou: false, totalAtaque: resultado.total, dano: 0 });
+        useLogStore.getState().addLog('combat', `🎯 ${modelo.nome} — ${acao.nome} contra ${alvo.nome}: d20 ${natural} + ${bonusAtaque!.total} = ${resultado.total} vs Defesa ${defesa} (${resultado.falhaCritica ? 'falha crítica' : 'erro'}).`);
+        resultados.push({ alvoId: alvo.alvoId, nomeAlvo: alvo.nome, acertou: false, totalAtaque: resultado.total, dano: 0 });
         continue;
       }
       const dadosDano = resultado.critico
@@ -1368,14 +1497,19 @@ export async function comandarAtaque(
         detalhesDanoAuxilio.push(`${efeito.formula} = ${rolagemAuxilio.total + formulaAuxilio.fixo}`);
       }
       const dano = Math.max(0, rolagem.total + formula!.fixo + calcularBonusDanoInvocacao(modelo, acao, 'ataque') + bonusDanoAuxilio);
-      await useCharacterStore.getState().applyDamage(alvo.id, dano, acao.tipoDano ?? 'DCO', {
-        attackerId: donoId,
-        source: 'omni',
-        isMelee: bonusAtaque!.tipo === 'corpo_a_corpo',
-        attack: { critical: resultado.critico, criticalFail: resultado.falhaCritica, kind: bonusAtaque!.tipo === 'corpo_a_corpo' ? 'melee' : 'ranged' },
-      });
-      useLogStore.getState().addLog('combat', `🎯 ${modelo.nome} — ${acao.nome} contra ${alvo.name}: d20 ${natural} + ${bonusAtaque!.total} = ${resultado.total} vs Defesa ${defesa} → ${resultado.critico ? 'acerto crítico' : 'acerto'}, dano ${dano} (${acao.tipoDano ?? 'DCO'})${detalhesDanoAuxilio.length ? `; auxílio extra ${detalhesDanoAuxilio.join(', ')}` : ''}.`);
-      resultados.push({ alvoId: alvo.id, nomeAlvo: alvo.name, acertou: true, totalAtaque: resultado.total, dano, ...(resultado.critico ? { critico: true } : {}) });
+      if (alvo.tipo === 'invocacao') {
+        const aplicado = causarDanoInvocacao(alvo.token.id, dano, acao.tipoDano ?? 'DCO', alvo.instanciaId);
+        if (!aplicado.ok) throw new Error(aplicado.motivo);
+      } else {
+        await useCharacterStore.getState().applyDamage(alvo.personagem.id, dano, acao.tipoDano ?? 'DCO', {
+          attackerId: donoId,
+          source: 'omni',
+          isMelee: bonusAtaque!.tipo === 'corpo_a_corpo',
+          attack: { critical: resultado.critico, criticalFail: resultado.falhaCritica, kind: bonusAtaque!.tipo === 'corpo_a_corpo' ? 'melee' : 'ranged' },
+        });
+      }
+      useLogStore.getState().addLog('combat', `🎯 ${modelo.nome} — ${acao.nome} contra ${alvo.nome}: d20 ${natural} + ${bonusAtaque!.total} = ${resultado.total} vs Defesa ${defesa} → ${resultado.critico ? 'acerto crítico' : 'acerto'}, dano ${dano} (${acao.tipoDano ?? 'DCO'})${detalhesDanoAuxilio.length ? `; auxílio extra ${detalhesDanoAuxilio.join(', ')}` : ''}.`);
+      resultados.push({ alvoId: alvo.alvoId, nomeAlvo: alvo.nome, acertou: true, totalAtaque: resultado.total, dano, ...(resultado.critico ? { critico: true } : {}) });
     }
     consumirAuxiliosDeAtaque();
     return resultadoEmLista

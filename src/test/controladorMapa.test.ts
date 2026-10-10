@@ -8,6 +8,7 @@ import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { useTestRequestStore } from '@/stores/useTestRequestStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
+import { useDice3DStore } from '@/stores/useDice3DStore';
 import type { EntidadeOmni } from '@/lib/omni/tipos';
 import { invocarControlador, invocarControladores, recolherInvocacao, tokensInvocados, limparInvocacoesDerrotadas, causarDanoInvocacao, curarInvocacao, levantarInvocacao, comandarReposicionamento, comandarAtaque, comandarSuporte, expirarEfeitosSuporteInvocacoes, comandosPorAcao, confirmarMovimentoInvocacao, rolarPericiaInvocacao } from '@/lib/controlador/mapa';
 import type { InvocacaoControlador } from '@/lib/controlador/tipos';
@@ -1044,13 +1045,122 @@ describe('Controlador — materialização real no mapa', () => {
     useCombatStore.setState({ inCombat: true, initiativeOrder: [{ charId: 'dono', initiative: 10 }], currentTurnIndex: 0 } as never);
 
     await expect(comandarAtaque('dono', 'a', 'pulso', { tipo: 'area' })).resolves.toMatchObject({
-      ok: false, motivo: 'A área também atinge outra invocação; dano em área contra invocações ainda não está disponível. Nada foi executado.',
+      ok: false, motivo: 'A área atingiu uma invocação sem ficha ou dono válido. Nada foi executado.',
     });
 
     expect(pegarFicha('dono').peCurrent).toBe(peAntesDaAcao);
     expect(pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoComum).toEqual({ atual: 1, maximo: 1 });
     expect(useTestRequestStore.getState().requests).toHaveLength(0);
     useCombatStore.setState({ inCombat: false } as never);
+  });
+  it('aplica ataque em área à instância válida de Shikigami atingida', async () => {
+    const entidade: EntidadeOmni = {
+      id: 'ent-omni-area-ataque-shiki', nome: 'Impacto Circular', categoria: 'talento',
+      acoesAtivas: [{
+        id: 'acao-omni', nome: 'Impacto Circular', acao: 'comum', custoPE: '2', alcanceM: 3,
+        teste: 'ataque', dano: '1d6', tipoDano: 'DP', tipo_efeito: 'dano',
+        tipo_alvo: 'area', filtro_alvo: 'todos', area: { forma: 'raio_no_ponto', tamanho_m: 4.5 },
+      }],
+    } as unknown as EntidadeOmni;
+    useOmniEntidadesStore.setState({ entidades: { [entidade.id]: entidade } });
+    const origem = {
+      ...modelo('a'), custoInvocacaoPE: 0,
+      atributos: { forca: 10, destreza: 10, constituicao: 10, inteligencia: 10, sabedoria: 10, presenca: 14 },
+      economiaAcoesConfigurada: { acaoComum: 1 },
+      acoes: [{ id: 'impacto', nome: 'Impacto Circular', tipoExecucao: 'omni' as const, entidadeOmniId: entidade.id, acaoOmniId: 'acao-omni' }],
+      custosComandosConfigurados: {
+        impacto: { execucao: 'manual' as const, debitos: [{ entidade: 'dono' as const, recurso: 'pe' as const, quantidade: 2 }] },
+      },
+    };
+    const alvoModelo = {
+      ...modelo('b'), custoInvocacaoPE: 0,
+      atributos: { forca: 10, destreza: 10, constituicao: 14, inteligencia: 10, sabedoria: 10, presenca: 10 },
+    };
+    useCharacterStore.getState().updateCharacter('dono', { level: 4, invocacoesConhecidas: [origem, alvoModelo] });
+    const origemInvocada = invocarControlador('dono', 'a', 'leste');
+    const alvoInvocado = invocarControlador('dono', 'b', 'sul');
+    if (!origemInvocada.ok) throw new Error(origemInvocada.motivo);
+    if (!alvoInvocado.ok) throw new Error(alvoInvocado.motivo);
+    const tokenOrigem = useMapStore.getState().entities[origemInvocada.tokenId];
+    const tokenAlvo = useMapStore.getState().entities[alvoInvocado.tokenId];
+    useMapStore.getState().updateEntity('e-dono', { x: 3000, y: 3000 });
+    useMapStore.getState().updateEntity(tokenAlvo.id, { x: tokenOrigem.x + 70, y: tokenOrigem.y });
+    const tokenAlvoAtual = useMapStore.getState().entities[tokenAlvo.id];
+    vi.spyOn(useMapStore.getState(), 'requestAoEPlacement').mockResolvedValue({
+      id: 'area-ataque-shiki', kind: 'circle', x: tokenAlvoAtual.x + tokenAlvoAtual.w / 2,
+      y: tokenAlvoAtual.y + tokenAlvoAtual.h / 2, rotation: 0, length: 210, width: 210,
+      color: '#ff5577', opacity: 1,
+    });
+    vi.spyOn(useDice3DStore.getState(), 'requestRoll').mockResolvedValue([12]);
+    vi.spyOn(useDice3DStore.getState(), 'requestNotation').mockResolvedValue([4]);
+    const peAntes = pegarFicha('dono').peCurrent;
+    useCombatStore.setState({ inCombat: true, initiativeOrder: [{ charId: 'dono', initiative: 10 }], currentTurnIndex: 0 } as never);
+
+    const resultado = await comandarAtaque('dono', 'a', 'impacto', { tipo: 'area' });
+
+    expect(resultado).toMatchObject({ ok: true, resultados: [
+      expect.objectContaining({ alvoId: `invoc:${tokenAlvo.id}`, nomeAlvo: 'b', acertou: true, dano: 4 }),
+    ] });
+    expect(pegarFicha('dono').peCurrent).toBe(peAntes - 2);
+    expect(pegarFicha('dono').instanciasInvocacao?.find(instancia => instancia.id === tokenAlvo.invocationInstanceId)).toMatchObject({ hpAtual: 8, estado: 'ativa' });
+    expect(useMapStore.getState().entities[tokenAlvo.id]?.hp).toBe(8);
+    useCombatStore.setState({ inCombat: false } as never);
+    vi.restoreAllMocks();
+  });
+  it('envia TR de área ao dono com o bônus e a instância do Shikigami alvo', async () => {
+    const entidade: EntidadeOmni = {
+      id: 'ent-omni-area-tr-shiki', nome: 'Rugido Circular', categoria: 'talento',
+      acoesAtivas: [{
+        id: 'acao-omni', nome: 'Rugido Circular', acao: 'comum', custoPE: '2', alcanceM: 3,
+        teste: 'tr', tr: 'fortitude', dano: '1d6', tipoDano: 'DP', tipo_efeito: 'dano', metadeNoSucesso: true,
+        tipo_alvo: 'area', filtro_alvo: 'todos', area: { forma: 'raio_no_ponto', tamanho_m: 4.5 },
+      }],
+    } as unknown as EntidadeOmni;
+    useOmniEntidadesStore.setState({ entidades: { [entidade.id]: entidade } });
+    const origem = {
+      ...modelo('a'), custoInvocacaoPE: 0,
+      atributos: { forca: 10, destreza: 10, constituicao: 10, inteligencia: 10, sabedoria: 10, presenca: 14 },
+      economiaAcoesConfigurada: { acaoComum: 1 },
+      acoes: [{ id: 'rugido', nome: 'Rugido Circular', tipoExecucao: 'omni' as const, entidadeOmniId: entidade.id, acaoOmniId: 'acao-omni' }],
+      custosComandosConfigurados: {
+        rugido: { execucao: 'manual' as const, debitos: [{ entidade: 'dono' as const, recurso: 'pe' as const, quantidade: 2 }] },
+      },
+    };
+    const alvoModelo = {
+      ...modelo('b'), custoInvocacaoPE: 0,
+      atributos: { forca: 10, destreza: 10, constituicao: 14, inteligencia: 10, sabedoria: 10, presenca: 10 },
+    };
+    useCharacterStore.getState().updateCharacter('dono', { level: 4, invocacoesConhecidas: [origem, alvoModelo] });
+    const origemInvocada = invocarControlador('dono', 'a', 'leste');
+    const alvoInvocado = invocarControlador('dono', 'b', 'sul');
+    if (!origemInvocada.ok) throw new Error(origemInvocada.motivo);
+    if (!alvoInvocado.ok) throw new Error(alvoInvocado.motivo);
+    const tokenOrigem = useMapStore.getState().entities[origemInvocada.tokenId];
+    const tokenAlvo = useMapStore.getState().entities[alvoInvocado.tokenId];
+    useMapStore.getState().updateEntity('e-dono', { x: 3000, y: 3000 });
+    useMapStore.getState().updateEntity(tokenAlvo.id, { x: tokenOrigem.x + 70, y: tokenOrigem.y });
+    const tokenAlvoAtual = useMapStore.getState().entities[tokenAlvo.id];
+    vi.spyOn(useMapStore.getState(), 'requestAoEPlacement').mockResolvedValue({
+      id: 'area-tr-shiki', kind: 'circle', x: tokenAlvoAtual.x + tokenAlvoAtual.w / 2,
+      y: tokenAlvoAtual.y + tokenAlvoAtual.h / 2, rotation: 0, length: 210, width: 210,
+      color: '#ff5577', opacity: 1,
+    });
+    useCombatStore.setState({ inCombat: true, initiativeOrder: [{ charId: 'dono', initiative: 10 }], currentTurnIndex: 0 } as never);
+
+    const resultado = await comandarAtaque('dono', 'a', 'rugido', { tipo: 'area' });
+    const pedido = useTestRequestStore.getState().requests.find(request => request.invocationResolution?.targetInvocation?.tokenId === tokenAlvo.id);
+
+    expect(resultado).toMatchObject({ ok: true, resultados: [expect.objectContaining({ testePendente: true, cd: 14 })] });
+    expect(pedido).toMatchObject({
+      charId: 'dono', charName: 'b', targetProfileId: 'perfil-dono', bonusOverride: 4,
+      invocationResolution: { targetInvocation: {
+        tokenId: tokenAlvo.id, ownerCharacterId: 'dono', invocationId: 'b',
+        invocationInstanceId: tokenAlvo.invocationInstanceId, name: 'b',
+      } },
+    });
+    expect(pedido?.bonusBreakdownOverride).toContain('mod. constituicao +2');
+    useCombatStore.setState({ inCombat: false } as never);
+    vi.restoreAllMocks();
   });
   it('valida o alcance de todos os alvos múltiplos antes de debitar recursos', async () => {
     const entidade: EntidadeOmni = {

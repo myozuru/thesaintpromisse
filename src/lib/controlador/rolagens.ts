@@ -146,6 +146,46 @@ export function calcularCDInvocacao(
   return 10 + Math.max(1, Math.floor(nivel / 2)) + modificadorAtributoInvocacao(valor);
 }
 
+const ATRIBUTO_CHAVE_POR_TR: Record<string, keyof NonNullable<InvocacaoControlador['atributos']>> = {
+  astucia: 'inteligencia',
+  fortitude: 'constituicao',
+  integridade: 'constituicao',
+  reflexos: 'destreza',
+  vontade: 'sabedoria',
+};
+
+/** Calcula o TR de um Shikigami alvo usando a ficha própria e a progressão do dono. */
+export function calcularBonusResistenciaInvocacao(
+  dono: Pick<Character, 'level'>,
+  modelo: InvocacaoControlador,
+  teste: string,
+): { total: number; breakdown: string } | null {
+  const chaveTR = normalizar(teste);
+  const atributo = ATRIBUTO_CHAVE_POR_TR[chaveTR];
+  const valorAtributo = atributoDaFicha(modelo, atributo);
+  if (!atributo || valorAtributo === null) return null;
+
+  const resistencia = modelo.resistenciaTreinada;
+  const nomeTreinado = lerConfiguracao(resistencia, 'nome');
+  const treinado = typeof nomeTreinado === 'string' && normalizar(nomeTreinado) === chaveTR;
+  const bonusExtraBruto = lerConfiguracao(resistencia, 'bonus');
+  const bonusExtra = treinado && bonusExtraBruto !== undefined ? Number(bonusExtraBruto) : 0;
+  if (!Number.isFinite(bonusExtra)) return null;
+
+  const nivel = Math.max(1, Math.trunc(dono.level || 1));
+  const modificador = modificadorAtributoInvocacao(valorAtributo);
+  const metadeNivel = Math.floor(nivel / 2);
+  const treinamento = treinado ? getTrainingBonusByLevel(nivel) : 0;
+  const total = modificador + metadeNivel + treinamento + bonusExtra;
+  const partes = [
+    `mod. ${atributo} ${modificador >= 0 ? '+' : ''}${modificador}`,
+    `½ nível +${metadeNivel}`,
+    ...(treinamento ? [`treinamento +${treinamento}`] : []),
+    ...(bonusExtra ? [`bônus da ficha ${bonusExtra > 0 ? '+' : ''}${bonusExtra}`] : []),
+  ];
+  return { total, breakdown: partes.join(' · ') };
+}
+
 export function resolverAcertoInvocacao(
   natural: number,
   bonus: number,
