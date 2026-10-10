@@ -72,6 +72,8 @@ export interface InvocacaoControlador {
   grau?: 'quarto' | 'terceiro' | 'segundo' | 'primeiro' | 'especial';
   atributos?: Record<'forca' | 'destreza' | 'constituicao' | 'inteligencia' | 'sabedoria' | 'presenca', number>;
   custoInvocacaoPE: number;
+  /** Distância máxima de posicionamento, definida ao criar a ficha. */
+  alcanceInvocacaoM?: number;
   custoSustentacaoPE?: number;
   acoes: Array<{
     id: string;

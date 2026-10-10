@@ -20,6 +20,9 @@ export type MeasurementStyle = 'CHEBYSHEV' | 'ALTERNATING' | 'MANHATTAN' | 'EUCL
 
 export interface Vector2 { x: number; y: number; }
 
+export interface InvocationPlacementItem { invocationId: string; label: string; alcanceM: number; color: string; }
+export interface InvocationMapPlacement { invocationId: string; x: number; y: number; }
+
 export interface Camera {
   x: number;
   y: number;
@@ -130,6 +133,7 @@ export interface Entity {
   invocationId?: string;
   /** IDs imutáveis do evento e da materialização desta instância. */
   invocationEventId?: string;
+  invocationBatchId?: string;
   invocationInstanceId?: string;
   /** Defesa e deslocamento próprios do servo (sem criar turno separado). */
   invocationDefense?: number;
@@ -487,6 +491,18 @@ interface MapState {
     template: import('@/components/mapa/TemplateEngine').MapTemplate | null,
   ) => void;
 
+  /** Posicionamento de uma ou duas invocações por clique no mapa. */
+  pendingInvocationPlacement: null | {
+    ownerCharacterId: string;
+    items: InvocationPlacementItem[];
+    placements: InvocationMapPlacement[];
+  };
+  requestInvocationPlacement: (opts: {
+    ownerCharacterId: string;
+    items: InvocationPlacementItem[];
+  }) => Promise<InvocationMapPlacement[] | null>;
+  resolveInvocationPlacement: (placement: { x: number; y: number } | null) => void;
+
 
 
   /** ===== Mira de feitiço single-target (linha que segue o mouse) ===== */
@@ -541,6 +557,7 @@ const uid = () =>
 let _pendingAoEResolver:
   | ((t: import('@/components/mapa/TemplateEngine').MapTemplate | null) => void)
   | null = null;
+let _pendingInvocationResolver: ((p: InvocationMapPlacement[] | null) => void) | null = null;
 
 export const useMapStore = create<MapState>()(
   persist(
@@ -1508,6 +1525,11 @@ export const useMapStore = create<MapState>()(
 
       pendingAoEPlacement: null,
       requestAoEPlacement: (opts) => {
+        if (_pendingInvocationResolver) {
+          _pendingInvocationResolver(null);
+          _pendingInvocationResolver = null;
+          set({ pendingInvocationPlacement: null });
+        }
         // Cancela qualquer placement pendente anterior.
         if (_pendingAoEResolver) {
           try { _pendingAoEResolver(null); } catch { /* noop */ }
@@ -1533,6 +1555,43 @@ export const useMapStore = create<MapState>()(
         _pendingAoEResolver = null;
         set({ pendingAoEPlacement: null });
         if (r) r(template);
+      },
+      pendingInvocationPlacement: null,
+      requestInvocationPlacement: (opts) => {
+        if (_pendingInvocationResolver) {
+          _pendingInvocationResolver(null);
+          _pendingInvocationResolver = null;
+        }
+        if (_pendingAoEResolver) {
+          _pendingAoEResolver(null);
+          _pendingAoEResolver = null;
+          set({ pendingAoEPlacement: null });
+        }
+        if (opts.items.length < 1 || opts.items.length > 2) return Promise.resolve(null);
+        set({ pendingInvocationPlacement: { ownerCharacterId: opts.ownerCharacterId, items: opts.items.map(item => ({ ...item })), placements: [] } });
+        return new Promise((resolve) => { _pendingInvocationResolver = resolve; });
+      },
+      resolveInvocationPlacement: (placement) => {
+        const pending = get().pendingInvocationPlacement;
+        if (!pending) return;
+        if (!placement) {
+          const resolver = _pendingInvocationResolver;
+          _pendingInvocationResolver = null;
+          set({ pendingInvocationPlacement: null });
+          resolver?.(null);
+          return;
+        }
+        const item = pending.items[pending.placements.length];
+        if (!item) return;
+        const placements = [...pending.placements, { invocationId: item.invocationId, x: placement.x, y: placement.y }];
+        if (placements.length >= pending.items.length) {
+          const resolver = _pendingInvocationResolver;
+          _pendingInvocationResolver = null;
+          set({ pendingInvocationPlacement: null });
+          resolver?.(placements);
+        } else {
+          set({ pendingInvocationPlacement: { ...pending, placements } });
+        }
       },
     }),
     {
@@ -1577,6 +1636,7 @@ export const useMapStore = create<MapState>()(
           // Estados efêmeros nunca devem ressurgir após um reload.
           singleTargetAim: null,
           pendingAoEPlacement: null,
+          pendingInvocationPlacement: null,
           aoeTargetPreview: null,
           toolSettings: {
             ...current.toolSettings,

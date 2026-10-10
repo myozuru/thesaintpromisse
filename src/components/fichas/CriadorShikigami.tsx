@@ -119,6 +119,7 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
   const [origemAquisicao, setOrigemAquisicao] = useState(initial?.origemAquisicao ?? '');
   const [referenciaInterludio, setReferenciaInterludio] = useState(initial?.referenciaInterludio ?? '');
   const [tipo, setTipo] = useState<'shikigami' | 'corpo_amaldicoado'>(initial?.tipo ?? 'shikigami');
+  const [alcanceInvocacaoM, setAlcanceInvocacaoM] = useState(initial?.alcanceInvocacaoM?.toString() ?? '');
   const [grau, setGrau] = useState<GrauShikigami>((initial?.grau as GrauShikigami) ?? 'quarto');
   const [nivelEvolucao, setNivelEvolucao] = useState(initial?.nivelEvolucao?.toString() ?? '');
   const [atributos, setAtributos] = useState<AtributosShikigami>(() => initial?.atributos ? { ...atributosIniciaisShikigami(), ...initial.atributos } : atributosIniciaisShikigami());
@@ -375,6 +376,8 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
       const atualHP = pvAtual.trim() === '' && !initial ? maxHP : Number(pvAtual);
       if (!Number.isFinite(atualHP) || atualHP < 0 || atualHP > maxHP) throw new Error('PV atual precisa ficar entre zero e o PV máximo.');
       if (valoresFinais.defesa < 0 || valoresFinais.deslocamentoM < 0 || valoresFinais.custoInvocacaoPE < 0) throw new Error('Defesa, deslocamento e custos derivados não podem ser negativos.');
+      const alcancePosicionamento = numeroOpcional(alcanceInvocacaoM, 'Alcance de posicionamento');
+      if (alcancePosicionamento === undefined || alcancePosicionamento < 0) throw new Error('Defina um alcance de posicionamento igual ou maior que zero.');
       const timeQty = numeroOpcional(tempoQuantidade, 'Tempo adicional');
       if ((timeQty === undefined) !== !tempoUnidade.trim()) throw new Error('Preencha quantidade e unidade do tempo adicional juntas.');
       const valoresDerivados: Record<string, CampoDerivadoInvocacao> = { ...resolvidos.configuracao };
@@ -436,6 +439,7 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
         ...(imagemAltText.trim() ? { imagemAltText: imagemAltText.trim() } : {}),
         ...(corIdentificacao ? { corIdentificacao } : {}), nomeplate, formaToken, ...(tokenCrop ? { tokenCrop } : {}),
         ...(intermediario ? { intermediario } : {}), atributos: { ...atributos }, valoresDerivados,
+        alcanceInvocacaoM: alcancePosicionamento,
         estadoLegado: {
           hpAtual: atualHP, hpMaximo: maxHP, defesa: valoresFinais.defesa,
           deslocamentoM: valoresFinais.deslocamentoM, custoInvocacaoPE: valoresFinais.custoInvocacaoPE,
@@ -566,6 +570,7 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
         <label className="text-xs">ID de referência da origem<input value={origemReferencia} onChange={event => setOrigemReferencia(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
         <label className="text-xs">Origem da aquisição<select value={origemAquisicao} onChange={event => setOrigemAquisicao(event.target.value)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Não definida</option><option value="interludio">Interlúdio</option><option value="livro">Referência do livro</option><option value="mestre">Decisão do Mestre</option><option value="outra">Outra</option></select></label>
         <label className="text-xs">Referência do Interlúdio<input value={referenciaInterludio} onChange={event => setReferenciaInterludio(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
+        <label className="text-xs">Alcance de posicionamento (m)<input aria-label="Alcance de posicionamento" type="number" min="0" step="any" value={alcanceInvocacaoM} onChange={event => setAlcanceInvocacaoM(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /><span className="mt-1 block text-xs text-muted-foreground">Distância máxima entre o centro do Controlador e o centro da célula escolhida no mapa.</span></label>
         <label className="text-xs">Intermediário<select value={intermediarioTipo} onChange={event => { setIntermediarioTipo(event.target.value as '' | 'talisma' | 'dispositivo' | 'tecnica'); setIntermediarioItem(''); }} className="mt-1 w-full rounded border bg-background p-2"><option value="">Não configurado</option>{tipo === 'shikigami' ? <><option value="talisma">Talismã</option><option value="tecnica" disabled={!character.tecnicaAmaldicoada?.trim()}>Técnica inata do personagem</option></> : <option value="dispositivo">Dispositivo próprio do corpo</option>}</select></label>
         {(intermediarioTipo === 'talisma' || intermediarioTipo === 'dispositivo') && <label className="text-xs">Item real do inventário<select value={intermediarioItem} onChange={event => setIntermediarioItem(event.target.value)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Selecione um item</option>{inventarioDoDono.filter(item => item.entity.categoria === 'item' && (item.entity.slotType ?? 'nenhum') === 'nenhum').map(item => <option key={item.instanceId} value={item.instanceId}>{item.entity.nome} · {item.emMaos ? 'em mãos' : 'na mochila'}{item.quebrado ? ' · quebrado' : ''} · {item.instanceId.slice(0, 8)}</option>)}</select></label>}
         {intermediarioTipo === 'tecnica' && <div className="space-y-1"><label className="block text-xs">Técnica amaldiçoada do personagem<input value={character.tecnicaAmaldicoada ?? ''} readOnly className="mt-1 w-full rounded border bg-muted p-2" /></label><p className="text-xs text-muted-foreground">A ficha precisa ser aprovada pelo Mestre para usar esta exceção ao talismã.</p></div>}
@@ -623,7 +628,7 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
 
     <details id="sec-E" open className="rounded border border-border p-2">
       <summary className="cursor-pointer text-sm font-semibold">E · Valores derivados e modo por campo</summary>
-      <p className="mt-2 text-xs text-muted-foreground">Cada campo mantém seu modo separadamente. Campos automáticos mostram prévia; os manuais não mudam quando atributos ou grau mudam. Alcance e resistências não têm fórmula cadastrada.</p>
+      <p className="mt-2 text-xs text-muted-foreground">Cada campo mantém seu modo separadamente. Campos automáticos mostram prévia; os manuais não mudam quando atributos ou grau mudam. O alcance de posicionamento é definido acima e é diferente do alcance dos ataques.</p>
       <div className="mt-2 grid gap-2 sm:grid-cols-2">{chavesDerivadas.map(renderDerivado)}</div>
       <div className="mt-2 grid gap-2 sm:grid-cols-2">
         {renderExtra('custoSustentacaoPE', 'Custo de sustentação', 'PE', false)}

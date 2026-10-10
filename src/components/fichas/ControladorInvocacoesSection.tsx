@@ -6,7 +6,7 @@ import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { validarIntermediarioInvocacao } from '@/lib/controlador/intermediario';
-import { invocarControlador, recolherInvocacao, limparInvocacoesDerrotadas, comandarReposicionamento, comandarAtaque, type DirecaoInvocacao } from '@/lib/controlador/mapa';
+import { invocarControladores, recolherInvocacao, limparInvocacoesDerrotadas, comandarReposicionamento, comandarAtaque, type DirecaoInvocacao } from '@/lib/controlador/mapa';
 import { limiteInvocacoesConhecidas, limiteAtivasPersonagem, validarCatalogoControlador, type InvocacaoControlador, type TipoInvocacaoControlador } from '@/lib/controlador/tipos';
 import { podeUsarVersaoAprovada } from '@/lib/controlador/aprovacao';
 import { carregarAssetFicha } from '@/lib/controlador/assetFicha';
@@ -45,6 +45,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
   const [defesa, setDefesa] = useState(10);
   const [deslocamento, setDeslocamento] = useState(9);
   const [custoPE, setCustoPE] = useState(3);
+  const [alcanceInvocacaoM, setAlcanceInvocacaoM] = useState('');
   const [fonte, setFonte] = useState('');
   const [erro, setErro] = useState('');
   const [busyAprovacao, setBusyAprovacao] = useState(false);
@@ -53,6 +54,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
   const [motivosRejeicao, setMotivosRejeicao] = useState<Record<string, string>>({});
   const [motivosOverride, setMotivosOverride] = useState<Record<string, string>>({});
   const [direcao, setDirecao] = useState<DirecaoInvocacao>('leste');
+  const [invocacoesSelecionadas, setInvocacoesSelecionadas] = useState<string[]>([]);
   const [mensagem, setMensagem] = useState('');
   const [alvosAtaque, setAlvosAtaque] = useState<Record<string, string>>({});
   const [busyAtaque, setBusyAtaque] = useState(false);
@@ -66,26 +68,44 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
   const entities = useMapStore(s => s.entities);
   const ativos = Object.values(entities).filter(e => e.ownerCharId === character.id && !!e.invocationId);
   useEffect(() => { if (ativos.some(e => (e.hp ?? 0) <= 0)) limparInvocacoesDerrotadas(character.id); }, [entities, character.id]);
-  const invocar = async (id: string, motivoOverride?: string) => {
+  const invocarSelecionadas = async () => {
     if (carregandoArteId) return;
+    const ids = [...invocacoesSelecionadas];
+    if (ids.length < 1 || ids.length > 2) { setErro('Selecione uma ou duas invocações.'); return; }
+    const modelos = ids.map(id => character.invocacoesConhecidas?.find(item => item.id === id));
+    if (modelos.some(modelo => !modelo)) { setErro('Uma das invocações selecionadas não está no catálogo.'); return; }
+    const modelosValidos = modelos as InvocacaoControlador[];
+    if (!Object.values(useMapStore.getState().entities).some(entity => entity.characterId === character.id && !entity.invocationId)) {
+      setErro('Coloque o token do Controlador no mapa primeiro.'); return;
+    }
+    if (modelosValidos.some(modelo => !Number.isFinite(modelo.alcanceInvocacaoM) || (modelo.alcanceInvocacaoM ?? -1) < 0)) {
+      setErro('Defina o alcance de posicionamento em cada ficha selecionada.'); return;
+    }
     const eventoId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
       ? crypto.randomUUID()
-      : `evento-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-    const modelo = character.invocacoesConhecidas?.find(item => item.id === id);
-    const assetIds = [modelo?.imagemAssetId, modelo?.imagemFallbackAssetId].filter((assetId): assetId is string => Boolean(assetId));
+      : 'evento-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
     try {
-      if (assetIds.length) {
-        setCarregandoArteId(id);
-        await Promise.all(assetIds.map(assetId => carregarAssetFicha(assetId)));
-      }
-      const resultado = invocarControlador(character.id, id, direcao, {
-        eventoId,
-        ...(motivoOverride ? { motivoOverrideIntermediario: motivoOverride } : {}),
+      setErro(''); setMensagem(''); setCarregandoArteId('lote');
+      const assetIds = modelosValidos.flatMap(modelo => [modelo.imagemAssetId, modelo.imagemFallbackAssetId].filter((assetId): assetId is string => Boolean(assetId)));
+      if (assetIds.length) await Promise.all(assetIds.map(assetId => carregarAssetFicha(assetId)));
+      const posicoes = await useMapStore.getState().requestInvocationPlacement({
+        ownerCharacterId: character.id,
+        items: modelosValidos.map(modelo => ({
+          invocationId: modelo.id,
+          label: modelo.apelido?.trim() || modelo.nome,
+          alcanceM: modelo.alcanceInvocacaoM!,
+          color: modelo.corIdentificacao ?? '#8055bd',
+        })),
       });
+      if (!posicoes) { setMensagem('Posicionamento cancelado.'); return; }
+      const motivos = Object.fromEntries(ids.map(id => [id, motivosOverride[id] ?? '']));
+      const resultado = invocarControladores(character.id, posicoes, { eventoId, motivosOverrideIntermediario: motivos });
       if (!resultado.ok) { setErro(resultado.motivo); return; }
-      setErro(''); setMensagem(motivoOverride ? 'Invocação materializada; override do Mestre registrado.' : 'Invocação materializada no mapa.');
+      setInvocacoesSelecionadas([]);
+      setErro('');
+      setMensagem('Invocação materializada no mapa como Ação Livre. PE cobrado uma vez pelo lote.');
     } catch (error) {
-      setErro(error instanceof Error ? error.message : 'Não foi possível carregar a arte da invocação.');
+      setErro(error instanceof Error ? error.message : 'Não foi possível preparar o posicionamento das invocações.');
     } finally {
       setCarregandoArteId(null);
     }
@@ -163,6 +183,8 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
 
   const salvar = async () => {
     if (busyAprovacao) return;
+    const alcance = alcanceInvocacaoM.trim() === '' ? Number.NaN : Number(alcanceInvocacaoM);
+    if (!Number.isFinite(alcance) || alcance < 0) { setErro('Defina o alcance de posicionamento em metros.'); return; }
     const novo: InvocacaoControlador = {
       id: crypto.randomUUID(), donoCharacterId: character.id,
       nome: escolhido?.nome ?? nome.trim(), tipo,
@@ -170,7 +192,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
       origem: escolhido ? { tipo: escolhido.tipo, entidadeId: escolhido.id } : { tipo: 'manual' },
       hpAtual: escolhido?.hp ?? hp, hpMaximo: escolhido?.hp ?? hp,
       defesa: escolhido?.defesa ?? defesa, deslocamentoM: escolhido?.deslocamento ?? deslocamento,
-      porte: escolhido?.porte ?? 'Médio', custoInvocacaoPE: custoPE,
+      porte: escolhido?.porte ?? 'Médio', custoInvocacaoPE: custoPE, alcanceInvocacaoM: alcance,
       acoes: escolhido?.acoes ?? [],
     };
     const resultado = validarCatalogoControlador(character.id, character.level, [...catalogo, novo]);
@@ -191,7 +213,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
         solicitacaoAprovacaoId: solicitacao.requestId,
       };
       updateCharacter(character.id, { invocacoesConhecidas: [...catalogo, salvo], limiteInvocacoesConhecidas: max ?? undefined, limiteInvocacoesAtivas: ativas });
-      setFonte(''); setNome(''); setErro('');
+      setFonte(''); setNome(''); setAlcanceInvocacaoM(''); setErro('');
       setMensagem(solicitacao.status === 'aprovada' ? 'Invocação aprovada pelo Mestre.' : 'Solicitação enviada ao Mestre.');
     } catch (error) {
       setErro(error instanceof Error ? error.message : 'Não foi possível enviar a solicitação ao Mestre.');
@@ -309,15 +331,25 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
   return (
     <div className="space-y-3 rounded-lg border border-border p-3 text-sm">
       <div className="font-semibold">Invocações conhecidas: {catalogo.length}/{max ?? 'Interlúdio'} · Em campo: {ativos.length}/{ativas}</div>
-      <label className="block text-xs">Posicionar na célula adjacente ao Controlador
-        <select aria-label="Direção da invocação" value={direcao} onChange={e => setDirecao(e.target.value as DirecaoInvocacao)} className="mt-1 w-full rounded border border-input bg-background p-2">
-          <option value="norte">Norte</option><option value="sul">Sul</option><option value="leste">Leste</option><option value="oeste">Oeste</option>
-        </select>
-      </label>
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="block min-w-40 flex-1 text-xs">Direção dos comandos de movimento
+          <select aria-label="Direção do movimento da invocação" value={direcao} onChange={e => setDirecao(e.target.value as DirecaoInvocacao)} className="mt-1 w-full rounded border border-input bg-background p-2">
+            <option value="norte">Norte</option><option value="sul">Sul</option><option value="leste">Leste</option><option value="oeste">Oeste</option>
+          </select>
+        </label>
+        <button type="button" className="rounded border border-primary px-3 py-2 text-xs disabled:opacity-50" disabled={!!carregandoArteId || invocacoesSelecionadas.length < 1} onClick={() => void invocarSelecionadas()}>
+          {carregandoArteId === 'lote' ? 'Preparando posicionamento…' : 'Invocar selecionadas (' + invocacoesSelecionadas.length + '/2)'}
+        </button>
+      </div>
+      <p className="text-xs text-muted-foreground">Selecione até duas fichas e clique no mapa para escolher uma célula livre para cada uma. Invocar é Ação Livre por enquanto.</p>
       {mensagem && <p role="status" className="text-xs text-muted-foreground">{mensagem}</p>}
       {catalogo.map(inv => {
         const arte = assetForFicha(inv);
         const estadoIntermediario = validarIntermediarioInvocacao(inv, character, itensInventario, catalogo);
+        const ativo = ativos.some(entity => entity.invocationId === inv.id);
+        const aprovado = podeUsarVersaoAprovada({ estado: inv.aprovacaoMestre, versaoAtual: inv.versaoModelo, versaoAprovada: inv.versaoAprovada });
+        const alcanceConfigurado = Number.isFinite(inv.alcanceInvocacaoM) && (inv.alcanceInvocacaoM ?? -1) >= 0;
+        const podeSelecionar = !ativo && aprovado && alcanceConfigurado && (estadoIntermediario.ok || (isMaster && Boolean(motivosOverride[inv.id]?.trim())));
         return (
         <div key={inv.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border p-2">
           <div className="flex items-center gap-2">
@@ -328,12 +360,13 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
           </div>
           <div className="basis-full text-xs text-muted-foreground">Aquisição: {inv.aprovacaoMestre === 'pendente' ? 'Aguardando aprovação do Mestre' : inv.aprovacaoMestre === 'rejeitada' ? 'Rejeitada — edite e solicite novamente' : 'Aprovada'}</div>
           <div className={'basis-full text-xs ' + (estadoIntermediario.ok ? 'text-muted-foreground' : 'text-amber-300')}>Intermediário: {estadoIntermediario.ok ? 'disponível — ' + estadoIntermediario.resumo : 'pendente de validação — ' + estadoIntermediario.motivo}</div>
+          <div className={'basis-full text-xs ' + (alcanceConfigurado ? 'text-muted-foreground' : 'text-amber-300')}>Alcance de posicionamento: {alcanceConfigurado ? (inv.alcanceInvocacaoM ?? 0) + ' m' : 'não definido — edite a ficha antes de invocar'}</div>
           {inv.origemAquisicao && <div className="basis-full text-xs text-muted-foreground">Origem da aquisição: {inv.origemAquisicao === 'interludio' ? 'Interlúdio' : inv.origemAquisicao}</div>}
           {inv.referenciaInterludio && <div className="basis-full text-xs text-muted-foreground">Referência do Interlúdio: {inv.referenciaInterludio}</div>}
           {isMaster && !estadoIntermediario.ok && podeUsarVersaoAprovada({ estado: inv.aprovacaoMestre, versaoAtual: inv.versaoModelo, versaoAprovada: inv.versaoAprovada }) && !ativos.some(e => e.invocationId === inv.id) && (
             <div className="basis-full flex flex-wrap items-center gap-2">
               <input aria-label={'Motivo do override do intermediário de ' + inv.nome} value={motivosOverride[inv.id] ?? ''} onChange={event => setMotivosOverride(state => ({ ...state, [inv.id]: event.target.value }))} placeholder="Motivo do override do Mestre" className="min-w-48 rounded border bg-background px-2 py-1 text-xs" />
-              <button type="button" disabled={!!carregandoArteId || !motivosOverride[inv.id]?.trim()} className="rounded border border-amber-500/50 px-2 py-1 text-xs text-amber-300 disabled:opacity-50" onClick={() => void invocar(inv.id, motivosOverride[inv.id]?.trim())}>Invocar com override do Mestre</button>
+
             </div>
           )}
           {inv.aprovacaoMestre === 'rejeitada' && inv.motivoRejeicao && <div className="basis-full text-xs text-destructive">Motivo da rejeição: {inv.motivoRejeicao}</div>}
@@ -353,10 +386,13 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
           )}
           <div className="flex shrink-0 flex-wrap gap-1">
             {onEditFicha && <button type="button" disabled={busyAprovacao || inv.aprovacaoMestre === 'pendente'} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={() => onEditFicha(inv.id)}>Editar ficha</button>}
-            {ativos.some(e => e.invocationId === inv.id) ? (
+            {ativo ? (
               <><button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => comandar(inv.id)}>Comandar movimento (bônus)</button><button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => recolher(inv.id)}>Recolher</button></>
             ) : (
-              <button type="button" className="rounded border border-primary px-2 py-1 text-xs" disabled={!!carregandoArteId || !estadoIntermediario.ok || !podeUsarVersaoAprovada({ estado: inv.aprovacaoMestre, versaoAtual: inv.versaoModelo, versaoAprovada: inv.versaoAprovada })} onClick={() => void invocar(inv.id)}>{carregandoArteId === inv.id ? 'Carregando arte…' : 'Invocar'}</button>
+                <label className="flex items-center gap-2 rounded border border-primary px-2 py-1 text-xs">
+                  <input type="checkbox" aria-label={'Selecionar ' + inv.nome + ' para invocar'} checked={invocacoesSelecionadas.includes(inv.id)} disabled={!!carregandoArteId || !podeSelecionar} onChange={event => setInvocacoesSelecionadas(current => event.target.checked ? (current.includes(inv.id) || current.length >= 2 ? current : [...current, inv.id]) : current.filter(id => id !== inv.id))} />
+                  Selecionar para invocar
+                </label>
             )}
             <button type="button" disabled={ativos.some(e => e.invocationId === inv.id) || inv.aprovacaoMestre === 'pendente' || busyAprovacao} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={() => remover(inv.id)}>Remover</button>
           </div>
@@ -430,12 +466,13 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
             <label className="text-xs">Deslocamento (m)<input type="number" min="0" value={deslocamento} onChange={e => setDeslocamento(Number(e.target.value))} className="w-full rounded border bg-background p-2" /></label>
           </div>
         </>}
+        <label className="block text-xs">Alcance de posicionamento (m)<input aria-label="Alcance de posicionamento" type="number" min="0" step="any" value={alcanceInvocacaoM} onChange={e => setAlcanceInvocacaoM(e.target.value)} className="mt-1 w-full rounded border bg-background p-2" /><span className="mt-1 block text-xs text-muted-foreground">Máxima distância entre o Controlador e o local escolhido no mapa.</span></label>
         <label className="block text-xs">Custo de invocação (PE)<input type="number" min="0" value={custoPE} onChange={e => setCustoPE(Number(e.target.value))} className="mt-1 w-full rounded border bg-background p-2" /></label>
         {erro && <p role="alert" className="text-xs text-destructive">{erro}</p>}
         <button type="button" disabled={busyAprovacao} onClick={() => void salvar()} className="rounded bg-primary px-3 py-2 text-xs text-primary-foreground disabled:opacity-50">Adicionar ao catálogo</button>
       </div>
       <p className="text-xs text-amber-600">{controlador ? `Progressão do livro: ${max} invocações; além disso exige Interlúdio. Limite simultâneo: ${ativas}.` : 'Outras especializações obtêm Shikigamis durante Interlúdios; podem manter apenas 1 invocação em campo por padrão.'}</p>
-      <p className="text-xs text-muted-foreground">Invocar gasta PE e cria um token no mapa. Reposicionamento comandado custa uma Ação Bônus no turno do Controlador. Ataques comandados gastam uma Ação Comum e utilizam a bandeja 3D, alcance real e defesa do alvo.</p>
+      <p className="text-xs text-muted-foreground">Invocar é uma Ação Livre por enquanto e gasta PE. Posicione as invocações clicando no mapa, dentro do alcance definido em cada ficha; um uso permite selecionar até duas. Reposicionamento custa uma Ação Bônus e ataques comandados gastam uma Ação Comum.</p>
     </div>
   );
 }

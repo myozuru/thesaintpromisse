@@ -987,6 +987,56 @@ export function MapaModule() {
         }
       }
 
+      // Ghost do posicionamento de invocações: célula, alcance, colisões e progresso.
+      {
+        const pending = state.pendingInvocationPlacement;
+        const mw = mouseWorldRef.current;
+        const item = pending?.items[pending.placements.length];
+        if (pending && item && mw && drag.kind === 'none') {
+          const dpi = state.gridConfig.dpi;
+          const mpc = state.gridConfig.metersPerCell;
+          const owner = Object.values(state.entities).find(entity => entity.characterId === pending.ownerCharacterId && !entity.invocationId);
+          if (dpi > 0 && mpc > 0 && owner) {
+            const target = { x: Math.round(mw.x / dpi) * dpi, y: Math.round(mw.y / dpi) * dpi };
+            const distM = Math.hypot(target.x - owner.x, target.y - owner.y) / dpi * mpc;
+            const occupied = Object.values(state.entities).some(entity =>
+              entity.layer !== 'map' && !entity.hidden &&
+              Math.abs(entity.x - target.x) < (entity.w + dpi) / 2 &&
+              Math.abs(entity.y - target.y) < (entity.h + dpi) / 2,
+            ) || pending.placements.some(placement =>
+              Math.abs(placement.x - target.x) < dpi &&
+              Math.abs(placement.y - target.y) < dpi,
+            );
+            const segments = WallsEngine.blockingSegments(state.walls, 'sight');
+            const blockedByWall = WallsEngine.minDistanceToSegments(target, segments) < dpi * Math.SQRT1_2;
+            const outOfRange = distM > item.alcanceM;
+            const valid = !outOfRange && !occupied && !blockedByWall;
+            const color = valid ? item.color : '#ef4444';
+            tkCtx.save();
+            tkCtx.strokeStyle = item.color + '77';
+            tkCtx.lineWidth = 1.5 / camera.scale;
+            tkCtx.setLineDash([7 / camera.scale, 5 / camera.scale]);
+            tkCtx.beginPath();
+            tkCtx.arc(owner.x, owner.y, (item.alcanceM / mpc) * dpi, 0, Math.PI * 2);
+            tkCtx.stroke();
+            tkCtx.setLineDash([]);
+            tkCtx.strokeStyle = color;
+            tkCtx.fillStyle = valid ? item.color + '55' : 'rgba(239,68,68,0.30)';
+            tkCtx.lineWidth = 2 / camera.scale;
+            tkCtx.fillRect(target.x - dpi / 2, target.y - dpi / 2, dpi, dpi);
+            tkCtx.strokeRect(target.x - dpi / 2, target.y - dpi / 2, dpi, dpi);
+            const labelText = item.label + ': ' + distM.toFixed(1) + ' / ' + item.alcanceM + ' m · ' + (pending.placements.length + 1) + '/' + pending.items.length;
+            const fontPx = Math.max(11, 12 / camera.scale);
+            tkCtx.font = 'bold ' + fontPx + 'px ui-monospace, monospace';
+            tkCtx.textAlign = 'center';
+            tkCtx.textBaseline = 'bottom';
+            tkCtx.fillStyle = valid ? '#ffffff' : '#fecaca';
+            tkCtx.fillText(labelText, target.x, target.y - dpi / 2 - 4 / camera.scale);
+            tkCtx.restore();
+          }
+        }
+      }
+
       // Mira de feitiço single-target: linha do conjurador até o cursor
       // com distância atual / alcance máximo. Visível para qualquer tipo
       // de feitiço (dano, buff, cura, condição etc.) enquanto estiver
@@ -1004,7 +1054,7 @@ export function MapaModule() {
             tkCtx.beginPath(); tkCtx.arc(t.x, t.y, Math.max(t.w, t.h) / 2 + 5, 0, Math.PI * 2); tkCtx.stroke(); tkCtx.restore();
           }
         }
-        if (aim && mw && drag.kind === 'none' && !state.pendingAoEPlacement) {
+        if (aim && mw && drag.kind === 'none' && !state.pendingAoEPlacement && !state.pendingInvocationPlacement) {
           const dpi = state.gridConfig.dpi || 70;
           const mpc = state.gridConfig.metersPerCell || 1;
           const origin = aim.originWorld;
@@ -1308,6 +1358,7 @@ export function MapaModule() {
     const store = useMapStore;
 
     const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && store.getState().pendingInvocationPlacement) { store.getState().resolveInvocationPlacement(null); e.preventDefault(); return; }
       if (e.key === 'Escape' && useAlvoMapaStore.getState().pending) { terminarAlvoMapa(null); e.preventDefault(); return; }
       if (e.code === 'Space') {
         // Evita que Space "re-clique" o último botão focado e impede o scroll
@@ -1586,7 +1637,7 @@ export function MapaModule() {
       // pan?
       const isMiddle = e.button === 1;
       if (e.button === 2 && useAlvoMapaStore.getState().pending) { terminarAlvoMapa(null); e.preventDefault(); return; }
-      const isSpacePan = e.button === 0 && spaceDownRef.current && !store.getState().pendingAoEPlacement;
+      const isSpacePan = e.button === 0 && spaceDownRef.current && !store.getState().pendingAoEPlacement && !store.getState().pendingInvocationPlacement;
       if (isMiddle || isSpacePan) {
         e.preventDefault();
         dragRef.current = { kind: 'pan' };
@@ -1596,6 +1647,12 @@ export function MapaModule() {
         return;
       }
       if (e.button !== 0) {
+        // Botão direito durante posicionamento de invocação → cancela.
+        if (e.button === 2 && store.getState().pendingInvocationPlacement) {
+          e.preventDefault();
+          store.getState().resolveInvocationPlacement(null);
+          return;
+        }
         // Botão direito durante posicionamento de AoE → cancela.
         if (e.button === 2 && store.getState().pendingAoEPlacement) {
           e.preventDefault();
@@ -1634,6 +1691,36 @@ export function MapaModule() {
       const { x: wx, y: wy } = worldFromEvent(e);
       const state = store.getState();
       const cam = state.camera;
+
+      // ── Clique para definir a célula de cada invocação ──
+      const invocationPlacement = state.pendingInvocationPlacement;
+      if (invocationPlacement) {
+        e.preventDefault();
+        const dpi = state.gridConfig.dpi;
+        const mpc = state.gridConfig.metersPerCell;
+        const item = invocationPlacement.items[invocationPlacement.placements.length];
+        const owner = Object.values(state.entities).find(entity =>
+          entity.characterId === invocationPlacement.ownerCharacterId && !entity.invocationId,
+        );
+        if (!(dpi > 0) || !(mpc > 0) || !item || !owner) return;
+        const x = Math.round(wx / dpi) * dpi;
+        const y = Math.round(wy / dpi) * dpi;
+        const distanceM = Math.hypot(x - owner.x, y - owner.y) / dpi * mpc;
+        const occupied = Object.values(state.entities).some(entity =>
+          entity.layer !== 'map' && !entity.hidden &&
+          Math.abs(entity.x - x) < (entity.w + dpi) / 2 &&
+          Math.abs(entity.y - y) < (entity.h + dpi) / 2,
+        ) || invocationPlacement.placements.some(placement =>
+          Math.abs(placement.x - x) < dpi &&
+          Math.abs(placement.y - y) < dpi,
+        );
+        const blockedByWall = WallsEngine.minDistanceToSegments(
+          { x, y }, WallsEngine.blockingSegments(state.walls, 'sight'),
+        ) < dpi * Math.SQRT1_2;
+        if (distanceM > item.alcanceM || occupied || blockedByWall) return;
+        state.resolveInvocationPlacement({ x, y });
+        return;
+      }
 
       if (useAlvoMapaStore.getState().pending) {
         e.preventDefault();
@@ -2608,7 +2695,7 @@ export function MapaModule() {
     const onContextMenu = (ev: MouseEvent) => {
       if (!isMapSurface(ev.target)) return;
       // Posicionamento de AoE ativo: clique-direito cancela e não abre menu.
-      if (store.getState().pendingAoEPlacement) { ev.preventDefault(); return; }
+      if (store.getState().pendingAoEPlacement || store.getState().pendingInvocationPlacement) { ev.preventDefault(); return; }
       // se o usuário arrastou o ponteiro (press-and-hold), não abre o menu
       if (rightPingRef.current?.moved) { ev.preventDefault(); return; }
       if (spaceDownRef.current) { ev.preventDefault(); return; }
