@@ -76,6 +76,7 @@ import { AcoesAtivasSection } from './AcoesAtivasSection';
 import { CamDeathReactionDialog } from './CamDeathReactionDialog';
 import { PendingLevelChoicesPanel, hasPendingChoices } from './PendingLevelChoicesPanel';
 import { PendingSummaryButton } from './PendingSummaryButton';
+import { ConquistasButton } from '@/components/conquistas/ConquistasButton';
 import { AttributeSpendDialog } from './AttributeSpendDialog';
 import { PoolGrantDialog } from './PoolGrantDialog';
 import { SorcererRankBadge } from './SorcererRankBadge';
@@ -1593,6 +1594,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
             <span className="flex-shrink-0">
               {!c.isGrimorioCreature && <PendingSummaryButton character={c} onExpand={() => setExpanded(true)} />}
             </span>
+            {c.category === 'PLAYER' && <ConquistasButton charId={c.id} nome={c.name} master={isMaster} />}
           </div>
           <div className="text-sm text-muted-foreground pr-2">
             {c.characterClass || 'Não-Feiticeiro'}
