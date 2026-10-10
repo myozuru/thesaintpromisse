@@ -128,6 +128,9 @@ export interface Entity {
   /** Invocação do Controlador: proprietário e ID do catálogo. */
   ownerCharId?: string;
   invocationId?: string;
+  /** IDs imutáveis do evento e da materialização desta instância. */
+  invocationEventId?: string;
+  invocationInstanceId?: string;
   /** Defesa e deslocamento próprios do servo (sem criar turno separado). */
   invocationDefense?: number;
   invocationMovementM?: number;

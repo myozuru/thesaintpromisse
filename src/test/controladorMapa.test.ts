@@ -52,6 +52,27 @@ describe('Controlador — materialização real no mapa', () => {
     expect(invocarControlador('dono', 'a', 'sul').ok).toBe(false);
     expect(pegarFicha('dono').peCurrent).toBe(7);
   });
+  it('repete o mesmo evento de invocação sem criar outra instância nem cobrar PE novamente', () => {
+    const eventoId = 'evento-repetido-controlador';
+    const primeira = invocarControlador('dono', 'a', 'leste', { eventoId });
+    if (!primeira.ok) throw new Error(primeira.motivo);
+    const token = useMapStore.getState().entities[primeira.tokenId];
+    expect(token.invocationEventId).toBe(eventoId);
+    expect(token.invocationInstanceId).toMatch(/^instancia-/);
+
+    const repetida = invocarControlador('dono', 'a', 'sul', { eventoId });
+    expect(repetida).toEqual(primeira);
+    expect(tokensInvocados('dono')).toHaveLength(1);
+    expect(pegarFicha('dono').peCurrent).toBe(7);
+  });
+  it('recusa reutilizar o ID de evento para outra invocação sem cobrar PE', () => {
+    const primeira = invocarControlador('dono', 'a', 'leste', { eventoId: 'evento-unico' });
+    expect(primeira.ok).toBe(true);
+    const segunda = invocarControlador('dono', 'b', 'sul', { eventoId: 'evento-unico' });
+    expect(segunda).toEqual({ ok: false, motivo: 'Este ID de evento já pertence a outra invocação.' });
+    expect(tokensInvocados('dono')).toHaveLength(1);
+    expect(pegarFicha('dono').peCurrent).toBe(7);
+  });
   it('bloqueia o uso sem intermediário em mãos e registra o override do Mestre', () => {
     useInventoryStore.getState().definirEmMaos(`item-${numeroFixture}-a`, false);
     const bloqueada = invocarControlador('dono', 'a', 'leste');
@@ -106,6 +127,23 @@ describe('Controlador — materialização real no mapa', () => {
     expect(invocarControlador('dono', 'b', 'sul').ok).toBe(true);
     expect(invocarControlador('dono', 'c', 'oeste').ok).toBe(false);
     expect(tokensInvocados('dono')).toHaveLength(2);
+  });
+  it('remove o token se a cobrança de PE falhar no meio da transação', () => {
+    const atual = useCharacterStore.getState();
+    const updateSpy = vi.spyOn(atual, 'updateCharacter').mockImplementation(() => {
+      throw new Error('falha simulada ao salvar o custo');
+    });
+    try {
+      const resultado = invocarControlador('dono', 'a', 'leste', { eventoId: 'evento-falha-custo' });
+      expect(resultado).toEqual({
+        ok: false,
+        motivo: 'Não foi possível concluir a invocação; os efeitos locais foram desfeitos.',
+      });
+      expect(tokensInvocados('dono')).toHaveLength(0);
+      expect(pegarFicha('dono').peCurrent).toBe(10);
+    } finally {
+      updateSpy.mockRestore();
+    }
   });
   it('recolhe sem reembolso e libera o slot para nova invocação', () => {
     expect(invocarControlador('dono', 'a', 'leste').ok).toBe(true);

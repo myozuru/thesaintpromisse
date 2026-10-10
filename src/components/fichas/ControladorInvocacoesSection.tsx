@@ -68,6 +68,9 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
   useEffect(() => { if (ativos.some(e => (e.hp ?? 0) <= 0)) limparInvocacoesDerrotadas(character.id); }, [entities, character.id]);
   const invocar = async (id: string, motivoOverride?: string) => {
     if (carregandoArteId) return;
+    const eventoId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `evento-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     const modelo = character.invocacoesConhecidas?.find(item => item.id === id);
     const assetIds = [modelo?.imagemAssetId, modelo?.imagemFallbackAssetId].filter((assetId): assetId is string => Boolean(assetId));
     try {
@@ -75,7 +78,10 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
         setCarregandoArteId(id);
         await Promise.all(assetIds.map(assetId => carregarAssetFicha(assetId)));
       }
-      const resultado = invocarControlador(character.id, id, direcao, motivoOverride ? { motivoOverrideIntermediario: motivoOverride } : undefined);
+      const resultado = invocarControlador(character.id, id, direcao, {
+        eventoId,
+        ...(motivoOverride ? { motivoOverrideIntermediario: motivoOverride } : {}),
+      });
       if (!resultado.ok) { setErro(resultado.motivo); return; }
       setErro(''); setMensagem(motivoOverride ? 'Invocação materializada; override do Mestre registrado.' : 'Invocação materializada no mapa.');
     } catch (error) {

@@ -11,6 +11,13 @@ import { podeUsarVersaoAprovada } from '@/lib/controlador/aprovacao';
 export type DirecaoInvocacao = 'norte' | 'sul' | 'leste' | 'oeste';
 export type ResultadoInvocacao = { ok: true; tokenId: string } | { ok: false; motivo: string };
 
+function novoIdInvocacao(prefixo: string): string {
+  const valor = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2) + Date.now().toString(36);
+  return `${prefixo}-${valor}`;
+}
+
 /** Mantém tokens distintos das fichas: servos não ganham iniciativa própria. */
 export function tokensInvocados(donoCharacterId: string) {
   return Object.values(useMapStore.getState().entities).filter(e => e.ownerCharId === donoCharacterId && !!e.invocationId);
@@ -19,6 +26,8 @@ export function tokensInvocados(donoCharacterId: string) {
 /** Coloca o servo na célula adjacente escolhida, respeitando alcance e ocupação. */
 export interface OpcoesInvocacaoControlador {
   motivoOverrideIntermediario?: string;
+  /** Chave estável do pedido, reutilizada caso a mesma execução seja reenviada. */
+  eventoId?: string;
 }
 
 export function invocarControlador(
@@ -30,6 +39,18 @@ export function invocarControlador(
   const cs = useCharacterStore.getState();
   const dono = cs.characters.find(c => c.id === donoId);
   if (!dono) return { ok: false, motivo: 'Personagem não encontrado.' };
+  if (opcoes?.eventoId !== undefined && !opcoes.eventoId.trim()) {
+    return { ok: false, motivo: 'O ID do evento de invocação está vazio.' };
+  }
+  const eventoId = opcoes?.eventoId?.trim() || novoIdInvocacao('evento');
+  const mapa = useMapStore.getState();
+  const eventoExistente = Object.values(mapa.entities).find(e => e.invocationEventId === eventoId);
+  if (eventoExistente) {
+    if (eventoExistente.ownerCharId === donoId && eventoExistente.invocationId === invocacaoId) {
+      return { ok: true, tokenId: eventoExistente.id };
+    }
+    return { ok: false, motivo: 'Este ID de evento já pertence a outra invocação.' };
+  }
   const modelo = dono.invocacoesConhecidas?.find(i => i.id === invocacaoId && i.donoCharacterId === donoId);
   if (!modelo) return { ok: false, motivo: 'Invocação não pertence ao catálogo.' };
   if (!podeUsarVersaoAprovada({ estado: modelo.aprovacaoMestre, versaoAtual: modelo.versaoModelo, versaoAprovada: modelo.versaoAprovada })) return { ok: false, motivo: 'Esta versão da invocação ainda não foi aprovada pelo Mestre.' };
@@ -40,7 +61,6 @@ export function invocarControlador(
   if (overrideIntermediario && useRoleStore.getState().role !== 'MASTER') return { ok: false, motivo: 'Somente o Mestre pode ignorar a validação do intermediário.' };
   if (modelo.hpAtual <= 0) return { ok: false, motivo: 'A invocação precisa ter PV para ser materializada.' };
 
-  const mapa = useMapStore.getState();
   const ativos = tokensInvocados(donoId);
   if (ativos.some(e => e.invocationId === invocacaoId)) return { ok: false, motivo: 'Essa invocação já está no mapa.' };
   if (ativos.length >= limiteAtivasPersonagem(dono.specialization, dono.treinoControle ?? 0)) return { ok: false, motivo: 'Limite de invocações ativas atingido.' };
@@ -62,19 +82,37 @@ export function invocarControlador(
     Math.abs((e.y + e.h / 2) - (y + passo / 2)) < passo * .45);
   if (ocupado) return { ok: false, motivo: 'A célula escolhida está ocupada.' };
 
-  const tokenId = mapa.addEntity({
-    shape: modelo.formaToken ?? 'ELLIPSE', x, y, w: passo, h: passo, rotation: 0,
-    color: modelo.corIdentificacao ?? '#8055bd',
-    label: modelo.apelido?.trim() || modelo.nome, locked: false, layer: 'tokens',
-    nameplate: modelo.nomeplate ?? true,
-    ...(modelo.imagemAssetId ? { assetId: modelo.imagemAssetId } : modelo.imagemFallbackAssetId ? { assetId: modelo.imagemFallbackAssetId } : {}),
-    ...(modelo.imagemFallbackAssetId ? { invocationFallbackAssetId: modelo.imagemFallbackAssetId } : {}),
-    ...(modelo.tokenCrop ? { tokenCrop: modelo.tokenCrop as import('@/stores/useMapStore').TokenCrop } : {}),
-    hp: modelo.hpAtual, hpMax: modelo.hpMaximo, ownerCharId: donoId,
-    ownerProfileId: dono.profileId || undefined, invocationId: modelo.id,
-    invocationDefense: modelo.defesa, invocationMovementM: modelo.deslocamentoM,
-  });
-  cs.updateCharacter(donoId, { peCurrent: (dono.peCurrent ?? 0) - modelo.custoInvocacaoPE });
+  const instanciaId = novoIdInvocacao('instancia');
+  const tokenId = novoIdInvocacao('token');
+  const peAntes = Number.isFinite(dono.peCurrent) ? dono.peCurrent : 0;
+  try {
+    mapa.addEntity({
+      id: tokenId,
+      shape: modelo.formaToken ?? 'ELLIPSE', x, y, w: passo, h: passo, rotation: 0,
+      color: modelo.corIdentificacao ?? '#8055bd',
+      label: modelo.apelido?.trim() || modelo.nome, locked: false, layer: 'tokens',
+      nameplate: modelo.nomeplate ?? true,
+      ...(modelo.imagemAssetId ? { assetId: modelo.imagemAssetId } : modelo.imagemFallbackAssetId ? { assetId: modelo.imagemFallbackAssetId } : {}),
+      ...(modelo.imagemFallbackAssetId ? { invocationFallbackAssetId: modelo.imagemFallbackAssetId } : {}),
+      ...(modelo.tokenCrop ? { tokenCrop: modelo.tokenCrop as import('@/stores/useMapStore').TokenCrop } : {}),
+      hp: modelo.hpAtual, hpMax: modelo.hpMaximo, ownerCharId: donoId,
+      ownerProfileId: dono.profileId || undefined, invocationId: modelo.id,
+      invocationEventId: eventoId, invocationInstanceId: instanciaId,
+      invocationDefense: modelo.defesa, invocationMovementM: modelo.deslocamentoM,
+    });
+    cs.updateCharacter(donoId, { peCurrent: peAntes - modelo.custoInvocacaoPE });
+  } catch {
+    try {
+      if (useMapStore.getState().entities[tokenId]) useMapStore.getState().removeEntities([tokenId]);
+    } catch { /* mantém a falha original; compensação best-effort */ }
+    try {
+      const donoAtual = useCharacterStore.getState().characters.find(c => c.id === donoId);
+      if (donoAtual && donoAtual.peCurrent === peAntes - modelo.custoInvocacaoPE) {
+        useCharacterStore.getState().updateCharacter(donoId, { peCurrent: peAntes });
+      }
+    } catch { /* mantém a falha original; compensação best-effort */ }
+    return { ok: false, motivo: 'Não foi possível concluir a invocação; os efeitos locais foram desfeitos.' };
+  }
   if (overrideIntermediario) {
     useLogStore.getState().addLog(
       'system',
