@@ -25,6 +25,7 @@ export function novaInstanciaInvocacao(input: {
   hpMaximoAtual: number;
   estado?: InstanciaInvocacao['estado'];
   economiaAcoes?: InstanciaInvocacao['economiaAcoes'];
+  recursosAtuais?: InstanciaInvocacao['recursosAtuais'];
   combateId?: string;
   turnoCriacao?: number;
   rodadaCriacao?: number;

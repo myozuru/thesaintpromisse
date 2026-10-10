@@ -24,8 +24,9 @@ import { persist } from 'zustand/middleware';
 import { useCharacterStore } from './useCharacterStore';
 import { ladoIniciativaPorFicha } from '@/lib/mapa/ladoIniciativa';
 import { useReactionStore } from './useReactionStore';
-import type { InstanciaInvocacao } from '@/lib/invocacoes/schema';
+import type { InstanciaInvocacao, LimiteResetEconomiaInvocacao } from '@/lib/invocacoes/schema';
 import { consumoPorTempoDecorrido, reservaTempoAtivaNoCombate } from '@/lib/controlador/tempo';
+import { processarResetEconomiaInstancia } from '@/lib/controlador/economiaAcoes';
 
 /**
  * Para cada condição ativa em `charId` cujo `durationMode` exija TR no turno do
@@ -425,6 +426,29 @@ function encerrarReservasDoCombate(combatId: string | null | undefined, agora: n
   }
 }
 
+function aplicarResetEconomiaInvocacoes(
+  escopo: Exclude<LimiteResetEconomiaInvocacao, 'manual'>,
+  eventoId: string,
+  donoId?: string | null,
+): void {
+  const store = useCharacterStore.getState();
+  for (const personagem of store.characters) {
+    if (donoId && personagem.id !== donoId) continue;
+    const instancias = personagem.instanciasInvocacao;
+    if (!instancias?.length) continue;
+    const modelos = new Map((personagem.invocacoesConhecidas ?? []).map(modelo => [modelo.id, modelo]));
+    let alterou = false;
+    const atualizadas = instancias.map(instancia => {
+      const modelo = modelos.get(instancia.modeloId);
+      if (!modelo) return instancia;
+      const atualizada = processarResetEconomiaInstancia(instancia, modelo, escopo, eventoId);
+      if (atualizada !== instancia) alterou = true;
+      return atualizada;
+    });
+    if (alterou) store.updateCharacter(personagem.id, { instanciasInvocacao: atualizadas });
+  }
+}
+
 export const useCombatStore = create<CombatStore>()(
   persist(
     (set, get) => ({
@@ -693,6 +717,10 @@ export const useCombatStore = create<CombatStore>()(
           turnStartedAt: Date.now(),
           turnPaused: !s.turnTimerEnabled,
         }));
+        aplicarResetEconomiaInvocacoes('inicio_combate', `${combatId}:inicio_combate`);
+        if (firstOwnerCharId) {
+          aplicarResetEconomiaInvocacoes('inicio_turno_dono', `${combatId}:turno:1:0:${firstOwnerCharId}`, firstOwnerCharId);
+        }
         // Limpa a telemetria de reações ao iniciar combate.
         import('@/stores/useReactionStore').then(({ useReactionStore }) =>
           useReactionStore.getState().resetRoundReactions(),
@@ -858,6 +886,12 @@ export const useCombatStore = create<CombatStore>()(
             turnStartedAt: Date.now(),
             turnPaused: !s.turnTimerEnabled,
           }));
+          const combateAtualId = get().combatId ?? `rodada-${newRound}`;
+          aplicarResetEconomiaInvocacoes('inicio_rodada', `${combateAtualId}:rodada:${newRound}`);
+          const primeiroDonoId = us.ordem[0]?.charId;
+          if (primeiroDonoId) {
+            aplicarResetEconomiaInvocacoes('inicio_turno_dono', `${combateAtualId}:turno:${newRound}:0:${primeiroDonoId}`, primeiroDonoId);
+          }
           import('@/stores/useMapStore').then(({ useMapStore }) => useMapStore.getState().setPendingMove(null));
           const firstEntry = us.ordem[0];
           if (firstEntry) {
@@ -936,6 +970,11 @@ export const useCombatStore = create<CombatStore>()(
             turnPaused: !s.turnTimerEnabled,
           };
         });
+        const nextOwnerCharId = initiativeOrder[nextIndex]?.charId;
+        const combateAtualId = get().combatId ?? `turno-${round}`;
+        if (nextOwnerCharId) {
+          aplicarResetEconomiaInvocacoes('inicio_turno_dono', `${combateAtualId}:turno:${round}:${nextIndex}:${nextOwnerCharId}`, nextOwnerCharId);
+        }
         import('@/stores/useMapStore').then(({ useMapStore }) => useMapStore.getState().setPendingMove(null));
         // Zera movimento do novo personagem ativo.
         const nextActive = initiativeOrder[nextIndex];

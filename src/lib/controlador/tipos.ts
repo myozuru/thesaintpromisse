@@ -45,7 +45,7 @@ export interface InvocacaoControlador {
   omniConfiguracao?: ModeloInvocacao["omniConfiguracao"];
   autonomia?: ModeloInvocacao["autonomia"];
   economiaAcoesConfigurada?: ModeloInvocacao["economiaAcoesConfigurada"];
-  custosComandosConfigurados?: Record<string, unknown>;
+  custosComandosConfigurados?: ModeloInvocacao["custosComandosConfigurados"];
   tempoAdicional?: ModeloInvocacao["tempoAdicional"];
   aquisicao?: EstadoAquisicaoInvocacao;
   registroEvolucao?: unknown[];
@@ -91,6 +91,7 @@ export interface InvocacaoControlador {
     opcaoInvocacao?: 'acao_simples' | 'acao_complexa' | 'caracteristica';
     custoPE?: number;
     recarga?: string;
+    recargaConfigurada?: { quantidade: number; unidade: 'inicio_turno_dono' | 'inicio_rodada' | 'manual' };
     alvo?: string;
     [campo: string]: unknown;
   }>;

@@ -8,6 +8,45 @@ const nonNegativeIntSchema = z.number().int().min(0);
 
 export const INVOCACAO_SCHEMA_VERSION = 1 as const;
 
+export const CategoriaEconomiaInvocacaoSchema = z.enum([
+  "acaoComum",
+  "acaoSimples",
+  "acaoComplexa",
+  "acaoMovimento",
+  "acaoBonus",
+  "acaoLivre",
+  "reacao",
+]);
+export type CategoriaEconomiaInvocacao = z.infer<typeof CategoriaEconomiaInvocacaoSchema>;
+
+export const LimiteResetEconomiaInvocacaoSchema = z.enum([
+  "inicio_turno_dono",
+  "inicio_rodada",
+  "inicio_combate",
+  "manual",
+]);
+export type LimiteResetEconomiaInvocacao = z.infer<typeof LimiteResetEconomiaInvocacaoSchema>;
+
+const ResetPorCategoriaEconomiaSchema = z.object({
+  acaoComum: LimiteResetEconomiaInvocacaoSchema.optional(),
+  acaoSimples: LimiteResetEconomiaInvocacaoSchema.optional(),
+  acaoComplexa: LimiteResetEconomiaInvocacaoSchema.optional(),
+  acaoMovimento: LimiteResetEconomiaInvocacaoSchema.optional(),
+  acaoBonus: LimiteResetEconomiaInvocacaoSchema.optional(),
+  acaoLivre: LimiteResetEconomiaInvocacaoSchema.optional(),
+  reacao: LimiteResetEconomiaInvocacaoSchema.optional(),
+}).strict();
+
+const RecargaAcaoSchema = z.object({
+  quantidade: z.number().int().min(1),
+  unidade: z.enum(["inicio_turno_dono", "inicio_rodada", "manual"]),
+}).strict();
+
+const RecargaRecursoSchema = z.object({
+  quantidade: finiteNumberSchema.positive(),
+  unidade: LimiteResetEconomiaInvocacaoSchema,
+}).strict();
+
 export const TipoModeloInvocacaoSchema = z.enum([
   "shikigami",
   "corpo_amaldicoado",
@@ -46,20 +85,29 @@ const IntermediarioInvocacaoSchema = z.object({
   tecnicaId: idSchema.optional(),
 }).passthrough();
 
-const AcaoInvocacaoSchema = z.object({
+export const AcaoInvocacaoSchema = z.object({
   id: idSchema,
   nome: textSchema,
   tipoExecucao: z.enum(["omni", "referencia_omni", "manual", "legada"]),
+  tipo: z.enum(["ataque", "habilidade", "movimento", "bonus", "suporte"]).optional(),
+  categoriaAcao: z.enum(["acao_comum", "acao_simples", "acao_complexa", "acao_bonus", "movimento", "livre", "reacao"]).optional(),
+  custoPE: nonNegativeNumberSchema.optional(),
+  /** Descrição textual legada; não é interpretada como regra de recarga. */
+  recarga: z.string().optional(),
   entidadeOmniId: idSchema.optional(),
   acaoOmniId: idSchema.optional(),
   payloadLegado: z.unknown().optional(),
+  /** Recarga estruturada; o campo textual legado `recarga` continua preservado. */
+  recargaConfigurada: RecargaAcaoSchema.optional(),
 }).passthrough();
+export type AcaoInvocacao = z.infer<typeof AcaoInvocacaoSchema>;
 
-const RecursoInvocacaoSchema = z.object({
+export const RecursoInvocacaoSchema = z.object({
   id: idSchema,
   nome: textSchema,
   valorInicial: finiteNumberSchema,
   valorMaximo: finiteNumberSchema.optional(),
+  recargaConfigurada: RecargaRecursoSchema.optional(),
   recarga: z.string().optional(),
 }).passthrough().superRefine((recurso, ctx) => {
   if (recurso.valorMaximo !== undefined && recurso.valorInicial > recurso.valorMaximo) {
@@ -70,6 +118,27 @@ const RecursoInvocacaoSchema = z.object({
     });
   }
 });
+export type RecursoInvocacao = z.infer<typeof RecursoInvocacaoSchema>;
+
+const DebitoComandoInvocacaoSchema = z.object({
+  entidade: z.enum(["dono", "invocacao"]),
+  recurso: z.enum(["pe", "recurso"]),
+  recursoId: idSchema.optional(),
+  quantidade: nonNegativeNumberSchema,
+}).strict().superRefine((debito, ctx) => {
+  if (debito.entidade === "invocacao" && !debito.recursoId) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["recursoId"], message: "Selecione o recurso que será debitado." });
+  }
+  if (debito.entidade === "dono" && debito.recurso !== "pe") {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["recurso"], message: "Esta versão só pode debitar PE configurado no personagem dono." });
+  }
+});
+
+export const CustoComandoInvocacaoSchema = z.object({
+  execucao: z.enum(["manual", "evento_automatico"]),
+  debitos: z.array(DebitoComandoInvocacaoSchema).max(10),
+}).strict();
+export type CustoComandoInvocacao = z.infer<typeof CustoComandoInvocacaoSchema>;
 
 const EconomiaConfiguradaSchema = z.object({
   acaoComum: nonNegativeIntSchema.optional(),
@@ -79,6 +148,8 @@ const EconomiaConfiguradaSchema = z.object({
   acaoBonus: nonNegativeIntSchema.optional(),
   acaoLivre: nonNegativeIntSchema.optional(),
   reacao: nonNegativeIntSchema.optional(),
+  /** Sem política explícita, o saldo não se reinicia automaticamente. */
+  resetPorCategoria: ResetPorCategoriaEconomiaSchema.optional(),
 }).strict();
 
 const AutomacaoOmniSchema = z.object({
@@ -155,7 +226,7 @@ export const ModeloInvocacaoSchema = z.object({
   economiaAcoesConfigurada: EconomiaConfiguradaSchema.optional(),
   registroEvolucao: z.array(z.unknown()).optional(),
   regrasRecuperacao: z.object({ derrotaPorPVNegativo: z.literal("menos_cem_por_cento_pv_maximo"), curaAcimaDeZeroLevanta: z.literal(false), acaoParaLevantar: z.literal("acao_de_movimento_propria"), dissipacaoVoluntariaMinSegundos: z.literal(10), contribuicaoNaDerrotaDefinitiva: z.literal("preservar_saldo_restante") }).strict().optional(),
-  custosComandosConfigurados: z.record(z.string(), z.unknown()).optional(),
+  custosComandosConfigurados: z.record(z.string(), CustoComandoInvocacaoSchema).optional(),
   tempoAdicional: ConfiguracaoTempoInvocacaoSchema.optional(),
   aquisicao: EstadoAquisicaoInvocacaoSchema,
   createdAt: z.string().optional(),
@@ -179,8 +250,11 @@ const SaldoAcaoSchema = z.object({
 
 const EconomiaInstanciaSchema = z.object({
   acaoComum: SaldoAcaoSchema.optional(),
+  acaoSimples: SaldoAcaoSchema.optional(),
+  acaoComplexa: SaldoAcaoSchema.optional(),
   acaoMovimento: SaldoAcaoSchema.optional(),
   acaoBonus: SaldoAcaoSchema.optional(),
+  acaoLivre: SaldoAcaoSchema.optional(),
   reacao: SaldoAcaoSchema.optional(),
 }).strict();
 
@@ -225,6 +299,10 @@ export const InstanciaInvocacaoSchema = z.object({
   condicoes: z.array(z.unknown()).optional(),
   economiaAcoes: EconomiaInstanciaSchema.optional(),
   recursosAtuais: z.record(z.string(), finiteNumberSchema).optional(),
+  /** Chaves de reset por escopo evitam reabastecimento duplicado no mesmo turno/rodada. */
+  marcadoresResetEconomia: z.record(z.string(), idSchema).optional(),
+  /** Evento de uso persistente por instância; protege comandos repetidos após refresh. */
+  eventosAcoesProcessados: z.array(idSchema).optional(),
   deslocamentoUsado: z.boolean().optional(),
   usoAcaoComCusto: z.record(z.string(), z.unknown()).optional(),
   recargas: z.record(z.string(), z.unknown()).optional(),

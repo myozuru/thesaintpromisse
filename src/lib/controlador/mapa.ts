@@ -22,6 +22,14 @@ import {
   formatarSegundosTempoInvocacao,
   tempoAdicionalEmSegundos,
 } from './tempo';
+import {
+  categoriaEconomiaDaAcao,
+  economiaAcoesInicial,
+  gastarAcaoDaInstancia,
+  podeUsarAcaoDaInstancia,
+  registrarRecargaDaAcao,
+  recursosInvocacaoIniciais,
+} from './economiaAcoes';
 
 export type DirecaoInvocacao = 'norte' | 'sul' | 'leste' | 'oeste';
 export type ResultadoInvocacao = { ok: true; tokenId: string } | { ok: false; motivo: string };
@@ -36,10 +44,7 @@ function novoIdInvocacao(prefixo: string): string {
 }
 
 function economiaInicialInvocacao(modelo: InvocacaoControlador): InstanciaInvocacao['economiaAcoes'] {
-  const movimento = modelo.economiaAcoesConfigurada?.acaoMovimento;
-  return movimento === undefined
-    ? undefined
-    : { acaoMovimento: { atual: movimento, maximo: movimento } };
+  return economiaAcoesInicial(modelo);
 }
 
 function instanciasComAtualizada(
@@ -55,6 +60,7 @@ function instanciasComAtualizada(
 function gravarInstancia(
   personagem: Character,
   instancia: InstanciaInvocacao,
+  extras: Partial<Character> = {},
 ): void {
   const hpCatalogo = Math.max(0, Math.min(instancia.hpMaximoAtual, instancia.hpAtual));
   useCharacterStore.getState().updateCharacter(personagem.id, {
@@ -62,7 +68,49 @@ function gravarInstancia(
     invocacoesConhecidas: (personagem.invocacoesConhecidas ?? []).map(modelo => modelo.id === instancia.modeloId
       ? { ...modelo, hpAtual: hpCatalogo }
       : modelo),
+    ...extras,
   });
+}
+
+function prepararDebitoComando(
+  dono: Character,
+  modelo: InvocacaoControlador,
+  instancia: InstanciaInvocacao,
+  acao: InvocacaoControlador['acoes'][number],
+): { ok: true; peDonoRestante: number; recursosRestantes: Record<string, number> } | { ok: false; motivo: string } {
+  const custo = acao.custoPE ?? 0;
+  const configuracao = modelo.custosComandosConfigurados?.[acao.id];
+  if (configuracao?.execucao === 'evento_automatico') {
+    return { ok: false, motivo: 'Esta ação está configurada para execução por evento automático.' };
+  }
+  if (custo > 0 && !configuracao) {
+    return { ok: false, motivo: 'A origem do custo de PE desta ação ainda precisa ser configurada.' };
+  }
+
+  let peDono = 0;
+  let peInvocacao = 0;
+  const recursosRestantes = { ...instancia.recursosAtuais };
+  for (const debito of configuracao?.debitos ?? []) {
+    if (!Number.isFinite(debito.quantidade) || debito.quantidade < 0) return { ok: false, motivo: 'Débito de recurso inválido.' };
+    if (debito.entidade === 'dono') {
+      if (debito.recurso !== 'pe') return { ok: false, motivo: 'Esta versão só pode debitar PE do personagem dono.' };
+      peDono += debito.quantidade;
+      continue;
+    }
+    const recursoId = debito.recursoId?.trim();
+    if (!recursoId) return { ok: false, motivo: 'Recurso próprio da invocação não identificado.' };
+    const saldo = recursosRestantes[recursoId];
+    if (saldo === undefined) return { ok: false, motivo: `Recurso próprio "${recursoId}" não configurado nesta instância.` };
+    if (saldo < debito.quantidade) return { ok: false, motivo: `Saldo próprio insuficiente para "${recursoId}".` };
+    recursosRestantes[recursoId] = saldo - debito.quantidade;
+    if (debito.recurso === 'pe') peInvocacao += debito.quantidade;
+  }
+  if (Math.abs(peDono + peInvocacao - custo) > 1e-9) {
+    return { ok: false, motivo: 'Os débitos de PE configurados não correspondem ao custo total da ação.' };
+  }
+  const peAtual = Number.isFinite(dono.peCurrent) ? dono.peCurrent : 0;
+  if (peAtual < peDono) return { ok: false, motivo: 'PE insuficiente para o custo atribuído ao dono.' };
+  return { ok: true, peDonoRestante: peAtual - peDono, recursosRestantes };
 }
 
 function obterInstanciaDoToken(
@@ -107,6 +155,7 @@ function obterInstanciaDoToken(
           ? 'caida'
           : 'ativa',
     economiaAcoes: economiaInicialInvocacao(modelo),
+    recursosAtuais: recursosInvocacaoIniciais(modelo),
   });
 }
 
@@ -258,6 +307,7 @@ export function invocarControlador(
       hpAtual: modelo.hpAtual,
       hpMaximoAtual: modelo.hpMaximo,
       economiaAcoes: economiaInicialInvocacao(modelo),
+      recursosAtuais: recursosInvocacaoIniciais(modelo),
       ...(combat.inCombat && combat.combatId ? { combateId: combat.combatId } : {}),
       ...(combat.inCombat ? { turnoCriacao: combat.currentTurnIndex, rodadaCriacao: combat.round } : {}),
       ...(contribuicaoTempo ? { contribuicaoTempo } : {}),
@@ -463,6 +513,7 @@ export function invocarControladores(
         hpAtual: modelo.hpAtual,
         hpMaximoAtual: modelo.hpMaximo,
         economiaAcoes: economiaInicialInvocacao(modelo),
+        recursosAtuais: recursosInvocacaoIniciais(modelo),
         ...(combat.inCombat && combat.combatId ? { combateId: combat.combatId } : {}),
         ...(combat.inCombat ? { turnoCriacao: combat.currentTurnIndex, rodadaCriacao: combat.round } : {}),
         ...(contribuicaoTempo ? { contribuicaoTempo } : {}),
@@ -685,13 +736,22 @@ export function levantarInvocacao(donoId: string, invocacaoId: string): { ok: tr
 /** Primeiro comando da Fase 4: uma ação bônus reposiciona um servo em
  * uma célula livre. Não cria novo turno na iniciativa nem movimento gratuito.
  */
-export function comandarReposicionamento(donoId: string, invocacaoId: string, direcao: DirecaoInvocacao): { ok: true } | { ok: false; motivo: string } {
+export function comandarReposicionamento(
+  donoId: string,
+  invocacaoId: string,
+  direcao: DirecaoInvocacao,
+  instanciaId?: string,
+): { ok: true } | { ok: false; motivo: string } {
   const dono = useCharacterStore.getState().characters.find(c => c.id === donoId);
   if (!dono) return { ok: false, motivo: 'Personagem inválido.' };
   if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Só é possível comandar no turno do Controlador.' };
-  const token = tokensInvocados(donoId).find(e => e.invocationId === invocacaoId);
+  const token = tokensInvocados(donoId).find(e => e.invocationId === invocacaoId && (!instanciaId || e.invocationInstanceId === instanciaId));
   if (!token || (token.hp ?? 0) <= 0) return { ok: false, motivo: 'Invocação não está ativa.' };
-  if ((dono.bonusActionsCurrent ?? 0) < 1) return { ok: false, motivo: 'Ação Bônus indisponível.' };
+  const modelo = obterModeloDoToken(dono, token);
+  if (!modelo) return { ok: false, motivo: 'Modelo da invocação não encontrado.' };
+  const instancia = obterInstanciaDoToken(dono, token, modelo);
+  const saldo = instancia.economiaAcoes?.acaoLivre;
+  if (!saldo || saldo.atual < 1) return { ok: false, motivo: 'Ação Livre própria indisponível.' };
   const mapa = useMapStore.getState();
   const passo = mapa.gridConfig.dpi;
   if (!(passo > 0) || !(mapa.gridConfig.metersPerCell > 0)) return { ok: false, motivo: 'Grade inválida.' };
@@ -705,8 +765,10 @@ export function comandarReposicionamento(donoId: string, invocacaoId: string, di
     Math.abs((e.x + e.w / 2) - (x + token.w / 2)) < passo * .45 &&
     Math.abs((e.y + e.h / 2) - (y + token.h / 2)) < passo * .45);
   if (ocupado) return { ok: false, motivo: 'Destino ocupado.' };
+  const gasto = gastarAcaoDaInstancia(instancia, 'acaoLivre');
+  if (!gasto.ok) return gasto;
+  gravarInstancia(dono, gasto.instancia);
   mapa.updateEntity(token.id, { x, y });
-  useCharacterStore.getState().updateCharacter(donoId, { bonusActionsCurrent: dono.bonusActionsCurrent - 1 });
   return { ok: true };
 }
 
@@ -721,24 +783,36 @@ const ataquesPendentes = new Set<string>();
 /** Ataque de servo comandado no turno do Controlador. O alvo utiliza uma ficha
  * real, portanto o dano percorre applyDamage (reações, RD e demais regras).
  */
-export async function comandarAtaque(donoId: string, invocacaoId: string, acaoId: string, alvoId: string):
+export async function comandarAtaque(
+  donoId: string,
+  invocacaoId: string,
+  acaoId: string,
+  alvoId: string,
+  opcoes?: { instanciaId?: string; requestId?: string },
+):
   Promise<{ ok: true; acertou: boolean; totalAtaque: number; dano: number } | { ok: false; motivo: string }> {
-  const chave = donoId + ':' + invocacaoId;
-  if (ataquesPendentes.has(chave)) return { ok: false, motivo: 'Comando anterior ainda em andamento.' };
   const dono = useCharacterStore.getState().characters.find(c => c.id === donoId);
   if (!dono) return { ok: false, motivo: 'Personagem inválido.' };
   if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
-  const rodada = useCombatStore.getState().round;
-  const pendente = dono.comandosControle?.rodada === rodada ? dono.comandosControle.restantes : 0;
-  if (pendente <= 0 && (dono.actionsCurrent ?? 0) < 1) return { ok: false, motivo: 'Ação Comum indisponível.' };
   const inv = dono.invocacoesConhecidas?.find(i => i.id === invocacaoId && i.donoCharacterId === donoId);
   const acao = inv?.acoes.find(a => a.id === acaoId && a.tipo === 'ataque');
   if (!acao || !acao.dano) return { ok: false, motivo: 'Ataque não configurado para esta invocação.' };
   const mapa = useMapStore.getState();
-  const servo = tokensInvocados(donoId).find(e => e.invocationId === invocacaoId && (e.hp ?? 0) > 0);
+  const servo = tokensInvocados(donoId).find(e => e.invocationId === invocacaoId && (!opcoes?.instanciaId || e.invocationInstanceId === opcoes.instanciaId) && (e.hp ?? 0) > 0);
+  if (!servo) return { ok: false, motivo: 'Servo ou alvo ausente do mapa.' };
+  const modelo = obterModeloDoToken(dono, servo);
+  if (!modelo) return { ok: false, motivo: 'Modelo da invocação não encontrado.' };
+  const instancia = obterInstanciaDoToken(dono, servo, modelo);
+  const chave = instancia.id + ':' + acaoId;
+  if (ataquesPendentes.has(chave)) return { ok: false, motivo: 'Comando anterior ainda em andamento.' };
+  if (!podeUsarAcaoDaInstancia(instancia, acaoId)) return { ok: false, motivo: 'A ação ainda está em recarga.' };
+  const debito = prepararDebitoComando(dono, modelo, instancia, acao);
+  if (!debito.ok) return debito;
+  const categoria = categoriaEconomiaDaAcao(acao, instancia.economiaAcoes);
+  if (!categoria) return { ok: false, motivo: 'Categoria de ação própria não configurada.' };
   const alvo = useCharacterStore.getState().characters.find(c => c.id === alvoId);
   const tokenAlvo = Object.values(mapa.entities).find(e => e.characterId === alvoId && !e.invocationId);
-  if (!servo || !alvo || !tokenAlvo || alvoId === donoId) return { ok: false, motivo: 'Servo ou alvo ausente do mapa.' };
+  if (!alvo || !tokenAlvo || alvoId === donoId) return { ok: false, motivo: 'Servo ou alvo ausente do mapa.' };
   const escala = mapa.gridConfig.metersPerCell / mapa.gridConfig.dpi;
   if (!(escala > 0)) return { ok: false, motivo: 'Grade inválida.' };
   const distancia = Math.hypot((servo.x + servo.w / 2) - (tokenAlvo.x + tokenAlvo.w / 2),
@@ -750,24 +824,22 @@ export async function comandarAtaque(donoId: string, invocacaoId: string, acaoId
   const [dados, bonusStr] = notacao.split('+');
   const quantidade = parseInt(dados.split('d')[0], 10);
   if (quantidade < 1 || quantidade > 40) return { ok: false, motivo: 'Quantidade de dados inválida.' };
+  const gasto = gastarAcaoDaInstancia(instancia, categoria, 1, opcoes?.requestId);
+  if (!gasto.ok) return gasto;
+  const comRecursosDebitados = { ...gasto.instancia, recursosAtuais: debito.recursosRestantes };
+  const comRecarga = registrarRecargaDaAcao(comRecursosDebitados, acao);
+  gravarInstancia(dono, comRecarga, { peCurrent: debito.peDonoRestante });
   ataquesPendentes.add(chave);
-  // Cada Ação Comum abre um grupo de ordens. Os créditos remanescentes
-  // não gastam outra ação, e não atravessam a rodada.
-  const abrirGrupo = pendente <= 0;
-  useCharacterStore.getState().updateCharacter(donoId, {
-    actionsCurrent: dono.actionsCurrent - (abrirGrupo ? 1 : 0),
-    comandosControle: { rodada, restantes: abrirGrupo ? comandosPorAcao(dono.level) - 1 : pendente - 1 },
-  });
   try {
     const { rollD20Com, rollDiceCom } = await import('@/lib/dice');
-    const natural = await rollD20Com(donoId, 0, { label: 'Ataque de ' + inv!.nome + ': ' + acao.nome });
+    const natural = await rollD20Com(donoId, 0, { label: 'Ataque de ' + modelo.nome + ': ' + acao.nome });
     const totalAtaque = natural + (acao.bonusAtaque ?? 0);
     const acertou = natural === 20 || (natural !== 1 && totalAtaque >= (alvo.ca ?? 10));
     if (!acertou) {
       useLogStore.getState().addLog('combat', `🎯 ${inv!.nome} — ${acao.nome} contra ${alvo.name}: ${totalAtaque} (erro).`);
       return { ok: true, acertou: false, totalAtaque, dano: 0 };
     }
-    const rolagem = await rollDiceCom(donoId, dados, { label: 'Dano de ' + inv!.nome });
+    const rolagem = await rollDiceCom(donoId, dados, { label: 'Dano de ' + modelo.nome });
     const dano = rolagem.total + Number(bonusStr ?? 0);
     await useCharacterStore.getState().applyDamage(alvoId, dano, acao.tipoDano ?? 'DCO', { attackerId: donoId });
     useLogStore.getState().addLog('combat', `🎯 ${inv!.nome} — ${acao.nome} contra ${alvo.name}: acerto ${totalAtaque}, dano rolado ${dano} (${acao.tipoDano ?? 'DCO'}).`);

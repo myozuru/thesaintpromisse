@@ -12,7 +12,15 @@ import {
 } from '@/lib/controlador/regrasShikigami';
 import { limiteInvocacoesConhecidas, type InvocacaoControlador } from '@/lib/controlador/tipos';
 import { submeterAprovacaoInvocacao } from '@/lib/controlador/aprovacao.functions';
-import { ModeloInvocacaoSchema, INVOCACAO_SCHEMA_VERSION, type CampoDerivadoInvocacao } from '@/lib/invocacoes/schema';
+import {
+  ModeloInvocacaoSchema,
+  INVOCACAO_SCHEMA_VERSION,
+  type CampoDerivadoInvocacao,
+  type CategoriaEconomiaInvocacao,
+  type LimiteResetEconomiaInvocacao,
+  type RecursoInvocacao,
+  type CustoComandoInvocacao,
+} from '@/lib/invocacoes/schema';
 import { resolverValoresDerivados, type CampoDerivadoShikigami, type EstadoEdicaoDerivado, type EstadosEdicaoDerivados } from '@/lib/controlador/fichaShikigami';
 import { SISTEMA_PERICIAS, ROTULOS_PERICIAS } from '@/lib/omni/constantesDoSistema';
 import { assetCache } from '@/components/mapa/assetCache';
@@ -156,6 +164,9 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
   const [resistenciaTreinada, setResistenciaTreinada] = useState(String(lerPropriedade(initial?.resistenciaTreinada, 'nome') ?? ''));
   const [bonusResistenciaTreinada, setBonusResistenciaTreinada] = useState(String(lerPropriedade(initial?.resistenciaTreinada, 'bonus') ?? ''));
   const [acoes, setAcoes] = useState<AcaoFicha[]>(initial?.acoes ?? []);
+  const [custosComandos, setCustosComandos] = useState<Record<string, CustoComandoInvocacao>>(() => ({
+    ...initial?.custosComandosConfigurados,
+  }));
   const [acaoNome, setAcaoNome] = useState('');
   const [acaoCategoria, setAcaoCategoria] = useState('');
   const [acaoExecucao, setAcaoExecucao] = useState<'manual' | 'omni' | 'referencia_omni'>('manual');
@@ -166,6 +177,12 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
   const [acaoAlcance, setAcaoAlcance] = useState('');
   const [acaoBonus, setAcaoBonus] = useState('');
   const [acaoCusto, setAcaoCusto] = useState('');
+  const [acaoCustoDonoPE, setAcaoCustoDonoPE] = useState('');
+  const [acaoCustoRecursoId, setAcaoCustoRecursoId] = useState('');
+  const [acaoCustoRecurso, setAcaoCustoRecurso] = useState('');
+  const [acaoModoCusto, setAcaoModoCusto] = useState<'manual' | 'evento_automatico'>('manual');
+  const [acaoRecargaQuantidade, setAcaoRecargaQuantidade] = useState('');
+  const [acaoRecargaUnidade, setAcaoRecargaUnidade] = useState<'inicio_turno_dono' | 'inicio_rodada' | 'manual' | ''>('');
   const [acaoOmniEntidade, setAcaoOmniEntidade] = useState('');
   const [acaoOmniId, setAcaoOmniId] = useState('');
   const [caracteristicas, setCaracteristicas] = useState<CaracteristicaFicha[]>(() => (initial?.caracteristicas ?? []) as CaracteristicaFicha[]);
@@ -206,6 +223,16 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
     const values = initial?.economiaAcoesConfigurada ?? {};
     return { acaoComum: values.acaoComum?.toString() ?? '', acaoSimples: values.acaoSimples?.toString() ?? '', acaoComplexa: values.acaoComplexa?.toString() ?? '', acaoMovimento: values.acaoMovimento?.toString() ?? '', acaoBonus: values.acaoBonus?.toString() ?? '', acaoLivre: values.acaoLivre?.toString() ?? '', reacao: values.reacao?.toString() ?? '' };
   });
+  const [resetEconomia, setResetEconomia] = useState<Partial<Record<CategoriaEconomiaInvocacao, LimiteResetEconomiaInvocacao>>>(() => ({
+    ...initial?.economiaAcoesConfigurada?.resetPorCategoria,
+  }));
+  const [recursos, setRecursos] = useState<RecursoInvocacao[]>(() => [...(initial?.recursosConfigurados ?? [])]);
+  const [recursoId, setRecursoId] = useState('');
+  const [recursoNome, setRecursoNome] = useState('');
+  const [recursoInicial, setRecursoInicial] = useState('');
+  const [recursoMaximo, setRecursoMaximo] = useState('');
+  const [recursoRecarga, setRecursoRecarga] = useState('');
+  const [recursoRecargaUnidade, setRecursoRecargaUnidade] = useState<LimiteResetEconomiaInvocacao | ''>('');
   const [tempoQuantidade, setTempoQuantidade] = useState(initial?.tempoAdicional?.quantidade?.toString() ?? '');
   const [tempoUnidade, setTempoUnidade] = useState(initial?.tempoAdicional?.unidade ?? '');
   const [intermediarioTipo, setIntermediarioTipo] = useState<'' | 'talisma' | 'dispositivo' | 'tecnica'>(initial?.intermediario?.tipo ?? '');
@@ -281,27 +308,69 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
   const adicionarAcao = () => {
     if (!acaoNome.trim() || !acaoCategoria) { setErro('Informe o nome e a categoria da ação.'); return; }
     const custo = acaoCusto.trim() === '' ? undefined : Number(acaoCusto);
+    const custoDono = numeroOpcional(acaoCustoDonoPE, 'Débito de PE do dono');
+    const custoRecurso = numeroOpcional(acaoCustoRecurso, 'Débito do recurso próprio');
+    const recargaQuantidade = inteiroOpcional(acaoRecargaQuantidade, 'Quantidade da recarga');
     const alcance = acaoAlcance.trim() === '' ? undefined : Number(acaoAlcance);
     const bonus = acaoBonus.trim() === '' ? undefined : Number(acaoBonus);
-    if ([custo, alcance, bonus].some(value => value !== undefined && !Number.isFinite(value)) || (custo !== undefined && custo < 0) || (alcance !== undefined && alcance < 0)) { setErro('Custos e alcance precisam ser números finitos e não negativos; bônus precisa ser finito.'); return; }
+    if ([custo, custoDono, custoRecurso, alcance, bonus].some(value => value !== undefined && !Number.isFinite(value)) || [custo, custoDono, custoRecurso, alcance].some(value => value !== undefined && value < 0)) { setErro('Custos e alcance precisam ser números finitos e não negativos; bônus precisa ser finito.'); return; }
+    if ((custoRecurso === undefined) !== !acaoCustoRecursoId) { setErro('Selecione o recurso próprio e informe o valor a debitar juntos.'); return; }
+    if ((recargaQuantidade === undefined) !== !acaoRecargaUnidade) { setErro('Preencha quantidade e marco da recarga juntos.'); return; }
+    if (recargaQuantidade !== undefined && recargaQuantidade < 1) { setErro('A recarga precisa ser de pelo menos um turno ou rodada.'); return; }
+    if (custoRecurso !== undefined && !recursos.some(recurso => recurso.id === acaoCustoRecursoId)) { setErro('O recurso escolhido precisa estar configurado na ficha.'); return; }
+    const recursoSelecionado = recursos.find(recurso => recurso.id === acaoCustoRecursoId);
+    const peDistribuido = (custoDono ?? 0) + (recursoSelecionado?.id === 'pe' ? custoRecurso ?? 0 : 0);
+    if (Math.abs(peDistribuido - (custo ?? 0)) > 1e-9) { setErro('Distribua o custo total de PE entre o dono e o recurso próprio com ID "pe".'); return; }
     const category = acaoCategoria as NonNullable<AcaoFicha['categoriaAcao']>;
     if (acaoExecucao !== 'manual' && (!acaoOmniEntidade || !acaoOmniId)) { setErro('A execução OMNI precisa de entidade e ID da ação.'); return; }
+    const actionId = crypto.randomUUID();
     const action: AcaoFicha = {
-      id: crypto.randomUUID(), nome: acaoNome.trim(), tipo: category === 'movimento' ? 'movimento' : acaoTipo,
+      id: actionId, nome: acaoNome.trim(), tipo: category === 'movimento' ? 'movimento' : acaoTipo,
       tipoExecucao: acaoExecucao, categoriaAcao: category,
       ...(acaoDano.trim() ? { dano: acaoDano.trim() } : {}),
       ...(acaoTipoDano ? { tipoDano: acaoTipoDano as import('@/types').DamageType } : {}),
       ...(alcance !== undefined ? { alcanceM: alcance } : {}),
       ...(bonus !== undefined ? { bonusAtaque: bonus } : {}),
       ...(custo !== undefined ? { custoPE: custo } : {}),
+      ...(recargaQuantidade !== undefined && acaoRecargaUnidade
+        ? { recargaConfigurada: { quantidade: recargaQuantidade, unidade: acaoRecargaUnidade } }
+        : {}),
       ...(acaoOmniEntidade ? { entidadeOmniId: acaoOmniEntidade } : {}),
       ...(acaoOmniId ? { acaoOmniId: acaoOmniId } : {}),
       ...(acaoAlvo.trim() ? { alvo: acaoAlvo.trim() } : {}),
       ...(category === 'acao_simples' || category === 'acao_complexa' ? { opcaoInvocacao: category } : {}),
     };
     setAcoes(previous => [...previous, action]);
-    setAcaoNome(''); setAcaoDano(''); setAcaoAlcance(''); setAcaoBonus(''); setAcaoCusto(''); setAcaoTipoDano(''); setAcaoAlvo('');
+    const debitos: CustoComandoInvocacao['debitos'] = [];
+    if ((custoDono ?? 0) > 0) debitos.push({ entidade: 'dono', recurso: 'pe', quantidade: custoDono! });
+    if ((custoRecurso ?? 0) > 0 && recursoSelecionado) debitos.push({
+      entidade: 'invocacao', recurso: recursoSelecionado.id === 'pe' ? 'pe' : 'recurso',
+      recursoId: recursoSelecionado.id, quantidade: custoRecurso!,
+    });
+    if (acaoModoCusto === 'evento_automatico' || debitos.length) {
+      setCustosComandos(previous => ({ ...previous, [actionId]: { execucao: acaoModoCusto, debitos } }));
+    }
+    setAcaoNome(''); setAcaoDano(''); setAcaoAlcance(''); setAcaoBonus(''); setAcaoCusto(''); setAcaoCustoDonoPE(''); setAcaoCustoRecursoId(''); setAcaoCustoRecurso(''); setAcaoModoCusto('manual'); setAcaoRecargaQuantidade(''); setAcaoRecargaUnidade(''); setAcaoTipoDano(''); setAcaoAlvo('');
     setErro('');
+  };
+  const adicionarRecurso = () => {
+    if (!recursoId.trim() || !recursoNome.trim()) { setErro('Informe um ID estável e o nome do recurso próprio.'); return; }
+    if (recursos.some(recurso => recurso.id === recursoId.trim())) { setErro('Esse ID de recurso já está configurado.'); return; }
+    const inicial = numeroOpcional(recursoInicial, 'Valor inicial do recurso');
+    const maximo = numeroOpcional(recursoMaximo, 'Valor máximo do recurso');
+    const quantidadeRecarga = numeroOpcional(recursoRecarga, 'Quantidade de recarga do recurso');
+    if (inicial === undefined) { setErro('Informe o valor inicial do recurso próprio.'); return; }
+    if (maximo !== undefined && maximo < inicial) { setErro('O valor máximo do recurso não pode ser menor que o inicial.'); return; }
+    if ((quantidadeRecarga === undefined) !== !recursoRecargaUnidade) { setErro('Preencha a quantidade e o marco de recarga juntos.'); return; }
+    if (quantidadeRecarga !== undefined && quantidadeRecarga <= 0) { setErro('A quantidade recuperada precisa ser maior que zero.'); return; }
+    setRecursos(previous => [...previous, {
+      id: recursoId.trim(), nome: recursoNome.trim(), valorInicial: inicial,
+      ...(maximo !== undefined ? { valorMaximo: maximo } : {}),
+      ...(quantidadeRecarga !== undefined && recursoRecargaUnidade
+        ? { recargaConfigurada: { quantidade: quantidadeRecarga, unidade: recursoRecargaUnidade } }
+        : {}),
+    }]);
+    setRecursoId(''); setRecursoNome(''); setRecursoInicial(''); setRecursoMaximo(''); setRecursoRecarga(''); setRecursoRecargaUnidade(''); setErro('');
   };
   const adicionarCaracteristica = () => {
     if (!caracteristicaNome.trim()) { setErro('Informe o nome da característica.'); return; }
@@ -390,6 +459,9 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
         const value = inteiroOpcional(economia[key] ?? '', key);
         if (value !== undefined) economy[key] = value;
       }
+      const resetPorCategoria = Object.fromEntries(
+        Object.entries(resetEconomia).filter(([key, policy]) => economy[key] !== undefined && !!policy),
+      ) as Partial<Record<CategoriaEconomiaInvocacao, LimiteResetEconomiaInvocacao>>;
       const time = timeQty === undefined ? undefined : { quantidade: timeQty, unidade: tempoUnidade.trim() };
       const acoesParaSalvar = acoes.map(action => ({ ...action, tipoExecucao: action.tipoExecucao ?? 'legada' as const }));
       const autonomous = autonomiaModo ? {
@@ -452,7 +524,8 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
           ...(numeroOpcional(ataqueTreinadoBonus, 'Bônus do ataque treinado') !== undefined ? { bonus: numeroOpcional(ataqueTreinadoBonus, 'Bônus do ataque treinado') } : {}),
         },
         ...(resistenciaTreinada ? { resistenciaTreinada: { nome: resistenciaTreinada, ...(numeroOpcional(bonusResistenciaTreinada, 'Bônus de resistência') !== undefined ? { bonus: numeroOpcional(bonusResistenciaTreinada, 'Bônus de resistência') } : {}) } } : {}),
-        recursosConfigurados: initial?.recursosConfigurados ?? [],
+        recursosConfigurados: recursos,
+        ...(Object.keys(custosComandos).length ? { custosComandosConfigurados: custosComandos } : {}),
         acoes: acoesParaSalvar, caracteristicas: caracteristicaCompletas, reacoes, automacoesOmni,
         omniConfiguracao: {
           ...(omniGatilhoEntidade ? { entidadeId: omniGatilhoEntidade } : {}),
@@ -468,7 +541,12 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
           ...(omniDiagnosticos.trim() ? { diagnosticos: omniDiagnosticos.trim() } : {}),
         },
         ...(autonomous ? { autonomia: autonomous } : {}),
-        ...(Object.keys(economy).length ? { economiaAcoesConfigurada: economy } : {}),
+        ...(Object.keys(economy).length ? {
+          economiaAcoesConfigurada: {
+            ...economy,
+            ...(Object.keys(resetPorCategoria).length ? { resetPorCategoria } : {}),
+          },
+        } : {}),
         ...(nivEvolucao !== undefined || registroEvolucao.length ? { registroEvolucao } : {}),
         ...(time ? { tempoAdicional: time } : {}),
         regrasRecuperacao: recoveryRules,
@@ -669,13 +747,23 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
         <label className="text-xs">Tipo de dano<select value={acaoTipoDano} onChange={event => setAcaoTipoDano(event.target.value)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Não definido</option>{(['DCO','DP','DI','DA','DCG','DCC','DQ','DS','DAL','DNR','DE','DPS','DR','DN','DV'] as const).map(value => <option key={value} value={value}>{value}</option>)}</select></label>
         <label className="text-xs">Alcance (m)<input type="number" step="any" value={acaoAlcance} onChange={event => setAcaoAlcance(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
         <label className="text-xs">Bônus de acerto<input type="number" step="any" value={acaoBonus} onChange={event => setAcaoBonus(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
-        <label className="text-xs">Custo PE<input type="number" step="any" value={acaoCusto} onChange={event => setAcaoCusto(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
+        <label className="text-xs">Custo total em PE<input type="number" min="0" step="any" value={acaoCusto} onChange={event => setAcaoCusto(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
+        <label className="text-xs">PE debitado do dono<input type="number" min="0" step="any" value={acaoCustoDonoPE} onChange={event => setAcaoCustoDonoPE(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
+        <label className="text-xs">Recurso debitado da invocação<select value={acaoCustoRecursoId} onChange={event => setAcaoCustoRecursoId(event.target.value)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Nenhum</option>{recursos.map(recurso => <option key={recurso.id} value={recurso.id}>{recurso.nome} · {recurso.id}</option>)}</select></label>
+        <label className="text-xs">Quantidade do recurso próprio<input type="number" min="0" step="any" value={acaoCustoRecurso} onChange={event => setAcaoCustoRecurso(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
+        <label className="text-xs">Execução do comando<select value={acaoModoCusto} onChange={event => setAcaoModoCusto(event.target.value as 'manual' | 'evento_automatico')} className="mt-1 w-full rounded border bg-background p-2"><option value="manual">Manual, sob comando</option><option value="evento_automatico">Somente por evento automático</option></select></label>
+        <label className="text-xs">Recarga em turnos ou rodadas<input type="number" min="1" step="1" value={acaoRecargaQuantidade} onChange={event => setAcaoRecargaQuantidade(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
+        <label className="text-xs">Marco da recarga<select value={acaoRecargaUnidade} onChange={event => setAcaoRecargaUnidade(event.target.value as 'inicio_turno_dono' | 'inicio_rodada' | 'manual' | '')} className="mt-1 w-full rounded border bg-background p-2"><option value="">Sem recarga</option><option value="inicio_turno_dono">Turnos do dono</option><option value="inicio_rodada">Rodadas</option><option value="manual">Manual</option></select></label>
         <label className="text-xs">Alvo<input value={acaoAlvo} onChange={event => setAcaoAlvo(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
         <label className="text-xs">Entidade OMNI<select value={acaoOmniEntidade} onChange={event => setAcaoOmniEntidade(event.target.value)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Nenhuma</option>{Object.values(entidades).map(entity => <option key={entity.id} value={entity.id}>{entity.nome}</option>)}</select></label>
         <label className="text-xs">ID de ação OMNI<input value={acaoOmniId} onChange={event => setAcaoOmniId(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
         <button type="button" className="self-end rounded bg-primary px-3 py-2 text-xs text-primary-foreground" onClick={adicionarAcao}>Adicionar ação</button>
       </div>
-      <ul className="mt-3 space-y-1">{acoes.map(action => <li key={action.id} className="flex flex-wrap items-center justify-between gap-2 rounded border p-2 text-xs"><span>{action.nome} · {action.categoriaAcao ?? action.tipo ?? 'sem categoria'}{action.custoPE !== undefined ? ' · ' + action.custoPE + ' PE' : ''}</span><button type="button" className="rounded border px-2 py-1" onClick={() => setAcoes(previous => previous.filter(item => item.id !== action.id))}>Remover</button></li>)}</ul>
+      <p className="mt-2 text-xs text-muted-foreground">Se a ação custa PE, distribua o total entre PE do dono e um recurso próprio com ID “pe”. Outros recursos podem ser debitados à parte. Sem distribuição, uma ação com custo PE não será executada.</p>
+      <ul className="mt-3 space-y-1">{acoes.map(action => <li key={action.id} className="flex flex-wrap items-center justify-between gap-2 rounded border p-2 text-xs"><span>{action.nome} · {action.categoriaAcao ?? action.tipo ?? 'sem categoria'}{action.custoPE !== undefined ? ' · ' + action.custoPE + ' PE' : ''}{custosComandos[action.id]?.execucao === 'evento_automatico' ? ' · somente evento automático' : custosComandos[action.id]?.debitos.length ? ' · débitos configurados' : ''}{action.recargaConfigurada ? ` · recarga ${action.recargaConfigurada.quantidade} (${action.recargaConfigurada.unidade})` : ''}</span><button type="button" className="rounded border px-2 py-1" onClick={() => {
+        setAcoes(previous => previous.filter(item => item.id !== action.id));
+        setCustosComandos(previous => { const next = { ...previous }; delete next[action.id]; return next; });
+      }}>Remover</button></li>)}</ul>
     </details>
 
     <details id="sec-H" className="rounded border border-border p-2">
@@ -744,10 +832,43 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
     <details id="sec-L" className="rounded border border-border p-2">
       <summary className="cursor-pointer text-sm font-semibold">L · Economia de ações própria</summary>
       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {[['acaoComum','Ação comum'],['acaoSimples','Ação simples'],['acaoComplexa','Ação complexa'],['acaoMovimento','Ação de movimento'],['acaoBonus','Ação bônus'],['acaoLivre','Ação livre'],['reacao','Reação']].map(([key,label]) =>
-          <label key={key} className="text-xs">{label}<input type="number" min="0" step="1" value={economia[key] ?? ''} onChange={event => setEconomia(previous => ({ ...previous, [key]: event.target.value }))} className="mt-1 w-full rounded border bg-background p-2" /></label>)}
+        {([
+          ['acaoComum', 'Ação comum'], ['acaoSimples', 'Ação simples'], ['acaoComplexa', 'Ação complexa'],
+          ['acaoMovimento', 'Ação de movimento'], ['acaoBonus', 'Ação bônus'], ['acaoLivre', 'Ação livre'], ['reacao', 'Reação'],
+        ] as const).map(([key, label]) =>
+          <div key={key} className="rounded border border-border p-2">
+            <label className="text-xs">{label}<input type="number" min="0" step="1" value={economia[key] ?? ''} onChange={event => setEconomia(previous => ({ ...previous, [key]: event.target.value }))} className="mt-1 w-full rounded border bg-background p-2" /></label>
+            <label className="mt-2 block text-xs">Reset<select value={resetEconomia[key] ?? ''} disabled={!economia[key]?.trim()} onChange={event => setResetEconomia(previous => {
+              const next = { ...previous };
+              if (event.target.value) next[key] = event.target.value as LimiteResetEconomiaInvocacao;
+              else delete next[key];
+              return next;
+            })} className="mt-1 w-full rounded border bg-background p-2 disabled:opacity-50">
+              <option value="">Sem reset automático</option>
+              <option value="inicio_turno_dono">No início do turno do dono</option>
+              <option value="inicio_rodada">No início da rodada</option>
+              <option value="inicio_combate">No início do combate</option>
+              <option value="manual">Manual</option>
+            </select></label>
+          </div>)}
       </div>
-      <p className="mt-2 text-xs text-muted-foreground">Cada campo é independente e pode ficar sem configuração até haver uma regra definida.</p>
+      <p className="mt-2 text-xs text-muted-foreground">Saldos são próprios da instância. Cada categoria pode ter um reset independente; campos vazios não recebem limite nem reset por suposição.</p>
+      <div className="mt-4 border-t border-border pt-3">
+        <h4 className="font-medium">Recursos próprios e recargas</h4>
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          <label className="text-xs">ID estável (use “pe” para PE próprio)<input value={recursoId} onChange={event => setRecursoId(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
+          <label className="text-xs">Nome do recurso<input value={recursoNome} onChange={event => setRecursoNome(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
+          <label className="text-xs">Saldo ao invocar<input type="number" step="any" value={recursoInicial} onChange={event => setRecursoInicial(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
+          <label className="text-xs">Saldo máximo (opcional)<input type="number" step="any" value={recursoMaximo} onChange={event => setRecursoMaximo(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
+          <label className="text-xs">Quantidade recuperada<input type="number" min="0" step="any" value={recursoRecarga} onChange={event => setRecursoRecarga(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
+          <label className="text-xs">Marco da recarga<select value={recursoRecargaUnidade} onChange={event => setRecursoRecargaUnidade(event.target.value as LimiteResetEconomiaInvocacao | '')} className="mt-1 w-full rounded border bg-background p-2"><option value="">Sem recarga automática</option><option value="inicio_turno_dono">Início do turno do dono</option><option value="inicio_rodada">Início da rodada</option><option value="inicio_combate">Início do combate</option><option value="manual">Manual</option></select></label>
+          <button type="button" className="self-end rounded bg-primary px-3 py-2 text-xs text-primary-foreground" onClick={adicionarRecurso}>Adicionar recurso</button>
+        </div>
+        <ul className="mt-3 space-y-1">{recursos.map(recurso => <li key={recurso.id} className="flex flex-wrap items-center justify-between gap-2 rounded border p-2 text-xs"><span>{recurso.nome} · ID {recurso.id} · inicial {recurso.valorInicial}{recurso.valorMaximo !== undefined ? ` / máximo ${recurso.valorMaximo}` : ''}{recurso.recargaConfigurada ? ` · +${recurso.recargaConfigurada.quantidade} em ${recurso.recargaConfigurada.unidade}` : ''}</span><button type="button" className="rounded border px-2 py-1" onClick={() => {
+          if (Object.values(custosComandos).some(custo => custo.debitos.some(debito => debito.recursoId === recurso.id))) { setErro('Este recurso está usado como custo de uma ação. Remova o débito antes de remover o recurso.'); return; }
+          setRecursos(previous => previous.filter(item => item.id !== recurso.id));
+        }}>Remover</button></li>)}</ul>
+      </div>
     </details>
 
     <details id="sec-M" className="rounded border border-border p-2">

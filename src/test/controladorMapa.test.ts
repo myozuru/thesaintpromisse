@@ -416,19 +416,26 @@ describe('Controlador — materialização real no mapa', () => {
     expect(comandarReposicionamento('dono', 'a', 'norte').ok).toBe(false);
     expect(pegarFicha('dono').bonusActionsCurrent ?? 0).toBe(0);
   });
-  it('reposiciona uma célula no turno do dono e desconta uma ação bônus', () => {
+  it('reposiciona uma célula no turno do dono usando a Ação Livre própria', () => {
+    const dono = pegarFicha('dono');
+    useCharacterStore.getState().updateCharacter('dono', {
+      bonusActionsCurrent: 1,
+      invocacoesConhecidas: (dono.invocacoesConhecidas ?? []).map(inv => inv.id === 'a'
+        ? { ...inv, economiaAcoesConfigurada: { acaoLivre: 1 } }
+        : inv),
+    });
     const r = invocarControlador('dono', 'a', 'leste');
     if (!r.ok) throw new Error(r.motivo);
     useCombatStore.setState({ inCombat: true, initiativeOrder: [{ charId: 'dono', initiative: 10 }], currentTurnIndex: 0 } as never);
-    useCharacterStore.getState().updateCharacter('dono', { bonusActionsCurrent: 1 });
     expect(comandarReposicionamento('dono', 'a', 'leste')).toEqual({ ok: true });
     expect(useMapStore.getState().entities[r.tokenId].x).toBe(280);
-    expect(pegarFicha('dono').bonusActionsCurrent).toBe(0);
+    expect(pegarFicha('dono').bonusActionsCurrent).toBe(1);
+    expect(pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoLivre).toEqual({ atual: 0, maximo: 1 });
     expect(comandarReposicionamento('dono', 'a', 'leste').ok).toBe(false);
     useCombatStore.setState({ inCombat: false } as never);
   });
   it('rejeita alvo fora do alcance sem gastar Ação Comum', async () => {
-    const inv = { ...modelo('a'), acoes: [{ id: 'mordida', nome: 'Mordida', tipo: 'ataque' as const, alcanceM: 1.5, dano: '1d6' }] };
+    const inv = { ...modelo('a'), economiaAcoesConfigurada: { acaoComum: 1 }, acoes: [{ id: 'mordida', nome: 'Mordida', tipo: 'ataque' as const, alcanceM: 1.5, dano: '1d6' }] };
     useCharacterStore.getState().updateCharacter('dono', { actionsCurrent: 1, invocacoesConhecidas: [inv] });
     const target = ficha('inimigo', { hpCurrent: 15, hpMax: 15, ca: 10 });
     useCharacterStore.setState({ characters: [...useCharacterStore.getState().characters, target] });
@@ -439,10 +446,11 @@ describe('Controlador — materialização real no mapa', () => {
     useCombatStore.setState({ inCombat: true, initiativeOrder: [{ charId: 'dono', initiative: 10 }], currentTurnIndex: 0 } as never);
     expect((await comandarAtaque('dono', 'a', 'mordida', 'inimigo')).ok).toBe(false);
     expect(pegarFicha('dono').actionsCurrent).toBe(1);
+    expect(pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoComum).toEqual({ atual: 1, maximo: 1 });
     useCombatStore.setState({ inCombat: false } as never);
   });
   it('ataque comandado que erra gasta exatamente uma Ação Comum', async () => {
-    const inv = { ...modelo('a'), acoes: [{ id: 'mordida', nome: 'Mordida', tipo: 'ataque' as const, alcanceM: 1.5, dano: '1d6' }] };
+    const inv = { ...modelo('a'), economiaAcoesConfigurada: { acaoComum: 1 }, acoes: [{ id: 'mordida', nome: 'Mordida', tipo: 'ataque' as const, alcanceM: 1.5, dano: '1d6' }] };
     useCharacterStore.getState().updateCharacter('dono', { actionsCurrent: 1, invocacoesConhecidas: [inv] });
     useCharacterStore.setState({ characters: [...useCharacterStore.getState().characters,
       ficha('inimigo', { hpCurrent: 15, hpMax: 15, ca: 30 })] });
@@ -454,13 +462,14 @@ describe('Controlador — materialização real no mapa', () => {
     vi.spyOn(useDice3DStore.getState(), 'requestRoll').mockResolvedValue([2]);
     const r = await comandarAtaque('dono', 'a', 'mordida', 'inimigo');
     expect(r).toMatchObject({ ok: true, acertou: false, dano: 0 });
-    expect(pegarFicha('dono').actionsCurrent).toBe(0);
+    expect(pegarFicha('dono').actionsCurrent).toBe(1);
+    expect(pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoComum).toEqual({ atual: 0, maximo: 1 });
     expect(pegarFicha('inimigo').hpCurrent).toBe(15);
     useCombatStore.setState({ inCombat: false } as never);
     vi.restoreAllMocks();
   });
   it('acerto comandado usa bônus e tipo do servo, com dados 3D e pipeline de dano', async () => {
-    const inv = { ...modelo('a'), acoes: [{
+    const inv = { ...modelo('a'), economiaAcoesConfigurada: { acaoComum: 1 }, acoes: [{
       id: 'mordida', nome: 'Mordida', tipo: 'ataque' as const, alcanceM: 1.5,
       dano: '1d6+2', bonusAtaque: 3, tipoDano: 'DP' as const,
     }] };
@@ -478,15 +487,83 @@ describe('Controlador — materialização real no mapa', () => {
     const result = await comandarAtaque('dono', 'a', 'mordida', 'inimigo');
     expect(result).toEqual({ ok: true, acertou: true, totalAtaque: 15, dano: 6 });
     expect(damage).toHaveBeenCalledWith('inimigo', 6, 'DP', { attackerId: 'dono' });
-    expect(pegarFicha('dono').actionsCurrent).toBe(0);
+    expect(pegarFicha('dono').actionsCurrent).toBe(1);
+    expect(pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoComum).toEqual({ atual: 0, maximo: 1 });
     useCombatStore.setState({ inCombat: false } as never);
     vi.restoreAllMocks();
+  });
+  it('debita custos de comando da origem configurada sem cobrar recursos não selecionados', async () => {
+    const inv = {
+      ...modelo('a'),
+      economiaAcoesConfigurada: { acaoComum: 1 },
+      recursosConfigurados: [{ id: 'pe', nome: 'PE próprio', valorInicial: 2, valorMaximo: 2 }],
+      custosComandosConfigurados: {
+        mordida: {
+          execucao: 'manual' as const,
+          debitos: [
+            { entidade: 'dono' as const, recurso: 'pe' as const, quantidade: 1 },
+            { entidade: 'invocacao' as const, recurso: 'pe' as const, recursoId: 'pe', quantidade: 1 },
+          ],
+        },
+      },
+      acoes: [{ id: 'mordida', nome: 'Mordida', tipo: 'ataque' as const, alcanceM: 1.5, dano: '1d6', custoPE: 2 }],
+    };
+    useCharacterStore.getState().updateCharacter('dono', { peCurrent: 10, invocacoesConhecidas: [inv] });
+    useCharacterStore.setState({ characters: [...useCharacterStore.getState().characters,
+      ficha('inimigo', { hpCurrent: 15, hpMax: 15, ca: 30 })] });
+    useMapStore.getState().addEntity({ shape: 'ELLIPSE', x: 280, y: 140, w: 70, h: 70, rotation: 0,
+      color: '#000', locked: false, characterId: 'inimigo' });
+    expect(invocarControlador('dono', 'a', 'leste').ok).toBe(true);
+    useCombatStore.setState({ inCombat: true, initiativeOrder: [{ charId: 'dono', initiative: 10 }], currentTurnIndex: 0 } as never);
+    const { useDice3DStore } = await import('@/stores/useDice3DStore');
+    vi.spyOn(useDice3DStore.getState(), 'requestRoll').mockResolvedValue([2]);
+    const result = await comandarAtaque('dono', 'a', 'mordida', 'inimigo');
+    expect(result).toMatchObject({ ok: true, acertou: false });
+    expect(pegarFicha('dono').peCurrent).toBe(6);
+    expect(pegarFicha('dono').instanciasInvocacao?.[0]).toMatchObject({
+      economiaAcoes: { acaoComum: { atual: 0, maximo: 1 } },
+      recursosAtuais: { pe: 1 },
+    });
+    useCombatStore.setState({ inCombat: false } as never);
+    vi.restoreAllMocks();
+  });
+  it('não gasta ação nem PE do dono se o recurso da invocação estiver insuficiente', async () => {
+    const inv = {
+      ...modelo('a'),
+      economiaAcoesConfigurada: { acaoComum: 1 },
+      recursosConfigurados: [{ id: 'pe', nome: 'PE próprio', valorInicial: 1, valorMaximo: 1 }],
+      custosComandosConfigurados: {
+        mordida: {
+          execucao: 'manual' as const,
+          debitos: [
+            { entidade: 'dono' as const, recurso: 'pe' as const, quantidade: 1 },
+            { entidade: 'invocacao' as const, recurso: 'pe' as const, recursoId: 'pe', quantidade: 1 },
+          ],
+        },
+      },
+      acoes: [{ id: 'mordida', nome: 'Mordida', tipo: 'ataque' as const, alcanceM: 1.5, dano: '1d6', custoPE: 2 }],
+    };
+    useCharacterStore.getState().updateCharacter('dono', { peCurrent: 10, invocacoesConhecidas: [inv] });
+    useCharacterStore.setState({ characters: [...useCharacterStore.getState().characters,
+      ficha('inimigo', { hpCurrent: 15, hpMax: 15, ca: 10 })] });
+    useMapStore.getState().addEntity({ shape: 'ELLIPSE', x: 280, y: 140, w: 70, h: 70, rotation: 0,
+      color: '#000', locked: false, characterId: 'inimigo' });
+    expect(invocarControlador('dono', 'a', 'leste').ok).toBe(true);
+    const dono = pegarFicha('dono');
+    useCharacterStore.getState().updateCharacter('dono', {
+      instanciasInvocacao: (dono.instanciasInvocacao ?? []).map(instance => ({ ...instance, recursosAtuais: { pe: 0 } })),
+    });
+    useCombatStore.setState({ inCombat: true, initiativeOrder: [{ charId: 'dono', initiative: 10 }], currentTurnIndex: 0 } as never);
+    expect(await comandarAtaque('dono', 'a', 'mordida', 'inimigo')).toMatchObject({ ok: false });
+    expect(pegarFicha('dono').peCurrent).toBe(7);
+    expect(pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoComum).toEqual({ atual: 1, maximo: 1 });
+    useCombatStore.setState({ inCombat: false } as never);
   });
   it('progride a cota de comandos nos níveis 1, 6, 12 e 18', () => {
     expect([1, 6, 12, 18].map(comandosPorAcao)).toEqual([1, 2, 3, 4]);
   });
-  it('nível 6 compartilha a mesma Ação Comum por dois ataques', async () => {
-    const inv = { ...modelo('a'), acoes: [{ id: 'mordida', nome: 'Mordida', tipo: 'ataque' as const, alcanceM: 1.5, dano: '1d6' }] };
+  it('cada instância gasta seu próprio saldo e não usa os créditos de ação do dono', async () => {
+    const inv = { ...modelo('a'), economiaAcoesConfigurada: { acaoComum: 2 }, acoes: [{ id: 'mordida', nome: 'Mordida', tipo: 'ataque' as const, alcanceM: 1.5, dano: '1d6' }] };
     useCharacterStore.getState().updateCharacter('dono', { level: 6, actionsCurrent: 1, invocacoesConhecidas: [inv] });
     useCharacterStore.setState({ characters: [...useCharacterStore.getState().characters,
       ficha('inimigo', { hpCurrent: 15, hpMax: 15, ca: 30 })] });
@@ -497,11 +574,12 @@ describe('Controlador — materialização real no mapa', () => {
     const { useDice3DStore } = await import('@/stores/useDice3DStore');
     vi.spyOn(useDice3DStore.getState(), 'requestRoll').mockResolvedValue([2]);
     expect((await comandarAtaque('dono', 'a', 'mordida', 'inimigo')).ok).toBe(true);
-    expect(pegarFicha('dono').actionsCurrent).toBe(0);
-    expect(pegarFicha('dono').comandosControle?.restantes).toBe(1);
+    expect(pegarFicha('dono').actionsCurrent).toBe(1);
+    expect(pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoComum).toEqual({ atual: 1, maximo: 2 });
     expect((await comandarAtaque('dono', 'a', 'mordida', 'inimigo')).ok).toBe(true);
-    expect(pegarFicha('dono').comandosControle?.restantes).toBe(0);
+    expect(pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoComum).toEqual({ atual: 0, maximo: 2 });
     expect((await comandarAtaque('dono', 'a', 'mordida', 'inimigo')).ok).toBe(false);
+    expect(pegarFicha('dono').actionsCurrent).toBe(1);
     useCombatStore.setState({ inCombat: false } as never);
     vi.restoreAllMocks();
   });
