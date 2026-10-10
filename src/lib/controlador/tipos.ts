@@ -35,19 +35,12 @@ export interface InvocacaoControlador {
   }>;
 }
 
-/** Livro de Invocações: Controlador recebe 2 no nível 1 e +1 a cada 3 níveis.
- * Outras especializações obtêm invocações por Interlúdio, sem limite numérico
- * de catálogo definido neste capítulo. */
-export function limiteInvocacoesConhecidas(nivel: number): number {
-  return 2 + Math.floor((Math.max(1, Math.trunc(nivel) || 1) - 1) / 3);
-}
-/** Padrão: 1 em campo; Controlador utiliza Treinamento em Controle. */
-export function limiteInvocacoesAtivas(treinoControle = 0): number {
-  return 1 + Math.max(0, Math.trunc(treinoControle) || 0);
-}
-export function limiteAtivasPersonagem(especializacao: string, treinoControle = 0): number {
-  return especializacao === 'Controlador' ? limiteInvocacoesAtivas(treinoControle) : 1;
-}
+/** Mantém a API histórica enquanto a progressão fica centralizada no motor de regras. */
+export {
+  invocacoesConhecidasPeloLivro as limiteInvocacoesConhecidas,
+  limiteInvocacoesAtivas,
+  limiteAtivasPersonagem,
+} from './regrasShikigami';
 
 /** Níveis de Controlador: PV inicial 10+CON, subsequentes 1d8 (média 5)+CON. */
 export function pvControlador(nivel: number, modCon: number, dadosPosteriores?: readonly number[]): number {
