@@ -4,6 +4,9 @@ import { ficha, montarMesa, pegarFicha, comoTela } from './helpers/mesaReal';
 import { useMapStore } from '@/stores/useMapStore';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
+import { useInventoryStore } from '@/stores/useInventoryStore';
+import { useLogStore } from '@/stores/useLogStore';
+import type { EntidadeOmni } from '@/lib/omni/tipos';
 import { invocarControlador, recolherInvocacao, tokensInvocados, limparInvocacoesDerrotadas, causarDanoInvocacao, comandarReposicionamento, comandarAtaque, comandosPorAcao } from '@/lib/controlador/mapa';
 import type { InvocacaoControlador } from '@/lib/controlador/tipos';
 
@@ -12,14 +15,22 @@ function modelo(id: string): InvocacaoControlador {
     id, nome: id, donoCharacterId: 'dono', tipo: 'shikigami',
     hpAtual: 12, hpMaximo: 12, defesa: 14, deslocamentoM: 9,
     porte: 'Médio', custoInvocacaoPE: 3, acoes: [],
+    intermediario: { tipo: 'talisma', itemInventarioId: `item-${id}` },
   };
 }
 beforeEach(() => {
+  useInventoryStore.getState().resetAll();
+  useLogStore.getState().clearLogs();
   montarMesa([ficha('dono', {
     specialization: 'Controlador', profileId: 'perfil-dono', level: 1,
     peCurrent: 10, treinoControle: 1,
     invocacoesConhecidas: [modelo('a'), modelo('b'), modelo('c')],
   })], { dono: [2, 2] });
+  for (const id of ['a', 'b', 'c']) {
+    const entidade: EntidadeOmni = { id: 'talisma-' + id, versao: 1, nome: 'Talismã ' + id, categoria: 'item', descricao: '', tags: [], duracao: { tipo: 'instantaneo' }, custos: [], gatilhos: [] };
+    const item = useInventoryStore.getState().add('dono', entidade, { instanceId: 'item-' + id });
+    useInventoryStore.getState().definirEmMaos(item.instanceId, true);
+  }
   comoTela({ profileId: 'perfil-dono', role: 'PLAYER' });
 });
 describe('Controlador — materialização real no mapa', () => {
@@ -37,6 +48,21 @@ describe('Controlador — materialização real no mapa', () => {
     expect(pegarFicha('dono').peCurrent).toBe(7);
     expect(invocarControlador('dono', 'a', 'sul').ok).toBe(false);
     expect(pegarFicha('dono').peCurrent).toBe(7);
+  });
+  it('bloqueia o uso sem intermediário em mãos e registra o override do Mestre', () => {
+    useInventoryStore.getState().definirEmMaos('item-a', false);
+    const bloqueada = invocarControlador('dono', 'a', 'leste');
+    expect(bloqueada.ok).toBe(false);
+    expect(pegarFicha('dono').peCurrent).toBe(10);
+    const overrideSemPermissao = invocarControlador('dono', 'a', 'leste', { motivoOverrideIntermediario: 'Tentativa de override por jogador.' });
+    expect(overrideSemPermissao).toMatchObject({ ok: false, motivo: 'Somente o Mestre pode ignorar a validação do intermediário.' });
+    expect(pegarFicha('dono').peCurrent).toBe(10);
+    comoTela({ profileId: 'perfil-mestre', role: 'MASTER' });
+    const aprovada = invocarControlador('dono', 'a', 'leste', { motivoOverrideIntermediario: 'O Mestre confirmou a exceção para esta cena.' });
+    expect(aprovada.ok).toBe(true);
+    expect(pegarFicha('dono').peCurrent).toBe(7);
+    expect(useLogStore.getState().logs[0]).toMatchObject({ sourceRole: 'MASTER' });
+    expect(useLogStore.getState().logs[0].message).toContain('O Mestre confirmou a exceção para esta cena.');
   });
   it('materializa arte, recorte, forma, cor e nomeplate da ficha', () => {
     const dono = pegarFicha('dono');

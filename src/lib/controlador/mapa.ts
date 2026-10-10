@@ -1,5 +1,8 @@
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useMapStore } from '@/stores/useMapStore';
+import { useInventoryStore } from '@/stores/useInventoryStore';
+import { useRoleStore } from '@/stores/useRoleStore';
+import { validarIntermediarioInvocacao } from './intermediario';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { limiteAtivasPersonagem } from './tipos';
 import { useLogStore } from '@/stores/useLogStore';
@@ -14,13 +17,27 @@ export function tokensInvocados(donoCharacterId: string) {
 }
 
 /** Coloca o servo na célula adjacente escolhida, respeitando alcance e ocupação. */
-export function invocarControlador(donoId: string, invocacaoId: string, direcao: DirecaoInvocacao): ResultadoInvocacao {
+export interface OpcoesInvocacaoControlador {
+  motivoOverrideIntermediario?: string;
+}
+
+export function invocarControlador(
+  donoId: string,
+  invocacaoId: string,
+  direcao: DirecaoInvocacao,
+  opcoes?: OpcoesInvocacaoControlador,
+): ResultadoInvocacao {
   const cs = useCharacterStore.getState();
   const dono = cs.characters.find(c => c.id === donoId);
   if (!dono) return { ok: false, motivo: 'Personagem não encontrado.' };
   const modelo = dono.invocacoesConhecidas?.find(i => i.id === invocacaoId && i.donoCharacterId === donoId);
   if (!modelo) return { ok: false, motivo: 'Invocação não pertence ao catálogo.' };
   if (!podeUsarVersaoAprovada({ estado: modelo.aprovacaoMestre, versaoAtual: modelo.versaoModelo, versaoAprovada: modelo.versaoAprovada })) return { ok: false, motivo: 'Esta versão da invocação ainda não foi aprovada pelo Mestre.' };
+  const validacaoIntermediario = validarIntermediarioInvocacao(modelo, dono, useInventoryStore.getState().items, dono.invocacoesConhecidas ?? []);
+  const motivoOverride = opcoes?.motivoOverrideIntermediario?.trim() ?? '';
+  const overrideIntermediario = !validacaoIntermediario.ok && Boolean(motivoOverride);
+  if (!validacaoIntermediario.ok && !motivoOverride) return { ok: false, motivo: validacaoIntermediario.motivo };
+  if (overrideIntermediario && useRoleStore.getState().role !== 'MASTER') return { ok: false, motivo: 'Somente o Mestre pode ignorar a validação do intermediário.' };
   if (modelo.hpAtual <= 0) return { ok: false, motivo: 'A invocação precisa ter PV para ser materializada.' };
 
   const mapa = useMapStore.getState();
@@ -58,6 +75,13 @@ export function invocarControlador(donoId: string, invocacaoId: string, direcao:
     invocationDefense: modelo.defesa, invocationMovementM: modelo.deslocamentoM,
   });
   cs.updateCharacter(donoId, { peCurrent: (dono.peCurrent ?? 0) - modelo.custoInvocacaoPE });
+  if (overrideIntermediario) {
+    useLogStore.getState().addLog(
+      'system',
+      'Override do Mestre: ' + dono.name + ' invocou ' + modelo.nome + ' sem intermediário validado. Motivo: ' + motivoOverride,
+      'O Mestre autorizou a invocação de ' + modelo.nome + ' com override do intermediário.',
+    );
+  }
   return { ok: true, tokenId };
 }
 

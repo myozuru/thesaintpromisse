@@ -42,6 +42,14 @@ describe('inventário OMNI entre telas', () => {
     expect(jogador.state.items[instancia.instanceId].ownerId).toBe('player');
     expect(jogador.state.items[instancia.instanceId].entity).toEqual(instancia.entity);
   });
+  it('sincroniza o estado em mãos e quebrado do intermediário entre telas', () => {
+    const entidade = useOmniEntidadesStore.getState().criar('item', 'Talismã de teste');
+    const item = useInventoryStore.getState().add('player', entidade);
+    useInventoryStore.getState().definirEmMaos(item.instanceId, true);
+    useInventoryStore.getState().marcarQuebrado(item.instanceId, true);
+    const remote = mergeInventory(empty(), snapshot());
+    expect(remote.items[item.instanceId]).toMatchObject({ emMaos: true, quebrado: true });
+  });
   it('uma cópia antiga não sobrescreve equipamento ou cargas mais recentes', () => {
     const arma = useOmniEntidadesStore.getState().criar('arma', 'Arma');
     const item = useInventoryStore.getState().add('player', { ...arma, usos: { total: 5, recarga: 'diaria' } });

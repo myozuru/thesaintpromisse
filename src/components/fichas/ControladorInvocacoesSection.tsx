@@ -4,6 +4,8 @@ import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useMapStore } from '@/stores/useMapStore';
+import { useInventoryStore } from '@/stores/useInventoryStore';
+import { validarIntermediarioInvocacao } from '@/lib/controlador/intermediario';
 import { invocarControlador, recolherInvocacao, limparInvocacoesDerrotadas, comandarReposicionamento, comandarAtaque, type DirecaoInvocacao } from '@/lib/controlador/mapa';
 import { limiteInvocacoesConhecidas, limiteAtivasPersonagem, validarCatalogoControlador, type InvocacaoControlador, type TipoInvocacaoControlador } from '@/lib/controlador/tipos';
 import { podeUsarVersaoAprovada } from '@/lib/controlador/aprovacao';
@@ -36,6 +38,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
   const updateCharacter = useCharacterStore(s => s.updateCharacter);
   const isMaster = useRoleStore(s => s.role) === 'MASTER';
   const entidades = useOmniEntidadesStore(s => s.entidades);
+  const itensInventario = useInventoryStore(s => s.items);
   const [nome, setNome] = useState('');
   const [tipo, setTipo] = useState<TipoInvocacaoControlador>('shikigami');
   const [hp, setHp] = useState(10);
@@ -48,6 +51,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
   const [carregandoArteId, setCarregandoArteId] = useState<string | null>(null);
   const [assetsTick, setAssetsTick] = useState(0);
   const [motivosRejeicao, setMotivosRejeicao] = useState<Record<string, string>>({});
+  const [motivosOverride, setMotivosOverride] = useState<Record<string, string>>({});
   const [direcao, setDirecao] = useState<DirecaoInvocacao>('leste');
   const [mensagem, setMensagem] = useState('');
   const [alvosAtaque, setAlvosAtaque] = useState<Record<string, string>>({});
@@ -62,7 +66,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
   const entities = useMapStore(s => s.entities);
   const ativos = Object.values(entities).filter(e => e.ownerCharId === character.id && !!e.invocationId);
   useEffect(() => { if (ativos.some(e => (e.hp ?? 0) <= 0)) limparInvocacoesDerrotadas(character.id); }, [entities, character.id]);
-  const invocar = async (id: string) => {
+  const invocar = async (id: string, motivoOverride?: string) => {
     if (carregandoArteId) return;
     const modelo = character.invocacoesConhecidas?.find(item => item.id === id);
     const assetIds = [modelo?.imagemAssetId, modelo?.imagemFallbackAssetId].filter((assetId): assetId is string => Boolean(assetId));
@@ -71,9 +75,9 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
         setCarregandoArteId(id);
         await Promise.all(assetIds.map(assetId => carregarAssetFicha(assetId)));
       }
-      const resultado = invocarControlador(character.id, id, direcao);
+      const resultado = invocarControlador(character.id, id, direcao, motivoOverride ? { motivoOverrideIntermediario: motivoOverride } : undefined);
       if (!resultado.ok) { setErro(resultado.motivo); return; }
-      setErro(''); setMensagem('Invocação materializada no mapa.');
+      setErro(''); setMensagem(motivoOverride ? 'Invocação materializada; override do Mestre registrado.' : 'Invocação materializada no mapa.');
     } catch (error) {
       setErro(error instanceof Error ? error.message : 'Não foi possível carregar a arte da invocação.');
     } finally {
@@ -307,6 +311,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
       {mensagem && <p role="status" className="text-xs text-muted-foreground">{mensagem}</p>}
       {catalogo.map(inv => {
         const arte = assetForFicha(inv);
+        const estadoIntermediario = validarIntermediarioInvocacao(inv, character, itensInventario, catalogo);
         return (
         <div key={inv.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border p-2">
           <div className="flex items-center gap-2">
@@ -316,8 +321,15 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
             <div><strong>{inv.apelido?.trim() || inv.nome}</strong><div className="text-xs text-muted-foreground">{inv.tipo === 'shikigami' ? 'Shikigami' : 'Corpo Amaldiçoado'} · PV {inv.hpAtual}/{inv.hpMaximo} · Defesa {inv.defesa} · {inv.deslocamentoM} m · {inv.custoInvocacaoPE} PE · {inv.acoes.length} ações</div></div>
           </div>
           <div className="basis-full text-xs text-muted-foreground">Aquisição: {inv.aprovacaoMestre === 'pendente' ? 'Aguardando aprovação do Mestre' : inv.aprovacaoMestre === 'rejeitada' ? 'Rejeitada — edite e solicite novamente' : 'Aprovada'}</div>
+          <div className={'basis-full text-xs ' + (estadoIntermediario.ok ? 'text-muted-foreground' : 'text-amber-300')}>Intermediário: {estadoIntermediario.ok ? 'disponível — ' + estadoIntermediario.resumo : 'pendente de validação — ' + estadoIntermediario.motivo}</div>
           {inv.origemAquisicao && <div className="basis-full text-xs text-muted-foreground">Origem da aquisição: {inv.origemAquisicao === 'interludio' ? 'Interlúdio' : inv.origemAquisicao}</div>}
           {inv.referenciaInterludio && <div className="basis-full text-xs text-muted-foreground">Referência do Interlúdio: {inv.referenciaInterludio}</div>}
+          {isMaster && !estadoIntermediario.ok && podeUsarVersaoAprovada({ estado: inv.aprovacaoMestre, versaoAtual: inv.versaoModelo, versaoAprovada: inv.versaoAprovada }) && !ativos.some(e => e.invocationId === inv.id) && (
+            <div className="basis-full flex flex-wrap items-center gap-2">
+              <input aria-label={'Motivo do override do intermediário de ' + inv.nome} value={motivosOverride[inv.id] ?? ''} onChange={event => setMotivosOverride(state => ({ ...state, [inv.id]: event.target.value }))} placeholder="Motivo do override do Mestre" className="min-w-48 rounded border bg-background px-2 py-1 text-xs" />
+              <button type="button" disabled={!!carregandoArteId || !motivosOverride[inv.id]?.trim()} className="rounded border border-amber-500/50 px-2 py-1 text-xs text-amber-300 disabled:opacity-50" onClick={() => void invocar(inv.id, motivosOverride[inv.id]?.trim())}>Invocar com override do Mestre</button>
+            </div>
+          )}
           {inv.aprovacaoMestre === 'rejeitada' && inv.motivoRejeicao && <div className="basis-full text-xs text-destructive">Motivo da rejeição: {inv.motivoRejeicao}</div>}
           {inv.aprovacaoMestre === 'rejeitada' && <button type="button" disabled={busyAprovacao} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={() => void reenviarAprovacao(inv.id)}>Solicitar nova aprovação</button>}
           {isMaster && inv.aprovacaoMestre === 'pendente' && (
@@ -338,7 +350,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
             {ativos.some(e => e.invocationId === inv.id) ? (
               <><button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => comandar(inv.id)}>Comandar movimento (bônus)</button><button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => recolher(inv.id)}>Recolher</button></>
             ) : (
-              <button type="button" className="rounded border border-primary px-2 py-1 text-xs" disabled={!!carregandoArteId || !podeUsarVersaoAprovada({ estado: inv.aprovacaoMestre, versaoAtual: inv.versaoModelo, versaoAprovada: inv.versaoAprovada })} onClick={() => void invocar(inv.id)}>{carregandoArteId === inv.id ? 'Carregando arte…' : 'Invocar'}</button>
+              <button type="button" className="rounded border border-primary px-2 py-1 text-xs" disabled={!!carregandoArteId || !estadoIntermediario.ok || !podeUsarVersaoAprovada({ estado: inv.aprovacaoMestre, versaoAtual: inv.versaoModelo, versaoAprovada: inv.versaoAprovada })} onClick={() => void invocar(inv.id)}>{carregandoArteId === inv.id ? 'Carregando arte…' : 'Invocar'}</button>
             )}
             <button type="button" disabled={ativos.some(e => e.invocationId === inv.id) || inv.aprovacaoMestre === 'pendente' || busyAprovacao} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={() => remover(inv.id)}>Remover</button>
           </div>

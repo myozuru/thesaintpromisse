@@ -26,6 +26,10 @@ export interface InventoryItem {
    * Vazio quando `isEquipped` for false.
    */
   equippedSlot?: string;
+  /** Se o item está sendo segurado neste momento, condição exigida para invocá-lo como intermediário. */
+  emMaos?: boolean;
+  /** Marcado pelo Mestre quando o item não pode mais servir de intermediário. */
+  quebrado?: boolean;
   /**
    * Cargas restantes desta instância (Pilar de Recursos).
    * Sincronizado com `entity.usos.total` no momento da criação.
@@ -51,6 +55,10 @@ interface InventoryState {
   add: (ownerId: string, entity: EntidadeOmni, opts?: { markBought?: boolean; instanceId?: string }) => InventoryItem;
   /** Remove uma instância. */
   remove: (instanceId: string) => void;
+  /** Marca um item Omni comum como em mãos ou guardado. */
+  definirEmMaos: (instanceId: string, emMaos: boolean) => boolean;
+  /** Registra se um item Omni comum está quebrado. */
+  marcarQuebrado: (instanceId: string, quebrado: boolean) => boolean;
   /** Lista os itens de um personagem. */
   listByOwner: (ownerId: string) => InventoryItem[];
   /**
@@ -145,6 +153,28 @@ export const useInventoryStore = create<InventoryState>()(
           .filter((i) => i.ownerId === ownerId)
           .map(adotarUsosSeFaltar)
           .sort((a, b) => b.acquiredAt - a.acquiredAt),
+
+      definirEmMaos: (instanceId, emMaos) => {
+        let atualizado = false;
+        set((s) => {
+          const item = s.items[instanceId];
+          if (!item || item.entity.categoria !== 'item') return s;
+          atualizado = true;
+          return { items: { ...s.items, [instanceId]: { ...item, emMaos } } };
+        });
+        return atualizado;
+      },
+
+      marcarQuebrado: (instanceId, quebrado) => {
+        let atualizado = false;
+        set((s) => {
+          const item = s.items[instanceId];
+          if (!item || item.entity.categoria !== 'item') return s;
+          atualizado = true;
+          return { items: { ...s.items, [instanceId]: { ...item, quebrado } } };
+        });
+        return atualizado;
+      },
 
       equipItem: (instanceId, slotName) => {
         const inst = get().items[instanceId];

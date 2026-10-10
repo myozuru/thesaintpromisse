@@ -209,7 +209,6 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
   const [tempoUnidade, setTempoUnidade] = useState(initial?.tempoAdicional?.unidade ?? '');
   const [intermediarioTipo, setIntermediarioTipo] = useState<'' | 'talisma' | 'dispositivo' | 'tecnica'>(initial?.intermediario?.tipo ?? '');
   const [intermediarioItem, setIntermediarioItem] = useState(initial?.intermediario?.itemInventarioId ?? '');
-  const [intermediarioTecnica, setIntermediarioTecnica] = useState(initial?.intermediario?.tecnicaId ?? '');
   const [erro, setErro] = useState('');
   const [mensagem, setMensagem] = useState('');
   const [salvando, setSalvando] = useState(false);
@@ -365,11 +364,9 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
     if (salvando) return;
     if (aguardandoMestre) { setErro('Esta versão está aguardando o Mestre e não pode ser editada.'); return; }
     if (!nome.trim()) { setErro('Informe o nome da ficha.'); return; }
+    const tecnicaIntermediario = character.tecnicaAmaldicoada?.trim() ?? '';
     const erroAtributos = validarAtributosShikigami(grau, atributos);
     if (erroAtributos) { setErro(erroAtributos); return; }
-    if ((intermediarioTipo === 'talisma' || intermediarioTipo === 'dispositivo') && !intermediarioItem) { setErro('Selecione um item real do inventário como intermediário.'); return; }
-    if (intermediarioTipo === 'tecnica' && !intermediarioTecnica.trim()) { setErro('Informe a técnica usada como intermediário.'); return; }
-    if (intermediarioItem && !inventarioDoDono.some(item => item.instanceId === intermediarioItem)) { setErro('O intermediário selecionado não pertence ao inventário deste personagem.'); return; }
     if (Number.isFinite(valoresFinais.hpMaximo) && valoresFinais.hpMaximo < 1) { setErro('PV máximo precisa ser maior que zero.'); return; }
     setSalvando(true); setErro(''); setMensagem('');
     try {
@@ -402,7 +399,7 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
       const intermediario = intermediarioTipo ? {
         tipo: intermediarioTipo,
         ...(intermediarioItem ? { itemInventarioId: intermediarioItem } : {}),
-        ...(intermediarioTecnica.trim() ? { tecnicaId: intermediarioTecnica.trim() } : {}),
+        ...(intermediarioTipo === 'tecnica' && tecnicaIntermediario ? { tecnicaId: tecnicaIntermediario } : {}),
       } : undefined;
       const caracteristicaCompletas = caracteristicas.map(item => ({
         ...item,
@@ -569,9 +566,11 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
         <label className="text-xs">ID de referência da origem<input value={origemReferencia} onChange={event => setOrigemReferencia(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
         <label className="text-xs">Origem da aquisição<select value={origemAquisicao} onChange={event => setOrigemAquisicao(event.target.value)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Não definida</option><option value="interludio">Interlúdio</option><option value="livro">Referência do livro</option><option value="mestre">Decisão do Mestre</option><option value="outra">Outra</option></select></label>
         <label className="text-xs">Referência do Interlúdio<input value={referenciaInterludio} onChange={event => setReferenciaInterludio(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
-        <label className="text-xs">Intermediário<select value={intermediarioTipo} onChange={event => { setIntermediarioTipo(event.target.value as '' | 'talisma' | 'dispositivo' | 'tecnica'); setIntermediarioItem(''); }} className="mt-1 w-full rounded border bg-background p-2"><option value="">Não configurado</option><option value="talisma">Talismã</option><option value="dispositivo">Dispositivo</option><option value="tecnica">Técnica</option></select></label>
-        {(intermediarioTipo === 'talisma' || intermediarioTipo === 'dispositivo') && <label className="text-xs">Item real do inventário<select value={intermediarioItem} onChange={event => setIntermediarioItem(event.target.value)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Selecione um item</option>{inventarioDoDono.map(item => <option key={item.instanceId} value={item.instanceId}>{item.entity.nome} · {item.instanceId.slice(0, 8)}</option>)}</select></label>}
-        {intermediarioTipo === 'tecnica' && <label className="text-xs">ID da técnica<input value={intermediarioTecnica} onChange={event => setIntermediarioTecnica(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>}
+        <label className="text-xs">Intermediário<select value={intermediarioTipo} onChange={event => { setIntermediarioTipo(event.target.value as '' | 'talisma' | 'dispositivo' | 'tecnica'); setIntermediarioItem(''); }} className="mt-1 w-full rounded border bg-background p-2"><option value="">Não configurado</option>{tipo === 'shikigami' ? <><option value="talisma">Talismã</option><option value="tecnica" disabled={!character.tecnicaAmaldicoada?.trim()}>Técnica inata do personagem</option></> : <option value="dispositivo">Dispositivo próprio do corpo</option>}</select></label>
+        {(intermediarioTipo === 'talisma' || intermediarioTipo === 'dispositivo') && <label className="text-xs">Item real do inventário<select value={intermediarioItem} onChange={event => setIntermediarioItem(event.target.value)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Selecione um item</option>{inventarioDoDono.filter(item => item.entity.categoria === 'item' && (item.entity.slotType ?? 'nenhum') === 'nenhum').map(item => <option key={item.instanceId} value={item.instanceId}>{item.entity.nome} · {item.emMaos ? 'em mãos' : 'na mochila'}{item.quebrado ? ' · quebrado' : ''} · {item.instanceId.slice(0, 8)}</option>)}</select></label>}
+        {intermediarioTipo === 'tecnica' && <div className="space-y-1"><label className="block text-xs">Técnica amaldiçoada do personagem<input value={character.tecnicaAmaldicoada ?? ''} readOnly className="mt-1 w-full rounded border bg-muted p-2" /></label><p className="text-xs text-muted-foreground">A ficha precisa ser aprovada pelo Mestre para usar esta exceção ao talismã.</p></div>}
+        <p className="sm:col-span-2 text-xs text-muted-foreground">Cada item intermediário real vinculado ocupa 0,5 espaço de inventário quando a aquisição for aprovada.</p>
+        <p className="sm:col-span-2 text-xs text-amber-300">A ficha continua editável sem intermediário validado. Para invocar, o intermediário precisa ser compatível e disponível; divergências bloqueiam a invocação e podem ser corrigidas depois.</p>
         <label className="text-xs sm:col-span-2">Descrição<textarea value={descricao} onChange={event => setDescricao(event.target.value)} rows={3} className="mt-1 w-full rounded border bg-background p-2" /></label>
         <label className="text-xs sm:col-span-2">Histórico<textarea value={historico} onChange={event => setHistorico(event.target.value)} rows={4} className="mt-1 w-full rounded border bg-background p-2" /></label>
         <label className="text-xs">Grau<select value={grau} onChange={event => setGrau(event.target.value as GrauShikigami)} className="mt-1 w-full rounded border bg-background p-2">{todosGraus.map(value => <option key={value} value={value}>{rotulosGraus[value]}{grausDisponiveis(character.level).includes(value) ? '' : ' · acima do nível atual'}</option>)}</select></label>

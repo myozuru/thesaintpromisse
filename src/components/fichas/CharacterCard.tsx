@@ -11,6 +11,7 @@ import { Character, Attribute, Passive, Spell, DAMAGE_TYPES, DAMAGE_TYPE_LABELS,
 import { SpellCreationAssistant } from './SpellCreationAssistant';
 import { OmniVinculadosList } from './OmniVinculadosList';
 import { ControladorShikigamisAba } from './ControladorShikigamisAba';
+import { podeUsarVersaoAprovada } from '@/lib/controlador/aprovacao';
 import { BlindfoldSlot } from './BlindfoldSlot';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useRoleStore } from '@/stores/useRoleStore';
@@ -859,6 +860,12 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
       ...inv,
       entity: resolverEntidadeOmniAtual(inv),
     }));
+  const itemIntermediarioIds = new Set((c.invocacoesConhecidas ?? [])
+    .filter(inv => podeUsarVersaoAprovada({ estado: inv.aprovacaoMestre, versaoAtual: inv.versaoModelo, versaoAprovada: inv.versaoAprovada }))
+    .map(inv => inv.intermediario?.itemInventarioId)
+    .filter((id): id is string => Boolean(id && inventoryItems[id]?.ownerId === c.id)));
+  const espacosIntermediarios = itemIntermediarioIds.size * 0.5;
+  const slotsAtualComIntermediarios = (c.slotsCurrent ?? 0) + espacosIntermediarios;
   const ownedOmniEntityIds = new Set(ownedOmniInventoryInstances.map((inv) => inv.entity.id));
   const legacyGeneralItems = equippedItems.filter(
     (i) => (!i.slotType || i.slotType === 'nenhum') && !ownedOmniEntityIds.has(i.id),
@@ -2078,7 +2085,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
             AO {c.opportunityCurrent}/{c.opportunityMax + itemBonuses.opportunity + talentBonuses.opportunity}
             {talentBonuses.opportunity > 0 && <span className="ml-0.5 text-primary/80">⚙</span>}
           </button>
-          <span>📦 {c.slotsCurrent}/<StatValue
+          <span title={espacosIntermediarios > 0 ? 'Inclui ' + espacosIntermediarios.toLocaleString('pt-BR') + ' espaço(s) de intermediário vinculado.' : undefined}>📦 {slotsAtualComIntermediarios.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}/<StatValue
             valorBase={effectiveSlotsMax - omniTotalsCombinados.slots}
             valorAtual={effectiveSlotsMax}
             origens={omniOrigensPorChave.slots}
@@ -3360,6 +3367,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                   const categoriaOmni = inv.entity.categoria;
                   // Armas e itens usam Equipar/Atacar; só feitiços, talentos, passivas, auras e condições vinculam.
                   const isVinculavel = categoriaOmni && categoriaOmni !== 'item' && categoriaOmni !== 'arma';
+                  const intermediarioVinculado = (c.invocacoesConhecidas ?? []).some(modelo => modelo.intermediario?.itemInventarioId === inv.instanceId && podeUsarVersaoAprovada({ estado: modelo.aprovacaoMestre, versaoAtual: modelo.versaoModelo, versaoAprovada: modelo.versaoAprovada }));
                   const vinculoExistente = (c.omniAtivos ?? []).find(
                     (a) => a.instanceId === inv.instanceId,
                   );
@@ -3423,7 +3431,9 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                             {ITEM_SLOT_LABELS[slotType]}
                           </span>
                         )}
-                        <span className="text-muted-foreground text-xs">Na mochila</span>
+                        <span className={inv.quebrado ? 'text-destructive text-xs' : 'text-muted-foreground text-xs'}>{inv.quebrado ? 'Quebrado' : inv.emMaos ? 'Em mãos' : 'Na mochila'}</span>
+                        {intermediarioVinculado && <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-xs text-amber-300" title="Este item ocupa meio espaço de inventário.">Intermediário · 0,5 espaço</span>}
+                        {canManageThisCharacter && categoriaOmni === 'item' && <button type="button" onClick={e => { e.stopPropagation(); useInventoryStore.getState().definirEmMaos(inv.instanceId, !inv.emMaos); }} className="rounded border px-2 py-0.5 text-xs">{inv.emMaos ? 'Guardar' : 'Pegar'}</button>}
                         {inv.usosTotais !== undefined ? (
                           <>
                             <button
@@ -3591,6 +3601,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                         )}
 
                         {!isVinculavel && <SoltarItemButton charId={c.id} itemId={inv.instanceId} />}
+                        {isMaster && editMode && categoriaOmni === 'item' && <button type="button" onClick={e => { e.stopPropagation(); useInventoryStore.getState().marcarQuebrado(inv.instanceId, !inv.quebrado); }} className="rounded border border-amber-500/40 px-2 py-0.5 text-xs text-amber-300">{inv.quebrado ? 'Desmarcar quebrado' : 'Marcar quebrado'}</button>}
                         {!isPlayer && editMode && (
                           <button
                             onClick={(e) => {
