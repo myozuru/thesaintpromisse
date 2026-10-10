@@ -1,5 +1,6 @@
 # Roadmap
 
+- [x] Sistema de Conquistas: raridades, catálogo editável, recompensas automáticas, banner e aba no Diário.
 - [ ] OMNI: chaves de mitigação por tipo de dano, scripts/passivas e verificação em combate no navegador.
 
 - [x] Migrate TP Fichas source and bundled assets into the current app.

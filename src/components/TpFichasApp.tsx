@@ -24,6 +24,7 @@ import { validateCursedAptitudeCatalog } from "@/lib/auraAptitudes";
 import { hasWorkspaceCloud } from "@/integrations/supabase/safeClient";
 import Index from "@/pages/Index";
 import { AuthSync } from "@/components/AuthSync";
+import { ConquistaBanner } from "@/components/conquistas/ConquistaBanner";
 
 function MultiplayerBridge() {
   useMultiplayerSync();
@@ -88,6 +89,7 @@ export default function TpFichasApp() {
         <DesvendarCDDialog />
         <GuardaSincronizadaWatcher />
         <InspiracaoWatcher />
+        <ConquistaBanner />
       </TooltipProvider>
     </AppErrorBoundary>
   );
