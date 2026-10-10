@@ -12,7 +12,7 @@ import type { InvocacaoControlador } from '@/lib/controlador/tipos';
 
 let numeroFixture = 0;
 
-function modelo(id: string, rodada: number): InvocacaoControlador {
+function modelo(id: string, rodada = numeroFixture): InvocacaoControlador {
   return {
     id, nome: id, donoCharacterId: 'dono', tipo: 'shikigami',
     hpAtual: 12, hpMaximo: 12, defesa: 14, deslocamentoM: 9,
