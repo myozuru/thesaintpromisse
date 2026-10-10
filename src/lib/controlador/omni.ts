@@ -70,11 +70,11 @@ export function resolverAcaoOmniInvocacao(
       ok: false,
       motivo: "A ação OMNI precisa ter efeito de dano para usar o fluxo de ataque/TR da invocação.",
     };
-  if (config.tipo_alvo && config.tipo_alvo !== "unico")
+  const tipoAlvo = config.tipo_alvo ?? "unico";
+  if (tipoAlvo !== "unico" && tipoAlvo !== "multiplo")
     return {
       ok: false,
-      motivo:
-        "A ação OMNI precisa ter alvo único; áreas e múltiplos alvos ainda não estão disponíveis para invocações.",
+      motivo: "A ação OMNI precisa ter alvo único ou múltiplo; áreas e alvo próprio ainda não estão disponíveis para invocações.",
     };
   if (config.filtro_alvo && config.filtro_alvo !== "todos_exceto_si")
     return {
@@ -82,7 +82,12 @@ export function resolverAcaoOmniInvocacao(
       motivo:
         "O filtro OMNI desta ação não pode ser representado pelo seletor de alvos da invocação.",
     };
-  if (config.max_alvos && config.max_alvos.trim() !== "1")
+  if (tipoAlvo === "multiplo" && !/^[1-9]\d*$/.test(config.max_alvos?.trim() ?? ""))
+    return { ok: false, motivo: "A ação OMNI múltipla precisa de um limite fixo e inteiro de alvos." };
+  const maxAlvos = tipoAlvo === "multiplo" ? Number(config.max_alvos) : 1;
+  if (!Number.isSafeInteger(maxAlvos) || maxAlvos < (tipoAlvo === "multiplo" ? 2 : 1))
+    return { ok: false, motivo: "O limite OMNI de alvos precisa ser pelo menos 2 para uma ação múltipla." };
+  if (tipoAlvo === "unico" && config.max_alvos && config.max_alvos.trim() !== "1")
     return { ok: false, motivo: "O limite OMNI precisa ser um alvo único." };
   if (!Number.isFinite(config.alcanceM) || config.alcanceM <= 0)
     return { ok: false, motivo: "Defina um alcance OMNI positivo para esta ação." };

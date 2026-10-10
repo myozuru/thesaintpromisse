@@ -62,6 +62,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
   const [invocacoesSelecionadas, setInvocacoesSelecionadas] = useState<string[]>([]);
   const [mensagem, setMensagem] = useState('');
   const [alvosAtaque, setAlvosAtaque] = useState<Record<string, string>>({});
+  const [alvosAtaqueMultiplo, setAlvosAtaqueMultiplo] = useState<Record<string, string[]>>({});
   const [busyAtaque, setBusyAtaque] = useState(false);
   const [alvosSuporte, setAlvosSuporte] = useState<Record<string, string[]>>({});
   const [busySuporte, setBusySuporte] = useState(false);
@@ -131,17 +132,34 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
     setErro(''); setMensagem('Reposicionamento executado com uma Ação Livre própria.');
   };
   const atacar = async (invocacaoId: string, acaoId: string) => {
-    const alvoId = alvosAtaque[invocacaoId];
-    if (!alvoId || busyAtaque) return;
+    const invocacao = catalogo.find(item => item.id === invocacaoId);
+    const acao = invocacao?.acoes.find(item => item.id === acaoId);
+    const configOmni = acao?.entidadeOmniId && acao.acaoOmniId
+      ? entidades[acao.entidadeOmniId]?.acoesAtivas?.find(item => item.id === acao.acaoOmniId)
+      : undefined;
+    const alvoMultiplo = configOmni?.tipo_alvo === 'multiplo';
+    const alvosSelecionados = alvoMultiplo
+      ? alvosAtaqueMultiplo[`${invocacaoId}:${acaoId}`] ?? []
+      : alvosAtaque[invocacaoId] ? [alvosAtaque[invocacaoId]] : [];
+    if (!alvosSelecionados.length || busyAtaque) return;
     setBusyAtaque(true); setErro(''); setMensagem('');
     try {
-      const r = await comandarAtaque(character.id, invocacaoId, acaoId, alvoId);
+      const r = await comandarAtaque(character.id, invocacaoId, acaoId, alvoMultiplo ? alvosSelecionados : alvosSelecionados[0]);
       if (!r.ok) { setErro(r.motivo); return; }
-      setMensagem(r.testePendente
-        ? `Teste de ${r.cd ? `CD ${r.cd}` : 'resistência'} enviado ao alvo. O efeito será aplicado após a rolagem.`
-        : r.acertou
-          ? `${r.critico ? 'Acerto crítico! ' : 'Acertou! '}Dano aplicado: ${r.dano}. Resultado: ${r.totalAtaque}.`
-          : `Ataque errou (resultado ${r.totalAtaque}).`);
+      if ('resultados' in r) {
+        const pendentes = r.resultados.filter(resultado => resultado.testePendente).length;
+        const acertos = r.resultados.filter(resultado => resultado.acertou).length;
+        const dano = r.resultados.reduce((total, resultado) => total + resultado.dano, 0);
+        setMensagem(pendentes
+          ? `${pendentes} teste(s) de resistência enviado(s) aos alvos.`
+          : `${acertos}/${r.resultados.length} acerto(s); dano total aplicado: ${dano}.`);
+      } else {
+        setMensagem(r.testePendente
+          ? `Teste de ${r.cd ? `CD ${r.cd}` : 'resistência'} enviado ao alvo. O efeito será aplicado após a rolagem.`
+          : r.acertou
+            ? `${r.critico ? 'Acerto crítico! ' : 'Acertou! '}Dano aplicado: ${r.dano}. Resultado: ${r.totalAtaque}.`
+            : `Ataque errou (resultado ${r.totalAtaque}).`);
+      }
     } finally { setBusyAtaque(false); }
   };
   const executarSuporte = async (invocacaoId: string, acaoId: string) => {
@@ -210,6 +228,16 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
       })),
     })),
   ];
+  const acoesDeAtaque = (inv: InvocacaoControlador) => inv.acoes.filter(a => a.tipo === 'ataque' || a.teste === 'ataque' || a.teste === 'resistencia');
+  const alvosDisponiveis = [...new Map(Object.values(entities)
+    .filter(entity => entity.characterId && entity.characterId !== character.id && !entity.invocationId && !entity.hidden)
+    .map(entity => {
+      const alvo = allCharacters.find(item => item.id === entity.characterId);
+      return [entity.characterId!, { id: entity.characterId!, nome: alvo?.name ?? entity.label ?? entity.characterId! }] as const;
+    })).values()];
+  const configOmniDaAcao = (acao: InvocacaoControlador['acoes'][number]) => acao.entidadeOmniId && acao.acaoOmniId
+    ? entidades[acao.entidadeOmniId]?.acoesAtivas?.find(item => item.id === acao.acaoOmniId)
+    : undefined;
   const escolhido = fontes.find(f => `${f.tipo}:${f.id}` === fonte);
   const solicitarVersaoEditada = async (original: InvocacaoControlador, alterada: InvocacaoControlador) => {
     const versaoModelo = (original.versaoModelo ?? 1) + 1;
@@ -540,25 +568,42 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
               </div>
             )}
           </div>
-          {ativos.some(e => e.invocationId === inv.id) && inv.acoes.some(a => a.tipo === 'ataque' || a.teste === 'ataque' || a.teste === 'resistencia') && (
+          {ativos.some(e => e.invocationId === inv.id) && acoesDeAtaque(inv).length > 0 && (
             <div className="basis-full space-y-2 border-t border-border/60 pt-2">
-              <label className="block text-xs">Alvo para ataque
+              {acoesDeAtaque(inv).some(acao => configOmniDaAcao(acao)?.tipo_alvo !== 'multiplo') && <label className="block text-xs">Alvo para ação individual
                 <select aria-label={`Alvo de ${inv.nome}`} className="mt-1 w-full rounded border border-input bg-background p-2"
                   value={alvosAtaque[inv.id] ?? ''} onChange={e => setAlvosAtaque(v => ({ ...v, [inv.id]: e.target.value }))}>
                   <option value="">Selecione uma ficha no mapa</option>
-                  {Object.values(entities).filter(e => e.characterId && e.characterId !== character.id && !e.invocationId).map(e => (
-                    <option key={e.id} value={e.characterId}>{e.label || e.characterId}</option>
-                  ))}
+                  {alvosDisponiveis.map(alvo => <option key={alvo.id} value={alvo.id}>{alvo.nome}</option>)}
                 </select>
-              </label>
+              </label>}
+              {acoesDeAtaque(inv).filter(acao => configOmniDaAcao(acao)?.tipo_alvo === 'multiplo').map(acao => {
+                const chave = `${inv.id}:${acao.id}`;
+                const maxAlvos = configOmniDaAcao(acao)?.max_alvos ?? '?';
+                return <label key={acao.id} className="block text-xs">Alvos de {acao.nome} (até {maxAlvos})
+                  <select aria-label={`Alvos de ${acao.nome}`} multiple size={Math.min(5, Math.max(2, alvosDisponiveis.length))}
+                    className="mt-1 w-full rounded border border-input bg-background p-2"
+                    value={alvosAtaqueMultiplo[chave] ?? []}
+                    onChange={event => setAlvosAtaqueMultiplo(current => ({
+                      ...current,
+                      [chave]: Array.from(event.currentTarget.selectedOptions, option => option.value),
+                    }))}>
+                    {alvosDisponiveis.map(alvo => <option key={alvo.id} value={alvo.id}>{alvo.nome}</option>)}
+                  </select>
+                </label>;
+              })}
               <div className="flex flex-wrap gap-1">
-                {inv.acoes.filter(a => a.tipo === 'ataque' || a.teste === 'ataque' || a.teste === 'resistencia').map(a => (
-                  <button key={a.id} type="button" disabled={busyAtaque || !alvosAtaque[inv.id]}
+                {acoesDeAtaque(inv).map(a => {
+                  const multiplo = configOmniDaAcao(a)?.tipo_alvo === 'multiplo';
+                  const temAlvos = multiplo
+                    ? (alvosAtaqueMultiplo[`${inv.id}:${a.id}`]?.length ?? 0) > 0
+                    : Boolean(alvosAtaque[inv.id]);
+                  return <button key={a.id} type="button" disabled={busyAtaque || !temAlvos}
                     onClick={() => void atacar(inv.id, a.id)}
                     className="rounded border border-primary px-2 py-1 text-xs disabled:opacity-50">
                     Usar ação: {a.nome}
-                  </button>
-                ))}
+                  </button>;
+                })}
               </div>
             </div>
           )}

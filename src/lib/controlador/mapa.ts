@@ -22,6 +22,7 @@ import { InstanciaInvocacaoSchema, type InstanciaInvocacao } from '@/lib/invocac
 import { alcanceCuraInvocacao, calcularEfeitoSuporte, capacidadeEnergiaReversaInvocacao } from './suporte';
 import { bonusPericiaCaracteristicas, reducaoDanoCaracteristicas } from './passivas';
 import { resolverAcaoOmniInvocacao } from './omni';
+import { aceitaAlvoAtivo } from '@/lib/omni/alvosAtivos';
 import {
   aplicarCuraPVInvocacao,
   aplicarDanoPVInvocacao,
@@ -992,6 +993,20 @@ export function comandosPorAcao(nivel: number): number {
 const ataquesPendentes = new Set<string>();
 const suportesPendentes = new Set<string>();
 
+type ResultadoAlvoAtaqueInvocacao = {
+  alvoId: string;
+  nomeAlvo: string;
+  acertou: boolean;
+  totalAtaque: number;
+  dano: number;
+  critico?: boolean;
+  testePendente?: boolean;
+  requestId?: string;
+  cd?: number;
+};
+type ResultadoAtaqueUnicoInvocacao = { ok: true } & Omit<ResultadoAlvoAtaqueInvocacao, 'alvoId' | 'nomeAlvo'>;
+type ResultadoAtaqueMultiploInvocacao = { ok: true; resultados: ResultadoAlvoAtaqueInvocacao[] };
+
 /** Ataque de servo comandado no turno do Controlador. O alvo utiliza uma ficha
  * real, portanto o dano percorre applyDamage (reações, RD e demais regras).
  */
@@ -999,10 +1014,10 @@ export async function comandarAtaque(
   donoId: string,
   invocacaoId: string,
   acaoId: string,
-  alvoId: string,
+  alvoId: string | string[],
   opcoes?: { instanciaId?: string; requestId?: string },
 ):
-  Promise<{ ok: true; acertou: boolean; totalAtaque: number; dano: number; critico?: boolean; testePendente?: boolean; requestId?: string; cd?: number } | { ok: false; motivo: string }> {
+  Promise<ResultadoAtaqueUnicoInvocacao | ResultadoAtaqueMultiploInvocacao | { ok: false; motivo: string }> {
   const dono = useCharacterStore.getState().characters.find(c => c.id === donoId);
   if (!dono) return { ok: false, motivo: 'Personagem inválido.' };
   if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
@@ -1022,6 +1037,12 @@ export async function comandarAtaque(
     return { ok: false, motivo: 'Teste de Resistência não reconhecido para esta ação.' };
   }
   const mapa = useMapStore.getState();
+  const idsAlvo = [...new Set((Array.isArray(alvoId) ? alvoId : [alvoId]).map(id => id.trim()).filter(Boolean))];
+  if (!idsAlvo.length) return { ok: false, motivo: 'Escolha pelo menos um alvo.' };
+  const aceitaMultiplos = resolucaoOmni?.ok && resolucaoOmni.config.tipo_alvo === 'multiplo';
+  if (!aceitaMultiplos && idsAlvo.length !== 1) return { ok: false, motivo: 'Esta ação aceita apenas um alvo.' };
+  const maxAlvos = aceitaMultiplos ? Number(resolucaoOmni.config.max_alvos) : 1;
+  if (idsAlvo.length > maxAlvos) return { ok: false, motivo: `Selecione no máximo ${maxAlvos} alvo(s).` };
   const servo = tokensInvocados(donoId).find(e => e.invocationId === invocacaoId && (!opcoes?.instanciaId || e.invocationInstanceId === opcoes.instanciaId) && (e.hp ?? 0) > 0);
   if (!servo) return { ok: false, motivo: 'Servo ou alvo ausente do mapa.' };
   const modelo = obterModeloDoToken(dono, servo);
@@ -1049,14 +1070,24 @@ export async function comandarAtaque(
   if (!debito.ok) return debito;
   const categoria = categoriaEconomiaDaAcao(acao, instancia.economiaAcoes);
   if (!categoria) return { ok: false, motivo: 'Categoria de ação própria não configurada.' };
-  const alvo = useCharacterStore.getState().characters.find(c => c.id === alvoId);
-  const tokenAlvo = Object.values(mapa.entities).find(e => e.characterId === alvoId && !e.invocationId);
-  if (!alvo || !tokenAlvo || alvoId === donoId) return { ok: false, motivo: 'Servo ou alvo ausente do mapa.' };
+  const alvos = idsAlvo.map(id => {
+    const personagem = useCharacterStore.getState().characters.find(c => c.id === id);
+    const token = Object.values(mapa.entities).find(e => e.characterId === id && !e.invocationId && !e.hidden);
+    return personagem && token ? { personagem, token } : null;
+  });
+  if (alvos.some(alvo => !alvo) || idsAlvo.includes(donoId)) return { ok: false, motivo: 'Servo ou alvo ausente do mapa.' };
   const escala = mapa.gridConfig.metersPerCell / mapa.gridConfig.dpi;
   if (!(escala > 0)) return { ok: false, motivo: 'Grade inválida.' };
-  const distancia = Math.hypot((servo.x + servo.w / 2) - (tokenAlvo.x + tokenAlvo.w / 2),
-    (servo.y + servo.h / 2) - (tokenAlvo.y + tokenAlvo.h / 2)) * escala;
-  if (distancia > (acao.alcanceM ?? 1.5) + 1e-6) return { ok: false, motivo: 'Alvo fora do alcance.' };
+  const alvosValidados = alvos.filter((alvo): alvo is NonNullable<typeof alvo> => alvo !== null).map(alvo => {
+    const distancia = Math.hypot((servo.x + servo.w / 2) - (alvo.token.x + alvo.token.w / 2),
+      (servo.y + servo.h / 2) - (alvo.token.y + alvo.token.h / 2)) * escala;
+    return { ...alvo, distancia, defesa: computeTotalDefense(alvo.personagem, {}, tipoTeste === 'ataque' && acao.tipoAtaque === 'distancia' ? 'ranged' : 'melee') };
+  });
+  if (alvosValidados.length !== idsAlvo.length) return { ok: false, motivo: 'Alvo inválido.' };
+  if (alvosValidados.some(alvo => alvo.distancia > (acao.alcanceM ?? 1.5) + 1e-6)) return { ok: false, motivo: 'Um ou mais alvos estão fora do alcance.' };
+  if (resolucaoOmni?.ok && alvosValidados.some(alvo => !aceitaAlvoAtivo(dono, alvo.personagem, resolucaoOmni.config))) {
+    return { ok: false, motivo: 'Um ou mais alvos não atendem ao filtro OMNI.' };
+  }
   const formula = acao.dano ? parseFormulaDanoInvocacao(acao.dano) : null;
   if (tipoTeste === 'ataque' && !formula) return { ok: false, motivo: 'Dano inválido; use dados como 2d12+1d6+3.' };
   if (tipoTeste === 'resistencia' && acao.dano && !formula) return { ok: false, motivo: 'Dano inválido; use dados como 2d12+1d6+3.' };
@@ -1072,8 +1103,6 @@ export async function comandarAtaque(
   }
   const cd = tipoTeste === 'resistencia' ? calcularCDInvocacao(dono, modelo, acao.atributoCD) : null;
   if (tipoTeste === 'resistencia' && cd === null) return { ok: false, motivo: 'Defina o atributo usado para calcular a CD da ação.' };
-  const kind = bonusAtaque?.tipo === 'distancia' ? 'ranged' : 'melee';
-  const defesa = computeTotalDefense(alvo, {}, kind);
   const gasto = gastarAcaoDaInstancia(instancia, categoria, 1, opcoes?.requestId);
   if (!gasto.ok) return gasto;
   const comRecursosDebitados = { ...gasto.instancia, recursosAtuais: debito.recursosRestantes };
@@ -1091,63 +1120,86 @@ export async function comandarAtaque(
   };
   try {
     if (tipoTeste === 'resistencia') {
-      const requestId = useTestRequestStore.getState().enqueue({
-        charId: alvo.id,
-        charName: alvo.name,
-        targetProfileId: alvo.profileId,
-        kind: 'save',
-        testName: acao.resistenciaAlvo!,
-        dc: cd!,
-        note: `${modelo.nome} — ${acao.nome}`,
-        originId: donoId,
-        sourceTag: `shikigami:${instancia.id}:${acao.id}:${opcoes?.requestId ?? novoIdInvocacao('tr')}`,
-        ...(formula ? {
-          invocationResolution: {
-            kind: 'shikigami_damage_after_save' as const,
-            ownerCharacterId: donoId,
-            invocationId: modelo.id,
-            invocationInstanceId: instancia.id,
-            actionId: acao.id,
-            sourceName: `${modelo.nome} — ${acao.nome}`,
-            damageFormula: acao.dano!,
-            damageBonus: calcularBonusDanoInvocacao(modelo, acao, 'resistencia'),
-            damageType: acao.tipoDano,
-            damageOnSuccess: acao.danoNoSucesso ?? 'nenhum',
-          },
-        } : {}),
+      const resultados: ResultadoAlvoAtaqueInvocacao[] = alvosValidados.map(({ personagem: alvo }) => {
+        const requestId = useTestRequestStore.getState().enqueue({
+          charId: alvo.id,
+          charName: alvo.name,
+          targetProfileId: alvo.profileId,
+          kind: 'save',
+          testName: acao.resistenciaAlvo!,
+          dc: cd!,
+          note: `${modelo.nome} — ${acao.nome}`,
+          originId: donoId,
+          sourceTag: `shikigami:${instancia.id}:${acao.id}:${opcoes?.requestId ?? novoIdInvocacao('tr')}:${alvo.id}`,
+          ...(formula ? {
+            invocationResolution: {
+              kind: 'shikigami_damage_after_save' as const,
+              ownerCharacterId: donoId,
+              invocationId: modelo.id,
+              invocationInstanceId: instancia.id,
+              actionId: acao.id,
+              sourceName: `${modelo.nome} — ${acao.nome}`,
+              damageFormula: acao.dano!,
+              damageBonus: calcularBonusDanoInvocacao(modelo, acao, 'resistencia'),
+              damageType: acao.tipoDano,
+              damageOnSuccess: acao.danoNoSucesso ?? 'nenhum',
+            },
+          } : {}),
+        });
+        useLogStore.getState().addLog('combat', `🛡️ ${modelo.nome} — ${acao.nome} exige TR ${acao.resistenciaAlvo} contra CD ${cd} de ${alvo.name}.`);
+        return { alvoId: alvo.id, nomeAlvo: alvo.name, acertou: false, totalAtaque: 0, dano: 0, testePendente: true, requestId, cd: cd! };
       });
-      useLogStore.getState().addLog('combat', `🛡️ ${modelo.nome} — ${acao.nome} exige TR ${acao.resistenciaAlvo} contra CD ${cd} de ${alvo.name}.`);
-      return { ok: true, acertou: false, totalAtaque: 0, dano: 0, testePendente: true, requestId, cd: cd! };
+      return Array.isArray(alvoId)
+        ? { ok: true, resultados }
+        : {
+          ok: true,
+          acertou: resultados[0].acertou,
+          totalAtaque: resultados[0].totalAtaque,
+          dano: resultados[0].dano,
+          ...(resultados[0].testePendente ? { testePendente: true, requestId: resultados[0].requestId, cd: resultados[0].cd } : {}),
+        };
     }
-    const natural = await rollD20Autonomo(bonusAtaque!.total, { label: `Ataque de ${modelo.nome}: ${acao.nome}` });
-    const resultado = resolverAcertoInvocacao(natural, bonusAtaque!.total, defesa, acao.margemCritico ?? 20);
-    if (!resultado.acertou) {
-      consumirAuxiliosDeAtaque();
-      useLogStore.getState().addLog('combat', `🎯 ${modelo.nome} — ${acao.nome} contra ${alvo.name}: d20 ${natural} + ${bonusAtaque!.total} = ${resultado.total} vs Defesa ${defesa} (${resultado.falhaCritica ? 'falha crítica' : 'erro'}).`);
-      return { ok: true, acertou: false, totalAtaque: resultado.total, dano: 0 };
+    const resultados: ResultadoAlvoAtaqueInvocacao[] = [];
+    for (const { personagem: alvo, defesa } of alvosValidados) {
+      const natural = await rollD20Autonomo(bonusAtaque!.total, { label: `Ataque de ${modelo.nome}: ${acao.nome}` });
+      const resultado = resolverAcertoInvocacao(natural, bonusAtaque!.total, defesa, acao.margemCritico ?? 20);
+      if (!resultado.acertou) {
+        useLogStore.getState().addLog('combat', `🎯 ${modelo.nome} — ${acao.nome} contra ${alvo.name}: d20 ${natural} + ${bonusAtaque!.total} = ${resultado.total} vs Defesa ${defesa} (${resultado.falhaCritica ? 'falha crítica' : 'erro'}).`);
+        resultados.push({ alvoId: alvo.id, nomeAlvo: alvo.name, acertou: false, totalAtaque: resultado.total, dano: 0 });
+        continue;
+      }
+      const dadosDano = resultado.critico
+        ? multiplicarDadosCriticos(formula!.dados, acao.multiplicadorCritico ?? 2)
+        : formula!.dados;
+      const rolagem = await rollDiceGroups(dadosDano, { label: `Dano de ${modelo.nome}: ${acao.nome}` });
+      let bonusDanoAuxilio = 0;
+      const detalhesDanoAuxilio: string[] = [];
+      for (const { efeito, formula: formulaAuxilio } of formulasDanoAdicional) {
+        if (!formulaAuxilio) continue;
+        const rolagemAuxilio = await rollDiceGroups(formulaAuxilio.dados, { label: `${modelo.nome}: auxílio de dano` });
+        bonusDanoAuxilio += rolagemAuxilio.total + formulaAuxilio.fixo;
+        detalhesDanoAuxilio.push(`${efeito.formula} = ${rolagemAuxilio.total + formulaAuxilio.fixo}`);
+      }
+      const dano = Math.max(0, rolagem.total + formula!.fixo + calcularBonusDanoInvocacao(modelo, acao, 'ataque') + bonusDanoAuxilio);
+      await useCharacterStore.getState().applyDamage(alvo.id, dano, acao.tipoDano ?? 'DCO', {
+        attackerId: donoId,
+        source: 'omni',
+        isMelee: bonusAtaque!.tipo === 'corpo_a_corpo',
+        attack: { critical: resultado.critico, criticalFail: resultado.falhaCritica, kind: bonusAtaque!.tipo === 'corpo_a_corpo' ? 'melee' : 'ranged' },
+      });
+      useLogStore.getState().addLog('combat', `🎯 ${modelo.nome} — ${acao.nome} contra ${alvo.name}: d20 ${natural} + ${bonusAtaque!.total} = ${resultado.total} vs Defesa ${defesa} → ${resultado.critico ? 'acerto crítico' : 'acerto'}, dano ${dano} (${acao.tipoDano ?? 'DCO'})${detalhesDanoAuxilio.length ? `; auxílio extra ${detalhesDanoAuxilio.join(', ')}` : ''}.`);
+      resultados.push({ alvoId: alvo.id, nomeAlvo: alvo.name, acertou: true, totalAtaque: resultado.total, dano, ...(resultado.critico ? { critico: true } : {}) });
     }
-    const dadosDano = resultado.critico
-      ? multiplicarDadosCriticos(formula!.dados, acao.multiplicadorCritico ?? 2)
-      : formula!.dados;
-    const rolagem = await rollDiceGroups(dadosDano, { label: `Dano de ${modelo.nome}: ${acao.nome}` });
-    let bonusDanoAuxilio = 0;
-    const detalhesDanoAuxilio: string[] = [];
-    for (const { efeito, formula: formulaAuxilio } of formulasDanoAdicional) {
-      if (!formulaAuxilio) continue;
-      const rolagemAuxilio = await rollDiceGroups(formulaAuxilio.dados, { label: `${modelo.nome}: auxílio de dano` });
-      bonusDanoAuxilio += rolagemAuxilio.total + formulaAuxilio.fixo;
-      detalhesDanoAuxilio.push(`${efeito.formula} = ${rolagemAuxilio.total + formulaAuxilio.fixo}`);
-    }
-    const dano = Math.max(0, rolagem.total + formula!.fixo + calcularBonusDanoInvocacao(modelo, acao, 'ataque') + bonusDanoAuxilio);
     consumirAuxiliosDeAtaque();
-    await useCharacterStore.getState().applyDamage(alvoId, dano, acao.tipoDano ?? 'DCO', {
-      attackerId: donoId,
-      source: 'omni',
-      isMelee: bonusAtaque!.tipo === 'corpo_a_corpo',
-      attack: { critical: resultado.critico, criticalFail: resultado.falhaCritica, kind: bonusAtaque!.tipo === 'corpo_a_corpo' ? 'melee' : 'ranged' },
-    });
-    useLogStore.getState().addLog('combat', `🎯 ${modelo.nome} — ${acao.nome} contra ${alvo.name}: d20 ${natural} + ${bonusAtaque!.total} = ${resultado.total} vs Defesa ${defesa} → ${resultado.critico ? 'acerto crítico' : 'acerto'}, dano ${dano} (${acao.tipoDano ?? 'DCO'})${detalhesDanoAuxilio.length ? `; auxílio extra ${detalhesDanoAuxilio.join(', ')}` : ''}.`);
-    return { ok: true, acertou: true, totalAtaque: resultado.total, dano, ...(resultado.critico ? { critico: true } : {}) };
+    return Array.isArray(alvoId)
+      ? { ok: true, resultados }
+      : {
+        ok: true,
+        acertou: resultados[0].acertou,
+        totalAtaque: resultados[0].totalAtaque,
+        dano: resultados[0].dano,
+        ...(resultados[0].critico ? { critico: true } : {}),
+      };
   } catch {
     // A execução pode ter chegado ao dano antes da falha. Não duplicar ação nem dano.
     return { ok: false, motivo: 'Falha ao resolver ataque; confira o log de combate.' };

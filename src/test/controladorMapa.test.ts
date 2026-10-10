@@ -851,6 +851,88 @@ describe('Controlador — materialização real no mapa', () => {
     expect(pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoComum).toEqual({ atual: 0, maximo: 1 });
     useCombatStore.setState({ inCombat: false } as never);
   });
+  it('executa TR OMNI contra vários alvos cobrando PE e ação apenas uma vez', async () => {
+    const entidade: EntidadeOmni = {
+      id: 'ent-omni-multiplo', nome: 'Pulso Sombrio', categoria: 'talento',
+      acoesAtivas: [{
+        id: 'acao-omni', nome: 'Pulso', acao: 'comum', custoPE: '2', alcanceM: 9,
+        teste: 'tr', tr: 'fortitude', dano: '1d6', tipoDano: 'DI', tipo_efeito: 'dano',
+        tipo_alvo: 'multiplo', filtro_alvo: 'todos_exceto_si', max_alvos: '2',
+      }],
+    } as unknown as EntidadeOmni;
+    useOmniEntidadesStore.setState({ entidades: { [entidade.id]: entidade } });
+    const inv = {
+      ...modelo('a'), custoInvocacaoPE: 0,
+      atributos: { forca: 10, destreza: 10, constituicao: 10, inteligencia: 10, sabedoria: 10, presenca: 14 },
+      economiaAcoesConfigurada: { acaoComum: 1 },
+      acoes: [{ id: 'pulso', nome: 'Pulso antigo', tipoExecucao: 'omni' as const, entidadeOmniId: entidade.id, acaoOmniId: 'acao-omni' }],
+      custosComandosConfigurados: {
+        pulso: { execucao: 'manual' as const, debitos: [{ entidade: 'dono' as const, recurso: 'pe' as const, quantidade: 2 }] },
+      },
+    };
+    useCharacterStore.getState().updateCharacter('dono', { level: 4, invocacoesConhecidas: [inv] });
+    for (const [id, x] of [['alvo-1', 280], ['alvo-2', 350]] as const) {
+      useCharacterStore.setState({ characters: [...useCharacterStore.getState().characters, ficha(id, { category: 'PLAYER', profileId: `perfil-${id}`, hpCurrent: 15, hpMax: 15 })] });
+      useMapStore.getState().addEntity({ shape: 'ELLIPSE', x, y: 140, w: 70, h: 70, rotation: 0,
+        color: '#000', locked: false, characterId: id });
+    }
+    const summoned = invocarControlador('dono', 'a', 'leste');
+    if (!summoned.ok) throw new Error(summoned.motivo);
+    useCombatStore.setState({ inCombat: true, initiativeOrder: [{ charId: 'dono', initiative: 10 }], currentTurnIndex: 0 } as never);
+    const peAntesDaAcao = pegarFicha('dono').peCurrent;
+
+    const resultado = await comandarAtaque('dono', 'a', 'pulso', ['alvo-1', 'alvo-2']);
+
+    expect(resultado).toMatchObject({ ok: true, resultados: [
+      { alvoId: 'alvo-1', testePendente: true, cd: 14 },
+      { alvoId: 'alvo-2', testePendente: true, cd: 14 },
+    ] });
+    expect(useTestRequestStore.getState().requests).toHaveLength(2);
+    expect(new Set(useTestRequestStore.getState().requests.map(request => request.sourceTag)).size).toBe(2);
+    expect(pegarFicha('dono').peCurrent).toBe(peAntesDaAcao - 2);
+    expect(pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoComum).toEqual({ atual: 0, maximo: 1 });
+    useCombatStore.setState({ inCombat: false } as never);
+  });
+  it('valida o alcance de todos os alvos múltiplos antes de debitar recursos', async () => {
+    const entidade: EntidadeOmni = {
+      id: 'ent-omni-multiplo-alcance', nome: 'Pulso Sombrio', categoria: 'talento',
+      acoesAtivas: [{
+        id: 'acao-omni', nome: 'Pulso', acao: 'comum', custoPE: '2', alcanceM: 3,
+        teste: 'tr', tr: 'fortitude', dano: '1d6', tipo_efeito: 'dano',
+        tipo_alvo: 'multiplo', filtro_alvo: 'todos_exceto_si', max_alvos: '2',
+      }],
+    } as unknown as EntidadeOmni;
+    useOmniEntidadesStore.setState({ entidades: { [entidade.id]: entidade } });
+    const inv = {
+      ...modelo('a'), custoInvocacaoPE: 0,
+      atributos: { forca: 10, destreza: 10, constituicao: 10, inteligencia: 10, sabedoria: 10, presenca: 14 },
+      economiaAcoesConfigurada: { acaoComum: 1 },
+      acoes: [{ id: 'pulso', nome: 'Pulso', tipoExecucao: 'omni' as const, entidadeOmniId: entidade.id, acaoOmniId: 'acao-omni' }],
+      custosComandosConfigurados: {
+        pulso: { execucao: 'manual' as const, debitos: [{ entidade: 'dono' as const, recurso: 'pe' as const, quantidade: 2 }] },
+      },
+    };
+    useCharacterStore.getState().updateCharacter('dono', { level: 4, invocacoesConhecidas: [inv] });
+    for (const [id, x] of [['alvo-perto', 280], ['alvo-longe', 1400]] as const) {
+      useCharacterStore.setState({ characters: [...useCharacterStore.getState().characters, ficha(id, { category: 'PLAYER', profileId: `perfil-${id}`, hpCurrent: 15, hpMax: 15 })] });
+      useMapStore.getState().addEntity({ shape: 'ELLIPSE', x, y: 140, w: 70, h: 70, rotation: 0,
+        color: '#000', locked: false, characterId: id });
+    }
+    const summoned = invocarControlador('dono', 'a', 'leste');
+    if (!summoned.ok) throw new Error(summoned.motivo);
+    useCombatStore.setState({ inCombat: true, initiativeOrder: [{ charId: 'dono', initiative: 10 }], currentTurnIndex: 0 } as never);
+    const peAntesDaAcao = pegarFicha('dono').peCurrent;
+    const acoesAntes = pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoComum;
+
+    await expect(comandarAtaque('dono', 'a', 'pulso', ['alvo-perto', 'alvo-longe'])).resolves.toMatchObject({
+      ok: false, motivo: 'Um ou mais alvos estão fora do alcance.',
+    });
+
+    expect(pegarFicha('dono').peCurrent).toBe(peAntesDaAcao);
+    expect(pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoComum).toEqual(acoesAntes);
+    expect(useTestRequestStore.getState().requests).toHaveLength(0);
+    useCombatStore.setState({ inCombat: false } as never);
+  });
   it('recusa uma referência OMNI incompatível sem debitar PE ou ações da invocação', async () => {
     const entidade: EntidadeOmni = {
       id: 'ent-omni-invalida', nome: 'Técnica Condicional', categoria: 'talento',
