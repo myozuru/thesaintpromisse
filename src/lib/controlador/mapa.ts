@@ -3,6 +3,7 @@ import { useMapStore } from '@/stores/useMapStore';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { limiteAtivasPersonagem } from './tipos';
 import { useLogStore } from '@/stores/useLogStore';
+import { podeUsarVersaoAprovada } from '@/lib/controlador/aprovacao';
 
 export type DirecaoInvocacao = 'norte' | 'sul' | 'leste' | 'oeste';
 export type ResultadoInvocacao = { ok: true; tokenId: string } | { ok: false; motivo: string };
@@ -19,7 +20,7 @@ export function invocarControlador(donoId: string, invocacaoId: string, direcao:
   if (!dono) return { ok: false, motivo: 'Personagem não encontrado.' };
   const modelo = dono.invocacoesConhecidas?.find(i => i.id === invocacaoId && i.donoCharacterId === donoId);
   if (!modelo) return { ok: false, motivo: 'Invocação não pertence ao catálogo.' };
-  if (modelo.aprovacaoMestre && modelo.aprovacaoMestre !== 'aprovada') return { ok: false, motivo: 'Invocação ainda não aprovada pelo Mestre.' };
+  if (!podeUsarVersaoAprovada({ estado: modelo.aprovacaoMestre, versaoAtual: modelo.versaoModelo, versaoAprovada: modelo.versaoAprovada })) return { ok: false, motivo: 'Esta versão da invocação ainda não foi aprovada pelo Mestre.' };
   if (modelo.hpAtual <= 0) return { ok: false, motivo: 'A invocação precisa ter PV para ser materializada.' };
 
   const mapa = useMapStore.getState();
