@@ -27,6 +27,24 @@ export function entregarRecompensas(charId: string, recompensas: RecompensaConqu
       feitas.push(`Título "${r.texto}"`);
     } else if (r.tipo === 'texto' && r.texto.trim()) {
       feitas.push(r.texto);
+    } else if (r.tipo === 'recuperar_pe' && r.valor > 0) {
+      const cs = useCharacterStore.getState();
+      const c = cs.characters.find((x) => x.id === charId);
+      if (!c) continue;
+      const novo = Math.min(c.peMax, (c.peCurrent ?? 0) + r.valor);
+      cs.updateCharacter(charId, { peCurrent: novo });
+      feitas.push(`⚡ +${novo - (c.peCurrent ?? 0)} PE`);
+    } else if (r.tipo === 'recuperar_vida' && r.valor > 0) {
+      useCharacterStore.getState().applyHealing(charId, r.valor, 'other');
+      feitas.push(`💚 +${r.valor} vida`);
+    } else if (r.tipo === 'pvt' && r.valor > 0) {
+      useCharacterStore.getState().applyShield(charId, r.valor);
+      feitas.push(`🛡️ +${r.valor} PVT`);
+    } else if (r.tipo === 'reduzir_exaustao' && r.niveis > 0) {
+      const antes = useCharacterStore.getState().characters.find((x) => x.id === charId)?.exhaustionLevel ?? 0;
+      if (antes <= 0) continue;
+      useCharacterStore.getState().bumpExhaustion(charId, -r.niveis);
+      feitas.push(`✨ -${Math.min(antes, r.niveis)} Exaustão`);
     }
   }
   return feitas;

@@ -8,7 +8,12 @@ export type RecompensaConquista =
   | { tipo: 'dinheiro'; valor: number; currencyId: string }
   | { tipo: 'item'; entidadeId: string; quantidade: number }
   | { tipo: 'titulo'; texto: string }
-  | { tipo: 'texto'; texto: string };
+  | { tipo: 'texto'; texto: string }
+  /** Recompensas imediatas na ficha — usar só em conquistas simples. */
+  | { tipo: 'recuperar_pe'; valor: number }
+  | { tipo: 'recuperar_vida'; valor: number }
+  | { tipo: 'pvt'; valor: number }
+  | { tipo: 'reduzir_exaustao'; niveis: number };
 
 export interface ConquistaDef {
   id: string;
@@ -62,17 +67,45 @@ export const RARIDADE_INFO: Record<RaridadeConquista, { nome: string; cabecalho:
   },
 };
 
-const d = (id: string, titulo: string, requisito: string, icone: string, raridade: RaridadeConquista, gatilho: GatilhoConquista = 'manual', secreta = false): ConquistaDef =>
-  ({ id, titulo, descricao: requisito, requisito, icone, raridade, secreta, gatilho, recompensas: [], updatedAt: 0 });
+const d = (id: string, titulo: string, requisito: string, icone: string, raridade: RaridadeConquista, gatilho: GatilhoConquista = 'manual', secreta = false, recompensas: RecompensaConquista[] = []): ConquistaDef =>
+  ({ id, titulo, descricao: requisito, requisito, icone, raridade, secreta, gatilho, recompensas, updatedAt: 0 });
 
-/** Catálogo inicial; o Mestre pode editar, apagar ou criar novas. */
+const pe = (valor: number): RecompensaConquista => ({ tipo: 'recuperar_pe', valor });
+const vida = (valor: number): RecompensaConquista => ({ tipo: 'recuperar_vida', valor });
+const pvt = (valor: number): RecompensaConquista => ({ tipo: 'pvt', valor });
+const exaustao = (niveis: number): RecompensaConquista => ({ tipo: 'reduzir_exaustao', niveis });
+const titulo = (texto: string): RecompensaConquista => ({ tipo: 'titulo', texto });
+
+/** Catálogo inicial; o Mestre pode editar, apagar ou criar novas.
+ *  Recompensas imediatas (PE/vida/PVT/exaustão) só nas conquistas simples. */
 export const CONQUISTAS_PADRAO: ConquistaDef[] = [
-  d('mesmo-mundo', 'O mesmo mundo; uma nova visão.', 'O começo da campanha.', '🌅', 'comum'),
-  d('comidas-caras', 'Comidas são mais caras do que eu pensava!', 'Vá em uma loja de comidas e conheça o catálogo.', '🍙', 'comum', 'loja_comida'),
-  d('primeira-vez', 'Pra tudo tem a primeira vez! Até pra... Maldições..?', 'Tenha seu primeiro combate.', '⚔️', 'comum', 'primeiro_combate'),
-  d('limiar-do-fim', 'O Limiar do Fim', 'Caia nas Portas da Morte pela primeira vez.', '🚪', 'raro', 'portas_da_morte', true),
-  d('expansao-dominio', 'Expansão de Domínio', 'Realize uma Expansão de Domínio Completa.', '🌀', 'lendario'),
-  d('dano-colateral', 'Dano Colateral Urbano', 'Cause o colapso de edifícios massivos ou transforme o campo de batalha em Terreno Difícil com feitiços destrutivos.', '🏚️', 'epico'),
+  // Comum — simples, com pequenos bônus imediatos
+  d('mesmo-mundo', 'O mesmo mundo; uma nova visão.', 'O começo da campanha.', '🌅', 'comum', 'manual', false, [pe(3)]),
+  d('comidas-caras', 'Comidas são mais caras do que eu pensava!', 'Vá em uma loja de comidas e conheça o catálogo.', '🍙', 'comum', 'loja_comida', false, [vida(5)]),
+  d('primeira-vez', 'Pra tudo tem a primeira vez! Até pra... Maldições..?', 'Tenha seu primeiro combate.', '⚔️', 'comum', 'primeiro_combate', false, [pvt(5)]),
+  d('primeira-compra', 'Cliente Fiel', 'Compre seu primeiro item em uma loja.', '🛍️', 'comum', 'manual', false, [pe(2)]),
+  d('primeira-quest', 'Trabalho Honesto', 'Conclua sua primeira quest do mural.', '📜', 'comum', 'manual', false, [vida(8)]),
+  d('descanso-merecido', 'Descanso Merecido', 'Faça seu primeiro descanso longo em segurança.', '🛏️', 'comum', 'manual', false, [exaustao(1)]),
+  d('primeiro-critico', 'Na Mosca!', 'Acerte seu primeiro crítico (20 natural).', '🎯', 'comum', 'manual', false, [pe(3)]),
+  d('primeira-falha', 'Nem Todo Dia é Dia', 'Tire um 1 natural em um momento importante.', '🎲', 'comum', 'manual', false, [pvt(5)]),
+  d('anatomia-degradacao', 'A Anatomia da Degradação', 'Acumule Nível 3 de Exaustão.', '🥀', 'comum', 'manual', false, [exaustao(1)]),
+  // Raro — sem bônus imediatos
+  d('limiar-do-fim', 'O Limiar do Fim', 'Caia nas Portas da Morte e sobreviva aos testes de estabilização.', '🚪', 'raro', 'portas_da_morte', true),
   d('mercado-obscuro', 'O Preço do Mercado Obscuro', 'Adquira ou confeccione sua primeira Ferramenta Amaldiçoada de Grau 2 ou superior.', '🗡️', 'raro'),
+  d('guilda-fundada', 'Juntos Somos Mais', 'Funde ou entre em uma guilda.', '🏛️', 'raro'),
+  d('pechincheiro', 'Lábia de Mercador', 'Vença uma pechincha difícil com um lojista.', '🪙', 'raro'),
+  d('salvador', 'Mão Estendida', 'Estabilize um aliado nas Portas da Morte.', '🩹', 'raro'),
+  // Épico
+  d('raio-negro', 'Faíscas da Distorção Espacial', 'Acerte um Raio Negro em combate.', '⚡', 'epico', 'manual', false, [titulo('Faísca Negra')]),
+  d('dano-colateral', 'Dano Colateral Urbano', 'Cause o colapso de edifícios massivos ou transforme o campo de batalha em Terreno Difícil com feitiços destrutivos.', '🏚️', 'epico'),
   d('alvo-iniciativa', 'Alvo da Iniciativa', 'Sobreviva a uma emboscada não planejada ou a um mandado de execução emitido pela Cúpula.', '🎯', 'epico', 'manual', true),
+  d('matematica-equivalencia', 'A Matemática da Equivalência', 'Sele um Voto de Restrição de Peso Pesado com o Mestre.', '⚖️', 'epico'),
+  d('derrubar-chefe', 'Gigantes Também Caem', 'Ajude a derrotar um chefe de patamar Desafio ou superior.', '👹', 'epico', 'manual', false, [titulo('Mata-Gigantes')]),
+  // Lendário
+  d('expansao-dominio', 'Arquitetura Mental Manifestada', 'Realize uma Expansão de Domínio Completa.', '🌀', 'lendario', 'manual', false, [titulo('Senhor do Domínio')]),
+  d('supremacia-territorial', 'Supremacia Territorial', 'Vença um confronto de Expansões de Domínio.', '🏯', 'lendario', 'manual', false, [titulo('Soberano Territorial')]),
+  d('sobrevivente-calamidade', 'Diante da Calamidade', 'Sobreviva a um combate contra um chefe Calamidade.', '🌋', 'lendario', 'manual', true),
+  // Impossível
+  d('voto-quebrado', 'O Preço da Palavra', 'Quebre um Voto de Restrição e sobreviva às consequências.', '💔', 'impossivel', 'manual', true),
+  d('derrotar-santo', 'Abaixo dos Céus', 'Derrote sozinho um chefe de patamar Santo.', '👑', 'impossivel', 'manual', true, [titulo('O Impossível')]),
 ];

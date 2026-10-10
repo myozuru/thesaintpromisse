@@ -14,4 +14,10 @@ describe('conquistas', () => {
   it('primeiro combate é automático', () => {
     expect(CONQUISTAS_PADRAO.find((c) => c.id === 'primeira-vez')?.gatilho).toBe('primeiro_combate');
   });
+  it('recompensas imediatas só aparecem em conquistas comuns', () => {
+    const imediatas = ['recuperar_pe', 'recuperar_vida', 'pvt', 'reduzir_exaustao'];
+    const comBonus = CONQUISTAS_PADRAO.filter((c) => c.recompensas.some((r) => imediatas.includes(r.tipo)));
+    expect(comBonus.length).toBeGreaterThan(0);
+    expect(comBonus.every((c) => c.raridade === 'comum')).toBe(true);
+  });
 });

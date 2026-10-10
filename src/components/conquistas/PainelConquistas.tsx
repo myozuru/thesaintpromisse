@@ -122,6 +122,9 @@ function EditorConquista({ def, onClose }: { def: ConquistaDef; onClose: () => v
             {r.tipo === 'item' && <><span>🎒</span><select className={sel} value={r.entidadeId} onChange={(e) => setR(i, { ...r, entidadeId: e.target.value })}><option value="">— escolha —</option>{itens.map((it) => <option key={it.id} value={it.id}>{it.nome}</option>)}</select>
               <Input type="number" min={1} className="h-7 w-16" value={r.quantidade} onChange={(e) => setR(i, { ...r, quantidade: Math.max(1, Number(e.target.value) || 1) })} /></>}
             {(r.tipo === 'titulo' || r.tipo === 'texto') && <><span>{r.tipo === 'titulo' ? '👑' : '📜'}</span><Input className="h-7 flex-1" placeholder={r.tipo === 'titulo' ? 'Título/alcunha' : 'Prêmio narrativo'} value={r.texto} onChange={(e) => setR(i, { ...r, texto: e.target.value })} /></>}
+            {(r.tipo === 'recuperar_pe' || r.tipo === 'recuperar_vida' || r.tipo === 'pvt') && <><span>{r.tipo === 'recuperar_pe' ? '⚡ PE' : r.tipo === 'pvt' ? '🛡️ PVT' : '💚 Vida'}</span>
+              <Input type="number" min={1} className="h-7 w-20" value={r.valor} onChange={(e) => setR(i, { ...r, valor: Math.max(1, Number(e.target.value) || 1) })} /></>}
+            {r.tipo === 'reduzir_exaustao' && <><span>✨ Exaustão −</span><Input type="number" min={1} max={6} className="h-7 w-16" value={r.niveis} onChange={(e) => setR(i, { ...r, niveis: Math.max(1, Number(e.target.value) || 1) })} /></>}
             <Button size="sm" variant="ghost" onClick={() => setF({ ...f, recompensas: f.recompensas.filter((_, j) => j !== i) })}>✕</Button>
           </div>
         ))}
@@ -130,7 +133,12 @@ function EditorConquista({ def, onClose }: { def: ConquistaDef; onClose: () => v
           <Button size="sm" variant="outline" onClick={() => setF({ ...f, recompensas: [...f.recompensas, { tipo: 'item', entidadeId: '', quantidade: 1 }] })}>+ Item</Button>
           <Button size="sm" variant="outline" onClick={() => setF({ ...f, recompensas: [...f.recompensas, { tipo: 'titulo', texto: '' }] })}>+ Título</Button>
           <Button size="sm" variant="outline" onClick={() => setF({ ...f, recompensas: [...f.recompensas, { tipo: 'texto', texto: '' }] })}>+ Outro</Button>
+          <Button size="sm" variant="outline" onClick={() => setF({ ...f, recompensas: [...f.recompensas, { tipo: 'recuperar_pe', valor: 3 }] })}>+ PE</Button>
+          <Button size="sm" variant="outline" onClick={() => setF({ ...f, recompensas: [...f.recompensas, { tipo: 'recuperar_vida', valor: 5 }] })}>+ Vida</Button>
+          <Button size="sm" variant="outline" onClick={() => setF({ ...f, recompensas: [...f.recompensas, { tipo: 'pvt', valor: 5 }] })}>+ PVT</Button>
+          <Button size="sm" variant="outline" onClick={() => setF({ ...f, recompensas: [...f.recompensas, { tipo: 'reduzir_exaustao', niveis: 1 }] })}>+ Aliviar exaustão</Button>
         </div>
+        <p className="text-[11px] text-muted-foreground">Dica: PE, vida, PVT e exaustão combinam com conquistas simples.</p>
       </div>
       <div className="flex justify-between gap-2">
         <Button size="sm" variant="destructive" onClick={() => { useConquistaStore.getState().apagarDef(f.id); onClose(); }}>Apagar</Button>
