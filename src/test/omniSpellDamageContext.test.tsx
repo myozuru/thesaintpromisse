@@ -137,7 +137,7 @@ describe('Feitiços reais pela UI', () => {
   it('jogador rola pelo Shikigami com o bônus dele sem gastar vantagem ou bônus do dono', async () => {
     const dono = ficha('dono', {
       profileId: 'perfil-dono', level: 4, peCurrent: 20,
-      attributes: [{ name: 'CON', value: 30 }],
+      attributes: [{ id: 'con', name: 'CON', value: 30 }],
     });
     montarMesa([dono], { dono: [0, 0] });
     comoTela({ role: 'PLAYER', profileId: 'perfil-dono' });
@@ -156,7 +156,7 @@ describe('Feitiços reais pela UI', () => {
       invocationResolution: {
         kind: 'shikigami_damage_after_save', ownerCharacterId: 'origem',
         invocationId: 'shiki-origem', invocationInstanceId: 'origem-instance',
-        actionId: 'rugido', sourceName: 'Atacante — Rugido', damageFormula: '1d6',
+        actionId: 'rugido', sourceName: 'Atacante — Rugido', damageFormula: '1d6', damageBonus: 0,
         damageOnSuccess: 'nenhum',
         targetInvocation: {
           tokenId: 'token-guardiao', ownerCharacterId: 'dono',
