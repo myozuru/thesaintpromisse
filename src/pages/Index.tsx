@@ -16,6 +16,10 @@ import { useLogStore } from "@/stores/useLogStore";
 import { useMapStore } from "@/stores/useMapStore";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { TabId } from "@/components/Header";
+import { DiarioQuests } from '@/components/economia/DiarioQuests';
+import { useCharacterStore } from '@/stores/useCharacterStore';
+import { useProfileStore } from '@/stores/useProfileStore';
+import { findMyCharacter } from '@/lib/myCharacter';
 
 const ZOOM_SCALES = [55, 65, 75, 85, 100, 115] as const;
 const ZOOM_LABELS = ["55%", "65%", "75%", "85%", "100%", "115%"];
@@ -59,6 +63,10 @@ const TABS: TabId[] = ["relogio", "fichas", "feiticos-players", "itens", "baus",
 
 export default function Index() {
   const role = useRoleStore((s) => s.role);
+  const characters = useCharacterStore((s) => s.characters);
+  const profileId = useProfileStore((s) => s.activeProfileId);
+  const myCharacter = findMyCharacter(characters, profileId);
+  const [diaryOpen, setDiaryOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("fichas");
   const [hubOpen, setHubOpen] = useState(false);
   const [testsOpen, setTestsOpen] = useState(false);
@@ -219,7 +227,8 @@ export default function Index() {
 
         <GlobalClockTicker />
 
-        {!mapaImmersive && <Header activeTab={activeTab} onTabChange={handleTabChange} testsOpen={testsOpen} onToggleTests={() => setTestsOpen((open) => !open)} />}
+        {!mapaImmersive && <Header activeTab={activeTab} onTabChange={handleTabChange} testsOpen={testsOpen} onToggleTests={() => setTestsOpen((open) => !open)} onOpenDiary={() => setDiaryOpen(true)} />}
+        {diaryOpen && <DiarioQuests aberto onClose={() => setDiaryOpen(false)} charId={myCharacter?.id} master={role === 'MASTER'} />}
 
         <main
           className="relative z-10 transition-[padding] duration-300"

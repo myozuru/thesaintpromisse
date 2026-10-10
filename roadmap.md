@@ -1,6 +1,7 @@
 # Roadmap
 
 - [x] Sistema de Conquistas: raridades, catálogo editável, recompensas automáticas, banner e aba no Diário.
+- [x] Tornar Diário e Conquistas visíveis na barra superior e nas fichas; acessos verificados no navegador como Mestre e jogador, sem gravações na nuvem.
 - [ ] OMNI: chaves de mitigação por tipo de dano, scripts/passivas e verificação em combate no navegador.
 
 - [x] Migrate TP Fichas source and bundled assets into the current app.
