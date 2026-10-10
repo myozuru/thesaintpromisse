@@ -28,6 +28,63 @@ export function validarDissipacaoVoluntaria(input: {
   return { ok: true };
 }
 
+export type DecisaoManualDerrotaInvocacao =
+  | { resultado: 'recuperada'; pvRecuperados: number }
+  | { resultado: 'perda_permanente' };
+
+export type ResultadoResolucaoDerrotaInvocacao =
+  | { ok: true; instancia: InstanciaInvocacao; pvCatalogo: number; perdaPermanente: boolean }
+  | { ok: false; motivo: string };
+
+/** Registra a decisão humana sem apagar o PV que a instância tinha ao ser derrotada. */
+export function resolverDerrotaManualInvocacao(
+  instancia: InstanciaInvocacao,
+  decisao: DecisaoManualDerrotaInvocacao,
+  ator: { isMaster: boolean; profileId?: string; ownerProfileId?: string },
+): ResultadoResolucaoDerrotaInvocacao {
+  if (instancia.estado !== 'derrotada' || instancia.resolucaoDerrota) {
+    return { ok: false, motivo: 'Esta derrota já foi resolvida ou não está pendente.' };
+  }
+  if (!ator.isMaster && (!ator.profileId || !ator.ownerProfileId || ator.profileId !== ator.ownerProfileId)) {
+    return { ok: false, motivo: 'Somente o Controlador dono ou o Mestre pode resolver esta derrota.' };
+  }
+
+  const resolvidaEm = new Date().toISOString();
+  const resolvidaPorProfileId = ator.profileId;
+  if (decisao.resultado === 'recuperada') {
+    if (!Number.isInteger(decisao.pvRecuperados) || decisao.pvRecuperados < 1 || decisao.pvRecuperados > instancia.hpMaximoAtual) {
+      return { ok: false, motivo: `Informe PV inteiros entre 1 e ${instancia.hpMaximoAtual}.` };
+    }
+    const atualizada = InstanciaInvocacaoSchema.parse({
+      ...instancia,
+      version: instancia.version + 1,
+      hpAtual: decisao.pvRecuperados,
+      estado: 'dissipada',
+      causasSaida: Array.from(new Set([...(instancia.causasSaida ?? []), 'derrota_recuperada_manualmente'])),
+      resolucaoDerrota: {
+        resultado: 'recuperada',
+        pvNaDerrota: instancia.hpAtual,
+        pvRecuperados: decisao.pvRecuperados,
+        resolvidaEm,
+        ...(resolvidaPorProfileId ? { resolvidaPorProfileId } : {}),
+      },
+    });
+    return { ok: true, instancia: atualizada, pvCatalogo: decisao.pvRecuperados, perdaPermanente: false };
+  }
+
+  const atualizada = InstanciaInvocacaoSchema.parse({
+    ...instancia,
+    version: instancia.version + 1,
+    resolucaoDerrota: {
+      resultado: 'perda_permanente',
+      pvNaDerrota: instancia.hpAtual,
+      resolvidaEm,
+      ...(resolvidaPorProfileId ? { resolvidaPorProfileId } : {}),
+    },
+  });
+  return { ok: true, instancia: atualizada, pvCatalogo: Math.max(0, Math.min(instancia.hpMaximoAtual, instancia.hpAtual)), perdaPermanente: true };
+}
+
 export function estadoPorPVInvocacao(hpAtual: number, hpMaximo: number): InstanciaInvocacao['estado'] {
   if (hpAtual <= -hpMaximo) return 'derrotada';
   if (hpAtual <= 0) return 'caida';

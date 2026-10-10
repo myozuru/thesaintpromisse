@@ -34,7 +34,9 @@ import {
   levantarInstanciaInvocacao,
   novaInstanciaInvocacao,
   estadoPorPVInvocacao,
+  resolverDerrotaManualInvocacao,
   validarDissipacaoVoluntaria,
+  type DecisaoManualDerrotaInvocacao,
 } from './estadoInvocacao';
 import {
   criarContribuicaoTempoInvocacao,
@@ -102,6 +104,39 @@ function gravarInstancia(
       : modelo),
     ...extras,
   });
+}
+
+/** Registra a decisão manual do dono ou Mestre e preserva a instância derrotada no histórico. */
+export function resolverDerrotaPendenteInvocacao(
+  donoId: string,
+  invocacaoId: string,
+  decisao: DecisaoManualDerrotaInvocacao,
+  ator: { isMaster: boolean; profileId?: string },
+): { ok: true } | { ok: false; motivo: string } {
+  const dono = useCharacterStore.getState().characters.find(character => character.id === donoId);
+  if (!dono) return { ok: false, motivo: 'Personagem dono não encontrado.' };
+  const modelo = dono.invocacoesConhecidas?.find(item => item.id === invocacaoId);
+  if (!modelo) return { ok: false, motivo: 'Invocação não pertence ao catálogo.' };
+  if (modelo.perdaPermanente) return { ok: false, motivo: 'Esta invocação já foi arquivada por perda permanente.' };
+  const instancia = [...(dono.instanciasInvocacao ?? [])].reverse().find(item =>
+    item.modeloId === invocacaoId && item.estado === 'derrotada' && !item.resolucaoDerrota,
+  );
+  if (!instancia) return { ok: false, motivo: 'Não há uma derrota pendente para esta invocação.' };
+  const resultado = resolverDerrotaManualInvocacao(instancia, decisao, {
+    ...ator,
+    ownerProfileId: dono.profileId || instancia.donoProfileId || modelo.donoProfileId,
+  });
+  if (!resultado.ok) return resultado;
+
+  const modelosAtualizados = (dono.invocacoesConhecidas ?? []).map(item => item.id === invocacaoId
+    ? {
+      ...item,
+      hpAtual: resultado.pvCatalogo,
+      ...(resultado.perdaPermanente ? { perdaPermanente: true } : {}),
+    }
+    : item);
+  gravarInstancia(dono, resultado.instancia, { invocacoesConhecidas: modelosAtualizados });
+  return { ok: true };
 }
 
 type ModoExecucaoComandoInvocacao = 'manual' | 'evento_automatico' | 'reacao';
@@ -267,6 +302,7 @@ export function invocarControlador(
   }
   const modelo = dono.invocacoesConhecidas?.find(i => i.id === invocacaoId && i.donoCharacterId === donoId);
   if (!modelo) return { ok: false, motivo: 'Invocação não pertence ao catálogo.' };
+  if (modelo.perdaPermanente) return { ok: false, motivo: 'Esta invocação foi declarada como perda permanente.' };
   if (!podeUsarVersaoAprovada({ estado: modelo.aprovacaoMestre, versaoAtual: modelo.versaoModelo, versaoAprovada: modelo.versaoAprovada })) return { ok: false, motivo: 'Esta versão da invocação ainda não foi aprovada pelo Mestre.' };
   const validacaoIntermediario = validarIntermediarioInvocacao(modelo, dono, useInventoryStore.getState().items, dono.invocacoesConhecidas ?? []);
   const motivoOverride = opcoes?.motivoOverrideIntermediario?.trim() ?? '';
@@ -451,6 +487,7 @@ export function invocarControladores(
   const modelosValidos = modelos as InvocacaoControlador[];
   const validacoesOverride: Array<{ modelo: InvocacaoControlador; motivo: string; override: boolean }> = [];
   for (const modelo of modelosValidos) {
+    if (modelo.perdaPermanente) return { ok: false, motivo: 'A invocação ' + modelo.nome + ' foi declarada como perda permanente.' };
     if (!podeUsarVersaoAprovada({ estado: modelo.aprovacaoMestre, versaoAtual: modelo.versaoModelo, versaoAprovada: modelo.versaoAprovada })) {
       return { ok: false, motivo: 'A invocação ' + modelo.nome + ' ainda não foi aprovada pelo Mestre.' };
     }

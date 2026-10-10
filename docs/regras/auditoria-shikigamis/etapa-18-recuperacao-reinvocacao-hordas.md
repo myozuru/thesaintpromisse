@@ -9,6 +9,9 @@
 - Invocações Caídas ainda podem ser recolhidas quando os demais requisitos forem atendidos.
 - A causa `dissipacao_voluntaria` fica registrada na instância preservada.
 - Uma instância derrotada continua aguardando resolução; a dissipação voluntária não a remove nem substitui essa decisão.
+- O Controlador dono ou o Mestre pode registrar recuperação com PV inteiros definidos manualmente, ou confirmar perda permanente.
+- A recuperação guarda no histórico os PV da derrota e os PV escolhidos; o catálogo recebe esse valor para uma futura invocação.
+- A perda permanente mantém a ficha e a instância no histórico, arquiva o modelo e bloqueia novas invocações.
 
 ## Regras já presentes na main
 
@@ -19,7 +22,7 @@
 
 ## Dependências ainda abertas
 
-- A consequência e o registro da decisão manual após derrota (recuperar ou declarar perda permanente), inclusive quando Controlador e Mestre discordarem.
+- O procedimento quando Controlador e Mestre discordarem sobre recuperação ou perda permanente.
 - Reinvocação: cobrança de PE, recuperação do PV da instância, novo grant ou saldo de tempo existente e política de reinício de ações.
 - Hordas: arredondamento do limite de metade das invocações ativas; valor adicional de PE para membro de Primeiro Grau sob líder Especial; interação entre reservas de tempo dos membros; aplicação a Hordas das regras personalizadas de −PV máximo e preservação de tempo.
 - O sistema não cria nem materializa Hordas até essas regras serem definidas. As regras do livro que já são determinadas podem ser implementadas sem alterar o TXT original.
@@ -27,4 +30,5 @@
 ## Verificação
 
 - `src/test/controladorDissipacaoVoluntaria.test.ts` testa turno do dono, rodada de criação, estado Caído, derrota e dissipação fora de combate.
+- `src/test/controladorResolucaoDerrota.test.ts` testa permissão, PV de recuperação, preservação de histórico e perda permanente.
 - Testes locais sem conexão com Supabase.

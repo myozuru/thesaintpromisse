@@ -52,6 +52,8 @@ export interface InvocacaoControlador {
   aquisicao?: EstadoAquisicaoInvocacao;
   registroEvolucao?: unknown[];
   regrasRecuperacao?: ModeloInvocacao["regrasRecuperacao"];
+  /** Ficha preservada para histórico, mas indisponível para novas invocações. */
+  perdaPermanente?: boolean;
   /** Aquisição depende de aprovação do Mestre. Ausência em saves antigos equivale a legado já adquirido. */
   aprovacaoMestre?: 'pendente' | 'aprovada' | 'rejeitada';
   /** Versão do snapshot atualmente editado e versão liberada pelo Mestre. */

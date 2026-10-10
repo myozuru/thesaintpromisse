@@ -277,6 +277,8 @@ export const ModeloInvocacaoSchema = z.object({
   autonomia: AutonomiaInvocacaoSchema.optional(),
   economiaAcoesConfigurada: EconomiaConfiguradaSchema.optional(),
   registroEvolucao: z.array(z.unknown()).optional(),
+  /** Mantém a ficha arquivada quando o Controlador/Mestre declara perda permanente. */
+  perdaPermanente: z.boolean().optional(),
   regrasRecuperacao: z.object({ derrotaPorPVNegativo: z.literal("menos_cem_por_cento_pv_maximo"), curaAcimaDeZeroLevanta: z.literal(false), acaoParaLevantar: z.literal("acao_de_movimento_propria"), dissipacaoVoluntariaMinSegundos: z.literal(10), contribuicaoNaDerrotaDefinitiva: z.literal("preservar_saldo_restante") }).strict().optional(),
   custosComandosConfigurados: z.record(z.string(), CustoComandoInvocacaoSchema).optional(),
   tempoAdicional: ConfiguracaoTempoInvocacaoSchema.optional(),
@@ -364,6 +366,23 @@ export const ContribuicaoTempoInvocacaoSchema = z.object({
 });
 export type ContribuicaoTempoInvocacao = z.infer<typeof ContribuicaoTempoInvocacaoSchema>;
 
+export const ResolucaoDerrotaInvocacaoSchema = z.discriminatedUnion("resultado", [
+  z.object({
+    resultado: z.literal("recuperada"),
+    pvNaDerrota: finiteNumberSchema,
+    pvRecuperados: finiteNumberSchema.min(1),
+    resolvidaEm: z.string(),
+    resolvidaPorProfileId: idSchema.optional(),
+  }).strict(),
+  z.object({
+    resultado: z.literal("perda_permanente"),
+    pvNaDerrota: finiteNumberSchema,
+    resolvidaEm: z.string(),
+    resolvidaPorProfileId: idSchema.optional(),
+  }).strict(),
+]);
+export type ResolucaoDerrotaInvocacao = z.infer<typeof ResolucaoDerrotaInvocacaoSchema>;
+
 export const InstanciaInvocacaoSchema = z.object({
   schemaVersion: z.literal(INVOCACAO_SCHEMA_VERSION),
   version: z.number().int().min(1),
@@ -409,6 +428,8 @@ export const InstanciaInvocacaoSchema = z.object({
   eventoCriacaoId: idSchema.optional(),
   contribuicaoTempo: ContribuicaoTempoInvocacaoSchema.optional(),
   causasSaida: z.array(z.string()).optional(),
+  /** Decisão manual após derrota; os dados da instância original permanecem auditáveis. */
+  resolucaoDerrota: ResolucaoDerrotaInvocacaoSchema.optional(),
   createdAt: z.string().optional(),
 }).passthrough().superRefine((instancia, ctx) => {
   if (instancia.hpAtual > instancia.hpMaximoAtual) {

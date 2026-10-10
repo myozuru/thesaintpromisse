@@ -6,7 +6,7 @@ import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { validarIntermediarioInvocacao } from '@/lib/controlador/intermediario';
-import { invocarControladores, recolherInvocacao, limparInvocacoesDerrotadas, levantarInvocacao, comandarReposicionamento, comandarAtaque, comandarSuporte, rolarPericiaInvocacao, type DirecaoInvocacao } from '@/lib/controlador/mapa';
+import { invocarControladores, recolherInvocacao, limparInvocacoesDerrotadas, levantarInvocacao, resolverDerrotaPendenteInvocacao, comandarReposicionamento, comandarAtaque, comandarSuporte, rolarPericiaInvocacao, type DirecaoInvocacao } from '@/lib/controlador/mapa';
 import { limiteInvocacoesConhecidas, limiteAtivasPersonagem, validarCatalogoControlador, type InvocacaoControlador, type TipoInvocacaoControlador } from '@/lib/controlador/tipos';
 import { podeUsarVersaoAprovada } from '@/lib/controlador/aprovacao';
 import { carregarAssetFicha } from '@/lib/controlador/assetFicha';
@@ -83,6 +83,8 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
   const [multiplicadorDanoAtributoAtaque, setMultiplicadorDanoAtributoAtaque] = useState('');
   const [periciasSelecionadas, setPericiasSelecionadas] = useState<Record<string, string>>({});
   const [busyPericia, setBusyPericia] = useState<Record<string, boolean>>({});
+  const [pvRecuperacaoDerrota, setPvRecuperacaoDerrota] = useState<Record<string, string>>({});
+  const [confirmandoPerdaDerrota, setConfirmandoPerdaDerrota] = useState<string | null>(null);
 
   const entities = useMapStore(s => s.entities);
   const ativos = Object.values(entities).filter(e => e.ownerCharId === character.id && !!e.invocationId);
@@ -206,6 +208,22 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
     const resultado = levantarInvocacao(character.id, id);
     if (!resultado.ok) { setErro(resultado.motivo); return; }
     setErro(''); setMensagem('Invocação levantada; Ação de Movimento própria consumida.');
+  };
+  const resolverDerrota = (id: string, resultado: 'recuperada' | 'perda_permanente') => {
+    const decisao = resultado === 'recuperada'
+      ? { resultado, pvRecuperados: Number(pvRecuperacaoDerrota[id]) } as const
+      : { resultado } as const;
+    const resolucao = resolverDerrotaPendenteInvocacao(character.id, id, decisao, {
+      isMaster,
+      profileId: activeProfileId || undefined,
+    });
+    if (!resolucao.ok) { setErro(resolucao.motivo); return; }
+    setErro('');
+    setMensagem(resultado === 'recuperada'
+      ? 'Recuperação registrada. A próxima invocação começa com os PV escolhidos.'
+      : 'Perda permanente registrada; a ficha foi arquivada e o histórico foi preservado.');
+    setConfirmandoPerdaDerrota(null);
+    setPvRecuperacaoDerrota(current => ({ ...current, [id]: '' }));
   };
   const catalogo = character.invocacoesConhecidas ?? [];
   const assetForFicha = (inv: InvocacaoControlador) => {
@@ -451,6 +469,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
           ? character.instanciasInvocacao?.find(item => item.id === token.invocationInstanceId || item.tokenId === token.id)
           : [...(character.instanciasInvocacao ?? [])].reverse().find(item => item.modeloId === inv.id);
         const estadoInstancia = token?.invocationState ?? instancia?.estado;
+        const resolucaoDerrota = instancia?.resolucaoDerrota;
         const contribuicaoTempo = instancia?.contribuicaoTempo;
         const tempoConfigurado = tempoAdicionalEmSegundos(inv.tempoAdicional);
         const rotuloTempo = contribuicaoTempo?.estado === 'consolacao'
@@ -466,7 +485,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
                   : tempoConfigurado.ok
                     ? `Tempo por invocação: +${formatarSegundosTempoInvocacao(tempoConfigurado.segundos)} s`
                     : `Tempo extra inválido: ${tempoConfigurado.motivo}`;
-        const derrotaPendente = estadoInstancia === 'derrotada';
+        const derrotaPendente = estadoInstancia === 'derrotada' && !resolucaoDerrota;
         const personagensAlvoSuporte = [...new Map(Object.values(entities)
           .filter(entity => entity.characterId && !entity.invocationId && !entity.hidden &&
             (allCharacters.find(alvo => alvo.id === entity.characterId)?.category !== 'INIMIGO' || entity.characterId === character.id))
@@ -481,20 +500,23 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
           });
         const opcoesAlvoSuporte = [...personagensAlvoSuporte, ...invocacoesAlvoSuporte];
         const movimentoDisponivel = (instancia?.economiaAcoes?.acaoMovimento?.atual ?? 0) > 0;
-        const rotuloEstado = estadoInstancia === 'derrotada'
-          ? 'Derrotada — aguardando resolução'
-          : estadoInstancia === 'caida'
-            ? 'Caída — cura acima de 0 PV e Ação de Movimento própria para levantar'
-            : estadoInstancia === 'ativa'
-              ? 'Ativa no mapa'
-              : estadoInstancia === 'dissipada'
-                ? 'Dissipada'
-                : 'Pronta';
+        const rotuloEstado = inv.perdaPermanente || resolucaoDerrota?.resultado === 'perda_permanente'
+          ? 'Perda permanente registrada'
+          : estadoInstancia === 'derrotada'
+            ? 'Derrotada — aguardando resolução'
+            : estadoInstancia === 'caida'
+              ? 'Caída — cura acima de 0 PV e Ação de Movimento própria para levantar'
+              : estadoInstancia === 'ativa'
+                ? 'Ativa no mapa'
+                : estadoInstancia === 'dissipada'
+                  ? 'Dissipada'
+                  : 'Pronta';
         const aprovado = podeUsarVersaoAprovada({ estado: inv.aprovacaoMestre, versaoAtual: inv.versaoModelo, versaoAprovada: inv.versaoAprovada });
         const automacoesAtivas = (inv.automacoesOmni ?? []).filter(automacao => automacao.habilitada).length;
         const podeIntervirNaAutonomia = isMaster || Boolean(character.profileId && activeProfileId === character.profileId);
+        const podeResolverDerrota = isMaster || Boolean(character.profileId && activeProfileId === character.profileId);
         const alcanceConfigurado = Number.isFinite(inv.alcanceInvocacaoM) && (inv.alcanceInvocacaoM ?? -1) >= 0;
-        const podeSelecionar = !ativo && !derrotaPendente && inv.hpAtual > 0 && aprovado && alcanceConfigurado && (estadoIntermediario.ok || (isMaster && Boolean(motivosOverride[inv.id]?.trim())));
+        const podeSelecionar = !inv.perdaPermanente && !ativo && !derrotaPendente && inv.hpAtual > 0 && aprovado && alcanceConfigurado && (estadoIntermediario.ok || (isMaster && Boolean(motivosOverride[inv.id]?.trim())));
         return (
         <div key={inv.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border p-2">
           <div className="flex items-center gap-2">
@@ -504,6 +526,25 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
             <div><strong>{inv.apelido?.trim() || inv.nome}</strong><div className="text-xs text-muted-foreground">{inv.tipo === 'shikigami' ? 'Shikigami' : 'Corpo Amaldiçoado'} · PV {inv.hpAtual}/{inv.hpMaximo} · Defesa {inv.defesa} · {inv.deslocamentoM} m · {inv.custoInvocacaoPE} PE · {inv.acoes.length} ações</div></div>
           </div>
           <div className={'basis-full text-xs ' + (derrotaPendente ? 'text-destructive' : estadoInstancia === 'caida' ? 'text-amber-300' : 'text-muted-foreground')}>Estado de combate: {rotuloEstado}{estadoInstancia === 'derrotada' && instancia ? ` (PV ${instancia.hpAtual})` : ''}</div>
+          {resolucaoDerrota && <div className="basis-full text-xs text-muted-foreground">
+            {resolucaoDerrota.resultado === 'recuperada'
+              ? `Derrota resolvida: recuperação manual para ${resolucaoDerrota.pvRecuperados} PV. PV ao ser derrotada: ${resolucaoDerrota.pvNaDerrota}.`
+              : `Perda permanente registrada com ${resolucaoDerrota.pvNaDerrota} PV; ficha arquivada.`}
+          </div>}
+          {derrotaPendente && podeResolverDerrota && instancia && <div className="basis-full space-y-2 rounded border border-destructive/50 p-2">
+            <p className="text-xs">O Controlador dono ou o Mestre registra a recuperação com PV escolhidos manualmente, ou confirma a perda permanente. A instância derrotada fica no histórico.</p>
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="text-xs">PV após recuperação (1–{instancia.hpMaximoAtual})
+                <input aria-label={`PV após recuperação de ${inv.apelido?.trim() || inv.nome}`} type="number" min="1" max={instancia.hpMaximoAtual} step="1" value={pvRecuperacaoDerrota[inv.id] ?? ''} onChange={event => setPvRecuperacaoDerrota(current => ({ ...current, [inv.id]: event.target.value }))} className="mt-1 block w-32 rounded border bg-background p-2" />
+              </label>
+              <button type="button" disabled={!Number.isInteger(Number(pvRecuperacaoDerrota[inv.id])) || Number(pvRecuperacaoDerrota[inv.id]) < 1 || Number(pvRecuperacaoDerrota[inv.id]) > instancia.hpMaximoAtual} className="rounded border border-primary px-2 py-2 text-xs disabled:opacity-50" onClick={() => resolverDerrota(inv.id, 'recuperada')}>Registrar recuperação</button>
+              {confirmandoPerdaDerrota === inv.id ? <>
+                <span className="text-xs text-destructive">Esta decisão arquiva a ficha sem possibilidade de invocá-la novamente.</span>
+                <button type="button" className="rounded border border-destructive px-2 py-2 text-xs" onClick={() => resolverDerrota(inv.id, 'perda_permanente')}>Confirmar perda permanente</button>
+                <button type="button" className="rounded border px-2 py-2 text-xs" onClick={() => setConfirmandoPerdaDerrota(null)}>Cancelar</button>
+              </> : <button type="button" className="rounded border px-2 py-2 text-xs" onClick={() => setConfirmandoPerdaDerrota(inv.id)}>Declarar perda permanente</button>}
+            </div>
+          </div>}
           <div className="basis-full text-xs text-muted-foreground">{rotuloTempo}</div>
           <div className="basis-full text-xs text-muted-foreground">Aquisição: {inv.aprovacaoMestre === 'pendente' ? 'Aguardando aprovação do Mestre' : inv.aprovacaoMestre === 'rejeitada' ? 'Rejeitada — edite e solicite novamente' : 'Aprovada'}</div>
           {ativo && automacoesAtivas > 0 && (
@@ -543,7 +584,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
             </div>
           )}
           <div className="flex shrink-0 flex-wrap gap-1">
-            {onEditFicha && <button type="button" disabled={busyAprovacao || inv.aprovacaoMestre === 'pendente'} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={() => onEditFicha(inv.id)}>Editar ficha</button>}
+            {onEditFicha && <button type="button" disabled={inv.perdaPermanente || busyAprovacao || inv.aprovacaoMestre === 'pendente'} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={() => onEditFicha(inv.id)}>Editar ficha</button>}
             {ativo ? (
               <>
                 {estadoInstancia === 'caida' && <button type="button" disabled={(token?.hp ?? 0) <= 0 || !movimentoDisponivel} title={!movimentoDisponivel ? 'Ação de Movimento própria indisponível.' : undefined} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={() => levantar(inv.id)}>Levantar (Ação de Movimento)</button>}
@@ -556,20 +597,20 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
                   Selecionar para invocar
                 </label>
             )}
-            <button type="button" disabled={ativo || derrotaPendente || inv.aprovacaoMestre === 'pendente' || busyAprovacao} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={() => remover(inv.id)}>Remover</button>
+            <button type="button" disabled={inv.perdaPermanente || ativo || derrotaPendente || inv.aprovacaoMestre === 'pendente' || busyAprovacao} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={() => remover(inv.id)}>Remover</button>
           </div>
           <div className="basis-full space-y-2 border-t border-border/60 pt-2">
             <div className="flex items-center justify-between gap-2">
               <strong className="text-xs">Ataques personalizados</strong>
-              <button type="button" className="rounded border px-2 py-1 text-xs" onClick={() => setEditando(editando === inv.id ? null : inv.id)}>Adicionar ataque</button>
+              <button type="button" disabled={inv.perdaPermanente} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={() => setEditando(editando === inv.id ? null : inv.id)}>Adicionar ataque</button>
             </div>
             {inv.acoes.filter(a => a.tipo === 'ataque' || a.teste === 'ataque' || a.teste === 'resistencia').map(a => (
               <div key={a.id} className="flex items-center justify-between text-xs">
                 <span>{a.nome}: {a.dano ?? 'sem dano'} · {a.alcanceM ?? 1.5} m · acerto {a.bonusAtaque ?? 0}</span>
-                <button type="button" className="rounded border px-2 py-1" onClick={() => removerAtaque(inv.id, a.id)}>Excluir</button>
+                <button type="button" disabled={inv.perdaPermanente} className="rounded border px-2 py-1 disabled:opacity-50" onClick={() => removerAtaque(inv.id, a.id)}>Excluir</button>
               </div>
             ))}
-            {editando === inv.id && (
+            {editando === inv.id && !inv.perdaPermanente && (
               <div className="grid grid-cols-2 gap-2">
                 <label className="text-xs">Nome<input aria-label="Nome do ataque" value={nomeAtaque} onChange={e => setNomeAtaque(e.target.value)} className="w-full rounded border bg-background p-2" /></label>
                 <label className="text-xs">Dano<input aria-label="Dados de dano" value={formulaAtaque} onChange={e => setFormulaAtaque(e.target.value)} placeholder="2d12+1d6+3" className="w-full rounded border bg-background p-2" /></label>
@@ -584,7 +625,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
                 <label className="text-xs">Tipo de dano<select value={tipoDanoAtaque} onChange={e => setTipoDanoAtaque(e.target.value as import('@/types').DamageType)} className="w-full rounded border bg-background p-2">
                   {(['DCO','DP','DI','DA','DCG','DCC','DQ','DS','DAL','DNR','DE','DPS','DR','DN','DV'] as const).map(d => <option key={d} value={d}>{d}</option>)}
                 </select></label>
-                <button type="button" disabled={busyAprovacao || inv.aprovacaoMestre === 'pendente'} className="rounded bg-primary px-2 py-2 text-xs text-primary-foreground disabled:opacity-50" onClick={() => void adicionarAtaque(inv.id)}>Salvar ataque</button>
+                <button type="button" disabled={inv.perdaPermanente || busyAprovacao || inv.aprovacaoMestre === 'pendente'} className="rounded bg-primary px-2 py-2 text-xs text-primary-foreground disabled:opacity-50" onClick={() => void adicionarAtaque(inv.id)}>Salvar ataque</button>
               </div>
             )}
           </div>

@@ -10,7 +10,7 @@ import { useTestRequestStore } from '@/stores/useTestRequestStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useDice3DStore } from '@/stores/useDice3DStore';
 import type { EntidadeOmni } from '@/lib/omni/tipos';
-import { invocarControlador, invocarControladores, recolherInvocacao, tokensInvocados, limparInvocacoesDerrotadas, causarDanoInvocacao, curarInvocacao, levantarInvocacao, comandarReposicionamento, comandarAtaque, comandarSuporte, expirarEfeitosSuporteInvocacoes, comandosPorAcao, confirmarMovimentoInvocacao, rolarPericiaInvocacao } from '@/lib/controlador/mapa';
+import { invocarControlador, invocarControladores, recolherInvocacao, tokensInvocados, limparInvocacoesDerrotadas, causarDanoInvocacao, curarInvocacao, levantarInvocacao, resolverDerrotaPendenteInvocacao, comandarReposicionamento, comandarAtaque, comandarSuporte, expirarEfeitosSuporteInvocacoes, comandosPorAcao, confirmarMovimentoInvocacao, rolarPericiaInvocacao } from '@/lib/controlador/mapa';
 import type { InvocacaoControlador } from '@/lib/controlador/tipos';
 
 let numeroFixture = 0;
@@ -570,6 +570,41 @@ describe('Controlador — materialização real no mapa', () => {
     expect(pegarFicha('dono').invocacoesConhecidas?.find(i => i.id === 'a')?.hpAtual).toBe(0);
     expect(pegarFicha('dono').instanciasInvocacao?.[0]).toMatchObject({ estado: 'derrotada', hpAtual: -12 });
     expect(pegarFicha('dono').invocacoesConhecidas).toHaveLength(3);
+  });
+  it('permite ao dono registrar a recuperação com PV escolhidos e preserva a derrota original', () => {
+    const invocada = invocarControlador('dono', 'a', 'leste');
+    if (!invocada.ok) throw new Error(invocada.motivo);
+    causarDanoInvocacao(invocada.tokenId, 24);
+
+    expect(resolverDerrotaPendenteInvocacao('dono', 'a', { resultado: 'recuperada', pvRecuperados: 5 }, {
+      isMaster: false, profileId: 'perfil-alheio',
+    })).toMatchObject({ ok: false });
+    expect(resolverDerrotaPendenteInvocacao('dono', 'a', { resultado: 'recuperada', pvRecuperados: 5 }, {
+      isMaster: false, profileId: 'perfil-dono',
+    })).toEqual({ ok: true });
+
+    expect(pegarFicha('dono').invocacoesConhecidas?.find(item => item.id === 'a')?.hpAtual).toBe(5);
+    expect(pegarFicha('dono').instanciasInvocacao?.[0]).toMatchObject({
+      estado: 'dissipada', hpAtual: 5,
+      resolucaoDerrota: { resultado: 'recuperada', pvNaDerrota: -12, pvRecuperados: 5 },
+    });
+  });
+  it('arquiva permanentemente a ficha e bloqueia sua invocação sem apagar o histórico', () => {
+    const invocada = invocarControlador('dono', 'a', 'leste');
+    if (!invocada.ok) throw new Error(invocada.motivo);
+    causarDanoInvocacao(invocada.tokenId, 24);
+
+    expect(resolverDerrotaPendenteInvocacao('dono', 'a', { resultado: 'perda_permanente' }, {
+      isMaster: true, profileId: 'perfil-mestre',
+    })).toEqual({ ok: true });
+    expect(pegarFicha('dono').invocacoesConhecidas?.find(item => item.id === 'a')?.perdaPermanente).toBe(true);
+    expect(pegarFicha('dono').instanciasInvocacao?.[0]).toMatchObject({
+      estado: 'derrotada', hpAtual: -12,
+      resolucaoDerrota: { resultado: 'perda_permanente', pvNaDerrota: -12 },
+    });
+    expect(invocarControlador('dono', 'a', 'leste')).toMatchObject({
+      ok: false, motivo: 'Esta invocação foi declarada como perda permanente.',
+    });
   });
   it('cura PV negativos até o máximo sem levantar; levantar gasta movimento próprio', () => {
     const dono = pegarFicha('dono');
