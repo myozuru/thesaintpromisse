@@ -161,7 +161,7 @@ export function ControladorInvocacoesSection({ character }: { character: Charact
   };
   const adicionarAtaque = async (id: string) => {
     if (busyAprovacao) return;
-    if (!nomeAtaque.trim() || !/^\\d+d(?:4|6|8|10|12|20)(?:\\+\\d+)?$/i.test(formulaAtaque.trim())
+    if (!nomeAtaque.trim() || !/\^\d+d(?:4|6|8|10|12|20)(?:\\+\\d+)?$/i.test(formulaAtaque.trim())
       || !Number.isFinite(alcanceAtaque) || alcanceAtaque <= 0 || !Number.isFinite(bonusAtaque)) {
       setErro('Informe nome, dados no formato 1d6+2, alcance e bônus válidos.'); return;
     }
@@ -234,7 +234,26 @@ export function ControladorInvocacoesSection({ character }: { character: Charact
       setBusyAprovacao(false);
     }
   };
+  const reenviarAprovacao = async (id: string) => {
+    if (busyAprovacao) return;
+    const original = catalogo.find(inv => inv.id === id);
+    if (!original || original.aprovacaoMestre !== 'rejeitada') return;
+    setBusyAprovacao(true); setErro('');
+    try {
+      const salva = await solicitarVersaoEditada(original, original);
+      updateCharacter(character.id, { invocacoesConhecidas: catalogo.map(inv => inv.id === id ? salva : inv) });
+      setMensagem(salva.aprovacaoMestre === 'aprovada' ? 'Nova versão aprovada pelo Mestre.' : 'Nova versão enviada ao Mestre.');
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : 'Não foi possível reenviar a invocação.');
+    } finally {
+      setBusyAprovacao(false);
+    }
+  };
   const remover = (id: string) => {
+    if (catalogo.some(inv => inv.id === id && inv.aprovacaoMestre === 'pendente')) {
+      setErro('Aguarde a decisão do Mestre antes de remover esta invocação.');
+      return;
+    }
     updateCharacter(character.id, { invocacoesConhecidas: catalogo.filter(i => i.id !== id) });
     setErro('');
   };
@@ -251,6 +270,8 @@ export function ControladorInvocacoesSection({ character }: { character: Charact
         <div key={inv.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-border p-2">
           <div><strong>{inv.nome}</strong><div className="text-xs text-muted-foreground">{inv.tipo === 'shikigami' ? 'Shikigami' : 'Corpo Amaldiçoado'} · PV {inv.hpAtual}/{inv.hpMaximo} · Defesa {inv.defesa} · {inv.deslocamentoM} m · {inv.custoInvocacaoPE} PE · {inv.acoes.length} ações</div></div>
           <div className="basis-full text-xs text-muted-foreground">Aquisição: {inv.aprovacaoMestre === 'pendente' ? 'Aguardando aprovação do Mestre' : inv.aprovacaoMestre === 'rejeitada' ? 'Rejeitada — edite e solicite novamente' : 'Aprovada'}</div>
+          {inv.aprovacaoMestre === 'rejeitada' && inv.motivoRejeicao && <div className="basis-full text-xs text-destructive">Motivo da rejeição: {inv.motivoRejeicao}</div>}
+          {inv.aprovacaoMestre === 'rejeitada' && <button type="button" disabled={busyAprovacao} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={() => void reenviarAprovacao(inv.id)}>Solicitar nova aprovação</button>}
           {isMaster && inv.aprovacaoMestre === 'pendente' && inv.solicitacaoAprovacaoId && (
             <div className="flex flex-wrap gap-2">
               <button type="button" disabled={busyAprovacao} className="rounded border border-primary px-2 py-1 text-xs disabled:opacity-50" onClick={() => void decidirAprovacao(inv.id, 'aprovada')}>Aprovar</button>
@@ -270,7 +291,7 @@ export function ControladorInvocacoesSection({ character }: { character: Charact
             ) : (
               <button type="button" className="rounded border border-primary px-2 py-1 text-xs" disabled={!podeUsarVersaoAprovada({ estado: inv.aprovacaoMestre, versaoAtual: inv.versaoModelo, versaoAprovada: inv.versaoAprovada })} onClick={() => invocar(inv.id)}>Invocar</button>
             )}
-            <button type="button" disabled={ativos.some(e => e.invocationId === inv.id) || busyAprovacao} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={() => remover(inv.id)}>Remover</button>
+            <button type="button" disabled={ativos.some(e => e.invocationId === inv.id) || inv.aprovacaoMestre === 'pendente' || busyAprovacao} className="rounded border px-2 py-1 text-xs disabled:opacity-50" onClick={() => remover(inv.id)}>Remover</button>
           </div>
           <div className="basis-full space-y-2 border-t border-border/60 pt-2">
             <div className="flex items-center justify-between gap-2">
