@@ -7,7 +7,7 @@ import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useLogStore } from '@/stores/useLogStore';
 import type { EntidadeOmni } from '@/lib/omni/tipos';
-import { invocarControlador, invocarControladores, recolherInvocacao, tokensInvocados, limparInvocacoesDerrotadas, causarDanoInvocacao, curarInvocacao, levantarInvocacao, comandarReposicionamento, comandarAtaque, comandosPorAcao } from '@/lib/controlador/mapa';
+import { invocarControlador, invocarControladores, recolherInvocacao, tokensInvocados, limparInvocacoesDerrotadas, causarDanoInvocacao, curarInvocacao, levantarInvocacao, comandarReposicionamento, comandarAtaque, comandosPorAcao, confirmarMovimentoInvocacao } from '@/lib/controlador/mapa';
 import type { InvocacaoControlador } from '@/lib/controlador/tipos';
 
 let numeroFixture = 0;
@@ -28,6 +28,33 @@ function configurarTempo(id: string, quantidade: number, unidade = 'turnos') {
       : item),
   });
 }
+function configurarEconomiaMovimento(id: string, quantidade = 1) {
+  const personagem = pegarFicha('dono');
+  useCharacterStore.getState().updateCharacter('dono', {
+    invocacoesConhecidas: (personagem.invocacoesConhecidas ?? []).map(item => item.id === id
+      ? { ...item, economiaAcoesConfigurada: { acaoMovimento: quantidade } }
+      : item),
+  });
+}
+function prepararMovimentoPendente(
+  tokenId: string,
+  instanciaId: string,
+  de: { x: number; y: number },
+  distanciaM: number,
+  requestId: string,
+  trail: { x: number; y: number }[],
+) {
+  useMapStore.getState().setPendingMove({
+    entityId: tokenId,
+    charId: 'dono',
+    invocationInstanceId: instanciaId,
+    movementRequestId: requestId,
+    startX: de.x,
+    startY: de.y,
+    trail,
+    distM: distanciaM,
+  });
+}
 beforeEach(() => {
   numeroFixture += 1;
   useInventoryStore.getState().resetAll();
@@ -46,6 +73,144 @@ beforeEach(() => {
   comoTela({ profileId: 'perfil-dono', role: 'PLAYER' });
 });
 describe('Controlador — materialização real no mapa', () => {
+  it('move no turno do dono dentro do deslocamento e gasta só a ação da instância', () => {
+    configurarEconomiaMovimento('a');
+    useCharacterStore.getState().updateCharacter('dono', { actionsCurrent: 2, bonusActionsCurrent: 1 });
+    useCombatStore.setState({
+      inCombat: true,
+      currentTurnIndex: 0,
+      initiativeOrder: [{ charId: 'dono', charName: 'Dono', roll: 10, bonus: 0, total: 10 }],
+    } as never);
+    const invocacao = invocarControlador('dono', 'a', 'leste');
+    if (!invocacao.ok) throw new Error(invocacao.motivo);
+    const token = useMapStore.getState().entities[invocacao.tokenId];
+    const de = { x: token.x, y: token.y };
+    const para = { x: token.x + 70, y: token.y };
+    useMapStore.getState().updateEntity(token.id, para);
+    prepararMovimentoPendente(token.id, token.invocationInstanceId!, de, 1.5, 'movimento-teste-1', [de, para]);
+
+    expect(confirmarMovimentoInvocacao({
+      tokenId: token.id,
+      instanciaId: token.invocationInstanceId!,
+      de,
+      para,
+      trajetoria: [de, para],
+      distanciaM: 1.5,
+      requestId: 'movimento-teste-1',
+    })).toEqual({ ok: true, distanciaM: 1.5 });
+    const instancia = pegarFicha('dono').instanciasInvocacao?.find(item => item.id === token.invocationInstanceId);
+    expect(instancia?.economiaAcoes?.acaoMovimento?.atual).toBe(0);
+    expect(instancia?.eventosAcoesProcessados).toContain('movimento-teste-1');
+    expect(pegarFicha('dono')).toMatchObject({ actionsCurrent: 2, bonusActionsCurrent: 1 });
+  });
+
+  it('recusa movimento fora do deslocamento sem debitar ação própria', () => {
+    configurarEconomiaMovimento('a');
+    useCombatStore.setState({
+      inCombat: true,
+      currentTurnIndex: 0,
+      initiativeOrder: [{ charId: 'dono', charName: 'Dono', roll: 10, bonus: 0, total: 10 }],
+    } as never);
+    const invocacao = invocarControlador('dono', 'a', 'leste');
+    if (!invocacao.ok) throw new Error(invocacao.motivo);
+    const token = useMapStore.getState().entities[invocacao.tokenId];
+    const de = { x: token.x, y: token.y };
+    const para = { x: token.x + 700, y: token.y };
+    useMapStore.getState().updateEntity(token.id, para);
+    prepararMovimentoPendente(token.id, token.invocationInstanceId!, de, 15, 'movimento-longo', [de, para]);
+
+    expect(confirmarMovimentoInvocacao({
+      tokenId: token.id,
+      instanciaId: token.invocationInstanceId!,
+      de,
+      para,
+      trajetoria: [de, para],
+      distanciaM: 15,
+      requestId: 'movimento-longo',
+    })).toEqual({ ok: false, motivo: 'O movimento excede o deslocamento configurado na ficha.' });
+    expect(pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoMovimento?.atual).toBe(1);
+  });
+
+  it('recusa atravessar uma parede sem gastar ação', () => {
+    configurarEconomiaMovimento('a');
+    useCombatStore.setState({
+      inCombat: true,
+      currentTurnIndex: 0,
+      initiativeOrder: [{ charId: 'dono', charName: 'Dono', roll: 10, bonus: 0, total: 10 }],
+    } as never);
+    const invocacao = invocarControlador('dono', 'a', 'leste');
+    if (!invocacao.ok) throw new Error(invocacao.motivo);
+    const token = useMapStore.getState().entities[invocacao.tokenId];
+    const de = { x: token.x, y: token.y };
+    const para = { x: token.x + 70, y: token.y };
+    useMapStore.getState().addWall({ id: 'parede-movimento', kind: 'wall', p1: { x: token.x + 35, y: token.y - 50 }, p2: { x: token.x + 35, y: token.y + 50 } });
+    useMapStore.getState().updateEntity(token.id, para);
+    prepararMovimentoPendente(token.id, token.invocationInstanceId!, de, 1.5, 'movimento-parede', [de, para]);
+
+    expect(confirmarMovimentoInvocacao({
+      tokenId: token.id,
+      instanciaId: token.invocationInstanceId!,
+      de,
+      para,
+      trajetoria: [de, para],
+      distanciaM: 1.5,
+      requestId: 'movimento-parede',
+    })).toEqual({ ok: false, motivo: 'A trajetória está bloqueada por uma parede, área ou token.' });
+    expect(pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoMovimento?.atual).toBe(1);
+  });
+
+  it('recusa ocupar outro token sem gastar ação', () => {
+    configurarEconomiaMovimento('a');
+    useCombatStore.setState({
+      inCombat: true,
+      currentTurnIndex: 0,
+      initiativeOrder: [{ charId: 'dono', charName: 'Dono', roll: 10, bonus: 0, total: 10 }],
+    } as never);
+    const invocacao = invocarControlador('dono', 'a', 'leste');
+    if (!invocacao.ok) throw new Error(invocacao.motivo);
+    const token = useMapStore.getState().entities[invocacao.tokenId];
+    const de = { x: token.x, y: token.y };
+    const para = { x: token.x + 70, y: token.y };
+    useMapStore.getState().addEntity({
+      shape: 'RECT', x: para.x, y: para.y, w: 70, h: 70, rotation: 0,
+      color: '#333333', label: 'Bloqueador', locked: true, layer: 'tokens',
+    });
+    useMapStore.getState().updateEntity(token.id, para);
+    prepararMovimentoPendente(token.id, token.invocationInstanceId!, de, 1.5, 'movimento-token', [de, para]);
+
+    expect(confirmarMovimentoInvocacao({
+      tokenId: token.id,
+      instanciaId: token.invocationInstanceId!,
+      de,
+      para,
+      trajetoria: [de, para],
+      distanciaM: 1.5,
+      requestId: 'movimento-token',
+    })).toEqual({ ok: false, motivo: 'A trajetória está bloqueada por uma parede, área ou token.' });
+    expect(pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoMovimento?.atual).toBe(1);
+  });
+
+  it('não confirma movimento de uma instância caída', () => {
+    configurarEconomiaMovimento('a');
+    const invocacao = invocarControlador('dono', 'a', 'leste');
+    if (!invocacao.ok) throw new Error(invocacao.motivo);
+    const token = useMapStore.getState().entities[invocacao.tokenId];
+    useMapStore.getState().updateEntity(token.id, { hp: 0, invocationState: 'caida' });
+    const posicao = { x: token.x, y: token.y };
+    prepararMovimentoPendente(token.id, token.invocationInstanceId!, posicao, 0, 'movimento-caido', []);
+
+    expect(confirmarMovimentoInvocacao({
+      tokenId: token.id,
+      instanciaId: token.invocationInstanceId!,
+      de: posicao,
+      para: posicao,
+      trajetoria: [],
+      distanciaM: 0,
+      requestId: 'movimento-caido',
+    })).toEqual({ ok: false, motivo: 'Invocação caída ou inativa não pode se mover.' });
+    expect(pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoMovimento?.atual).toBe(1);
+  });
+
   it('concede o tempo configurado uma vez quando a instância é invocada no turno do dono', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-10-10T10:00:00.000Z'));

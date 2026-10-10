@@ -1,7 +1,7 @@
 # Etapa 11 — economia de ações por Shikigami
 
 **Data:** 10/10/2026  
-**Status:** fundação implementada; fluxos completos de OMNI, reações e HUD continuam nas etapas próprias.
+**Status:** fundação implementada; execução geral de OMNI e reações completas continuam nas etapas próprias.
 
 ## Comportamento implementado
 
@@ -14,6 +14,7 @@
 - A ficha permite configurar recursos próprios com saldo inicial, máximo e recuperação no turno do dono, rodada, combate ou manual. A materialização copia esses saldos para a instância; recuperação automática respeita o máximo.
 - Cada ação pode definir se é manual ou exclusiva de evento automático, e distribuir débitos entre PE do dono e recursos da invocação. O executor valida todos os saldos antes de gastar qualquer um. A soma dos débitos de PE precisa corresponder ao custo total em PE. Débitos de outros recursos próprios são adicionais.
 - Comandos podem receber `requestId`, persistido por instância para impedir replay do mesmo ID. Os últimos 200 IDs são mantidos.
+- A HUD e o painel do dono exibem esses saldos sem misturá-los aos recursos do personagem; os resets marcados como manuais podem ser aplicados à instância pelo painel (concluído na Etapa 12).
 
 ## Regras preservadas
 
@@ -24,11 +25,8 @@
 
 ## Escopo que segue pendente
 
-- A HUD própria e o painel do Controlador usarão esses saldos na Etapa 12.
-- Movimento completo no mapa, além do reposicionamento adjacente atual, pertence à Etapa 12.
 - Rolagens e execução geral das habilidades e ações OMNI continuam nas Etapas 13 e 15.
 - Reações já têm saldo e reset por instância, mas a janela de reação, prompt e execução antes do dano continuam na Etapa 17.
-- O reset manual está representado na configuração e no domínio; a operação de interface para solicitá-lo ficará no painel de controle.
 - A verificação server-side, locks entre clientes e sincronização autoritativa permanecem na Etapa 20.
 
 ## Validação

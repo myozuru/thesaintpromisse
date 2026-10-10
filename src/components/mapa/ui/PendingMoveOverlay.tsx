@@ -23,6 +23,8 @@ import { getSocket } from '@/lib/socket';
 import { holdLocalMapSync } from '../mapSyncGuards';
 import { combatMoveBudget } from '@/lib/movementBudget';
 import { isFreeformFor } from '@/lib/freeformMode';
+import { confirmarMovimentoInvocacao } from '@/lib/controlador/mapa';
+import { toast } from '@/hooks/use-toast';
 
 
 export function PendingMoveOverlay() {
@@ -48,13 +50,16 @@ export function PendingMoveOverlay() {
   if (!ent) return null;
 
   const combatNow = useCombatStore.getState();
+  const isInvocationMove = !!pending.invocationInstanceId;
   const isActiveTurn = !combatNow.inCombat || combatNow.initiativeOrder[combatNow.currentTurnIndex]?.charId === pending.charId;
   const isFreeform = isActiveTurn && isFreeformFor(character, freeformMode);
   const used = movementUsed[pending.charId] ?? 0;
   const equipped = Object.values(inventoryItems).filter((item) => item.ownerId === pending.charId && item.isEquipped && item.equippedSlot);
   const bonusDeslocamento = character ? selectOmniModifiers(character, equipped, omniEntidades).deslocamento : 0;
-  const total = isFreeform ? Infinity : (combatMoveBudget(character, isActiveTurn, bonusDeslocamento) ?? 0);
-  const remaining = isFreeform ? Infinity : Math.max(0, total - used - pending.distM);
+  const total = isInvocationMove
+    ? Math.max(0, ent.invocationMovementM ?? 0)
+    : isFreeform ? Infinity : (combatMoveBudget(character, isActiveTurn, bonusDeslocamento) ?? 0);
+  const remaining = isFreeform && !isInvocationMove ? Infinity : Math.max(0, total - (isInvocationMove ? 0 : used) - pending.distM);
 
   const confirm = async () => {
     if (locked.current) return;
@@ -62,6 +67,41 @@ export function PendingMoveOverlay() {
     try {
       const de = { x: pending.startX, y: pending.startY }, para = { x: ent.x, y: ent.y };
       const movimento = { de, para, trajetoria: pending.trail.length ? pending.trail : amostrarTrajetoria(de, para, (gridConfig.dpi || 70) / 4) };
+      if (isInvocationMove) {
+        const resultado = confirmarMovimentoInvocacao({
+          tokenId: pending.entityId,
+          instanciaId: pending.invocationInstanceId!,
+          de,
+          para,
+          trajetoria: movimento.trajetoria,
+          distanciaM: pending.distM,
+          requestId: pending.movementRequestId ?? `movimento-${crypto.randomUUID()}`,
+        });
+        if (!resultado.ok) {
+          toast({ title: 'Movimento não confirmado', description: resultado.motivo, variant: 'destructive' });
+          cancel();
+          return;
+        }
+        const confirmado = useMapStore.getState().entities[pending.entityId];
+        if (confirmado) {
+          holdLocalMapSync(1500, [pending.entityId]);
+          const w = window as unknown as {
+            __worldBus?: { send: (a: unknown) => void };
+            __worldBusClientId?: string;
+          };
+          const payload = {
+            clientId: w.__worldBusClientId,
+            at: Date.now(),
+            patches: [{ id: pending.entityId, patch: { x: confirmado.x, y: confirmado.y } }],
+          };
+          try {
+            w.__worldBus?.send({ type: 'broadcast', event: 'entity-patch', payload });
+            getSocket()?.emit('entity:patch', payload);
+          } catch { /* offline */ }
+        }
+        setPendingMove(null);
+        return;
+      }
       for (const gatilho of ['quando_inimigo_sair_alcance', 'quando_inimigo_entrar_alcance'] as const) {
         const evento = { gatilho, origemId: pending.charId, movimento };
         const r = ofertasReacaoAtiva(evento).length ? await abrirJanelaReacaoAtiva(evento) : { cancelado: false };
@@ -142,7 +182,7 @@ export function PendingMoveOverlay() {
     >
       <div className="pointer-events-auto flex flex-col items-center gap-1">
         <div className="rounded-md border border-border bg-card/95 backdrop-blur px-2 py-0.5 text-xs font-mono text-amber-200 shadow-lg tabular-nums">
-          {pending.distM.toFixed(1)}m{Number.isFinite(remaining) ? ` · resta ${remaining.toFixed(1)}m` : ' · livre'}
+          {pending.distM.toFixed(1)}m{Number.isFinite(remaining) ? ` · resta ${remaining.toFixed(1)}m` : ' · livre'}{isInvocationMove ? ' · ação própria' : ''}
         </div>
         <div className="flex items-center gap-1 rounded-full border border-border bg-card/95 backdrop-blur px-1 py-1 shadow-xl">
           <button

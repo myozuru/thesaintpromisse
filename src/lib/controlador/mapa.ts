@@ -8,6 +8,10 @@ import { limiteAtivasPersonagem, type InvocacaoControlador } from './tipos';
 import { useLogStore } from '@/stores/useLogStore';
 import { podeUsarVersaoAprovada } from '@/lib/controlador/aprovacao';
 import { WallsEngine } from '@/components/mapa/WallsEngine';
+import { prepareCollisionCache, resolveCollisionMove, tokenFootprintSegments, type MapCollisionToken } from '@/lib/mapCollision';
+import { buildSegments as buildFogSegments } from '@/lib/fog/visibility';
+import { useFogStore } from '@/stores/fogStore';
+import { isFreeformFor } from '@/lib/freeformMode';
 import type { Character } from '@/types';
 import { InstanciaInvocacaoSchema, type InstanciaInvocacao } from '@/lib/invocacoes/schema';
 import {
@@ -27,6 +31,7 @@ import {
   economiaAcoesInicial,
   gastarAcaoDaInstancia,
   podeUsarAcaoDaInstancia,
+  processarResetEconomiaInstancia,
   registrarRecargaDaAcao,
   recursosInvocacaoIniciais,
 } from './economiaAcoes';
@@ -652,6 +657,142 @@ export function podeComandarInvocacao(donoId: string): boolean {
   return combat.inCombat && combat.initiativeOrder[combat.currentTurnIndex]?.charId === donoId;
 }
 
+/** Movimento de jogador em combate exige o turno do dono e Ação de Movimento própria. */
+export function podeMoverInvocacao(donoId: string, tokenId: string): boolean {
+  const dono = useCharacterStore.getState().characters.find(character => character.id === donoId);
+  const token = useMapStore.getState().entities[tokenId];
+  if (!dono || !token || token.ownerCharId !== donoId || !token.invocationId || (token.hp ?? 0) <= 0) return false;
+  const modelo = obterModeloDoToken(dono, token);
+  if (!modelo || !Number.isFinite(modelo.deslocamentoM) || modelo.deslocamentoM <= 0) return false;
+  const instancia = obterInstanciaDoToken(dono, token, modelo);
+  if (instancia.estado !== 'ativa') return false;
+  const combat = useCombatStore.getState();
+  if (!combat.inCombat) return true;
+  if (!podeComandarInvocacao(donoId)) return false;
+  if (isFreeformFor(dono, combat.freeformMode)) return true;
+  return (instancia.economiaAcoes?.acaoMovimento?.atual ?? 0) > 0;
+}
+
+export type ResultadoMovimentoInvocacao =
+  | { ok: true; distanciaM: number }
+  | { ok: false; motivo: string };
+
+/** Confirma um movimento pré-visualizado, revalida distância/colisão e gasta ação da instância. */
+export function confirmarMovimentoInvocacao(input: {
+  tokenId: string;
+  instanciaId: string;
+  de: { x: number; y: number };
+  para: { x: number; y: number };
+  trajetoria: readonly { x: number; y: number }[];
+  distanciaM: number;
+  requestId: string;
+}): ResultadoMovimentoInvocacao {
+  const mapa = useMapStore.getState();
+  const token = mapa.entities[input.tokenId];
+  if (!token?.ownerCharId || !token.invocationId || token.invocationInstanceId !== input.instanciaId) {
+    return { ok: false, motivo: 'A instância selecionada não está mais no mapa.' };
+  }
+  const previa = mapa.pendingMove;
+  if (!previa || previa.entityId !== token.id || previa.charId !== token.ownerCharId ||
+    previa.invocationInstanceId !== input.instanciaId ||
+    Math.hypot(previa.startX - input.de.x, previa.startY - input.de.y) > 0.5 ||
+    (previa.movementRequestId !== undefined && previa.movementRequestId !== input.requestId) ||
+    Math.abs(previa.distM - input.distanciaM) > 0.05) {
+    return { ok: false, motivo: 'A prévia de movimento não corresponde à instância selecionada.' };
+  }
+  if (!input.requestId.trim() || !Number.isFinite(input.distanciaM) || input.distanciaM < 0 ||
+    ![input.de.x, input.de.y, input.para.x, input.para.y].every(Number.isFinite) ||
+    input.trajetoria.length > 1024 || !input.trajetoria.every(point => Number.isFinite(point.x) && Number.isFinite(point.y))) {
+    return { ok: false, motivo: 'Trajetória de movimento inválida.' };
+  }
+  if (Math.hypot(token.x - input.para.x, token.y - input.para.y) > 0.5) {
+    return { ok: false, motivo: 'A posição do token mudou antes da confirmação.' };
+  }
+
+  const dono = useCharacterStore.getState().characters.find(character => character.id === token.ownerCharId);
+  if (!dono) return { ok: false, motivo: 'Dono da invocação não encontrado.' };
+  const modelo = obterModeloDoToken(dono, token);
+  if (!modelo || !Number.isFinite(modelo.deslocamentoM) || modelo.deslocamentoM <= 0) {
+    return { ok: false, motivo: 'Deslocamento da invocação inválido.' };
+  }
+  const instanciaAtiva = obterInstanciaDoToken(dono, token, modelo);
+  if ((token.hp ?? instanciaAtiva.hpAtual) <= 0 || (token.invocationState && token.invocationState !== 'ativa') || instanciaAtiva.estado !== 'ativa') {
+    return { ok: false, motivo: 'Invocação caída ou inativa não pode se mover.' };
+  }
+  const grid = mapa.gridConfig;
+  if (!(grid.dpi > 0) || !(grid.metersPerCell > 0)) return { ok: false, motivo: 'Grade do mapa inválida.' };
+  const pontos = [input.de, ...input.trajetoria, input.para];
+  const distanciaDaTrajetoriaM = pontos.slice(1).reduce((total, ponto, index) => {
+    const anterior = pontos[index];
+    return total + Math.hypot(ponto.x - anterior.x, ponto.y - anterior.y) / grid.dpi * grid.metersPerCell;
+  }, 0);
+  const distanciaM = Math.max(input.distanciaM, distanciaDaTrajetoriaM);
+  if (distanciaM > modelo.deslocamentoM + 0.05) {
+    return { ok: false, motivo: 'O movimento excede o deslocamento configurado na ficha.' };
+  }
+  if (distanciaM <= 0.05) return { ok: true, distanciaM };
+  const segmentos = WallsEngine.blockingSegments(mapa.walls, 'sight');
+  const fog = useFogStore.getState();
+  for (const segment of buildFogSegments(fog.walls, fog.doors)) segmentos.push([segment.a, segment.b]);
+  const entidadesFixas = Object.values(mapa.entities).filter(entity =>
+    entity.id !== token.id && entity.layer !== 'map' && !entity.hidden && !entity.carriedBy,
+  );
+  for (const entity of entidadesFixas) {
+    const bloqueador: MapCollisionToken = { origin: { x: entity.x, y: entity.y }, entity };
+    segmentos.push(...tokenFootprintSegments(bloqueador, 0, 0));
+  }
+  const cache = prepareCollisionCache(segmentos);
+  const movingToken: MapCollisionToken = { origin: input.de, entity: token };
+  let deslocamento = { dx: 0, dy: 0 };
+  for (const ponto of pontos.slice(1)) {
+    const destino = { dx: ponto.x - input.de.x, dy: ponto.y - input.de.y };
+    const passo = { dx: destino.dx - deslocamento.dx, dy: destino.dy - deslocamento.dy };
+    deslocamento = resolveCollisionMove([movingToken], cache, deslocamento, passo);
+    if (Math.hypot(deslocamento.dx - destino.dx, deslocamento.dy - destino.dy) > 0.5) {
+      return { ok: false, motivo: 'A trajetória está bloqueada por uma parede, área ou token.' };
+    }
+  }
+  if (Math.hypot(input.de.x + deslocamento.dx - input.para.x, input.de.y + deslocamento.dy - input.para.y) > 0.5) {
+    return { ok: false, motivo: 'A trajetória não termina na posição pré-visualizada.' };
+  }
+
+  const combat = useCombatStore.getState();
+  let instancia = instanciaAtiva;
+  if (combat.inCombat) {
+    if (!podeComandarInvocacao(dono.id)) return { ok: false, motivo: 'Só é possível mover a invocação no turno do dono.' };
+    if (isFreeformFor(dono, combat.freeformMode)) return { ok: true, distanciaM };
+    const gasto = gastarAcaoDaInstancia(instancia, 'acaoMovimento', 1, input.requestId);
+    if (!gasto.ok) return gasto;
+    instancia = gasto.instancia;
+    gravarInstancia(dono, instancia);
+  }
+  return { ok: true, distanciaM };
+}
+
+/** Aplica os resets manuais configurados no modelo somente à instância escolhida. */
+export function resetarEconomiaManualInvocacao(
+  donoId: string,
+  tokenId: string,
+  eventoId = novoIdInvocacao('reset-economia'),
+): { ok: true } | { ok: false; motivo: string } {
+  const dono = useCharacterStore.getState().characters.find(character => character.id === donoId);
+  const token = useMapStore.getState().entities[tokenId];
+  if (!dono || !token || token.ownerCharId !== donoId || !token.invocationId) {
+    return { ok: false, motivo: 'Instância do Shikigami não encontrada para este dono.' };
+  }
+  const modelo = obterModeloDoToken(dono, token);
+  if (!modelo) return { ok: false, motivo: 'Modelo da invocação não encontrado.' };
+  const temResetManual = Object.values(modelo.economiaAcoesConfigurada?.resetPorCategoria ?? {}).includes('manual') ||
+    modelo.acoes.some(acao => acao.recargaConfigurada?.unidade === 'manual') ||
+    (modelo.recursosConfigurados ?? []).some(recurso => recurso.recargaConfigurada?.unidade === 'manual');
+  if (!temResetManual) return { ok: false, motivo: 'Esta instância não possui saldos com reset manual.' };
+  const instancia = obterInstanciaDoToken(dono, token, modelo);
+  if (instancia.estado !== 'ativa') return { ok: false, motivo: 'Apenas uma instância ativa pode receber reset manual.' };
+  if (!eventoId.trim()) return { ok: false, motivo: 'Identificador do reset inválido.' };
+  gravarInstancia(dono, processarResetEconomiaInstancia(instancia, modelo, 'manual', eventoId));
+  return { ok: true };
+}
+
 
 /** Dano direcionado a uma instância; 0 PV deixa a criatura Caída, −PV máximo a derrota. */
 export function causarDanoInvocacao(tokenId: string, dano: number): { ok: true; hpRestante: number; destruida: boolean } | { ok: false; motivo: string } {
@@ -733,7 +874,7 @@ export function levantarInvocacao(donoId: string, invocacaoId: string): { ok: tr
   return { ok: true };
 }
 
-/** Primeiro comando da Fase 4: uma ação bônus reposiciona um servo em
+/** Primeiro comando da Fase 4: uma Ação Livre própria reposiciona um servo em
  * uma célula livre. Não cria novo turno na iniciativa nem movimento gratuito.
  */
 export function comandarReposicionamento(

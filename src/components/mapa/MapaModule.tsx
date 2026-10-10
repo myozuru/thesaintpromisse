@@ -4,7 +4,7 @@ import { comPreviaMovimento, confirmarMovimentoMapa } from '@/lib/mapa/movimento
 import { ItemNoChaoOverlay } from './ui/ItemNoChaoOverlay';
 import { AlvoMapaOverlay } from './ui/AlvoMapaOverlay';
 import { useAlvoMapaStore, tokenDaFicha, clicarAlvoMapa, terminarAlvoMapa, alvosNoAlcance } from '@/stores/useAlvoMapaStore';
-import { prepareCollisionCache, resolveCollisionMove, type MapCollisionSegment, type MapCollisionToken, type MapCollisionCache } from '@/lib/mapCollision';
+import { prepareCollisionCache, resolveCollisionMove, tokenFootprintSegments, type MapCollisionSegment, type MapCollisionToken, type MapCollisionCache } from '@/lib/mapCollision';
 /**
  * MapaModule — Etapas 1+2+3.
  *
@@ -88,6 +88,7 @@ import { PreparoImediatoPrompt } from '@/components/fichas/PreparoImediatoPrompt
 import { PendingAoEOverlay } from './ui/PendingAoEOverlay';
 import { LootOverlay } from './ui/LootOverlay';
 import { ChestOverlay } from './ui/ChestOverlay';
+import { ShikigamiTokenHud } from './ui/ShikigamiTokenHud';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { useFogStore } from '@/stores/fogStore';
 import { buildSegments as buildFogSegments } from '@/lib/fog/visibility';
@@ -116,6 +117,8 @@ import { isFreeformFor } from '@/lib/freeformMode';
 import { toast } from '@/hooks/use-toast';
 import { imagemArmaEmpunhada, imagemPronta } from '@/lib/omni/imagemItem';
 import { useChestStore } from '@/stores/useChestStore';
+import { useShikigamiHudStore } from '@/stores/useShikigamiHudStore';
+import { podeMoverInvocacao } from '@/lib/controlador/mapa';
 
 const MIN_SCALE = 0.1;
 const MAX_SCALE = 10;
@@ -149,6 +152,8 @@ type DragMode =
 
 type CombatMoveMeta = {
   charId: string;
+  invocationInstanceId?: string;
+  movementRequestId?: string;
   budgetM: number;
   usedBeforeM: number;
   metersPerPx: number;
@@ -267,8 +272,14 @@ const canStartMoveEntityNow = (entity: Entity): boolean => {
   if (!playerOwnsEntity(entity, activeProfileId, characters)) return false;
 
   const combat = useCombatStore.getState();
-  // Servos não possuem turnos independentes: em combate aguardam comando do dono.
-  if (entity.invocationId && combat.inCombat) return false;
+  // Servos não ganham iniciativa própria: em combate o jogador move no turno
+  // do dono e paga a Ação de Movimento da instância ao confirmar.
+  if (entity.invocationId) {
+    if (!combat.inCombat) return true;
+    if (samePending) return true;
+    if (combat.initiativeOrder[combat.currentTurnIndex]?.charId !== entity.ownerCharId) return false;
+    return !!entity.ownerCharId && podeMoverInvocacao(entity.ownerCharId, entity.id);
+  }
   if (!combat.inCombat) return true;
   // Entidades sem ficha vinculada (imagens/objetos enviados pelo player) são
   // movíveis livremente mesmo em combate — não consomem orçamento de movimento.
@@ -1112,6 +1123,78 @@ export function MapaModule() {
         }
       }
 
+      // HUD de Shikigami: mostra alcance escolhido e mede até o alvo, ponto ou cursor.
+      {
+        const hud = useShikigamiHudStore.getState();
+        const source = hud.sourceTokenId ? entities[hud.sourceTokenId] : undefined;
+        const owner = source?.ownerCharId
+          ? useCharacterStore.getState().characters.find((character) => character.id === source.ownerCharId)
+          : undefined;
+        const model = owner?.invocacoesConhecidas?.find((invocation) => invocation.id === source?.invocationId);
+        if (source && model && source.invocationId && drag.kind === 'none' && !state.pendingAoEPlacement && !state.pendingInvocationPlacement) {
+          const dpi = state.gridConfig.dpi || 70;
+          const metersPerCell = state.gridConfig.metersPerCell || 1.5;
+          const rangeMode = hud.rangeMode;
+          const action = rangeMode?.kind === 'action'
+            ? model.acoes.find((item) => item.id === rangeMode.actionId)
+            : undefined;
+          const rangeM = hud.rangeMode?.kind === 'movement' ? model.deslocamentoM : action?.alcanceM;
+          const radius = rangeM === undefined ? undefined : (rangeM / metersPerCell) * dpi;
+          const target = hud.selectedTargetId ? entities[hud.selectedTargetId] : undefined;
+          const point = hud.interaction
+            ? mouseWorldRef.current
+            : target && !target.hidden
+              ? { x: target.x, y: target.y }
+              : hud.measurementPoint;
+          const sourceCenter = { x: source.x, y: source.y };
+          const distanceM = point ? Math.hypot(point.x - sourceCenter.x, point.y - sourceCenter.y) / dpi * metersPerCell : null;
+          const outOfRange = rangeM !== undefined && distanceM !== null && distanceM > rangeM + 0.05;
+          tkCtx.save();
+          if (radius !== undefined && Number.isFinite(radius) && radius >= 0) {
+            tkCtx.strokeStyle = hud.rangeMode?.kind === 'action' ? '#f59e0b88' : '#a78bfa88';
+            tkCtx.lineWidth = 1.5 / camera.scale;
+            tkCtx.setLineDash([7 / camera.scale, 5 / camera.scale]);
+            tkCtx.beginPath();
+            tkCtx.arc(sourceCenter.x, sourceCenter.y, radius, 0, Math.PI * 2);
+            tkCtx.stroke();
+            tkCtx.setLineDash([]);
+          }
+          if (point) {
+            const color = outOfRange ? '#ef4444' : '#a78bfa';
+            tkCtx.strokeStyle = color;
+            tkCtx.lineWidth = 2 / camera.scale;
+            tkCtx.setLineDash([8 / camera.scale, 6 / camera.scale]);
+            tkCtx.beginPath();
+            tkCtx.moveTo(sourceCenter.x, sourceCenter.y);
+            tkCtx.lineTo(point.x, point.y);
+            tkCtx.stroke();
+            tkCtx.setLineDash([]);
+            if (target && !target.hidden) {
+              tkCtx.lineWidth = 3 / camera.scale;
+              tkCtx.beginPath();
+              tkCtx.arc(target.x, target.y, Math.max(target.w, target.h) / 2 + 5 / camera.scale, 0, Math.PI * 2);
+              tkCtx.stroke();
+            }
+            if (distanceM !== null) {
+              const label = rangeM === undefined ? `${distanceM.toFixed(1)} m` : `${distanceM.toFixed(1)} / ${rangeM} m`;
+              const mx = (sourceCenter.x + point.x) / 2;
+              const my = (sourceCenter.y + point.y) / 2;
+              const font = Math.max(11, 12 / camera.scale);
+              tkCtx.font = `bold ${font}px ui-monospace, monospace`;
+              tkCtx.textAlign = 'center';
+              tkCtx.textBaseline = 'middle';
+              const width = tkCtx.measureText(label).width + 12 / camera.scale;
+              const height = font + 6 / camera.scale;
+              tkCtx.fillStyle = 'rgba(15,15,20,0.85)';
+              tkCtx.fillRect(mx - width / 2, my - height / 2, width, height);
+              tkCtx.fillStyle = outOfRange ? '#fca5a5' : '#ffffff';
+              tkCtx.fillText(label, mx, my);
+            }
+          }
+          tkCtx.restore();
+        }
+      }
+
 
 
 
@@ -1368,6 +1451,7 @@ export function MapaModule() {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && store.getState().pendingInvocationPlacement) { store.getState().resolveInvocationPlacement(null); e.preventDefault(); return; }
       if (e.key === 'Escape' && useAlvoMapaStore.getState().pending) { terminarAlvoMapa(null); e.preventDefault(); return; }
+      if (e.key === 'Escape' && useShikigamiHudStore.getState().interaction) { useShikigamiHudStore.getState().cancelInteraction(); e.preventDefault(); return; }
       if (e.code === 'Space') {
         // Evita que Space "re-clique" o último botão focado e impede o scroll
         // padrão da página. Mantém o Space funcionando dentro de inputs/textareas.
@@ -1667,6 +1751,11 @@ export function MapaModule() {
           store.getState().resolveAoEPlacement(null);
           return;
         }
+        if (e.button === 2 && useShikigamiHudStore.getState().interaction) {
+          useShikigamiHudStore.getState().cancelInteraction();
+          e.preventDefault();
+          return;
+        }
         // Botão direito durante mira single-target → cancela o feitiço.
         if (e.button === 2 && store.getState().singleTargetAim) {
           e.preventDefault();
@@ -1727,6 +1816,23 @@ export function MapaModule() {
         ) < dpi * Math.SQRT1_2;
         if (distanceM > item.alcanceM || occupied || blockedByWall) return;
         state.resolveInvocationPlacement({ x, y });
+        return;
+      }
+
+      const shikigamiInteraction = useShikigamiHudStore.getState();
+      if (shikigamiInteraction.interaction && !useAlvoMapaStore.getState().pending && !state.pendingAoEPlacement && !state.singleTargetAim) {
+        e.preventDefault();
+        const hit = pickEntityAt(wx, wy);
+        if (shikigamiInteraction.interaction === 'target') {
+          if (!hit || hit.id === shikigamiInteraction.sourceTokenId || hit.hidden || hit.carriedBy || (hit.layer ?? 'tokens') !== 'tokens') {
+            shikigamiInteraction.setError('Escolha outro token visível para definir o alvo.');
+          } else {
+            shikigamiInteraction.acceptTarget(hit.id);
+          }
+        } else {
+          const point = hit && (hit.layer ?? 'tokens') !== 'map' ? { x: hit.x, y: hit.y } : { x: wx, y: wy };
+          shikigamiInteraction.acceptMeasurement(point);
+        }
         return;
       }
 
@@ -2021,11 +2127,13 @@ export function MapaModule() {
         // expansão de grupo: clicar em membro de um grupo seleciona todos do grupo
         // (a menos que Alt esteja pressionado, que isola apenas o token clicado).
         const altIsolate = (e as any).altKey === true;
-        const groupExpanded = altIsolate
+        const groupExpanded = hit.invocationId || altIsolate
           ? [hit.id]
           : state.expandToGroups([hit.id]);
         let ids: string[];
-        if (shiftDownRef.current) {
+        if (hit.invocationId) {
+          ids = [hit.id];
+        } else if (shiftDownRef.current) {
           const already = state.selectedIds.includes(hit.id);
           if (already) {
             ids = state.selectedIds.filter((x) => !groupExpanded.includes(x));
@@ -2054,12 +2162,21 @@ export function MapaModule() {
         entityDragMovedRef.current = false;
         setSelectionToolbarVisible(false);
         let cachedBlockers: MapCollisionCache | undefined;
-        if (useRoleStore.getState().role === 'PLAYER') {
+        const movingInvocation = ids.some((id) => !!store.getState().entities[id]?.invocationId);
+        if (useRoleStore.getState().role === 'PLAYER' || movingInvocation) {
           const wallBlockers = WallsEngine.blockingSegments(store.getState().walls, 'sight');
           const fogState = useFogStore.getState();
           const fogSegs = buildFogSegments(fogState.walls, fogState.doors);
           const blockerSegments: MapCollisionSegment[] = [...wallBlockers];
           for (const s of fogSegs) blockerSegments.push([s.a, s.b]);
+          if (movingInvocation) {
+            const movingIds = new Set(ids);
+            for (const entity of Object.values(store.getState().entities)) {
+              if (movingIds.has(entity.id) || entity.layer === 'map' || entity.hidden || entity.carriedBy) continue;
+              const blocker: MapCollisionToken = { origin: { x: entity.x, y: entity.y }, entity };
+              blockerSegments.push(...tokenFootprintSegments(blocker, 0, 0));
+            }
+          }
           cachedBlockers = prepareCollisionCache(blockerSegments);
         }
         // Em combate: se o token tem ficha vinculada que está na ordem ativa,
@@ -2068,7 +2185,35 @@ export function MapaModule() {
         const cb = useCombatStore.getState();
         const primaryEnt = store.getState().entities[hit.id];
         const linkedCharId = primaryEnt?.characterId;
-        if (cb.inCombat && linkedCharId) {
+        if (cb.inCombat && primaryEnt?.invocationId && primaryEnt.ownerCharId && useRoleStore.getState().role === 'PLAYER') {
+          const owner = useCharacterStore.getState().characters.find((character) => character.id === primaryEnt.ownerCharId);
+          const isActiveMove = cb.initiativeOrder[cb.currentTurnIndex]?.charId === primaryEnt.ownerCharId;
+          const free = isActiveMove && isFreeformFor(owner, cb.freeformMode);
+          if (owner && isActiveMove && !free && podeMoverInvocacao(owner.id, primaryEnt.id)) {
+            const cfg = store.getState().gridConfig;
+            const metersPerPx = (cfg.metersPerCell || 1.5) / (cfg.dpi || 70);
+            const pending = store.getState().pendingMove;
+            const continuing = pending && pending.entityId === hit.id && pending.invocationInstanceId === primaryEnt.invocationInstanceId;
+            const startPrim = continuing ? { x: pending.startX, y: pending.startY } : { x: primaryEnt.x, y: primaryEnt.y };
+            const trail = continuing ? [...pending.trail] : [{ x: primaryEnt.x, y: primaryEnt.y }];
+            const movedPx = continuing ? pending.distM / metersPerPx : 0;
+            const movementRequestId = continuing && pending.movementRequestId
+              ? pending.movementRequestId
+              : `movimento-${typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)}`;
+            combatMeta = {
+              charId: owner.id,
+              invocationInstanceId: primaryEnt.invocationInstanceId,
+              movementRequestId,
+              budgetM: Math.max(0, primaryEnt.invocationMovementM ?? 0),
+              usedBeforeM: 0,
+              metersPerPx,
+              startPrim,
+              lastPrim: { x: primaryEnt.x, y: primaryEnt.y },
+              trail,
+              movedPx,
+            };
+          }
+        } else if (cb.inCombat && linkedCharId) {
           const activeChar = cb.initiativeOrder[cb.currentTurnIndex]?.charId;
           const chMove = useCharacterStore.getState().characters.find((c) => c.id === linkedCharId);
           const isActiveMove = activeChar === linkedCharId;
@@ -2559,6 +2704,8 @@ export function MapaModule() {
             st.setPendingMove({
               entityId: drag.primaryId,
               charId: cm.charId,
+              ...(cm.invocationInstanceId ? { invocationInstanceId: cm.invocationInstanceId } : {}),
+              ...(cm.movementRequestId ? { movementRequestId: cm.movementRequestId } : {}),
               startX: cm.startPrim.x,
               startY: cm.startPrim.y,
               trail: [...cm.trail],
@@ -3166,6 +3313,7 @@ export function MapaModule() {
 
           <NotesOverlay containerRef={containerRef as React.RefObject<HTMLDivElement>} />
           <SelectionToolbar visible={selectionToolbarVisible} onAdjustToken={setTokenCropEntityId} onEditTerrainZone={setTerrainZoneEditId} />
+      <ShikigamiTokenHud />
           <ZonaTerrenoDialog entityId={terrainZoneEditId} onClose={() => setTerrainZoneEditId(null)} />
           <PendingMoveOverlay />
           <OpportunityPromptOverlay />

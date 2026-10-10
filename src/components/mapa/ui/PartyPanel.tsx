@@ -11,6 +11,7 @@ import { useMapStore } from '@/stores/useMapStore';
 import { CharacterCard } from '@/components/fichas/CharacterCard';
 import { useProfileStore } from '@/stores/useProfileStore';
 import { findMyCharacter } from '@/lib/myCharacter';
+import { ShikigamiOwnerPanel } from './ShikigamiOwnerPanel';
 
 interface Props {
   collapsed: boolean;
@@ -28,13 +29,15 @@ export function PartyPanel({ collapsed, onToggleCollapsed }: Props) {
   const characters = useCharacterStore((s) => s.characters);
   const playerCharacter = isPlayer ? findMyCharacter(characters, activeProfileId) ?? undefined : undefined;
 
-  // Mestre: se houver um único token selecionado vinculado a uma ficha, mostra essa ficha.
-  const selectedCharacterId = useMapStore((s) => {
-    if (isPlayer) return null;
-    if (s.selectedIds.length !== 1) return null;
-    const ent = s.entities[s.selectedIds[0]];
-    return ent?.characterId ?? null;
-  });
+  const selectedEntity = useMapStore((s) => s.selectedIds.length === 1 ? s.entities[s.selectedIds[0]] : undefined);
+  const selectedInvocationTokenId = selectedEntity?.invocationId &&
+    (!isPlayer || selectedEntity.ownerCharId === playerCharacter?.id)
+    ? selectedEntity.id
+    : null;
+  // Ao selecionar um Shikigami, o Mestre vê a ficha do dono junto ao painel da instância.
+  const selectedCharacterId = !isPlayer
+    ? selectedEntity?.characterId ?? selectedEntity?.ownerCharId ?? null
+    : null;
   const selectedCharacter = useCharacterStore((s) =>
     selectedCharacterId ? s.characters.find((c) => c.id === selectedCharacterId) : undefined,
   );
@@ -73,6 +76,7 @@ export function PartyPanel({ collapsed, onToggleCollapsed }: Props) {
         >
           {showSheet ? (
             <div className="flex-1 overflow-y-auto overflow-x-hidden p-2">
+              {selectedInvocationTokenId && <ShikigamiOwnerPanel tokenId={selectedInvocationTokenId} />}
               <CharacterCard character={sheetToShow!} hideAttackPanel compactHeader />
             </div>
           ) : isPlayer ? (

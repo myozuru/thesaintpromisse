@@ -114,7 +114,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
   const comandar = (id: string) => {
     const r = comandarReposicionamento(character.id, id, direcao);
     if (!r.ok) { setErro(r.motivo); return; }
-    setErro(''); setMensagem('Reposicionamento executado com uma Ação Bônus.');
+    setErro(''); setMensagem('Reposicionamento executado com uma Ação Livre própria.');
   };
   const atacar = async (invocacaoId: string, acaoId: string) => {
     const alvoId = alvosAtaque[invocacaoId];
