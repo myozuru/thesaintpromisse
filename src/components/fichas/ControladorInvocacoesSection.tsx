@@ -138,13 +138,17 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
       ? entidades[acao.entidadeOmniId]?.acoesAtivas?.find(item => item.id === acao.acaoOmniId)
       : undefined;
     const alvoMultiplo = configOmni?.tipo_alvo === 'multiplo';
+    const alvoArea = configOmni?.tipo_alvo === 'area';
     const alvosSelecionados = alvoMultiplo
       ? alvosAtaqueMultiplo[`${invocacaoId}:${acaoId}`] ?? []
       : alvosAtaque[invocacaoId] ? [alvosAtaque[invocacaoId]] : [];
-    if (!alvosSelecionados.length || busyAtaque) return;
+    if ((!alvosSelecionados.length && !alvoArea) || busyAtaque) return;
     setBusyAtaque(true); setErro(''); setMensagem('');
     try {
-      const r = await comandarAtaque(character.id, invocacaoId, acaoId, alvoMultiplo ? alvosSelecionados : alvosSelecionados[0]);
+      const selecao = alvoArea
+        ? { tipo: 'area' as const }
+        : alvoMultiplo ? alvosSelecionados : alvosSelecionados[0];
+      const r = await comandarAtaque(character.id, invocacaoId, acaoId, selecao);
       if (!r.ok) { setErro(r.motivo); return; }
       if ('resultados' in r) {
         const pendentes = r.resultados.filter(resultado => resultado.testePendente).length;
@@ -570,13 +574,14 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
           </div>
           {ativos.some(e => e.invocationId === inv.id) && acoesDeAtaque(inv).length > 0 && (
             <div className="basis-full space-y-2 border-t border-border/60 pt-2">
-              {acoesDeAtaque(inv).some(acao => configOmniDaAcao(acao)?.tipo_alvo !== 'multiplo') && <label className="block text-xs">Alvo para ação individual
+              {acoesDeAtaque(inv).some(acao => !['multiplo', 'area'].includes(configOmniDaAcao(acao)?.tipo_alvo ?? 'unico')) && <label className="block text-xs">Alvo para ação individual
                 <select aria-label={`Alvo de ${inv.nome}`} className="mt-1 w-full rounded border border-input bg-background p-2"
                   value={alvosAtaque[inv.id] ?? ''} onChange={e => setAlvosAtaque(v => ({ ...v, [inv.id]: e.target.value }))}>
                   <option value="">Selecione uma ficha no mapa</option>
                   {alvosDisponiveis.map(alvo => <option key={alvo.id} value={alvo.id}>{alvo.nome}</option>)}
                 </select>
               </label>}
+              {acoesDeAtaque(inv).some(acao => configOmniDaAcao(acao)?.tipo_alvo === 'area') && <p className="text-xs text-muted-foreground">Ações em área: ao usar, posicione e confirme a forma no mapa. O raio em si usa o centro da invocação.</p>}
               {acoesDeAtaque(inv).filter(acao => configOmniDaAcao(acao)?.tipo_alvo === 'multiplo').map(acao => {
                 const chave = `${inv.id}:${acao.id}`;
                 const maxAlvos = configOmniDaAcao(acao)?.max_alvos ?? '?';
@@ -595,10 +600,11 @@ export function ControladorInvocacoesSection({ character, onEditFicha }: { chara
               <div className="flex flex-wrap gap-1">
                 {acoesDeAtaque(inv).map(a => {
                   const multiplo = configOmniDaAcao(a)?.tipo_alvo === 'multiplo';
+                const area = configOmniDaAcao(a)?.tipo_alvo === 'area';
                   const temAlvos = multiplo
                     ? (alvosAtaqueMultiplo[`${inv.id}:${a.id}`]?.length ?? 0) > 0
-                    : Boolean(alvosAtaque[inv.id]);
-                  return <button key={a.id} type="button" disabled={busyAtaque || !temAlvos}
+                    : area || Boolean(alvosAtaque[inv.id]);
+                return <button key={a.id} type="button" disabled={busyAtaque || !temAlvos}
                     onClick={() => void atacar(inv.id, a.id)}
                     className="rounded border border-primary px-2 py-1 text-xs disabled:opacity-50">
                     Usar ação: {a.nome}

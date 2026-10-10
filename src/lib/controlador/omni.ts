@@ -71,17 +71,32 @@ export function resolverAcaoOmniInvocacao(
       motivo: "A ação OMNI precisa ter efeito de dano para usar o fluxo de ataque/TR da invocação.",
     };
   const tipoAlvo = config.tipo_alvo ?? "unico";
-  if (tipoAlvo !== "unico" && tipoAlvo !== "multiplo")
+  if (tipoAlvo !== "unico" && tipoAlvo !== "multiplo" && tipoAlvo !== "area")
     return {
       ok: false,
-      motivo: "A ação OMNI precisa ter alvo único ou múltiplo; áreas e alvo próprio ainda não estão disponíveis para invocações.",
+      motivo: "A ação OMNI precisa ter alvo único, múltiplo ou área; alvo próprio ainda não está disponível para invocações.",
     };
-  if (config.filtro_alvo && config.filtro_alvo !== "todos_exceto_si")
+  if (
+    config.filtro_alvo &&
+    !["todos_exceto_si", "todos", "aliados", "inimigos"].includes(config.filtro_alvo)
+  )
     return {
       ok: false,
-      motivo:
-        "O filtro OMNI desta ação não pode ser representado pelo seletor de alvos da invocação.",
+      motivo: "O filtro OMNI desta ação não é reconhecido pelo seletor de alvos da invocação.",
     };
+  if (tipoAlvo === "area") {
+    const area = config.area;
+    if (
+      !area ||
+      !["cone", "linha", "raio_em_si", "raio_no_ponto"].includes(area.forma) ||
+      !Number.isFinite(area.tamanho_m) ||
+      area.tamanho_m <= 0 ||
+      (area.forma === "linha" && area.largura_m !== undefined &&
+        (!Number.isFinite(area.largura_m) || area.largura_m <= 0))
+    ) {
+      return { ok: false, motivo: "Configure uma área OMNI com dimensões positivas." };
+    }
+  }
   if (tipoAlvo === "multiplo" && !/^[1-9]\d*$/.test(config.max_alvos?.trim() ?? ""))
     return { ok: false, motivo: "A ação OMNI múltipla precisa de um limite fixo e inteiro de alvos." };
   const maxAlvos = tipoAlvo === "multiplo" ? Number(config.max_alvos) : 1;
@@ -89,7 +104,12 @@ export function resolverAcaoOmniInvocacao(
     return { ok: false, motivo: "O limite OMNI de alvos precisa ser pelo menos 2 para uma ação múltipla." };
   if (tipoAlvo === "unico" && config.max_alvos && config.max_alvos.trim() !== "1")
     return { ok: false, motivo: "O limite OMNI precisa ser um alvo único." };
-  if (!Number.isFinite(config.alcanceM) || config.alcanceM <= 0)
+  if (
+    !Number.isFinite(config.alcanceM) ||
+    config.alcanceM < 0 ||
+    (tipoAlvo !== "area" && config.alcanceM <= 0) ||
+    (tipoAlvo === "area" && config.area?.forma === "raio_no_ponto" && config.alcanceM <= 0)
+  )
     return { ok: false, motivo: "Defina um alcance OMNI positivo para esta ação." };
   if (!/^(?:\d+)(?:\.\d+)?$/.test(config.custoPE.trim()))
     return {

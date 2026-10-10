@@ -893,6 +893,165 @@ describe('Controlador — materialização real no mapa', () => {
     expect(pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoComum).toEqual({ atual: 0, maximo: 1 });
     useCombatStore.setState({ inCombat: false } as never);
   });
+  it('posiciona área OMNI no mapa, encontra todos os alvos e cobra PE e ação uma vez', async () => {
+    const entidade: EntidadeOmni = {
+      id: 'ent-omni-area', nome: 'Pulso de Ruína', categoria: 'talento',
+      acoesAtivas: [{
+        id: 'acao-omni', nome: 'Pulso de Ruína', acao: 'comum', custoPE: '2', alcanceM: 3,
+        teste: 'tr', tr: 'fortitude', dano: '1d6', tipoDano: 'DI', tipo_efeito: 'dano',
+        tipo_alvo: 'area', filtro_alvo: 'inimigos', area: { forma: 'raio_no_ponto', tamanho_m: 4.5 },
+      }],
+    } as unknown as EntidadeOmni;
+    useOmniEntidadesStore.setState({ entidades: { [entidade.id]: entidade } });
+    const inv = {
+      ...modelo('a'), custoInvocacaoPE: 0,
+      atributos: { forca: 10, destreza: 10, constituicao: 10, inteligencia: 10, sabedoria: 10, presenca: 14 },
+      economiaAcoesConfigurada: { acaoComum: 1 },
+      acoes: [{ id: 'pulso', nome: 'Pulso de Ruína', tipoExecucao: 'omni' as const, entidadeOmniId: entidade.id, acaoOmniId: 'acao-omni' }],
+      custosComandosConfigurados: {
+        pulso: { execucao: 'manual' as const, debitos: [{ entidade: 'dono' as const, recurso: 'pe' as const, quantidade: 2 }] },
+      },
+    };
+    useCharacterStore.getState().updateCharacter('dono', { level: 4, invocacoesConhecidas: [inv] });
+    for (const [id, x] of [['area-inimigo-1', 280], ['area-inimigo-2', 350]] as const) {
+      useCharacterStore.setState({ characters: [...useCharacterStore.getState().characters, ficha(id, { category: 'INIMIGO', profileId: `perfil-${id}`, hpCurrent: 15, hpMax: 15 })] });
+      useMapStore.getState().addEntity({ shape: 'ELLIPSE', x, y: 140, w: 70, h: 70, rotation: 0,
+        color: '#000', locked: false, characterId: id });
+    }
+    const summoned = invocarControlador('dono', 'a', 'leste');
+    if (!summoned.ok) throw new Error(summoned.motivo);
+    const servo = useMapStore.getState().entities[summoned.tokenId];
+    const placement = vi.spyOn(useMapStore.getState(), 'requestAoEPlacement').mockResolvedValue({
+      id: 'area-escolhida', kind: 'circle', x: 280, y: 175, rotation: 0,
+      length: 210, width: 210, color: '#ff5577', opacity: 1,
+    });
+    const peAntesDaAcao = pegarFicha('dono').peCurrent;
+    useCombatStore.setState({ inCombat: true, initiativeOrder: [{ charId: 'dono', initiative: 10 }], currentTurnIndex: 0 } as never);
+
+    const resultado = await comandarAtaque('dono', 'a', 'pulso', { tipo: 'area' });
+
+    expect(placement).toHaveBeenCalledWith(expect.objectContaining({
+      kind: 'circle', sizeMeters: 4.5, maxRangeMeters: 3,
+      originWorld: { x: servo.x + servo.w / 2, y: servo.y + servo.h / 2 },
+    }));
+    expect(resultado).toMatchObject({ ok: true, resultados: [
+      { alvoId: 'area-inimigo-1', testePendente: true, cd: 14 },
+      { alvoId: 'area-inimigo-2', testePendente: true, cd: 14 },
+    ] });
+    expect(useTestRequestStore.getState().requests).toHaveLength(2);
+    expect(pegarFicha('dono').peCurrent).toBe(peAntesDaAcao - 2);
+    expect(pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoComum).toEqual({ atual: 0, maximo: 1 });
+    useCombatStore.setState({ inCombat: false } as never);
+  });
+  it('área OMNI inclui o Controlador quando o filtro de aliados o seleciona', async () => {
+    const entidade: EntidadeOmni = {
+      id: 'ent-omni-area-aliados', nome: 'Aura Guardiã', categoria: 'talento',
+      acoesAtivas: [{
+        id: 'acao-omni', nome: 'Aura Guardiã', acao: 'comum', custoPE: '2', alcanceM: 0,
+        teste: 'tr', tr: 'fortitude', dano: '1d6', tipo_efeito: 'dano', tipo_alvo: 'area',
+        filtro_alvo: 'aliados', area: { forma: 'raio_em_si', tamanho_m: 3 },
+      }],
+    } as unknown as EntidadeOmni;
+    useOmniEntidadesStore.setState({ entidades: { [entidade.id]: entidade } });
+    const inv = {
+      ...modelo('a'), custoInvocacaoPE: 0,
+      atributos: { forca: 10, destreza: 10, constituicao: 10, inteligencia: 10, sabedoria: 10, presenca: 14 },
+      economiaAcoesConfigurada: { acaoComum: 1 },
+      acoes: [{ id: 'aura', nome: 'Aura Guardiã', tipoExecucao: 'omni' as const, entidadeOmniId: entidade.id, acaoOmniId: 'acao-omni' }],
+      custosComandosConfigurados: {
+        aura: { execucao: 'manual' as const, debitos: [{ entidade: 'dono' as const, recurso: 'pe' as const, quantidade: 2 }] },
+      },
+    };
+    useCharacterStore.getState().updateCharacter('dono', { level: 4, invocacoesConhecidas: [inv] });
+    useCharacterStore.setState({ characters: [...useCharacterStore.getState().characters, ficha('aliado-area', { category: 'PLAYER', profileId: 'perfil-aliado-area', hpCurrent: 15, hpMax: 15 })] });
+    useMapStore.getState().addEntity({ shape: 'ELLIPSE', x: 350, y: 140, w: 70, h: 70, rotation: 0,
+      color: '#000', locked: false, characterId: 'aliado-area' });
+    const summoned = invocarControlador('dono', 'a', 'leste');
+    if (!summoned.ok) throw new Error(summoned.motivo);
+    useCombatStore.setState({ inCombat: true, initiativeOrder: [{ charId: 'dono', initiative: 10 }], currentTurnIndex: 0 } as never);
+
+    const resultado = await comandarAtaque('dono', 'a', 'aura', { tipo: 'area' });
+
+    expect(resultado).toMatchObject({ ok: true, resultados: [
+      expect.objectContaining({ alvoId: 'dono', testePendente: true }),
+      expect.objectContaining({ alvoId: 'aliado-area', testePendente: true }),
+    ] });
+    expect(useTestRequestStore.getState().requests.map(request => request.charId)).toEqual(['dono', 'aliado-area']);
+    useCombatStore.setState({ inCombat: false } as never);
+  });
+  it('cancelar a colocação da área não consome PE, ação nem cria TR', async () => {
+    const entidade: EntidadeOmni = {
+      id: 'ent-omni-area-cancelada', nome: 'Lança de Vento', categoria: 'talento',
+      acoesAtivas: [{
+        id: 'acao-omni', nome: 'Lança de Vento', acao: 'comum', custoPE: '2', alcanceM: 9,
+        teste: 'tr', tr: 'reflexos', dano: '1d6', tipo_efeito: 'dano', tipo_alvo: 'area',
+        area: { forma: 'linha', tamanho_m: 6, largura_m: 1.5 },
+      }],
+    } as unknown as EntidadeOmni;
+    useOmniEntidadesStore.setState({ entidades: { [entidade.id]: entidade } });
+    const inv = {
+      ...modelo('a'), custoInvocacaoPE: 0, economiaAcoesConfigurada: { acaoComum: 1 },
+      acoes: [{ id: 'linha', nome: 'Lança de Vento', tipoExecucao: 'omni' as const, entidadeOmniId: entidade.id, acaoOmniId: 'acao-omni' }],
+      custosComandosConfigurados: {
+        linha: { execucao: 'manual' as const, debitos: [{ entidade: 'dono' as const, recurso: 'pe' as const, quantidade: 2 }] },
+      },
+    };
+    useCharacterStore.getState().updateCharacter('dono', { invocacoesConhecidas: [inv] });
+    const summoned = invocarControlador('dono', 'a', 'leste');
+    if (!summoned.ok) throw new Error(summoned.motivo);
+    const placement = vi.spyOn(useMapStore.getState(), 'requestAoEPlacement').mockResolvedValue(null);
+    const peAntesDaAcao = pegarFicha('dono').peCurrent;
+    useCombatStore.setState({ inCombat: true, initiativeOrder: [{ charId: 'dono', initiative: 10 }], currentTurnIndex: 0 } as never);
+
+    await expect(comandarAtaque('dono', 'a', 'linha', { tipo: 'area' })).resolves.toEqual({
+      ok: false, motivo: 'Posicionamento da área cancelado.',
+    });
+
+    expect(placement).toHaveBeenCalledTimes(1);
+    expect(pegarFicha('dono').peCurrent).toBe(peAntesDaAcao);
+    expect(pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoComum).toEqual({ atual: 1, maximo: 1 });
+    expect(useTestRequestStore.getState().requests).toHaveLength(0);
+    useCombatStore.setState({ inCombat: false } as never);
+  });
+  it('recusa área que atinge outra invocação antes de debitar PE ou ação', async () => {
+    const entidade: EntidadeOmni = {
+      id: 'ent-omni-area-shiki', nome: 'Pulso de Ruína', categoria: 'talento',
+      acoesAtivas: [{
+        id: 'acao-omni', nome: 'Pulso de Ruína', acao: 'comum', custoPE: '2', alcanceM: 3,
+        teste: 'tr', tr: 'fortitude', dano: '1d6', tipo_efeito: 'dano', tipo_alvo: 'area',
+        area: { forma: 'raio_no_ponto', tamanho_m: 4.5 },
+      }],
+    } as unknown as EntidadeOmni;
+    useOmniEntidadesStore.setState({ entidades: { [entidade.id]: entidade } });
+    const inv = {
+      ...modelo('a'), custoInvocacaoPE: 0, economiaAcoesConfigurada: { acaoComum: 1 },
+      acoes: [{ id: 'pulso', nome: 'Pulso de Ruína', tipoExecucao: 'omni' as const, entidadeOmniId: entidade.id, acaoOmniId: 'acao-omni' }],
+      custosComandosConfigurados: {
+        pulso: { execucao: 'manual' as const, debitos: [{ entidade: 'dono' as const, recurso: 'pe' as const, quantidade: 2 }] },
+      },
+    };
+    useCharacterStore.getState().updateCharacter('dono', { invocacoesConhecidas: [inv] });
+    const summoned = invocarControlador('dono', 'a', 'leste');
+    if (!summoned.ok) throw new Error(summoned.motivo);
+    const servo = useMapStore.getState().entities[summoned.tokenId];
+    useMapStore.getState().addEntity({ shape: 'ELLIPSE', x: servo.x + 20, y: servo.y + 20, w: 50, h: 50, rotation: 0,
+      color: '#000', locked: false, ownerCharId: 'dono', invocationId: 'outra-invocacao' });
+    vi.spyOn(useMapStore.getState(), 'requestAoEPlacement').mockResolvedValue({
+      id: 'area-escolhida', kind: 'circle', x: servo.x + 35, y: servo.y + 35, rotation: 0,
+      length: 210, width: 210, color: '#ff5577', opacity: 1,
+    });
+    const peAntesDaAcao = pegarFicha('dono').peCurrent;
+    useCombatStore.setState({ inCombat: true, initiativeOrder: [{ charId: 'dono', initiative: 10 }], currentTurnIndex: 0 } as never);
+
+    await expect(comandarAtaque('dono', 'a', 'pulso', { tipo: 'area' })).resolves.toMatchObject({
+      ok: false, motivo: 'A área também atinge outra invocação; dano em área contra invocações ainda não está disponível. Nada foi executado.',
+    });
+
+    expect(pegarFicha('dono').peCurrent).toBe(peAntesDaAcao);
+    expect(pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoComum).toEqual({ atual: 1, maximo: 1 });
+    expect(useTestRequestStore.getState().requests).toHaveLength(0);
+    useCombatStore.setState({ inCombat: false } as never);
+  });
   it('valida o alcance de todos os alvos múltiplos antes de debitar recursos', async () => {
     const entidade: EntidadeOmni = {
       id: 'ent-omni-multiplo-alcance', nome: 'Pulso Sombrio', categoria: 'talento',

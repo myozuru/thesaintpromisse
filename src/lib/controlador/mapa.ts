@@ -18,11 +18,15 @@ import { buildSegments as buildFogSegments } from '@/lib/fog/visibility';
 import { useFogStore } from '@/stores/fogStore';
 import { isFreeformFor } from '@/lib/freeformMode';
 import { DEFAULT_SAVING_THROWS, type ActiveBuff, type Character, type DamageType } from '@/types';
+import type { MapTemplate } from '@/components/mapa/TemplateEngine';
+import { findEntitiesInTemplate, resolveAreaTargetCharacters } from '@/lib/mapAoE';
+import { resolverTokenDaFicha } from '@/lib/mapa/tokenDaFicha';
 import { InstanciaInvocacaoSchema, type InstanciaInvocacao } from '@/lib/invocacoes/schema';
 import { alcanceCuraInvocacao, calcularEfeitoSuporte, capacidadeEnergiaReversaInvocacao } from './suporte';
 import { bonusPericiaCaracteristicas, reducaoDanoCaracteristicas } from './passivas';
 import { resolverAcaoOmniInvocacao } from './omni';
 import { aceitaAlvoAtivo } from '@/lib/omni/alvosAtivos';
+import type { AcaoAtivaConfig } from '@/lib/omni/tipos';
 import {
   aplicarCuraPVInvocacao,
   aplicarDanoPVInvocacao,
@@ -1006,6 +1010,131 @@ type ResultadoAlvoAtaqueInvocacao = {
 };
 type ResultadoAtaqueUnicoInvocacao = { ok: true } & Omit<ResultadoAlvoAtaqueInvocacao, 'alvoId' | 'nomeAlvo'>;
 type ResultadoAtaqueMultiploInvocacao = { ok: true; resultados: ResultadoAlvoAtaqueInvocacao[] };
+type SelecaoAlvoAreaInvocacao = { tipo: 'area' };
+
+function validarAcaoAtaqueInvocacao(acao: InvocacaoControlador['acoes'][number]): string | null {
+  const tipoTeste = acao.teste ?? (acao.tipo === 'ataque' ? 'ataque' : undefined);
+  if (tipoTeste !== 'ataque' && tipoTeste !== 'resistencia') return 'Ação sem ataque ou teste de resistência configurado.';
+  if (tipoTeste === 'ataque' && !acao.dano) return 'Configure a fórmula de dano deste ataque.';
+  if (tipoTeste === 'resistencia' && !acao.resistenciaAlvo?.trim()) return 'Configure qual Teste de Resistência o alvo fará.';
+  if (tipoTeste === 'resistencia' && !DEFAULT_SAVING_THROWS.some(nome => nome.toLocaleLowerCase('pt-BR') === acao.resistenciaAlvo!.trim().toLocaleLowerCase('pt-BR'))) {
+    return 'Teste de Resistência não reconhecido para esta ação.';
+  }
+  return null;
+}
+
+function formaTemplateArea(forma: NonNullable<AcaoAtivaConfig['area']>['forma']): MapTemplate['kind'] {
+  if (forma === 'cone') return 'cone_attached';
+  if (forma === 'linha') return 'line';
+  return 'circle';
+}
+
+function montarTemplateAreaInvocacao(
+  cfg: AcaoAtivaConfig,
+  servo: Entity,
+  dono: Character,
+  nomeAcao: string,
+): Promise<{ ok: true; template: MapTemplate } | { ok: false; motivo: string }> {
+  const area = cfg.area;
+  if (!area) return Promise.resolve({ ok: false, motivo: 'A ação OMNI não tem uma área configurada.' });
+  const mapa = useMapStore.getState();
+  const dpi = mapa.gridConfig.dpi || 70;
+  const metrosPorCelula = mapa.gridConfig.metersPerCell || 1.5;
+  if (!(dpi > 0) || !(metrosPorCelula > 0)) {
+    return Promise.resolve({ ok: false, motivo: 'Grade inválida para posicionar a área.' });
+  }
+  const pixelsPorMetro = dpi / metrosPorCelula;
+  const origem = { x: servo.x + servo.w / 2, y: servo.y + servo.h / 2 };
+  const kind = formaTemplateArea(area.forma);
+  const comprimento = area.tamanho_m * pixelsPorMetro;
+  const largura = (area.largura_m ?? 1.5) * pixelsPorMetro;
+  const templateBase: MapTemplate = {
+    id: 'omni-invocacao-area', kind, x: origem.x, y: origem.y, rotation: 0,
+    length: comprimento, width: area.forma === 'linha' ? largura : comprimento,
+    color: '#ff5577', opacity: 1,
+  };
+  if (area.forma === 'raio_em_si') return Promise.resolve({ ok: true, template: templateBase });
+
+  const maxRangeMeters = area.forma === 'raio_no_ponto' ? cfg.alcanceM : undefined;
+  return mapa.requestAoEPlacement({
+    kind,
+    sizeMeters: area.tamanho_m,
+    widthMeters: area.forma === 'linha' ? area.largura_m ?? 1.5 : undefined,
+    sourceLabel: `${dono.name} · ${nomeAcao}`,
+    originWorld: origem,
+    ...(maxRangeMeters !== undefined ? { maxRangeMeters } : {}),
+  }).then(colocado => {
+    if (!colocado) return { ok: false as const, motivo: 'Posicionamento da área cancelado.' };
+    const ancoraOrigem = area.forma === 'cone' || area.forma === 'linha';
+    return {
+      ok: true as const,
+      template: {
+        ...templateBase,
+        x: ancoraOrigem ? origem.x : colocado.x,
+        y: ancoraOrigem ? origem.y : colocado.y,
+        rotation: area.forma === 'raio_no_ponto' ? 0 : colocado.rotation,
+      },
+    };
+  });
+}
+
+function filtroAceitaPersonagemNaArea(
+  dono: Character,
+  alvo: Character,
+  cfg: AcaoAtivaConfig,
+): boolean {
+  const filtro = cfg.filtro_alvo ?? 'todos_exceto_si';
+  // "Si" é o token do Shikigami, removido da geometria abaixo. O Controlador
+  // continua sendo um alvo válido quando a área ou o filtro o incluem.
+  if (filtro === 'todos' || filtro === 'todos_exceto_si') return true;
+  return aceitaAlvoAtivo(dono, alvo, { ...cfg, filtro_alvo: filtro });
+}
+
+function resolverAlvosDaAreaInvocacao(
+  cfg: AcaoAtivaConfig,
+  dono: Character,
+  servo: Entity,
+  template: MapTemplate,
+): { ok: true; ids: string[] } | { ok: false; motivo: string } {
+  const mapa = useMapStore.getState();
+  const characters = useCharacterStore.getState().characters;
+  const entidadesVisiveis = Object.fromEntries(Object.entries(mapa.entities)
+    .filter(([, entity]) => mapa.layerVisible[entity.layer ?? 'tokens'] !== false));
+  const entityIds = findEntitiesInTemplate(template, entidadesVisiveis);
+  const filtro = cfg.filtro_alvo ?? 'todos_exceto_si';
+  const outrosServosAtingidos = entityIds
+    .map(id => mapa.entities[id])
+    .filter((entity): entity is Entity => Boolean(entity?.invocationId && entity.id !== servo.id))
+    .filter(entity => {
+      if (filtro === 'todos' || filtro === 'todos_exceto_si') return true;
+      const donoAlvo = characters.find(character => character.id === entity.ownerCharId);
+      return donoAlvo ? aceitaAlvoAtivo(dono, donoAlvo, { ...cfg, filtro_alvo: filtro }) : true;
+    });
+  if (outrosServosAtingidos.length) {
+    return {
+      ok: false,
+      motivo: 'A área também atinge outra invocação; dano em área contra invocações ainda não está disponível. Nada foi executado.',
+    };
+  }
+
+  const resolvidos = resolveAreaTargetCharacters(entityIds, mapa.entities, characters, undefined, servo.id);
+  const ids = [...new Set(resolvidos.characterIds)].filter(id => {
+    const alvo = characters.find(character => character.id === id);
+    return alvo && filtroAceitaPersonagemNaArea(dono, alvo, cfg);
+  });
+  if (!ids.length) return { ok: false, motivo: 'Nenhum alvo válido dentro da área.' };
+
+  if (cfg.area?.forma === 'raio_no_ponto') {
+    const pixelsPorMetro = mapa.gridConfig.dpi / mapa.gridConfig.metersPerCell;
+    if (!Number.isFinite(pixelsPorMetro) || pixelsPorMetro <= 0) return { ok: false, motivo: 'Grade inválida para medir o alcance da área.' };
+    const origem = { x: servo.x + servo.w / 2, y: servo.y + servo.h / 2 };
+    const alcanceCentro = Math.hypot(template.x - origem.x, template.y - origem.y) / pixelsPorMetro;
+    if (!Number.isFinite(alcanceCentro) || alcanceCentro > cfg.alcanceM + 0.05) {
+      return { ok: false, motivo: 'Centro da área fora de alcance.' };
+    }
+  }
+  return { ok: true, ids };
+}
 
 /** Ataque de servo comandado no turno do Controlador. O alvo utiliza uma ficha
  * real, portanto o dano percorre applyDamage (reações, RD e demais regras).
@@ -1014,37 +1143,93 @@ export async function comandarAtaque(
   donoId: string,
   invocacaoId: string,
   acaoId: string,
-  alvoId: string | string[],
+  alvoId: string | string[] | SelecaoAlvoAreaInvocacao,
   opcoes?: { instanciaId?: string; requestId?: string },
 ):
   Promise<ResultadoAtaqueUnicoInvocacao | ResultadoAtaqueMultiploInvocacao | { ok: false; motivo: string }> {
-  const dono = useCharacterStore.getState().characters.find(c => c.id === donoId);
+  let dono = useCharacterStore.getState().characters.find(c => c.id === donoId);
   if (!dono) return { ok: false, motivo: 'Personagem inválido.' };
   if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
-  const inv = dono.invocacoesConhecidas?.find(i => i.id === invocacaoId && i.donoCharacterId === donoId);
-  const acaoOriginal = inv?.acoes.find(a => a.id === acaoId);
+  let inv = dono.invocacoesConhecidas?.find(i => i.id === invocacaoId && i.donoCharacterId === donoId);
+  let acaoOriginal = inv?.acoes.find(a => a.id === acaoId);
   if (!inv || !acaoOriginal) return { ok: false, motivo: 'Ação ou invocação não encontrada.' };
-  const resolucaoOmni = acaoOriginal.tipoExecucao === 'omni' || acaoOriginal.tipoExecucao === 'referencia_omni'
+  let resolucaoOmni = acaoOriginal.tipoExecucao === 'omni' || acaoOriginal.tipoExecucao === 'referencia_omni'
     ? resolverAcaoOmniInvocacao(acaoOriginal, useOmniEntidadesStore.getState().entidades)
     : undefined;
   if (resolucaoOmni && !resolucaoOmni.ok) return { ok: false, motivo: resolucaoOmni.motivo };
-  const acao = resolucaoOmni?.ok ? resolucaoOmni.acao : acaoOriginal;
-  const tipoTeste = acao?.teste ?? (acao?.tipo === 'ataque' ? 'ataque' : undefined);
-  if (tipoTeste !== 'ataque' && tipoTeste !== 'resistencia') return { ok: false, motivo: 'Ação sem ataque ou teste de resistência configurado.' };
-  if (tipoTeste === 'ataque' && !acao.dano) return { ok: false, motivo: 'Configure a fórmula de dano deste ataque.' };
-  if (tipoTeste === 'resistencia' && !acao.resistenciaAlvo?.trim()) return { ok: false, motivo: 'Configure qual Teste de Resistência o alvo fará.' };
-  if (tipoTeste === 'resistencia' && !DEFAULT_SAVING_THROWS.some(nome => nome.toLocaleLowerCase('pt-BR') === acao.resistenciaAlvo!.trim().toLocaleLowerCase('pt-BR'))) {
-    return { ok: false, motivo: 'Teste de Resistência não reconhecido para esta ação.' };
+  let acao = resolucaoOmni?.ok ? resolucaoOmni.acao : acaoOriginal;
+  const selecaoArea = !Array.isArray(alvoId) && typeof alvoId === 'object' && alvoId.tipo === 'area';
+  const areaConfigurada = resolucaoOmni?.ok && resolucaoOmni.config.tipo_alvo === 'area';
+  if (selecaoArea && !areaConfigurada) return { ok: false, motivo: 'Esta ação OMNI não está configurada para selecionar uma área.' };
+  if (!selecaoArea && areaConfigurada) return { ok: false, motivo: 'Esta ação precisa selecionar uma área no mapa.' };
+  const erroAcao = validarAcaoAtaqueInvocacao(acao);
+  if (erroAcao) return { ok: false, motivo: erroAcao };
+  let tipoTeste = acao.teste ?? (acao.tipo === 'ataque' ? 'ataque' : undefined);
+  let mapa = useMapStore.getState();
+  let servo = tokensInvocados(donoId).find(e => e.invocationId === invocacaoId && (!opcoes?.instanciaId || e.invocationInstanceId === opcoes.instanciaId) && (e.hp ?? 0) > 0);
+  if (!servo || (selecaoArea && (servo.hidden || mapa.layerVisible[servo.layer ?? 'tokens'] === false))) {
+    return { ok: false, motivo: 'Servo ou alvo ausente do mapa.' };
   }
-  const mapa = useMapStore.getState();
-  const idsAlvo = [...new Set((Array.isArray(alvoId) ? alvoId : [alvoId]).map(id => id.trim()).filter(Boolean))];
+  let idsAlvo: string[];
+  let resultadoEmLista = Array.isArray(alvoId) || selecaoArea;
+  if (selecaoArea && resolucaoOmni?.ok) {
+    const resolucaoInicial = resolucaoOmni;
+    const areaPosicionada = await montarTemplateAreaInvocacao(resolucaoInicial.config, servo, dono, acao.nome);
+    if (!areaPosicionada.ok) return areaPosicionada;
+
+    // Releia a mesa depois da colocação: alvo, posição, filtros e custo podem
+    // ter mudado enquanto o jogador escolhia o ponto no mapa.
+    dono = useCharacterStore.getState().characters.find(character => character.id === donoId);
+    if (!dono || !podeComandarInvocacao(donoId)) return { ok: false, motivo: 'O turno do Controlador terminou durante a seleção da área.' };
+    inv = dono.invocacoesConhecidas?.find(item => item.id === invocacaoId && item.donoCharacterId === donoId);
+    acaoOriginal = inv?.acoes.find(item => item.id === acaoId);
+    if (!inv || !acaoOriginal) return { ok: false, motivo: 'Ação ou invocação removida durante a seleção da área.' };
+    resolucaoOmni = acaoOriginal.tipoExecucao === 'omni' || acaoOriginal.tipoExecucao === 'referencia_omni'
+      ? resolverAcaoOmniInvocacao(acaoOriginal, useOmniEntidadesStore.getState().entidades)
+      : undefined;
+    if (resolucaoOmni && !resolucaoOmni.ok) return { ok: false, motivo: resolucaoOmni.motivo };
+    if (!resolucaoOmni?.ok || resolucaoOmni.config.tipo_alvo !== 'area' ||
+      JSON.stringify(resolucaoInicial.config.area) !== JSON.stringify(resolucaoOmni.config.area)) {
+      return { ok: false, motivo: 'A configuração da área mudou durante a seleção. Tente a ação novamente.' };
+    }
+    acao = resolucaoOmni.acao;
+    tipoTeste = acao.teste ?? (acao.tipo === 'ataque' ? 'ataque' : undefined);
+    const erroAcaoAtual = validarAcaoAtaqueInvocacao(acao);
+    if (erroAcaoAtual) return { ok: false, motivo: erroAcaoAtual };
+    mapa = useMapStore.getState();
+    const servoId = servo.id;
+    servo = mapa.entities[servoId];
+    if (!servo || servo.ownerCharId !== donoId || servo.invocationId !== invocacaoId ||
+      (opcoes?.instanciaId && servo.invocationInstanceId !== opcoes.instanciaId) ||
+      (servo.hp ?? 0) <= 0 || servo.hidden || mapa.layerVisible[servo.layer ?? 'tokens'] === false) {
+      return { ok: false, motivo: 'A invocação saiu do mapa durante a seleção da área.' };
+    }
+    const forma = resolucaoOmni.config.area?.forma;
+    if ((forma === 'cone' || forma === 'linha' || forma === 'raio_em_si') &&
+      (Math.hypot(areaPosicionada.template.x - (servo.x + servo.w / 2), areaPosicionada.template.y - (servo.y + servo.h / 2)) > 1e-6)) {
+      return { ok: false, motivo: 'A invocação mudou de posição durante a seleção da área. Tente novamente.' };
+    }
+    const areaAtual = resolucaoOmni.config.area!;
+    const pixelsPorMetro = (mapa.gridConfig.dpi || 70) / (mapa.gridConfig.metersPerCell || 1.5);
+    if (!Number.isFinite(pixelsPorMetro) || pixelsPorMetro <= 0) return { ok: false, motivo: 'Grade inválida para resolver a área.' };
+    const comprimentoArea = areaAtual.tamanho_m * pixelsPorMetro;
+    const templateAtual: MapTemplate = {
+      ...areaPosicionada.template,
+      length: comprimentoArea,
+      width: areaAtual.forma === 'linha' ? (areaAtual.largura_m ?? 1.5) * pixelsPorMetro : comprimentoArea,
+    };
+    const alvosArea = resolverAlvosDaAreaInvocacao(resolucaoOmni.config, dono, servo, templateAtual);
+    if (!alvosArea.ok) return alvosArea;
+    idsAlvo = alvosArea.ids;
+  } else {
+    const idsSelecionados = typeof alvoId === 'string' ? [alvoId] : Array.isArray(alvoId) ? alvoId : [];
+    idsAlvo = [...new Set(idsSelecionados.map(id => id.trim()).filter(Boolean))];
+  }
   if (!idsAlvo.length) return { ok: false, motivo: 'Escolha pelo menos um alvo.' };
   const aceitaMultiplos = resolucaoOmni?.ok && resolucaoOmni.config.tipo_alvo === 'multiplo';
-  if (!aceitaMultiplos && idsAlvo.length !== 1) return { ok: false, motivo: 'Esta ação aceita apenas um alvo.' };
-  const maxAlvos = aceitaMultiplos ? Number(resolucaoOmni.config.max_alvos) : 1;
-  if (idsAlvo.length > maxAlvos) return { ok: false, motivo: `Selecione no máximo ${maxAlvos} alvo(s).` };
-  const servo = tokensInvocados(donoId).find(e => e.invocationId === invocacaoId && (!opcoes?.instanciaId || e.invocationInstanceId === opcoes.instanciaId) && (e.hp ?? 0) > 0);
-  if (!servo) return { ok: false, motivo: 'Servo ou alvo ausente do mapa.' };
+  if (!selecaoArea && !aceitaMultiplos && idsAlvo.length !== 1) return { ok: false, motivo: 'Esta ação aceita apenas um alvo.' };
+  const maxAlvos = aceitaMultiplos && resolucaoOmni?.ok ? Number(resolucaoOmni.config.max_alvos) : 1;
+  if (!selecaoArea && idsAlvo.length > maxAlvos) return { ok: false, motivo: `Selecione no máximo ${maxAlvos} alvo(s).` };
   const modelo = obterModeloDoToken(dono, servo);
   if (!modelo) return { ok: false, motivo: 'Modelo da invocação não encontrado.' };
   const instancia = obterInstanciaDoToken(dono, servo, modelo);
@@ -1072,10 +1257,10 @@ export async function comandarAtaque(
   if (!categoria) return { ok: false, motivo: 'Categoria de ação própria não configurada.' };
   const alvos = idsAlvo.map(id => {
     const personagem = useCharacterStore.getState().characters.find(c => c.id === id);
-    const token = Object.values(mapa.entities).find(e => e.characterId === id && !e.invocationId && !e.hidden);
+    const token = personagem ? resolverTokenDaFicha(personagem, mapa.entities, mapa.layerVisible) : undefined;
     return personagem && token ? { personagem, token } : null;
   });
-  if (alvos.some(alvo => !alvo) || idsAlvo.includes(donoId)) return { ok: false, motivo: 'Servo ou alvo ausente do mapa.' };
+  if (alvos.some(alvo => !alvo) || (!selecaoArea && idsAlvo.includes(donoId))) return { ok: false, motivo: 'Servo ou alvo ausente do mapa.' };
   const escala = mapa.gridConfig.metersPerCell / mapa.gridConfig.dpi;
   if (!(escala > 0)) return { ok: false, motivo: 'Grade inválida.' };
   const alvosValidados = alvos.filter((alvo): alvo is NonNullable<typeof alvo> => alvo !== null).map(alvo => {
@@ -1084,8 +1269,10 @@ export async function comandarAtaque(
     return { ...alvo, distancia, defesa: computeTotalDefense(alvo.personagem, {}, tipoTeste === 'ataque' && acao.tipoAtaque === 'distancia' ? 'ranged' : 'melee') };
   });
   if (alvosValidados.length !== idsAlvo.length) return { ok: false, motivo: 'Alvo inválido.' };
-  if (alvosValidados.some(alvo => alvo.distancia > (acao.alcanceM ?? 1.5) + 1e-6)) return { ok: false, motivo: 'Um ou mais alvos estão fora do alcance.' };
-  if (resolucaoOmni?.ok && alvosValidados.some(alvo => !aceitaAlvoAtivo(dono, alvo.personagem, resolucaoOmni.config))) {
+  if (!selecaoArea && alvosValidados.some(alvo => alvo.distancia > (acao.alcanceM ?? 1.5) + 1e-6)) return { ok: false, motivo: 'Um ou mais alvos estão fora do alcance.' };
+  if (resolucaoOmni?.ok && alvosValidados.some(alvo => selecaoArea
+    ? !filtroAceitaPersonagemNaArea(dono, alvo.personagem, resolucaoOmni.config)
+    : !aceitaAlvoAtivo(dono, alvo.personagem, resolucaoOmni.config))) {
     return { ok: false, motivo: 'Um ou mais alvos não atendem ao filtro OMNI.' };
   }
   const formula = acao.dano ? parseFormulaDanoInvocacao(acao.dano) : null;
@@ -1149,7 +1336,7 @@ export async function comandarAtaque(
         useLogStore.getState().addLog('combat', `🛡️ ${modelo.nome} — ${acao.nome} exige TR ${acao.resistenciaAlvo} contra CD ${cd} de ${alvo.name}.`);
         return { alvoId: alvo.id, nomeAlvo: alvo.name, acertou: false, totalAtaque: 0, dano: 0, testePendente: true, requestId, cd: cd! };
       });
-      return Array.isArray(alvoId)
+      return resultadoEmLista
         ? { ok: true, resultados }
         : {
           ok: true,
@@ -1191,7 +1378,7 @@ export async function comandarAtaque(
       resultados.push({ alvoId: alvo.id, nomeAlvo: alvo.name, acertou: true, totalAtaque: resultado.total, dano, ...(resultado.critico ? { critico: true } : {}) });
     }
     consumirAuxiliosDeAtaque();
-    return Array.isArray(alvoId)
+    return resultadoEmLista
       ? { ok: true, resultados }
       : {
         ok: true,

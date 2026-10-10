@@ -72,6 +72,30 @@ describe("ações OMNI de invocação", () => {
     });
   });
 
+  it("aceita ação OMNI de área com forma fixa e filtros nativos", () => {
+    const entidade = entidadeOmni({
+      tipo_alvo: "area",
+      filtro_alvo: "aliados",
+      area: { forma: "raio_em_si", tamanho_m: 4.5 },
+    });
+    expect(resolverAcaoOmniInvocacao(referencia, { [entidade.id]: entidade })).toMatchObject({
+      ok: true,
+      config: { tipo_alvo: "area", filtro_alvo: "aliados", area: { forma: "raio_em_si", tamanho_m: 4.5 } },
+      acao: { teste: "ataque", tipo: "ataque" },
+    });
+  });
+
+  it("recusa área inválida antes de comandar a invocação", () => {
+    const entidade = entidadeOmni({
+      tipo_alvo: "area",
+      area: { forma: "raio_no_ponto", tamanho_m: 0 },
+    });
+    expect(resolverAcaoOmniInvocacao(referencia, { [entidade.id]: entidade })).toEqual({
+      ok: false,
+      motivo: "Configure uma área OMNI com dimensões positivas.",
+    });
+  });
+
   it("recusa efeitos OMNI ainda não suportados sem descartar a limitação", () => {
     const entidade = entidadeOmni({
       efeitos: [{ tipo: "condicao", condicao: "agarrado", rodadas: 2 }],
