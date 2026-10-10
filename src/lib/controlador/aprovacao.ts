@@ -10,14 +10,20 @@ export interface ContextoSubmissaoAprovacao {
   invocationOwnerCharacterId: string;
 }
 
-export type ResultadoPoliticaAprovacao =
+type ResultadoNegado = { ok: false; motivo: string };
+
+export type ResultadoPoliticaSubmissao =
   | { ok: true; estado: "pendente" | "aprovada" }
-  | { ok: false; motivo: string };
+  | ResultadoNegado;
+
+export type ResultadoPoliticaDecisao =
+  | { ok: true; estado: DecisaoAprovacaoInvocacao }
+  | ResultadoNegado;
 
 /** A submissão exige propriedade persistida; Mestre pode agir em qualquer ficha. */
 export function avaliarSubmissaoAprovacao(
   contexto: ContextoSubmissaoAprovacao,
-): ResultadoPoliticaAprovacao {
+): ResultadoPoliticaSubmissao {
   if (!contexto.requesterUserId.trim()) {
     return { ok: false, motivo: "A conta autenticada não foi identificada." };
   }
@@ -37,7 +43,7 @@ export function validarDecisaoAprovacao(args: {
   estadoAtual: EstadoAprovacaoInvocacao;
   decisao: DecisaoAprovacaoInvocacao;
   motivo?: string;
-}): ResultadoPoliticaAprovacao {
+}): ResultadoPoliticaDecisao {
   if (!args.requesterIsMaster) {
     return { ok: false, motivo: "Apenas o Mestre pode revisar uma invocação." };
   }
