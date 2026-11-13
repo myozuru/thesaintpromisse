@@ -844,6 +844,12 @@ export function acoesAtivasDe(charId: string): { instanceId: string; ent: Entida
 
   const adicionar = (instanceId: string, ent: EntidadeOmni) => {
     for (const cfg of ent.acoesAtivas ?? []) {
+      // O painel específico executa estas ações; manter o preset legado não deve
+      // disponibilizar um segundo caminho com custos e efeitos diferentes.
+      if (ent.tags.includes('feature:baculo-aetheris') && [
+        'aa-aetheris-plumas', 'aa-aetheris-reversao', 'aa-aetheris-trono',
+        'aa-aetheris-requiem', 'aa-aetheris-ruptura',
+      ].includes(cfg.id)) continue;
       const key = ent.id + ':' + instanceId + ':' + cfg.id;
       if (seen.has(key)) continue;
       seen.add(key);

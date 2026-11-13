@@ -46,6 +46,20 @@ describe('armas, mira e chão', () => {
     useCharacterStore.getState().equipWeapons('u', { mainHandName: null });
     expect(acoesAtivasDe('u')).toHaveLength(0);
   });
+  it('evita duplicar ações legadas do Báculo com painel próprio, preservando a reação e ações personalizadas', () => {
+    const aetheris = {
+      ...arma(), nome: 'Báculo Aetheris', tags: ['modelo:baculo-aetheris', 'feature:baculo-aetheris', 'mao:2'],
+      acoesAtivas: [
+        { ...config, id: 'aa-aetheris-plumas' },
+        { ...config, id: 'aa-aetheris-requiem' },
+        { ...config, id: 'baculo-aetheris-reversao' },
+        { ...config, id: 'personalizada' },
+      ],
+    };
+    useInventoryStore.getState().add('u', aetheris);
+    expect(useCharacterStore.getState().equipWeapons('u', { mainHandName: aetheris.nome }).ok).toBe(true);
+    expect(acoesAtivasDe('u').map(({ cfg }) => cfg.id)).toEqual(['baculo-aetheris-reversao', 'personalizada']);
+  });
   it('duas mãos configuradas no OMNI ocupam ambas e aparecem nos dois cards', () => {
     useInventoryStore.getState().add('u', arma());
     expect(useCharacterStore.getState().equipWeapons('u', { mainHandName: 'Katana' }).ok).toBe(true);

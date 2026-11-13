@@ -56,7 +56,8 @@ beforeEach(() => {
   useDice3DStore.setState({ enabled: false, current: null, queue: [] });
 });
 
-afterEach(() => {
+afterEach(async () => {
+  await vi.dynamicImportSettled();
   vi.restoreAllMocks();
   useDice3DStore.getState().clear();
   useCombatStore.setState({ inCombat: false, reactionPauseIds: [] });

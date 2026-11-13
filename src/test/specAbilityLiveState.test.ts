@@ -5,10 +5,14 @@
  *   • Pool dedicado de Aptidões reaplicado no início da rodada
  *   • Reset de aptitudeOnlyTempPE / lastSpellUsedId em cena/descansos
  */
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { aggregateSpecAbilityEffects } from '@/lib/specAbilityEffects';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import type { Character } from '@/types';
+
+afterEach(async () => {
+  await vi.dynamicImportSettled();
+});
 
 function baseChar(partial: Partial<Character> = {}): Pick<
   Character,
