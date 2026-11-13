@@ -123,7 +123,7 @@ export function PlayerActionBar() {
 
 
   const omniAcaoLabel: Record<string, string> = {
-    comum: 'Ação Comum', bonus: 'Ação Bônus', reacao: 'Reação', movimento: 'Movimento', livre: 'Ação Livre',
+    comum: 'Ação Comum', bonus: 'Ação Bônus', reacao: 'Reação', movimento: 'Movimento', livre: 'Ação Livre', completa: 'Ação Completa',
   };
 
   const omniQuickEntries: ListEntry[] = useMemo(() => {

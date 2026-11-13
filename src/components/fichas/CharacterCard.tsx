@@ -563,7 +563,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
   accessorySlots.aneis.forEach(id => { if (id) slottedItemIds.add(id); });
   accessorySlots.pulseiras.forEach(id => { if (id) slottedItemIds.add(id); });
 
-  const equippedItems = items.filter((i) => i.assignedTo.includes(c.id));
+  const equippedItems = items.filter((i) => (i.assignedTo ?? []).includes(c.id));
   // Omni-Engine: mapeia itens (por nome) para entidades com combatData,
   // permitindo o botão de ação no inventário (Atacar / Curar / Aplicar).
   const omniEntidadesMap = useOmniEntidadesStore((s) => s.entidades);
@@ -1299,7 +1299,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
       const target = allCharacters.find((ch) => ch.id === targetId);
       if (!target) return;
       const tPassiveCA = target.passives.reduce((sum, p) => sum + p.bonusCA, 0);
-      const tEquipped = items.filter((i) => i.assignedTo.includes(target.id));
+      const tEquipped = items.filter((i) => (i.assignedTo ?? []).includes(target.id));
       const tItemCA = tEquipped.reduce((sum, i) => sum + i.bonusCA, 0);
       const tBuffCA = (target.activeBuffs || []).filter(b => b.type === 'ca').reduce((s, b) => s + b.value, 0);
       const tCondCA = getDefenseModFromConditions(target, type === 'cursed' ? 'cursed' : type);
@@ -1415,7 +1415,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
       const target = allCharacters.find((ch) => ch.id === targetId);
       if (!target) return;
       const tPassiveCA = target.passives.reduce((sum, p) => sum + p.bonusCA, 0);
-      const tEquipped = items.filter((i) => i.assignedTo.includes(target.id));
+      const tEquipped = items.filter((i) => (i.assignedTo ?? []).includes(target.id));
       const tItemCA = tEquipped.reduce((sum, i) => sum + i.bonusCA, 0);
       const tBuffCA = (target.activeBuffs || []).filter(b => b.type === 'ca').reduce((s, b) => s + b.value, 0);
       const tCondCA = getDefenseModFromConditions(target, 'melee');
@@ -4777,7 +4777,7 @@ function AccessorySlotsSection({
   onUseOmni: (inv: InventoryItem) => void;
 }) {
   const assignedAccessoryItems = items.filter(
-    (i) => i.assignedTo.includes(character.id) && i.slotType && i.slotType !== 'nenhum'
+    (i) => (i.assignedTo ?? []).includes(character.id) && i.slotType && i.slotType !== 'nenhum'
   );
 
   const getItemById = (id: string | null) => id ? items.find((i) => i.id === id) : null;

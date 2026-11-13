@@ -16,7 +16,7 @@ import { useLogStore } from '@/stores/useLogStore';
 import { acoesAtivasDe, armaDaAcao, executarAcaoAtiva } from '@/lib/omni/acaoAtiva';
 import { montarVariaveisDoPersonagem } from '@/lib/omni/resolvedor';
 
-const ACAO_ROT = { comum: 'Ação Comum', bonus: 'Ação Bônus', reacao: 'Reação', movimento: 'Ação de Movimento', livre: 'Livre' } as const;
+const ACAO_ROT = { comum: 'Ação Comum', bonus: 'Ação Bônus', reacao: 'Reação', movimento: 'Ação de Movimento', livre: 'Livre', completa: 'Ação Completa' } as const;
 const TR_ROT: Record<string, string> = { astucia: 'Astúcia', fortitude: 'Fortitude', integridade: 'Integridade', reflexos: 'Reflexos', vontade: 'Vontade' };
 const chip = 'rounded border px-1.5 py-0.5 text-xs font-semibold whitespace-nowrap';
 

@@ -8,7 +8,7 @@
 
 - A ativação procura o modificador pelo ID da entidade, ID da Ação Ativa ou nome da ação, normalizando caixa, acentos e separadores.
 - Aceita somente IDs de `SYSTEM_ACTIONS`; limites por rodada precisam ser inteiros não negativos. Zero significa sem limite.
-- Em combate, a ação alterada é cobrada de verdade. Uma Ação Completa consome duas Ações Comuns. Depois de esgotar um limite por rodada, a ação volta ao custo que consta na sua configuração.
+- Em combate, a ação alterada é cobrada de verdade. Uma Ação Completa consome a Ação Comum e a Ação Bônus do turno. Depois de esgotar um limite por rodada, a ação volta ao custo que consta na sua configuração.
 - O uso do limite é registrado junto com o pagamento dos demais custos. Reaplicar a configuração mantém o consumo já realizado na rodada.
 - Os limites começam zerados quando o combate inicia e continuam sendo reiniciados na transição de rodada.
 - `AcaoLogica.condicao` agora documenta seu uso como parâmetro textual dependente da primitiva. A validação específica do custo é feita antes de gravar a mudança.

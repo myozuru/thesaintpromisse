@@ -27,14 +27,13 @@
 - Dice keeps one scene while resizing; cinematic camera targets the live die and smooths only distance/FOV. Final face is upright. Drama alters vertical bounce only; armed bodies launch in batches.
 - Attack damage is applied to the target automatically via `applyDamage(..., { attackerId, rdIgnore })`; RD-ignoring abilities pass `rdIgnore` instead of only logging — abilities like Penetrante/Arremessos Potentes/Dragão need the real damage taken.
 - Réplicas materializáveis: o Mestre configura `EntidadeOmni.replica` (porte, PE de invocação/sustentação); materializar, sustentar no início do turno e desintegrar ao soltar ficam em src/lib/replicas.ts — o jogador nunca monta a cópia, só escolhe qual materializar.
-- Reações OMNI: gatilhos listados em `GATILHOS_REACAO_IDS` (tipos.ts); efeitos de uma reação rodam sob `comReacaoEmCurso` (reacaoEmCurso.ts) para nunca abrir reações em cadeia.
 - Portas da Morte, Ferimentos Complexos e "No Último Segundo" ficam em src/lib/portasDaMorte.ts (regras puras + ganchos chamados por applyDamage/applyHealing/applyLongRest/nextTurn); morte = condição `morto`, Portas = `inconsciente` com sourceEntityId `portas-da-morte` — o sistema não tem campo próprio de morte.
 - Economia/quests: lojas, categorias e pechinchas sincronizam pela fatia `economia`; quests, murais, facções, linha do tempo, notas do diário e viagem pela fatia `quests`, todos mesclados por `updatedAt` com remoção por `deletedAt` — vários clientes escrevem (jogadores movem cartazes, aceitam quests, registram pechincha). Regras puras em src/lib/economia/; prazos usam o relógio do mundo (`toTimelineSeconds`) e o cliente do Mestre expira/revela via `processarQuestsMestre`.
 - A CD de pechincha e o objetivo de quests "?" ficam ocultos só na interface do jogador (os dados da mesa são legíveis por todos).
-- Sustentações OMNI podem gerar cargas (`gerar_cargas`) e ter limite de metros (`alcance_sustentacao_m`); ações que gastam esse contador se prendem à sustentação, e o Mestre confere a distância a cada movimento (src/lib/omni/vigiaSustentacao.ts) e no início do turno — assim invocações limitadas não viram ações livres infinitas.
-- Efeitos OMNI contínuos presos ao alvo (cura todo turno, assistência de dano por tipo de ataque) ficam em `Character.omniEfeitosContinuos` e src/lib/omni/efeitosContinuos.ts; valem enquanto a sustentação de origem existir — assim somem sozinhos sem precisar de limpeza em cada caminho.
 - Conquistas sincronizam pela fatia `conquistas` (definições, desbloqueios e títulos mesclados por `updatedAt`); gatilhos automáticos chamam src/lib/conquistas/motor.ts por import dinâmico para evitar ciclos entre stores.
 - Global diary access and character achievement shortcuts reuse DiarioQuests with an initial-tab prop; mount dialogs only while open so each entry starts on the intended tab and character.
+
+- Subdirectories (e.g. src/lib/omni) have their own `AGENTS.md`; read it before changing files there.
 
 # Fluxo de versionamento (agentes)
 

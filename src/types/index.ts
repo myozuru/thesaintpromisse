@@ -1104,6 +1104,8 @@ export interface Character {
    * Ex.: `omniActionCost.ler_tecnica = { cost: 'action_free', perRound: 1 }`.
    * Resolve a transformação dinâmica de "Ler Técnica" (bônus → livre 1×/rodada).
    */
+  /** Usos por cena de ações OMNI limitadas; zera quando a cena (combate) muda. */
+  omniUsosCena?: { cena: string; usos: Record<string, number> };
   omniActionCost?: Record<string, { cost: string; perRound?: number; usedThisRound?: number }>;
   /**
    * Redutores de custo de PE de FEITIÇOS aplicados no `SpellApplyDialog`.

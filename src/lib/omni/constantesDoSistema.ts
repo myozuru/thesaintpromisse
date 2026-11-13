@@ -202,6 +202,7 @@ export const DICIONARIO_CONDICOES = [
   'caido',
   'enredado',
   'imovel',
+  'suspenso',
   'lento',
   'surpreso',
   'fragilizado',

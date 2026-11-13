@@ -156,7 +156,7 @@ const CondicionalAtivoSchema = z.object({
 const EfeitoSecundarioSchema = z.union([
   z.object({ tipo: z.literal('remover_condicao'), condicao: z.string().min(1) }),
   z.object({ tipo: z.enum(['pv_temporarios', 'escudo']), valor: z.string().min(1), rodadas: z.number().finite().int().nonnegative() }),
-  z.object({ tipo: z.literal('condicao'), condicao: z.string(), rodadas: z.number().finite() }),
+  z.object({ tipo: z.literal('condicao'), condicao: z.string(), rodadas: z.number().finite(), ate_inicio_turno_usuario: z.boolean().optional() }),
   z.object({ tipo: z.enum(['puxar', 'empurrar']), metros: z.number().finite() }),
   z.object({ tipo: z.literal('movimento'), movimento_tipo: z.enum(['puxar', 'empurrar', 'avancar_ate', 'teleporte', 'trocar_posicao']), movimento_distancia: z.string(), movimento_alvo: z.enum(['usuario', 'alvo']).optional() }),
 ]);
@@ -175,7 +175,7 @@ const AcaoAtivaSchema = z.object({
     alvo: z.enum(['origem', 'protegido', 'usuario']), cancelar_evento: z.boolean().optional(), defesa_bonus: z.number().finite().nonnegative().optional(),
     bonus_teste: z.number().finite().optional(), dano_minimo: z.number().finite().nonnegative().optional(),
   }).optional(),
-  id: z.string(), nome: z.string(), acao: z.enum(['comum', 'bonus', 'reacao', 'movimento', 'livre']),
+  id: z.string(), nome: z.string(), acao: z.enum(['comum', 'bonus', 'reacao', 'movimento', 'livre', 'completa']), usos_por_cena: z.number().int().positive().optional(),
   custo_recursos: z.object({
     pe_base: z.string().optional(), pe_por_intensificacao: z.string().optional(),
     max_intensificacoes: z.string().optional(), limite_pe: z.string().optional(),

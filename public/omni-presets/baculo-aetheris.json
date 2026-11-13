@@ -12,14 +12,31 @@
       "descricao": "**Complexa • Corpo-a-corpo • Grupo Haste**\nDano: 2d8 Impacto\nMargem de crítico: 19–20\nAlcance: 3 m\nEspaços: 2\nPropriedades: Estendida, Duas Mãos, Especial\n\n**Asas do Firmamento:** +3 m de deslocamento, ignora terreno difícil natural e reduz dano de queda para o excedente acima de 18 m.\n\n**Rajada Sônica:** primeiro acerto de cada rodada causa +3d8 Sônico e empurra 3 m. **Julgamento dos Ventos:** acerto crítico causa +5d8 Sônico e exige TR de Fortitude; falha suprime Reações até o início do próximo turno do portador. **Ruptura do Firmamento:** após crítico, Reação e 2 PE para +10d10 Sônico, empurrão 6 m e TR de Fortitude para Caído.\n\n**Plumas da Tempestade** (Ação Comum, 8 PE): até 3 ataques independentes de 6d8 Cortante a até 18 m; depois, até 4,5 m de movimento sem AdO. **Reversão dos Ventos** (Reação, 7 PE): +5 Defesa contra ataque à distância contra o portador ou aliado a até 9 m; se tornar o ataque uma falha, libera contra-ataque de 5d8 Sônico a até 18 m. **Trono das Nuvens** (Ação Comum, 9 PE): raio de 3 m a até 18 m, 5d8 Impacto e Suspenso a 4,5 m em falha no TR de Fortitude até o próximo turno do portador. **Réquiem dos Céus** (Ação Completa, 18 PE, 1× por cena): raio de 9 m, 15d10 Sônico, empurrão de 6 m e Caído em falha; até 3 aliados são transportados em segurança até 9 m.",
       "icone": "🪄",
       "tags": [
-        "preset", "arma", "complexa", "melee", "grupo:haste", "prop:estendida",
-        "prop:duas_maos", "prop:especial", "modelo:baculo-aetheris", "espacos:2",
-        "mao:2", "feature:baculo-aetheris"
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:haste",
+        "prop:estendida",
+        "prop:duas_maos",
+        "prop:especial",
+        "modelo:baculo-aetheris",
+        "espacos:2",
+        "mao:2",
+        "feature:baculo-aetheris",
+        "grau:especial",
+        "raridade:lendario"
       ],
-      "duracao": { "tipo": "permanente" },
+      "duracao": {
+        "tipo": "permanente"
+      },
       "custos": [],
       "gatilhos": [
-        { "id": "baculo-aetheris-equipar", "evento": "aoEquipar", "blocos": [] }
+        {
+          "id": "baculo-aetheris-equipar",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
       ],
       "slotType": "maos",
       "criadoEm": 1792454400000,
@@ -43,15 +60,131 @@
             "alvo": "protegido",
             "defesa_bonus": 5
           }
+        },
+        {
+          "id": "aa-aetheris-plumas",
+          "nome": "Plumas da Tempestade",
+          "acao": "comum",
+          "custoPE": "8",
+          "alcanceM": 18,
+          "tipo_alvo": "multiplo",
+          "filtro_alvo": "inimigos",
+          "max_alvos": "3",
+          "teste": "ataque",
+          "dano": "6d8",
+          "tipoDano": "Cortante"
+        },
+        {
+          "id": "aa-aetheris-reversao",
+          "nome": "Reversão dos Ventos (contra-rajada)",
+          "acao": "reacao",
+          "custoPE": "7",
+          "alcanceM": 9,
+          "tipo_alvo": "unico",
+          "filtro_alvo": "inimigos",
+          "teste": "ataque",
+          "dano": "5d8",
+          "tipoDano": "Sônico"
+        },
+        {
+          "id": "aa-aetheris-trono",
+          "nome": "Trono das Nuvens",
+          "acao": "comum",
+          "custoPE": "9",
+          "alcanceM": 18,
+          "tipo_alvo": "area",
+          "filtro_alvo": "todos_exceto_si",
+          "area": {
+            "forma": "raio_no_ponto",
+            "tamanho_m": 3
+          },
+          "teste": "tr",
+          "tr": "fortitude",
+          "metadeNoSucesso": true,
+          "dano": "5d8",
+          "tipoDano": "Impacto",
+          "desfechosTR": {
+            "falha": {
+              "dano": "total",
+              "efeitos": [
+                {
+                  "tipo": "condicao",
+                  "condicao": "suspenso",
+                  "rodadas": 0,
+                  "ate_inicio_turno_usuario": true
+                }
+              ]
+            },
+            "sucesso": {
+              "dano": "metade"
+            }
+          }
+        },
+        {
+          "id": "aa-aetheris-requiem",
+          "nome": "Réquiem dos Céus",
+          "acao": "completa",
+          "usos_por_cena": 1,
+          "custoPE": "18",
+          "alcanceM": 24,
+          "tipo_alvo": "area",
+          "filtro_alvo": "todos_exceto_si",
+          "area": {
+            "forma": "raio_no_ponto",
+            "tamanho_m": 9
+          },
+          "teste": "tr",
+          "tr": "fortitude",
+          "metadeNoSucesso": true,
+          "dano": "15d10",
+          "tipoDano": "Sônico",
+          "condicionais": [
+            {
+              "id": "requiem-suspensos",
+              "se_alvo": [
+                {
+                  "tipo": "tem_condicao",
+                  "nome": "suspenso"
+                }
+              ],
+              "mod_tr_alvo": -2
+            }
+          ]
+        },
+        {
+          "id": "aa-aetheris-ruptura",
+          "nome": "Ruptura do Firmamento (após crítico)",
+          "acao": "reacao",
+          "custoPE": "2",
+          "alcanceM": 0,
+          "tipo_alvo": "unico",
+          "filtro_alvo": "inimigos",
+          "teste": "nenhum",
+          "dano": "10d10",
+          "tipoDano": "Sônico"
         }
       ],
       "combatData": {
         "effects": [
-          { "id": "baculo-aetheris-dano", "formula": "2d8", "type": "SUBTRAIR", "target": "ALVO", "damageType": "Impacto", "resourcePath": "vida_atual" }
+          {
+            "id": "baculo-aetheris-dano",
+            "formula": "2d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          }
         ],
         "effectsPassive": [],
         "effectsActive": [
-          { "id": "baculo-aetheris-dano", "formula": "2d8", "type": "SUBTRAIR", "target": "ALVO", "damageType": "Impacto", "resourcePath": "vida_atual" }
+          {
+            "id": "baculo-aetheris-dano",
+            "formula": "2d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          }
         ],
         "critRange": 19,
         "critMultiplier": 2,

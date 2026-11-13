@@ -243,7 +243,7 @@ export type EfeitoMovimentoAtivo = {
 };
 
 export type EfeitoSecundarioAtivo =
-  | { tipo: 'condicao'; condicao: string; rodadas: number }
+  | { tipo: 'condicao'; condicao: string; rodadas: number; /** Dura até o início do próximo turno do usuário. */ ate_inicio_turno_usuario?: boolean }
   | { tipo: 'remover_condicao'; condicao: string }
   | { tipo: 'pv_temporarios' | 'escudo'; valor: string; rodadas: number }
   | { tipo: 'puxar' | 'empurrar'; metros: number }
@@ -331,7 +331,10 @@ export interface AcaoAtivaConfig {
   desfechosTR?: { falha?: DesfechoTRAtivo; sucesso?: DesfechoTRAtivo; falha_critica?: DesfechoTRAtivo };
   id: string;
   nome: string;
-  acao: 'comum' | 'bonus' | 'reacao' | 'movimento' | 'livre';
+  /** 'completa' gasta a Ação Comum e a Ação Bônus do turno. */
+  acao: 'comum' | 'bonus' | 'reacao' | 'movimento' | 'livre' | 'completa';
+  /** Máximo de usos por cena (combate). Ausente = sem limite. */
+  usos_por_cena?: number;
   /** Fórmula do custo em PE. */
   custoPE: string;
   /** 0 = sem limite. */

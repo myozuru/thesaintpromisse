@@ -42,6 +42,12 @@
       "nome": "Aura Ardente",
       "descricao": "Aura Ardente 1: quem começa o turno a até 3 m faz TR de Fortitude; na falha sofre 2d8 de dano queimante.",
       "arquivo": "/omni-presets/aura-ardente.json"
+    },
+    {
+      "id": "baculo-aetheris",
+      "nome": "Báculo Aetheris",
+      "descricao": "Arma lendária de Grau Especial (2d8 Impacto, crítico 19–20): Plumas da Tempestade, Reversão dos Ventos, Trono das Nuvens, Réquiem dos Céus e Ruptura do Firmamento.",
+      "arquivo": "/omni-presets/baculo-aetheris.json"
     }
   ]
 }

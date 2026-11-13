@@ -180,7 +180,7 @@ function ItemCard({
   const inventoryAdd = useInventoryStore((s) => s.add);
   const omniEntities = useOmniEntidadesStore((s) => s.entidades);
   const addLog = useLogStore((s) => s.addLog);
-  const assignedChars = characters.filter((c) => item.assignedTo.includes(c.id));
+  const assignedChars = characters.filter((c) => (item.assignedTo ?? []).includes(c.id));
   const isAccessory = item.slotType && item.slotType !== 'nenhum';
   const qty = item.quantity || 1;
 
@@ -190,7 +190,7 @@ function ItemCard({
     inventoryAdd(charId, ent);
     // 2) Vincula o item ao personagem no banco para aparecer na seção
     //    "Inventário" da ficha imediatamente (idempotente).
-    if (!item.assignedTo.includes(charId)) {
+    if (!(item.assignedTo ?? []).includes(charId)) {
       onUpdate({ assignedTo: [...item.assignedTo, charId] });
     }
     addLog('system', `📦 "${item.name}" enviado ao inventário de ${charName}.`);
@@ -343,7 +343,7 @@ function ItemCard({
                   <div key={c.id} className="flex items-center gap-1 rounded-full bg-primary/10 border border-primary/25 pl-2.5 pr-1 py-0.5 group">
                     <span className="text-xs text-primary font-medium">{c.name}</span>
                     <button
-                      onClick={() => onUpdate({ assignedTo: item.assignedTo.filter((id) => id !== c.id) })}
+                      onClick={() => onUpdate({ assignedTo: (item.assignedTo ?? []).filter((id) => id !== c.id) })}
                       className="rounded-full p-0.5 text-muted-foreground hover:text-destructive hover:bg-destructive/20 transition-colors opacity-60 group-hover:opacity-100"
                       title="Desvincular"
                     >
@@ -358,7 +358,7 @@ function ItemCard({
               <div>
                 <h4 className="text-xs font-semibold text-muted-foreground mb-1.5">Vincular:</h4>
                 <div className="flex flex-wrap gap-1.5">
-                  {characters.filter((c) => !item.assignedTo.includes(c.id)).map((c) => (
+                  {characters.filter((c) => !(item.assignedTo ?? []).includes(c.id)).map((c) => (
                     <button
                       key={c.id}
                       onClick={() => { onUpdate({ assignedTo: [...item.assignedTo, c.id] }); playClickSound(); }}
@@ -367,7 +367,7 @@ function ItemCard({
                       <Link2 className="h-2.5 w-2.5" /> {c.name}
                     </button>
                   ))}
-                  {characters.filter((c) => !item.assignedTo.includes(c.id)).length === 0 && (
+                  {characters.filter((c) => !(item.assignedTo ?? []).includes(c.id)).length === 0 && (
                     <p className="text-xs text-muted-foreground italic">Todos vinculados.</p>
                   )}
                 </div>
@@ -637,16 +637,16 @@ function ItemForm({
                 key={c.id}
                 onClick={() => setForm({
                   ...form,
-                  assignedTo: form.assignedTo.includes(c.id) ? form.assignedTo.filter((id) => id !== c.id) : [...form.assignedTo, c.id],
+                  assignedTo: (form.assignedTo ?? []).includes(c.id) ? (form.assignedTo ?? []).filter((id) => id !== c.id) : [...form.assignedTo, c.id],
                 })}
                 className={cn(
                   'flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs transition-all',
-                  form.assignedTo.includes(c.id)
+                  (form.assignedTo ?? []).includes(c.id)
                     ? 'border-primary/40 bg-primary/15 text-primary'
                     : 'border-border bg-secondary/50 text-muted-foreground hover:border-primary/30 hover:text-primary'
                 )}
               >
-                {form.assignedTo.includes(c.id) ? <Link2 className="h-2.5 w-2.5" /> : <Unlink className="h-2.5 w-2.5" />}
+                {(form.assignedTo ?? []).includes(c.id) ? <Link2 className="h-2.5 w-2.5" /> : <Unlink className="h-2.5 w-2.5" />}
                 {c.name}
               </button>
             ))}

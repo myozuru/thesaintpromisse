@@ -6,7 +6,7 @@ import type { InvocacaoControlador } from "./tipos";
 type AcaoCatalogoInvocacao = InvocacaoControlador["acoes"][number];
 
 const CATEGORIAS: Record<
-  AcaoAtivaConfig["acao"],
+  Exclude<AcaoAtivaConfig["acao"], "completa">,
   NonNullable<AcaoCatalogoInvocacao["categoriaAcao"]>
 > = {
   comum: "acao_comum",
@@ -66,6 +66,8 @@ export function resolverAcaoOmniInvocacao(
       motivo: "Esta versão de Invocações executa ações OMNI de Ataque ou Teste de Resistência.",
     };
   }
+  if (config.acao === "completa")
+    return { ok: false, motivo: "Invocações ainda não executam ações OMNI de Ação Completa." };
   const reacaoConfigurada = config.acao === "reacao" && !!config.reacao;
   if (config.acao === "reacao" && (!opcoes.permitirReacao || !reacaoConfigurada))
     return {

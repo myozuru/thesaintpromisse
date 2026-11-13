@@ -17,12 +17,23 @@ export interface ContextoCustosAtivos { armaNome?: string; armaInstanciaId?: str
 
 type AcaoAtivaEfetiva = AcaoAtivaConfig['acao'] | 'completa';
 
+/** Cena = combate atual; fora de combate, uma cena única até o próximo combate. */
+export function cenaAtualOmni(): string { return useCombatStore.getState().combatId ?? 'fora-de-combate'; }
+
+/** Usos já feitos desta ação na cena atual. */
+export function usosNaCenaOmni(u: Pick<Character, 'omniUsosCena'>, chave: string): number {
+  const r = u.omniUsosCena;
+  return r && r.cena === cenaAtualOmni() ? (r.usos[chave] ?? 0) : 0;
+}
+
 export interface PlanoCustosAtivos {
   pe: number; pv: number; cargas: number; contador?: string;
   municao: number; armaMunicao?: { charId: string; nome: string; restanteAntes: number; instanceId?: string };
   usosItem: number; instanciaItemId?: string;
   acao: AcaoAtivaEfetiva; custoAcaoOmniKey?: string; intensificacoes: number; maxIntensificacoes: number;
   pePorTurno: number;
+  /** Limite de usos por cena desta ação (chave = id da ação). */
+  limiteCena?: { chave: string; limite: number };
 }
 export type ResultadoCustosAtivos = { ok: true; plano: PlanoCustosAtivos } | { ok: false; reason: string };
 
@@ -152,7 +163,14 @@ export function planejarCustosAtivos(cfg: AcaoAtivaConfig, u: Character, intensi
     const efeitos = [...(cfg.efeitos ?? []), ...Object.values(cfg.desfechosTR ?? {}).flatMap(r => r?.efeitos ?? [])];
     if (efeitos.some(e => e.tipo === 'remover_condicao') && acao === 'livre') return { ok: false, reason: 'Remover condições exige uma ação: escolha Comum, Bônus, Reação ou Movimento.' };
     if (!['comum', 'bonus', 'reacao', 'movimento', 'livre', 'completa'].includes(acao)) throw new Error('Tipo de ação inválido.');
-    return { ok: true, plano: { pe, pv, cargas, contador, municao, armaMunicao, usosItem, instanciaItemId, acao, custoAcaoOmniKey: modificadorAcao?.key, intensificacoes, maxIntensificacoes: max, pePorTurno } };
+    let limiteCena: PlanoCustosAtivos['limiteCena'];
+    if (cfg.usos_por_cena !== undefined) {
+      if (!Number.isSafeInteger(cfg.usos_por_cena) || cfg.usos_por_cena < 1) throw new Error('Usos por cena deve ser um inteiro positivo.');
+      const chave = `${contexto.entidadeId ?? ''}:${cfg.id}`;
+      if (usosNaCenaOmni(u, chave) >= cfg.usos_por_cena) return { ok: false, reason: `${cfg.nome} já foi usada ${cfg.usos_por_cena}× nesta cena.` };
+      limiteCena = { chave, limite: cfg.usos_por_cena };
+    }
+    return { ok: true, plano: { pe, pv, cargas, contador, municao, armaMunicao, usosItem, instanciaItemId, acao, custoAcaoOmniKey: modificadorAcao?.key, intensificacoes, maxIntensificacoes: max, pePorTurno, limiteCena } };
   } catch (e) { return { ok: false, reason: e instanceof Error ? e.message : 'Custos inválidos.' }; }
 }
 
@@ -160,8 +178,12 @@ export function validarRecursosAtivos(u: Character, p: PlanoCustosAtivos): { ok:
   if (![u.peCurrent ?? 0, u.tempPE ?? 0].every(n => Number.isFinite(n) && n >= 0) || (u.peCurrent ?? 0) + (u.tempPE ?? 0) < p.pe) return { ok: false, reason: `PE insuficiente (precisa de ${p.pe}).` };
   // Sacrifício usa PV reais, sem mitigação/escudo/PV temporários e sem matar o usuário.
   if (p.pv > 0 && (!Number.isFinite(u.hpCurrent) || (u.hpCurrent ?? 0) <= p.pv)) return { ok: false, reason: `PV insuficiente: o custo de ${p.pv} deve deixar ao menos 1 PV.` };
-  const comunsNecessarias = p.acao === 'completa' ? 2 : p.acao === 'comum' ? 1 : 0;
-  if (comunsNecessarias && (!Number.isFinite(u.actionsCurrent ?? 1) || (u.actionsCurrent ?? 1) < comunsNecessarias)) return { ok: false, reason: comunsNecessarias === 2 ? 'Sem duas Ações Comuns disponíveis.' : 'Sem Ação Comum disponível.' };
+  // Ação Completa = Ação Comum + Ação Bônus do mesmo turno.
+  const semComum = !Number.isFinite(u.actionsCurrent ?? 1) || (u.actionsCurrent ?? 1) < 1;
+  const semBonus = !Number.isFinite(u.bonusActionsCurrent ?? 1) || (u.bonusActionsCurrent ?? 1) < 1;
+  if (p.acao === 'completa' && (semComum || semBonus)) return { ok: false, reason: 'Ação Completa exige a Ação Comum e a Ação Bônus do turno.' };
+  if (p.acao === 'comum' && semComum) return { ok: false, reason: 'Sem Ação Comum disponível.' };
+  if (p.limiteCena && usosNaCenaOmni(u, p.limiteCena.chave) >= p.limiteCena.limite) return { ok: false, reason: `Limite de ${p.limiteCena.limite}× por cena atingido.` };
   if (p.acao === 'bonus' && (!Number.isFinite(u.bonusActionsCurrent ?? 1) || (u.bonusActionsCurrent ?? 1) < 1)) return { ok: false, reason: 'Sem Ação Bônus disponível.' };
   if (u.feridaInternaBloqueada && (p.acao === 'comum' || p.acao === 'completa' || p.acao === 'reacao')) return { ok: false, reason: 'Ferida interna: perdeu a ação e as reações até o próximo turno.' };
   const reacoesDisponiveis = u.reactionsCurrent ?? u.reactionsMax ?? 1;
@@ -179,7 +201,15 @@ export function patchCustosAtivos(u: Character, p: PlanoCustosAtivos): Partial<C
   const patch: Partial<Character> = { tempPE: (u.tempPE ?? 0) - temp, peCurrent: (u.peCurrent ?? 0) - (p.pe - temp) };
   if (p.pv) patch.hpCurrent = u.hpCurrent - p.pv;
   if (p.acao === 'comum') patch.actionsCurrent = Math.max(0, (u.actionsCurrent ?? 1) - 1);
-  if (p.acao === 'completa') patch.actionsCurrent = Math.max(0, (u.actionsCurrent ?? 1) - 2);
+  if (p.acao === 'completa') {
+    patch.actionsCurrent = Math.max(0, (u.actionsCurrent ?? 1) - 1);
+    patch.bonusActionsCurrent = Math.max(0, (u.bonusActionsCurrent ?? 1) - 1);
+  }
+  if (p.limiteCena) {
+    const cena = cenaAtualOmni();
+    const usos = u.omniUsosCena?.cena === cena ? u.omniUsosCena.usos : {};
+    patch.omniUsosCena = { cena, usos: { ...usos, [p.limiteCena.chave]: (usos[p.limiteCena.chave] ?? 0) + 1 } };
+  }
   if (p.acao === 'bonus') patch.bonusActionsCurrent = Math.max(0, (u.bonusActionsCurrent ?? 1) - 1);
   if (p.acao === 'reacao') patch.reactionsCurrent = Math.max(0, (u.reactionsCurrent ?? u.reactionsMax ?? 1) - 1);
   if (p.custoAcaoOmniKey) {

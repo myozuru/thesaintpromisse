@@ -143,7 +143,7 @@ export const saveCharactersSliceSecurely = createServerFn({ method: "POST" })
   .middleware([forwardSupabaseFunctionAuth, requireSupabaseAuth])
   .validator((input: unknown) => saveCharactersInputSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const { data: result, error } = await context.supabase.rpc("write_owned_characters_slice", {
+    const { data: result, error } = await (context.supabase.rpc as any)("write_owned_characters_slice", {
       p_request_id: data.requestId,
       p_expected_revision: data.expectedRevision,
       p_characters: data.characters as unknown as import("@/integrations/supabase/types").Json,
@@ -172,7 +172,7 @@ export const saveMapSceneSliceSecurely = createServerFn({ method: "POST" })
   .middleware([forwardSupabaseFunctionAuth, requireSupabaseAuth])
   .validator((input: unknown) => saveMapSceneInputSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const { data: result, error } = await context.supabase.rpc("write_owned_map_scene", {
+    const { data: result, error } = await (context.supabase.rpc as any)("write_owned_map_scene", {
       p_request_id: data.requestId,
       p_expected_revision: data.expectedRevision,
       p_map_scene: data.mapScene as import("@/integrations/supabase/types").Json,

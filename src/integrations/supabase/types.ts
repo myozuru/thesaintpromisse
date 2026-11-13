@@ -114,6 +114,7 @@ export type Database = {
         Returns: boolean
       }
       list_masters: { Args: never; Returns: string[] }
+      nick_em_uso: { Args: { _nick: string }; Returns: boolean }
       set_master: {
         Args: { _make: boolean; _target: string }
         Returns: undefined

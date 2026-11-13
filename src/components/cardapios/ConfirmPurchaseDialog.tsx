@@ -149,7 +149,7 @@ export function ConfirmPurchaseDialog({ open, onOpenChange, estId, estName }: Pr
         (inv) =>
           inv.name === it.name &&
           (inv.isFood ?? false) === (it.isFood ?? false) &&
-          inv.assignedTo.includes(char.id),
+          (inv.assignedTo ?? []).includes(char.id),
       );
       if (existing) {
         updateInventoryItem(existing.id, {

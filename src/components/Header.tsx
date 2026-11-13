@@ -363,6 +363,11 @@ export function Header({ activeTab, onTabChange, testsOpen = false, onToggleTest
                 align="end"
                 sideOffset={8}
                 className="w-64 max-w-[calc(100vw-1rem)]"
+                {...({ onOpenAutoFocus: (event: Event) => {
+                  if (!activeMenuItemRef.current) return;
+                  event.preventDefault();
+                  activeMenuItemRef.current.focus();
+                } } as Record<string, unknown>)}
               >
                 <DropdownMenuLabel className="flex flex-col items-start gap-0.5 px-3 py-2">
                   <span className="sm:hidden">{'Navega\u00e7\u00e3o'}</span>

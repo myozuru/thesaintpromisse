@@ -38,6 +38,7 @@ export const ALL_CONDITIONS: ConditionDef[] = [
   { id: 'caido', name: 'Caído', category: 'MOVIMENTO', icon: '🔻', description: '-3 ataque corpo a corpo, movimento 4,5m. -3 Defesa (corpo a corpo), +3 Defesa (distância).' },
   { id: 'enredado', name: 'Enredado', category: 'MOVIMENTO', icon: '🕸', description: 'Deslocamento reduzido à metade. -2 Defesa e ataques.' },
   { id: 'imovel', name: 'Imóvel', category: 'MOVIMENTO', icon: '🦶', description: 'Incapaz de ações de movimento. Não recebe Deslocamento de qualquer fonte.' },
+  { id: 'suspenso', name: 'Suspenso', category: 'MOVIMENTO', icon: '🌪️', description: 'Erguido a 4,5 m do chão. Sem voo, não pode andar. Desce sem dano de queda quando acaba.' },
   { id: 'lento', name: 'Lento', category: 'MOVIMENTO', icon: '🐌', description: 'Toda forma de movimento reduzida pela metade.' },
 
   // SENSORIAIS
@@ -86,6 +87,8 @@ export interface ActiveCondition {
   sourceCharName?: string;
   /** Origem identificada para gatilhos; não é inferida pelo nome. */
   sourceCharId?: string;
+  /** Termina no início do próximo turno deste personagem (ex.: quem aplicou). */
+  expiraNoInicioDoTurnoDe?: string;
   /** ID da entidade que aplicou a condição (arma, item, talento ou feitiço). */
   sourceEntityId?: string;
   /** ID da cópia específica da fonte no inventário, quando houver. */

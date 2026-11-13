@@ -1628,7 +1628,7 @@ export function AttackPanel({ character: cProp }: Props) {
     if (!nome) return null;
     const candidatas = omniInventoryList.filter(inv => inv.ownerId === c.id && inv.entity.nome === nome);
     const instancia = candidatas.find(inv => inv.isEquipped) ?? candidatas[0];
-    if (!instancia) { const legado = items.find(i => i.name === nome && i.assignedTo.includes(c.id)); return legado ? <SoltarItemButton charId={c.id} itemId={legado.id} legado /> : null; }
+    if (!instancia) { const legado = items.find(i => i.name === nome && (i.assignedTo ?? []).includes(c.id)); return legado ? <SoltarItemButton charId={c.id} itemId={legado.id} legado /> : null; }
     return <><ContadoresEquipamento charId={c.id} entidade={omniEntidadesMap[instancia.entity.id] ?? instancia.entity} /><SoltarItemButton charId={c.id} itemId={instancia.instanceId} /></>;
   };
 

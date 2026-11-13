@@ -249,7 +249,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
   const dcAttrLabel = dcLinkedAttr ? dcLinkedAttr.name.slice(0, 3).toUpperCase() : '—';
   const halfLevelSrc = Math.floor((source.level || 1) / 2);
   const passiveDC = (source.passives || []).reduce((s, p) => s + (p.bonusDC || 0), 0);
-  const equippedSrc = items.filter(i => i.assignedTo.includes(source.id));
+  const equippedSrc = items.filter(i => (i.assignedTo ?? []).includes(source.id));
   const itemDC = equippedSrc.reduce((s, i) => s + (i.bonusDC || 0), 0);
   const buffDC = (source.activeBuffs || []).filter(b => b.type === 'dc').reduce((s, b) => s + b.value, 0);
   const cdIncrease = source.cdIncrease || 0;
@@ -531,7 +531,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
     const desMod = desAttr ? Math.floor((desAttr.value - 10) / 2) : 0;
     const halfLevel = Math.floor((t.level || 1) / 2);
     const passiveCA = (t.passives || []).reduce((s, p) => s + (p.bonusCA || 0), 0);
-    const equipped = items.filter(i => i.assignedTo.includes(t.id));
+    const equipped = items.filter(i => (i.assignedTo ?? []).includes(t.id));
     const itemCA = equipped.reduce((s, i) => s + (i.bonusCA || 0), 0);
     const buffCA = (t.activeBuffs || []).filter(b => b.type === 'ca').reduce((s, b) => s + b.value, 0);
     return (t.ca || 10) + desMod + halfLevel + passiveCA + itemCA + buffCA;

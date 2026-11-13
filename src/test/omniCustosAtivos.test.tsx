@@ -172,19 +172,31 @@ describe('custos genéricos de ações', () => {
     expect(segunda.ok).toBe(true);
     expect(pegarFicha('u')).toMatchObject({ actionsCurrent: 1, bonusActionsCurrent: 0, omniActionCost: { ler_tecnica: { usedThisRound: 1 } } });
   });
-  it('custo action_full exige e consome duas ações comuns', async () => {
-    mesa({ actionsCurrent: 1, omniActionCost: { golpe_completo: { cost: 'action_full' } } });
+  it('custo action_full exige e consome Ação Comum + Ação Bônus', async () => {
+    mesa({ actionsCurrent: 1, bonusActionsCurrent: 0, omniActionCost: { golpe_completo: { cost: 'action_full' } } });
     useCombatStore.setState({ inCombat: true });
     const acao = cfg({ id: 'golpe_completo', acao: 'livre', custoPE: '0' });
 
     const insuficiente = await executarAcaoAtiva('u', acao, 'a');
-    expect(insuficiente).toMatchObject({ ok: false, reason: 'Sem duas Ações Comuns disponíveis.' });
+    expect(insuficiente).toMatchObject({ ok: false, reason: 'Ação Completa exige a Ação Comum e a Ação Bônus do turno.' });
     expect(pegarFicha('u').actionsCurrent).toBe(1);
 
-    useCharacterStore.getState().updateCharacter('u', { actionsCurrent: 2 });
+    useCharacterStore.getState().updateCharacter('u', { bonusActionsCurrent: 1 });
     const suficiente = await executarAcaoAtiva('u', acao, 'a');
     expect(suficiente.ok).toBe(true);
-    expect(pegarFicha('u').actionsCurrent).toBe(0);
+    expect(pegarFicha('u')).toMatchObject({ actionsCurrent: 0, bonusActionsCurrent: 0 });
+  });
+  it('ação configurada como completa gasta Comum + Bônus e respeita 1× por cena', async () => {
+    mesa({ actionsCurrent: 1, bonusActionsCurrent: 1 });
+    useCombatStore.setState({ inCombat: true, combatId: 'cena-1' } as never);
+    const acao = cfg({ id: 'requiem', acao: 'completa', usos_por_cena: 1, custoPE: '0' });
+    expect((await executarAcaoAtiva('u', acao, 'a')).ok).toBe(true);
+    expect(pegarFicha('u')).toMatchObject({ actionsCurrent: 0, bonusActionsCurrent: 0 });
+    useCharacterStore.getState().updateCharacter('u', { actionsCurrent: 1, bonusActionsCurrent: 1 });
+    expect(await executarAcaoAtiva('u', acao, 'a')).toMatchObject({ ok: false });
+    expect(pegarFicha('u').actionsCurrent).toBe(1);
+    useCombatStore.setState({ combatId: 'cena-2' } as never);
+    expect((await executarAcaoAtiva('u', acao, 'a')).ok).toBe(true);
   });
   it('exige uma ação determinada para purificação manual', async () => {
     const purificar = cfg({ acao: 'livre', efeitos: [{ tipo: 'remover_condicao', condicao: 'caido' }] });

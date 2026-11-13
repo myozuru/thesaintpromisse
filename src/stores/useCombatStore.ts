@@ -3,7 +3,17 @@ import { aplicarUltimoSegundo, inicioTurnoFeridaInterna } from '@/lib/portasDaMo
 import { terraPvtPatch, ceuPreparoPatch, TEMPESTADE_IMOVEL_PREFIX } from '@/lib/posturas';
 
 /** Posturas no começo do turno: Terra (PVT), Céu (preparo temporário) e fim do Imóvel da Tempestade. */
+/** Remove condições que duram "até o início do próximo turno" deste personagem. */
+export function expirarCondicoesNoInicioDoTurno(charId: string) {
+  const st = useCharacterStore.getState();
+  for (const c of st.characters) {
+    const fim = (c.activeConditions ?? []).filter(cd => cd.expiraNoInicioDoTurnoDe === charId);
+    if (fim.length) st.updateCharacter(c.id, { activeConditions: c.activeConditions.filter(cd => cd.expiraNoInicioDoTurnoDe !== charId) });
+  }
+}
+
 function inicioTurnoPostura(charId: string) {
+  expirarCondicoesNoInicioDoTurno(charId);
   // Ferida interna (Ferimento Complexo 7): TR de Fortitude para agir.
   inicioTurnoFeridaInterna(charId, useCombatStore.getState().inCombat);
   const st = useCharacterStore.getState();
