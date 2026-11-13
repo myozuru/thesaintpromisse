@@ -68,7 +68,7 @@ export function AltitudeDialog({ entityId, onClose }: { entityId: string | null;
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Altitude e queda</DialogTitle>
-          <DialogDescription>Informe a altura final do token. Reduzir a altitude resolve dano de queda automaticamente; o B?culo Aetheris anula os primeiros 18 m.</DialogDescription>
+          <DialogDescription>Informe a altura final do token. Reduzir a altitude resolve dano de queda automaticamente; o Báculo Aetheris anula os primeiros 18 m.</DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
           <Label htmlFor="map-entity-altitude">Altura acima do solo (m)</Label>

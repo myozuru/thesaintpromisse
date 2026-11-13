@@ -103,6 +103,32 @@ describe('Aetheris combat panel', () => {
     expect(pegarFicha(ownerId)).toMatchObject({ peCurrent: 2, actionsCurrent: 0, baculoAetherisSafeMoveM: 4.5, baculoAetherisSafeMoveRemainingM: 4.5 });
   });
 
+  it('não oferece NPC aliado como alvo das Plumas', () => {
+    useCharacterStore.getState().updateCharacter('alvo', { category: 'NPC' });
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: /Plumas da Tempestade/ }));
+    expect(screen.queryByRole('button', { name: 'Adicionar pluma a alvo' })).toBeNull();
+  });
+
+  it('fecha o modal de Plumas pela tecla Escape', () => {
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: /Plumas da Tempestade/ }));
+    expect(screen.getByRole('dialog')).not.toBeNull();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('não gasta recursos se o alvo selecionado deixar de existir', async () => {
+    const attack = vi.spyOn(combatEngine, 'rollAttack');
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: /Plumas da Tempestade/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Adicionar pluma a alvo' }));
+    act(() => useCharacterStore.setState((state) => ({ characters: state.characters.filter((c) => c.id !== 'alvo') })));
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Disparar Plumas/ })); });
+    expect(attack).not.toHaveBeenCalled();
+    expect(pegarFicha(ownerId)).toMatchObject({ peCurrent: 10, actionsCurrent: 1 });
+  });
+
   it('leaves the pass button available when Rupture lacks a reaction', () => {
     useCharacterStore.getState().updateCharacter(ownerId, { reactionsCurrent: 0 });
     const { getByRole } = renderPanel('alvo');
@@ -110,5 +136,18 @@ describe('Aetheris combat panel', () => {
     expect(activate.hasAttribute('disabled')).toBe(true);
     expect(activate.getAttribute('title')).toContain('Sem Re');
     expect(getByRole('button', { name: /Ignorar/ }).hasAttribute('disabled')).toBe(false);
+  });
+
+  it('permite selecionar no mapa o Réquiem a até 24 m sem o modal bloquear a retícula', async () => {
+    useCharacterStore.getState().updateCharacter(ownerId, { peCurrent: 25 });
+    let finish!: (value: null) => void;
+    const placement = vi.spyOn(useMapStore.getState(), 'requestAoEPlacement')
+      .mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: /18 PE/ }));
+    expect(placement).toHaveBeenCalledWith(expect.objectContaining({ maxRangeMeters: 24, sizeMeters: 9 }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await act(async () => { finish(null); });
+    expect(screen.getByRole('dialog')).not.toBeNull();
   });
 });

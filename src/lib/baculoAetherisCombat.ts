@@ -13,7 +13,9 @@ import { getReactionsAvailable } from '@/lib/reactionBudget';
 export type AetherisConditionOnFailure = 'sem-reacoes' | 'suspenso' | 'caido';
 export { useBaculoAetherisCounterattackStore } from '@/lib/baculoAetherisState';
 export type { BaculoAetherisCounterattack } from '@/lib/baculoAetherisState';
+export { expireBaculoAetherisConditionsForTurnStart } from '@/lib/baculoAetherisTurn';
 type AetherisResolutionInput = Omit<NonNullable<TestRequest['aetherisResolution']>, 'sourceCharId' | 'sourceCharName' | 'sourceEntityId' | 'sourceName'>;
+const rupturasEmResolucao = new Set<string>();
 
 export function pedirTRBaculoAetheris(
   source: Character,
@@ -38,22 +40,28 @@ export function pedirTRBaculoAetheris(
 
 async function aplicarDanoBaculo(sourceId: string, targetId: string, formula: string, damageType: DamageType, sourceName: string): Promise<number> {
   const rolled = await rollDiceCom(sourceId, formula, { label: sourceName });
-  await useCharacterStore.getState().applyDamage(targetId, rolled.total, damageType, { attackerId: sourceId, source: 'arma', isMelee: true });
-  useLogStore.getState().addLog('combat', `💥 ${sourceName}: ${formula} Sônico = ${rolled.total} de dano.`);
+  await aplicarDanoBaculoRolado(sourceId, targetId, rolled.total, damageType, formula, sourceName);
   return rolled.total;
 }
 
-function empurrarAlvo(sourceId: string, targetId: string, metros: number, sourceName: string): void {
+async function aplicarDanoBaculoRolado(sourceId: string, targetId: string, total: number, damageType: DamageType, formula: string, sourceName: string): Promise<void> {
+  await useCharacterStore.getState().applyDamage(targetId, total, damageType, { attackerId: sourceId, source: 'arma', isMelee: true });
+  useLogStore.getState().addLog('combat', `💥 ${sourceName}: ${formula} Sônico = ${total} de dano.`);
+}
+
+function empurrarAlvo(sourceId: string, targetId: string, metros: number, sourceName: string): boolean {
   const map = useMapStore.getState();
   const sourceToken = Object.values(map.entities).find((entity) => entity.characterId === sourceId && (entity.layer ?? 'tokens') === 'tokens');
   const targetToken = Object.values(map.entities).find((entity) => entity.characterId === targetId && (entity.layer ?? 'tokens') === 'tokens');
   if (!sourceToken || !targetToken) {
     useLogStore.getState().addLog('combat', `⚠ ${sourceName}: empurrão não aplicado porque falta um token no mapa.`);
-    return;
+    return false;
   }
   const result = aplicarMovimentoAtivo(sourceId, targetId, { indice: 0, tipo: 'empurrar', sujeito: 'alvo', metros });
-  if (!/empurrad/i.test(result)) useLogStore.getState().addLog('combat', `⚠ ${sourceName}: ${result}.`);
+  const aplicado = /empurrad/i.test(result);
+  if (!aplicado) useLogStore.getState().addLog('combat', `⚠ ${sourceName}: ${result}.`);
   else useLogStore.getState().addLog('combat', `↗ ${sourceName}: alvo empurrado ${metros} m.`);
+  return aplicado;
 }
 
 /** Primeiro acerto do báculo na rodada: dano sônico e empurrão. Críticos também abrem Julgamento. */
@@ -74,8 +82,8 @@ export async function resolverAcertoBaculoAetheris(
   if (aetherisRoundUseReady(record, combat.combatId ?? null, combat.round)) {
     useCombatStore.getState().markAetherisRoundUse(useKey);
     await aplicarDanoBaculo(attackerId, targetId, '3d8', 'DS', 'Rajada Sônica');
-    empurrarAlvo(attackerId, targetId, 3, 'Rajada Sônica');
-    useLogStore.getState().addLog('combat', '+3d8 Sônico e empurrão de 3 m aplicados.');
+    const empurraoAplicado = empurrarAlvo(attackerId, targetId, 3, 'Rajada Sônica');
+    useLogStore.getState().addLog('combat', `+3d8 Sônico aplicado${empurraoAplicado ? ' com empurrão de 3 m.' : '; empurrão não aplicado.'}`);
   } else {
     useLogStore.getState().addLog('combat', 'Rajada Sônica já utilizada nesta rodada.');
   }
@@ -105,28 +113,67 @@ export function motivoBloqueioRupturaBaculo(source: Character, weaponInstanceId?
 }
 
 export async function ativarRupturaBaculoAetheris(sourceId: string, targetId: string, weaponInstanceId?: string | null): Promise<{ ok: boolean; reason?: string }> {
-  const store = useCharacterStore.getState();
-  const source = store.characters.find((character) => character.id === sourceId);
-  const target = store.characters.find((character) => character.id === targetId);
-  if (!source || !target) return { ok: false, reason: 'Ficha do portador ou do alvo não encontrada.' };
-  const reason = motivoBloqueioRupturaBaculo(source, weaponInstanceId);
-  if (reason) {
-    if (reason === 'Sem Reação disponível nesta rodada') useLogStore.getState().addLog('combat', 'Ruptura do Firmamento não disparou: Reação indisponível');
-    return { ok: false, reason };
+  const useKey = `${sourceId}:${weaponInstanceId || BACULO_AETHERIS_ID}:ruptura`;
+  if (rupturasEmResolucao.has(useKey)) return { ok: false, reason: 'Ruptura do Firmamento já está sendo resolvida.' };
+  const inicial = useCharacterStore.getState().characters.find((character) => character.id === sourceId);
+  if (!inicial || !useCharacterStore.getState().characters.some((character) => character.id === targetId)) {
+    return { ok: false, reason: 'Ficha do portador ou do alvo não encontrada.' };
   }
-  const gastoTemporario = Math.min(2, source.tempPE ?? 0);
-  store.updateCharacter(sourceId, {
-    tempPE: (source.tempPE ?? 0) - gastoTemporario,
-    peCurrent: Math.max(0, (source.peCurrent ?? 0) - (2 - gastoTemporario)),
-    reactionsCurrent: getReactionsAvailable(source) - 1,
-  });
-  const combat = useCombatStore.getState();
-  useCombatStore.getState().markAetherisRoundUse(sourceId + ':' + (weaponInstanceId || BACULO_AETHERIS_ID) + ':ruptura');
-  await aplicarDanoBaculo(sourceId, targetId, '10d10', 'DS', 'Ruptura do Firmamento');
-  empurrarAlvo(sourceId, targetId, 6, 'Ruptura do Firmamento');
-  pedirTRBaculoAetheris(source, target, 'Ruptura do Firmamento', { conditionOnFailure: 'caido', sourceInstanceId: weaponInstanceId ?? undefined });
-  useLogStore.getState().addLog('combat', 'Ruptura do Firmamento: 10d10 Sônico, alvo empurrado 6 m; TR de Fortitude para evitar Caído.');
-  return { ok: true };
+  const bloqueioInicial = motivoBloqueioRupturaBaculo(inicial, weaponInstanceId);
+  if (bloqueioInicial) {
+    if (bloqueioInicial === 'Sem Reação disponível nesta rodada') useLogStore.getState().addLog('combat', 'Ruptura do Firmamento não disparou: Reação indisponível');
+    return { ok: false, reason: bloqueioInicial };
+  }
+
+  const combateNoInicio = useCombatStore.getState();
+  rupturasEmResolucao.add(useKey);
+  try {
+    let rolled: Awaited<ReturnType<typeof rollDiceCom>>;
+    try {
+      // A rolagem não altera o combate; resolvê-la antes do débito preserva
+      // PE e Reação se o serviço de dados falhar.
+      rolled = await rollDiceCom(sourceId, '10d10', { label: 'Ruptura do Firmamento' });
+    } catch (error) {
+      const detalhe = error instanceof Error ? ` ${error.message}` : '';
+      const reason = 'Ruptura não iniciada: a rolagem falhou; PE e Reação foram preservados.';
+      useLogStore.getState().addLog('combat', `⛔ ${reason}${detalhe}`);
+      return { ok: false, reason };
+    }
+    if (!Number.isFinite(rolled.total)) return { ok: false, reason: 'Ruptura não iniciada: resultado de dano inválido; PE e Reação foram preservados.' };
+
+    const store = useCharacterStore.getState();
+    const source = store.characters.find((character) => character.id === sourceId);
+    const target = store.characters.find((character) => character.id === targetId);
+    if (!source || !target) return { ok: false, reason: 'Portador ou alvo removido durante a rolagem; PE e Reação foram preservados.' };
+    const combateAtual = useCombatStore.getState();
+    if (combateAtual.combatId !== combateNoInicio.combatId || combateAtual.round !== combateNoInicio.round) {
+      return { ok: false, reason: 'O combate mudou durante a rolagem; PE e Reação foram preservados.' };
+    }
+    const bloqueioAtual = motivoBloqueioRupturaBaculo(source, weaponInstanceId);
+    if (bloqueioAtual) return { ok: false, reason: `${bloqueioAtual}; PE e Reação foram preservados.` };
+
+    const gastoTemporario = Math.min(2, source.tempPE ?? 0);
+    store.updateCharacter(sourceId, {
+      tempPE: (source.tempPE ?? 0) - gastoTemporario,
+      peCurrent: Math.max(0, (source.peCurrent ?? 0) - (2 - gastoTemporario)),
+      reactionsCurrent: getReactionsAvailable(source) - 1,
+    });
+    useCombatStore.getState().markAetherisRoundUse(useKey);
+    try {
+      await aplicarDanoBaculoRolado(sourceId, targetId, rolled.total, 'DS', '10d10', 'Ruptura do Firmamento');
+      const empurraoAplicado = empurrarAlvo(sourceId, targetId, 6, 'Ruptura do Firmamento');
+      pedirTRBaculoAetheris(source, target, 'Ruptura do Firmamento', { conditionOnFailure: 'caido', sourceInstanceId: weaponInstanceId ?? undefined });
+      useLogStore.getState().addLog('combat', `Ruptura do Firmamento: 10d10 Sônico${empurraoAplicado ? ', alvo empurrado 6 m' : '; empurrão não aplicado'}; TR de Fortitude para evitar Caído.`);
+    } catch (error) {
+      const detalhe = error instanceof Error ? ` ${error.message}` : '';
+      const reason = 'resolução interrompida após o débito; confira dano e condições antes de repetir';
+      useLogStore.getState().addLog('combat', `⛔ Ruptura do Firmamento: ${reason}.${detalhe}`);
+      return { ok: false, reason };
+    }
+    return { ok: true };
+  } finally {
+    rupturasEmResolucao.delete(useKey);
+  }
 }
 
 export async function resolverTRBaculoAetheris(request: TestRequest): Promise<void> {
@@ -135,7 +182,10 @@ export async function resolverTRBaculoAetheris(request: TestRequest): Promise<vo
   if (!effect || !result) return;
   const passed = result.forced ? result.forced.kind === 'success' : result.d20 !== 1 && (request.dc == null || result.total >= request.dc);
   const target = useCharacterStore.getState().characters.find((character) => character.id === request.charId);
-  if (!target) throw new Error('Ficha do alvo não encontrada para resolver o efeito do Báculo Aetheris.');
+  if (!target) {
+    useLogStore.getState().addLog('combat', `⚠️ Báculo Aetheris: o alvo ${request.charName} foi removido antes da resolução do TR; o efeito foi encerrado sem aplicar dano ou condição.`);
+    return;
+  }
 
   if (effect.damageFormula) {
     const rolled = await rollDiceCom(effect.sourceCharId, effect.damageFormula, { label: effect.sourceName ?? 'Báculo Aetheris' });
@@ -168,8 +218,10 @@ export async function resolverTRBaculoAetheris(request: TestRequest): Promise<vo
       conditionId: ids[condition],
       name: names[condition].name,
       icon: names[condition].icon,
+      // A duração é vinculada ao próximo turno do portador, não ao turno do alvo.
       remainingTurns: -1,
       remainingRounds: -1,
+      expiraNoInicioDoTurnoDe: effect.sourceCharId,
       sourceCharId: effect.sourceCharId,
       sourceCharName: effect.sourceCharName,
       sourceEntityId: BACULO_AETHERIS_ID,
@@ -183,32 +235,4 @@ export async function resolverTRBaculoAetheris(request: TestRequest): Promise<vo
   }
 
   useLogStore.getState().addLog('combat', `${request.charName} ${passed ? 'passou' : 'falhou'} no TR de Fortitude (CD ${request.dc ?? '—'})${!passed && effect.conditionOnFailure ? `; condição ${effect.conditionOnFailure === 'sem-reacoes' ? 'Sem Reações' : effect.conditionOnFailure === 'suspenso' ? 'Suspenso' : 'Caído'} aplicada` : ''}.`);
-}
-
-/** Expira os efeitos do báculo no início do próximo turno de quem o empunha. */
-export function expireBaculoAetherisConditionsForTurnStart(wielderId: string): void {
-  const store = useCharacterStore.getState();
-  let suspendedCount = 0;
-  for (const character of store.characters) {
-    const conditions = character.activeConditions ?? [];
-    const expires = conditions.filter((condition) =>
-      (condition.conditionId === BACULO_AETHERIS_SEM_REACOES || condition.conditionId === BACULO_AETHERIS_SUSPENSO)
-      && condition.sourceCharId === wielderId
-      && condition.sourceEntityId === BACULO_AETHERIS_ID,
-    );
-    if (expires.length === 0) continue;
-    const expiredIds = new Set(expires.map((condition) => condition.id));
-    store.updateCharacter(character.id, { activeConditions: conditions.filter((condition) => !expiredIds.has(condition.id)) });
-    if (expires.some((condition) => condition.conditionId === BACULO_AETHERIS_SUSPENSO)) {
-      suspendedCount += 1;
-      const stillSuspended = useCharacterStore.getState().characters.find((entry) => entry.id === character.id)
-        ?.activeConditions.some((condition) => condition.conditionId === BACULO_AETHERIS_SUSPENSO);
-      if (!stillSuspended) {
-        for (const entity of Object.values(useMapStore.getState().entities).filter((candidate) => candidate.characterId === character.id)) {
-          useMapStore.getState().updateEntity(entity.id, { altitudeM: 0, altitudeLabel: undefined });
-        }
-      }
-    }
-  }
-  if (suspendedCount > 0) useLogStore.getState().addLog('combat', '🪶 Trono das Nuvens expirou: criaturas descem suavemente ao solo.');
 }

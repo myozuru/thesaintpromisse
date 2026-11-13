@@ -1,0 +1,97 @@
+{
+  "profileId": "prof_mwfdxdff_ojbud",
+  "page": {
+    "text": "R\nTestes\nRPG\n12:00:00\n×\n1\n10\n60\n300\nAvançar\nRegistrar evento\nDia 1 · Mês 1 · Ano 1\nRelógio\nFichas\nInvocações\nDebates\nItens\nBaús\nMódulos\n· Omni-Engine\nDiário\nMestre\nOmni-Engine\nConstrutor visual no-code de entidades do sistema\nConstrutor\nCatálogo\nTodos\nItens\nArmas\nFeitiços\nTalentos\nAuras\nPassivas\nCondições\nVotos\nGuia de Fórmulas\nPresets\nLojas\nMigrar Legado\nExportar\nImportar\nIten\nArma\nFeitiço\nTalento\nAura\nPassiva\nCondiçõe\nVoto\nAplicar como:\n— Origem —\n→\n— Alvo —\nNenhum efeito ativo no momento.\nPosicionamento (m)\n↻ Auras\nNenhum personagem carregado.\n\nNenhuma entidade criada ainda.\n\nComece criando um Item, Feitiço, Talento ou Aura acima.\n\nLogs\nVisão dos players: Logs públicos\n\nNenhum evento registrado\n\n100%",
+    "buttons": [
+      "R\nTestes",
+      "1",
+      "10",
+      "60",
+      "300",
+      "Avançar",
+      "Registrar evento",
+      "Relógio",
+      "Fichas",
+      "Invocações",
+      "Debates",
+      "Itens",
+      "Baús",
+      "Módulos\n· Omni-Engine",
+      "Diário",
+      "Mestre",
+      "Iniciar Combate (Rolar Iniciativa)",
+      "Ativar Modo Livre",
+      "Criar ficha",
+      "Assistente",
+      "Ficha temporária",
+      "Players0",
+      "Inimigos0",
+      "NPCs0",
+      "Construtor",
+      "Catálogo",
+      "Todos",
+      "Itens",
+      "Armas",
+      "Feitiços",
+      "Talentos",
+      "Auras",
+      "Passivas",
+      "Condições",
+      "Votos",
+      "Guia de Fórmulas",
+      "Presets",
+      "Lojas",
+      "Migrar Legado",
+      "Exportar",
+      "Importar",
+      "Iten",
+      "Arma",
+      "Feitiço",
+      "Talento",
+      "Aura",
+      "Passiva",
+      "Condiçõe",
+      "Voto",
+      "↻ Auras"
+    ]
+  },
+  "editor": {
+    "title": "◇\nConstrutor No-Code\nItem\nGeral\nCustos\nDuração & Alcance\nGatilhos & Efeitos\nEfeitos e Combate\n⚡ Ações Ativas\nComércio\nNome\nCategoria\nItem\nDescrição\nsem imagem\nImagem do item\n\nAparece no inventário, no chão do mapa e no personagem ao empunhar.\n\nEscolher imagem\nTags (separadas por vírgula)\nTipo de Equipamento\nNenhum (Item comum / Mochila)\n\nDefine em qual slot da ficha este item poderá ser equipado. Limites por personagem: 1 Colar · 4 Anéis · 2 Pulseiras. Itens passivos (sem ataque ativo) ficam automaticamente com duração Permanente.\n\nSIMULADOR DINÂMICO\nMock\nPersonagem Real\nNível\nTreino\nForça\nInteligência\nNova item\nSem descrição\nDuração: instantaneo\nGatilhos: 1\nMock: Nv 5, Treino 3, FOR 4, INT 3.\nCancelar\nSalvar Entidade\nClose",
+    "labels": [
+      "Nome",
+      "Categoria",
+      "Descrição",
+      "Imagem do item",
+      "Escolher imagem",
+      "Tags (separadas por vírgula)",
+      "Tipo de Equipamento",
+      "Nível",
+      "Treino",
+      "Força",
+      "Inteligência"
+    ],
+    "dialogs": 1
+  },
+  "activeTab": "⚡ Ações Ativas",
+  "screenshots": [
+    {
+      "file": "omni-editor-desktop-1440x900.png",
+      "width": 1440,
+      "height": 900,
+      "cssViewport": "{\"width\":1440,\"height\":900}"
+    },
+    {
+      "file": "omni-editor-tablet-768x1024.png",
+      "width": 768,
+      "height": 1024,
+      "cssViewport": "{\"width\":768,\"height\":1024}"
+    },
+    {
+      "file": "omni-editor-mobile-390x844.png",
+      "width": 390,
+      "height": 844,
+      "cssViewport": "{\"width\":390,\"height\":844}"
+    }
+  ],
+  "consoleErrors": []
+}

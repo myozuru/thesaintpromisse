@@ -1,0 +1,9 @@
+﻿Estado: concluido localmente
+Responsavel: Codex
+Escopo: revisao e conciliacao do Baculo Aetheris e do merge Omni.
+Atualizacao: 2026-11-13
+Branches locais: fix/revisao-integracao e fix/integracao-omni-legado.
+TypeScript apos os ajustes finais: sem erros nos dois worktrees.
+Suites completas, builds de producao e QA visual foram concluidos durante a tarefa.
+Commit do merge Omni: 9cd9a41. Commit local do Baculo registrado nesta branch.
+Sem push ou integracao na main. Sem pendencias conhecidas para esta tarefa.

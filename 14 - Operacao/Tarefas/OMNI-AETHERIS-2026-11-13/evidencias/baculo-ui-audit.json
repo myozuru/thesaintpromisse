@@ -1,0 +1,32 @@
+{
+  "fixture": {
+    "profileId": "prof_mwfde0qi_7uj3y",
+    "itemId": "qa-baculo-aetheris",
+    "weapon": "Báculo Aetheris"
+  },
+  "dialogText": "Plumas da Tempestade\n\nDistribua até 3 ataques de 6d8 Cortante entre alvos a até 18 m.\n\nAlvo de Teste · 4,0 m\n−\n1\n+\n1/3 plumas\nDisparar Plumas (8 PE)",
+  "tabStayedInsideDialog": true,
+  "escapeClosed": true,
+  "screenshots": [
+    {
+      "file": "baculo-dialog-desktop-1440x900.png",
+      "width": 1440,
+      "height": 900,
+      "cssViewport": "{\"width\":1440,\"height\":900}"
+    },
+    {
+      "file": "baculo-dialog-tablet-768x1024.png",
+      "width": 768,
+      "height": 1024,
+      "cssViewport": "{\"width\":768,\"height\":1024}"
+    },
+    {
+      "file": "baculo-dialog-mobile-390x844.png",
+      "width": 390,
+      "height": 844,
+      "cssViewport": "{\"width\":390,\"height\":844}"
+    }
+  ],
+  "blockedExternalRequests": [],
+  "consoleErrors": []
+}

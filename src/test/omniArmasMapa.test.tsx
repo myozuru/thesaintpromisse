@@ -60,6 +60,17 @@ describe('armas, mira e chão', () => {
     expect(useCharacterStore.getState().equipWeapons('u', { mainHandName: aetheris.nome }).ok).toBe(true);
     expect(acoesAtivasDe('u').map(({ cfg }) => cfg.id)).toEqual(['baculo-aetheris-reversao', 'personalizada']);
   });
+  it('ativa a reação atual no preset antigo sem modificar seu item salvo', () => {
+    const antigo = {
+      ...arma(), id: 'preset-baculo-aetheris', nome: 'Aetheris, o Báculo do Firmamento',
+      tags: ['modelo:baculo-aetheris', 'mao:2'],
+      acoesAtivas: [{ ...config, id: 'aa-aetheris-plumas' }, { ...config, id: 'personalizada' }],
+    };
+    const item = useInventoryStore.getState().add('u', antigo);
+    expect(useCharacterStore.getState().equipWeapons('u', { mainHandName: antigo.nome }).ok).toBe(true);
+    expect(acoesAtivasDe('u').map(({ cfg }) => cfg.id)).toEqual(['personalizada', 'baculo-aetheris-reversao']);
+    expect(useInventoryStore.getState().items[item.instanceId].entity.acoesAtivas?.map((a) => a.id)).toEqual(['aa-aetheris-plumas', 'personalizada']);
+  });
   it('duas mãos configuradas no OMNI ocupam ambas e aparecem nos dois cards', () => {
     useInventoryStore.getState().add('u', arma());
     expect(useCharacterStore.getState().equipWeapons('u', { mainHandName: 'Katana' }).ok).toBe(true);

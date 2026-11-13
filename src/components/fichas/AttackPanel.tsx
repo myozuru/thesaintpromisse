@@ -1802,7 +1802,7 @@ export function AttackPanel({ character: cProp }: Props) {
         {/* ─── AÇÕES ATIVAS & TÉCNICAS OMNI ───────────────────────────── */}
         <AcoesAtivasSection charId={c.id} incluirCategorias={['arma']} />
         {isAetherisWeapon && mainWeapon && (
-          <BaculoAetherisPanel character={c} weaponInstanceId={c.mainHandWeaponInstanceId ?? mainWeapon.id}
+          <BaculoAetherisPanel character={c} weaponInstanceId={c.mainHandWeaponInstanceId ?? mainWeapon.id} weapon={mainWeapon}
             ruptureTargetId={ruptureTargetId} onRupturePromptClose={() => setRuptureTargetId(null)} />
         )}
 

@@ -3,6 +3,7 @@ import type { Weapon } from '@/lib/weapons';
 
 export const BACULO_AETHERIS_ID = 'baculo-aetheris';
 export const BACULO_AETHERIS_NAME = 'Báculo Aetheris';
+export const BACULO_AETHERIS_LEGACY_NAME = 'Aetheris, o Báculo do Firmamento';
 export const BACULO_AETHERIS_SEM_REACOES = 'baculo-aetheris-sem-reacoes';
 export const BACULO_AETHERIS_SUSPENSO = 'baculo-aetheris-suspenso';
 export const BACULO_AETHERIS_MOVIMENTO_M = 3;
@@ -16,7 +17,8 @@ export function isBaculoAetheris(weapon?: Pick<Weapon, 'specialFeatureId'> | nul
 }
 
 export function baculoAetherisEquipped(character: Partial<Pick<Character, 'mainHandWeaponName' | 'offHandWeaponName'>> | null | undefined): boolean {
-  return [character?.mainHandWeaponName, character?.offHandWeaponName].some((name) => norm(name) === norm(BACULO_AETHERIS_NAME));
+  const names = [BACULO_AETHERIS_NAME, BACULO_AETHERIS_LEGACY_NAME].map(norm);
+  return [character?.mainHandWeaponName, character?.offHandWeaponName].some((name) => !!name && names.includes(norm(name)));
 }
 
 export function ignoresNaturalDifficultTerrain(character: Partial<Pick<Character, 'mainHandWeaponName' | 'offHandWeaponName'>> | null | undefined): boolean {

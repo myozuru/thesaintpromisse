@@ -98,6 +98,8 @@ export interface TestRequest {
     };
   };
   resolutionApplied?: boolean;
+  /** Resolução iniciada e ainda não confirmada; pode ter produzido efeitos parciais. */
+  aetherisResolutionNeedsReview?: boolean;
   createdAt: number;
   /**
    * Preenchido quando o JOGADOR fecha o resultado na tela dele.
@@ -127,6 +129,7 @@ interface TestRequestState {
   enqueue: (r: Omit<TestRequest, 'id' | 'createdAt' | 'result'>) => string;
   setResult: (id: string, result: NonNullable<TestRequest['result']>) => void;
   markResolutionApplied: (id: string) => void;
+  markAetherisResolutionStarted: (id: string) => void;
   /** Jogador confirma que viu o resultado (não remove — o mestre ainda vê). */
   ackResult: (id: string) => void;
   dismiss: (id: string) => void;
@@ -152,7 +155,9 @@ export const useTestRequestStore = create<TestRequestState>()(
           requests: s.requests.map((x) => (x.id === id ? { ...x, result } : x)),
         })),
       markResolutionApplied: (id) =>
-        set((s) => ({ requests: s.requests.map((x) => x.id === id ? { ...x, resolutionApplied: true } : x) })),
+        set((s) => ({ requests: s.requests.map((x) => x.id === id ? { ...x, resolutionApplied: true, aetherisResolutionNeedsReview: false } : x) })),
+      markAetherisResolutionStarted: (id) =>
+        set((s) => ({ requests: s.requests.map((x) => x.id === id ? { ...x, aetherisResolutionNeedsReview: true } : x) })),
       ackResult: (id) =>
         set((s) => ({
           requests: s.requests.map((x) => (x.id === id ? { ...x, playerAckedAt: Date.now() } : x)),

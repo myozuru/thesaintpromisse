@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
+import * as Dialog from '@radix-ui/react-dialog';
 import { Cloud, Feather, Shield, Sparkles, Wind, X } from 'lucide-react';
 import type { Character } from '@/types';
-import { findWeaponModelById } from '@/lib/weapons';
+import { findWeaponModelById, type Weapon } from '@/lib/weapons';
 import { buildAttackContext, pickAttackAbility, rollAttack } from '@/lib/combatEngine';
 import { computeTotalDefense } from '@/lib/defenseCalc';
 import { distanceBetweenChars } from '@/lib/weaponRange';
@@ -15,14 +16,15 @@ import { aplicarMovimentoAtivo, validarPlanoMovimento } from '@/lib/omni/movimen
 import { aetherisRequiemReady, aetherisRoundUseReady, validAetherisFeatherAllocation, BACULO_AETHERIS_ID, BACULO_AETHERIS_SUSPENSO } from '@/lib/baculoAetheris';
 import { getReactionsAvailable } from '@/lib/reactionBudget';
 import { useBaculoAetherisCounterattackStore } from '@/lib/baculoAetherisState';
+import { saoAliados } from '@/lib/omni/observadores';
 
-interface Props { character: Character; weaponInstanceId: string; ruptureTargetId: string | null; onRupturePromptClose: () => void }
+interface Props { character: Character; weaponInstanceId: string; weapon?: Weapon; ruptureTargetId: string | null; onRupturePromptClose: () => void }
 type Ability = 'trono' | 'requiem';
 type AreaState = { ability: Ability; ids: string[] };
 
 const tokenOf = (entities: Record<string, Entity>, id: string) => Object.values(entities).find((e) => e.characterId === id && (e.layer ?? 'tokens') === 'tokens' && !e.hidden);
-const hostile = (c: Character, owner: string) => c.id !== owner && (c.category === 'INIMIGO' || c.category === 'NPC');
-const ally = (c: Character, owner: string) => c.id !== owner && c.category === 'PLAYER';
+const hostile = (c: Character, owner: Character) => c.id !== owner.id && !saoAliados(c, owner);
+const ally = (c: Character, owner: Character) => c.id !== owner.id && saoAliados(c, owner);
 
 function spend(charId: string, peCost: number, complete: boolean): string | null {
   const store = useCharacterStore.getState();
@@ -42,7 +44,7 @@ function spend(charId: string, peCost: number, complete: boolean): string | null
   return null;
 }
 
-export function BaculoAetherisPanel({ character, weaponInstanceId, ruptureTargetId, onRupturePromptClose }: Props) {
+export function BaculoAetherisPanel({ character, weaponInstanceId, weapon: equippedWeapon, ruptureTargetId, onRupturePromptClose }: Props) {
   const characters = useCharacterStore((s) => s.characters);
   const updateCharacter = useCharacterStore((s) => s.updateCharacter);
   const applyDamage = useCharacterStore((s) => s.applyDamage);
@@ -60,17 +62,17 @@ export function BaculoAetherisPanel({ character, weaponInstanceId, ruptureTarget
   const addLog = useLogStore((s) => s.addLog);
   const current = characters.find((x) => x.id === character.id) ?? character;
   const sourceToken = tokenOf(entities, current.id);
-  const weapon = findWeaponModelById(BACULO_AETHERIS_ID);
+  const weapon = equippedWeapon ?? findWeaponModelById(BACULO_AETHERIS_ID);
   const [mode, setMode] = useState<'plumas' | Ability | null>(null);
   const [allocation, setAllocation] = useState<Record<string, number>>({});
   const [area, setArea] = useState<AreaState | null>(null);
   const [safe, setSafe] = useState<string[]>([]);
   const [destinations, setDestinations] = useState<Record<string, { x: number; y: number }>>({});
   const [busy, setBusy] = useState(false);
-  const reachable = useMemo(() => characters.filter((c) => hostile(c, current.id) && (distanceBetweenChars(current.id, c.id, entities, grid, { casterProfileId: current.profileId, targetProfileId: c.profileId }) ?? Infinity) <= 18.05), [characters, current.id, current.profileId, entities, grid]);
+  const reachable = useMemo(() => characters.filter((c) => hostile(c, current) && (distanceBetweenChars(current.id, c.id, entities, grid, { casterProfileId: current.profileId, targetProfileId: c.profileId }) ?? Infinity) <= 18.05), [characters, current, entities, grid]);
   const areaChars = area ? area.ids.map((id) => characters.find((c) => c.id === id)).filter((c): c is Character => !!c) : [];
-  const enemies = areaChars.filter((c) => hostile(c, current.id));
-  const allies = areaChars.filter((c) => ally(c, current.id));
+  const allies = areaChars.filter((c) => ally(c, current));
+  const affected = areaChars.filter((c) => c.id !== current.id && !safe.includes(c.id));
   const totalPE = (current.peCurrent ?? 0) + (current.tempPE ?? 0);
   const reversaoReason = totalPE < 7 ? 'PE insuficiente: requer 7, você possui ' + totalPE
     : getReactionsAvailable(current) <= 0 ? 'Sem Reação disponível nesta rodada' : null;
@@ -91,11 +93,13 @@ export function BaculoAetherisPanel({ character, weaponInstanceId, ruptureTarget
     try {
       const template = await requestArea({ kind: 'circle', sizeMeters: ability === 'trono' ? 3 : 9,
         sourceLabel: ability === 'trono' ? 'Trono das Nuvens · raio 3 m · alcance 18 m' : 'Réquiem dos Céus · raio 9 m',
-        color: ability === 'trono' ? '#a78bfa' : '#38bdf8', originWorld: { x: sourceToken.x, y: sourceToken.y }, maxRangeMeters: 18 });
+        color: ability === 'trono' ? '#a78bfa' : '#38bdf8', originWorld: { x: sourceToken.x, y: sourceToken.y }, maxRangeMeters: ability === 'trono' ? 18 : 24 });
       if (!template) return;
       const map = useMapStore.getState().entities;
       const ids = findEntitiesInTemplate(template, map).map((id) => map[id]?.characterId).filter((id): id is string => !!id);
       setArea({ ability, ids: Array.from(new Set(ids)) });
+      setSafe([]);
+      setDestinations({});
     } finally { setBusy(false); }
   };
 
@@ -111,8 +115,13 @@ export function BaculoAetherisPanel({ character, weaponInstanceId, ruptureTarget
     const reason = actionReason(8, false);
     if (reason) { addLog('combat', 'Plumas da Tempestade: ' + reason + '.'); return; }
     const map = useMapStore.getState();
+    const fichasAtuais = useCharacterStore.getState().characters;
+    const portadorAtual = fichasAtuais.find((c) => c.id === current.id);
+    if (!portadorAtual) { addLog('combat', 'Plumas da Tempestade: ficha do portador não encontrada.'); return; }
     for (const id of Object.keys(allocation).filter((key) => allocation[key] > 0)) {
-      const d = distanceBetweenChars(current.id, id, map.entities, map.gridConfig, { casterProfileId: current.profileId, targetProfileId: characters.find((c) => c.id === id)?.profileId });
+      const alvo = fichasAtuais.find((c) => c.id === id);
+      if (!alvo || !hostile(alvo, portadorAtual)) { addLog('combat', 'Plumas da Tempestade: um alvo não está mais disponível. Selecione os alvos novamente.'); return; }
+      const d = distanceBetweenChars(portadorAtual.id, id, map.entities, map.gridConfig, { casterProfileId: portadorAtual.profileId, targetProfileId: alvo.profileId });
       if (d === null || d > 18.05) { addLog('combat', 'Plumas da Tempestade: alvo fora do alcance de 18 m.'); return; }
     }
     const costError = spend(current.id, 8, false);
@@ -155,8 +164,8 @@ export function BaculoAetherisPanel({ character, weaponInstanceId, ruptureTarget
       const costError = spend(current.id, 9, false);
       if (costError) return;
       const { pedirTRBaculoAetheris } = await import('@/lib/baculoAetherisCombat');
-      for (const target of enemies) pedirTRBaculoAetheris(current, target, 'Trono das Nuvens', { damageFormula: '5d8', damageType: 'DI', halfOnSuccess: true, conditionOnFailure: 'suspenso', sourceInstanceId: weaponInstanceId });
-      addLog('combat', 'Trono das Nuvens: ' + enemies.length + ' alvo(s) aguardam TR de Fortitude.');
+      for (const target of affected) pedirTRBaculoAetheris(current, target, 'Trono das Nuvens', { damageFormula: '5d8', damageType: 'DI', halfOnSuccess: true, conditionOnFailure: 'suspenso', sourceInstanceId: weaponInstanceId });
+      addLog('combat', 'Trono das Nuvens: ' + affected.length + ' alvo(s) aguardam TR de Fortitude.');
       close();
       return;
     }
@@ -170,7 +179,7 @@ export function BaculoAetherisPanel({ character, weaponInstanceId, ruptureTarget
     if (spend(current.id, 18, true)) return;
     markRequiem(current.id);
     const { pedirTRBaculoAetheris } = await import('@/lib/baculoAetherisCombat');
-    for (const target of enemies.filter((c) => !safe.includes(c.id))) {
+    for (const target of affected) {
       const suspended = target.activeConditions?.some((condition) => condition.conditionId === BACULO_AETHERIS_SUSPENSO);
       pedirTRBaculoAetheris(current, target, 'Réquiem dos Céus', {
         damageFormula: '15d10', damageType: 'DS', halfOnSuccess: true, pushMetersOnFailure: 6,
@@ -180,7 +189,7 @@ export function BaculoAetherisPanel({ character, weaponInstanceId, ruptureTarget
       const moved = aplicarMovimentoAtivo(current.id, id, { indice: 0, tipo: 'teleporte', sujeito: 'alvo', metros: 9, destino: destinations[id]! });
       if (!/teleportado/i.test(moved)) addLog('combat', 'Transporte do Réquiem não aplicado: ' + moved + '.');
     }
-    addLog('combat', 'Réquiem dos Céus: ' + enemies.filter((c) => !safe.includes(c.id)).length + ' inimigo(s) na área; ' + safe.length + ' aliado(s) em segurança.');
+    addLog('combat', 'Réquiem dos Céus: ' + affected.length + ' alvo(s) na área; ' + safe.length + ' aliado(s) em segurança.');
     close();
     } finally {
       setBusy(false);
@@ -190,8 +199,11 @@ export function BaculoAetherisPanel({ character, weaponInstanceId, ruptureTarget
   const chooseDestination = async (id: string) => {
     const token = tokenOf(useMapStore.getState().entities, id);
     if (!token) return;
-    const template = await requestArea({ kind: 'circle', sizeMeters: 0.15, sourceLabel: 'Destino seguro · até 9 m', color: '#38bdf8', originWorld: { x: token.x, y: token.y }, maxRangeMeters: 9 });
-    if (template) setDestinations((prev) => ({ ...prev, [id]: { x: template.x, y: template.y } }));
+    setBusy(true);
+    try {
+      const template = await requestArea({ kind: 'circle', sizeMeters: 0.15, sourceLabel: 'Destino seguro · até 9 m', color: '#38bdf8', originWorld: { x: token.x, y: token.y }, maxRangeMeters: 9 });
+      if (template) setDestinations((prev) => ({ ...prev, [id]: { x: template.x, y: template.y } }));
+    } finally { setBusy(false); }
   };
   const ruptureTarget = characters.find((c) => c.id === ruptureTargetId);
   const counterattackTarget = counterattack ? characters.find((c) => c.id === counterattack.attackerId) : undefined;
@@ -234,14 +246,17 @@ export function BaculoAetherisPanel({ character, weaponInstanceId, ruptureTarget
       <p className="text-xs text-muted-foreground">O ataque à distância contra {characters.find((c) => c.id === counterattack.protectedId)?.name ?? 'o aliado'} errou após Reversão dos Ventos. Atacante: {counterattackTarget.name} · {counterattackDistance === null ? 'fora do mapa' : counterattackDistance.toFixed(1).replace('.', ',') + ' m'}.</p>
       <div className="flex flex-wrap gap-2"><button type="button" disabled={busy || counterattackDistance === null || counterattackDistance > 18.05} onClick={() => void (async () => { setBusy(true); try { const { dispararContraRajadaBaculo } = await import('@/lib/baculoAetherisCounterattack'); const result = await dispararContraRajadaBaculo(counterattack); if (!result.ok) addLog('combat', 'Contra-Rajada: ' + result.reason + '.'); clearCounterattack(); } finally { setBusy(false); } })()} title={counterattackDistance === null || counterattackDistance > 18.05 ? 'Atacante fora do alcance de 18 m' : undefined} className="rounded-md bg-primary px-3 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50">Disparar Contra-Rajada (5d8 Sônico) no Atacante</button><button type="button" onClick={clearCounterattack} className="rounded-md border border-border px-3 py-2 text-sm">Ignorar</button></div>
     </div>}
-    {mode && <div className="fixed inset-0 z-[90] grid place-items-center bg-black/70 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) close(); }}><section role="dialog" aria-modal="true" aria-labelledby="aetheris-modal-title" className="max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-xl border border-border bg-background p-4 shadow-xl">
+    <Dialog.Root open={!!mode && !busy} onOpenChange={(open) => { if (!open && !busy) close(); }}>
+      <Dialog.Portal><Dialog.Overlay className="fixed inset-0 z-[90] bg-black/70" />
+      <Dialog.Content aria-labelledby="aetheris-modal-title" aria-describedby={undefined} className="fixed left-1/2 top-1/2 z-[91] max-h-[85vh] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-border bg-background p-4 shadow-xl">
       <div className="mb-3 flex items-start gap-3"><div className="min-w-0 flex-1"><h3 id="aetheris-modal-title" className="text-base font-bold">{mode === 'plumas' ? 'Plumas da Tempestade' : mode === 'trono' ? 'Trono das Nuvens' : 'Réquiem dos Céus'}</h3><p className="mt-1 text-sm text-muted-foreground">{mode === 'plumas' ? 'Distribua até 3 ataques de 6d8 Cortante entre alvos a até 18 m.' : mode === 'trono' ? 'Posicione o raio de 3 m a até 18 m e confira os alvos.' : 'Posicione o raio de 9 m e escolha até 3 aliados para transporte seguro.'}</p></div><button type="button" onClick={close} aria-label="Fechar" className="rounded p-1"><X className="h-4 w-4"/></button></div>
       {mode === 'plumas' && <div className="space-y-2">{reachable.length === 0 && <p className="text-sm text-muted-foreground">Nenhum inimigo visível a até 18 m.</p>}{reachable.map((c) => { const count = allocation[c.id] ?? 0; const total = Object.values(allocation).reduce((a, n) => a+n, 0); const d = distanceBetweenChars(current.id, c.id, entities, grid, { casterProfileId: current.profileId, targetProfileId: c.profileId }) ?? 0; return <div key={c.id} className="flex items-center gap-3 border-b border-border py-2"><span className="min-w-0 flex-1 truncate text-sm">{c.name} · {d.toFixed(1).replace('.', ',')} m</span><button type="button" aria-label={'Remover pluma de '+c.name} onClick={() => setAllocationFor(c.id,-1)} disabled={count===0} className="h-8 w-8 rounded border border-border disabled:opacity-40">−</button><span className="w-5 text-center tabular-nums">{count}</span><button type="button" aria-label={'Adicionar pluma a '+c.name} onClick={() => setAllocationFor(c.id,1)} disabled={total>=3||count>=3} className="h-8 w-8 rounded border border-border disabled:opacity-40">+</button></div>; })}<div className="flex items-center justify-between border-t border-border pt-3"><span className="text-sm text-muted-foreground">{Object.values(allocation).reduce((a,n)=>a+n,0)}/3 plumas</span><button type="button" onClick={() => void fire()} disabled={!validAetherisFeatherAllocation(allocation)||busy} className="rounded-md bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50">Disparar Plumas (8 PE)</button></div></div>}
       {mode !== 'plumas' && !area && <p role="status" className="rounded-md bg-muted px-3 py-3 text-sm text-muted-foreground">{busy?'Abrindo a retícula no mapa…':'Escolha um ponto no mapa para posicionar a área.'}</p>}
-      {mode !== 'plumas' && area && <div className="space-y-3"><h4 className="text-sm font-semibold">Alvos capturados</h4>{enemies.length?enemies.map((c)=><p key={c.id} className="border-b border-border py-1 text-sm">{c.name}</p>):<p className="text-sm text-muted-foreground">Nenhum inimigo dentro da área.</p>}
-        {area.ability==='requiem' && <div className="space-y-2 border-t border-border pt-3"><h4 className="text-sm font-semibold">Selecione até 3 aliados para acolher no vórtice seguro</h4>{allies.map((c)=><div key={c.id} className="flex items-center gap-3 border-b border-border py-2"><label className="flex min-w-0 flex-1 items-center gap-2 text-sm"><input type="checkbox" checked={safe.includes(c.id)} onChange={()=>setSafe((prev)=>prev.includes(c.id)?prev.filter((id)=>id!==c.id):prev.length<3?[...prev,c.id]:prev)} disabled={!safe.includes(c.id)&&safe.length>=3}/>{c.name}</label>{safe.includes(c.id)&&<button type="button" onClick={()=>void (async()=>{const token=tokenOf(useMapStore.getState().entities,c.id);if(!token)return;const point=await requestArea({kind:'circle',sizeMeters:0.15,sourceLabel:'Destino seguro · até 9 m',color:'#38bdf8',originWorld:{x:token.x,y:token.y},maxRangeMeters:9});if(point)setDestinations((prev)=>({...prev,[c.id]:{x:point.x,y:point.y}}));})()} className="rounded border border-border px-2 py-1 text-xs">{destinations[c.id]?'Destino definido':'Definir destino'}</button>}</div>)}</div>}
+      {mode !== 'plumas' && area && <div className="space-y-3"><h4 className="text-sm font-semibold">Alvos afetados</h4>{affected.length?affected.map((c)=><p key={c.id} className="border-b border-border py-1 text-sm">{c.name}</p>):<p className="text-sm text-muted-foreground">Nenhum alvo dentro da área.</p>}
+        {area.ability==='requiem' && <div className="space-y-2 border-t border-border pt-3"><h4 className="text-sm font-semibold">Selecione até 3 aliados para acolher no vórtice seguro</h4>{allies.map((c)=><div key={c.id} className="flex items-center gap-3 border-b border-border py-2"><label className="flex min-w-0 flex-1 items-center gap-2 text-sm"><input type="checkbox" checked={safe.includes(c.id)} onChange={()=>setSafe((prev)=>prev.includes(c.id)?prev.filter((id)=>id!==c.id):prev.length<3?[...prev,c.id]:prev)} disabled={!safe.includes(c.id)&&safe.length>=3}/>{c.name}</label>{safe.includes(c.id)&&<button type="button" onClick={()=>void chooseDestination(c.id)} className="rounded border border-border px-2 py-1 text-xs">{destinations[c.id]?'Destino definido':'Definir destino'}</button>}</div>)}</div>}
         <div className="flex justify-end gap-2 border-t border-border pt-3"><button type="button" onClick={()=>{setArea(null);void place(area.ability);}} disabled={busy} className="rounded-md border border-border px-3 py-2 text-sm">Reposicionar</button><button type="button" onClick={()=>void confirmArea()} disabled={busy||(area.ability==='requiem'&&safe.some((id)=>!destinations[id]))} className="rounded-md bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50">Confirmar {area.ability==='trono'?'Trono':'Réquiem'}</button></div>
       </div>}
-    </section></div>}
+      </Dialog.Content></Dialog.Portal>
+    </Dialog.Root>
   </section>;
 }

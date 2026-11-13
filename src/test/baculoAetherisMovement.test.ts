@@ -27,6 +27,7 @@ describe('Aetheris movement, terrain and fall', () => {
   it('adds 3 m movement and ignores only natural difficult terrain', () => {
     const wielder = { movement: 9, slotsCurrent: 0, slotsMax: 10, mainHandWeaponName: 'Baculo Aetheris' };
     expect(baculoAetherisEquipped(wielder)).toBe(true);
+    expect(baculoAetherisEquipped({ mainHandWeaponName: 'Aetheris, o Báculo do Firmamento' })).toBe(true);
     expect(effectiveMovement(wielder)).toBe(12);
     expect(movementCostForTerrainSegment({ x: 0, y: 0 }, { x: 100, y: 0 }, 0.1, [naturalArea])).toBeCloseTo(12);
     expect(movementCostForTerrainSegment({ x: 0, y: 0 }, { x: 100, y: 0 }, 0.1, [naturalArea], ignoresNaturalDifficultTerrain(wielder))).toBeCloseTo(10);

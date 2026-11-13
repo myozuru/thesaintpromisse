@@ -38,6 +38,7 @@ import type { InstanciaInvocacao, LimiteResetEconomiaInvocacao } from '@/lib/inv
 import type { LancaCombatRecord } from '@/lib/lancaVetorial';
 import { consumoPorTempoDecorrido, reservaTempoAtivaNoCombate } from '@/lib/controlador/tempo';
 import { processarResetEconomiaInstancia } from '@/lib/controlador/economiaAcoes';
+import { expireBaculoAetherisConditionsForTurnStart } from '@/lib/baculoAetherisTurn';
 
 /**
  * Para cada condição ativa em `charId` cujo `durationMode` exija TR no turno do
@@ -796,6 +797,7 @@ export const useCombatStore = create<CombatStore>()(
         }));
         aplicarResetEconomiaInvocacoes('inicio_combate', `${combatId}:inicio_combate`);
         if (firstOwnerCharId) {
+          expireBaculoAetherisConditionsForTurnStart(firstOwnerCharId);
           aplicarResetEconomiaInvocacoes('inicio_turno_dono', `${combatId}:turno:1:0:${firstOwnerCharId}`, firstOwnerCharId);
         }
         // Limpa a telemetria de reações ao iniciar combate.
@@ -885,6 +887,7 @@ export const useCombatStore = create<CombatStore>()(
         // Desengajar dura até o fim do turno de quem desengajou.
         if (currentEntry) {
           const ce = useCharacterStore.getState().characters.find((c) => c.id === currentEntry.charId);
+          if (ce?.baculoAetherisSafeMoveM || ce?.baculoAetherisSafeMoveRemainingM) useCharacterStore.getState().updateCharacter(currentEntry.charId, { baculoAetherisSafeMoveM: 0, baculoAetherisSafeMoveRemainingM: 0 });
           if (ce?.desengajado) useCharacterStore.getState().updateCharacter(currentEntry.charId, { desengajado: false });
           if (ce?.desengajadoDe?.length) useCharacterStore.getState().updateCharacter(currentEntry.charId, { desengajadoDe: [] });
         }
@@ -983,8 +986,8 @@ export const useCombatStore = create<CombatStore>()(
           const firstEntry = us.ordem[0];
           if (firstEntry) {
             iniciarTurnoLanca(firstEntry.charId);
-            import('@/lib/baculoAetherisCombat').then(({ expireBaculoAetherisConditionsForTurnStart }) => expireBaculoAetherisConditionsForTurnStart(firstEntry.charId));
-            charStore.updateCharacter(firstEntry.charId, { weaponSwapsThisTurn: 0, attacksThisTurn: 0, lastAttackHit: undefined, mobilidadeReacaoM: 0, mobilidadeReacaoBase: 0, arteGolpeDescendente: null, baculoAetherisSafeMoveM: 0 });
+            expireBaculoAetherisConditionsForTurnStart(firstEntry.charId);
+            charStore.updateCharacter(firstEntry.charId, { weaponSwapsThisTurn: 0, attacksThisTurn: 0, lastAttackHit: undefined, mobilidadeReacaoM: 0, mobilidadeReacaoBase: 0, arteGolpeDescendente: null, baculoAetherisSafeMoveM: 0, baculoAetherisSafeMoveRemainingM: 0 });
             // Assumir Postura: termina após 1 minuto (10 rodadas).
             for (const ch of charStore.characters) {
               if (ch.posturaAtiva && newRound > ch.posturaAtiva.untilRound) {
@@ -1084,7 +1087,7 @@ export const useCombatStore = create<CombatStore>()(
         const nextEntry = initiativeOrder[nextIndex];
         if (nextEntry) {
           iniciarTurnoLanca(nextEntry.charId);
-          import('@/lib/baculoAetherisCombat').then(({ expireBaculoAetherisConditionsForTurnStart }) => expireBaculoAetherisConditionsForTurnStart(nextEntry.charId));
+          expireBaculoAetherisConditionsForTurnStart(nextEntry.charId);
           useCharacterStore.getState().updateCharacter(nextEntry.charId, { weaponSwapsThisTurn: 0, attacksThisTurn: 0, lastAttackHit: undefined, mobilidadeReacaoM: 0, mobilidadeReacaoBase: 0, arteGolpeDescendente: null, baculoAetherisSafeMoveM: 0, baculoAetherisSafeMoveRemainingM: 0 });
           // Fase 2 — Reaplica pool dedicado de Aptidões (Mestre das Aptidões).
           useCharacterStore.getState().applyTurnStartSpecHooks(nextEntry.charId);
@@ -1114,6 +1117,7 @@ export const useCombatStore = create<CombatStore>()(
         const charStore = useCharacterStore.getState();
         const { initiativeOrder, round, combatId } = get();
         for (const character of charStore.characters) {
+          if (character.baculoAetherisSafeMoveM || character.baculoAetherisSafeMoveRemainingM) charStore.updateCharacter(character.id, { baculoAetherisSafeMoveM: 0, baculoAetherisSafeMoveRemainingM: 0 });
           for (const buff of character.activeBuffs ?? []) {
             if (buff.expiraNaRodada !== undefined) charStore.removeBuff(character.id, buff.id);
           }

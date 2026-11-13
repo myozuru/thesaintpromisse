@@ -194,6 +194,7 @@ function MasterWatchPanel() {
                 <div className="truncate font-display text-sm font-bold">
                   {r.testName}{r.dc != null && <span className="font-body text-muted-foreground"> · CD {r.dc}</span>}
                 </div>
+                {r.aetherisResolutionNeedsReview && <p role="alert" className="mt-2 text-xs text-destructive">Efeito do Báculo não confirmado. Confira dano e condições antes de aplicar novamente.</p>}
                 {!r.result && (
                   <div className="mt-2 flex items-center gap-2 rounded-sm bg-secondary/55 px-2 py-1.5 text-xs text-muted-foreground">
                     <Loader2 className="w-3 h-3 animate-spin text-accent" /> Aguardando o jogador
@@ -267,14 +268,17 @@ export function TestRequestOverlay() {
   useEffect(() => {
     if (!isMaster) return;
     for (const request of requests) {
-      if (!request.aetherisResolution || !request.result || request.resolutionApplied || aetherisRequestsResolving.has(request.id)) continue;
+      if (!request.aetherisResolution || !request.result || request.resolutionApplied || request.aetherisResolutionNeedsReview || aetherisRequestsResolving.has(request.id)) continue;
       aetherisRequestsResolving.add(request.id);
-      void import('@/lib/baculoAetherisCombat').then(({ resolverTRBaculoAetheris }) => resolverTRBaculoAetheris(request))
+      useTestRequestStore.getState().markAetherisResolutionStarted(request.id);
+      void import('@/lib/baculoAetherisCombat').then(async ({ resolverTRBaculoAetheris }) => {
+        await resolverTRBaculoAetheris(request);
+        useTestRequestStore.getState().markResolutionApplied(request.id);
+      })
         .catch((error) => {
-          useLogStore.getState().addLog('combat', `⛔ Báculo Aetheris: não foi possível resolver o TR de ${request.charName}. ${error instanceof Error ? error.message : ''}`);
+          useLogStore.getState().addLog('combat', `⛔ Báculo Aetheris: resolução de ${request.charName} interrompida. Confira dano e condições antes de aplicar novamente. ${error instanceof Error ? error.message : ''}`);
         })
         .finally(() => {
-          useTestRequestStore.getState().markResolutionApplied(request.id);
           aetherisRequestsResolving.delete(request.id);
         });
     }

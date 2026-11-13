@@ -1,0 +1,22 @@
+{
+  "id": "OMNI-AETHERIS-2026-11-13",
+  "created_at": "2026-11-13",
+  "owner": "Codex",
+  "worktrees": [
+    {
+      "path": "C:\\Users\\justs\\Downloads\\TSP-revisao-integracao",
+      "branch": "fix/revisao-integracao",
+      "scope": "Báculo Aetheris"
+    },
+    {
+      "path": "C:\\Users\\justs\\Downloads\\TSP-omni-integracao",
+      "branch": "fix/integracao-omni-legado",
+      "scope": "Conciliação de merge Omni"
+    }
+  ],
+  "preview": {
+    "url": "http://127.0.0.1:5178/",
+    "cloud": "disabled by empty Vite process environment variables"
+  },
+  "state": "complete"
+}

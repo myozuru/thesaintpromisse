@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
 import { authDb, applyUser } from '@/lib/auth';
 import { useRoleStore } from '@/stores/useRoleStore';
+import { hasWorkspaceCloud } from '@/integrations/supabase/workspaceCloudConfig';
 
 /** Mantém o papel alinhado com a conta logada. Mestre exige conta verificada. */
 export function AuthSync() {
   useEffect(() => {
+    if (!hasWorkspaceCloud) return;
     let alive = true;
     authDb.auth.getUser().then(({ data }) => {
       if (!alive) return;

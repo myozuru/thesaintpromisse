@@ -76,6 +76,43 @@ afterEach(() => {
 });
 
 describe('Aetheris combat', () => {
+  it('expira a suspensão no início do próximo turno do portador', async () => {
+    const requestId = pedirTRBaculoAetheris(pegarFicha(donoId), pegarFicha(alvoId), 'Trono das Nuvens', {
+      conditionOnFailure: 'suspenso',
+    });
+    const request = useTestRequestStore.getState().requests.find((entry) => entry.id === requestId)!;
+    await resolverTRBaculoAetheris({ ...request, result: trResult('failure', 2) });
+    expect(pegarFicha(alvoId).activeConditions.some((condition) => condition.conditionId === BACULO_AETHERIS_SUSPENSO)).toBe(true);
+    useCombatStore.setState({ initiativeOrder: [{ charId: alvoId }, { charId: donoId }], currentTurnIndex: 0, round: 1 } as never);
+    useCombatStore.getState().nextTurn();
+    await vi.waitFor(() => expect(pegarFicha(alvoId).activeConditions.some((condition) => condition.conditionId === BACULO_AETHERIS_SUSPENSO)).toBe(false));
+  });
+
+  it('sinaliza resolução interrompida e impede repetir Ruptura após falha parcial', async () => {
+    damage.mockRejectedValueOnce(new Error('falha ao aplicar dano'));
+    const result = await ativarRupturaBaculoAetheris(donoId, alvoId, 'baculo-1');
+    expect(result.ok).toBe(false);
+    expect(result.reason).toContain('confira dano e condições');
+    expect(pegarFicha(donoId)).toMatchObject({ peCurrent: 8, reactionsCurrent: 0 });
+    expect((await ativarRupturaBaculoAetheris(donoId, alvoId, 'baculo-1')).ok).toBe(false);
+    expect(damage).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserva PE e Reação se a rolagem falhar antes de iniciar Ruptura', async () => {
+    vi.spyOn(dice, 'rollDiceCom').mockRejectedValueOnce(new Error('rolagem indisponível'));
+
+    const failed = await ativarRupturaBaculoAetheris(donoId, alvoId, 'baculo-1');
+
+    expect(failed.ok).toBe(false);
+    expect(failed.reason).toContain('PE e Reação foram preservados');
+    expect(pegarFicha(donoId)).toMatchObject({ peCurrent: 10, reactionsCurrent: 1 });
+    expect(useCombatStore.getState().aetherisRoundUse['portador:baculo-1:ruptura']).toBeUndefined();
+
+    await expect(ativarRupturaBaculoAetheris(donoId, alvoId, 'baculo-1')).resolves.toEqual({ ok: true });
+    expect(pegarFicha(donoId)).toMatchObject({ peCurrent: 8, reactionsCurrent: 0 });
+    expect(useCombatStore.getState().aetherisRoundUse['portador:baculo-1:ruptura']).toBeDefined();
+  });
+
   it('aplica Rajada uma vez por rodada e o cr?tico abre Julgamento com Fortitude', async () => {
     await resolverAcertoBaculoAetheris(donoId, alvoId, 'baculo-1', false);
     expect(rollCalls).toEqual(['3d8']);
@@ -134,6 +171,19 @@ describe('Aetheris combat', () => {
     expireBaculoAetherisConditionsForTurnStart(donoId);
     expect(pegarFicha(alvoId).activeConditions?.some((condition) => condition.conditionId === BACULO_AETHERIS_SUSPENSO)).toBe(false);
     expect(useMapStore.getState().entities['e-alvo']).toMatchObject({ altitudeM: 0, altitudeLabel: undefined });
+  });
+
+  it('encerra sem erro o TR quando o alvo saiu do combate', async () => {
+    const requestId = pedirTRBaculoAetheris(pegarFicha(donoId), pegarFicha(alvoId), 'Trono das Nuvens', {
+      damageFormula: '5d8', damageType: 'DI', halfOnSuccess: true, conditionOnFailure: 'suspenso',
+    });
+    const request = useTestRequestStore.getState().requests.find((entry) => entry.id === requestId)!;
+    useCharacterStore.setState((state) => ({ characters: state.characters.filter((character) => character.id !== alvoId) }));
+
+    await expect(resolverTRBaculoAetheris({ ...request, result: trResult('failure', 2) })).resolves.toBeUndefined();
+
+    expect(rollCalls).toEqual([]);
+    expect(damage).not.toHaveBeenCalled();
   });
 
   it('offers Reversao only for a ranged attack against an ally within 9 m', () => {

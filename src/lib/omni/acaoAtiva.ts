@@ -843,10 +843,19 @@ export function acoesAtivasDe(charId: string): { instanceId: string; ent: Entida
   const char = useCharacterStore.getState().characters.find(c => c.id === charId);
 
   const adicionar = (instanceId: string, ent: EntidadeOmni) => {
-    for (const cfg of ent.acoesAtivas ?? []) {
+    const aetheris = ent.id === 'preset-baculo-aetheris' && ent.tags.includes('modelo:baculo-aetheris');
+    const configs = [...(ent.acoesAtivas ?? [])];
+    if (aetheris && !configs.some((cfg) => cfg.id === 'baculo-aetheris-reversao')) {
+      configs.push({
+        id: 'baculo-aetheris-reversao', nome: 'Reversão dos Ventos', acao: 'reacao', custoPE: '7', alcanceM: 9,
+        tipo_alvo: 'unico', filtro_alvo: 'todos', teste: 'nenhum', tipo_efeito: 'buff',
+        reacao: { gatilho: 'quando_alvo_declarar_ataque', alcance_m: 9, tipo_ataque: 'ranged', protegido: 'todos', alvo: 'protegido', defesa_bonus: 5 },
+      });
+    }
+    for (const cfg of configs) {
       // O painel específico executa estas ações; manter o preset legado não deve
       // disponibilizar um segundo caminho com custos e efeitos diferentes.
-      if (ent.tags.includes('feature:baculo-aetheris') && [
+      if ((aetheris || ent.tags.includes('feature:baculo-aetheris')) && [
         'aa-aetheris-plumas', 'aa-aetheris-reversao', 'aa-aetheris-trono',
         'aa-aetheris-requiem', 'aa-aetheris-ruptura',
       ].includes(cfg.id)) continue;
