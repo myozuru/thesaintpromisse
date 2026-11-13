@@ -308,6 +308,7 @@ export type GatilhoReacaoAtiva = typeof GATILHOS_REACAO_IDS[number];
 export interface ReacaoAtivaConfig {
   gatilho: GatilhoReacaoAtiva;
   alcance_m: number;
+  tipo_ataque?: 'melee' | 'ranged';
   protegido: 'usuario' | 'aliados' | 'todos';
   alvo: 'origem' | 'protegido' | 'usuario';
   cancelar_evento?: boolean;

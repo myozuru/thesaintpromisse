@@ -6,6 +6,7 @@
  * condicao_rodadas_<id>.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { waitFor } from '@testing-library/react';
 vi.mock('@/integrations/supabase/client', async () => ({ supabase: (await import('./helpers/mesaReal')).nuvemFalsa }));
 vi.mock('@/lib/socket', () => ({ getSocket: () => null }));
 vi.mock('@/integrations/supabase/safeClient', async () => ({ hasWorkspaceCloud: false, supabase: (await import('./helpers/mesaReal')).nuvemFalsa }));
@@ -222,7 +223,7 @@ describe('Rancor na arma empunhada pelo painel', () => {
     expect(pegarFicha('ana').omniCounters?.rancor).toBe(2);
     const hp = pegarFicha('inim').hpCurrent;
     dispararGatilhoEfeitosItens('aoAcertarAtaque', { usuarioId: 'ana', alvoId: 'inim' });
-    expect(pegarFicha('inim').hpCurrent).toBe(hp - 2);
+    await waitFor(() => expect(pegarFicha('inim').hpCurrent).toBe(hp - 2));
     useCharacterStore.getState().equipWeapons('ana', { mainHandName: null });
     await danoEm('ana', 2, 'inim');
     await danoEm('bia', 2, 'inim');
@@ -272,9 +273,9 @@ it('receita com teto total, inimigos e dano corpo a corpo; cópias não duplicam
   expect(pegarFicha('ana').omniCounters?.rancor).toBe(treinoDe('ana'));
   const hp = pegarFicha('inim').hpCurrent;
   dispararGatilhoEfeitosItens('aoAcertarAtaque', { usuarioId: 'ana', alvoId: 'inim', dano: { tipo_ataque: 2 } });
-  expect(pegarFicha('inim').hpCurrent).toBe(hp);
+  await waitFor(() => expect(pegarFicha('inim').hpCurrent).toBe(hp));
   dispararGatilhoEfeitosItens('aoAcertarAtaque', { usuarioId: 'ana', alvoId: 'inim', dano: { tipo_ataque: 1 } });
-  expect(pegarFicha('inim').hpCurrent).toBe(hp - treinoDe('ana'));
+  await waitFor(() => expect(pegarFicha('inim').hpCurrent).toBe(hp - treinoDe('ana')));
 });
 
 

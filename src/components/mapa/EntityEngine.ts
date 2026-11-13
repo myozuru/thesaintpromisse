@@ -313,7 +313,7 @@ export function drawEntity(ctx: CanvasRenderingContext2D, e: Entity, scale: numb
     ctx.fillStyle = withAlpha(e.color, e.terrainZone ? 0.18 : 0.5);
     ctx.strokeStyle = withAlpha(e.color, 1);
     ctx.lineWidth = 2 / scale;
-    ctx.setLineDash(e.terrainZone ? [8 / scale, 5 / scale] : []);
+    ctx.setLineDash(e.terrainZone || e.difficultTerrain ? [8 / scale, 5 / scale] : []);
     if (e.shape === 'ELLIPSE') {
       ctx.beginPath();
       ctx.ellipse(0, 0, hw, hh, 0, 0, Math.PI * 2);
@@ -338,6 +338,41 @@ export function drawEntity(ctx: CanvasRenderingContext2D, e: Entity, scale: numb
       ctx.strokeText(e.label, 0, 0);
       ctx.fillText(e.label, 0, 0);
     }
+  }
+  if (e.difficultTerrain) {
+    ctx.save();
+    ctx.strokeStyle = e.difficultTerrain === 'natural' ? 'rgba(190, 242, 100, 0.95)' : 'rgba(216, 180, 254, 0.95)';
+    ctx.lineWidth = 3 / scale;
+    ctx.setLineDash([8 / scale, 4 / scale]);
+    ctx.beginPath();
+    if (e.shape === 'ELLIPSE') ctx.ellipse(0, 0, hw, hh, 0, 0, Math.PI * 2);
+    else ctx.rect(-hw, -hh, e.w, e.h);
+    ctx.stroke();
+    const terrainLabel = e.difficultTerrain === 'natural' ? 'TERRENO NATURAL / CUSTO 2:1' : 'TERRENO MAGICO / CUSTO 2:1';
+    ctx.font = `${11 / scale}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const badgeWidth = ctx.measureText(terrainLabel).width + 12 / scale;
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+    ctx.fillRect(-badgeWidth / 2, -hh - 22 / scale, badgeWidth, 18 / scale);
+    ctx.fillStyle = e.difficultTerrain === 'natural' ? '#d9f99d' : '#e9d5ff';
+    ctx.fillText(terrainLabel, 0, -hh - 13 / scale);
+    ctx.restore();
+  }
+  if ((e.altitudeM ?? 0) > 0) {
+    ctx.save();
+    const altitudeText = e.altitudeLabel === 'Suspenso'
+      ? `SUSPENSO / ${(e.altitudeM ?? 0).toFixed(1).replace('.', ',')} m`
+      : `ALTITUDE / ${(e.altitudeM ?? 0).toFixed(1).replace('.', ',')} m`;
+    ctx.font = `${11 / scale}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const badgeWidth = ctx.measureText(altitudeText).width + 12 / scale;
+    ctx.fillStyle = e.altitudeLabel === 'Suspenso' ? 'rgba(88, 28, 135, 0.94)' : 'rgba(30, 64, 175, 0.94)';
+    ctx.fillRect(-badgeWidth / 2, -hh - 42 / scale, badgeWidth, 18 / scale);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(altitudeText, 0, -hh - 33 / scale);
+    ctx.restore();
   }
   ctx.restore();
 }

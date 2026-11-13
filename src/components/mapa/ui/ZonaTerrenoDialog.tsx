@@ -25,6 +25,7 @@ export function ZonaTerrenoDialog({ entityId, onClose }: { entityId: string | nu
   const [duracao, setDuracao] = useState('1');
   const [gatilhos, setGatilhos] = useState<GatilhoZonaTerreno[]>(['entrada']);
   const [efeitos, setEfeitos] = useState<CombatEffect[]>([]);
+  const [difficultTerrain, setDifficultTerrain] = useState<'none' | 'natural' | 'magical'>('none');
 
   useEffect(() => {
     const zona = entity?.terrainZone;
@@ -32,6 +33,7 @@ export function ZonaTerrenoDialog({ entityId, onClose }: { entityId: string | nu
     setDuracao(zona?.duracaoRodadas == null ? '' : String(zona.duracaoRodadas));
     setGatilhos(zona?.gatilhos ?? ['entrada']);
     setEfeitos(zona?.efeitos ?? []);
+    setDifficultTerrain(entity?.difficultTerrain ?? 'none');
   }, [entity?.id, entity?.terrainZone]);
 
   const toggleGatilho = (gatilho: GatilhoZonaTerreno) => {
@@ -55,13 +57,13 @@ export function ZonaTerrenoDialog({ entityId, onClose }: { entityId: string | nu
     const restantes = parsed === null ? null
       : zonaAnterior?.duracaoRodadas === parsed ? (zonaAnterior.rodadasRestantes ?? parsed) : parsed;
     pushHistory();
-    updateEntity(entity.id, { terrainZone: { sourceCharId: origemId || undefined, duracaoRodadas: parsed, rodadasRestantes: restantes, gatilhos, efeitos } });
+    updateEntity(entity.id, { terrainZone: { sourceCharId: origemId || undefined, duracaoRodadas: parsed, rodadasRestantes: restantes, gatilhos, efeitos }, difficultTerrain: difficultTerrain === 'none' ? undefined : difficultTerrain });
     onClose();
   };
   const remover = () => {
     if (!entity) return;
     pushHistory();
-    updateEntity(entity.id, { terrainZone: undefined });
+    updateEntity(entity.id, { terrainZone: undefined, difficultTerrain: undefined });
     onClose();
   };
 
@@ -76,6 +78,14 @@ export function ZonaTerrenoDialog({ entityId, onClose }: { entityId: string | nu
         </DialogHeader>
 
         <div className="space-y-4">
+          <label className="block space-y-1 text-sm">Tipo de terreno
+            <select aria-label="Tipo de terreno dificil" className="w-full rounded border border-input bg-background p-2" value={difficultTerrain} onChange={(event) => setDifficultTerrain(event.target.value as 'none' | 'natural' | 'magical')}>
+              <option value="none">Sem terreno dificil</option>
+              <option value="natural">Natural ? custo 2:1</option>
+              <option value="magical">Magico ? custo 2:1</option>
+            </select>
+          </label>
+          <p className="text-xs text-muted-foreground">Cruzar a area custa o dobro do deslocamento; o Baculo Aetheris ignora apenas o terreno natural.</p>
           <label className="block space-y-1 text-sm">Origem da zona
             <select aria-label="Origem da zona" className="w-full rounded border border-input bg-background p-2" value={origemId} onChange={e => setOrigemId(e.target.value)}>
               <option value="">Ambiente (sem autor)</option>
@@ -170,7 +180,7 @@ export function ZonaTerrenoDialog({ entityId, onClose }: { entityId: string | nu
           {entity?.terrainZone ? <Button type="button" variant="destructive" onClick={remover}>Remover zona</Button> : <span />}
           <div className="flex gap-2">
             <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-            <Button type="button" onClick={salvar}>Salvar zona</Button>
+            <Button type="button" onClick={salvar}>Salvar terreno</Button>
           </div>
         </DialogFooter>
       </DialogContent>

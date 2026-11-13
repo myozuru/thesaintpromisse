@@ -425,6 +425,10 @@ export interface Character {
   /** Atenção passiva (campo agregador exibido na ficha; talentos somam aqui via `talentBonuses`). */
   attention?: number;
   movement: number;
+  /** Báculo Aetheris: movimento adicional sem AdO até o fim do turno. */
+  baculoAetherisSafeMoveM?: number;
+  /** Báculo Aetheris: distância física restante protegida contra AdO. */
+  baculoAetherisSafeMoveRemainingM?: number;
   damageDiceLevel: number;
   critMargin: number;
   cdIncrease: number;

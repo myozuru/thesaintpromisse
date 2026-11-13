@@ -340,7 +340,7 @@ describe("receitas no combate real", () => {
       ],
       {},
     );
-    useCharacterStore
+    await useCharacterStore
       .getState()
       .applyDamage("a", 10, "DI", { attackerId: "u", source: "arma" });
     await esperar(15);
@@ -379,8 +379,8 @@ describe("receitas no combate real", () => {
       damageType: efeito.damageType,
       attackerId: "u",
     });
-    expect(pegarFicha("a").hpCurrent).toBe(34);
     await esperar(5);
+    expect(pegarFicha("a").hpCurrent).toBe(34);
   });
   it("toda receita de dano declara um tipo aceito; choque não usa AREA como atalho", async () => {
     const { RECEITAS_OMNI } = await import("@/lib/omni/receitas"),

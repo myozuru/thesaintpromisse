@@ -88,6 +88,8 @@ import { amostrarTrajetoria } from '@/lib/omni/geometriaReacao';
 import { comPreviaMovimento } from '@/lib/mapa/movimentoConfirmado';
 import { selectOmniModifiers } from '@/lib/omni/omniBridge';
 import { useOpportunityStore } from '@/stores/useOpportunityStore';
+import { isBaculoAetheris } from '@/lib/baculoAetheris';
+import { BaculoAetherisPanel } from './BaculoAetherisPanel';
 
 import { escondidoDe, revelarPara } from '@/lib/buscarOportunidade';
 import { registrarAtaqueCompensar } from '@/lib/compensarErro';
@@ -305,6 +307,7 @@ export function AttackPanel({ character: cProp }: Props) {
     ? distanceBetweenChars(c.id, target.id, mapEntities, gridConfig, mapIdentities)
     : null;
   const isLancaWeapon = mainWeapon?.specialFeatureId === 'lanca-vetorial-rubra';
+  const isAetherisWeapon = isBaculoAetheris(mainWeapon);
   const lancaKey = isLancaWeapon ? lancaInstanceKey(c.id, c.mainHandWeaponInstanceId, mainWeapon.name) : null;
   const lancaRecord = lancaKey
     ? lancaRecords[lancaKey] ?? createLancaCombatRecord(c.id, c.mainHandWeaponInstanceId ?? mainWeapon!.id)
@@ -382,6 +385,7 @@ export function AttackPanel({ character: cProp }: Props) {
   const luckRollInFlightRef = useRef(false);
   const lancaAttackResolutionRef = useRef<LancaAttackResolution | null>(null);
   const lancaActionLockRef = useRef(false);
+  const [ruptureTargetId, setRuptureTargetId] = useState<string | null>(null);
 
   // ─── Artes do Combate (Especialista em Combate) ────────────────────────────
   const temArtes = hasArtesCombate(c);
@@ -1037,6 +1041,7 @@ export function AttackPanel({ character: cProp }: Props) {
   const handleRollDamage = async () => {
     if (phase !== 'await-dmg' || !pendingResult || !mainWeapon) return;
     let result = pendingResult;
+    setRuptureTargetId(null);
     setPhase('rolling-dmg');
     if (result.damageNeedsReroll) {
       const rolled = await rollDiceCom(c.id, result.damageDice);
@@ -1069,6 +1074,11 @@ export function AttackPanel({ character: cProp }: Props) {
           attackerId: c.id, source: 'arma', isMelee: mainWeapon.range === 'melee', rdIgnore: rdIgn,
           attack: { ...metadadosAtaqueRef.current, critical: result.critical, criticalFail: result.criticalFail },
         });
+      }
+      if (isAetherisWeapon && target) {
+        const { resolverAcertoBaculoAetheris } = await import('@/lib/baculoAetherisCombat');
+        const followup = await resolverAcertoBaculoAetheris(c.id, target.id, c.mainHandWeaponInstanceId ?? mainWeapon.id, result.critical);
+        if (followup.rupturaPodeSerOferecida) setRuptureTargetId(target.id);
       }
       if (g?.sel.impactante && g.target) await empurrarImpactante(g.target, result.damageTotal);
       if (target && result.damageTotal > 0) await explosaoDragao(target, result.damageTotal, result.damageType ?? undefined);
@@ -1791,6 +1801,10 @@ export function AttackPanel({ character: cProp }: Props) {
 
         {/* ─── AÇÕES ATIVAS & TÉCNICAS OMNI ───────────────────────────── */}
         <AcoesAtivasSection charId={c.id} incluirCategorias={['arma']} />
+        {isAetherisWeapon && mainWeapon && (
+          <BaculoAetherisPanel character={c} weaponInstanceId={c.mainHandWeaponInstanceId ?? mainWeapon.id}
+            ruptureTargetId={ruptureTargetId} onRupturePromptClose={() => setRuptureTargetId(null)} />
+        )}
 
         {isLancaWeapon && mainWeapon && (
           <section className="rounded-xl border border-rose-500/40 bg-gradient-to-br from-rose-950/35 via-background/80 to-background p-3 space-y-3" aria-label="Núcleo Carmesim da Lança Vetorial Rubra">

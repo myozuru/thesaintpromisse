@@ -55,7 +55,7 @@ export function armaDoPersonagem(charId: string, nome: string, instanciaId?: str
   }
   if (ent.combatData?.critRange != null) weapon.critRange = ent.combatData.critRange;
   const featureId = ent.tags.find((tag) => tag.startsWith('feature:'))?.slice('feature:'.length);
-  if (featureId === 'lanca-vetorial-rubra') weapon.specialFeatureId = featureId;
+  if (featureId === 'lanca-vetorial-rubra' || featureId === 'baculo-aetheris') weapon.specialFeatureId = featureId;
   if (meta.espacos != null) weapon.spaces = meta.espacos;
   if (meta.alcanceLongo != null) { weapon.rangeLong = meta.alcanceLongo; weapon.rangeShort = meta.alcanceCurto ?? meta.alcanceLongo; }
   return weapon;

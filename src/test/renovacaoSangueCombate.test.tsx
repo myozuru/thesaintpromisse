@@ -82,7 +82,7 @@ describe('Renovação pelo Sangue em combate', () => {
 
   it('reduzir o alvo a 0 PV recupera 1 PE (via applyDamage com attackerId)', async () => {
     await montar(esp());
-    useCharacterStore.getState().applyDamage('bruno', 999, 'DCO', { attackerId: 'ana' });
+    await useCharacterStore.getState().applyDamage('bruno', 999, 'DCO', { attackerId: 'ana' });
     expect(pegarFicha('bruno').hpCurrent).toBeLessThanOrEqual(0);
     expect(pegarFicha('ana').peCurrent).toBe(6);
     expect(textoLog()).toMatch(/Renovação pelo Sangue: ana reduziu bruno a 0 PV/);

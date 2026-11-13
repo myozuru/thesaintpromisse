@@ -43,7 +43,8 @@ const TAB_LABELS: Record<TabId, string> = {
   grimorio: 'Grimório',
 };
 
-const TAB_ICONS: Record<TabId, React.ElementType> = {
+type HeaderTabIcon = import('lucide-react').LucideIcon | ((props: { className?: string; 'aria-hidden'?: boolean }) => React.ReactElement);
+const TAB_ICONS: Record<TabId, HeaderTabIcon> = {
   relogio: Clock,
   fichas: Users,
   invocacoes: Ghost,
@@ -362,11 +363,6 @@ export function Header({ activeTab, onTabChange, testsOpen = false, onToggleTest
                 align="end"
                 sideOffset={8}
                 className="w-64 max-w-[calc(100vw-1rem)]"
-                onOpenAutoFocus={(event) => {
-                  if (!activeMenuItemRef.current) return;
-                  event.preventDefault();
-                  activeMenuItemRef.current.focus();
-                }}
               >
                 <DropdownMenuLabel className="flex flex-col items-start gap-0.5 px-3 py-2">
                   <span className="sm:hidden">{'Navega\u00e7\u00e3o'}</span>

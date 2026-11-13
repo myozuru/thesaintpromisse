@@ -171,7 +171,7 @@ const AcaoAtivaSchema = z.object({
   desfechosTR: z.object({ falha: DesfechoTRSchema.optional(), sucesso: DesfechoTRSchema.optional(), falha_critica: DesfechoTRSchema.optional() }).optional(),
   reacao: z.object({
     gatilho: z.enum(GATILHOS_REACAO_IDS),
-    alcance_m: z.number().finite().positive(), protegido: z.enum(['usuario', 'aliados', 'todos']),
+    alcance_m: z.number().finite().positive(), tipo_ataque: z.enum(['melee', 'ranged']).optional(), protegido: z.enum(['usuario', 'aliados', 'todos']),
     alvo: z.enum(['origem', 'protegido', 'usuario']), cancelar_evento: z.boolean().optional(), defesa_bonus: z.number().finite().nonnegative().optional(),
     bonus_teste: z.number().finite().optional(), dano_minimo: z.number().finite().nonnegative().optional(),
   }).optional(),

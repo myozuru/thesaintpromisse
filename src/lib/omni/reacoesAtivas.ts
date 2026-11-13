@@ -18,7 +18,6 @@ import { armaDoPersonagem, armaEstaEmpunhada } from './armaDoPersonagem';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { replicaWeaponName } from '@/lib/replicas';
 import { segmentoCruzaAlcance } from './geometriaReacao';
-import { comReacaoEmCurso, reacaoEmCurso } from './reacaoEmCurso';
 import { resolverAcaoOmniInvocacao } from '@/lib/controlador/omni';
 import { podeUsarVersaoAprovada } from '@/lib/controlador/aprovacao';
 import { categoriaEconomiaDaAcao, podeUsarAcaoDaInstancia } from '@/lib/controlador/economiaAcoes';
@@ -28,11 +27,12 @@ export interface EventoReacaoAtiva {
   gatilho: GatilhoReacaoAtiva;
   origemId: string;
   protegidoId?: string;
+  tipoAtaque?: 'melee' | 'ranged';
   /** Dano efetivo (gatilhos de dano). */
   dano?: number;
   movimento?: { de: { x: number; y: number }; para: { x: number; y: number }; /** Amostras intermediárias do trajeto, na ordem do movimento. */ trajetoria?: { x: number; y: number }[] };
 }
-export interface ResultadoJanelaAtiva { cancelado: boolean; defesaBonus: number; testeBonus: number }
+export interface ResultadoJanelaAtiva { cancelado: boolean; defesaBonus: number; testeBonus: number; aetherisCounterattack?: { wielderId: string; attackerId: string; protectedId: string } }
 export interface OfertaReacaoItem { fonte?: 'item'; id: string; usuarioId: string; nomeUsuario: string; instanceId: string; cfg: AcaoAtivaConfig; ent: EntidadeOmni; alvoId: string }
 export interface OfertaReacaoInvocacao {
   fonte: 'invocacao';
@@ -93,6 +93,14 @@ const remoteExpirations = new Map<string, ReturnType<typeof setTimeout>>();
 export const PRAZO_SONDAGEM_REACAO_MS = 12000;
 export const PRAZO_ESCOLHA_REACAO_MS = 12000;
 const PRAZO_RESOLUCAO_REACAO_MANUAL_MS = PRAZO_ESCOLHA_REACAO_MS;
+type ReacaoGlobal = typeof globalThis & { __tpOmniReactionDepth?: number };
+function reacaoEmCurso(): boolean { return (((globalThis as ReacaoGlobal).__tpOmniReactionDepth) ?? 0) > 0; }
+async function comReacaoEmCurso<T>(fn: () => Promise<T>): Promise<T> {
+  const estado = globalThis as ReacaoGlobal;
+  estado.__tpOmniReactionDepth = (estado.__tpOmniReactionDepth ?? 0) + 1;
+  try { return await fn(); }
+  finally { estado.__tpOmniReactionDepth = Math.max(0, (estado.__tpOmniReactionDepth ?? 1) - 1); }
+}
 
 type AcaoControlePrazoReacao = 'pausar' | 'retomar' | 'estender';
 interface ControlePrazoReacao { acao: AcaoControlePrazoReacao; segundos?: number }
@@ -206,7 +214,7 @@ function scheduleSondagemExpiry(janelaId: string, perfilId: string, expiresAt?: 
     passarOfertaRemota(janelaId, perfilId);
   }, Math.max(0, expiresAt - Date.now())));
 }
-const vazio = (): ResultadoJanelaAtiva => ({ cancelado: false, defesaBonus: 0, testeBonus: 0 });
+function vazio(): ResultadoJanelaAtiva { return { cancelado: false, defesaBonus: 0, testeBonus: 0 }; }
 
 function destinatariosReacoes(): string[] {
   // Sem canal multiplayer não há sessão remota capaz de confirmar a sondagem.
@@ -258,7 +266,9 @@ export async function responderOfertaRemota(janelaId: string, ofertaId?: string,
     const r = await comReacaoEmCurso(() => executarAcaoAtiva(oferta.usuarioId, cfg, oferta.alvoId, oferta.ent, { ignorarReacoes: true, instanciaId: oferta.instanceId }));
     if (!r.ok) throw new Error(r.reason);
     // executarAcaoAtiva já debita a reação no mesmo patch dos outros custos.
-    const resultado = { cancelado: !!r.efeitoAplicado && !!oferta.cfg.reacao?.cancelar_evento, defesaBonus: r.efeitoAplicado ? oferta.cfg.reacao?.defesa_bonus ?? 0 : 0, testeBonus: r.efeitoAplicado ? oferta.cfg.reacao?.bonus_teste ?? 0 : 0 };
+    const aplicado = !!r.efeitoAplicado || (oferta.cfg.teste === 'nenhum' && oferta.cfg.reacao?.defesa_bonus !== undefined);
+    const resultado: ResultadoJanelaAtiva = { cancelado: aplicado && !!oferta.cfg.reacao?.cancelar_evento, defesaBonus: aplicado ? oferta.cfg.reacao?.defesa_bonus ?? 0 : 0, testeBonus: aplicado ? oferta.cfg.reacao?.bonus_teste ?? 0 : 0 };
+    if (aplicado && oferta.cfg.id === 'baculo-aetheris-reversao' && remoto.evento.protegidoId) resultado.aetherisCounterattack = { wielderId: oferta.usuarioId, attackerId: remoto.evento.origemId, protectedId: remoto.evento.protegidoId };
     useLogStore.getState().addLog('combat', `↪ ${oferta.nomeUsuario} reagiu com ${oferta.cfg.nome}${resultado.cancelado ? ' e interrompeu o evento' : ''}.`);
     window.dispatchEvent(new CustomEvent('omni-reaction:send', { detail: { tipo: 'resultado', janelaId, perfilId, clienteOrigem, ofertaId, resultado } }));
     useReacoesAtivasStore.getState().fecharOfertaRemota(janelaId);
@@ -279,7 +289,7 @@ function elegivel(oferta: OfertaReacaoItem, evento: EventoReacaoAtiva): boolean 
     if (!u || !nome || !exemplarEstaEmpunhado(u, item) || (ent.replica && !item.materializada)) return false;
   }
   const r = oferta.cfg.reacao;
-  if (!u || !origem || !r || u.id === origem.id || (u.hpCurrent ?? 1) <= 0 || !aceitaAlvoAtivo(u, origem, { ...oferta.cfg, filtro_alvo: 'inimigos' })) return false;
+  if (!u || !origem || !r || (r.tipo_ataque && r.tipo_ataque !== evento.tipoAtaque) || u.id === origem.id || (u.hpCurrent ?? 1) <= 0 || !aceitaAlvoAtivo(u, origem, { ...oferta.cfg, filtro_alvo: 'inimigos' })) return false;
   if (r.dano_minimo && (evento.dano ?? 0) < r.dano_minimo) return false;
   const protegido = chars.find(c => c.id === evento.protegidoId);
   if (evento.protegidoId) {
@@ -311,7 +321,7 @@ export function ofertasReacaoAtiva(evento: EventoReacaoAtiva): OfertaReacaoItem[
   for (const item of Object.values(useInventoryStore.getState().items)) {
     const ent = useOmniEntidadesStore.getState().entidades[item.entity.id] ?? item.entity;
     for (const cfg of ent.acoesAtivas ?? []) {
-      if (cfg.reacao?.gatilho !== evento.gatilho) continue;
+      if (cfg.reacao?.gatilho !== evento.gatilho || (cfg.reacao.tipo_ataque && cfg.reacao.tipo_ataque !== evento.tipoAtaque)) continue;
       // Seleção determinística evita abrir um segundo seletor durante a interrupção.
       if (cfg.tipo_alvo === 'multiplo' || cfg.tipo_alvo === 'area') continue;
       const alvoId = cfg.reacao.alvo === 'usuario' ? item.ownerId : cfg.reacao.alvo === 'protegido' ? evento.protegidoId : evento.origemId;
@@ -348,7 +358,7 @@ function reacoesInvocacaoElegiveis(evento: EventoReacaoAtiva, janelaId?: string)
         const acao = modelo.acoes.find(item => item.id === reacao.acaoId);
         if (!acao || acao.categoriaAcao !== 'reacao' || (acao.tipoExecucao !== 'omni' && acao.tipoExecucao !== 'referencia_omni')) continue;
         const resolvida = resolverAcaoOmniInvocacao(acao, entidades, { permitirReacao: true });
-        if (!resolvida.ok || !resolvida.config.reacao || resolvida.config.reacao.gatilho !== evento.gatilho) continue;
+        if (!resolvida.ok || !resolvida.config.reacao || resolvida.config.reacao.gatilho !== evento.gatilho || (resolvida.config.reacao.tipo_ataque && resolvida.config.reacao.tipo_ataque !== evento.tipoAtaque)) continue;
         const alvoId = resolvida.config.reacao.alvo === 'usuario'
           ? dono.id
           : resolvida.config.reacao.alvo === 'protegido' ? evento.protegidoId : evento.origemId;
@@ -481,7 +491,15 @@ async function executarOfertaReacao(oferta: OfertaReacaoAtiva, evento: EventoRea
   const cfg = { ...oferta.cfg, tipo_alvo: oferta.alvoId === oferta.usuarioId ? 'proprio' as const : 'unico' as const, ...(evento.movimento ? { alcanceM: 0 } : {}) };
   const r = await comReacaoEmCurso(() => executarAcaoAtiva(oferta.usuarioId, cfg, oferta.alvoId, oferta.ent, { ignorarReacoes: true, instanciaId: oferta.instanceId }));
   if (!r.ok) throw new Error(r.reason);
-  const aplicado = { cancelado: !!r.efeitoAplicado && !!oferta.cfg.reacao?.cancelar_evento, defesaBonus: r.efeitoAplicado ? oferta.cfg.reacao?.defesa_bonus ?? 0 : 0, testeBonus: r.efeitoAplicado ? oferta.cfg.reacao?.bonus_teste ?? 0 : 0 };
+  const efeitoAplicado = !!r.efeitoAplicado || (oferta.cfg.teste === 'nenhum' && oferta.cfg.reacao?.defesa_bonus !== undefined);
+  const aplicado: ResultadoJanelaAtiva = {
+    cancelado: efeitoAplicado && !!oferta.cfg.reacao?.cancelar_evento,
+    defesaBonus: efeitoAplicado ? oferta.cfg.reacao?.defesa_bonus ?? 0 : 0,
+    testeBonus: efeitoAplicado ? oferta.cfg.reacao?.bonus_teste ?? 0 : 0,
+  };
+  if (efeitoAplicado && oferta.cfg.id === 'baculo-aetheris-reversao' && evento.protegidoId) {
+    aplicado.aetherisCounterattack = { wielderId: oferta.usuarioId, attackerId: evento.origemId, protectedId: evento.protegidoId };
+  }
   useLogStore.getState().addLog('combat', '↪ ' + oferta.nomeUsuario + ' reagiu com ' + oferta.cfg.nome + (aplicado.cancelado ? ' e interrompeu o evento' : '') + '.');
   return aplicado;
 }
@@ -593,10 +611,14 @@ export async function responderReacaoAtiva(id: string, ofertaId?: string): Promi
     const r = await comReacaoEmCurso(() => executarAcaoAtiva(oferta.usuarioId, cfg, oferta.alvoId, oferta.ent, { ignorarReacoes: true, instanciaId: oferta.instanceId }));
     if (!r.ok) throw new Error(r.reason);
     // executarAcaoAtiva já debita a reação no mesmo patch dos outros custos.
-    if (r.efeitoAplicado) {
+    const efeitoAplicado = !!r.efeitoAplicado || (oferta.cfg.teste === 'nenhum' && oferta.cfg.reacao?.defesa_bonus !== undefined);
+    if (efeitoAplicado) {
       resultado.defesaBonus += oferta.cfg.reacao?.defesa_bonus ?? 0;
       resultado.testeBonus += oferta.cfg.reacao?.bonus_teste ?? 0;
       resultado.cancelado ||= !!oferta.cfg.reacao?.cancelar_evento;
+      if (oferta.cfg.id === 'baculo-aetheris-reversao' && j.evento.protegidoId) {
+        resultado.aetherisCounterattack = { wielderId: oferta.usuarioId, attackerId: j.evento.origemId, protectedId: j.evento.protegidoId };
+      }
     }
     useLogStore.getState().addLog('combat', `↪ ${oferta.nomeUsuario} reagiu com ${oferta.cfg.nome}${resultado.cancelado ? ' e interrompeu o evento' : ''}.`);
     }
@@ -637,7 +659,7 @@ export async function receberRespostaRemota(msg: { tipo: 'resultado' | 'passar' 
     return;
   }
   if (msg.tipo === 'disponivel') return;
-  const resultado = msg.tipo === 'resultado' ? { cancelado: j.resultado.cancelado || !!msg.resultado?.cancelado, defesaBonus: j.resultado.defesaBonus + (msg.resultado?.defesaBonus ?? 0), testeBonus: (j.resultado.testeBonus ?? 0) + (msg.resultado?.testeBonus ?? 0) } : j.resultado;
+  const resultado: ResultadoJanelaAtiva = msg.tipo === 'resultado' ? { cancelado: j.resultado.cancelado || !!msg.resultado?.cancelado, defesaBonus: j.resultado.defesaBonus + (msg.resultado?.defesaBonus ?? 0), testeBonus: (j.resultado.testeBonus ?? 0) + (msg.resultado?.testeBonus ?? 0), aetherisCounterattack: msg.resultado?.aetherisCounterattack ?? j.resultado.aetherisCounterattack } : j.resultado;
   if (resultado.cancelado) { fechar(j.id, resultado); return; }
   const pendentes = j.pendentes.filter(x => x !== msg.perfilId);
   // Quando o próprio perfil resolveu uma oferta em sua sessão, retire a cópia

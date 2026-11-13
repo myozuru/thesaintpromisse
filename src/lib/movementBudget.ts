@@ -5,12 +5,13 @@
  * Mobilidade Avançada (Suporte) e itens equipados somam metros antes da sobrecarga.
  */
 import type { Character } from '@/types';
+import { baculoAetherisEquipped } from '@/lib/baculoAetheris';
 
 export const MOBILIDADE_ID = 'sup-mobilidade-avancada';
 export const MOBILIDADE_BONUS_M = 3;
 
 type MoveChar = Pick<Character, 'movement' | 'slotsCurrent' | 'slotsMax'> &
-  Partial<Pick<Character, 'chosenSpecAbilities' | 'mobilidadeReacaoM' | 'mobilidadeReacaoBase' | 'ultimoSegundoAtivo' | 'ferimentosComplexos'>>;
+  Partial<Pick<Character, 'chosenSpecAbilities' | 'mobilidadeReacaoM' | 'mobilidadeReacaoBase' | 'ultimoSegundoAtivo' | 'ferimentosComplexos' | 'mainHandWeaponName' | 'offHandWeaponName' | 'baculoAetherisSafeMoveM'>>;
 
 export function isOverloaded(c: Pick<Character, 'slotsCurrent' | 'slotsMax'> | undefined | null): boolean {
   if (!c) return false;
@@ -23,7 +24,8 @@ export function getMobilidadeBonus(c: Partial<Pick<Character, 'chosenSpecAbiliti
 
 export function effectiveMovement(c: MoveChar | undefined | null, bonusDeslocamento = 0): number {
   const pernas = (c?.ferimentosComplexos ?? []).some((f) => f.resultado >= 4 && f.resultado <= 6) ? 0.5 : 1;
-  const base = Math.max(0, ((c?.movement ?? 0) + getMobilidadeBonus(c)) * pernas + (c?.ultimoSegundoAtivo ? 4.5 : 0) + bonusDeslocamento);
+  const bonusArma = baculoAetherisEquipped(c) ? 3 : 0;
+  const base = Math.max(0, ((c?.movement ?? 0) + getMobilidadeBonus(c) + bonusArma + (c?.baculoAetherisSafeMoveM ?? 0)) * pernas + (c?.ultimoSegundoAtivo ? 4.5 : 0) + bonusDeslocamento);
   return isOverloaded(c) ? base / 2 : base;
 }
 

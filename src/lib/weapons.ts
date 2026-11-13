@@ -22,7 +22,7 @@ export type WeaponPropertyKind =
   | 'fineza' | 'leve' | 'marcial' | 'modular' | 'mortal' | 'oscilante'
   | 'pesada' | 'recarga' | 'versatil';
 
-export type WeaponSpecialFeatureId = 'lanca-vetorial-rubra';
+export type WeaponSpecialFeatureId = 'lanca-vetorial-rubra' | 'baculo-aetheris';
 
 export interface WeaponProperty {
   kind: WeaponPropertyKind;
@@ -331,6 +331,20 @@ export const EXTERNAL_WEAPONS: Weapon[] = [
     spaces: 3,
     specialFeatureId: 'lanca-vetorial-rubra',
     specialText: 'Ferramenta Amaldi\u00e7oada - Grau 1 - Raridade \u00c9pico. N\u00facleo Carmesim: cada acerto aplica 1 Marca Vetorial (m\u00e1ximo 3); acertos cr\u00edticos aplicam 2. Somente um inimigo pode estar marcado por vez. Com 1 marca, o portador recebe +2 nos ataques contra o alvo. Com 2, os ataques ignoram 3 pontos de Defesa e causam +2d8 de dano uma vez por rodada. Com 3, a margem de cr\u00edtico passa a 18\u201320 contra o alvo. Avan\u00e7o Escarlate (A\u00e7\u00e3o Comum, 4 PE): avance em linha reta at\u00e9 3 m e ataque; no acerto, causa o dano normal e aplica exatamente 2 marcas, inclusive em cr\u00edtico. Senten\u00e7a Rubra (A\u00e7\u00e3o Comum, 10 PE; exige 3 marcas): no acerto, causa o dano-base +10d8 Perfurante, impede Rea\u00e7\u00f5es do alvo at\u00e9 o in\u00edcio do pr\u00f3ximo turno do portador e consome as marcas. Em cr\u00edtico, dobra os dados-base e os 10d8, sem dobrar modificadores fixos. Senten\u00e7a Rubra n\u00e3o recebe o +2d8 de Fratura Energ\u00e9tica. As marcas desaparecem ao fim do combate.',
+  },
+  {
+    id: 'baculo-aetheris',
+    name: 'Báculo Aetheris',
+    category: 'complexa',
+    range: 'melee',
+    group: 'Haste',
+    damage: '2d8',
+    damageType: 'Im',
+    critRange: 19,
+    properties: [P.duasMaos(), P.estendida(), P.especial()],
+    spaces: 2,
+    specialFeatureId: 'baculo-aetheris',
+    specialText: 'Arma de duas mãos, ocupa 2 espaços, alcance corpo a corpo de 3 m. Ataque básico: 2d8 Impacto, crítico 19–20. Asas do Firmamento: +3 m de deslocamento, ignora terreno difícil natural e reduz dano de queda para a distância que exceder 18 m. Rajada Sônica: no primeiro acerto de cada rodada, +3d8 Sônico e empurrão de 3 m. Julgamento dos Ventos: em crítico, +5d8 Sônico e TR de Fortitude; falha suprime Reações até o início do próximo turno do portador. Ruptura do Firmamento: após um crítico, pode gastar 2 PE e uma Reação para causar +10d10 Sônico, empurrar 6 m e exigir TR de Fortitude para Caído. Plumas da Tempestade (Ação Comum, 8 PE): até 3 ataques de 6d8 Cortante, alcance 18 m, com até 4,5 m de movimento sem Ataques de Oportunidade após o disparo. Reversão dos Ventos (Reação, 7 PE): +5 Defesa para o portador ou aliado a até 9 m contra ataque à distância; se o bônus fizer o ataque errar, libera contra-ataque de 5d8 Sônico a até 18 m. Trono das Nuvens (Ação Comum, 9 PE): raio 3 m a até 18 m, 5d8 Impacto e suspensão a 4,5 m em falha no TR de Fortitude até o próximo turno do portador. Réquiem dos Céus (Ação Completa, 18 PE, 1× por cena): raio 9 m, 15d10 Sônico, empurrão de 6 m e Caído em falha no TR de Fortitude; até 3 aliados podem ser transportados em segurança até 9 m.',
   },
 ];
 

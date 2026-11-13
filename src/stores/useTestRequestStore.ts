@@ -62,6 +62,20 @@ export interface TestRequest {
     conditionIcon: string;
   };
   /** Efeito de dano de uma ação de Shikigami após o alvo resolver o TR. */
+  aetherisResolution?: {
+    sourceCharId: string;
+    sourceCharName?: string;
+    sourceEntityId: string;
+    sourceInstanceId?: string;
+    sourceName?: string;
+    damageFormula?: string;
+    damageType?: DamageType;
+    halfOnSuccess?: boolean;
+    /** Flat modifier applied to the requested saving throw, e.g. Suspended gives -2 vs. Requiem. */
+    saveModifier?: number;
+    conditionOnFailure?: 'sem-reacoes' | 'suspenso' | 'caido';
+    pushMetersOnFailure?: number;
+  };
   invocationResolution?: {
     kind: 'shikigami_damage_after_save';
     ownerCharacterId: string;

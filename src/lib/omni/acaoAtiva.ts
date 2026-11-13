@@ -750,7 +750,7 @@ async function executarAcaoAtivaInterna(
       ];
       const tiposParcela = new Set(parcelas.map((p) => p.tipo));
       const tipoOcorrencia = tiposParcela.size === 1 ? parcelas[0]?.tipo : undefined;
-      useCharacterStore.getState().applyDamage(t.id, dano, tipoOcorrencia, {
+      await useCharacterStore.getState().applyDamage(t.id, dano, tipoOcorrencia, {
         attackerId: u.id, source: 'omni', attack: metadadosAtaque,
         isMelee: metadadosAtaque ? metadadosAtaque.kind === 'melee' : undefined,
         parcelas,

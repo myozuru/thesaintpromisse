@@ -43,3 +43,18 @@
 - A `main` só recebe integração (merge/cherry-pick) **quando o usuário solicitar** — o agente não integra por iniciativa própria.
 - Operações destrutivas (force push, `reset --hard`, reescrever histórico já publicado, excluir branches) exigem autorização prévia.
 - Vale o aviso do Lovable acima: nunca reescrever histórico já publicado.
+
+
+## Protocolo visual de interface
+
+- Antes de uma tarefa visual autorizada, leia DESIGN_SYSTEM.md. Use DESIGN.md como referência da identidade aprovada e src/styles.css como fonte dos tokens e estilos implementados; não criar paleta concorrente nem substituir o tema existente.
+- Confirme alvo, branch, estado Git, AGENTS.md e existência de CLAUDE.md; identifique o servidor e a URL reais no package.json e no terminal. Não presumir porta única, hot reload ou que o Portal está mostrando o build mais recente.
+- Para uma mudança de UI, use o Portal Maestri conectado ou um Portal local dedicado. Preserve The Saint Promisse quando apontar para o site publicado; não reutilize essa sessão de produção como preview local. Registre URL e versão exatas.
+- Capture e observe desktop, tablet e celular; confira tree acessível, foco/teclado, interações, console, layout e reduced-motion. Guarde capturas e auditorias em 14 - Operacao/Tarefas/<ID>/evidencias.
+- Cada execução usa ID estável e os arquivos STATUS.txt, HANDOFF.txt e CONTEXTO.json. O Maestro mantém esses registros em série e sincroniza o TXT canônico .maestri/CONTROLE_TAREFAS.txt com a nota de controle; especialistas não editam concorrencialmente o estado de orquestração.
+- Um agente diferente do implementador faz a revisão independente. Classifique achados P0–P3; corrija e reveja no máximo três rodadas. Não declare a interface alterada aprovada enquanto houver problema crítico ou P1 sem resolução.
+- Preserve comportamento, regras, stores, contratos, fichas e dados de campanha. Este protocolo orienta o processo, mas não amplia a autorização de escrita da tarefa.
+- Se o Portal não fornecer evidência suficiente, verifique primeiro as ferramentas Playwright já disponíveis no projeto antes de adicionar uma integração.
+
+
+- Confira as dimensões reais de cada PNG contra o viewport CSS do Portal. Se houver corte, marque a evidência como parcial, registre a diferença e obtenha captura completa por método alternativo antes de aprovar.

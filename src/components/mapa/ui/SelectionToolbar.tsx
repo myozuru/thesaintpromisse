@@ -11,7 +11,7 @@ import { useMapStore, type EntityLayer } from '@/stores/useMapStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { entityAABB } from '../EntityEngine';
 import {
-  Eye, EyeOff, Lock, Unlock, Layers, Type as TypeIcon, Trash2, Copy, Package, Scan,
+  Eye, EyeOff, Lock, Unlock, Layers, Type as TypeIcon, Trash2, Copy, Package, Scan, MoveVertical,
 } from 'lucide-react';
 import { assetCache } from '../assetCache';
 import { useChestStore } from '@/stores/useChestStore';
@@ -19,7 +19,7 @@ import { MapPin } from 'lucide-react';
 
 const LAYER_ORDER: EntityLayer[] = ['map', 'tokens', 'gm'];
 
-export function SelectionToolbar({ visible = true, onAdjustToken, onEditTerrainZone }: { visible?: boolean; onAdjustToken?: (entityId: string) => void; onEditTerrainZone?: (entityId: string) => void }) {
+export function SelectionToolbar({ visible = true, onAdjustToken, onEditTerrainZone, onEditAltitude }: { visible?: boolean; onAdjustToken?: (entityId: string) => void; onEditTerrainZone?: (entityId: string) => void; onEditAltitude?: (entityId: string) => void }) {
   const selectedIds = useMapStore((s) => s.selectedIds);
   const entities = useMapStore((s) => s.entities);
   const camera = useMapStore((s) => s.camera);
@@ -174,6 +174,11 @@ export function SelectionToolbar({ visible = true, onAdjustToken, onEditTerrainZ
           {isMaster && !e.characterId && !e.chestId && onEditTerrainZone && (
             <ToolBtn title={e.terrainZone ? 'Editar zona de terreno' : 'Configurar zona de terreno'} onClick={() => onEditTerrainZone(e.id)} active={!!e.terrainZone}>
               <MapPin className="h-3.5 w-3.5" />
+            </ToolBtn>
+          )}
+          {isMaster && e.characterId && onEditAltitude && (
+            <ToolBtn title="Definir altitude ou registrar queda" onClick={() => onEditAltitude(e.id)} active={(e.altitudeM ?? 0) > 0}>
+              <MoveVertical className="h-3.5 w-3.5" />
             </ToolBtn>
           )}
           {e.assetId && onAdjustToken && (

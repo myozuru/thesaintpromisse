@@ -1119,7 +1119,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
               <div className="inv-derived-note-copy">
                 <p className="inv-profile-kind">Transformação · sem ficha-base adicional</p>
                 <h5>{forma.nome}</h5>
-                <p>{forma.descricao}</p>
+                <p>{'descricao' in forma ? forma.descricao : 'Descrição não informada nesta referência.'}</p>
                 <p>A Totalidade transforma o Cão sobrevivente após o exorcismo permanente do outro. É uma transformação, não uma ficha-base separada; o catálogo não adiciona uma identidade extra.</p>
               </div>
             </article>
@@ -1151,7 +1151,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
                   </div>
                   <div className="inv-profile-description">
                     <span>Descrição</span>
-                    <p>{forma.descricao}</p>
+                    <p>{DEZ_SOMBRAS_FORMAS_REFERENCIA.find((referencia) => referencia.id === forma.id)?.descricao ?? 'Descrição não informada nesta referência.'}</p>
                   </div>
                   <footer className="inv-profile-card-footer">
                     {isAlreadyInCatalog ? (

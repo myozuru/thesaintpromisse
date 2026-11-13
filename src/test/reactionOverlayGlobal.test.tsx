@@ -41,7 +41,7 @@ describe('overlay de reação no shell global', () => {
     });
     render(<Index />);
 
-    fireEvent.click(screen.getByText('Clique em qualquer lugar para entrar'));
+    fireEvent.click(screen.getByRole('button', { name: 'Entrar em The Saint Promisse' }));
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 900)); });
     fireEvent.click(screen.getByRole('button', { name: 'Abrir mapa' }));
     await screen.findByText('Mapa montado');

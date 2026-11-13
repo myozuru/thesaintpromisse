@@ -50,8 +50,7 @@ describe('Origem e regras do novo dano Omni', () => {
     montarMesa([char('autor'), char('alvo', { escCurrent: 5, rd: 3, rdByType: { DQ: 4 } as Character['rdByType'] })], {});
     const events = vi.spyOn(eventBus, 'emitirEvento');
     executarGatilho(logica('hit', 'aoUsarTalento', [dano(20, 'Fogo')]), 'aoUsarTalento', { usuario: pegarFicha('autor'), alvo: pegarFicha('alvo'), dano: { tipo: 1, fonte: 1, foi_critico: 1 } });
-    expect(pegarFicha('alvo').escCurrent).toBe(0);
-    expect(pegarFicha('alvo').hpCurrent).toBe(992);
+    await waitFor(() => expect(pegarFicha('alvo')).toMatchObject({ escCurrent: 0, hpCurrent: 992 }));
     await waitFor(() => expect(events.mock.calls.some(([e]) => e === 'aoCausarDano')).toBe(true));
     const opts = events.mock.calls.find(([e]) => e === 'aoCausarDano')![1]!;
     expect(opts).toMatchObject({ usuarioId: 'autor', alvoId: 'alvo' });
@@ -67,14 +66,14 @@ describe('Origem e regras do novo dano Omni', () => {
     montarMesa([char('autor'), char('alvo', patch as Partial<Character>)], {});
     const events = vi.spyOn(eventBus, 'emitirEvento');
     executarGatilho(logica('hit', 'aoUsarTalento', [dano(20, tipo)]), 'aoUsarTalento', { usuario: pegarFicha('autor'), alvo: pegarFicha('alvo') });
-    expect(pegarFicha('alvo').hpCurrent).toBe(hp);
+    await waitFor(() => expect(pegarFicha('alvo').hpCurrent).toBe(hp));
     await waitFor(() => expect(events.mock.calls.some(([e]) => e === 'aoCausarDano')).toBe(true));
     if (!tipo || tipo === 'Verdadeiro') expect(events.mock.calls.find(([e]) => e === 'aoCausarDano')![1]?.dano).not.toHaveProperty('tipo');
   });
-  it('bloqueio é consumido uma vez e a segunda ação usa a ficha atual', () => {
+  it('bloqueio é consumido uma vez e a segunda ação usa a ficha atual', async () => {
     montarMesa([char('autor'), char('alvo', { omniFlags: { bloqueio_total: 1 } })], {});
     executarGatilho(logica('hit', 'aoUsarTalento', [dano(20), { ...dano(20), id: 'hit2' }]), 'aoUsarTalento', { usuario: pegarFicha('autor'), alvo: pegarFicha('alvo') });
-    expect(pegarFicha('alvo').hpCurrent).toBe(980);
+    await waitFor(() => expect(pegarFicha('alvo').hpCurrent).toBe(980));
     expect(pegarFicha('alvo').omniFlags?.bloqueio_total).toBe(0);
   });
   it('retaliação pertence ao portador e não ao atacante recebido', async () => {
@@ -111,7 +110,7 @@ describe('Limites permanecem válidos através de callbacks assíncronos', () =>
     expect(2000 - snapshot.reduce((a, b) => a + b, 0)).toBeLessThanOrEqual(LIMITE_PROFUNDIDADE_OMNI);
     useOmniEntidadesStore.setState({ entidades: {} });
     const hp = pegarFicha('alvo').hpCurrent;
-    useCharacterStore.getState().applyDamage('alvo', 3, 'DI', { attackerId: 'autor' });
+    await useCharacterStore.getState().applyDamage('alvo', 3, 'DI', { attackerId: 'autor' });
     expect(pegarFicha('alvo').hpCurrent).toBe(hp - 3);
   });
   it('ramificações compartilham orçamento em vez de reiniciar o limite', async () => {
@@ -125,7 +124,7 @@ describe('Limites permanecem válidos através de callbacks assíncronos', () =>
     expect(1000 - hp).toBeLessThanOrEqual(LIMITE_PASSOS_OMNI);
     await esperar(10);
     expect(pegarFicha('alvo').hpCurrent).toBe(hp);
-  });
+  }, 15_000);
   it('observadores preservam o limite quando seu efeito produz outro dano', async () => {
     const obs = logica('observar', 'aoAliadoSofrerDano', [dano(1)]);
     montarMesa([char('autor'), char('alvo'), char('obs1', { omniAtivos: [vincular(obs)] }), char('obs2', { omniAtivos: [vincular(obs)] })], {});

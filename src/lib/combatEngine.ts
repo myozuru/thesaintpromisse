@@ -7,6 +7,7 @@ import { posturaAlcanceMult } from './posturas';
 import { extensaoAlcanceBonus } from './extensaoCorpo';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { abrirJanelaReacaoAtiva } from './omni/reacoesAtivas';
+import { useBaculoAetherisCounterattackStore } from '@/lib/baculoAetherisState';
 import { computeTotalDefense } from './defenseCalc';
 import { duelistaApplies, getDuelistaBonus, distanteApplies, getDistanteBonus, arremessadorApplies, getArremessadorDamage, duploApplies, getDuploDamage, massivoApplies, getMassivoDamage } from './combateEstilos';
 import { posturaAtaque } from '@/lib/posturas';
@@ -366,13 +367,17 @@ export function getAbilityMod(c: Character, name: 'FOR' | 'DES'): number {
 
 /** Resolve ataque e janelas de reação; a aplicação do dano principal continua no chamador. */
 export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
+  let aetherisCounterattack: { wielderId: string; attackerId: string; protectedId: string } | undefined;
+  let aetherisDefenseBonus = 0;
   if (ctx.targetId && !ctx.ignorarReacoes) {
     const posicoes = () => Object.values(useMapStore.getState().entities).filter(e => e.characterId === ctx.attacker.id || e.characterId === ctx.targetId).map(e => `${e.id}:${e.x}:${e.y}`).join('|');
     const posAntes = posicoes();
     const antes = useCharacterStore.getState().characters.find(c => c.id === ctx.targetId);
     const kind = ctx.weapon.range === 'melee' ? 'melee' : 'ranged';
     const defesaAntes = antes ? computeTotalDefense(antes, {}, kind) : 0;
-    const janela = await abrirJanelaReacaoAtiva({ gatilho: 'quando_alvo_declarar_ataque', origemId: ctx.attacker.id, protegidoId: ctx.targetId });
+    const janela = await abrirJanelaReacaoAtiva({ gatilho: 'quando_alvo_declarar_ataque', origemId: ctx.attacker.id, protegidoId: ctx.targetId, tipoAtaque: kind });
+    aetherisCounterattack = janela.aetherisCounterattack;
+    aetherisDefenseBonus = janela.defesaBonus;
     const chars = useCharacterStore.getState().characters;
     const atacante = chars.find(c => c.id === ctx.attacker.id), alvo = chars.find(c => c.id === ctx.targetId);
     let foraDeAlcance = false;
@@ -531,6 +536,11 @@ export async function rollAttack(ctx: AttackContext): Promise<AttackResult> {
 
   const attackTotal = natural + mods.reduce((a, m) => a + m.value, 0);
   const hit = !criticalFail && !jammed && (critical || attackTotal >= ctx.targetDefense);
+  if (aetherisCounterattack && !hit && !critical && !criticalFail && aetherisDefenseBonus > 0 && attackTotal >= ctx.targetDefense - aetherisDefenseBonus) {
+    const map = useMapStore.getState();
+    const distance = distanceBetweenChars(aetherisCounterattack.wielderId, aetherisCounterattack.attackerId, map.entities, map.gridConfig);
+    if (distance !== null && distance <= 18.05) useBaculoAetherisCounterattackStore.getState().setPending(aetherisCounterattack);
+  }
 
   // Dano: aplica step + dados extras + crítico (Mortal/Fatal)
   let finalDice: DamageDice = baseDice.length ? stepDamage(baseDice, ctxBonus.damageStepDelta) : [];

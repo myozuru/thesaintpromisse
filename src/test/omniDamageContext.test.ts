@@ -193,6 +193,13 @@ describe('Cobrir-se antes da aplicação do dano', () => {
     const anterior = (window as unknown as { __worldBus?: unknown }).__worldBus;
     (window as unknown as { __worldBus?: unknown }).__worldBus = { send: vi.fn() };
     const enviados = capturarEnvios('reaction-prompt');
+    const responderSondagemRemota = (event: Event) => {
+      const detalhe = (event as CustomEvent).detail as { tipo?: string; janelaId?: string; perfilId?: string } | undefined;
+      if (detalhe?.tipo === 'sondar' && detalhe.perfilId === 'perfil-alvo' && detalhe.janelaId) {
+        void import('@/lib/omni/reacoesAtivas').then(({ passarOfertaRemota }) => passarOfertaRemota(detalhe.janelaId!, detalhe.perfilId!));
+      }
+    };
+    window.addEventListener('omni-reaction:send', responderSondagemRemota);
     try {
       montarMesa([
         char('alvo', {
@@ -216,6 +223,7 @@ describe('Cobrir-se antes da aplicação do dano', () => {
       comoTela({ profileId: 'perfil-alvo', role: 'PLAYER' });
       useReactionStore.getState().receiveRemote(prompt, 'cliente-mestre');
       expect(useReactionStore.getState().resolveDecision(prompt.id, 4)).toBe(true);
+      comoTela({ profileId: null, role: 'MASTER' });
       await damage;
 
       expect(enviados.enviados.find((m) => m.tipo === 'resposta')).toMatchObject({ answer: 4, clienteOrigem: 'cliente-mestre' });
@@ -225,6 +233,7 @@ describe('Cobrir-se antes da aplicação do dano', () => {
       expect(useCombatStore.getState().reactionPauseIds).not.toContain(prompt.id);
     } finally {
       enviados.parar();
+      window.removeEventListener('omni-reaction:send', responderSondagemRemota);
       (window as unknown as { __worldBus?: unknown }).__worldBus = anterior;
     }
   });

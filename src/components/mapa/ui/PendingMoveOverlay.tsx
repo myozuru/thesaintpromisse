@@ -26,6 +26,7 @@ import { isFreeformFor } from '@/lib/freeformMode';
 import { confirmarMovimentoInvocacao } from '@/lib/controlador/mapa';
 import { toast } from '@/hooks/use-toast';
 import { hasLancaReactionSuppression } from '@/lib/conditionEffects';
+import { routePrefixByDistance } from '@/lib/mapa/terrenoDificil';
 
 
 export function PendingMoveOverlay() {
@@ -127,7 +128,7 @@ export function PendingMoveOverlay() {
       const charNames: Record<string, string> = {};
       for (const c of chars) charNames[c.id] = c.name;
       const movingChar = useCharacterStore.getState().characters.find((c) => c.id === pending.charId);
-      const candidates = movingChar?.desengajado ? [] : detectOpportunityCandidates({
+      const fullCandidates = movingChar?.desengajado ? [] : detectOpportunityCandidates({
         moving: ent,
         prevX: pending.startX,
         prevY: pending.startY,
@@ -136,9 +137,34 @@ export function PendingMoveOverlay() {
         grants: oppState.grants,
         charNames,
         grid: gridConfig,
-      }).filter((cand) =>
-        !(movingChar?.desengajadoDe ?? []).includes(cand.charId) && !suppressedReactionIds.has(cand.charId),
+      });
+      const safeRemainingM = Math.max(0, movingChar?.baculoAetherisSafeMoveRemainingM ?? 0);
+      const actualDistanceM = Math.max(0, pending.actualDistM ?? pending.distM);
+      const metersPerPx = (gridConfig.metersPerCell || 1.5) / (gridConfig.dpi || 70);
+      const safeRoute = safeRemainingM > 0
+        ? routePrefixByDistance([de, ...movimento.trajetoria, para], Math.min(safeRemainingM, actualDistanceM), metersPerPx)
+        : [];
+      const safeEnd = safeRoute[safeRoute.length - 1];
+      const safeCandidates = safeRemainingM > 0 && safeEnd ? detectOpportunityCandidates({
+        moving: { ...ent, x: safeEnd.x, y: safeEnd.y },
+        prevX: pending.startX,
+        prevY: pending.startY,
+        trajetoria: safeRoute.slice(1),
+        entities,
+        grants: oppState.grants,
+        charNames,
+        grid: gridConfig,
+      }) : [];
+      const safeCandidateEntityIds = new Set(safeCandidates.map((cand) => cand.entityId));
+      const candidates = fullCandidates.filter((cand) =>
+        !safeCandidateEntityIds.has(cand.entityId)
+        && !(movingChar?.desengajadoDe ?? []).includes(cand.charId) && !suppressedReactionIds.has(cand.charId),
       );
+      if (safeRemainingM > 0 && movingChar) {
+        useCharacterStore.getState().updateCharacter(pending.charId, {
+          baculoAetherisSafeMoveRemainingM: Math.max(0, safeRemainingM - actualDistanceM),
+        });
+      }
       if (candidates.length > 0) {
         oppState.setPending({
           id: `${Date.now().toString(36)}`,
@@ -193,7 +219,7 @@ export function PendingMoveOverlay() {
     >
       <div className="pointer-events-auto flex flex-col items-center gap-1">
         <div className="rounded-md border border-border bg-card/95 backdrop-blur px-2 py-0.5 text-xs font-mono text-amber-200 shadow-lg tabular-nums">
-          {pending.distM.toFixed(1)}m{Number.isFinite(remaining) ? ` · resta ${remaining.toFixed(1)}m` : ' · livre'}{isInvocationMove ? ' · ação própria' : ''}
+          {pending.distM.toFixed(1)}m de custo{pending.actualDistM !== undefined && Math.abs(pending.distM - pending.actualDistM) > 0.05 ? ` (${pending.actualDistM.toFixed(1)}m real)` : ''} | {Number.isFinite(remaining) ? ` · resta ${remaining.toFixed(1)}m` : ' · livre'}{isInvocationMove ? ' · ação própria' : ''}
         </div>
         <div className="flex items-center gap-1 rounded-full border border-border bg-card/95 backdrop-blur px-1 py-1 shadow-xl">
           <button

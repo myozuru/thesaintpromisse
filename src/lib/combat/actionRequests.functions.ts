@@ -154,7 +154,7 @@ export const saveCharactersSliceSecurely = createServerFn({ method: "POST" })
       if (error.code === "22023") return { ok: false as const, code: "invalid" as const, message: "A solicitação de gravação é inválida." };
       return { ok: false as const, code: "failed" as const, message: "Não foi possível salvar as fichas com segurança." };
     }
-    const saved = result as {
+    const saved = result as unknown as {
       revision: number;
       data: import("@/integrations/supabase/types").Json;
       duplicate: boolean;
@@ -183,7 +183,7 @@ export const saveMapSceneSliceSecurely = createServerFn({ method: "POST" })
       if (error.code === "22023") return { ok: false as const, code: "invalid" as const, message: "A solicitação de mapa é inválida." };
       return { ok: false as const, code: "failed" as const, message: "Não foi possível salvar o mapa com segurança." };
     }
-    const saved = result as {
+    const saved = result as unknown as {
       revision: number;
       data: import("@/integrations/supabase/types").Json;
       duplicate: boolean;

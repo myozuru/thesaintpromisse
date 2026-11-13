@@ -115,6 +115,9 @@ import { holdLocalMapSync, markLocalEntityEdits } from './mapSyncGuards';
 import { combatMoveBudget, reactionMoveBudget } from '@/lib/movementBudget';
 import { isFreeformFor } from '@/lib/freeformMode';
 import { toast } from '@/hooks/use-toast';
+import { BACULO_AETHERIS_SUSPENSO, ignoresNaturalDifficultTerrain } from '@/lib/baculoAetheris';
+import { AltitudeDialog } from './ui/AltitudeDialog';
+import { difficultTerrainPenaltyMeters, movementCostForTerrainSegment } from '@/lib/mapa/terrenoDificil';
 import { imagemArmaEmpunhada, imagemPronta } from '@/lib/omni/imagemItem';
 import { useChestStore } from '@/stores/useChestStore';
 import { useShikigamiHudStore } from '@/stores/useShikigamiHudStore';
@@ -161,6 +164,7 @@ type CombatMoveMeta = {
   lastPrim: { x: number; y: number };
   trail: { x: number; y: number }[];
   movedPx: number;
+  terrainCostBonusM?: number;
 };
 
 /** Clipboard volátil (sobrevive entre mounts da página mas não entre reloads). */
@@ -263,6 +267,11 @@ const canStartMoveEntityNow = (entity: Entity): boolean => {
   if (entity.characterId) {
     const ch = useCharacterStore.getState().characters.find((c) => c.id === entity.characterId);
     if (ch && (ch.hpCurrent ?? 0) <= 0) return false;
+    if (ch?.activeConditions?.some((condition) => condition.conditionId === BACULO_AETHERIS_SUSPENSO)
+      && Number(ch.omniFlags?.voando ?? ch.omniCounters?.voando ?? 0) <= 0) {
+      toast({ title: 'Criatura Suspensa a 4,5 m do solo (sem voo, não pode se deslocar)' });
+      return false;
+    }
   }
 
   if (useRoleStore.getState().role !== 'PLAYER') return true;
@@ -360,6 +369,7 @@ export function MapaModule() {
   const [selectionToolbarVisible, setSelectionToolbarVisible] = useState(false);
   const [tokenCropEntityId, setTokenCropEntityId] = useState<string | null>(null);
   const [terrainZoneEditId, setTerrainZoneEditId] = useState<string | null>(null);
+  const [altitudeEditId, setAltitudeEditId] = useState<string | null>(null);
   const selectionToolbarVisibleRef = useRef(false);
 
   const gridConfig = useMapStore((s) => s.gridConfig);
@@ -651,7 +661,7 @@ export function MapaModule() {
       const liveDrag = dragRef.current;
       if (liveDrag.kind === 'move' && liveDrag.combat) {
         const cm = liveDrag.combat;
-        const usedNow = cm.usedBeforeM + cm.movedPx * cm.metersPerPx;
+        const usedNow = cm.usedBeforeM + cm.movedPx * cm.metersPerPx + (cm.terrainCostBonusM ?? 0);
         drawTrail(cm.trail, '#fcd34d', usedNow, cm.budgetM);
       }
       if (state.pendingMove && (liveDrag.kind !== 'move' || !liveDrag.combat)) {
@@ -2233,7 +2243,9 @@ export function MapaModule() {
             const continuing = pending && pending.entityId === hit.id && pending.charId === linkedCharId;
             const startPrim = continuing ? { x: pending.startX, y: pending.startY } : { x: primaryEnt.x, y: primaryEnt.y };
             const trail = continuing ? [...pending.trail] : [{ x: primaryEnt.x, y: primaryEnt.y }];
-            const movedPx = continuing ? pending.distM / metersPerPx : 0;
+            const previousActualDistM = continuing ? (pending.actualDistM ?? pending.distM) : 0;
+            const movedPx = previousActualDistM / metersPerPx;
+            const terrainCostBonusM = continuing ? Math.max(0, pending.distM - previousActualDistM) : 0;
             combatMeta = {
               charId: linkedCharId,
               budgetM,
@@ -2243,6 +2255,7 @@ export function MapaModule() {
               lastPrim: { x: primaryEnt.x, y: primaryEnt.y },
               trail,
               movedPx,
+              terrainCostBonusM,
             };
           }
         }
@@ -2367,38 +2380,51 @@ export function MapaModule() {
           }
         }
 
-        // Cap de movimento em combate: distância em linha reta a partir do
-        // início da arrastada, somada ao já consumido, não pode exceder budget.
+        // Cap movement by actual path cost; difficult terrain doubles only its segment.
         if (drag.combat) {
           const cm = drag.combat;
           const primOrig = drag.origs[drag.primaryId];
           if (primOrig) {
-            // Trava dura: o token nunca pode ultrapassar o orçamento total.
-            const totalBudgetPx = Math.max(0, (cm.budgetM - cm.usedBeforeM) / cm.metersPerPx);
-            const remainingStepPx = Math.max(0, totalBudgetPx - cm.movedPx);
-            const nx = primOrig.x + finalDx;
-            const ny = primOrig.y + finalDy;
-            const stepPx = Math.hypot(nx - cm.lastPrim.x, ny - cm.lastPrim.y);
-            if (stepPx > remainingStepPx && stepPx > 0) {
-              const k = remainingStepPx / stepPx;
-              finalDx = cm.lastPrim.x + (nx - cm.lastPrim.x) * k - primOrig.x;
-              finalDy = cm.lastPrim.y + (ny - cm.lastPrim.y) * k - primOrig.y;
+            const zones = Object.values(state.entities).filter((entity) => !!entity.difficultTerrain);
+            const character = useCharacterStore.getState().characters.find((item) => item.id === cm.charId);
+            const ignoresNatural = ignoresNaturalDifficultTerrain(character);
+            const alreadySpent = cm.movedPx * cm.metersPerPx + (cm.terrainCostBonusM ?? 0);
+            const availableCost = Math.max(0, cm.budgetM - cm.usedBeforeM - alreadySpent);
+            const start = cm.lastPrim;
+            const proposed = { x: primOrig.x + finalDx, y: primOrig.y + finalDy };
+            const costAt = (t: number) => movementCostForTerrainSegment(
+              start,
+              { x: start.x + (proposed.x - start.x) * t, y: start.y + (proposed.y - start.y) * t },
+              cm.metersPerPx,
+              zones,
+              ignoresNatural,
+            );
+            if (costAt(1) > availableCost) {
+              let low = 0;
+              let high = 1;
+              for (let i = 0; i < 16; i += 1) {
+                const middle = (low + high) / 2;
+                if (costAt(middle) <= availableCost) low = middle;
+                else high = middle;
+              }
+              finalDx = start.x + (proposed.x - start.x) * low - primOrig.x;
+              finalDy = start.y + (proposed.y - start.y) * low - primOrig.y;
             }
             const tx = primOrig.x + finalDx;
             const ty = primOrig.y + finalDy;
-            const appliedStepPx = Math.hypot(tx - cm.lastPrim.x, ty - cm.lastPrim.y);
+            const appliedStepPx = Math.hypot(tx - start.x, ty - start.y);
             if (appliedStepPx > 0) {
+              cm.terrainCostBonusM = (cm.terrainCostBonusM ?? 0)
+                + difficultTerrainPenaltyMeters(start, { x: tx, y: ty }, cm.metersPerPx, zones, ignoresNatural);
               cm.movedPx += appliedStepPx;
               cm.lastPrim = { x: tx, y: ty };
-              // Sempre mantém o último ponto do rastro grudado no token,
-              // sem "buracos" entre amostras: empurra um novo ponto ou
-              // atualiza o último para refletir a posição atual.
+              // Keep the route origin and compress only nearby intermediate samples.
               const minStep = 4 / state.camera.scale;
               const last = cm.trail[cm.trail.length - 1];
               const distLast = last ? Math.hypot(tx - last.x, ty - last.y) : Infinity;
-              if (distLast >= minStep) {
+              if (distLast >= minStep || cm.trail.length === 1) {
                 cm.trail.push({ x: tx, y: ty });
-                if (cm.trail.length > 1024) cm.trail.shift();
+                if (cm.trail.length > 1024) cm.trail.splice(1, 1);
               } else if (last) {
                 last.x = tx;
                 last.y = ty;
@@ -2701,7 +2727,8 @@ export function MapaModule() {
           if (ent) {
             const tail = cm.trail[cm.trail.length - 1];
             if (!tail || Math.hypot(ent.x - tail.x, ent.y - tail.y) > 0.5) cm.trail.push({ x: ent.x, y: ent.y });
-            const distM = cm.movedPx * cm.metersPerPx;
+            const actualDistM = cm.movedPx * cm.metersPerPx;
+            const distM = actualDistM + (cm.terrainCostBonusM ?? 0);
             holdLocalMapSync(1200, drag.ids);
             st.setPendingMove({
               entityId: drag.primaryId,
@@ -2712,6 +2739,7 @@ export function MapaModule() {
               startY: cm.startPrim.y,
               trail: [...cm.trail],
               distM,
+              actualDistM,
             });
           }
         } else {
@@ -3314,9 +3342,10 @@ export function MapaModule() {
 
 
           <NotesOverlay containerRef={containerRef as React.RefObject<HTMLDivElement>} />
-          <SelectionToolbar visible={selectionToolbarVisible} onAdjustToken={setTokenCropEntityId} onEditTerrainZone={setTerrainZoneEditId} />
+          <SelectionToolbar visible={selectionToolbarVisible} onAdjustToken={setTokenCropEntityId} onEditTerrainZone={setTerrainZoneEditId} onEditAltitude={setAltitudeEditId} />
       <ShikigamiTokenHud />
           <ZonaTerrenoDialog entityId={terrainZoneEditId} onClose={() => setTerrainZoneEditId(null)} />
+          <AltitudeDialog entityId={altitudeEditId} onClose={() => setAltitudeEditId(null)} />
           <PendingMoveOverlay />
           <OpportunityPromptOverlay />
           <ZonaRiscoPrompt />

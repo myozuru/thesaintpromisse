@@ -46,6 +46,7 @@ import { resolveAuraTurnTest } from '@/lib/auraTurnResolution';
 import { resolverDanoAposTRInvocacao } from '@/lib/controlador/resolucaoTR';
 
 const invocationRequestsResolving = new Set<string>();
+const aetherisRequestsResolving = new Set<string>();
 
 /** Modificadores externos de combate que valem para qualquer teste pedido. */
 function bonusDeCombate(c: Character, req: TestRequest): { bonus: number; parts: string[] } {
@@ -266,6 +267,22 @@ export function TestRequestOverlay() {
   useEffect(() => {
     if (!isMaster) return;
     for (const request of requests) {
+      if (!request.aetherisResolution || !request.result || request.resolutionApplied || aetherisRequestsResolving.has(request.id)) continue;
+      aetherisRequestsResolving.add(request.id);
+      void import('@/lib/baculoAetherisCombat').then(({ resolverTRBaculoAetheris }) => resolverTRBaculoAetheris(request))
+        .catch((error) => {
+          useLogStore.getState().addLog('combat', `⛔ Báculo Aetheris: não foi possível resolver o TR de ${request.charName}. ${error instanceof Error ? error.message : ''}`);
+        })
+        .finally(() => {
+          useTestRequestStore.getState().markResolutionApplied(request.id);
+          aetherisRequestsResolving.delete(request.id);
+        });
+    }
+  }, [isMaster, requests]);
+
+  useEffect(() => {
+    if (!isMaster) return;
+    for (const request of requests) {
       if (!request.invocationResolution || !request.result || request.resolutionApplied || invocationRequestsResolving.has(request.id)) continue;
       invocationRequestsResolving.add(request.id);
       void resolverDanoAposTRInvocacao(request)
@@ -355,6 +372,8 @@ export function TestRequestOverlay() {
 
   const showDc = current.dc != null && (isMaster || !current.hideDcFromPlayer);
   const showOutcome = current.dc != null && (isMaster || !current.hideOutcomeFromPlayer);
+  const aetherisSaveModifier = current.aetherisResolution?.saveModifier ?? 0;
+  const aetherisSaveFinal = bonus + aetherisSaveModifier;
 
   const kindLabel =
     current.kind === 'attribute' ? 'Teste de Atributo'
@@ -425,7 +444,7 @@ export function TestRequestOverlay() {
     // Bônus fixos (ex: Apoio Focado do Suporte) somam no total e são consumidos.
     const flat = alvoInvocacao ? { bonus: 0, notes: [] as string[] } : consumeFlatBonusFor(char.id, ctx);
     const masterBonus = current.masterBonus ?? 0;
-    const totalBonus = bonus + flat.bonus + masterBonus + preReacao.testeBonus + (current.kind === 'skill' ? posturaPericia(char) : 0);
+    const totalBonus = bonus + flat.bonus + masterBonus + preReacao.testeBonus + (current.kind === 'skill' ? posturaPericia(char) : 0) + (current.kind === 'save' ? aetherisSaveModifier : 0);
 
     let total = d20 + totalBonus;
     // Quando o resultado é FORÇADO e há CD, ajusta `total` pra garantir
@@ -599,6 +618,7 @@ export function TestRequestOverlay() {
 
             <div className="p-4 sm:p-6">
               {current.note && <div className="mb-4 flex gap-3 rounded-md border border-accent/20 bg-accent/5 p-3 text-sm italic text-muted-foreground"><Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-accent" /><span>“{current.note}”</span></div>}
+              {aetherisSaveModifier !== 0 && <p role="status" className="mb-3 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm font-semibold text-primary">Modificador de TR: {bonus >= 0 ? '+' : ''}{bonus} ({aetherisSaveModifier} Suspenso no Trono = {aetherisSaveFinal >= 0 ? '+' : ''}{aetherisSaveFinal} final)</p>}
 
             {!char && (
               <div className="mb-4 text-center text-sm text-destructive">
@@ -752,6 +772,7 @@ export function TestRequestOverlay() {
               <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-relic" /><span>“{current.note}”</span>
             </div>
           )}
+          {aetherisSaveModifier !== 0 && <p role="status" className="mb-3 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm font-semibold text-primary">Modificador de TR: {bonus >= 0 ? '+' : ''}{bonus} ({aetherisSaveModifier} Suspenso no Trono = {aetherisSaveFinal >= 0 ? '+' : ''}{aetherisSaveFinal} final)</p>}
 
           {!char && (
             <div className="mb-4 text-center text-sm text-destructive">

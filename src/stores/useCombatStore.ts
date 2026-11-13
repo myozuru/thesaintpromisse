@@ -242,6 +242,11 @@ interface CombatStore {
   lancaVetorial: Record<string, LancaCombatRecord>;
   setLancaRecord: (key: string, record: LancaCombatRecord) => void;
   refreshLancaForWielder: (wielderId: string) => void;
+  /** Báculo Aetheris: usos limitados por rodada e cena. */
+  aetherisRoundUse: Record<string, { combatId: string | null; round: number }>;
+  aetherisRequiemUse: Record<string, string>;
+  markAetherisRoundUse: (key: string) => void;
+  markAetherisRequiemUse: (key: string) => void;
   /** Avanço confirmado, aguardando confirmação do movimento ou do ataque. */
   pendingLancaAdvance: null | { id: string; wielderId: string; targetId: string; status: 'movement' | 'ready' | 'interrupted' };
   setPendingLancaAdvance: (value: CombatStore['pendingLancaAdvance']) => void;
@@ -503,6 +508,10 @@ export const useCombatStore = create<CombatStore>()(
         return changed ? { lancaVetorial } : {};
       }),
       pendingLancaAdvance: null,
+      aetherisRoundUse: {},
+      aetherisRequiemUse: {},
+      markAetherisRoundUse: (key) => set((s) => ({ aetherisRoundUse: { ...s.aetherisRoundUse, [key]: { combatId: s.combatId ?? null, round: s.round } } })),
+      markAetherisRequiemUse: (key) => set((s) => ({ aetherisRequiemUse: { ...s.aetherisRequiemUse, [key]: s.combatId ?? 'sem-combate' } })),
       setPendingLancaAdvance: (value) => set({ pendingLancaAdvance: value }),
       resolveLancaAdvanceMovement: (id, status) => set((s) =>
         s.pendingLancaAdvance?.id === id ? { pendingLancaAdvance: { ...s.pendingLancaAdvance, status } } : {},
@@ -766,6 +775,7 @@ export const useCombatStore = create<CombatStore>()(
           movementUsedByChar: {},
           movementActionUsedByChar: {},
           lancaVetorial: {},
+          aetherisRoundUse: {},
           pendingLancaAdvance: null,
           turnClockOwnerCharId: firstOwnerCharId,
           turnBaseRemainingAtStart: s.turnDurationSec,
@@ -963,7 +973,8 @@ export const useCombatStore = create<CombatStore>()(
           const firstEntry = us.ordem[0];
           if (firstEntry) {
             iniciarTurnoLanca(firstEntry.charId);
-            charStore.updateCharacter(firstEntry.charId, { weaponSwapsThisTurn: 0, attacksThisTurn: 0, lastAttackHit: undefined, mobilidadeReacaoM: 0, mobilidadeReacaoBase: 0, arteGolpeDescendente: null });
+            import('@/lib/baculoAetherisCombat').then(({ expireBaculoAetherisConditionsForTurnStart }) => expireBaculoAetherisConditionsForTurnStart(firstEntry.charId));
+            charStore.updateCharacter(firstEntry.charId, { weaponSwapsThisTurn: 0, attacksThisTurn: 0, lastAttackHit: undefined, mobilidadeReacaoM: 0, mobilidadeReacaoBase: 0, arteGolpeDescendente: null, baculoAetherisSafeMoveM: 0 });
             // Assumir Postura: termina após 1 minuto (10 rodadas).
             for (const ch of charStore.characters) {
               if (ch.posturaAtiva && newRound > ch.posturaAtiva.untilRound) {
@@ -1063,7 +1074,8 @@ export const useCombatStore = create<CombatStore>()(
         const nextEntry = initiativeOrder[nextIndex];
         if (nextEntry) {
           iniciarTurnoLanca(nextEntry.charId);
-          useCharacterStore.getState().updateCharacter(nextEntry.charId, { weaponSwapsThisTurn: 0, attacksThisTurn: 0, lastAttackHit: undefined, mobilidadeReacaoM: 0, mobilidadeReacaoBase: 0, arteGolpeDescendente: null });
+          import('@/lib/baculoAetherisCombat').then(({ expireBaculoAetherisConditionsForTurnStart }) => expireBaculoAetherisConditionsForTurnStart(nextEntry.charId));
+          useCharacterStore.getState().updateCharacter(nextEntry.charId, { weaponSwapsThisTurn: 0, attacksThisTurn: 0, lastAttackHit: undefined, mobilidadeReacaoM: 0, mobilidadeReacaoBase: 0, arteGolpeDescendente: null, baculoAetherisSafeMoveM: 0, baculoAetherisSafeMoveRemainingM: 0 });
           // Fase 2 — Reaplica pool dedicado de Aptidões (Mestre das Aptidões).
           useCharacterStore.getState().applyTurnStartSpecHooks(nextEntry.charId);
           inicioTurnoPostura(nextEntry.charId);
@@ -1157,6 +1169,7 @@ export const useCombatStore = create<CombatStore>()(
           turnRemainingAtStart: s.turnDurationSec,
           turnStartedAt: Date.now(),
           lancaVetorial: {},
+          aetherisRoundUse: {},
           pendingLancaAdvance: null,
         }));
       },
@@ -1183,6 +1196,8 @@ export const useCombatStore = create<CombatStore>()(
         turnPaused: s.turnPaused,
         freeformMode: s.freeformMode,
         lancaVetorial: s.lancaVetorial,
+        aetherisRoundUse: s.aetherisRoundUse,
+        aetherisRequiemUse: s.aetherisRequiemUse,
         pendingLancaAdvance: s.pendingLancaAdvance,
       }),
     },

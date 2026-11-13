@@ -152,6 +152,12 @@ export interface Entity {
   characterId?: string;
   /** Configuração de efeito persistente aplicada quando personagens entram ou terminam o turno na zona. */
   terrainZone?: ZonaTerreno;
+  /** Natural terrain ignores the Aetheris passive; magical terrain remains difficult. */
+  difficultTerrain?: 'natural' | 'magical';
+  /** Token elevation above ground, in meters. */
+  altitudeM?: number;
+  /** Optional label for current elevation, such as the Aetheris suspended condition. */
+  altitudeLabel?: string;
   /** ID de um Baú (useChestStore) vinculado a este token — transforma o token em um baú interativo. */
   chestId?: string;
   /** ID de outra Entity que está carregando este token (ex.: corpo desmaiado/morto). */
@@ -417,6 +423,8 @@ interface MapState {
     trail: Vector2[];
     /** metros percorridos neste arrasto (preview) */
     distM: number;
+    /** Physical distance before difficult-terrain movement cost. */
+    actualDistM?: number;
     /** A confirmação deste movimento conclui o deslocamento do Avanço Escarlate. */
     lancaAdvanceId?: string;
   };

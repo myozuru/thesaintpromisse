@@ -119,7 +119,7 @@ describe('Subefeitos encadeados', () => {
     montarMesa([char('usuario'), char('alvo', { rd: 3, rdByType: { DQ: 4 } as Character['rdByType'] })], {});
     const events = vi.spyOn(eventBus, 'emitirEvento');
     executarCombatEffect(nested, { usuarioId: 'usuario', alvoId: 'alvo', usuarioVars: {}, itemVars: { usos_restantes: 2 }, resultados: [3], dano: Object.freeze({ valor_final: 7, tipo: 1 }) });
-    expect(pegarFicha('alvo').hpCurrent).toBe(87);
+    await waitFor(() => expect(pegarFicha('alvo').hpCurrent).toBe(87));
     await waitFor(() => expect(events.mock.calls.some(([e]) => e === 'aoSofrerDano')).toBe(true));
     expect(events.mock.calls.find(([e]) => e === 'aoSofrerDano')![1]?.dano).toMatchObject({ tipo: 7, fonte: 3, valor_inicial: 20, valor_final: 13, id_origem: 1 });
   });
