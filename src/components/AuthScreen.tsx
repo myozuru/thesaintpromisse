@@ -39,7 +39,7 @@ export function AuthScreen() {
           setError('As senhas não conferem');
           return;
         }
-        const { data: taken } = await authDb.from('profiles').select('id').eq('nick', n).maybeSingle();
+        const { data: taken } = await (authDb as any).rpc('nick_em_uso', { _nick: n });
         if (taken) {
           setError('Este nick já está em uso');
           return;
