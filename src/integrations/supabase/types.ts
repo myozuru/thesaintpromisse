@@ -97,14 +97,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      write_owned_characters_slice: {
-        Args: { p_request_id: string; p_expected_revision: number; p_characters: Json }
-        Returns: Json
-      }
-      write_owned_map_scene: {
-        Args: { p_request_id: string; p_expected_revision: number; p_map_scene: Json }
-        Returns: Json
-      }
       claim_first_master: { Args: never; Returns: boolean }
       has_role: {
         Args: {
