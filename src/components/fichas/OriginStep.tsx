@@ -3,6 +3,8 @@ import { ORIGIN_SPECS, CLAN_DATA, CLANS, FAH_ANATOMIES, CAM_CORES, type ClanId }
 import { AURA_APTITUDES } from '@/lib/auraAptitudes';
 import { attrChoiceFor, type OriginChoices } from '@/lib/originEngine';
 import { ORIGINS, type Origin } from '@/types';
+import { possuiTecnicaDezSombras } from '@/lib/controlador/dezSombras';
+
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sparkles, Crown, Wind, Bone, Layers, BookOpen, Zap, Shield, TrendingUp } from 'lucide-react';
 
@@ -18,6 +20,7 @@ interface Props {
   setChoices: (c: OriginChoices) => void;
   /** Quantas anatomias o jogador pode escolher (varia com o nível para FAH). */
   anatomyAllowed: number;
+  isControlador?: boolean;
 }
 
 /** Detalhes longos de cada clã exibidos no painel rolável. */
@@ -96,7 +99,7 @@ const CLAN_LORE: Record<ClanId, {
  *  - sub-menus condicionais (Clã, Aura, Anatomia, Núcleo)
  *  - painel detalhado com scroll para o clã selecionado
  */
-export function OriginStep({ origin, setOrigin, choices, setChoices, anatomyAllowed }: Props) {
+export function OriginStep({ origin, setOrigin, choices, setChoices, anatomyAllowed, isControlador = false }: Props) {
   const spec = ORIGIN_SPECS[origin];
   const attrChoice = attrChoiceFor(origin, choices.clan);
 
@@ -178,7 +181,11 @@ export function OriginStep({ origin, setOrigin, choices, setChoices, anatomyAllo
                 ))}
               </select>
               <p id="inherited-clan-technique-help" className="text-xs leading-relaxed text-muted-foreground">
-                Deixe em “escolher depois” se não for usar uma técnica automatizada nesta ficha. Escolher Dez Sombras salva a técnica e libera seu catálogo na seção de invocações; os shikigamis ainda precisam ser adicionados e adquiridos separadamente em jogo.
+                {possuiTecnicaDezSombras(choices.inheritedTechnique)
+                  ? isControlador
+                    ? 'As dez sombras e quatro formas derivadas são entregues automaticamente nesta ficha. Os Cães Divinos começam domados; as demais sombras exigem rituais. Formas derivadas dependem dos componentes e da aprovação do Mestre.'
+                    : 'Dez Sombras será registrada como técnica herdada. O pacote de invocações é entregue automaticamente apenas para personagens Controladores.'
+                  : 'Escolha uma técnica para registrá-la na ficha. O pacote das Dez Sombras é entregue automaticamente a Controladores que escolherem essa técnica.'}
               </p>
             </div>
           )}

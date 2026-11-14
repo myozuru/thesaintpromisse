@@ -1,0 +1,15 @@
+QA visual — ENTREGA-DEZ-SOMBRAS-2026-11-14
+
+Preview: http://127.0.0.1:5183/
+Portal Maestri: Dez Sombras QA
+Servidor: preview local do projeto; script disponível em package.json como `dev:qa`.
+
+Capturas e snapshots
+- Desktop 1440×900: tela inicial de autenticação; captura portal-desktop-1440x900.png.
+- Tablet 768×1024: tela inicial de autenticação; captura portal-tablet-768x1024.png.
+- Mobile 390×844: tela inicial de autenticação; captura portal-mobile-390x844.png.
+- Árvore acessível em todos os tamanhos expôs apenas o botão “Entrar em The Saint Promisse”.
+- Console do Portal: nenhum log retornado.
+
+Limite
+O wizard exige sessão e o preview não estava autenticado. Não foi possível verificar visualmente a etapa Herdado/Zenin ou percorrer teclado/foco no wizard. As capturas documentam o bloqueio de acesso e não são aprovação visual da interface alterada.

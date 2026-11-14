@@ -22,6 +22,7 @@ import { useLogStore } from '@/stores/useLogStore';
 import { getMaxSpells, getMaxSpellLevel, isSpellLevelAllowed, getPassiveSpellLevel, isPassiveActive } from '@/lib/spellRules';
 import { getClassHitDie, getKeyAttrForSpec, getPePerLevelMult } from '@/lib/levelEngine';
 import { TECNICA_FUNDAMENTOS, TECNICA_FUNDAMENTO_DETAILS, type TecnicaFundamento } from '@/lib/tecnicaProgression';
+import { criarInvocacoesIniciaisDezSombras } from '@/lib/controlador/dezSombrasCriacao';
 import type { Spell, SpellLevel } from '@/types';
 import { SPELL_LEVELS } from '@/types';
 
@@ -556,9 +557,15 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
     // narrativa "Envenenado" (tag visível na ficha — a condição mecânica é checada
     // no aplicador de status pelo nome).
     const camImmunities: DamageType[] = effects.enablesCores ? ['DV'] : [];
+    const characterId = crypto.randomUUID();
+    const invocacoesIniciais = criarInvocacoesIniciaisDezSombras(
+      characterId,
+      isControlador,
+      effects.automation.tecnicaAmaldicoada,
+    );
 
     const char: Character = {
-      id: crypto.randomUUID(),
+      id: characterId,
       name: name.trim(),
       category,
       level,
@@ -685,7 +692,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
           : specialization === 'Especialista em Combate'
             ? combKeyAttribute
             : undefined,
-      invocacoesConhecidas: isControlador ? [] : undefined,
+      invocacoesConhecidas: invocacoesIniciais,
       treinoControle: isControlador ? 1 : undefined,
       limiteInvocacoesConhecidas: isControlador ? 2 : undefined,
       limiteInvocacoesAtivas: isControlador ? 2 : undefined,
@@ -1383,6 +1390,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
               choices={originChoices}
               setChoices={setOriginChoices}
               anatomyAllowed={anatomyAllowed}
+              isControlador={isControlador}
             />
           )}
           {step === 2 && charClass !== 'Feiticeiro' && (

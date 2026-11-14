@@ -1,0 +1,32 @@
+{
+  "id": "ENTREGA-DEZ-SOMBRAS-2026-11-14",
+  "root": "C:/Users/justs/Downloads/TSP-invocacoes-player",
+  "branch": "feature/dez-sombras-entrega-controle",
+  "base": "4a18f89",
+  "objective": "Entregar automaticamente as fichas das Dez Sombras na criação de um Controlador com a técnica herdada; garantir controle do Mestre sobre adversários temporários de ritual.",
+  "decisions": {
+    "package": "11 fichas-base e quatro formas derivadas; cães iniciam domados; outras sombras usam o ritual existente; formas derivadas aguardam componentes e aprovação.",
+    "duplicateImport": "A importação existente compara subcategoria e não adiciona perfis duplicados.",
+    "ritualControl": "Entidade temporária de ritual usa masterControlled, que sobrepõe posse do token/imagem em seleção, movimento e painel do jogador."
+  },
+  "review": {
+    "reviewer": "Claude Opus via Maestri",
+    "result": "Sem achados P0-P2"
+  },
+  "validation": {
+    "typecheck": "passed",
+    "build": "passed_with_existing_chunk_warnings",
+    "focusedTests": "2 files, 5 tests passed",
+    "diffCheck": "passed",
+    "tenShadowsSuite": "214 assertions passed; command exited nonzero due to six unhandled eventBus initialization rejections; isolated Mahoraga test passed (25 tests)",
+    "visualQA": "partial_auth_screen_only"
+  },
+  "preview": {
+    "url": "http://127.0.0.1:5183/",
+    "portal": "Dez Sombras QA",
+    "screenshots": ["portal-desktop-1440x900.png", "portal-tablet-768x1024.png", "portal-mobile-390x844.png"],
+    "limitation": "Portal mostrou a tela inicial de autenticação; criação da ficha não foi acessível sem sessão."
+  },
+  "status": "validated_pending_integration",
+  "createdAt": "2026-11-14"
+}

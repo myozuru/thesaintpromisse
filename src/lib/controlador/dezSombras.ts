@@ -330,6 +330,14 @@ export const HABILIDADES_TECNICA_DEZ_SOMBRAS = [
   { id: 'jardim-das-sombras-sobrepostas', nome: 'Jardim das Sombras Sobrepostas', nivel: 0, pagina: 71, automacao: 'manual', descricao: 'Expansão incompleta. Duração 1 + Aptidão de Domínio rodadas; área indicada como 4,5 m × maestria; pode receber até três efeitos: invocações persistentes, clones e chão de sombras. Seleção, custos, ação, arredondamento e término estão incompletos na fonte.' },
 ] as const;
 
+export function possuiTecnicaDezSombras(tecnicaAmaldicoada?: string): boolean {
+  return (tecnicaAmaldicoada ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('pt-BR')
+    .includes('dez sombras');
+}
+
 export function criarPacoteDezSombras(donoCharacterId: string, incluirHomebrew = false): InvocacaoControlador[] {
   return perfis
     .filter(perfil => incluirHomebrew || !perfil.opcionalHomebrew)

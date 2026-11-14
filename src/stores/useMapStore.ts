@@ -162,6 +162,8 @@ export interface Entity {
   invocationMovementMode?: 'voo' | 'caminhada';
   /** ID do ritual que criou este adversário temporário no mapa. */
   ritualId?: string;
+  /** Apenas o Mestre pode selecionar, mover ou operar esta entidade. */
+  masterControlled?: boolean;
   /** ID da ficha (Character) vinculada a esta imagem/token. */
   characterId?: string;
   /** Configuração de efeito persistente aplicada quando personagens entram ou terminam o turno na zona. */

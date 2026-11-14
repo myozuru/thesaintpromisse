@@ -1,0 +1,23 @@
+ID: ENTREGA-DEZ-SOMBRAS-2026-11-14
+Estado: implementação e validação concluídas; integração pendente.
+Branch: feature/dez-sombras-entrega-controle
+Base: 4a18f89
+Pasta de trabalho: C:/Users/justs/Downloads/TSP-invocacoes-player
+Escopo: entrega automática do pacote das Dez Sombras ao criar Controlador com a técnica herdada; controle exclusivo do Mestre sobre adversários materializados em rituais.
+
+Resultado
+- CharacterWizard cria 11 fichas-base (dez entradas oficiais; Cães Divinos em fichas separadas) e quatro formas derivadas quando Feiticeiro/Controlador seleciona Dez Sombras.
+- Os dois Cães Divinos começam domados; as outras nove fichas-base continuam sujeitas ao ritual. Formas derivadas continuam pendentes de componentes e aprovação do Mestre.
+- Reimportação não duplica fichas já presentes, usando subcategoria como chave.
+- Entidades temporárias de ritual são marcadas como masterControlled; jogadores não as selecionam, movem ou operam pelo painel de shikigami, mesmo quando a arte/token é deles.
+
+Revisão
+- Claude Opus via Maestri revisou o diff; sem achados P0–P2.
+
+Validação
+- TypeScript, build Vite, testes focados (2 arquivos, 5 testes) e git diff --check: aprovados.
+- A suíte test:dez-sombras marcou 214 testes como aprovados, mas encerrou com seis rejeições não tratadas de inicialização em src/lib/omni/eventBus.ts. O teste Mahoraga isolado passou (25 testes); esse erro não foi alterado nesta tarefa.
+- QA visual parcial: preview local em 1440×900, 768×1024 e 390×844 mostrou a tela inicial de autenticação. Sem sessão, o CharacterWizard não pôde ser alcançado; a interface alterada não recebe aprovação visual neste registro. Capturas e detalhes em evidencias/qa-visual.txt.
+
+Entrega
+- Commit e publicação ainda pendentes.

@@ -159,6 +159,7 @@ export function RituaisDezSombrasSection({ character }: Props) {
         layer: 'tokens',
         nameplate: true,
         ritualId: base.id,
+        masterControlled: true,
         hp: alvo.hpMaximo,
         hpMax: alvo.hpMaximo,
         ...(alvo.imagemAssetId ? { assetId: alvo.imagemAssetId } : {}),
@@ -344,7 +345,7 @@ export function RituaisDezSombrasSection({ character }: Props) {
                     {!isMaster && atual && <p className="rituals-player-status">
                       {atual.estado === 'solicitado'
                         ? 'O Mestre precisa escolher como conduzir este ritual.'
-                        : `${atual.modo === 'mapa' ? 'A luta está preparada no mapa.' : 'O Mestre está resolvendo o ritual.'} Aguarde o registro do resultado.`}
+                        : `${atual.modo === 'mapa' ? 'A luta está preparada no mapa; a sombra fica sob controle do Mestre.' : 'O Mestre está resolvendo o ritual.'} Aguarde o registro do resultado.`}
                     </p>}
                     {isMaster && !requisitosAtendidos && !atual && <p className="rituals-notice">Domine todos os componentes listados para liberar o ritual de quimera.</p>}
                   </div>

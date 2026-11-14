@@ -1,0 +1,27 @@
+Tarefa: ENTREGA-DEZ-SOMBRAS-2026-11-14
+Implementador: Codex
+Revisor independente: Claude Opus
+Branch: feature/dez-sombras-entrega-controle (base 4a18f89)
+
+Objetivo cumprido
+Entregar as fichas das Dez Sombras junto com a criação de um Feiticeiro Controlador que escolheu a técnica herdada Dez Sombras, mantendo domesticação e aprovação sob as regras existentes. Adversários temporários de ritual ficam sob controle do Mestre.
+
+Arquivos principais
+- src/components/fichas/CharacterWizard.tsx
+- src/components/fichas/OriginStep.tsx
+- src/lib/controlador/dezSombrasCriacao.ts
+- src/lib/mapa/playerOwnsEntity.ts
+- src/components/fichas/RituaisDezSombrasSection.tsx
+
+Validação
+- `rtk tsc --noEmit`: aprovado.
+- `rtk npm run build`: aprovado; warnings existentes de imports dinâmicos/code splitting.
+- `rtk npx vitest run src/test/dezSombrasCriacao.test.ts src/test/playerOwnsEntity.test.ts --reporter=dot`: 2 arquivos e 5 testes aprovados.
+- `rtk git diff --check`: aprovado.
+- A suíte maior `test:dez-sombras` permanece com seis rejeições não tratadas no eventBus apesar de 214 testes aprovados; teste Mahoraga isolado passou.
+
+Limite de QA
+O portal local `http://127.0.0.1:5183/` permaneceu na tela de entrada. O fluxo visual de criação não pôde ser percorrido sem uma sessão; consultar `evidencias/qa-visual.txt`. A lógica foi verificada por teste da escolha herdada Zenin → automação da técnica → fábrica do pacote.
+
+Próxima ação
+Concluir o commit local e integrar apenas se solicitado pelo usuário.

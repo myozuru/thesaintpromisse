@@ -641,6 +641,7 @@ export function ShikigamiOwnerPanel({ tokenId }: { tokenId: string }) {
   };
 
   if (!token?.invocationId || !owner || !model || sourceTokenId !== token.id) return null;
+  if (role === 'PLAYER' && token.masterControlled) return null;
   if (role === 'PLAYER' && (owner.profileId !== activeProfileId || (token.ownerProfileId && token.ownerProfileId !== activeProfileId))) return null;
 
   const targetRangeLabel = rangeMeters === undefined

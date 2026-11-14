@@ -1,0 +1,7 @@
+Validação técnica — 2026-11-14
+
+- `rtk tsc --noEmit`: TypeScript: No errors found.
+- `rtk npm run build`: exit 0; Vite build concluído com warnings preexistentes de imports dinâmicos/code splitting.
+- `rtk npx vitest run src/test/dezSombrasCriacao.test.ts src/test/playerOwnsEntity.test.ts --reporter=dot`: 2 arquivos, 5 testes aprovados.
+- `rtk git diff --check`: exit 0.
+- `rtk npm run test:dez-sombras`: conforme execução desta tarefa, 9 arquivos e 214 testes foram aprovados, mas o processo saiu com erro por seis rejeições não tratadas `ReferenceError: Cannot access 'despachosAutonomiaPendentes' before initialization` em `src/lib/omni/eventBus.ts`. O teste `src/test/dezSombrasMahoraga.test.ts` passou isoladamente (25 testes). A tarefa não altera `eventBus.ts`.

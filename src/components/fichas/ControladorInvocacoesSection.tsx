@@ -23,7 +23,7 @@ import { bonusPericiaCaracteristicas } from '@/lib/controlador/passivas';
 import { definirAutomacaoInvocacao } from '@/lib/controlador/autonomia';
 import { useProfileStore } from '@/stores/useProfileStore';
 import { calcularHorda, validarLimiteHorda, vagasInvocacaoEmCampo } from '@/lib/controlador/hordas';
-import { DEZ_SOMBRAS_FORMAS_DERIVADAS as DEZ_SOMBRAS_FORMAS_REFERENCIA, DEZ_SOMBRAS_MODELOS, HABILIDADES_TECNICA_DEZ_SOMBRAS, criarPacoteDezSombras } from '@/lib/controlador/dezSombras';
+import { DEZ_SOMBRAS_FORMAS_DERIVADAS as DEZ_SOMBRAS_FORMAS_REFERENCIA, DEZ_SOMBRAS_MODELOS, HABILIDADES_TECNICA_DEZ_SOMBRAS, criarPacoteDezSombras, possuiTecnicaDezSombras } from '@/lib/controlador/dezSombras';
 import { auditarValoresProvisoriosFormaDerivadaDezSombras, DEZ_SOMBRAS_FORMAS_DERIVADAS, criarFormasDerivadasDezSombras } from '@/lib/controlador/dezSombrasDerivadas';
 
 type Fonte = { id: string; nome: string; tipo: 'grimorio' | 'omni'; hp: number; defesa: number; deslocamento: number; porte: InvocacaoControlador['porte']; acoes: InvocacaoControlador['acoes'] };
@@ -379,7 +379,7 @@ export function ControladorInvocacoesSection({ character, view = 'catalog', canV
   const invocacoesFiltradas = invocacoesDaVisao.filter(inv =>
     (inv.nome + ' ' + (inv.apelido ?? '')).toLocaleLowerCase().includes(libraryQuery.trim().toLocaleLowerCase()),
   );
-  const temTecnicaDezSombras = (character.tecnicaAmaldicoada ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase().includes('dez sombras');
+  const temTecnicaDezSombras = possuiTecnicaDezSombras(character.tecnicaAmaldicoada);
   const chaveImagemParaFichaDezSombras = (ficha: InvocacaoControlador) => {
     const idPerfil = ficha.subcategoria?.replace(/^dez-sombras:/, '');
     if (!idPerfil || ficha.pacoteRegras !== 'dez-sombras') return null;
