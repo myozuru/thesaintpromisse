@@ -23,5 +23,7 @@ Validação
 Limite de QA
 O portal local `http://127.0.0.1:5183/` permaneceu na tela de entrada. O fluxo visual de criação não pôde ser percorrido sem uma sessão; consultar `evidencias/qa-visual.txt`. A lógica foi verificada por teste da escolha herdada Zenin → automação da técnica → fábrica do pacote.
 
-Próxima ação
-Concluir o commit local e integrar apenas se solicitado pelo usuário.
+Entrega
+- Commit: f78f48a (`feat(controlador): entregar Dez Sombras na criação`).
+- Publicado em `origin/main` por fast-forward, sem reescrita de histórico.
+- QA visual limitado à tela de autenticação; ver `evidencias/qa-visual.txt`.

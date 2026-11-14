@@ -3,6 +3,8 @@
   "root": "C:/Users/justs/Downloads/TSP-invocacoes-player",
   "branch": "feature/dez-sombras-entrega-controle",
   "base": "4a18f89",
+  "commit": "f78f48a",
+  "publishedTo": "origin/main",
   "objective": "Entregar automaticamente as fichas das Dez Sombras na criação de um Controlador com a técnica herdada; garantir controle do Mestre sobre adversários temporários de ritual.",
   "decisions": {
     "package": "11 fichas-base e quatro formas derivadas; cães iniciam domados; outras sombras usam o ritual existente; formas derivadas aguardam componentes e aprovação.",
@@ -27,6 +29,6 @@
     "screenshots": ["portal-desktop-1440x900.png", "portal-tablet-768x1024.png", "portal-mobile-390x844.png"],
     "limitation": "Portal mostrou a tela inicial de autenticação; criação da ficha não foi acessível sem sessão."
   },
-  "status": "validated_pending_integration",
+  "status": "complete_pushed_to_main",
   "createdAt": "2026-11-14"
 }

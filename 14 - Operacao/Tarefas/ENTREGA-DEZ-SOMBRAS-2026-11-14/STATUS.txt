@@ -1,5 +1,5 @@
 ID: ENTREGA-DEZ-SOMBRAS-2026-11-14
-Estado: implementação e validação concluídas; integração pendente.
+Estado: concluída, integrada e publicada em origin/main (f78f48a).
 Branch: feature/dez-sombras-entrega-controle
 Base: 4a18f89
 Pasta de trabalho: C:/Users/justs/Downloads/TSP-invocacoes-player
@@ -20,4 +20,6 @@ Validação
 - QA visual parcial: preview local em 1440×900, 768×1024 e 390×844 mostrou a tela inicial de autenticação. Sem sessão, o CharacterWizard não pôde ser alcançado; a interface alterada não recebe aprovação visual neste registro. Capturas e detalhes em evidencias/qa-visual.txt.
 
 Entrega
-- Commit e publicação ainda pendentes.
+- Commit: f78f48a (feat(controlador): entregar Dez Sombras na criação).
+- Integração: fast-forward de origin/main em 2026-11-14, sem reescrever histórico.
+- Próxima ação: nenhuma.
