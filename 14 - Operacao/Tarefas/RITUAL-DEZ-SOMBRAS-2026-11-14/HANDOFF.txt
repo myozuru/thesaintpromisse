@@ -35,3 +35,8 @@ Arquivos principais
 - `src/components/mapa/MapaModule.tsx`, `src/components/invocacoes/invocations.css`
 
 Preview offline: http://127.0.0.1:5183/
+
+Integração e publicação
+- Commit: `b6e85321893879fa253365ddd5eae6e3792a9816` (`feat: add Ten Shadows ritual flows`).
+- Publicado em `origin/main` por fast-forward; sem reescrita de histórico.
+- Build, TypeScript, revisão independente e QA manual estão registrados em `evidencias/AUDITORIA.md`.

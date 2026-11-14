@@ -2,6 +2,7 @@
 
 ## Ambiente
 
+- Commit publicado: `b6e85321893879fa253365ddd5eae6e3792a9816` em `origin/main`, integrado por fast-forward.
 - Branch: `feature/ritual-dez-sombras`, base `c015c26`.
 - Preview offline: `http://127.0.0.1:5183/`.
 - Servidor iniciado por `launch-preview-offline.mjs`; Supabase não configurado, dados de QA ficaram no navegador local.

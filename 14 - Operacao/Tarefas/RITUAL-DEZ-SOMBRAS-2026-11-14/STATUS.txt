@@ -1,5 +1,5 @@
 ID: RITUAL-DEZ-SOMBRAS-2026-11-14
-Estado: implementado e revisado; pronto para integração local
+Estado: concluído, integrado e publicado em origin/main (b6e8532)
 Branch: feature/ritual-dez-sombras
 Base: c015c26
 Pasta de trabalho: C:/Users/justs/Downloads/TSP-invocacoes-player
@@ -40,5 +40,8 @@ Evidências
 - O Portal recortava 8 px do PNG em relação ao viewport configurado; capturado com +8 px de altura para produzir imagens completas nas dimensões-alvo. A auditoria registra os viewports efetivamente configurados.
 - `evidencias/AUDITORIA.md` descreve a sequência e os resultados detalhados.
 
-Próxima etapa
-- Revisar diff e integrar/publicar sem reescrever histórico já publicado.
+Entrega final
+- Commit: b6e85321893879fa253365ddd5eae6e3792a9816 (`feat: add Ten Shadows ritual flows`).
+- O commit de implementação está integrado em `main` e publicado em `origin/main`.
+- Integração feita por fast-forward, sem reescrever histórico publicado.
+- Árvore de trabalho limpa após o push.
