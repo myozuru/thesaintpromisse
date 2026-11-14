@@ -17,8 +17,8 @@ vi.mock('@/components/fichas/ControladorInvocacoesSection', () => ({
 afterEach(cleanup);
 const character = { id: 'ui-character', name: 'Controlador', invocacoesConhecidas: [] } as unknown as Character;
 
-describe('Biblioteca e rascunho do criador', () => {
-  it('abre a biblioteca primeiro sem montar um rascunho', () => {
+describe('Invocações e rascunho do criador', () => {
+  it('abre Minhas invocações primeiro sem montar um rascunho', () => {
     render(<ControladorShikigamisAba character={character} />);
     expect(screen.getByRole('button', { name: 'Criar ficha' }).closest('[hidden]')).toBeNull();
     expect(screen.queryByLabelText('Rascunho')).toBeNull();
@@ -27,10 +27,10 @@ describe('Biblioteca e rascunho do criador', () => {
     render(<ControladorShikigamisAba character={character} />);
     fireEvent.click(screen.getByRole('button', { name: 'Criar ficha' }));
     fireEvent.change(screen.getByLabelText('Rascunho'), { target: { value: 'Valor preservado' } });
-    fireEvent.click(screen.getByRole('button', { name: /Biblioteca e Invocações/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Criar ou editar ficha' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Minhas invocações' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Criar ou editar' }));
     expect((screen.getByLabelText('Rascunho') as HTMLInputElement).value).toBe('Valor preservado');
-    fireEvent.click(screen.getByRole('button', { name: /Biblioteca e Invocações/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Minhas invocações' }));
     fireEvent.click(screen.getByRole('button', { name: 'Criar ficha' }));
     expect((screen.getByLabelText('Rascunho') as HTMLInputElement).value).toBe('');
   });
@@ -41,7 +41,7 @@ describe('Biblioteca e rascunho do criador', () => {
     expect((screen.getByLabelText('Rascunho') as HTMLInputElement).value).toBe('Ficha existente');
     fireEvent.click(screen.getByRole('button', { name: action }));
     await waitFor(() => expect(screen.queryByLabelText('Rascunho')).toBeNull());
-    fireEvent.click(screen.getByRole('button', { name: 'Criar ou editar ficha' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Criar ficha' }));
     expect((screen.getByLabelText('Rascunho') as HTMLInputElement).value).toBe('');
   });
 });

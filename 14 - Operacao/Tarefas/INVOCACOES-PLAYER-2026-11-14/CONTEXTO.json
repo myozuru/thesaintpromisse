@@ -1,0 +1,26 @@
+{
+  "id": "INVOCACOES-PLAYER-2026-11-14",
+  "root": "C:/Users/justs/Downloads/TSP-invocacoes-player",
+  "branch": "feature/invocacoes-player-tabs",
+  "base": "a40b5cf",
+  "targets": [
+    "src/components/fichas/ControladorInvocacoesSection.tsx",
+    "src/components/fichas/ControladorShikigamisAba.tsx",
+    "src/components/fichas/OwnedInvocationsCollection.tsx",
+    "src/components/fichas/CriadorShikigami.tsx",
+    "src/components/invocacoes/InvocacoesModule.tsx",
+    "src/components/invocacoes/invocations.css",
+    "src/test/InvocacoesNavigation.test.tsx"
+  ],
+  "visualReferences": [
+    "DESIGN.md",
+    "DESIGN_SYSTEM.md",
+    "src/styles.css"
+  ],
+  "preview": "local Vite server at http://127.0.0.1:5182; visual QA complete",
+  "status": "ready_for_review",
+  "reviewer": "Claude Opus (read-only)",
+  "build": "passed",
+  "automatedTests": "not_run",
+  "createdAt": "2026-11-14"
+}

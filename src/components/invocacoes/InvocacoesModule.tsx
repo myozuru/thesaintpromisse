@@ -38,7 +38,7 @@ export function InvocacoesModule() {
       <ModuleHeader
         icon={Ghost}
         title="Invocações"
-        description="Crie e edite fichas de Shikigami, consulte a biblioteca e comande suas invocações."
+        description="Veja suas invocações, explore o catálogo e crie fichas."
       />
 
       {role === "MASTER" && selectableCharacters.length > 0 && (

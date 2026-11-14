@@ -725,12 +725,13 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
         solicitacaoAprovacaoId: solicitacao.requestId,
         versaoModelo: version,
       } as unknown as InvocacaoControlador;
-      const catalogo = character.invocacoesConhecidas ?? [];
+      const personagemAtual = useCharacterStore.getState().characters.find(item => item.id === character.id) ?? character;
+      const catalogo = personagemAtual.invocacoesConhecidas ?? [];
       update(character.id, {
         invocacoesConhecidas: initial
           ? catalogo.map(inv => inv.id === id ? salvo : inv)
           : [...catalogo, salvo],
-        limiteInvocacoesConhecidas: character.specialization === 'Controlador' ? limiteInvocacoesConhecidas(character.level) : undefined,
+        limiteInvocacoesConhecidas: personagemAtual.specialization === 'Controlador' ? limiteInvocacoesConhecidas(personagemAtual.level) : undefined,
       });
       setMensagem(solicitacao.status === 'aprovada' ? 'Ficha aprovada pelo Mestre.' : 'Ficha enviada ao Mestre para aprovação.');
       onSaved?.();

@@ -1,5 +1,6 @@
 import { InvocationDisclosure } from "@/components/invocacoes/InvocationDisclosure";
 import { InvocationSelect } from "@/components/invocacoes/InvocationSelect";
+import { OwnedInvocationsCollection } from './OwnedInvocationsCollection';
 import { useEffect, useRef, useState } from 'react';
 import type { Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
@@ -26,6 +27,7 @@ import { DEZ_SOMBRAS_FORMAS_DERIVADAS as DEZ_SOMBRAS_FORMAS_REFERENCIA, DEZ_SOMB
 import { auditarValoresProvisoriosFormaDerivadaDezSombras, DEZ_SOMBRAS_FORMAS_DERIVADAS, criarFormasDerivadasDezSombras } from '@/lib/controlador/dezSombrasDerivadas';
 
 type Fonte = { id: string; nome: string; tipo: 'grimorio' | 'omni'; hp: number; defesa: number; deslocamento: number; porte: InvocacaoControlador['porte']; acoes: InvocacaoControlador['acoes'] };
+type InvocationSectionView = 'owned' | 'catalog';
 const numero = (valor: unknown, padrao: number): number => {
   const n = Number(valor);
   return Number.isFinite(n) ? n : padrao;
@@ -60,7 +62,7 @@ function criaturasGrimorio(): Fonte[] {
     }));
   } catch { return []; }
 }
-export function ControladorInvocacoesSection({ character, onEditFicha, onCreateFicha }: { character: Character; onEditFicha?: (id: string) => void; onCreateFicha?: () => void }) {
+export function ControladorInvocacoesSection({ character, view = 'catalog', onBrowseCatalog, onEditFicha, onCreateFicha }: { character: Character; view?: InvocationSectionView; onBrowseCatalog?: () => void; onEditFicha?: (id: string) => void; onCreateFicha?: () => void }) {
   const updateCharacter = useCharacterStore(s => s.updateCharacter);
   const allCharacters = useCharacterStore(s => s.characters);
   const isMaster = useRoleStore(s => s.role) === 'MASTER';
@@ -367,8 +369,16 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
       : 'Perda permanente registrada; a ficha foi arquivada e o histórico foi preservado.');
     setConfirmandoPerdaDerrota(null);
   };
-  const [libraryQuery, setLibraryQuery] = useState('');
+  const [ownedQuery, setOwnedQuery] = useState('');
+  const [catalogQuery, setCatalogQuery] = useState('');
+  const libraryQuery = view === 'owned' ? ownedQuery : catalogQuery;
+  const setLibraryQuery = view === 'owned' ? setOwnedQuery : setCatalogQuery;
   const catalogo = character.invocacoesConhecidas ?? [];
+  const invocacoesPossuidas = catalogo.filter(inv => !mensagemDomesticaoPendente(inv) && !inv.perdaPermanente);
+  const invocacoesDaVisao = view === 'owned' ? invocacoesPossuidas : catalogo;
+  const invocacoesFiltradas = invocacoesDaVisao.filter(inv =>
+    (inv.nome + ' ' + (inv.apelido ?? '')).toLocaleLowerCase().includes(libraryQuery.trim().toLocaleLowerCase()),
+  );
   const temTecnicaDezSombras = (character.tecnicaAmaldicoada ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase().includes('dez sombras');
   const chaveImagemParaFichaDezSombras = (ficha: InvocacaoControlador) => {
     const idPerfil = ficha.subcategoria?.replace(/^dez-sombras:/, '');
@@ -583,8 +593,6 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
   }, [catalogo]);
   const controlador = character.specialization === 'Controlador';
   const max = controlador ? limiteInvocacoesConhecidas(character.level) : null;
-  const individuosBase = catalogo.filter(inv => !inv.formaDerivada);
-  const formasDerivadas = catalogo.filter(inv => inv.formaDerivada);
   const ativas = limiteAtivasPersonagem(character.specialization, character.treinoControle ?? 0);
   const ordemGrauHorda = { quarto: 1, terceiro: 2, segundo: 3, primeiro: 4, especial: 5 } as const;
   const hordaLider = catalogo.find(inv => inv.id === hordaLiderId);
@@ -915,9 +923,14 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
     updateCharacter(character.id, { invocacoesConhecidas: catalogo.filter(i => i.id !== id) });
     setErro('');
   };
+  const acaoPrimaria = view === 'owned' && invocacoesPossuidas.length === 0 && onBrowseCatalog
+    ? { label: 'Explorar catálogo', run: onBrowseCatalog }
+    : onCreateFicha
+      ? { label: 'Criar ficha', run: onCreateFicha }
+      : undefined;
   return (
-    <div className="inv-library-panel space-y-3 rounded-lg border border-border p-3 text-sm">
-      <div className="inv-toolbar"><div><p className="inv-eyebrow">Biblioteca de invocações</p><h2>Suas invocações</h2></div>{onCreateFicha && <button type="button" className="inv-primary" onClick={onCreateFicha}>Criar ficha</button>}</div>
+    <div className="invocations-view space-y-4">
+      {view === 'catalog' && <>
       <section className="inv-section inv-package-panel" aria-label="Pacote Dez Sombras">
         <div className="inv-package-top">
           <div className="inv-package-intro">
@@ -925,14 +938,14 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
             <div className="inv-package-copy">
               <p className="inv-package-eyebrow">Pacote pré-pronto</p>
               <h3>Dez Sombras</h3>
-              <p>Os dez shikigamis oficiais e suas formas derivadas. Os Cães Divinos são disponibilizados em fichas separadas. Cada ficha precisa de uma imagem.</p>
+              <p>Importe os dez shikigamis e suas formas derivadas. Os Cães Divinos têm fichas separadas; cada ficha exige uma imagem.</p>
             </div>
           </div>
           <div className="inv-package-import">
             <button type="button" className="inv-primary inv-package-import-button" disabled={!temTecnicaDezSombras || Boolean(salvandoImagemPerfilId)} onClick={() => void importarDezSombras()}>
               {salvandoImagemPerfilId === 'lote' ? 'Guardando imagens…' : 'Importar fichas'}
             </button>
-            <p className="inv-package-bulk-help">Para importar em lote, escolha uma imagem em cada cartão pendente abaixo.</p>
+            <p className="inv-package-bulk-help">Escolha uma imagem por perfil pendente.</p>
             {!temTecnicaDezSombras && <p className="inv-package-requirement" role="status">Cadastre “Dez Sombras” como técnica amaldiçoada para liberar a importação.</p>}
           </div>
         </div>
@@ -965,8 +978,9 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
           </div>
         </details>
       </section>
+      </>}
 
-      <section className="inv-individual-catalog" aria-labelledby="inv-individual-catalog-title">
+      {view === 'catalog' && <section className="inv-individual-catalog" aria-labelledby="inv-individual-catalog-title">
         <header className="inv-individual-heading">
           <div className="inv-individual-mark" aria-hidden="true">✦</div>
           <div className="inv-individual-heading-copy">
@@ -1143,27 +1157,32 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
             })}
           </div>
         </div>
-      </section>
-      <label className="inv-field">Buscar nas suas fichas<input type="search" value={libraryQuery} onChange={event => setLibraryQuery(event.target.value)} placeholder="Nome ou apelido nas fichas adicionadas" /></label>
-      {catalogo.length === 0 && !libraryQuery.trim() && <div className="inv-empty"><div className="inv-empty-icon" aria-hidden="true">◇</div><h3>Sua biblioteca ainda está vazia</h3><p>Esta busca filtra fichas já adicionadas. O catálogo de referência das Dez Sombras fica acima; adicionar fichas exige a técnica cadastrada no personagem.</p>{onCreateFicha && <button type="button" className="inv-primary" onClick={onCreateFicha}>Criar primeira ficha</button>}</div>}
-      {libraryQuery.trim() && !catalogo.some(inv => (inv.nome + ' ' + (inv.apelido ?? '')).toLocaleLowerCase().includes(libraryQuery.trim().toLocaleLowerCase())) && <p role="status" className="inv-description">Nenhuma ficha adicionada corresponde à busca. O catálogo de referência das Dez Sombras acima não é filtrado por este campo.</p>}
-      <dl className="inv-library-hud" aria-label="Resumo da biblioteca"><div><dt>Indivíduos / limite</dt><dd>{individuosBase.length} / {max ?? 'Interlúdio'}</dd></div><div><dt>Formas derivadas</dt><dd>{formasDerivadas.length}</dd></div><div><dt>Em campo / limite</dt><dd>{ativos.length} / {ativas}</dd></div><div><dt>Selecionadas</dt><dd>{invocacoesSelecionadas.length} / 2</dd></div><div><dt>Aguardando aprovação</dt><dd>{catalogo.filter(inv => inv.aprovacaoMestre === 'pendente').length}</dd></div></dl>
-      {catalogo.length > 0 && (
-<div className="inv-command-bar flex flex-wrap items-end gap-2">
-        <label className="block min-w-40 flex-1 text-xs">Direção dos comandos de movimento
-          <InvocationSelect aria-label="Direção do movimento da invocação" value={direcao} onChange={e => setDirecao(e.target.value as DirecaoInvocacao)} className="mt-1 w-full rounded border border-input bg-background p-2">
-            <option value="norte">Norte</option><option value="sul">Sul</option><option value="leste">Leste</option><option value="oeste">Oeste</option>
-          </InvocationSelect>
-        </label>
-        <button type="button" className="rounded border border-primary px-3 py-2 text-xs disabled:opacity-50" disabled={!!carregandoArteId || invocacoesSelecionadas.length < 1} onClick={() => void invocarSelecionadas()}>
-          {carregandoArteId === 'lote' ? 'Preparando posicionamento…' : 'Invocar selecionadas (' + invocacoesSelecionadas.length + '/2)'}
-        </button>
-      </div>
-      )}
-      {catalogo.length > 0 && (<p className="text-xs text-muted-foreground">Selecione até duas fichas e clique no mapa para escolher uma célula livre para cada uma. Invocar é Ação Livre por enquanto. Fichas com 0 PV continuam invocáveis e entram Caídas; descanso longo restaura 100% dos PV.</p>)}
-      {mensagem && <p role="status" className="text-xs text-muted-foreground">{mensagem}</p>}
-{erro && <p role="alert" className="text-xs inv-error">{erro}</p>}
-      {catalogo.filter(inv => (inv.nome + ' ' + (inv.apelido ?? '')).toLocaleLowerCase().includes(libraryQuery.trim().toLocaleLowerCase())).map(inv => {
+      </section>}
+      <OwnedInvocationsCollection
+        variant={view}
+        title={view === 'owned' ? 'Minhas invocações' : 'Fichas do personagem'}
+        description={view === 'owned'
+          ? 'Invocações domadas e disponíveis. Rituais pendentes e fichas arquivadas ficam no Catálogo.'
+          : 'Fichas salvas, rituais pendentes e registros arquivados. Os perfis de referência ficam acima.'}
+        totalCount={invocacoesDaVisao.length}
+        baseLimit={max}
+        derivedCount={invocacoesDaVisao.filter(inv => inv.formaDerivada).length}
+        activeCount={ativos.length}
+        activeLimit={ativas}
+        selectedCount={invocacoesSelecionadas.length}
+        pendingApprovalCount={invocacoesDaVisao.filter(inv => inv.aprovacaoMestre === 'pendente').length}
+        searchQuery={libraryQuery}
+        onSearchChange={setLibraryQuery}
+        primaryActionLabel={acaoPrimaria?.label}
+        onPrimaryAction={acaoPrimaria?.run}
+        movementDirection={direcao}
+        onMovementDirectionChange={setDirecao}
+        onInvokeSelected={() => void invocarSelecionadas()}
+        statusMessage={mensagem}
+        error={erro}
+        zeroResults={libraryQuery.trim().length > 0 && invocacoesFiltradas.length === 0}
+      >
+      {invocacoesFiltradas.map(inv => {
         const arte = assetForFicha(inv);
         const auditoriaFormaDerivada = auditarValoresProvisoriosFormaDerivadaDezSombras(inv);
         const estadoIntermediario = validarIntermediarioInvocacao(inv, character, itensInventario, catalogo);
@@ -1282,7 +1301,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
         const bloqueioDomesticao = mensagemDomesticaoPendente(inv);
         const podeSelecionar = !aguardandoRodadaHorda && !emHorda && !bloqueioDomesticao && !inv.perdaPermanente && !ativo && !derrotaPendente && aprovado && alcanceConfigurado && (estadoIntermediario.ok || (isMaster && Boolean(motivosOverride[inv.id]?.trim())));
         return (
-        <div key={inv.id} className="inv-card flex flex-wrap items-center justify-between gap-2 rounded border border-border p-2">
+        <div key={inv.id} role="listitem" className="inv-card flex flex-wrap items-center justify-between gap-2 rounded border border-border p-2">
           <div className="inv-card-header flex items-center gap-3">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded border" style={{ borderColor: inv.corIdentificacao ?? '#8055bd' }}>
               {arte ? <img key={assetsTick} src={arte.url} alt={inv.imagemAltText || inv.apelido || inv.nome} className="h-full w-full object-cover" /> : <span className="text-xs text-muted-foreground">Sem arte</span>}
@@ -1590,7 +1609,8 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
         </div>
         );
       })}
-<div className="inv-library-utilities"><h3>Ferramentas da biblioteca</h3>
+      </OwnedInvocationsCollection>
+{view === 'owned' && controlador && invocacoesPossuidas.length > 0 && <div className="inv-library-utilities"><h3>Comandos avançados</h3>
       {controlador && <InvocationDisclosure className="inv-section space-y-2 p-3" aria-label="Criar Horda"><summary>Criar Horda</summary>
 
         <p className="text-xs text-muted-foreground">Escolha um líder de Primeiro Grau ou inferior e membros de grau inferior ao dele. A Horda ocupa uma vaga e usa uma única ficha de PV; as ações vêm do líder.</p>
@@ -1632,6 +1652,8 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
           {carregandoArteId === 'horda' ? 'Preparando Horda…' : 'Posicionar Horda no mapa'}
         </button>
       </InvocationDisclosure>}
+      </div>}
+      {view === 'catalog' && <div className="inv-library-utilities"><h3>Mais opções do catálogo</h3>
       <InvocationDisclosure className="inv-section space-y-2 p-4">
         <summary>Importar ou adicionar ficha rápida</summary>
         <label className="block text-xs">Importar do Grimório ou OMNI
@@ -1659,10 +1681,9 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
 
         <button type="button" disabled={busyAprovacao} onClick={() => void salvar()} className="rounded bg-primary px-3 py-2 text-xs text-primary-foreground disabled:opacity-50">Adicionar ao catálogo</button>
       </InvocationDisclosure>
-</div>
+      </div>}
 
-      <p className="text-xs inv-warning">{controlador ? `Progressão do livro: ${max} invocações; além disso exige Interlúdio. Limite simultâneo: ${ativas}.` : 'Outras especializações obtêm invocações durante Interlúdios; podem manter apenas 1 invocação em campo por padrão.'}</p>
-      <p className="text-xs text-muted-foreground">Invocar é uma Ação Livre por enquanto e gasta PE. Posicione as invocações clicando no mapa, dentro do alcance definido em cada ficha; um uso permite selecionar até duas. Reposicionamento custa uma Ação Bônus e ataques comandados gastam uma Ação Comum.</p>
+      {view === 'catalog' && <p className="text-xs inv-warning">{controlador ? `Progressão do Controlador: ${max} invocações conhecidas; extras exigem Interlúdio. Limite simultâneo: ${ativas}.` : 'Esta especialização recebe invocações em Interlúdios e mantém uma em campo por padrão.'}</p>}
     </div>
   );
 }

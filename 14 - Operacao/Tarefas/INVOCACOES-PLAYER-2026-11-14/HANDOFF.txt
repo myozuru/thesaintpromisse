@@ -1,0 +1,16 @@
+﻿# Handoff — INVOCACOES-PLAYER-2026-11-14
+
+Branch ativa: feature/invocacoes-player-tabs, baseada em origin/main a40b5cf.
+Worktree: C:/Users/justs/Downloads/TSP-invocacoes-player.
+
+A tarefa está pronta para revisão. O objetivo foi criar uma experiência visual clara para Minhas Invocações e Catálogo, reduzir a copy sem reduzir limites nem truncar dados, e manter as regras de domínio existentes.
+
+Claude Opus implementou OwnedInvocationsCollection.tsx e revisou o diff em modo somente leitura. Codex integrou a peça com ControladorShikigamisAba e ControladorInvocacoesSection, mantendo uma única instância do controlador para preservar rascunhos e estado ao alternar entre Minhas invocações e Catálogo. Cada aba mantém sua própria busca.
+
+A lista de posse exclui rituais pendentes e perdas permanentes; perfis pendentes continuam acessíveis no catálogo. As regras existentes de aprovação, invocação, limite de duas ativas, combate e arquivo continuam no controlador. O salvamento pós-aprovação lê a lista mais recente do store antes de atualizar o personagem. O estado vazio usa uma variante explícita, separada do título visível.
+
+Build client e SSR validada com sucesso. QA visual em 1440×900, 1024×768 e 390×844; sem overflow horizontal. Busca sem resultados, navegação por abas e logs de console foram verificados no preview local. Testes automatizados não foram executados.
+
+Capturas em `evidence/`: owned-1440x900.png, catalog-1440x900.png, owned-1024x768.png, catalog-390x844.png, owned-top-390x844.png e owned-card-390x844.png.
+
+Não fazer push nem merge sem pedido explícito. Branch local: `feature/invocacoes-player-tabs`, baseada em `origin/main` (`a40b5cf`).
