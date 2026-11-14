@@ -1,0 +1,37 @@
+Tarefa: RITUAL-DEZ-SOMBRAS-2026-11-14
+Implementador: Codex
+Revisor independente: Claude Opus
+Branch: feature/ritual-dez-sombras
+
+Objetivo cumprido
+Implementar o fluxo de rituais das Dez Sombras com solicitações de Player, condução manual pelo Mestre ou preparo de combate no mapa. Vitória é registrada explicitamente pelo Mestre; domesticação continua separada da aprovação da ficha.
+
+Implementação
+- Tipos persistentes para pedidos e tentativas, seus estados e modo de resolução.
+- Regras puras para componentes e bloqueios das quatro quimeras oficiais.
+- Aba Rituais para domesticações e formas derivadas; jogadores não veem Catálogo.
+- Token de combate com PV e iniciativa, identificado pela tentativa; a limpeza preserva outros usos do token.
+- Estados de falha/cancelamento não liberam a invocação.
+- Navegação móvel em duas colunas com texto integral e espaço inferior para controles fixos.
+- Botões bloqueados explicam os requisitos e expõem `aria-disabled`; badges têm semântica de status.
+
+Validações concluídas
+- `rtk tsc --noEmit`: aprovado.
+- `rtk npm run build`: aprovado; warnings existentes de chunks/importações dinâmicas.
+- `rtk git diff --check`: aprovado.
+- QA visual/funcional pelo Maestri Portal em Player e Mestre, dimensões e estados descritos em `evidencias/AUDITORIA.md`.
+- Revisor Claude Opus não encontrou problemas P0–P2.
+- Testes automatizados não foram adicionados nem executados.
+
+Limites explícitos
+- As fontes não definem testes, custos, ajudantes ou resolução automática; o Mestre registra o resultado.
+- Aprovação numérica das formas derivadas continua seguindo o fluxo atual do Mestre.
+
+Arquivos principais
+- `src/lib/controlador/rituaisDezSombras.ts`
+- `src/components/fichas/RituaisDezSombrasSection.tsx`
+- `src/lib/controlador/tipos.ts`, `src/types/index.ts`, `src/stores/useMapStore.ts`
+- `src/components/fichas/ControladorShikigamisAba.tsx`, `src/components/fichas/ControladorInvocacoesSection.tsx`
+- `src/components/mapa/MapaModule.tsx`, `src/components/invocacoes/invocations.css`
+
+Preview offline: http://127.0.0.1:5183/

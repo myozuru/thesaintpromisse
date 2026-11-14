@@ -548,22 +548,13 @@ export function ControladorInvocacoesSection({ character, view = 'catalog', canV
   const registrarDomesticaoConcluida = (invocacaoId: string) => {
     if (!isMaster) return;
     const invocacao = catalogo.find(item => item.id === invocacaoId);
-    if (!invocacao || !mensagemDomesticaoPendente(invocacao)) return;
+    if (!invocacao || invocacao.pacoteRegras === 'dez-sombras' || !mensagemDomesticaoPendente(invocacao)) return;
     updateCharacter(character.id, {
       invocacoesConhecidas: catalogo.map(item => item.id === invocacaoId ? { ...item, domado: true } : item),
     });
     setMensagem(invocacao.tipo === 'maldicao_domada'
       ? `Domesticação de ${invocacao.nome} confirmada pelo Mestre. A aprovação da ficha e os custos de invocação continuam valendo.`
       : `Ritual de ${invocacao.nome} registrado pelo Mestre. A ficha pode ser invocada se também estiver aprovada.`);
-  };
-  const confirmarRequisitosFormaDerivada = (invocacaoId: string) => {
-    if (!isMaster) return;
-    updateCharacter(character.id, {
-      invocacoesConhecidas: catalogo.map(item => item.id === invocacaoId && item.formaDerivada
-        ? { ...item, domado: true }
-        : item),
-    });
-    setMensagem('O Mestre confirmou manualmente os requisitos da forma derivada. Alcance de posicionamento e aprovação da ficha ainda são verificados normalmente.');
   };
   const assetForFicha = (inv: InvocacaoControlador) => {
     const principal = inv.imagemAssetId ? assetCache.get(inv.imagemAssetId) : null;
@@ -1321,15 +1312,13 @@ export function ControladorInvocacoesSection({ character, view = 'catalog', canV
           </div>}
           {bloqueioDomesticao && (inv.tipo === 'maldicao_domada' || inv.pacoteRegras === 'dez-sombras') && <div className="basis-full space-y-1 text-xs">
             {inv.formaDerivada ? <>
-              <p>Forma derivada bloqueada; não pode ser invocada até o Mestre confirmar manualmente os requisitos listados. O sistema não verifica os pré-requisitos automaticamente.</p>
+              <p>Forma derivada bloqueada. Conclua o ritual de quimera na aba Rituais depois de domar os componentes.</p>
               {inv.requisitosFormaDerivada && <ul className="list-disc pl-5">{inv.requisitosFormaDerivada.map(requisito => <li key={requisito}>{requisito}</li>)}</ul>}
-              {isMaster && <button type="button" className="rounded border px-2 py-1" onClick={() => confirmarRequisitosFormaDerivada(inv.id)}>Confirmar requisitos e liberar forma</button>}
             </> : inv.tipo === 'maldicao_domada' ? <>
               <p>{bloqueioDomesticao} Criar ou aprovar a ficha não substitui o processo de domesticação da campanha.</p>
               {isMaster && <button type="button" className="rounded border px-2 py-1" onClick={() => registrarDomesticaoConcluida(inv.id)}>Confirmar domesticação concluída</button>}
             </> : <>
-              <p>Ritual de domar pendente; esta ficha não pode ser invocada.</p>
-              {isMaster && <button type="button" className="rounded border px-2 py-1" onClick={() => registrarDomesticaoConcluida(inv.id)}>Registrar ritual bem-sucedido</button>}
+              <p>Ritual de domesticação pendente; esta ficha não pode ser invocada. Consulte a aba Rituais para solicitar ou conduzir a tentativa.</p>
             </>}
           </div>}
           {inv.formaDerivada && <div className="basis-full text-xs text-muted-foreground"><strong>Forma derivada — não ocupa vaga de indivíduo-base.</strong>{inv.lacunasFormaDerivada && <ul className="list-disc pl-5">{inv.lacunasFormaDerivada.map(lacuna => <li key={lacuna}>{lacuna}</li>)}</ul>}{inv.valoresProvisoriosFormaDerivada?.length ? <><p>Valores provisórios: {inv.valoresProvisoriosFormaDerivada.join(', ')}.</p><p>Comparação com a base do grau ({inv.grau}); diferenças para revisão do Mestre, sem funcionarem como limites:</p><ul className="list-disc pl-5">{auditoriaFormaDerivada.map(item => <li key={item.campo}>{item.campo}: {item.valorProvisorio} vs referência {item.referenciaGrau} ({item.diferenca > 0 ? '+' : ''}{item.diferenca}).</li>)}</ul></> : null}</div>}

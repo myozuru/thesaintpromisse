@@ -42,6 +42,28 @@ export function mensagemDomesticaoPendente(
   return `${invocacao.nome} ainda precisa ser domado no ritual.`;
 }
 
+export type TipoRitualDezSombras = 'domesticacao' | 'quimera';
+export type EstadoRitualDezSombras = 'solicitado' | 'em_andamento' | 'concluido' | 'falhou' | 'cancelado';
+export type ModoRitualDezSombras = 'mapa' | 'manual';
+
+/** Registro persistente de uma tentativa. O resultado continua sendo decisão explícita do Mestre. */
+export interface RitualDezSombras {
+  id: string;
+  tipo: TipoRitualDezSombras;
+  estado: EstadoRitualDezSombras;
+  alvoInvocacaoId: string;
+  alvoNomeSnapshot: string;
+  solicitadoEm: string;
+  solicitadoPorProfileId?: string;
+  modo?: ModoRitualDezSombras;
+  iniciadoEm?: string;
+  iniciadoPorProfileId?: string;
+  resolvidoEm?: string;
+  resolvidoPorProfileId?: string;
+  entidadeMapaId?: string;
+  iniciativaMapaId?: string;
+}
+
 export interface InvocacaoControlador {
   id: string;
   donoCharacterId: string;
@@ -49,7 +71,7 @@ export interface InvocacaoControlador {
   pacoteRegras?: "dez-sombras";
   /** Formas derivadas não consomem vagas de indivíduos-base. */
   formaDerivada?: boolean;
-  /** Requisitos listados para confirmação manual; o sistema não os avalia automaticamente. */
+  /** Requisitos de composição e domesticação exigidos antes do ritual de quimera. */
   requisitosFormaDerivada?: string[];
   /** Lacunas ou dependências que devem permanecer visíveis na ficha. */
   lacunasFormaDerivada?: string[];

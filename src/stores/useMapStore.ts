@@ -160,6 +160,8 @@ export interface Entity {
   };
   /** Nue: modo escolhido para a próxima ação de movimento. Ausente em fichas legadas = voo. */
   invocationMovementMode?: 'voo' | 'caminhada';
+  /** ID do ritual que criou este adversário temporário no mapa. */
+  ritualId?: string;
   /** ID da ficha (Character) vinculada a esta imagem/token. */
   characterId?: string;
   /** Configuração de efeito persistente aplicada quando personagens entram ou terminam o turno na zona. */

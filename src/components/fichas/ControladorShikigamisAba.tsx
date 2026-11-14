@@ -4,9 +4,10 @@ import { useState } from 'react';
 import type { Character } from '@/types';
 import { CriadorShikigami } from './CriadorShikigami';
 import { ControladorInvocacoesSection } from './ControladorInvocacoesSection';
+import { RituaisDezSombrasSection } from './RituaisDezSombrasSection';
 
 export function ControladorShikigamisAba({ character, canViewCatalog = true }: { character: Character; canViewCatalog?: boolean }) {
-  const [aba, setAba] = useState<'minhas' | 'catalogo' | 'criar'>('minhas');
+  const [aba, setAba] = useState<'minhas' | 'catalogo' | 'rituais' | 'criar'>('minhas');
   const [creatorOpened, setCreatorOpened] = useState(false);
   const [closeAfterTransition, setCloseAfterTransition] = useState(false);
   const [draftKey, setDraftKey] = useState(0);
@@ -43,6 +44,7 @@ export function ControladorShikigamisAba({ character, canViewCatalog = true }: {
     <div role="navigation" aria-label="Invocações do personagem" data-catalog-visible={canViewCatalog} className="inv-topnav">
       <motion.button type="button" aria-pressed={abaVisivel === 'minhas'} onClick={() => setAba('minhas')} whileTap={reduceMotion ? undefined : { scale: 0.985 }} className={`rounded px-3 py-2 text-sm ${abaVisivel === 'minhas' ? 'bg-primary text-primary-foreground' : 'border border-border'}`}>Minhas invocações</motion.button>
       {canViewCatalog && <motion.button type="button" aria-pressed={abaVisivel === 'catalogo'} onClick={() => setAba('catalogo')} whileTap={reduceMotion ? undefined : { scale: 0.985 }} className={`rounded px-3 py-2 text-sm ${abaVisivel === 'catalogo' ? 'bg-primary text-primary-foreground' : 'border border-border'}`}>Catálogo</motion.button>}
+      <motion.button type="button" aria-pressed={abaVisivel === 'rituais'} onClick={() => setAba('rituais')} whileTap={reduceMotion ? undefined : { scale: 0.985 }} className={`rounded px-3 py-2 text-sm ${abaVisivel === 'rituais' ? 'bg-primary text-primary-foreground' : 'border border-border'}`}>Rituais</motion.button>
       <motion.button type="button" aria-pressed={abaVisivel === 'criar'} onClick={() => { setCloseAfterTransition(false); setCreatorOpened(true); setAba('criar'); }} whileTap={reduceMotion ? undefined : { scale: 0.985 }} className={`rounded px-3 py-2 text-sm ${abaVisivel === 'criar' ? 'bg-primary text-primary-foreground' : 'border border-border'}`}>Criar ou editar</motion.button>
     </div>
     <div className="inv-view-stack" data-active-view={abaVisivel}>
@@ -51,10 +53,15 @@ export function ControladorShikigamisAba({ character, canViewCatalog = true }: {
         transition={viewTransition} onAnimationComplete={finalizarFechamento}>
         {creatorOpened && <CriadorShikigami key={draftKey} character={character} initial={fichaEdicao} onSaved={voltarBiblioteca} onCancel={voltarBiblioteca} />}
       </motion.div>
-      <motion.div role="region" aria-label={abaVisivel === 'catalogo' ? 'Catálogo de invocações' : 'Minhas invocações'} aria-hidden={abaVisivel === 'criar'} inert={abaVisivel === 'criar'} data-active={abaVisivel !== 'criar'} className="inv-view-panel" initial={false}
-        animate={{ height: abaVisivel !== 'criar' ? 'auto' : 0, opacity: abaVisivel !== 'criar' ? 1 : 0, y: reduceMotion || abaVisivel !== 'criar' ? 0 : -6 }}
+      <motion.div role="region" aria-label={abaVisivel === 'catalogo' ? 'Catálogo de invocações' : 'Minhas invocações'} aria-hidden={abaVisivel === 'criar' || abaVisivel === 'rituais'} inert={abaVisivel === 'criar' || abaVisivel === 'rituais'} data-active={abaVisivel === 'minhas' || abaVisivel === 'catalogo'} className="inv-view-panel" initial={false}
+        animate={{ height: abaVisivel === 'minhas' || abaVisivel === 'catalogo' ? 'auto' : 0, opacity: abaVisivel === 'minhas' || abaVisivel === 'catalogo' ? 1 : 0, y: reduceMotion || abaVisivel === 'minhas' || abaVisivel === 'catalogo' ? 0 : -6 }}
         transition={viewTransition}>
         <ControladorInvocacoesSection character={character} view={canViewCatalog && abaVisivel === 'catalogo' ? 'catalog' : 'owned'} canViewCatalog={canViewCatalog} onBrowseCatalog={canViewCatalog ? () => setAba('catalogo') : undefined} onEditFicha={editar} onCreateFicha={novaFicha} />
+      </motion.div>
+      <motion.div role="region" aria-label="Rituais das Dez Sombras" aria-hidden={abaVisivel !== 'rituais'} inert={abaVisivel !== 'rituais'} data-active={abaVisivel === 'rituais'} className="inv-view-panel" initial={false}
+        animate={{ height: abaVisivel === 'rituais' ? 'auto' : 0, opacity: abaVisivel === 'rituais' ? 1 : 0, y: reduceMotion || abaVisivel === 'rituais' ? 0 : -6 }}
+        transition={viewTransition}>
+        {abaVisivel === 'rituais' && <RituaisDezSombrasSection character={character} />}
       </motion.div>
     </div>
   </div>;

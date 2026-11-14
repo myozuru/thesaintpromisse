@@ -1,0 +1,44 @@
+ID: RITUAL-DEZ-SOMBRAS-2026-11-14
+Estado: implementado e revisado; pronto para integração local
+Branch: feature/ritual-dez-sombras
+Base: c015c26
+Pasta de trabalho: C:/Users/justs/Downloads/TSP-invocacoes-player
+Escopo: rituais persistentes de domesticação e quimera das Dez Sombras, com pedido do Player, resolução manual e combate no mapa.
+
+Decisão do usuário
+- Oferecer os dois caminhos: combate no mapa e resolução manual pelo Mestre.
+
+Resultado
+- Aba própria Rituais, sem Catálogo para Player.
+- Histórico persistente de pedidos, tentativas, vitórias, falhas e cancelamentos.
+- Vitória marcada explicitamente pelo Mestre libera a sombra, sem alterar a aprovação da ficha.
+- Quimeras exigem componentes domados; nenhuma regra, teste ou custo foi inventado.
+- Combate de mapa cria token visível com PV e iniciativa; finalizar remove apenas a entrada criada pelo ritual e preserva referências compartilhadas.
+- Corrigidos layout móvel e espaço de rolagem sobre os controles flutuantes.
+
+Revisão
+- Claude Opus: revisão independente final sem achados P0–P2.
+- Impeccable detect: executado uma vez. Corrigida a cor fora da paleta no token temporário; avisos de border-left são regras preexistentes de outras áreas do mesmo CSS.
+
+Validação
+- TypeScript: aprovado, sem erros.
+- Build Vite: aprovado.
+- `git diff --check`: aprovado.
+- Testes automatizados: não executados conforme instrução do projeto; QA funcional manual pelo Portal.
+- Player: Catálogo ausente na navegação e no texto da página; pediu ritual de quimera.
+- Mestre: resolveu Nue por mapa, Gama manual e Abismo de forma manual; gate de Abismo bloqueou quando Gama ficou não domada e liberou após restaurar.
+- Mapa: token, PV e iniciativa conferidos; falha/cancelamento mantiveram a sombra não domada e limparam token/iniciativa.
+- Acessibilidade: navegação por Tab percorreu Minhas → Rituais → Criar ou editar; `prefers-reduced-motion` estava ativo no Portal.
+- Console do Portal: sem mensagens.
+
+Preview
+- URL: http://127.0.0.1:5183/
+- Servidor: Vite offline, iniciado por `evidencias/launch-preview-offline.mjs`; Supabase sem configuração neste preview.
+
+Evidências
+- Capturas verificadas em `evidencias/`: `rituais-desktop-1440x900.png`, `rituais-tablet-1024x768.png`, `rituais-player-mobile-390x844.png`, `rituais-player-mobile-bottom-390x844.png` e `mapa-desktop-1440x900.png`.
+- O Portal recortava 8 px do PNG em relação ao viewport configurado; capturado com +8 px de altura para produzir imagens completas nas dimensões-alvo. A auditoria registra os viewports efetivamente configurados.
+- `evidencias/AUDITORIA.md` descreve a sequência e os resultados detalhados.
+
+Próxima etapa
+- Revisar diff e integrar/publicar sem reescrever histórico já publicado.

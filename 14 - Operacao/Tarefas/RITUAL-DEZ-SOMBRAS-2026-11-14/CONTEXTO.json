@@ -1,0 +1,41 @@
+{
+  "id": "RITUAL-DEZ-SOMBRAS-2026-11-14",
+  "root": "C:/Users/justs/Downloads/TSP-invocacoes-player",
+  "branch": "feature/ritual-dez-sombras",
+  "base": "c015c26",
+  "head": "c015c26",
+  "targets": [
+    "src/lib/controlador/tipos.ts",
+    "src/lib/controlador/rituaisDezSombras.ts",
+    "src/types/index.ts",
+    "src/stores/useMapStore.ts",
+    "src/components/fichas/ControladorShikigamisAba.tsx",
+    "src/components/fichas/ControladorInvocacoesSection.tsx",
+    "src/components/fichas/RituaisDezSombrasSection.tsx",
+    "src/components/mapa/MapaModule.tsx",
+    "src/components/invocacoes/invocations.css"
+  ],
+  "visualReferences": ["DESIGN.md", "DESIGN_SYSTEM.md", "src/styles.css"],
+  "preview": {
+    "url": "http://127.0.0.1:5183/",
+    "server": "14 - Operacao/Tarefas/RITUAL-DEZ-SOMBRAS-2026-11-14/evidencias/launch-preview-offline.mjs",
+    "data": "offline-local-only"
+  },
+  "status": "ready_for_integration",
+  "reviewer": "Claude Opus",
+  "review": "no_P0_P2_findings",
+  "build": "passed",
+  "typecheck": "passed",
+  "diffCheck": "passed",
+  "automatedTests": "not_run_by_instruction",
+  "visualQA": {
+    "portal": "Dez Sombras QA",
+    "sizes": ["1440x900 PNG", "1024x768 PNG", "390x844 PNG"],
+    "captureCompensation": "Portal PNG output was 8px shorter than configured viewport; viewport height set +8px and PNG headers verified.",
+    "keyboard": "Tab path Minhas -> Rituais -> Criar ou editar",
+    "reducedMotion": true,
+    "console": "empty",
+    "evidence": "14 - Operacao/Tarefas/RITUAL-DEZ-SOMBRAS-2026-11-14/evidencias"
+  },
+  "createdAt": "2026-11-14"
+}

@@ -835,6 +835,8 @@ export interface Character {
   keyAttribute?: 'Inteligência' | 'Sabedoria' | 'Presença' | 'Força' | 'Destreza';
   /** Catálogo do Controlador; invocações são modelos persistidos, ainda não tokens em campo. */
   invocacoesConhecidas?: import('@/lib/controlador/tipos').InvocacaoControlador[];
+  /** Histórico e estado dos rituais de domesticação e quimera das Dez Sombras. */
+  rituaisDezSombras?: import('@/lib/controlador/tipos').RitualDezSombras[];
   /** Instâncias de combate de Invocação, separadas do estado de aquisição do catálogo. */
   instanciasInvocacao?: import('@/lib/invocacoes/schema').InstanciaInvocacao[];
   /** Treinamento específico em Controle (distinto do bônus geral de Treinamento). */

@@ -3401,6 +3401,7 @@ export function MapaModule() {
 
         <div
           ref={containerRef}
+          data-map-viewport
           className="flex-1 relative overflow-hidden"
           tabIndex={0}
           style={{ touchAction: 'none', background: 'hsl(var(--secondary))' }}
