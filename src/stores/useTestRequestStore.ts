@@ -17,6 +17,14 @@ import type { DamageType } from '@/types';
 
 export type TestKind = 'attribute' | 'skill' | 'save';
 
+export interface TestRequestInvocationTarget {
+  tokenId: string;
+  ownerCharacterId: string;
+  invocationId: string;
+  invocationInstanceId: string;
+  name: string;
+}
+
 export interface TestRequest {
   id: string;
   charId: string;
@@ -52,6 +60,23 @@ export interface TestRequest {
   bonusBreakdownOverride?: string;
   /** Tag para correlacionar resultado com a origem (ex.: feitiço.id + targetId). */
   sourceTag?: string;
+  /** Invocação que faz o TR por meio do perfil do dono, sem exigir efeito de dano automático. */
+  targetInvocation?: TestRequestInvocationTarget;
+  /** Retalhar: em falha no TR, aplica Sangramento Forte até o alvo passar em Fortitude. */
+  tigreSangramentoResolution?: {
+    sourceCharId: string;
+    sourceCharName: string;
+    sourceInvocationId: string;
+    sourceInstanceId: string;
+    sourceName: string;
+    conditionId: string;
+    conditionName: string;
+    conditionIcon: string;
+    endCD: number;
+    targetInvocation?: TestRequestInvocationTarget;
+  };
+  /** Condições que este TR pode aplicar; permite bônus situacional contra categorias específicas. */
+  conditionIds?: string[];
   /** Efeito automático a resolver após a rolagem do TR. */
   auraResolution?: {
     type: 'enemy_turn_aura';
@@ -96,6 +121,13 @@ export interface TestRequest {
       name: string;
       tipoAlvo?: 'unico' | 'area';
     };
+  };
+  /** Resultado de TR da Neutralização do Cervo Circular. */
+  cervoNeutralizationResolution?: {
+    sourceCharId: string;
+    sourceName: string;
+    sourceInvocationId: string;
+    sourceInstanceId: string;
   };
   resolutionApplied?: boolean;
   /** Resolução iniciada e ainda não confirmada; pode ter produzido efeitos parciais. */

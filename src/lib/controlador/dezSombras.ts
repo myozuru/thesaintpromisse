@@ -3,13 +3,17 @@ import type { InvocacaoControlador } from './tipos';
 
 export type IdDezSombras =
   | 'cao-branco' | 'cao-preto' | 'nue' | 'sapo' | 'grande-serpente'
-  | 'elefante-maximo' | 'cervo-circular' | 'touro-perfurante' | 'mahoraga'
+  | 'elefante-maximo' | 'fuga-do-coelho' | 'cervo-circular' | 'touro-perfurante' | 'mahoraga'
   | 'tigre-funebre';
+
+export const FONTE_ENCICLOPEDIA_MALDITA = 'Enciclopédia Maldita (F&M 2.5.2), v1.1.1';
+export const CUSTO_CAO_DIVINO_CAMPANHA_PE = 2;
 
 type AcaoFonte = InvocacaoControlador['acoes'][number] & {
   descricaoRegra?: string;
   statusAutomacao?: 'executavel' | 'parcial' | 'manual';
   formulaCura?: string;
+  fenomenoAdaptacaoId?: string;
   curaRealSemCusto?: boolean;
   permiteInimigos?: boolean;
   todosNoAlcance?: boolean;
@@ -31,12 +35,13 @@ export interface ModeloFonteDezSombras {
   domadoInicialmente: boolean;
   opcionalHomebrew?: boolean;
   caracteristicas?: Array<Record<string, unknown>>;
+  ataqueTreinado?: InvocacaoControlador['ataqueTreinado'];
   acoes: AcaoFonte[];
 }
 
 export function ataque(input: {
   id: string; nome: string; dano: string; tipoDano: DamageType; alcanceM?: number;
-  bonusAtaque: number; atributoAtaque?: 'forca' | 'destreza'; descricaoRegra?: string;
+  bonusAtaque: number; atributoAtaque?: 'forca' | 'destreza'; multiplicadorDanoAtributo?: number; descricaoRegra?: string;
   statusAutomacao?: 'executavel' | 'parcial' | 'manual';
 }): AcaoFonte {
   return {
@@ -47,7 +52,7 @@ export function ataque(input: {
     teste: 'ataque',
     tipoAtaque: 'corpo_a_corpo',
     atributoAtaque: input.atributoAtaque ?? 'forca',
-    multiplicadorDanoAtributo: 0,
+    multiplicadorDanoAtributo: input.multiplicadorDanoAtributo ?? 0,
     categoriaAcao: 'acao_complexa',
     dano: input.dano,
     tipoDano: input.tipoDano,
@@ -96,108 +101,162 @@ export function cura(input: {
 
 const perfis: ModeloFonteDezSombras[] = [
   {
-    id: 'cao-branco', nome: 'Cão Divino Branco', grau: 'quarto', custoPE: 2, hp: 25, defesa: 19, deslocamentoM: 10.5,
-    atributos: { forca: 12, destreza: 16, constituicao: 10, inteligencia: 8, sabedoria: 6, presenca: 6 },
-    pagina: 55, domadoInicialmente: true,
-    descricao: 'Mordida: 1,5 m, +5, 2d8+3 perfurante. Alcateia: a fonte condiciona o bônus a outro shikigami estar a até 1,5 m do alvo e diz que “ele” recebe +2; o antecedente do pronome é ambíguo, então o Mestre define o beneficiário e a aplicação. Regra definida pelo usuário: cada Cão custa 2 PE; invocar o par custa 4 PE. Perfil-base do livro para nível 1 e maestria +2.',
-    acoes: [ataque({ id: 'mordida', nome: 'Mordida', dano: '2d8+3', tipoDano: 'DP', alcanceM: 1.5, bonusAtaque: 4 }), { ...habilidade('alcateia', 'Alcateia', 'A fonte condiciona o bônus a outro Shikigami estar a até 1,5 m do alvo e diz que “ele” recebe +2; o antecedente do pronome é ambíguo, então o Mestre define o beneficiário e a aplicação.'), statusAutomacao: 'manual' }],
-  },
-  {
-    id: 'cao-preto', nome: 'Cão Divino Preto', grau: 'quarto', custoPE: 2, hp: 25, defesa: 19, deslocamentoM: 10.5,
-    atributos: { forca: 12, destreza: 16, constituicao: 10, inteligencia: 8, sabedoria: 6, presenca: 6 },
-    pagina: 55, domadoInicialmente: true,
-    descricao: 'Mordida: 1,5 m, +5, 2d8+3 perfurante. Alcateia: a fonte condiciona o bônus a outro shikigami estar a até 1,5 m do alvo e diz que “ele” recebe +2; o antecedente do pronome é ambíguo, então o Mestre define o beneficiário e a aplicação. Regra definida pelo usuário: cada Cão custa 2 PE; invocar o par custa 4 PE. Perfil-base do livro para nível 1 e maestria +2.',
-    acoes: [ataque({ id: 'mordida', nome: 'Mordida', dano: '2d8+3', tipoDano: 'DP', alcanceM: 1.5, bonusAtaque: 4 }), { ...habilidade('alcateia', 'Alcateia', 'A fonte condiciona o bônus a outro Shikigami estar a até 1,5 m do alvo e diz que “ele” recebe +2; o antecedente do pronome é ambíguo, então o Mestre define o beneficiário e a aplicação.'), statusAutomacao: 'manual' }],
-  },
-  {
-    id: 'nue', nome: 'Nue', grau: 'quarto', custoPE: 3, hp: 25, defesa: 19, deslocamentoM: 10.5,
-    atributos: { forca: 12, destreza: 16, constituicao: 10, inteligencia: 8, sabedoria: 6, presenca: 6 },
-    pagina: 56, domadoInicialmente: false,
-    descricao: 'Rasante Elétrico: ação complexa, 3 m, +5, 2d8+3 chocante. Alado concede voo. Montaria permite ao montado usar o movimento de Nue; procedimento de montar e desmontar não está especificado. Perfil-base do livro para nível 1 e maestria +2.',
+    id: 'cao-branco', nome: 'Cão Divino Branco', grau: 'quarto', custoPE: CUSTO_CAO_DIVINO_CAMPANHA_PE, hp: 26, defesa: 12, deslocamentoM: 12,
+    atributos: { forca: 14, destreza: 14, constituicao: 12, inteligencia: 6, sabedoria: 8, presenca: 6 },
+    pagina: 76, domadoInicialmente: true,
+    descricao: 'Ficha-base da Enciclopédia Maldita v1.1.1. Exceção aprovada da campanha: cada Cão custa 2 PE (4 PE pelo par), embora a ficha impressa indique outro custo. Mordida: ação complexa, alcance corpo a corpo, +5 no ataque e 1d12+1d8 perfurante. Instinto Caçador concede +2 em Percepção e +3 m de deslocamento; também pode dar vantagem em rastreamento com uma Ação Simples. Matilha das Sombras depende de outro Cão próximo do alvo; a aplicação de Flanqueado e do bônus precisa ser arbitrada conforme a ficha.',
+    caracteristicas: [
+      { tipo: 'passiva', nome: 'Instinto Caçador', efeitoOperacional: { tipo: 'bonus_pericia', pericia: 'Percepção' } },
+    ],
     acoes: [
-      ataque({ id: 'rasante-eletrico', nome: 'Rasante Elétrico', dano: '2d8+3', tipoDano: 'DCC', alcanceM: 3, bonusAtaque: 2, atributoAtaque: 'destreza' }),
-      habilidade('alado', 'Alado', 'Nue pode voar. O perfil não especifica manobras, limite de altitude ou regras de carga.'),
-      habilidade('montaria', 'Montaria', 'Uma criatura montada usa o movimento de Nue. Montar e desmontar não têm procedimento definido no material-fonte.'),
+      ataque({ id: 'mordida', nome: 'Mordida', dano: '1d12+1d8', tipoDano: 'DP', alcanceM: 1.5, bonusAtaque: 1 }),
+      {
+        ...habilidade('instinto-cacador', 'Instinto Caçador', 'Como Ação Simples, concede vantagem ao Controlador no próximo teste de Percepção feito para rastrear uma criatura.', 'acao_simples'),
+        statusAutomacao: 'executavel',
+        efeitoEspecial: { tipo: 'vantagem_pericia_controlador', pericia: 'Percepção', contexto: 'rastreamento' },
+      },
+      habilidade('matilha-das-sombras', 'Matilha das Sombras', 'Se outro aliado estiver adjacente ao alvo da Mordida, ele é considerado Flanqueado. A posição é calculada no mapa e fica disponível no contexto OMNI do alvo; nenhum bônus numérico adicional é presumido.'),
     ],
   },
   {
-    id: 'sapo', nome: 'Sapo', grau: 'quarto', custoPE: 3, hp: 25, defesa: 18, deslocamentoM: 9,
-    atributos: { forca: 16, destreza: 14, constituicao: 10, inteligencia: 6, sabedoria: 6, presenca: 6 },
-    pagina: 57, domadoInicialmente: false,
-    descricao: 'Segurar: língua até 9 m, disputa Luta contra Atletismo e aplica Agarrado; o alvo pode tentar escapar no início de seus turnos. Arremessar: ação Complexa apenas contra alvo agarrado; lança a criatura a um ponto desocupado até 6 m, encerra o agarrão e causa 2d6+3 de impacto. O TR de Reflexos causa Caído em caso de falha; a fonte não descreve redução de dano no sucesso nem define a CD, a origem da distância ou a visibilidade do ponto. Fora de Risco: reação até 4,5 m, compara Reflexos do Sapo com o total do ataque; se superar, nega o ataque e move a criatura protegida até 3 m para espaço livre. Desempate, consentimento e origem da distância não são definidos.',
+    id: 'cao-preto', nome: 'Cão Divino Preto', grau: 'quarto', custoPE: CUSTO_CAO_DIVINO_CAMPANHA_PE, hp: 26, defesa: 12, deslocamentoM: 12,
+    atributos: { forca: 14, destreza: 14, constituicao: 12, inteligencia: 6, sabedoria: 8, presenca: 6 },
+    pagina: 76, domadoInicialmente: true,
+    descricao: 'Ficha-base da Enciclopédia Maldita v1.1.1. Exceção aprovada da campanha: cada Cão custa 2 PE (4 PE pelo par), embora a ficha impressa indique outro custo. Mordida: ação complexa, alcance corpo a corpo, +5 no ataque e 1d12+1d8 perfurante. Instinto Caçador concede +2 em Percepção e +3 m de deslocamento; também pode dar vantagem em rastreamento com uma Ação Simples. Matilha das Sombras depende de outro Cão próximo do alvo; a aplicação de Flanqueado e do bônus precisa ser arbitrada conforme a ficha.',
+    caracteristicas: [
+      { tipo: 'passiva', nome: 'Instinto Caçador', efeitoOperacional: { tipo: 'bonus_pericia', pericia: 'Percepção' } },
+    ],
     acoes: [
-      ataque({ id: 'arremessar', nome: 'Arremessar', dano: '2d6+3', tipoDano: 'DI', bonusAtaque: 0, statusAutomacao: 'manual', descricaoRegra: 'Somente contra alvo Agarrado. Escolha manualmente ponto desocupado a até 6 m; a fonte não define a origem da distância nem a visibilidade do ponto. O agarrão termina e o alvo sofre 2d6+3 de impacto; o TR de Reflexos causa Caído em caso de falha. A fonte não descreve redução de dano no sucesso nem define a fórmula da CD.' }),
-      { ...habilidade('segurar', 'Segurar', 'Ação Simples: disputa o Luta +5 do Sapo contra Atletismo do alvo até 9 m; sucesso aplica Agarrado. A tentativa de fuga é tratada no início do turno do alvo conforme a ficha.', 'acao_simples'), alcanceM: 9, statusAutomacao: 'executavel' },
-      habilidade('fora-de-risco', 'Fora de Risco', 'Reação para proteger criatura até 4,5 m: teste de Reflexos do Sapo contra o total do ataque; se superar, anula o ataque e move o protegido até 3 m para espaço livre. Empate e aceitação do deslocamento permanecem indefinidos.', 'reacao'),
+      ataque({ id: 'mordida', nome: 'Mordida', dano: '1d12+1d8', tipoDano: 'DP', alcanceM: 1.5, bonusAtaque: 1 }),
+      {
+        ...habilidade('instinto-cacador', 'Instinto Caçador', 'Como Ação Simples, concede vantagem ao Controlador no próximo teste de Percepção feito para rastrear uma criatura.', 'acao_simples'),
+        statusAutomacao: 'executavel',
+        efeitoEspecial: { tipo: 'vantagem_pericia_controlador', pericia: 'Percepção', contexto: 'rastreamento' },
+      },
+      habilidade('matilha-das-sombras', 'Matilha das Sombras', 'Se outro aliado estiver adjacente ao alvo da Mordida, ele é considerado Flanqueado. A posição é calculada no mapa e fica disponível no contexto OMNI do alvo; nenhum bônus numérico adicional é presumido.'),
     ],
   },
   {
-    id: 'grande-serpente', nome: 'Grande Serpente', grau: 'quarto', custoPE: 4, hp: 25, defesa: 19, deslocamentoM: 10.5,
-    atributos: { forca: 14, destreza: 16, constituicao: 10, inteligencia: 6, sabedoria: 6, presenca: 6 },
-    pagina: 58, domadoInicialmente: false,
-    descricao: 'Entrelaçar disputa Luta da Serpente contra Atletismo do alvo e aplica Agarrado; a fuga no início do turno é contra Acrobacia da Serpente. Mordida: 3 m, +5, 2d8+3 perfurante. Flexível concede +2 em Acrobacia. Alcance e limite de tamanho do agarrão não são definidos.',
+    id: 'nue', nome: 'Nue', grau: 'quarto', custoPE: 3, hp: 26, defesa: 13, deslocamentoM: 12,
+    atributos: { forca: 8, destreza: 16, constituicao: 12, inteligencia: 6, sabedoria: 10, presenca: 6 },
+    pagina: 78, domadoInicialmente: false,
+    descricao: 'Ficha-base da Enciclopédia Maldita v1.1.1. Voo Maldito: 12 m de voo e 4,5 m de caminhada. Pode carregar até quatro criaturas Pequenas/Mínimas (−1,5 m de voo por criatura) ou até duas Médias (−3 m por criatura); agarrar um hostil em voo e soltá-lo exige resolução manual. Choque Estático acrescenta 1d6 chocante quando um ataque físico ou feitiço elétrico acerta. Investida Eletrizante causa 1d12+1d8 chocante.',
     acoes: [
-      ataque({ id: 'mordida', nome: 'Mordida', dano: '2d8+3', tipoDano: 'DP', alcanceM: 3, bonusAtaque: 3 }),
-      habilidade('entrelacar', 'Entrelaçar', 'Disputa Luta da Serpente contra Atletismo do alvo e aplica Agarrado; o alvo pode tentar escapar no início do próprio turno contra Acrobacia da Serpente. Alcance e limite de tamanho não constam da ficha.'),
-      { ...habilidade('flexivel', 'Flexível', 'Concede +2 em Acrobacia; o bônus é aplicado automaticamente nos testes de perícia da Serpente.'), statusAutomacao: 'executavel' },
-    ],
-    caracteristicas: [{ tipo: 'caracteristica', nome: 'Flexível', texto: 'Bônus de +2 em Acrobacia.', efeitoOperacional: { tipo: 'bonus_pericia', pericia: 'acrobacia' } }],
-  },
-  {
-    id: 'elefante-maximo', nome: 'Elefante Máximo', grau: 'terceiro', custoPE: 7, hp: 80, defesa: 22, deslocamentoM: 6,
-    atributos: { forca: 18, destreza: 7, constituicao: 20, inteligencia: 6, sabedoria: 6, presenca: 6 },
-    pagina: 59, domadoInicialmente: false, bonusPVMaximo: 10,
-    descricao: 'Golpe com Tromba: 3 m, +6, 2d12+4 impacto; a ficha não dá empurrão a este golpe. Torrente de Água: alcance 12 m, Fortitude, 2d10+4 impacto; sucesso causa metade e não empurra, falha empurra 4,5 m. Defesa alternativa por Constituição; Grande; Robustez soma +10 PV máximos aos 80 PV do perfil (90 no total).',
-    acoes: [
-      ataque({ id: 'golpe-tromba', nome: 'Golpe com Tromba', dano: '2d12+4', tipoDano: 'DI', alcanceM: 3, bonusAtaque: 2 }),
-      { id: 'torrente-agua', nome: 'Torrente de Água', tipo: 'ataque', tipoExecucao: 'manual', teste: 'resistencia', categoriaAcao: 'acao_complexa', resistenciaAlvo: 'Fortitude', atributoCD: 'constituicao', multiplicadorDanoAtributo: 0, dano: '2d10+4', tipoDano: 'DI', danoNoSucesso: 'metade', alcanceM: 12, statusAutomacao: 'executavel', descricaoRegra: 'No sucesso do TR de Fortitude, o alvo sofre metade do dano e não é empurrado. Na falha, é empurrado 4,5 m, mesmo se o dano for 0; paredes ou tokens podem interromper o movimento.' },
-      habilidade('defesa-alternativa', 'Defesa Alternativa (Constituição)', 'O perfil lista Defesa Alternativa por Constituição, sem fórmula de recalcular Defesa; aplicação manual.'),
-      { ...habilidade('robustez', 'Robustez', 'A característica adiciona +10 PV máximos aos 80 PV-base (90 no total), já aplicados ao perfil.'), statusAutomacao: 'executavel' },
+      ataque({ id: 'investida-eletrizante', nome: 'Investida Eletrizante', dano: '1d12+1d8', tipoDano: 'DCC', alcanceM: 3, bonusAtaque: 1, atributoAtaque: 'destreza' }),
+      habilidade('voo-maldito', 'Voo Maldito', 'Voa 12 m e caminha 4,5 m. Pode carregar até quatro criaturas Pequenas/Mínimas, reduzindo o voo em 1,5 m por criatura, ou até duas Médias, reduzindo-o em 3 m por criatura. Agarrar um hostil no ar exige teste de Atletismo ou Acrobacia contra o alvo; se vencer, pode movê-lo conforme as penalidades de carga e soltá-lo no ponto final do movimento.'),
+      habilidade('choque-estatico', 'Choque Estático', 'Ao acertar com ataque físico ou feitiço que cause dano elétrico, causa mais 1d6 de dano chocante.'),
     ],
   },
   {
-    id: 'cervo-circular', nome: 'Cervo Circular', grau: 'segundo', custoPE: 7, hp: 70, defesa: 17, deslocamentoM: 6,
-    atributos: { forca: 14, destreza: 8, constituicao: 14, inteligencia: 6, sabedoria: 10, presenca: 20 },
-    pagina: 60, domadoInicialmente: false,
-    descricao: 'Cura Concentrada cura um alvo a até 4,5 m em 3d10+5 PV. Liberar Energia Reversa cura todas as criaturas em até 3 m em 2d12+5 PV cada. Fluxo Reverso: energia amaldiçoada não afeta objetos até 3 m; criaturas nessa área recebem +6 em testes contra efeitos de técnicas amaldiçoadas. Auto-inclusão e limites de área não são detalhados.',
+    id: 'sapo', nome: 'Gama', grau: 'quarto', custoPE: 3, hp: 28, defesa: 10, deslocamentoM: 9,
+    atributos: { forca: 15, destreza: 10, constituicao: 16, inteligencia: 6, sabedoria: 6, presenca: 6 },
+    pagina: 77, domadoInicialmente: false,
+    descricao: 'Ficha-base da Enciclopédia Maldita v1.1.1; o identificador interno “sapo” é mantido para compatibilidade. Língua Sombria tem alcance natural de 6 m e puxa um aliado Médio ou menor para um espaço adjacente como Reação, uma vez por rodada. Protusão de Língua tem ataque +5 e causa 1d12+1d8+2 de impacto; ao acertar, pode gastar 4 PE para tentar Agarrar como Ação Livre. Anfíbio Sombrio permite respirar debaixo d’água, ignora terreno difícil aquático ou lamacento e concede +2 em testes de manobra submerso ou em Escuridão Total.',
     acoes: [
-      cura({ id: 'cura-concentrada', nome: 'Cura Concentrada', formula: '3d10+5', alcanceM: 4.5, custoPE: 2 }),
-      cura({ id: 'liberar-energia-reversa', nome: 'Liberar Energia Reversa', formula: '2d12+5', alcanceM: 3, alvos: 'multiplos', custoPE: 2, todosNoAlcance: true, permiteInimigos: true, descricaoRegra: 'Cura todas as criaturas em até 3 m em 2d12+5 PV cada.' }),
-      habilidade('fluxo-reverso', 'Fluxo Reverso', 'Aura de 3 m: impede energia amaldiçoada de afetar objetos e concede +6 a criaturas em testes contra efeitos de técnicas amaldiçoadas. A seleção de objetos e a integração de bônus situacionais precisam de regra própria.'),
+      {
+        ...ataque({ id: 'protusao-lingua', nome: 'Protusão de Língua', dano: '1d12+1d8', tipoDano: 'DI', alcanceM: 6, bonusAtaque: 0, multiplicadorDanoAtributo: 1, statusAutomacao: 'parcial', descricaoRegra: 'Ataque complexo com alcance natural de 6 m, bônus total +5 e dano 1d12+1d8+2. Ao acertar, o Gama pode escolher gastar 4 PE e tentar Agarrar como Ação Livre.' }),
+        efeitoEspecial: { tipo: 'agarrar_gama_apos_acerto', custoPE: 4, categoriaAcao: 'acaoLivre' },
+      },
+      {
+        ...habilidade('lingua-sombria', 'Língua Sombria', 'Uma vez por rodada, como Reação, puxe um aliado de tamanho Médio ou menor que esteja a até 6 m para um espaço adjacente ao Gama. O deslocamento é instantâneo e não provoca ataques de oportunidade.', 'reacao'),
+        alcanceM: 6,
+        statusAutomacao: 'executavel',
+        efeitoEspecial: { tipo: 'puxar_aliado_gama' },
+      },
+      habilidade('anfibio-sombrio', 'Anfíbio Sombrio', 'Ignora penalidades de terreno difícil ligadas à água ou lama, pode respirar debaixo d’água e recebe +2 em testes de manobra quando submerso ou em ambiente de Escuridão Total.'),
     ],
   },
   {
-    id: 'touro-perfurante', nome: 'Touro Perfurante', grau: 'segundo', custoPE: 6, hp: 85, defesa: 17, deslocamentoM: 16.5,
-    atributos: { forca: 24, destreza: 8, constituicao: 18, inteligencia: 6, sabedoria: 6, presenca: 6 },
-    pagina: 61, domadoInicialmente: false,
-    descricao: 'Investida Perfurante: ação complexa, 1,5 m, +9, 2d10+7 perfurante e +1d10 a cada 3 m percorridos em linha reta antes do ataque. O movimento confirmado no mapa registra o percurso retilíneo e o ataque consome o bônus no turno. Movimento usa Força; Grande.',
-    acoes: [ataque({ id: 'investida-perfurante', nome: 'Investida Perfurante', dano: '2d10+7', tipoDano: 'DP', alcanceM: 1.5, bonusAtaque: 2, statusAutomacao: 'executavel', descricaoRegra: 'Adiciona +1d10 por cada 3 m percorridos em linha reta no movimento confirmado neste turno; a marca é consumida na tentativa de Investida. Curvas não contam. A fonte não define teto de dados.' }), habilidade('movimento-alternativo', 'Movimento Alternativo (Força)', 'O deslocamento do perfil usa Força; o cálculo dinâmico ainda não está integrado.')],
-  },
-  {
-    id: 'mahoraga', nome: 'General Divino Mahoraga', grau: 'especial', custoPE: 18, hp: 200, defesa: 26, deslocamentoM: 9,
-    atributos: { forca: 24, destreza: 14, constituicao: 22, inteligencia: 8, sabedoria: 12, presenca: 8 },
-    pagina: 62, domadoInicialmente: false, bonusPVMaximo: 40,
-    descricao: 'Adaptação Defensiva: após receber um tipo de dano, ganha resistência após 1 rodada e imunidade após outra; duração e dano simultâneo não estão definidos. Adaptação Ofensiva acumula +5 contra um alvo após cada tentativa que erra, permanecendo após o primeiro acerto; sem teto. Burlar Defesas reduz níveis de resistência após acertos em intervalos de rodada; escopo de alvo/tipo não está definido. Robustez soma +40 PV máximos aos 200 PV do perfil (240 no total). Ações com dados e cura são executáveis; as três adaptações ainda precisam de estado de combate próprio.',
+    id: 'grande-serpente', nome: 'Orochi (Grande Serpente)', grau: 'quarto', custoPE: 3, hp: 26, defesa: 12, deslocamentoM: 9,
+    atributos: { forca: 14, destreza: 14, constituicao: 12, inteligencia: 6, sabedoria: 8, presenca: 6 },
+    pagina: 79, domadoInicialmente: false,
+    descricao: 'Ficha-base da Enciclopédia Maldita v1.1.1. Orochi é Grande e recebe +2 em testes de manobra em Escuridão Total. Emergir das Sombras permite escolher um espaço livre dentro do alcance de invocação; no turno em que surge, recebe vantagem contra alvos que ainda não agiram. Bote Sombrio causa 1d12+1d8 perfurante e pode gastar 4 PE para tentar Agarrar como Ação Livre; enquanto mantém o alvo agarrado, causa dano de Força (+2) automaticamente no início de cada turno do alvo.',
     acoes: [
-      ataque({ id: 'golpe-punho', nome: 'Golpe com Punho', dano: '4d12+7', tipoDano: 'DI', alcanceM: 3, bonusAtaque: 2 }),
-      ataque({ id: 'espada-energia-reversa', nome: 'Espada da Exterminação — Energia Reversa', dano: '4d12+7', tipoDano: 'DNR', alcanceM: 3, bonusAtaque: 2, descricaoRegra: 'Escolha esta versão quando a energia reversa for apropriada ao alvo. O critério da fonte não é formalizado.' }),
-      ataque({ id: 'espada-forca', nome: 'Espada da Exterminação — Força', dano: '4d12+7', tipoDano: 'DE', alcanceM: 3, bonusAtaque: 2, descricaoRegra: 'Versão de dano de força; o critério para escolher o tipo não é formalizado na fonte.' }),
-      cura({ id: 'regeneracao', nome: 'Regeneração', formula: '5d10+6', alcanceM: 0, somenteProprio: true, curaRealSemCusto: true }),
-      habilidade('adaptacao-defensiva', 'Adaptação Defensiva', 'Após receber um tipo de dano, resistência após 1 rodada e imunidade após outra. Duração, tipos simultâneos e marco exato permanecem sem definição.'),
-      habilidade('adaptacao-ofensiva', 'Adaptação Ofensiva', 'Cada tentativa que não acerta um alvo concede +5 cumulativo contra ele até o primeiro acerto; o bônus permanece depois. Sem teto ou definição de tentativa elegível.'),
-      habilidade('burlar-defesas', 'Burlar Defesas', 'Ao acertar alvo resistente, depois de 1 rodada ignora um nível de resistência e após outra ignora por completo. A ficha não define progressão por alvo/tipo nem reinício.'),
-      { ...habilidade('robustez', 'Robustez', 'A característica adiciona +40 PV máximos aos 200 PV-base (240 no total), já aplicados ao perfil.'), statusAutomacao: 'executavel' },
+      ataque({ id: 'bote-sombrio', nome: 'Bote Sombrio', dano: '1d12+1d8', tipoDano: 'DP', alcanceM: 1.5, bonusAtaque: 1, statusAutomacao: 'parcial', descricaoRegra: 'Ataque complexo. Ao acertar, pode gastar 4 PE e tentar Agarrar como Ação Livre. Enquanto mantém o alvo agarrado, causa dano automático no início dos turnos conforme a ficha; a disputa permanece manual.' }),
+      habilidade('emergir-das-sombras', 'Emergir das Sombras', 'Pode surgir em espaço livre dentro do alcance de invocação, mesmo em terreno difícil. No turno em que é invocado, recebe vantagem contra alvos que ainda não agiram.'),
+      habilidade('grande-serpente', 'Grande Serpente', 'Orochi conta como criatura de categoria Grande e recebe +2 em testes de manobra em ambientes de Escuridão Total.'),
     ],
   },
   {
-    id: 'tigre-funebre', nome: 'Tigre Fúnebre', grau: 'segundo', custoPE: 7, hp: 80, defesa: 19, deslocamentoM: 9,
-    atributos: { forca: 20, destreza: 14, constituicao: 16, inteligencia: 6, sabedoria: 6, presenca: 6 },
-    pagina: 67, domadoInicialmente: false, opcionalHomebrew: true,
-    descricao: 'HOMEbrew opcional: o próprio livro classifica este bloco como especulativo e não oficial, sem garantia de fidelidade à técnica original. Presas Fúnebres: 3 m, +7, 3d10+5 necrótico. Garras Rápidas: 3 m, +7, 3d10+5 cortante (mapeado para dano físico cortante do sistema). Arauto do Funeral impede recuperar metade dos PV perdidos pelo dano necrótico durante 1 rodada.',
+    id: 'fuga-do-coelho', nome: 'Fuga dos Coelhos', grau: 'terceiro', custoPE: 6, hp: 56, defesa: 13, deslocamentoM: 9,
+    atributos: { forca: 6, destreza: 20, constituicao: 12, inteligencia: 12, sabedoria: 6, presenca: 6 },
+    pagina: 81, domadoInicialmente: false,
+    descricao: 'Ficha-base da Enciclopédia Maldita v1.1.1. A Fuga é uma Horda de tamanho Médio com 56 PV, Defesa 13 e 9 m de deslocamento. A cada três rodadas completas, Horda Infindável acrescenta 1/5 dos PV-base (arredondado para baixo) aos PV atuais e máximos e aumenta uma categoria, até Colossal. Crescimento, pegada, terreno difícil, flanqueamento, cobertura da Fuga, Fragilizada por área, dispersão e ataques dos coelhos têm estado de combate integrado. A fonte não fixa a proporção de PV/porte removidos na dispersão nem a duração ou redução de movimento da Fuga; esses valores ficam para confirmação da mesa. A redução de ataques múltiplos ainda exige adjudicação do Mestre.',
     acoes: [
-      ataque({ id: 'presas-funebres', nome: 'Presas Fúnebres', dano: '3d10+5', tipoDano: 'DN', alcanceM: 3, bonusAtaque: 2 }),
-      ataque({ id: 'garras-rapidas', nome: 'Garras Rápidas', dano: '3d10+5', tipoDano: 'DCO', alcanceM: 3, bonusAtaque: 2 }),
-      habilidade('arauto-do-funeral', 'Arauto do Funeral', 'Uma criatura atingida pelo dano necrótico do Tigre não pode recuperar metade dos PV perdidos para esse ataque durante 1 rodada. Bloqueio de cura por origem requer integração própria.'),
+      { ...habilidade('fuga', 'Fuga', 'Ação Complexa, alcance 9 m, um alvo. Coelhos cobrem o alvo e atrapalham seus movimentos. Aliado recebe Cobertura Completa contra ataques de alvo único; contra ataques em área, alvo e Horda ficam Fragilizados. Duração não definida na fonte e acompanhada pela mesa.'), alcanceM: 9, categoriaAcao: 'acao_complexa', statusAutomacao: 'parcial' },
+      { ...habilidade('dispersao-tatica', 'Dispersão Tática', 'Como Ação Bônus, remova uma parte da Horda e manifeste até seis coelhos individuais em quadrados adjacentes. Cada um tem 1 PV, Defesa igual à da Horda e 9 m de deslocamento; pode correr até um alvo e atacar como invocação, causando 1 dano fixo que ignora RD comum. A fonte não fornece a proporção numérica de redução: o Mestre confirma os PV máximos e o porte restantes antes de resolver.' , 'acao_bonus'), statusAutomacao: 'parcial' },
+      habilidade('horda-infindavel', 'Horda Infindável', 'A cada 3 rodadas em cena, os PV atuais e máximos aumentam em 1/5 dos PV-base e o tamanho sobe uma categoria (Médio, Grande, Enorme, Colossal). A partir de Grande, inimigos podem atravessar ou parar nos espaços da Horda. Sua área conta como terreno difícil e inimigos nela ficam automaticamente Flanqueados. Recebe +1 nível de dano por categoria acima de Médio (máximo +3); danos de ataques múltiplos e auxiliares diminuem conforme o enxame cresce, exigindo um uso adicional para superar penalidades de ação por categoria acima de Médio. Requer estado de combate para automatizar.'),
+      habilidade('tesouro-escondido', 'Tesouro Escondido', 'A Horda compartilha um único Líder, cujo token é seu tesouro sagrado. O Líder não morre e retorna após Descanso Longo, exceto se for atingido por Acerto Crítico; se o Líder for atingido, a Horda é desfeita e exorcizada, qualquer que seja seu PV.'),
+    ],
+  },
+  {
+    id: 'elefante-maximo', nome: 'Elefante Máximo', grau: 'terceiro', custoPE: 6, hp: 75, defesa: 12, deslocamentoM: 9,
+    atributos: { forca: 15, destreza: 10, constituicao: 20, inteligencia: 6, sabedoria: 6, presenca: 6 },
+    pagina: 80, domadoInicialmente: false, bonusPVMaximo: 15,
+    descricao: 'Ficha-base da Enciclopédia Maldita v1.1.1: 75 PV-base, Defesa 12 e 9 m de caminhada. Robustez eleva os PV máximos em 15 (90 no total). Torrente de Água é uma linha de 6 m e exige TR de Fortitude; falha causa 1d8 de impacto. Massa Esmagadora permite pisotear como Ação Simples uma criatura sob seus pés: ela cai e sofre 4d12, mais 1d6 por cada 3 m de queda; em Expansão de Domínio, considere 6d12 de dano inicial.',
+    acoes: [
+      { id: 'torrente-agua', nome: 'Torrente de Água', tipo: 'ataque', tipoExecucao: 'manual', teste: 'resistencia', categoriaAcao: 'acao_complexa', resistenciaAlvo: 'Fortitude', atributoCD: 'constituicao', multiplicadorDanoAtributo: 0, dano: '1d8', tipoDano: 'DI', tipo_alvo: 'area', filtro_alvo: 'todos', area: { forma: 'linha', tamanho_m: 6 }, statusAutomacao: 'executavel', descricaoRegra: 'Libera um jato em linha reta de 6 m. Todas as criaturas na linha fazem TR de Fortitude; em falha, sofrem 1d8 de impacto. A origem e o sentido da linha são posicionados no mapa; a largura usa uma célula padrão da grade porque a fonte não a especifica.' },
+      {
+        ...habilidade('massa-esmagadora', 'Massa Esmagadora', 'Como Ação Simples, pode pisotear uma criatura menor que esteja sob seus pés. Se lançada no ar e cair sobre a criatura, ela sofre 4d12 de dano de impacto e mais 1d6 para cada 3 m de queda. Em Expansão de Domínio, considere 6d12 como dano inicial.', 'acao_simples'),
+        categoriaAcao: 'acao_simples',
+        statusAutomacao: 'executavel',
+      },
+      { ...habilidade('robustez', 'Robustez', 'Aumenta em 15 os PV máximos do Elefante Máximo (90 no total), já aplicados ao perfil.'), statusAutomacao: 'executavel' },
+      habilidade('grande', 'Grande', 'O Elefante Máximo conta como criatura de categoria Grande.'),
+    ],
+  },
+  {
+    id: 'cervo-circular', nome: 'Cervo Circular', grau: 'segundo', custoPE: 10, hp: 94, defesa: 16, deslocamentoM: 9,
+    atributos: { forca: 16, destreza: 10, constituicao: 14, inteligencia: 6, sabedoria: 16, presenca: 6 },
+    pagina: 83, domadoInicialmente: false,
+    descricao: 'Ficha-base da Enciclopédia Maldita v1.1.1: Grau 2, 10 PE, 94 PV, Defesa 16 e 9 m. Aura da Quietude concede +3 em TR contra condições mentais em raio de 6 m e recupera PV iguais ao atributo Sabedoria (16) no início dos turnos dos aliados. Toque da Vida remove condições Fracas/Médias com movimento ou Fortes/Extremas com Ação Complexa e 2 PE por nível. Bênção cura 3d12+3; contra Maldições, causa dano de Energia Reversa 1,5 vez maior. Neutralização dissipa técnicas amaldiçoadas ativas em 4,5 m; feiticeiros na área fazem TR de Vontade ou ficam sem a técnica inata por 1 rodada.',
+    acoes: [
+      habilidade('aura-da-quietude', 'Aura da Quietude', 'Aliados em raio de 6 m recebem +3 em TR contra condições mentais (Medo, Confusão, Atordoamento) e recuperam PV iguais ao atributo Sabedoria do Cervo (16) no início dos próprios turnos.'),
+      { ...habilidade('toque-da-vida', 'Toque da Vida', 'Ação de Movimento: remove uma condição Fraca ou Média de um aliado adjacente. Ação Complexa: remove uma condição Forte ou Extrema. Cada nível removido custa 2 PE.', 'movimento'), custoPE: 2, efeitoEspecial: { tipo: 'toque_da_vida_cervo' }, statusAutomacao: 'executavel' },
+      { id: 'pisotear', nome: 'Pisotear', tipo: 'ataque', tipoExecucao: 'manual', teste: 'resistencia', categoriaAcao: 'acao_complexa', resistenciaAlvo: 'Fortitude', atributoCD: 'constituicao', multiplicadorDanoAtributo: 0, dano: '1d10', formulaDanoAlvoUnico: '2d12', tipoDano: 'DI', tipo_alvo: 'area', filtro_alvo: 'todos_exceto_si', area: { forma: 'raio_em_si', tamanho_m: 4.5 }, statusAutomacao: 'executavel', descricaoRegra: 'Ação Complexa: todas as criaturas em área de até 4,5 m fazem TR de Fortitude; falha causa 1d10 de impacto. Se houver apenas uma criatura na área, ela sofre 1d12+1d12 de impacto.' },
+      { ...cura({ id: 'bencao', nome: 'Bênção', formula: '3d12+3', alcanceM: 1.5, custoPE: 2, alvos: 'unico', permiteInimigos: true, descricaoRegra: 'Ação Complexa de toque. Restaura 3d12+modificador de Sabedoria em PV; contra Maldições, causa dano de Energia Reversa igual a 1,5 vez esse valor.' }), statusAutomacao: 'executavel' },
+      { ...habilidade('neutralizacao', 'Neutralização', 'Ação Simples: energia positiva em raio de 4,5 m dissipa manifestações ativas de técnica inata (incluindo barreiras, clones e construtos registrados como dissipáveis). Feiticeiros na área fazem TR de Vontade contra a CD do Cervo; na falha, não podem usar sua técnica inata até o início do próximo turno.', 'acao_simples'), tipoExecucao: 'manual', teste: 'resistencia', resistenciaAlvo: 'Vontade', atributoCD: 'sabedoria', tipo_alvo: 'area', filtro_alvo: 'todos', area: { forma: 'raio_em_si', tamanho_m: 4.5 }, efeitoEspecial: { tipo: 'neutralizacao_cervo' }, statusAutomacao: 'executavel' },
+      habilidade('grande', 'Grande', 'O Cervo Circular conta como criatura de categoria Grande.'),
+    ],
+  },
+  {
+    id: 'touro-perfurante', nome: 'Touro Perfurante', grau: 'segundo', custoPE: 8, hp: 96, defesa: 16, deslocamentoM: 15,
+    atributos: { forca: 24, destreza: 8, constituicao: 16, inteligencia: 6, sabedoria: 6, presenca: 6 },
+    pagina: 84, domadoInicialmente: false,
+    descricao: 'Ficha-base da Enciclopédia Maldita v1.1.1: Grau 2, 8 PE, 96 PV, Defesa 16 e 15 m. Trajetória Fixa exige ao menos 3 m em linha reta antes de atacar; mudanças de direção acima de 45° custam ação de movimento e Ação Complexa. Investida Perfurante desloca o Touro como parte da Ação Complexa, causa 2d12+1d12 de impacto e adiciona +1d8 por cada 3 m percorridos; ao percorrer todo o deslocamento disponível nesta rodada, um acerto torna-se crítico automático (não natural). Inércia Imparável é Ação Simples, dobra o deslocamento para 30 m nesta rodada e ignora efeitos que reduzam velocidade ou impeçam movimento; a Investida usada nesta rodada aumenta em 2 níveis de dano.',
+    acoes: [
+      ataque({ id: 'investida-perfurante', nome: 'Investida Perfurante', dano: '2d12+1d12', tipoDano: 'DI', alcanceM: 1.5, bonusAtaque: 1, statusAutomacao: 'executavel', descricaoRegra: 'Ação Complexa: o deslocamento em linha reta faz parte do ataque. Requer ao menos 3 m de trajetória reta; adiciona +1d8 por cada 3 m percorridos. Ao percorrer todo o deslocamento disponível nesta rodada, um acerto torna-se crítico automático (não natural). Mudanças de direção acima de 45° exigem uma Ação de Movimento adicional, além desta Ação Complexa.' }),
+      habilidade('ruptura', 'Ruptura', 'Causa dano dobrado contra objetos e estruturas. Se destruir um objeto durante a carga, o Touro pode continuar o movimento sem perder o bônus de ímpeto.'),
+      habilidade('trajetoria-fixa', 'Trajetória Fixa', 'Só pode atacar depois de mover ao menos 3 m em linha reta naquela rodada. Pode mudar de direção em até 45°; acima disso, gasta ação de movimento e Ação Complexa.'),
+      { ...habilidade('inercia-imparavel', 'Inércia Imparável', 'Ação Simples: dobra o deslocamento do Touro para 30 m até o fim desta rodada e o torna imune a efeitos que reduzam sua velocidade ou impeçam movimento. A Investida Perfurante usada nesta rodada aumenta em 2 níveis de dano.', 'acao_simples'), statusAutomacao: 'executavel', somenteProprio: true },
+      habilidade('grande', 'Grande', 'O Touro Perfurante conta como criatura de categoria Grande.'),
+    ],
+  },
+  {
+    id: 'mahoraga', nome: 'General Divino Mahoraga', grau: 'especial', custoPE: 20, hp: 1000, defesa: 24, deslocamentoM: 15,
+    atributos: { forca: 30, destreza: 16, constituicao: 28, inteligencia: 6, sabedoria: 6, presenca: 6 },
+    pagina: 88, domadoInicialmente: false,
+    descricao: 'Ficha-base da Enciclopédia Maldita v1.1.1, pp. 88–92: Grau Especial, 20 PE, Grande, 1000 PV, Defesa 24, 15 m de caminhada, percepção às cegas em cone de 9 m e atributos FOR 30, DES 16, CON 28, INT/SAB/PRE 6. O Ciclo da Roda tem três estágios de vida (1000, 500 e 250 PV): para avançar, precisa chegar a 0 PV e receber 150 ou mais de dano excedente em um golpe, usando um fenômeno ainda não adaptado nesta cena; sem isso, a Roda restaura o estágio anterior. A Roda de Dharma adapta fenômenos em cinco giros, com um giro imediato no primeiro contato, outro a cada 5 rodadas e giro adicional quando o mesmo fenômeno o atinge novamente. A ficha inclui adaptação de combate, ambiente, condições e obstáculos; efeitos que dependem de fenômeno, alvo ou cenário ficam registrados para resolução específica da mesa quando não houver dado estruturado no sistema.',
+    acoes: [
+      ataque({ id: 'punho-do-exterminio', nome: 'Punho do Extermínio', dano: '3d12+1d8', tipoDano: 'DI', alcanceM: 3, bonusAtaque: 1, descricaoRegra: 'Ação Complexa. No momento do ataque, reduza um ou mais dados da fórmula (primeiro os d12 e depois o d8); se acertar, empurre o alvo 6 m por dado removido. O empurrão respeita paredes e ocupação do mapa.' }),
+      ataque({ id: 'espada-do-exterminio', nome: 'Espada do Extermínio', dano: '3d12+1d8', tipoDano: 'DCO', alcanceM: 3, bonusAtaque: 1, descricaoRegra: 'Ação Complexa. Contra uma Maldição, o dano deste golpe é Energia Reversa (DNR).' }),
+      { ...habilidade('regeneracao-adaptativa', 'Regeneração Adaptativa', 'Ação Complexa: recebe 2d12+2d12+1d8 PV temporários. General Imoral eleva a cura em 8 níveis de dano. Por 2 PE, converte o resultado em cura de PV; cada PE adicional (até o modificador de Constituição +8) eleva a cura/PVT em 2 níveis. Com metade dos PV ou menos, usa como Ação Livre uma vez por rodada. Um giro da Roda permite usá-la como Ação Simples; se já for Simples, torna-se Livre. 8 PE regenera Ferimento Complexo; se estiver com o membro, recolocá-lo custa 4 PE e Ação Simples. Ferimentos e membros ainda exigem registro do Mestre.', 'acao_complexa'), statusAutomacao: 'parcial' },
+      { ...habilidade('ataque-adaptativo', 'Ataque Adaptativo', 'Ação Simples: escolhe uma propriedade/elemento cuja adaptação a Roda completou em cinco giros e aplica ao próximo ataque. O tipo de dano é automatizado; alcançar frequência e ignorar uma defesa específica do alvo dependem da defesa/técnica registrada pela mesa.', 'acao_simples'), statusAutomacao: 'parcial' },
+      { ...habilidade('roda-de-dharma', 'Roda de Dharma', 'Passiva: o primeiro contato com dano, fenômeno, feitiço ou TR gira imediatamente; o mesmo fenômeno atingindo de novo gira mais uma vez; depois, gira automaticamente a cada 5 rodadas no início do turno de Mahoraga. 1) enxerga feitiços invisíveis/intangíveis; 2) recebe 12 RD irredutível; 3) recebe metade do dano por 1 hora; 4) recebe um quarto do dano e fica imune aos efeitos não danosos da fonte; 5) a fonte não pode reduzi-lo abaixo de 1 PV. A adaptação se agrupa por propriedade-base, não pelo nome de cada execução. Um giro também permite Regeneração Adaptativa como Ação Simples (ou Livre se já Simples).', 'acao_comum'), statusAutomacao: 'parcial' },
+      { ...habilidade('vontade-divina', 'Vontade Divina', 'Só após domesticação permanente: quando o dono fica inconsciente ou Morrendo, Mahoraga entra em Máquina por rodadas iguais ao maior modificador de Sabedoria/Presença do dono (mínimo 1). Prioriza a última ordem, eliminar a ameaça que feriu o dono e atacar inimigos que se aproximem a menos de 3 m do corpo; se a área for pacificada, retorna à sombra no último segundo. Ignora intimidação/controle mental que não venham do Mestre. O estado e a prioridade são registrados pela HUD; seleção de ameaça pode exigir decisão do Mestre.', 'acao_comum'), statusAutomacao: 'parcial' },
+    ],
+  },
+  {
+    id: 'tigre-funebre', nome: 'Tigre Fúnebre', grau: 'primeiro', custoPE: 11, hp: 140, defesa: 12, deslocamentoM: 9,
+    atributos: { forca: 20, destreza: 20, constituicao: 20, inteligencia: 6, sabedoria: 6, presenca: 6 },
+    pagina: 85, domadoInicialmente: false,
+    descricao: 'Ficha-base oficial da Enciclopédia Maldita v1.1.1: Grau 1, 11 PE, Grande, 140 PV, Defesa 12 e 9 m. Garras de Extermínio reduzem cumulativamente a Defesa do alvo em 1, até −4; a Defesa recupera +1 por rodada sem receber ataque corpo a corpo do Tigre. Reflexos Felinos dá uma reação adicional por rodada (duas no total) e permite usar Retalhar contra quem errar um ataque corpo a corpo contra ele. Retalhar causa 2d12+1d12 cortante. Predador Ápice permite dois Retalhares na rodada seguinte e ignora 8 RD, além de toda RD de criaturas de 2º Grau ou inferior.',
+    acoes: [
+      ataque({ id: 'retalhar', nome: 'Retalhar', dano: '2d12+1d12', tipoDano: 'DCO', alcanceM: 3, bonusAtaque: 1, statusAutomacao: 'executavel', descricaoRegra: 'Ação Complexa. Se for acerto crítico, o Controlador pode gastar 6 PE para forçar TR de Fortitude; na falha, o alvo recebe Sangramento Forte (4d10). Reflexos Felinos também permite Retalhar como reação contra uma criatura hostil que erre um ataque corpo a corpo contra o Tigre.' }),
+      habilidade('garras-de-exterminio', 'Garras de Extermínio', 'Sempre que o Tigre acerta uma criatura com um ataque corpo a corpo e causa dano, reduz a Defesa do alvo em 1, cumulativamente até −4. Para cada rodada consecutiva sem um novo ataque bem-sucedido contra esse alvo, ele recupera +1 Defesa no início do próprio turno, até voltar ao valor original.'),
+      habilidade('reflexos-felinos', 'Reflexos Felinos', 'Recebe uma Ação de Reação adicional por rodada (duas no total). Quando uma criatura hostil erra um ataque corpo a corpo contra o Tigre, ele pode gastar uma reação para usar Retalhar contra ela e quebrar sua postura.'),
+      { ...habilidade('predador-apice', 'Predador Ápice', 'Ação Simples: sintoniza os sentidos com a energia do alvo. Na próxima rodada, pode usar dois Retalhares em vez de um; os ataques ignoram 8 pontos de RD e toda RD de criaturas de 2º Grau ou inferior.', 'acao_simples'), statusAutomacao: 'executavel', somenteProprio: true },
+      habilidade('grande', 'Grande', 'O Tigre Fúnebre conta como criatura de categoria Grande.'),
     ],
   },
 ];
@@ -205,46 +264,16 @@ const perfis: ModeloFonteDezSombras[] = [
 export const DEZ_SOMBRAS_MODELOS: readonly ModeloFonteDezSombras[] = perfis;
 
 export const DEZ_SOMBRAS_FORMAS_DERIVADAS = [
-  { id: 'totalidade', nome: 'Totalidade', derivaDe: ['cao-branco', 'cao-preto'], pagina: 65, categoria: 'forma', descricao: 'Transformação do Cão sobrevivente somente após o outro sofrer exorcismo permanente (regra definida pelo usuário; 0 PV ou dissipação não ativam Totalidade). Não é uma décima identidade. Perfil publicado: 35 PV máximos, Defesa 22, deslocamento 12 m, mordida +8, 3d8+6 perfurante.' },
-  { id: 'abismo-desconhecido-do-poco', nome: 'O Abismo Desconhecido do Poço', derivaDe: ['nue', 'sapo'], pagina: 66, categoria: 'quimera', descricao: 'Quimera de Nue e Sapo que requer a especialização Quimera; grau 4º, 6 PE, 50 PV, Defesa 21, voo e movimento 10,5 m. Inclui Segurar, Fora de Risco, Alado e Grupo (3 sapos). A composição e a perda de membros precisam de regras próprias.' },
-  { id: 'agito', nome: 'Agito', derivaDe: ['nue', 'grande-serpente', 'tigre-funebre', 'cervo-circular'], pagina: 68, categoria: 'heranca', descricao: 'Forma descrita como oficial pelo RPG, mas inclui Tigre Fúnebre, cuja ficha é especulativa. Grau 2º, 7 PE, 120 PV, Defesa 27, movimento 18 m; Golpes Eletrificados +11, 5d10+6 chocante; Cura Concentrada 5d10+3; Regeneração Superior como reação. Fórmulas de composição e gatilhos têm limites editoriais.' },
+  { id: 'totalidade', nome: 'Cão Divino: Totalidade', derivaDe: ['cao-branco', 'cao-preto'], pagina: 69, grau: 'terceiro', categoria: 'quimera', descricao: 'A forma oficial resulta da quimera dos dois Cães Divinos domados e é de 3º Grau. A ficha lista a combinação, mas não publica atributos, PV, Defesa ou ações numéricas.' },
+  { id: 'abismo-desconhecido-do-poco', nome: 'O Abismo Desconhecido do Poço', derivaDe: ['sapo', 'nue'], pagina: 69, grau: 'terceiro', categoria: 'quimera', descricao: 'Quimera de Gama e Nue, de 3º Grau. A ficha de forma derivada e seus valores numéricos não são publicados na nova edição.' },
+  { id: 'nue-totalidade', nome: 'Nue: Totalidade', derivaDe: ['nue', 'grande-serpente'], pagina: 69, grau: 'segundo', categoria: 'quimera', descricao: 'Quimera de Nue e Orochi, de 2º Grau. A ficha de forma derivada e seus valores numéricos não são publicados na nova edição.' },
+  { id: 'agito', nome: 'Agito', derivaDe: ['nue', 'grande-serpente', 'cervo-circular', 'tigre-funebre'], pagina: 69, grau: 'especial', categoria: 'quimera', descricao: 'Quimera de Nue, Orochi, Cervo Circular e Tigre Fúnebre, de Grau Especial. A ficha de forma derivada e seus valores numéricos não são publicados na nova edição.' },
 ] as const;
 
 
-/** Transforma o perfil do C?o sobrevivente ap?s o exorcismo permanente do outro. */
-export function transformarCaoEmTotalidade(modelo: InvocacaoControlador): InvocacaoControlador | null {
-  if (
-    modelo.pacoteRegras !== 'dez-sombras' ||
-    !['dez-sombras:cao-branco', 'dez-sombras:cao-preto'].includes(modelo.subcategoria ?? '')
-  ) return null;
-
-  const forma = DEZ_SOMBRAS_FORMAS_DERIVADAS.find(item => item.id === 'totalidade');
-  return {
-    ...modelo,
-    nome: 'C\u00e3o Divino Totalidade',
-    subcategoria: 'dez-sombras:totalidade',
-    referenciaRegra: 'Enciclop\u00e9dia Amaldi\u00e7oada v0.9, Cap. 2, p. 65',
-    descricao: forma?.descricao ?? modelo.descricao,
-    historico: forma?.descricao ?? modelo.historico,
-    hpAtual: Number.isFinite(modelo.hpAtual) ? Math.min(Math.trunc(modelo.hpAtual), 35) : 0,
-    hpMaximo: 35,
-    defesa: 22,
-    deslocamentoM: 12,
-    acoes: modelo.acoes.map(acao => acao.id === 'mordida'
-      ? {
-          ...acao,
-          nome: 'Mordida (Totalidade)',
-          dano: '3d8+6',
-          tipoDano: 'DP',
-          alcanceM: 1.5,
-          bonusAtaque: 7,
-          statusAutomacao: 'executavel',
-          descricaoRegra: 'Perfil publicado: +8 no acerto no n\u00edvel 1 com maestria +2; 3d8+6 perfurante. A fonte também prevê +4 de Alcateia se outro shikigami estiver a at\u00e9 1,5 m do alvo e diz que “ele” recebe o bônus; o antecedente do pronome é ambíguo, então o Mestre define o benefici\u00e1rio e a aplica\u00e7\u00e3o.',
-        }
-      : acao.id === 'alcateia'
-        ? { ...acao, statusAutomacao: 'manual', descricaoRegra: 'A fonte prevê +4 se outro shikigami estiver a at\u00e9 1,5 m do alvo e diz que “ele” recebe o bônus; o antecedente do pronome é ambíguo, então o Mestre define o benefici\u00e1rio e a aplica\u00e7\u00e3o.' }
-        : { ...acao }),
-  };
+/** @deprecated Totalidade é uma quimera separada dos dois cães; não se transforma uma ficha isolada. */
+export function transformarCaoEmTotalidade(_modelo: InvocacaoControlador): InvocacaoControlador | null {
+  return null;
 }
 
 /** Mede uma trajetória inteiramente reta e em um só sentido; trajetórias curvas não geram bônus de investida. */
@@ -274,8 +303,23 @@ export function medirInvestidaRetaEmMetros(
 
 export function dadosAdicionaisInvestidaPerfurante(distanciaM: number): number {
   return Number.isFinite(distanciaM) && distanciaM > 0
-    ? Math.floor((distanciaM + 1e-6) / 3)
+    // O solver de colisão pode parar até 0,05 px antes do contato; em uma grade
+    // de 70 px por 1,5 m isso equivale a pouco mais de 1 mm.
+    ? Math.floor((distanciaM + 0.002) / 3)
     : 0;
+}
+
+export interface EstadoInerciaImparavelTouro {
+  combateId: string;
+  rodada: number;
+}
+
+export function inerciaImparavelTouroAtiva(
+  estado: EstadoInerciaImparavelTouro | undefined,
+  combate: { inCombat: boolean; combatId?: string | null; round?: number | null },
+): boolean {
+  return Boolean(estado && combate.inCombat && combate.combatId &&
+    estado.combateId === combate.combatId && estado.rodada === (combate.round ?? 1));
 }
 
 export const HABILIDADES_TECNICA_DEZ_SOMBRAS = [
@@ -291,7 +335,22 @@ export function criarPacoteDezSombras(donoCharacterId: string, incluirHomebrew =
     .filter(perfil => incluirHomebrew || !perfil.opcionalHomebrew)
     .map(perfil => {
       const id = `${donoCharacterId}-dez-sombras-${perfil.id}`;
-      const acoes = perfil.acoes.map(acao => ({ ...acao }));
+      const acoes = perfil.acoes.map(acao => ({
+        ...acao,
+        ...(perfil.id === 'grande-serpente' && acao.id === 'bote-sombrio' ? {
+          statusAutomacao: 'executavel' as const,
+          efeitoEspecial: {
+            tipo: 'agarrar_orochi_apos_acerto' as const,
+            custoPE: 4,
+            categoriaAcao: 'acaoLivre' as const,
+          },
+          descricaoRegra: 'Ação Complexa. Ao acertar, pode gastar 4 PE e tentar Agarrar como Ação Livre. Enquanto mantém o alvo agarrado, causa 2 de dano de Força automaticamente no início de cada turno do alvo.',
+        } : {}),
+        ...(perfil.id === 'fuga-do-coelho' && acao.id === 'horda-infindavel' ? {
+          statusAutomacao: 'parcial' as const,
+          descricaoRegra: 'Passiva: no início da rodada, após cada três rodadas completas da cena, acrescenta 1/5 dos PV-base (arredondado para baixo) aos PV atuais e máximos e cresce uma categoria até Colossal. O app automatiza crescimento e porte; terreno, flanqueamento e interações de dano da Horda ainda são resolvidos manualmente.',
+        } : {}),
+      }));
       const custosComandosConfigurados: NonNullable<InvocacaoControlador['custosComandosConfigurados']> = {};
       for (const acao of acoes) {
         if ((acao.custoPE ?? 0) <= 0) continue;
@@ -307,18 +366,20 @@ export function criarPacoteDezSombras(donoCharacterId: string, incluirHomebrew =
         tipo: 'shikigami' as const,
         subcategoria: `dez-sombras:${perfil.id}`,
         pacoteRegras: 'dez-sombras' as const,
-        referenciaRegra: `Enciclopédia Amaldiçoada v0.9, Cap. 2, p. ${perfil.pagina}`,
+        referenciaRegra: `${FONTE_ENCICLOPEDIA_MALDITA}, Cap. 2, p. ${perfil.pagina}`,
         opcionalHomebrew: perfil.opcionalHomebrew ?? false,
-        origemAquisicao: `Feiticeiros e Maldições — ${`Enciclopédia Amaldiçoada v0.9, Cap. 2, p. ${perfil.pagina}`}`,
+        origemAquisicao: `Feiticeiros e Maldições — ${FONTE_ENCICLOPEDIA_MALDITA}, Cap. 2, p. ${perfil.pagina}`,
         historico: perfil.descricao,
         descricao: perfil.descricao,
         hpAtual: perfil.hp + (perfil.bonusPVMaximo ?? 0),
         hpMaximo: perfil.hp + (perfil.bonusPVMaximo ?? 0),
         defesa: perfil.defesa,
         deslocamentoM: perfil.deslocamentoM,
+        ...(perfil.id === 'fuga-do-coelho' ? { formaToken: 'RECT' as const } : {}),
         porte: (['grande-serpente', 'elefante-maximo', 'cervo-circular', 'touro-perfurante', 'mahoraga', 'tigre-funebre'] as IdDezSombras[]).includes(perfil.id) ? 'Grande' : 'Médio',
         grau: perfil.grau,
         atributos: { ...perfil.atributos },
+        ataqueTreinado: perfil.ataqueTreinado ?? { tipo: 'corpo_a_corpo', atributo: 'forca' },
         custoInvocacaoPE: perfil.custoPE,
         domado: perfil.domadoInicialmente,
         aprovacaoMestre: 'aprovada' as const,
@@ -326,12 +387,42 @@ export function criarPacoteDezSombras(donoCharacterId: string, incluirHomebrew =
         versaoAprovada: 1,
         atributoBasePericias: 'sabedoria' as const,
         possuiEnergiaReversa: perfil.id === 'cervo-circular',
-        economiaAcoesConfigurada: { acaoComum: 1, acaoBonus: 1, acaoMovimento: 1, reacao: 1 },
+        economiaAcoesConfigurada: {
+          acaoComum: 1, acaoBonus: 1, acaoMovimento: 1, reacao: 1,
+          ...(perfil.id === 'touro-perfurante' ? { acaoSimples: 1, acaoComplexa: 1 } : {}),
+          ...(perfil.id === 'tigre-funebre' ? {
+            acaoSimples: 1,
+            acaoComplexa: 1,
+            reacao: 2,
+            resetPorCategoria: {
+              acaoComum: 'inicio_turno_dono' as const,
+              acaoSimples: 'inicio_turno_dono' as const,
+              acaoComplexa: 'inicio_turno_dono' as const,
+              acaoMovimento: 'inicio_turno_dono' as const,
+              acaoBonus: 'inicio_turno_dono' as const,
+              reacao: 'inicio_turno_dono' as const,
+            },
+          } : {}),
+          ...(perfil.id === 'mahoraga' ? {
+            acaoSimples: 1,
+            acaoComplexa: 1,
+            acaoLivre: 1,
+            resetPorCategoria: {
+              acaoComum: 'inicio_turno_dono' as const,
+              acaoSimples: 'inicio_turno_dono' as const,
+              acaoComplexa: 'inicio_turno_dono' as const,
+              acaoMovimento: 'inicio_turno_dono' as const,
+              acaoBonus: 'inicio_turno_dono' as const,
+              acaoLivre: 'inicio_turno_dono' as const,
+              reacao: 'inicio_turno_dono' as const,
+            },
+          } : {}),
+        },
         ...(Object.keys(custosComandosConfigurados).length ? { custosComandosConfigurados } : {}),
         intermediario: { tipo: 'tecnica' as const, tecnicaId: 'Dez Sombras' },
         acoes,
         caracteristicas: [
-          { tipo: 'fonte', texto: `Enciclopédia Amaldiçoada v0.9, Cap. 2, p. ${perfil.pagina}` },
+          { tipo: 'fonte', texto: `${FONTE_ENCICLOPEDIA_MALDITA}, Cap. 2, p. ${perfil.pagina}` },
           ...(perfil.caracteristicas ?? []),
           ...(perfil.opcionalHomebrew ? [{ tipo: 'homebrew', texto: 'Perfil especulativo e opcional; não oficial segundo o próprio livro.' }] : []),
         ],

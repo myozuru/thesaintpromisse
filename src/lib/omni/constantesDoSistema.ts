@@ -183,6 +183,7 @@ export const DICIONARIO_CONDICOES = [
   'agarrado',
   'enfeiticado',
   'inconsciente',
+  'tecnica-inata-suprimida',
   'morto',
   'sangrando',
   'envenenado',

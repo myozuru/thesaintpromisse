@@ -4,9 +4,11 @@
 **Branch e snapshot:** main — [8257ebc30787df29f762fe6ac5084e77963a273b](https://github.com/myozuru/thesaintpromisse/commit/8257ebc30787df29f762fe6ac5084e77963a273b)  
 **Escopo:** inventário de leitura. Este relatório não altera comportamento do sistema.
 
+> **Registro histórico:** este inventário documenta o snapshot e a fonte consultada em 2026-10-09. Em 2026-11-13, a Enciclopédia Maldita (F&M 2.5.2), v1.1.1, passou a ser a fonte normativa; use [o registro canônico atual](../fonte-canonica-enciclopedia.md) para novas decisões de regra. As afirmações abaixo sobre o TXT descrevem apenas a auditoria original.
+
 ## Fontes e prioridade
 
-1. O livro original em `docs/regras/invocacoes_texto_original_2026-10-08.txt` é a referência-base e permanece imutável.
+1. Na data desta auditoria, `docs/regras/invocacoes_texto_original_2026-10-08.txt` era a referência-base e permanecia imutável; hoje é apenas um registro histórico.
 2. `docs/regras/controlador_especificacao_complementar.md` registra as exceções e decisões aprovadas pelo usuário; quando diverge do código existente, indica trabalho pendente.
 3. A branch `main` foi inspecionada para registrar o estado real, não para validar as regras.
 

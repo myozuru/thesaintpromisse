@@ -103,6 +103,8 @@ export interface HordaCalculada {
   liderId: string;
   membrosIds: string[];
   quantidadeMembros: number;
+  /** Vagas de invocação ocupadas: líder mais cada integrante da composição. */
+  vagasInvocacao: number;
   pvAtual: number;
   pvMaximo: number;
   custoInvocacaoPE: number;
@@ -118,6 +120,14 @@ export interface HordaCalculada {
       atravessamento: { inimigosPodemOcupar: true; terrenoDificil: true; flanqueado: true };
     };
   };
+}
+
+/** Cada modelo que compõe uma Horda ocupa uma vaga de invocação, mesmo sob um token compartilhado. */
+export function vagasInvocacaoEmCampo(token: {
+  invocationHordeId?: string;
+  invocationHordeMemberIds?: readonly string[];
+}): number {
+  return token.invocationHordeId ? 1 + (token.invocationHordeMemberIds?.length ?? 0) : 1;
 }
 
 export type TipoAlvoDanoHorda = "unico" | "area";
@@ -186,14 +196,20 @@ export interface ValidarLimiteHordaInput {
   hordasAtivas: number;
   /** Invocações individuais que continuam em campo após converter os membros. */
   invocacoesIndividuaisAposCriacao: number;
+  /** Vagas ocupadas por todas as Hordas que já estão em campo. */
+  vagasOcupadasPorHordas?: number;
+  /** Vagas reservadas pela nova Horda; legado assume uma vaga. */
+  vagasNovaHorda?: number;
 }
 
 export function validarLimiteHorda(
   input: ValidarLimiteHordaInput,
 ): { ok: true } | { ok: false; codigo: string; motivo: string } {
   const { limiteInvocacoesEmCampo, hordasAtivas, invocacoesIndividuaisAposCriacao } = input;
-  if (![limiteInvocacoesEmCampo, hordasAtivas, invocacoesIndividuaisAposCriacao].every(Number.isInteger)
-      || limiteInvocacoesEmCampo < 0 || hordasAtivas < 0 || invocacoesIndividuaisAposCriacao < 0) {
+  const vagasOcupadasPorHordas = input.vagasOcupadasPorHordas ?? hordasAtivas;
+  const vagasNovaHorda = input.vagasNovaHorda ?? 1;
+  if (![limiteInvocacoesEmCampo, hordasAtivas, invocacoesIndividuaisAposCriacao, vagasOcupadasPorHordas, vagasNovaHorda].every(Number.isInteger)
+      || limiteInvocacoesEmCampo < 0 || hordasAtivas < 0 || invocacoesIndividuaisAposCriacao < 0 || vagasOcupadasPorHordas < 0 || vagasNovaHorda < 1) {
     return { ok: false, codigo: "limite_invalido", motivo: "Os limites e as quantidades precisam ser inteiros não negativos." };
   }
 
@@ -201,8 +217,8 @@ export function validarLimiteHorda(
   if (hordasAtivas >= limiteHordas) {
     return { ok: false, codigo: "limite_hordas", motivo: `O limite atual permite ${limiteHordas} Horda(s) em campo.` };
   }
-  if (invocacoesIndividuaisAposCriacao + hordasAtivas + 1 > limiteInvocacoesEmCampo) {
-    return { ok: false, codigo: "limite_invocacoes_em_campo", motivo: "A Horda ocuparia uma vaga além do limite de invocações em campo." };
+  if (invocacoesIndividuaisAposCriacao + vagasOcupadasPorHordas + vagasNovaHorda > limiteInvocacoesEmCampo) {
+    return { ok: false, codigo: "limite_invocacoes_em_campo", motivo: "A composição da Horda ultrapassa o limite de vagas de invocação em campo." };
   }
   return { ok: true };
 }
@@ -254,6 +270,7 @@ export function calcularHorda(input: CalcularHordaInput): ResultadoCalculoHorda 
       liderId: lider.id,
       membrosIds: membros.map(membro => membro.id),
       quantidadeMembros: membros.length,
+      vagasInvocacao: membros.length + 1,
       pvAtual,
       pvMaximo,
       custoInvocacaoPE,

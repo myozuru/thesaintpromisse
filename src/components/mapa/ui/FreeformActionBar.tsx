@@ -11,11 +11,13 @@ import { shownHpMax } from '@/lib/peDisplay';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Swords, Heart, X, Dice6, Crosshair, Plus, Minus } from 'lucide-react';
 import { useCharacterStore } from '@/stores/useCharacterStore';
+import { useCombatStore } from '@/stores/useCombatStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { useTestRequestStore } from '@/stores/useTestRequestStore';
 import { rollD20Com, rollDiceGroups } from '@/lib/dice';
 import { computeTotalDefense } from '@/lib/defenseCalc';
+import { penalidadeGarrasTigre } from '@/lib/controlador/dezSombrasTigre';
 import { DAMAGE_TYPES, DAMAGE_TYPE_LABELS, createEmptyRdByType } from '@/types';
 import type { Character, DamageType } from '@/types';
 import { cn } from '@/lib/utils';
@@ -264,7 +266,11 @@ export function FreeformAttackForm({
     try {
       const nat = await rollD20Com(character.id, attackBonus || undefined);
       const total = nat + attackBonus;
-      const def = computeTotalDefense(target);
+      const def = Math.max(0, computeTotalDefense(target) - penalidadeGarrasTigre(
+        useCharacterStore.getState().characters,
+        target.id,
+        useCombatStore.getState().combatId ?? undefined,
+      ));
       const hit = nat !== 1 && (nat === 20 || total >= def);
       setAttack({ nat, total, hit });
       setDmgResult(null);

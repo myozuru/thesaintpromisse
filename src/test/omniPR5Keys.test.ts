@@ -77,6 +77,44 @@ describe('PR-5 — Cena Tática', () => {
     expect(resolver(hero, 'na_linha_de_frente')).toBe(1);
   });
 
+  it('conta shikigami ativo do lado inimigo para flanqueamento e proximidade', () => {
+    addEnt('t-hero', 0, 0, 'hero-pr5');
+    addEnt('t-e1', 1, 0, 'enemy1');
+    useMapStore.setState((state) => ({
+      entities: {
+        ...state.entities,
+        't-summon': {
+          id: 't-summon', shape: 'RECT', x: 0, y: 1, w: 1, h: 1, rotation: 0,
+          color: '#fff', locked: false, layer: 'tokens', ownerCharId: 'enemy2',
+          invocationId: 'summon-enemy', invocationInstanceId: 'summon-instance',
+          invocationState: 'ativa', hp: 8, hpMax: 8,
+        },
+      },
+    }));
+
+    expect(resolver(hero, 'qtd_inimigos_adjacentes')).toBe(2);
+    expect(resolver(hero, 'flanqueado')).toBe(1);
+  });
+
+  it('ignora shikigami derrotado no cálculo tático', () => {
+    addEnt('t-hero', 0, 0, 'hero-pr5');
+    addEnt('t-e1', 1, 0, 'enemy1');
+    useMapStore.setState((state) => ({
+      entities: {
+        ...state.entities,
+        't-summon': {
+          id: 't-summon', shape: 'RECT', x: 0, y: 1, w: 1, h: 1, rotation: 0,
+          color: '#fff', locked: false, layer: 'tokens', ownerCharId: 'enemy2',
+          invocationId: 'summon-enemy', invocationInstanceId: 'summon-instance',
+          invocationState: 'derrotada', hp: 0, hpMax: 8,
+        },
+      },
+    }));
+
+    expect(resolver(hero, 'qtd_inimigos_adjacentes')).toBe(1);
+    expect(resolver(hero, 'flanqueado')).toBe(0);
+  });
+
   it('contadores de cena agregam tokens', () => {
     addEnt('t-hero', 0, 0, 'hero-pr5');
     addEnt('t-ally', 2, 2, 'ally');

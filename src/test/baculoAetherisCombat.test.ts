@@ -16,6 +16,7 @@ import {
   resolverTRBaculoAetheris,
 } from '@/lib/baculoAetherisCombat';
 import { getReactionsAvailable } from '@/lib/reactionBudget';
+import { aguardarEventosOmniPendentes } from '@/lib/omni/notificarEvento';
 import { ofertasReacaoAtiva } from '@/lib/omni/reacoesAtivas';
 import { PacoteOmniSchema } from '@/lib/omni/validacao';
 import type { EntidadeOmni } from '@/lib/omni/tipos';
@@ -63,7 +64,8 @@ beforeEach(() => {
   vi.spyOn(dice, 'rollDiceCom').mockImplementation(async (_id, formula) => { rollCalls.push(formula); return { total: 40 } as never; });
 });
 
-afterEach(() => {
+afterEach(async () => {
+  await aguardarEventosOmniPendentes();
   vi.restoreAllMocks();
   useCharacterStore.setState({ applyDamage: restoreApplyDamage, characters: [] } as never);
   useMapStore.setState({ entities: {}, walls: [] } as never);

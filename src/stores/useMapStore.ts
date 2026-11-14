@@ -143,17 +143,31 @@ export interface Entity {
   invocationHordeSizeIncreases?: number;
   invocationEffectiveSize?: string;
   invocationEffectiveSizeCategory?: number;
+  /** IDs de condições aplicadas à instância para HUD e regras de combate. */
+  invocationConditionIds?: string[];
   /** Pontos de Vida Temporários do token de invocação, absorvidos antes de PV. */
   invocationTempHp?: number;
   /** Defesa e deslocamento próprios do servo (sem criar turno separado). */
   invocationDefense?: number;
   invocationMovementM?: number;
+  /** Coelho subordinado materializado pela Dispersão Tática da Fuga. */
+  invocationSubordinate?: {
+    kind: 'fuga-coelho';
+    parentTokenId: string;
+    dispersionEventId: string;
+    index: number;
+    attackUsed?: { combatId?: string; round: number; requestId?: string };
+  };
+  /** Nue: modo escolhido para a próxima ação de movimento. Ausente em fichas legadas = voo. */
+  invocationMovementMode?: 'voo' | 'caminhada';
   /** ID da ficha (Character) vinculada a esta imagem/token. */
   characterId?: string;
   /** Configuração de efeito persistente aplicada quando personagens entram ou terminam o turno na zona. */
   terrainZone?: ZonaTerreno;
   /** Natural terrain ignores the Aetheris passive; magical terrain remains difficult. */
   difficultTerrain?: 'natural' | 'magical';
+  /** Material for abilities that interact with specific difficult terrain kinds. */
+  difficultTerrainKind?: 'water' | 'mud' | 'other';
   /** Token elevation above ground, in meters. */
   altitudeM?: number;
   /** Optional label for current elevation, such as the Aetheris suspended condition. */
@@ -161,7 +175,7 @@ export interface Entity {
   /** ID de um Baú (useChestStore) vinculado a este token — transforma o token em um baú interativo. */
   chestId?: string;
   /** ID de outra Entity que está carregando este token (ex.: corpo desmaiado/morto). */
-  carriedBy?: string;
+  carriedBy?: string | null;
 }
 
 
@@ -417,6 +431,8 @@ interface MapState {
     charId: string;
     /** Instância invocada move por ação própria, sem ficha de personagem vinculada. */
     invocationInstanceId?: string;
+    /** Modo de deslocamento congelado ao iniciar a prévia de movimento do Nue. */
+    invocationMovementMode?: 'voo' | 'caminhada';
     movementRequestId?: string;
     startX: number;
     startY: number;

@@ -94,6 +94,10 @@ function writeMods(charId: string, mods: Record<string, AdvModifier>): void {
 }
 
 // ─── API pública ───────────────────────────────────────────────────────
+function normalizarChaveContextual(valor: string | undefined): string {
+  return (valor ?? '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
+}
+
 export function grantAdvantage(
   charId: string,
   kind: AdvKind,
@@ -108,7 +112,7 @@ export function grantAdvantage(
   const id = `${kind}-${scope}-${opts.target ?? 'any'}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
   mods[id] = {
     id, kind, scope,
-    target: opts.target?.toLowerCase(),
+    target: opts.target === undefined ? undefined : normalizarChaveContextual(opts.target),
     expires: opts.expires ?? defExp,
     source: opts.source,
     grantedBy: opts.grantedBy,
@@ -134,6 +138,17 @@ export function expireGrantedBy(grantorId: string): void {
 
 export function clearAllAdvantage(charId: string): void {
   writeMods(charId, {});
+}
+
+/** Remove um modificador específico quando a ação que o concedia não conseguiu completar. */
+export function revokeAdvantage(charId: string, modifierId: string): void {
+  if (!modifierId) return;
+  const c = useCharacterStore.getState().characters.find(x => x.id === charId);
+  if (!c) return;
+  const mods = { ...readMods(c) };
+  if (!mods[modifierId]) return;
+  delete mods[modifierId];
+  writeMods(charId, mods);
 }
 
 /** Limpa todos os modificadores cujo escopo expira no fim do turno. */
@@ -179,15 +194,15 @@ function matchesScope(m: AdvModifier, ctx: RollContext): boolean {
     case 'attack_ranged': return ctx.kind === 'attack' && ctx.subtype === 'ranged';
     case 'attack_cursed': return ctx.kind === 'attack' && ctx.subtype === 'cursed';
     case 'save_specific':
-      return ctx.kind === 'save' && (m.target ?? '') === ctx.name.toLowerCase();
+      return ctx.kind === 'save' && normalizarChaveContextual(m.target) === normalizarChaveContextual(ctx.name);
     case 'skill_specific':
-      return ctx.kind === 'skill' && (m.target ?? '') === ctx.name.toLowerCase();
+      return ctx.kind === 'skill' && normalizarChaveContextual(m.target) === normalizarChaveContextual(ctx.name);
     case 'attribute_specific':
-      return ctx.kind === 'attribute' && (m.target ?? '') === ctx.name.toLowerCase();
+      return ctx.kind === 'attribute' && normalizarChaveContextual(m.target) === normalizarChaveContextual(ctx.name);
     case 'attack_weapon_group':
-      return ctx.kind === 'attack' && (m.target ?? '') === (ctx.weaponGroup ?? '').toLowerCase();
+      return ctx.kind === 'attack' && normalizarChaveContextual(m.target) === normalizarChaveContextual(ctx.weaponGroup);
     case 'attack_weapon_name':
-      return ctx.kind === 'attack' && (m.target ?? '') === (ctx.weaponName ?? '').toLowerCase();
+      return ctx.kind === 'attack' && normalizarChaveContextual(m.target) === normalizarChaveContextual(ctx.weaponName);
   }
 }
 

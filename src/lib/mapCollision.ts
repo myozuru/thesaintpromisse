@@ -92,6 +92,41 @@ export const tokenFootprintSegments = (token: MapCollisionToken, dx: number, dy:
   return corners.map((p, i) => [p, corners[(i + 1) % corners.length]]);
 };
 
+/** Detecta a sobreposição de duas formas convexas; contato de bordas continua permitido. */
+export const tokenFootprintsOverlap = (
+  a: MapCollisionToken,
+  b: MapCollisionToken,
+  aDx = 0,
+  aDy = 0,
+  bDx = 0,
+  bDy = 0,
+): boolean => {
+  const segmentosA = tokenFootprintSegments(a, aDx, aDy);
+  const segmentosB = tokenFootprintSegments(b, bDx, bDy);
+  const pontosA = segmentosA.map(([p]) => p);
+  const pontosB = segmentosB.map(([p]) => p);
+
+  for (const segmentos of [segmentosA, segmentosB]) {
+    for (const [p, q] of segmentos) {
+      const eixoX = -(q.y - p.y);
+      const eixoY = q.x - p.x;
+      const comprimento = Math.hypot(eixoX, eixoY);
+      if (comprimento < 1e-9) continue;
+      const projetar = (pontos: MapCollisionPoint[]) => pontos.map(
+        ponto => (ponto.x * eixoX + ponto.y * eixoY) / comprimento,
+      );
+      const projecoesA = projetar(pontosA);
+      const projecoesB = projetar(pontosB);
+      if (
+        Math.max(...projecoesA) <= Math.min(...projecoesB) + COLLISION_TOUCH_EPS ||
+        Math.max(...projecoesB) <= Math.min(...projecoesA) + COLLISION_TOUCH_EPS
+      ) return false;
+    }
+  }
+
+  return true;
+};
+
 const pointInsideTokenFootprint = (
   p: MapCollisionPoint,
   token: MapCollisionToken,

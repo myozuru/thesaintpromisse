@@ -8,8 +8,80 @@ import { buildSegments as buildFogSegments } from '@/lib/fog/visibility';
 import { prepareCollisionCache, resolveCollisionMove, tokenFootprintSegments, type MapCollisionSegment } from '@/lib/mapCollision';
 import { rollDiceGroups } from '@/lib/dice';
 import { parseFormulaDanoInvocacao } from './rolagens';
-import { causarDanoInvocacao } from './mapa';
+import { causarDanoInvocacao, registrarFenomenoRodaMahoraga } from './mapa';
 import { resolverTokenDaFicha } from '@/lib/mapa/tokenDaFicha';
+import { InstanciaInvocacaoSchema } from '@/lib/invocacoes/schema';
+import { TIGRE_SANGRAMENTO_FORMULA } from './dezSombrasTigre';
+
+/** Aplica a condição única do Retalhar somente após uma falha confirmada em Fortitude. */
+export function resolverSangramentoForteTigre(request: TestRequest): { passou: boolean; aplicado: boolean } {
+  const resolution = request.tigreSangramentoResolution;
+  const result = request.result;
+  if (!resolution || !result || request.dc === undefined) {
+    throw new Error('O pedido não contém resultado de Fortitude para Sangramento Forte.');
+  }
+  const passou = result.forced
+    ? result.forced.kind === 'success'
+    : result.d20 !== 1 && result.total >= request.dc;
+  if (passou) {
+    useLogStore.getState().addLog('combat', `🐅 ${resolution.sourceName}: ${request.charName} passou em Fortitude contra CD ${request.dc}; não recebe Sangramento Forte.`);
+    return { passou: true, aplicado: false };
+  }
+
+  const targetInvocation = resolution.targetInvocation ?? request.targetInvocation;
+  const condicao = {
+    id: `tigre-sangramento:${request.id}`,
+    conditionId: resolution.conditionId,
+    name: resolution.conditionName,
+    icon: resolution.conditionIcon,
+    remainingTurns: -1,
+    remainingRounds: -1,
+    durationMode: 'ate_passar_tr' as const,
+    endTrType: 'Fortitude',
+    endCD: resolution.endCD,
+    endTrTiming: 'turn_end' as const,
+    tickDamageFormula: TIGRE_SANGRAMENTO_FORMULA,
+    lastDamageTickTurnKey: undefined,
+    lastEndTrOfferTurnKey: undefined,
+    sourceCharId: resolution.sourceCharId,
+    sourceCharName: resolution.sourceCharName,
+    sourceEntityId: 'tigre-funebre',
+    sourceInstanceId: resolution.sourceInstanceId,
+  };
+  if (targetInvocation) {
+    const token = useMapStore.getState().entities[targetInvocation.tokenId];
+    const owner = useCharacterStore.getState().characters.find(character => character.id === targetInvocation.ownerCharacterId);
+    const instance = owner?.instanciasInvocacao?.find(item => item.id === targetInvocation.invocationInstanceId);
+    if (!token || token.invocationInstanceId !== targetInvocation.invocationInstanceId || !owner || !instance || instance.estado !== 'ativa') {
+      useLogStore.getState().addLog('combat', `🐅 ${resolution.sourceName}: a invocação-alvo saiu do combate antes de receber Sangramento Forte.`);
+      return { passou: false, aplicado: false };
+    }
+    const conditions = instance.condicoes ?? [];
+    if (conditions.some(item => item && typeof item === 'object' && (item as { id?: unknown }).id === condicao.id)) {
+      return { passou: false, aplicado: true };
+    }
+    const updated = InstanciaInvocacaoSchema.parse({
+      ...instance,
+      version: instance.version + 1,
+      condicoes: [...conditions, condicao],
+    });
+    useCharacterStore.getState().updateCharacter(owner.id, {
+      instanciasInvocacao: (owner.instanciasInvocacao ?? []).map(item => item.id === instance.id ? updated : item),
+    });
+    useMapStore.getState().updateEntity(token.id, {
+      invocationConditionIds: [...new Set([...(token.invocationConditionIds ?? []), resolution.conditionId])],
+    });
+  } else {
+    const alvo = useCharacterStore.getState().characters.find(character => character.id === request.charId);
+    if (!alvo) {
+      useLogStore.getState().addLog('combat', `🐅 ${resolution.sourceName}: a ficha-alvo saiu do combate antes de receber Sangramento Forte.`);
+      return { passou: false, aplicado: false };
+    }
+    useCharacterStore.getState().addCondition(alvo.id, condicao as never);
+  }
+  useLogStore.getState().addLog('combat', `🐅 ${resolution.sourceName}: ${request.charName} falhou em Fortitude contra CD ${request.dc} e recebe Sangramento Forte (4d10 no início do turno; Fortitude no fim do turno encerra).`);
+  return { passou: false, aplicado: true };
+}
 
 /** Resolve o dano de uma ação de Shikigami depois que o alvo conclui o TR. */
 export async function resolverDanoAposTRInvocacao(request: TestRequest): Promise<{
@@ -24,6 +96,15 @@ export async function resolverDanoAposTRInvocacao(request: TestRequest): Promise
   const passou = result.forced
     ? result.forced.kind === 'success'
     : result.d20 !== 1 && result.total >= request.dc;
+  const eventoId = request.sourceTag ?? request.id;
+  const fenomenoId = `${resolution.invocationId}:${resolution.actionId}`;
+  if (resolution.targetInvocation) {
+    registrarFenomenoRodaMahoraga(
+      resolution.targetInvocation.ownerCharacterId,
+      resolution.targetInvocation.invocationId,
+      { id: fenomenoId, nome: resolution.sourceName, eventoId, tipoDano: resolution.damageType },
+    );
+  }
   let dano = 0;
 
   if (!passou || resolution.damageOnSuccess === 'metade') {
@@ -40,7 +121,12 @@ export async function resolverDanoAposTRInvocacao(request: TestRequest): Promise
           dano,
           resolution.damageType,
           resolution.targetInvocation.invocationInstanceId,
-          { tipoAlvo: resolution.targetInvocation.tipoAlvo ?? 'unico' },
+          {
+            tipoAlvo: resolution.targetInvocation.tipoAlvo ?? 'unico',
+            eventoId,
+            fenomenoId,
+            fenomenoNome: resolution.sourceName,
+          },
         );
         if (!aplicado.ok) throw new Error(aplicado.motivo);
       } else {

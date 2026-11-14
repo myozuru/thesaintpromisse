@@ -24,6 +24,7 @@ import { holdLocalMapSync } from '../mapSyncGuards';
 import { combatMoveBudget } from '@/lib/movementBudget';
 import { isFreeformFor } from '@/lib/freeformMode';
 import { confirmarMovimentoInvocacao } from '@/lib/controlador/mapa';
+import { deslocamentoInvocacaoM } from '@/lib/controlador/dezSombrasMovimento';
 import { toast } from '@/hooks/use-toast';
 import { hasLancaReactionSuppression } from '@/lib/conditionEffects';
 import { routePrefixByDistance } from '@/lib/mapa/terrenoDificil';
@@ -60,7 +61,7 @@ export function PendingMoveOverlay() {
   const equipped = Object.values(inventoryItems).filter((item) => item.ownerId === pending.charId && item.isEquipped && item.equippedSlot);
   const bonusDeslocamento = character ? selectOmniModifiers(character, equipped, omniEntidades).deslocamento : 0;
   const total = isInvocationMove
-    ? Math.max(0, ent.invocationMovementM ?? 0)
+    ? deslocamentoInvocacaoM(ent.id, pending.invocationMovementMode)
     : isFreeform ? Infinity : (combatMoveBudget(character, isActiveTurn, bonusDeslocamento) ?? 0);
   const remaining = isFreeform && !isInvocationMove ? Infinity : Math.max(0, total - (isInvocationMove ? 0 : used) - pending.distM);
 
@@ -95,7 +96,11 @@ export function PendingMoveOverlay() {
           const payload = {
             clientId: w.__worldBusClientId,
             at: Date.now(),
-            patches: [{ id: pending.entityId, patch: { x: confirmado.x, y: confirmado.y } }],
+            patches: [{ id: pending.entityId, patch: {
+              x: confirmado.x,
+              y: confirmado.y,
+              ...(pending.invocationMovementMode ? { invocationMovementMode: pending.invocationMovementMode } : {}),
+            } }],
           };
           try {
             w.__worldBus?.send({ type: 'broadcast', event: 'entity-patch', payload });

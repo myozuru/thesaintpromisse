@@ -13,6 +13,7 @@ import { SpellApplyDialog } from '@/components/fichas/SpellApplyDialog';
 import { TestRequestOverlay } from '@/components/fichas/TestRequestOverlay';
 import { importCreatureToFichas } from '@/components/grimorio/convertToFicha';
 import { resolveAreaTargetCharacters } from '@/lib/mapAoE';
+import { novaInstanciaInvocacao } from '@/lib/controlador/estadoInvocacao';
 import { useMapStore } from '@/stores/useMapStore';
 import { useTestRequestStore } from '@/stores/useTestRequestStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
@@ -204,9 +205,27 @@ describe('Feitiços reais pela UI', () => {
       peCurrent: 20, peMax: 20, rd: 0, attributes: [], savingThrows: [], activeBuffs: [],
     });
     useCharacterStore.setState((s) => ({ characters: [...s.characters, target] }));
+    const fugaModel = {
+      id: 'fuga-model', donoCharacterId: imported.id, nome: 'Fuga dos Coelhos', tipo: 'shikigami',
+      subcategoria: 'dez-sombras:fuga-do-coelho',
+    } as never;
+    const fugaInstance = {
+      ...novaInstanciaInvocacao({
+        id: 'fuga-instance', modeloId: 'fuga-model', donoCharacterId: imported.id,
+        tokenId: 'fuga-token', hpAtual: 80, hpMaximoAtual: 80,
+      }),
+      fugaCoelhosAlvo: {
+        targetEntityId: 'tokenAlvo', targetCharacterId: 'alvo', targetName: target.name,
+        lado: 'aliado', tipoAlvo: 'personagem', rodada: 1,
+      },
+    } as never;
+    useCharacterStore.getState().updateCharacter(imported.id, {
+      invocacoesConhecidas: [fugaModel], instanciasInvocacao: [fugaInstance],
+    });
     const entities = {
       caster: { id: 'caster', characterId: imported.id, x: 0, y: 0, w: 70, h: 70 },
       tokenAlvo: { id: 'tokenAlvo', avatarProfileId: 'perfil-alvo', x: 70, y: 0, w: 70, h: 70 },
+      'fuga-token': { id: 'fuga-token', x: 140, y: 0, w: 70, h: 70, hp: 80, hpMax: 80, invocationState: 'ativa', layer: 'tokens' },
     } as never;
     useMapStore.setState({ entities });
     const resolved = resolveAreaTargetCharacters(
@@ -226,6 +245,13 @@ describe('Feitiços reais pela UI', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Rolar Dano' }, { timeout: 5000 }));
     const ctx = await resultadoCausado(spy);
     await waitFor(() => expect(pegarFicha('alvo').hpCurrent).toBe(182));
+    expect(pegarFicha('alvo').activeConditions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ conditionId: 'fragilizado', sourceInstanceId: 'fuga-instance' }),
+    ]));
+    expect(pegarFicha(creature.id).instanciasInvocacao?.[0].condicoes).toEqual(expect.arrayContaining([
+      expect.objectContaining({ conditionId: 'fragilizado', sourceInstanceId: 'fuga-instance' }),
+    ]));
+    expect(useMapStore.getState().entities['fuga-token']?.invocationConditionIds).toContain('fragilizado');
     expect(ctx).toMatchObject({ tipo: 7, fonte: 2, valor_inicial: 18, valor_final: 18, id_origem: 1 });
     expect(pegarFicha(creature.id).peCurrent).toBe(creature.peCurrent - 5);
   });

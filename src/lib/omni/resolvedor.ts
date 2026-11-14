@@ -38,6 +38,7 @@ import { canonicalizarChave, expandirParaCaminhoLegado } from "./keyAliases";
 import { effectiveMovement } from "@/lib/movementBudget";
 import { shownHpMax, shownPeMax } from "@/lib/peDisplay";
 import { getActiveConcentrationCount } from "@/lib/concentration";
+import { flanqueadoPelaFugaCoelhos } from '@/lib/controlador/dezSombrasFuga';
 
 // Leitura de caminho "dot.path" em um objeto qualquer.
 function lerCaminho(obj: unknown, caminho: string): unknown {
@@ -730,6 +731,10 @@ export function montarVariaveisDoPersonagem(
                   w: number;
                   h: number;
                   characterId?: string;
+                  ownerCharId?: string;
+                  invocationId?: string;
+                  invocationState?: string;
+                  hp?: number;
                   layer?: string;
                   hidden?: boolean;
                 }
@@ -737,17 +742,20 @@ export function montarVariaveisDoPersonagem(
             }
           ).entities ?? {};
         const entities = Object.values(entitiesObj).filter(
-          (e) => !e.hidden && e.layer !== "gm",
+          (e) => !e.hidden && e.layer !== "gm" &&
+            (!e.invocationId || ((e.hp ?? 1) > 0 && (!e.invocationState || e.invocationState === "ativa"))),
         );
         const chars = useCharacterStore.getState().characters;
         const catById = new Map(chars.map((ch) => [ch.id, ch.category]));
+        const characterIdForEntity = (entity: (typeof entities)[number]) =>
+          entity.invocationId ? entity.ownerCharId : entity.characterId;
         const meuToken = entities.find((e) => e.characterId === c.id);
         out.CENA_QTD_TOKENS = entities.length;
         out.CENA_QTD_ALIADOS = entities.filter(
-          (e) => e.characterId && catById.get(e.characterId) === "PLAYER",
+          (e) => characterIdForEntity(e) && catById.get(characterIdForEntity(e)!) === "PLAYER",
         ).length;
         out.CENA_QTD_INIMIGOS = entities.filter(
-          (e) => e.characterId && catById.get(e.characterId) === "INIMIGO",
+          (e) => characterIdForEntity(e) && catById.get(characterIdForEntity(e)!) === "INIMIGO",
         ).length;
         if (!meuToken) return out;
         out.ESTA_NO_MAPA = 1;
@@ -761,7 +769,8 @@ export function montarVariaveisDoPersonagem(
           inAdj = 0,
           inPx = 0;
         for (const e of entities) {
-          if (e.id === meuToken.id || !e.characterId || e.characterId === c.id)
+          const entityCharacterId = characterIdForEntity(e);
+          if (e.id === meuToken.id || !entityCharacterId || entityCharacterId === c.id)
             continue;
           const ex = e.x + e.w / 2;
           const ey = e.y + e.h / 2;
@@ -772,7 +781,7 @@ export function montarVariaveisDoPersonagem(
               (Math.max(meuToken.w, meuToken.h) + Math.max(e.w, e.h)) / 4,
           );
           const distM = distPx * metrosPorPixel;
-          const cat = catById.get(e.characterId);
+          const cat = catById.get(entityCharacterId);
           // PLAYER & NPC = aliados de PLAYER; INIMIGO oposto. NPC neutro p/ INIMIGO.
           const ehAliado =
             minhaCategoria === "INIMIGO"
@@ -798,7 +807,11 @@ export function montarVariaveisDoPersonagem(
         out.QTD_INIMIGOS_ENGAJADOS = inAdj;
         out.ALIADO_ADJACENTE = alAdj > 0 ? 1 : 0;
         out.INIMIGO_ADJACENTE = inAdj > 0 ? 1 : 0;
-        out.FLANQUEADO = inAdj >= 2 ? 1 : 0;
+        const tokenCompleto = map.entities[meuToken.id];
+        const flanqueadoPelaHorda = tokenCompleto
+          ? flanqueadoPelaFugaCoelhos(tokenCompleto, map.entities, chars, map.layerVisible)
+          : false;
+        out.FLANQUEADO = inAdj >= 2 || flanqueadoPelaHorda ? 1 : 0;
         out.SOZINHO = alAdj === 0 && alPx === 0 ? 1 : 0;
         out.NA_LINHA_DE_FRENTE = inAdj > 0 ? 1 : 0;
       } catch {

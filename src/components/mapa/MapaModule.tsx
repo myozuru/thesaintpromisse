@@ -121,7 +121,10 @@ import { difficultTerrainPenaltyMeters, movementCostForTerrainSegment } from '@/
 import { imagemArmaEmpunhada, imagemPronta } from '@/lib/omni/imagemItem';
 import { useChestStore } from '@/stores/useChestStore';
 import { useShikigamiHudStore } from '@/stores/useShikigamiHudStore';
-import { podeMoverInvocacao } from '@/lib/controlador/mapa';
+import { alvoFlanqueadoPelaMatilha, podeMoverInvocacao } from '@/lib/controlador/mapa';
+import { deslocamentoInvocacaoM, modoMovimentoNue, validarCargaNue } from '@/lib/controlador/dezSombrasMovimento';
+import { terrenosDificeisFugaCoelhos } from '@/lib/controlador/dezSombrasFuga';
+import { broadcastEntityPatches } from '@/lib/mapa/broadcastEntityPatches';
 
 const MIN_SCALE = 0.1;
 const MAX_SCALE = 10;
@@ -156,6 +159,8 @@ type DragMode =
 type CombatMoveMeta = {
   charId: string;
   invocationInstanceId?: string;
+  invocationMovementMode?: 'voo' | 'caminhada';
+  terrainIgnoreMode?: 'none' | 'water_mud' | 'all';
   movementRequestId?: string;
   budgetM: number;
   usedBeforeM: number;
@@ -669,7 +674,9 @@ export function MapaModule() {
         const cb2 = useCombatStore.getState();
         const ch2 = useCharacterStore.getState().characters.find((c) => c.id === pm.charId);
         const active2 = cb2.initiativeOrder[cb2.currentTurnIndex]?.charId === pm.charId;
-        const budgetM2 = active2 && isFreeformFor(ch2, cb2.freeformMode) ? Infinity : (ch2 ? (combatMoveBudget(ch2, active2, bonusDeslocamentoOmni(ch2)) ?? undefined) : undefined);
+        const budgetM2 = pm.invocationInstanceId
+          ? deslocamentoInvocacaoM(pm.entityId, pm.invocationMovementMode)
+          : active2 && isFreeformFor(ch2, cb2.freeformMode) ? Infinity : (ch2 ? (combatMoveBudget(ch2, active2, bonusDeslocamentoOmni(ch2)) ?? undefined) : undefined);
         const committed = cb2.movementUsedByChar[pm.charId] ?? 0;
         const totalUsed = committed + pm.distM;
         drawTrail(pm.trail, '#fcd34d', totalUsed, budgetM2);
@@ -1144,6 +1151,40 @@ export function MapaModule() {
           : undefined;
         const model = owner?.invocacoesConhecidas?.find((invocation) => invocation.id === source?.invocationId);
         if (source && model && source.invocationId && drag.kind === 'none' && !state.pendingAoEPlacement && !state.pendingInvocationPlacement) {
+          const isDogDivine = model.subcategoria === 'dez-sombras:cao-branco' || model.subcategoria === 'dez-sombras:cao-preto';
+          if (isDogDivine && !source.hidden && state.layerVisible[source.layer ?? 'tokens'] !== false) {
+            const flankTargets = Object.values(entities).filter((candidate) =>
+              !candidate.hidden && state.layerVisible[candidate.layer ?? 'tokens'] !== false &&
+              alvoFlanqueadoPelaMatilha(model, source, candidate, charsById.characters, entities, state.layerVisible, state.gridConfig),
+            );
+            if (flankTargets.length > 0) {
+              tkCtx.save();
+              tkCtx.setLineDash([5 / camera.scale, 3 / camera.scale]);
+              tkCtx.lineWidth = 2.5 / camera.scale;
+              tkCtx.strokeStyle = '#fbbf24';
+              tkCtx.fillStyle = 'rgba(120, 53, 15, 0.22)';
+              for (const target of flankTargets) {
+                const centerX = target.x + target.w / 2;
+                const centerY = target.y + target.h / 2;
+                const radius = Math.max(target.w, target.h) / 2 + 5 / camera.scale;
+                tkCtx.beginPath();
+                tkCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                tkCtx.fill();
+                tkCtx.stroke();
+              }
+              tkCtx.setLineDash([]);
+              tkCtx.font = `800 ${Math.max(10, 11 / camera.scale)}px ui-sans-serif, system-ui, sans-serif`;
+              tkCtx.textAlign = 'center';
+              tkCtx.textBaseline = 'bottom';
+              for (const target of flankTargets) {
+                const centerX = target.x + target.w / 2;
+                const top = target.y - 5 / camera.scale;
+                tkCtx.fillStyle = '#fef3c7';
+                tkCtx.fillText('FLANQUEADO', centerX, top);
+              }
+              tkCtx.restore();
+            }
+          }
           const dpi = state.gridConfig.dpi || 70;
           const metersPerCell = state.gridConfig.metersPerCell || 1.5;
           const rangeMode = hud.rangeMode;
@@ -2175,6 +2216,13 @@ export function MapaModule() {
         setSelectionToolbarVisible(false);
         let cachedBlockers: MapCollisionCache | undefined;
         const movingInvocation = ids.some((id) => !!store.getState().entities[id]?.invocationId);
+        const movingEntity = store.getState().entities[hit.id];
+        const movingOwner = movingEntity?.ownerCharId
+          ? useCharacterStore.getState().characters.find((character) => character.id === movingEntity.ownerCharId)
+          : undefined;
+        const movingModel = movingOwner?.invocacoesConhecidas?.find((model) => model.id === movingEntity?.invocationId);
+        const nueFlying = movingModel?.subcategoria === 'dez-sombras:nue' &&
+          (movingEntity?.invocationMovementMode ?? 'voo') === 'voo';
         if (useRoleStore.getState().role === 'PLAYER' || movingInvocation) {
           const wallBlockers = WallsEngine.blockingSegments(store.getState().walls, 'sight');
           const fogState = useFogStore.getState();
@@ -2185,6 +2233,7 @@ export function MapaModule() {
             const movingIds = new Set(ids);
             for (const entity of Object.values(store.getState().entities)) {
               if (movingIds.has(entity.id) || entity.layer === 'map' || entity.hidden || entity.carriedBy) continue;
+              if (nueFlying && (entity.altitudeM ?? 0) <= 0) continue;
               const blocker: MapCollisionToken = { origin: { x: entity.x, y: entity.y }, entity };
               blockerSegments.push(...tokenFootprintSegments(blocker, 0, 0));
             }
@@ -2209,14 +2258,24 @@ export function MapaModule() {
             const startPrim = continuing ? { x: pending.startX, y: pending.startY } : { x: primaryEnt.x, y: primaryEnt.y };
             const trail = continuing ? [...pending.trail] : [{ x: primaryEnt.x, y: primaryEnt.y }];
             const movedPx = continuing ? pending.distM / metersPerPx : 0;
+            const modeloPrimario = owner.invocacoesConhecidas?.find((modelo) => modelo.id === primaryEnt.invocationId);
+            const isNue = modeloPrimario?.subcategoria === 'dez-sombras:nue';
+            const movementMode = isNue
+              ? continuing ? (pending.invocationMovementMode ?? modoMovimentoNue(primaryEnt)) : modoMovimentoNue(primaryEnt)
+              : undefined;
+            const terrainIgnoreMode = isNue && movementMode === 'voo'
+              ? 'all'
+              : modeloPrimario?.subcategoria === 'dez-sombras:sapo' ? 'water_mud' : 'none';
             const movementRequestId = continuing && pending.movementRequestId
               ? pending.movementRequestId
               : `movimento-${typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)}`;
             combatMeta = {
               charId: owner.id,
               invocationInstanceId: primaryEnt.invocationInstanceId,
+              ...(movementMode ? { invocationMovementMode: movementMode } : {}),
+              terrainIgnoreMode,
               movementRequestId,
-              budgetM: Math.max(0, primaryEnt.invocationMovementM ?? 0),
+              budgetM: deslocamentoInvocacaoM(primaryEnt.id, movementMode),
               usedBeforeM: 0,
               metersPerPx,
               startPrim,
@@ -2386,8 +2445,17 @@ export function MapaModule() {
           const primOrig = drag.origs[drag.primaryId];
           if (primOrig) {
             const zones = Object.values(state.entities).filter((entity) => !!entity.difficultTerrain);
-            const character = useCharacterStore.getState().characters.find((item) => item.id === cm.charId);
-            const ignoresNatural = ignoresNaturalDifficultTerrain(character);
+            const charactersForTerrain = useCharacterStore.getState().characters;
+            const character = charactersForTerrain.find((item) => item.id === cm.charId);
+            const zonasComHorda = [
+              ...zones,
+              ...terrenosDificeisFugaCoelhos(cm.charId, charactersForTerrain, state.entities, state.layerVisible),
+            ];
+            const terrainIgnore = cm.invocationInstanceId
+              ? cm.terrainIgnoreMode === 'all' ? { ignoreAll: true }
+                : cm.terrainIgnoreMode === 'water_mud' ? { ignoreKinds: ['water', 'mud'] as const }
+                  : false
+              : ignoresNaturalDifficultTerrain(character);
             const alreadySpent = cm.movedPx * cm.metersPerPx + (cm.terrainCostBonusM ?? 0);
             const availableCost = Math.max(0, cm.budgetM - cm.usedBeforeM - alreadySpent);
             const start = cm.lastPrim;
@@ -2396,8 +2464,8 @@ export function MapaModule() {
               start,
               { x: start.x + (proposed.x - start.x) * t, y: start.y + (proposed.y - start.y) * t },
               cm.metersPerPx,
-              zones,
-              ignoresNatural,
+              zonasComHorda,
+              terrainIgnore,
             );
             if (costAt(1) > availableCost) {
               let low = 0;
@@ -2415,7 +2483,7 @@ export function MapaModule() {
             const appliedStepPx = Math.hypot(tx - start.x, ty - start.y);
             if (appliedStepPx > 0) {
               cm.terrainCostBonusM = (cm.terrainCostBonusM ?? 0)
-                + difficultTerrainPenaltyMeters(start, { x: tx, y: ty }, cm.metersPerPx, zones, ignoresNatural);
+                + difficultTerrainPenaltyMeters(start, { x: tx, y: ty }, cm.metersPerPx, zonasComHorda, terrainIgnore);
               cm.movedPx += appliedStepPx;
               cm.lastPrim = { x: tx, y: ty };
               // Keep the route origin and compress only nearby intermediate samples.
@@ -2734,6 +2802,7 @@ export function MapaModule() {
               entityId: drag.primaryId,
               charId: cm.charId,
               ...(cm.invocationInstanceId ? { invocationInstanceId: cm.invocationInstanceId } : {}),
+              ...(cm.invocationMovementMode ? { invocationMovementMode: cm.invocationMovementMode } : {}),
               ...(cm.movementRequestId ? { movementRequestId: cm.movementRequestId } : {}),
               startX: cm.startPrim.x,
               startY: cm.startPrim.y,
@@ -3005,8 +3074,39 @@ export function MapaModule() {
     if (a === 'carry' || a === 'drop') {
       const c = ctxMenu?.carry;
       if (!c) return;
+      const carrier = st.entities[c.carrierId];
+      const alvo = st.entities[c.targetId];
+      let posicaoDeCarga: { x: number; y: number } | undefined;
+      const donoCarga = carrier?.ownerCharId
+        ? useCharacterStore.getState().characters.find((character) => character.id === carrier.ownerCharId)
+        : undefined;
+      const modeloCarga = donoCarga?.invocacoesConhecidas?.find((modelo) => modelo.id === carrier?.invocationId);
+      if (a === 'carry' && modeloCarga?.subcategoria === 'dez-sombras:nue' && alvo) {
+        const fichaAlvo = alvo.characterId
+          ? useCharacterStore.getState().characters.find((character) => character.id === alvo.characterId)
+          : undefined;
+        const alvoVivo = (fichaAlvo?.hpCurrent ?? alvo.hp ?? 0) > 0;
+        if (alvoVivo) {
+          toast({ title: 'Resolva o agarrão pelo HUD do Nue', description: 'Confirme manualmente alcance e disputa antes de carregar uma criatura ativa.' });
+          return;
+        }
+        const carga = validarCargaNue(carrier.id, alvo.id);
+        if (!carga.ok) {
+          toast({ title: 'Carga acima da capacidade', description: carga.motivo, variant: 'destructive' });
+          return;
+        }
+        posicaoDeCarga = {
+          x: carrier.x + (carrier.w - alvo.w) / 2,
+          y: carrier.y + (carrier.h - alvo.h) / 2,
+        };
+      }
       st.pushHistory();
+      if (a === 'carry' && alvo && posicaoDeCarga) st.updateEntity(alvo.id, posicaoDeCarga);
       st.setEntityCarriedBy(c.targetId, a === 'carry' ? c.carrierId : null);
+      broadcastEntityPatches([{
+        id: c.targetId,
+        patch: { ...(posicaoDeCarga ?? {}), carriedBy: a === 'carry' ? c.carrierId : null },
+      }]);
       return;
     }
     const sel = st.selectedIds;

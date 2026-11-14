@@ -16,10 +16,13 @@ import { useEffect, useState } from 'react';
 import { useReactionStore, type ReactionPrompt, kindConsumesReaction } from '@/stores/useReactionStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useCombatStore } from '@/stores/useCombatStore';
+import { useMapStore } from '@/stores/useMapStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { DAMAGE_TYPE_LABELS, type DamageType } from '@/types';
 import { rollDiceCom } from '@/lib/dice';
 import { resolverTipoDano } from '@/lib/omni/contextoDano';
+import { calcularBonusResistenciaInvocacao } from '@/lib/controlador/rolagens';
+import { InstanciaInvocacaoSchema } from '@/lib/invocacoes/schema';
 import { X, Shield, Flame, Crosshair, Skull, Sparkles, Hourglass, ShieldPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { playSuccessSound, playErrorSound, playClickSound } from '@/lib/sounds';
@@ -190,6 +193,67 @@ export function ReactionPromptOverlay() {
             if (!c) { dismiss(p.id); return; }
             const trType = (p.payload?.endTrType || 'reflexos').toLowerCase();
             const dc = p.payload?.endCD ?? 10;
+            const targetInvocation = p.payload?.targetInvocation;
+            if (targetInvocation) {
+              const owner = useCharacterStore.getState().characters.find(character => character.id === targetInvocation.ownerCharacterId);
+              const model = owner?.invocacoesConhecidas?.find(item => item.id === targetInvocation.invocationId);
+              const instance = owner?.instanciasInvocacao?.find(item => item.id === targetInvocation.invocationInstanceId);
+              const token = useMapStore.getState().entities[targetInvocation.tokenId];
+              const condition = instance?.condicoes?.find(item => item && typeof item === 'object' &&
+                (item as { id?: unknown }).id === p.payload?.conditionInstanceId);
+              if (!owner || !model || !instance || !token || token.invocationInstanceId !== instance.id || !condition) {
+                addLog('combat', `⏳ ${targetInvocation.name}: a condição ou a invocação saiu de campo antes do TR de Fortitude.`);
+                dismiss(p.id);
+                return;
+              }
+              const bonusInvocacao = calcularBonusResistenciaInvocacao(owner, model, trType) ??
+                (Number.isFinite(p.payload?.bonusOverride) ? {
+                  total: p.payload!.bonusOverride!,
+                  breakdown: p.payload?.bonusBreakdownOverride ?? 'bônus salvo no início da janela',
+                } : null);
+              if (!bonusInvocacao) {
+                addLog('combat', `⏳ ${targetInvocation.name}: não foi possível calcular Fortitude; a condição continua ativa.`);
+                dismiss(p.id);
+                return;
+              }
+              const r = await rollDiceCom(p.charId, '1d20');
+              const total = r.total + bonusInvocacao.total;
+              const passed = r.total !== 1 && total >= dc;
+              if (passed) {
+                playSuccessSound();
+                const atuais = useCharacterStore.getState().characters.find(character => character.id === owner.id);
+                const instanciaAtual = atuais?.instanciasInvocacao?.find(item => item.id === instance.id);
+                if (atuais && instanciaAtual) {
+                  const condicoes = (instanciaAtual.condicoes ?? []).filter(item => !(
+                    item && typeof item === 'object' && (item as { id?: unknown }).id === p.payload?.conditionInstanceId
+                  ));
+                  const atualizada = InstanciaInvocacaoSchema.parse({
+                    ...instanciaAtual,
+                    version: instanciaAtual.version + 1,
+                    condicoes,
+                  });
+                  useCharacterStore.getState().updateCharacter(owner.id, {
+                    instanciasInvocacao: (atuais.instanciasInvocacao ?? []).map(item => item.id === instance.id ? atualizada : item),
+                  });
+                  const aindaSangra = condicoes.some(item => item && typeof item === 'object' &&
+                    (item as { conditionId?: unknown }).conditionId === p.payload?.conditionId);
+                  if (!aindaSangra) {
+                    const currentToken = useMapStore.getState().entities[token.id];
+                    useMapStore.getState().updateEntity(token.id, {
+                      invocationConditionIds: (currentToken?.invocationConditionIds ?? []).filter(id => id !== p.payload?.conditionId),
+                    });
+                  }
+                }
+                addLog('combat', `✅ ${targetInvocation.name}: TR de Fortitude ${r.total} + ${bonusInvocacao.total} = ${total} vs CD ${dc} — SUCESSO. Sangramento Forte encerrado.`);
+              } else {
+                playErrorSound();
+                addLog('combat', `❌ ${targetInvocation.name}: TR de Fortitude ${r.total} + ${bonusInvocacao.total} = ${total} vs CD ${dc} — FALHA. Sangramento Forte continua.`);
+              }
+              dismiss(p.id);
+              return;
+            }
+            const conditionStillActive = c.activeConditions?.some(condition => condition.id === p.payload?.conditionInstanceId);
+            if (!conditionStillActive && p.payload?.conditionInstanceId) { dismiss(p.id); return; }
             // Procura o TR pelo nome canônico.
             const stEntry = (c.savingThrows || []).find(
               (s) => (s.name || '').toLowerCase() === trType,
@@ -200,7 +264,7 @@ export function ReactionPromptOverlay() {
             const baseBonus = (stEntry?.value || 0) + attrMod;
             const r = await rollDiceCom(p.charId, '1d20');
             const total = r.total + baseBonus;
-            const passed = total >= dc;
+            const passed = r.total !== 1 && total >= dc;
             if (passed) {
               playSuccessSound();
               if (p.payload?.conditionInstanceId) {
@@ -316,6 +380,16 @@ export function ReactionPromptOverlay() {
             useReactionStore.getState().resolveDecision(p.id, peSpent);
             playSuccessSound();
           }}
+          onTigreReflexos={(useIt) => {
+            useReactionStore.getState().resolveDecision(p.id, useIt ? 1 : 0);
+            if (useIt) playSuccessSound();
+            else addLog('combat', `${p.charName}: recusou Retalhar de Reflexos Felinos.`);
+          }}
+          onTigreSangramento={(useIt) => {
+            useReactionStore.getState().resolveDecision(p.id, useIt ? 1 : 0);
+            if (useIt) playSuccessSound();
+            else addLog('combat', `${p.charName}: não gastou 6 PE para o Sangramento Forte do Retalhar.`);
+          }}
         />
       ))}
     </div>
@@ -337,12 +411,14 @@ interface PromptCardProps {
   onConditionEndTR: () => void;
   onPersistentAreaTR: (acceptEffect?: boolean) => void;
   onCobrirSe: (peSpent: number) => void;
+  onTigreReflexos: (useIt: boolean) => void;
+  onTigreSangramento: (useIt: boolean) => void;
 }
 
 function PromptCard({
   prompt: p, reactionLocked = false, onDismiss, onNullify, onAbsorb, onRedirect,
   onAlmaMaldita, onAnatomiaIncompreensivel, onPresencaNefastaRoll, onDevoradorAck, onLua,
-  onConditionEndTR, onPersistentAreaTR, onCobrirSe,
+  onConditionEndTR, onPersistentAreaTR, onCobrirSe, onTigreReflexos, onTigreSangramento,
 }: PromptCardProps) {
   const [tier, setTier] = useState<'fraca' | 'media' | 'forte' | 'extrema'>('fraca');
   const [cobrirPe, setCobrirPe] = useState<number>(1);
@@ -433,6 +509,40 @@ function PromptCard({
         </button>
       )}
 
+      {p.kind === 'tigre_reflexos_offer' && (
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => onTigreReflexos(true)}
+            className="flex-1 text-xs px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
+          >
+            🐅 Usar Reação · Retalhar
+          </button>
+          <button
+            onClick={() => onTigreReflexos(false)}
+            className="flex-1 text-xs px-2 py-1 rounded border border-border bg-secondary/40 hover:bg-secondary"
+          >
+            Recusar
+          </button>
+        </div>
+      )}
+
+      {p.kind === 'tigre_sangramento_offer' && (
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => onTigreSangramento(true)}
+            className="flex-1 text-xs px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 font-bold"
+          >
+            🩸 Gastar 6 PE · Fortitude
+          </button>
+          <button
+            onClick={() => onTigreSangramento(false)}
+            className="flex-1 text-xs px-2 py-1 rounded border border-border bg-secondary/40 hover:bg-secondary"
+          >
+            Recusar
+          </button>
+        </div>
+      )}
+
       {p.kind === 'lua_reacao_offer' && (
         <div className="flex items-center gap-1.5">
           <button
@@ -512,6 +622,7 @@ function PromptCard({
       {p.kind === 'condition_end_tr_offer' && (
         <div className="space-y-1.5">
           <div className="text-xs text-muted-foreground">
+            {p.payload?.targetInvocation?.name && <><span className="font-semibold">{p.payload.targetInvocation.name}</span>: </>}
             TR de <span className="font-semibold">{p.payload?.conditionName ?? 'condição'}</span>
             {p.payload?.durationMode === 'ate_passar_tr' && ' — só sai se passar.'}
             {p.payload?.durationMode === 'tr_todo_round' && ' — sucesso encerra antes do prazo.'}

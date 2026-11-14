@@ -6,11 +6,13 @@ import {
   limiteAtivasPersonagem,
   pvControlador,
   validarCatalogoControlador,
+  mensagemDomesticaoPendente,
   type InvocacaoControlador,
 } from '@/lib/controlador/tipos';
 import type { Attribute, Character } from '@/types';
 import { specDCFor } from '@/lib/golpeEspecial';
 import { avaliarSubmissaoAprovacao, validarDecisaoAprovacao, podeUsarVersaoAprovada } from '@/lib/controlador/aprovacao';
+import { auditarFichaShikigami } from '@/lib/controlador/regrasShikigami';
 
 const attrs = [
   { id: 'sab', name: 'Sabedoria', value: 18 },
@@ -135,5 +137,46 @@ describe('Controlador — política pura de aprovação', () => {
     expect(podeUsarVersaoAprovada({})).toBe(true);
     expect(podeUsarVersaoAprovada({ estado: 'aprovada' })).toBe(true);
     expect(podeUsarVersaoAprovada({ estado: 'aprovada', versaoAtual: 0, versaoAprovada: 0 })).toBe(false);
+  });
+});
+
+describe('Controlador — compatibilidade de domesticação', () => {
+  const maldicao = {
+    nome: 'Maldição de teste',
+    tipo: 'maldicao_domada' as const,
+  };
+
+  it('mantém utilizáveis fichas legadas sem domado mesmo com metadados parciais', () => {
+    expect(mensagemDomesticaoPendente({ ...maldicao })).toBeNull();
+    expect(mensagemDomesticaoPendente({ ...maldicao, schemaVersion: 1 })).toBeNull();
+    expect(mensagemDomesticaoPendente({ ...maldicao, aprovacaoMestre: 'aprovada' })).toBeNull();
+    expect(mensagemDomesticaoPendente({ ...maldicao, version: 2, versaoModelo: 1 })).toBeNull();
+  });
+
+  it('preserva bloqueio quando a domesticação ou aquisição foi explicitamente recusada ou está pendente', () => {
+    expect(mensagemDomesticaoPendente({ ...maldicao, domado: false })).toContain('não foi confirmada');
+    expect(mensagemDomesticaoPendente({ ...maldicao, aprovacaoMestre: 'pendente' })).toContain('não foi confirmada');
+    expect(mensagemDomesticaoPendente({ ...maldicao, aprovacaoMestre: 'rejeitada' })).toContain('não foi confirmada');
+    expect(mensagemDomesticaoPendente({
+      ...maldicao,
+      aquisicao: { fonte: 'mestre', estado: 'pendente' },
+    })).toContain('não foi confirmada');
+  });
+});
+
+describe('Controlador — auditoria de maldição domada', () => {
+  const fichaBase = {
+    grau: 'quarto' as const,
+    tipo: 'maldicao_domada' as const,
+    nivelUsuario: 1,
+    bonusTreinamentoUsuario: 2,
+    atributos: { forca: 8, destreza: 8, constituicao: 8, inteligencia: 8, sabedoria: 8, presenca: 8 },
+  };
+
+  it('avisa que aprovar a ficha não conclui a domesticação', () => {
+    expect(auditarFichaShikigami({ ...fichaBase, domado: false }))
+      .toContainEqual(expect.objectContaining({ codigo: 'domesticacao_pendente', severidade: 'aviso' }));
+    expect(auditarFichaShikigami({ ...fichaBase, domado: true }))
+      .not.toContainEqual(expect.objectContaining({ codigo: 'domesticacao_pendente' }));
   });
 });

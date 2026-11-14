@@ -7,6 +7,8 @@ export interface MetadadosAtaqueDano {
   criticalFail?: boolean;
   isSneak?: boolean;
   isOpportunity?: boolean;
+  /** Identifica dano aplicado pela resolução de uma área, que ignora Cobertura Completa. */
+  isAreaAttack?: boolean;
   kind?: 'melee' | 'ranged' | 'cursed';
 }
 
@@ -54,6 +56,8 @@ export interface OpcoesDano {
   cadeia?: CadeiaOmni;
   ignoresRD?: boolean;
   ignoresResistance?: boolean;
+  /** Ignora apenas a resistência àquele tipo; imunidades e vulnerabilidades continuam ativas. */
+  ignoresOnlyResistance?: boolean;
   attackerId?: string;
   isMelee?: boolean;
   tags?: string[];

@@ -3,13 +3,14 @@ import { InvocationSelect } from "@/components/invocacoes/InvocationSelect";
 import { useEffect, useRef, useState } from 'react';
 import type { Character } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
+import { useCombatStore } from '@/stores/useCombatStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { validarIntermediarioInvocacao } from '@/lib/controlador/intermediario';
-import { invocarControladores, invocarHordaControlador, recolherInvocacao, limparInvocacoesDerrotadas, levantarInvocacao, resolverDerrotaPendenteInvocacao, comandarReposicionamento, comandarAtaque, comandarSuporte, comandarSegurarSapo, escaparInvocacaoAgarrada, rolarPericiaInvocacao, type DirecaoInvocacao, type PericiaFugaSapo } from '@/lib/controlador/mapa';
-import { limiteInvocacoesConhecidas, limiteAtivasPersonagem, validarCatalogoControlador, type InvocacaoControlador, type TipoInvocacaoControlador } from '@/lib/controlador/tipos';
+import { invocarControladores, invocarHordaControlador, recolherInvocacao, limparInvocacoesDerrotadas, levantarInvocacao, resolverDerrotaPendenteInvocacao, comandarReposicionamento, comandarAgarrarGama, comandarAtaque, comandarPuxarAliadoGama, comandarSuporte, comandarSegurarSapo, comandarHabilidadeInvocacao, escaparInvocacaoAgarrada, rolarPericiaInvocacao, type DirecaoInvocacao, type PericiaFugaAgarrado } from '@/lib/controlador/mapa';
+import { limiteInvocacoesConhecidas, limiteAtivasPersonagem, mensagemDomesticaoPendente, rotuloTipoInvocacao, validarCatalogoControlador, type InvocacaoControlador, type TipoInvocacaoControlador } from '@/lib/controlador/tipos';
 import { podeUsarVersaoAprovada } from '@/lib/controlador/aprovacao';
 import { carregarAssetFicha, salvarAssetFicha } from '@/lib/controlador/assetFicha';
 import { formatarSegundosTempoInvocacao, tempoAdicionalEmSegundos } from '@/lib/controlador/tempo';
@@ -20,9 +21,9 @@ import { calcularBonusAtaqueInvocacao, invocacaoTreinadaNaPericia, parseFormulaD
 import { bonusPericiaCaracteristicas } from '@/lib/controlador/passivas';
 import { definirAutomacaoInvocacao } from '@/lib/controlador/autonomia';
 import { useProfileStore } from '@/stores/useProfileStore';
-import { calcularHorda } from '@/lib/controlador/hordas';
+import { calcularHorda, validarLimiteHorda, vagasInvocacaoEmCampo } from '@/lib/controlador/hordas';
 import { DEZ_SOMBRAS_FORMAS_DERIVADAS as DEZ_SOMBRAS_FORMAS_REFERENCIA, DEZ_SOMBRAS_MODELOS, HABILIDADES_TECNICA_DEZ_SOMBRAS, criarPacoteDezSombras } from '@/lib/controlador/dezSombras';
-import { DEZ_SOMBRAS_FORMAS_DERIVADAS, criarFormasDerivadasDezSombras } from '@/lib/controlador/dezSombrasDerivadas';
+import { auditarValoresProvisoriosFormaDerivadaDezSombras, DEZ_SOMBRAS_FORMAS_DERIVADAS, criarFormasDerivadasDezSombras } from '@/lib/controlador/dezSombrasDerivadas';
 
 type Fonte = { id: string; nome: string; tipo: 'grimorio' | 'omni'; hp: number; defesa: number; deslocamento: number; porte: InvocacaoControlador['porte']; acoes: InvocacaoControlador['acoes'] };
 const numero = (valor: unknown, padrao: number): number => {
@@ -63,6 +64,11 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
   const updateCharacter = useCharacterStore(s => s.updateCharacter);
   const allCharacters = useCharacterStore(s => s.characters);
   const isMaster = useRoleStore(s => s.role) === 'MASTER';
+  const inCombat = useCombatStore(s => s.inCombat);
+  const combatId = useCombatStore(s => s.combatId);
+  const round = useCombatStore(s => s.round);
+  const currentTurnIndex = useCombatStore(s => s.currentTurnIndex);
+  const currentActorId = useCombatStore(s => s.initiativeOrder[s.currentTurnIndex]?.charId);
   const activeProfileId = useProfileStore(s => s.activeProfileId);
   const entidades = useOmniEntidadesStore(s => s.entidades);
   const itensInventario = useInventoryStore(s => s.items);
@@ -91,9 +97,14 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
   const [hordaTempoUnidade, setHordaTempoUnidade] = useState('');
   const [mensagem, setMensagem] = useState('');
   const [alvosAtaque, setAlvosAtaque] = useState<Record<string, string>>({});
+  const [alvosPuxarGama, setAlvosPuxarGama] = useState<Record<string, string>>({});
   const [alvosAtaqueMultiplo, setAlvosAtaqueMultiplo] = useState<Record<string, string[]>>({});
   const [busyAtaque, setBusyAtaque] = useState(false);
+  const [busyHabilidadeId, setBusyHabilidadeId] = useState<string | null>(null);
   const [busySegurar, setBusySegurar] = useState(false);
+  const [busyAgarrarGama, setBusyAgarrarGama] = useState(false);
+  const [gamaSubmerso, setGamaSubmerso] = useState(false);
+  const [gamaEscuridaoTotal, setGamaEscuridaoTotal] = useState(false);
   const [membrosSapoVivos, setMembrosSapoVivos] = useState<Record<string, string>>({});
   const [busyFugaInvocacao, setBusyFugaInvocacao] = useState(false);
   const [alvosSuporte, setAlvosSuporte] = useState<Record<string, string[]>>({});
@@ -183,6 +194,14 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
     if ((!alvosSelecionados.length && !alvoArea) || busyAtaque) return;
     setBusyAtaque(true); setErro(''); setMensagem('');
     try {
+      if (acao?.efeitoEspecial?.tipo === 'puxar_aliado_gama') {
+        const alvo = alvosPuxarGama[invocacaoId];
+        if (!alvo) { setErro('Selecione um aliado para Língua Sombria.'); return; }
+        const resultado = comandarPuxarAliadoGama(character.id, invocacaoId, alvo);
+        if (!resultado.ok) { setErro(resultado.motivo); return; }
+        setMensagem(`${resultado.nomeAlvo} foi puxado para um espaço adjacente ao Gama, sem provocar ataques de oportunidade.`);
+        return;
+      }
       const selecao = alvoArea
         ? { tipo: 'area' as const }
         : alvoMultiplo ? alvosSelecionados : alvosSelecionados[0];
@@ -199,10 +218,28 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
         setMensagem(r.testePendente
           ? `Teste de ${r.cd ? `CD ${r.cd}` : 'resistência'} enviado ao alvo. O efeito será aplicado após a rolagem.`
           : r.acertou
-            ? `${r.critico ? 'Acerto crítico! ' : 'Acertou! '}Dano aplicado: ${r.dano}. Resultado: ${r.totalAtaque}.`
+            ? `${r.critico ? 'Acerto crítico! ' : 'Acertou! '}Dano aplicado: ${r.dano}. Resultado: ${r.totalAtaque}.${r.efeitoOpcional?.tipo === 'agarrar_gama' ? ` Pode gastar ${r.efeitoOpcional.custoPE} PE para tentar Agarrar como Ação Livre.` : ''}`
             : `Ataque errou (resultado ${r.totalAtaque}).`);
       }
     } finally { setBusyAtaque(false); }
+  };
+  const agarrarGama = async (invocacaoId: string, instanciaId: string, eventoId: string) => {
+    if (busyAgarrarGama) return;
+    setBusyAgarrarGama(true); setErro(''); setMensagem('');
+    try {
+      const resultado = await comandarAgarrarGama(character.id, invocacaoId, {
+        instanciaId,
+        requestId: `ficha-gama-grapple-${eventoId}`,
+        contextoAmbiente: { submerso: gamaSubmerso, escuridaoTotal: gamaEscuridaoTotal },
+      });
+      if (!resultado.ok) { setErro(resultado.motivo); return; }
+      const bonusSituacional = resultado.bonusSituacional > 0 ? ' (+2 Anfíbio Sombrio)' : '';
+      setMensagem(resultado.sucesso
+        ? resultado.aplicouCondicao ? resultado.nomeAlvo + ' ficou Agarrado' + bonusSituacional + '.' : 'A disputa foi vencida, mas a condição não foi aplicada' + bonusSituacional + '.'
+        : resultado.nomeAlvo + ' resistiu ao Agarrar' + bonusSituacional + '.');
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : 'Não foi possível concluir a tentativa de Agarrar.');
+    } finally { setBusyAgarrarGama(false); }
   };
   const segurar = async (invocacaoId: string) => {
     const alvoId = alvosAtaque[invocacaoId];
@@ -230,13 +267,25 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
       setErro(error instanceof Error ? error.message : 'Não foi possível executar Segurar.');
     } finally { setBusySegurar(false); }
   };
-  const escaparInvocacao = async (instanciaId: string, pericia: PericiaFugaSapo) => {
+  const usarHabilidadeInvocacao = (invocacaoId: string, acaoId: string) => {
+    const key = `${invocacaoId}:${acaoId}`;
+    if (busyHabilidadeId) return;
+    setBusyHabilidadeId(key); setErro(''); setMensagem('');
+    try {
+      const resultado = comandarHabilidadeInvocacao(character.id, invocacaoId, acaoId);
+      if (!resultado.ok) { setErro(resultado.motivo); return; }
+      setMensagem(`Vantagem concedida no próximo teste de ${resultado.pericia} para rastreamento.`);
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : 'Não foi possível executar esta habilidade.');
+    } finally { setBusyHabilidadeId(null); }
+  };
+  const escaparInvocacao = async (instanciaId: string, pericia: PericiaFugaAgarrado) => {
     if (busyFugaInvocacao) return;
     setBusyFugaInvocacao(true); setErro(''); setMensagem('');
     try {
       const resultado = await escaparInvocacaoAgarrada(character.id, instanciaId, pericia);
       if (!resultado.ok) { setErro(resultado.motivo); return; }
-      setMensagem(resultado.escapou ? 'O Shikigami escapou do agarrão.' : 'O Shikigami continua Agarrado.');
+      setMensagem(resultado.escapou ? 'A invocação escapou do agarrão.' : 'A invocação continua Agarrada.');
     } catch (error) {
       setErro(error instanceof Error ? error.message : 'Não foi possível tentar escapar.');
     } finally { setBusyFugaInvocacao(false); }
@@ -292,7 +341,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
       const nome = ROTULOS_PERICIAS[pericia as keyof typeof ROTULOS_PERICIAS] ?? pericia;
       setMensagem(`${nome}: ${resultado.d20} + ${resultado.bonus} = ${resultado.total}${resultado.treinada ? ' (treinada)' : ''}.`);
     } catch (error) {
-      setErro(error instanceof Error ? error.message : 'Não foi possível rolar a perícia do Shikigami.');
+      setErro(error instanceof Error ? error.message : 'Não foi possível rolar a perícia da invocação.');
     } finally {
       setBusyPericia(current => ({ ...current, [invocacaoId]: false }));
     }
@@ -319,7 +368,6 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
     setConfirmandoPerdaDerrota(null);
   };
   const [libraryQuery, setLibraryQuery] = useState('');
-  const [incluirTigreFunebre, setIncluirTigreFunebre] = useState(false);
   const catalogo = character.invocacoesConhecidas ?? [];
   const temTecnicaDezSombras = (character.tecnicaAmaldicoada ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase().includes('dez sombras');
   const chaveImagemParaFichaDezSombras = (ficha: InvocacaoControlador) => {
@@ -335,7 +383,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
     }
     if (salvandoImagemPerfilId) return;
     const existentes = new Set(catalogo.filter(item => item.pacoteRegras === 'dez-sombras').map(item => item.subcategoria));
-    const fichasBase = criarPacoteDezSombras(character.id, incluirTigreFunebre);
+    const fichasBase = criarPacoteDezSombras(character.id);
     const fichasDerivadas = criarFormasDerivadasDezSombras(character.id);
     const novos = [...fichasBase, ...fichasDerivadas].filter(item => !existentes.has(item.subcategoria));
     if (!novos.length) {
@@ -373,7 +421,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
       });
       const quantidadeBase = novos.length - novos.filter(item => item.formaDerivada).length;
       const quantidadeDerivada = novos.filter(item => item.formaDerivada).length;
-      setMensagem(`${quantidadeBase} indivíduo(s)-base e ${quantidadeDerivada} forma(s) derivada(s) adicionados com imagem. Cães iniciais vêm domados; as demais fichas ficam bloqueadas até ritual ou confirmação manual do Mestre.`);
+      setMensagem(`${quantidadeBase} ficha(s)-base e ${quantidadeDerivada} forma(s) derivada(s) adicionados com imagem. A lista oficial tem dez entradas; os dois Cães aparecem em fichas separadas. Fichas derivadas aguardam aprovação do Mestre.`);
     } catch (error) {
       setErro(error instanceof Error ? `Não foi possível guardar as imagens: ${error.message}` : 'Não foi possível guardar as imagens das fichas.');
     } finally {
@@ -487,12 +535,16 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
       setSalvandoImagemPerfilId(null);
     }
   };
-  const registrarRitualConcluido = (invocacaoId: string) => {
+  const registrarDomesticaoConcluida = (invocacaoId: string) => {
     if (!isMaster) return;
+    const invocacao = catalogo.find(item => item.id === invocacaoId);
+    if (!invocacao || !mensagemDomesticaoPendente(invocacao)) return;
     updateCharacter(character.id, {
       invocacoesConhecidas: catalogo.map(item => item.id === invocacaoId ? { ...item, domado: true } : item),
     });
-    setMensagem('Ritual registrado pelo Mestre. O shikigami pode ser invocado.');
+    setMensagem(invocacao.tipo === 'maldicao_domada'
+      ? `Domesticação de ${invocacao.nome} confirmada pelo Mestre. A aprovação da ficha e os custos de invocação continuam valendo.`
+      : `Ritual de ${invocacao.nome} registrado pelo Mestre. A ficha pode ser invocada se também estiver aprovada.`);
   };
   const confirmarRequisitosFormaDerivada = (invocacaoId: string) => {
     if (!isMaster) return;
@@ -560,6 +612,14 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
       },
     })
     : null;
+  const hordaAtivaTokens = ativos.filter(token => Boolean(token.invocationHordeId));
+  const limiteHordaPreview = hordaPreview?.ok ? validarLimiteHorda({
+    limiteInvocacoesEmCampo: ativas,
+    hordasAtivas: hordaAtivaTokens.length,
+    invocacoesIndividuaisAposCriacao: ativos.filter(token => !token.invocationHordeId).length,
+    vagasOcupadasPorHordas: hordaAtivaTokens.reduce((total, token) => total + vagasInvocacaoEmCampo(token), 0),
+    vagasNovaHorda: hordaPreview.horda.vagasInvocacao,
+  }) : null;
   const hordaTempoPreview = hordaTempoQuantidade.trim() && hordaTempoUnidade.trim()
     ? tempoAdicionalEmSegundos({ quantidade: Number(hordaTempoQuantidade), unidade: hordaTempoUnidade })
     : { ok: false as const, motivo: 'Defina o tempo da Horda na criação.' };
@@ -584,6 +644,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
     }
     if (!hordaPreview) { setErro('Confira a composição e o tempo da Horda.'); return; }
     if (!hordaPreview.ok) { setErro(hordaPreview.motivo); return; }
+    if (limiteHordaPreview && !limiteHordaPreview.ok) { setErro(limiteHordaPreview.motivo); return; }
     if (!hordaTempoPreview.ok) { setErro(hordaTempoPreview.motivo); return; }
     if (!Object.values(useMapStore.getState().entities).some(entity => entity.characterId === character.id && !entity.invocationId)) {
       setErro('Coloque o token do Controlador no mapa primeiro.'); return;
@@ -648,7 +709,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
       }),
     })),
   ];
-  const acoesDeAtaque = (inv: InvocacaoControlador) => inv.acoes.filter(a => a.tipo === 'ataque' || a.teste === 'ataque' || a.teste === 'resistencia');
+  const acoesDeAtaque = (inv: InvocacaoControlador) => inv.acoes.filter(a => a.tipo === 'ataque' || a.teste === 'ataque' || a.teste === 'resistencia' || a.efeitoEspecial?.tipo === 'puxar_aliado_gama');
   const alvosPersonagensDisponiveis = [...new Map(Object.values(entities)
     .filter(entity => entity.characterId && entity.characterId !== character.id && !entity.invocationId && !entity.hidden)
     .map(entity => {
@@ -664,7 +725,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
       return donoAlvo && modeloAlvo
         ? [{ id: `invoc:${entity.id}`, nome: entity.invocationHordeId
           ? entity.label || `Horda de ${modeloAlvo.apelido?.trim() || modeloAlvo.nome}`
-          : `${modeloAlvo.apelido?.trim() || modeloAlvo.nome} (Shikigami)` }]
+          : `${modeloAlvo.apelido?.trim() || modeloAlvo.nome} (${rotuloTipoInvocacao(modeloAlvo.tipo)})` }]
         : [];
     });
   const alvosDisponiveis = [...alvosPersonagensDisponiveis, ...alvosInvocacaoDisponiveis];
@@ -703,6 +764,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
     const novo: InvocacaoControlador = {
       id: crypto.randomUUID(), donoCharacterId: character.id,
       nome: escolhido?.nome ?? nome.trim(), tipo,
+      ...(tipo === 'maldicao_domada' ? { domado: false } : {}),
       aprovacaoMestre: 'pendente', versaoModelo: 1,
       origem: escolhido ? { tipo: escolhido.tipo, entidadeId: escolhido.id } : { tipo: 'manual' },
       hpAtual: escolhido?.hp ?? hp, hpMaximo: escolhido?.hp ?? hp,
@@ -863,7 +925,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
             <div className="inv-package-copy">
               <p className="inv-package-eyebrow">Pacote pré-pronto</p>
               <h3>Dez Sombras</h3>
-              <p>Perfis-base, opção homebrew e formas derivadas para adicionar à biblioteca. Cada ficha precisa de uma imagem.</p>
+              <p>Os dez shikigamis oficiais e suas formas derivadas. Os Cães Divinos são disponibilizados em fichas separadas. Cada ficha precisa de uma imagem.</p>
             </div>
           </div>
           <div className="inv-package-import">
@@ -875,20 +937,15 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
           </div>
         </div>
         <div className="inv-package-tools">
-          <label className="inv-package-homebrew">
-            <input type="checkbox" checked={incluirTigreFunebre} onChange={event => setIncluirTigreFunebre(event.target.checked)} />
-            <span>Incluir Tigre Fúnebre</span>
-            <small>Opção homebrew especulativa</small>
-          </label>
           <div className="inv-package-facts" aria-label="Conteúdo do pacote">
-            <span><strong>9</strong> indivíduos-base</span>
-            <span><strong>2</strong> formas derivadas</span>
+            <span><strong>10</strong> entradas oficiais</span>
+            <span><strong>4</strong> formas derivadas</span>
           </div>
         </div>
         <details className="inv-package-details">
           <summary>Regras, habilidades e ressalvas</summary>
           <div className="inv-package-details-content">
-            <p className="inv-package-reference-notes">O material disponível identifica nove indivíduos-base; as fontes do vault não identificam o décimo. O Tigre Fúnebre permanece uma opção homebrew especulativa e não preenche essa vaga. Este pacote também importa Abismo e Agito como formas derivadas separadas, sem contá-las como indivíduos-base. Os dois Cães iniciais já vêm domados; os demais indivíduos exigem ritual, e as formas derivadas exigem confirmação manual do Mestre. O alcance de posicionamento não é definido: configure-o em cada ficha. A esfera de 18 m do ritual não é tratada como alcance de invocação. Regra da campanha: cada Cão custa 2 PE; invocar o par custa 4 PE.</p>
+            <p className="inv-package-reference-notes">A lista oficial tem dez entradas; os Cães Divinos são dois lobos entregues juntos e aparecem como duas fichas. Fuga dos Coelhos e Tigre Fúnebre são perfis oficiais. As quatro formas derivadas ficam em fichas separadas, não ocupam vagas de indivíduo-base e aguardam aprovação do Mestre porque a edição nova não publica seus valores numéricos completos. As quimeras exigem que as invocações componentes tenham sido domadas e um ritual; um shikigami exorcizado após ser domado ainda pode ser usado na quimera. O alcance de posicionamento das invocações não é definido; a esfera de 18 m do ritual não é tratada como alcance de invocação. Regra da campanha preservada: cada Cão custa 2 PE; invocar o par custa 4 PE. Fichas já salvas não são sobrescritas durante a importação, para preservar personalizações; versões da edição anterior ficam identificadas na própria ficha.</p>
             <div className="inv-package-skills-grid">
               <div>
                 <strong>Técnica</strong>
@@ -900,7 +957,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
                 <strong>Formas derivadas (não são indivíduos adicionais na lista-base)</strong>
                 <ul>
                   {DEZ_SOMBRAS_FORMAS_REFERENCIA.map(forma => <li key={forma.id}><strong>{forma.nome} | p. {forma.pagina}</strong> — {forma.descricao}</li>)}
-                  <li><strong>Fichas separadas importáveis:</strong> {DEZ_SOMBRAS_FORMAS_DERIVADAS.map(forma => forma.nome).join(' e ')}. Não contam como indivíduos-base e exigem confirmação manual dos requisitos pelo Mestre.</li>
+                  <li><strong>Fichas derivadas:</strong> {DEZ_SOMBRAS_FORMAS_DERIVADAS.map(forma => forma.nome).join(', ')}. Não contam como indivíduos-base; seus valores numéricos são provisórios até revisão e aprovação pelo Mestre.</li>
                 </ul>
               </div>
             </div>
@@ -917,8 +974,8 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
             <h3 id="inv-individual-catalog-title">Adicionar invocações individuais</h3>
             <p>Escolha uma imagem para cada perfil antes de adicioná-lo. A prévia aparece no cartão e acompanha a ficha na biblioteca.</p>
           </div>
-          <div className="inv-catalog-counter" aria-label="Nove perfis-base">
-            <strong>09</strong><span>perfis-base</span>
+          <div className="inv-catalog-counter" aria-label="Onze fichas para dez entradas oficiais">
+            <strong>11</strong><span>fichas-base</span>
           </div>
         </header>
 
@@ -926,9 +983,9 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
           <div className="inv-profile-group-heading">
             <div className="inv-profile-group-title">
               <span className="inv-profile-group-index" aria-hidden="true">01</span>
-              <div><p className="inv-catalog-kicker">Catálogo principal</p><h4>Indivíduos-base</h4></div>
+              <div><p className="inv-catalog-kicker">Catálogo principal</p><h4>Invocações oficiais</h4></div>
             </div>
-            <span className="inv-profile-group-count">9 perfis de referência</span>
+            <span className="inv-profile-group-count">10 entradas · 11 fichas com os dois Cães</span>
           </div>
 
           <div className="inv-profile-grid">
@@ -996,7 +1053,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
                           className="inv-primary inv-profile-add"
                           disabled={!temTecnicaDezSombras || !imagemSelecionada || Boolean(salvandoImagemPerfilId)}
                           onClick={() => void adicionarFichaPreProntaComImagem(chaveImagem,
-                            () => criarPacoteDezSombras(character.id, incluirTigreFunebre).find(
+                            () => criarPacoteDezSombras(character.id).find(
                               novo => novo.subcategoria === 'dez-sombras:' + perfil.id
                             ),
                             perfil.nome,
@@ -1013,98 +1070,6 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
           </div>
         </div>
 
-        {incluirTigreFunebre && (
-          <div className="inv-profile-group inv-profile-group-homebrew">
-            <div className="inv-profile-group-heading">
-              <div className="inv-profile-group-title">
-                <span className="inv-profile-group-index" aria-hidden="true">H</span>
-                <div><p className="inv-catalog-kicker">Conteúdo especulativo</p><h4>Perfil homebrew</h4></div>
-              </div>
-              <span className="inv-profile-group-count">Opção extra</span>
-            </div>
-            <div className="inv-profile-grid">
-              {DEZ_SOMBRAS_MODELOS
-                .filter(perfil => perfil.opcionalHomebrew) // Apenas homebrew
-                .map(perfil => {
-                  const chaveImagem = `homebrew:${perfil.id}`;
-                  const imagemSelecionada = Boolean(imagensPerfisPreProntos[chaveImagem]);
-                  const salvandoImagem = salvandoImagemPerfilId === chaveImagem;
-                  const fichaExistente = catalogo.find(inv =>
-                    inv.subcategoria === `dez-sombras:${perfil.id}`
-                  );
-                  const isAlreadyInCatalog = Boolean(fichaExistente);
-                  return (
-                    <article key={perfil.id} className="inv-profile-card" data-variant="homebrew" data-added={isAlreadyInCatalog} data-image-ready={imagemSelecionada}>
-                      <div className="inv-profile-card-top">
-                        {fichaExistente ? renderImagemPerfilExistente(fichaExistente, perfil.nome) : renderSeletorImagemPerfilPrePronto(chaveImagem, perfil.nome)}
-                        <div className="inv-profile-card-name">
-                          <span className="inv-profile-kind">Opção homebrew</span>
-                          <h5>{perfil.nome}</h5>
-                        </div>
-                        <span className="inv-profile-page">p. {perfil.pagina}</span>
-                      </div>
-                      <div className="inv-profile-badges">
-                        <span className="inv-profile-grade">Grau {perfil.grau}</span>
-                        <span className="inv-profile-cost"><span aria-hidden="true">✦</span> {perfil.custoPE} PE</span>
-                      </div>
-                      <dl className="inv-profile-stats">
-                        <div><dt>PV</dt><dd>{perfil.hp + (perfil.bonusPVMaximo ?? 0)}</dd></div>
-                        <div><dt>Defesa</dt><dd>{perfil.defesa}</dd></div>
-                        <div><dt>Movimento</dt><dd>{perfil.deslocamentoM}<small> m</small></dd></div>
-                      </dl>
-                      <div className="inv-profile-actions">
-                        <div className="inv-profile-actions-heading">
-                          <span>Ações</span>
-                          <small>{perfil.acoes.length} {perfil.acoes.length === 1 ? 'ação' : 'ações'}</small>
-                        </div>
-                        <div className="inv-profile-action-list">
-                          {perfil.acoes.map((acao, index) => (
-                            <div key={index} className="inv-profile-action-row">
-                              <div className="inv-profile-action-main">
-                                <strong>{acao.nome}</strong>
-                                <span>
-                                  {acao.tipo === 'ataque' ? (acao.dano ?? 'Ataque') :
-                                   acao.formulaCura ? acao.formulaCura + ' PV' :
-                                   acao.efeitoSuporte?.efeito || 'Habilidade'}
-                                </span>
-                              </div>
-                              {acao.statusAutomacao && (
-                                <span className="inv-profile-automation" data-state={acao.statusAutomacao}>
-                                  {acao.statusAutomacao === 'executavel' ? 'Automático' :
-                                   acao.statusAutomacao === 'parcial' ? 'Parcial' : 'Manual'}
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <footer className="inv-profile-card-footer">
-                        {isAlreadyInCatalog ? (
-                          <p className="inv-profile-added" role="status"><span aria-hidden="true">✓</span> Já está na biblioteca</p>
-                        ) : (
-                          <button
-                            type="button"
-                            className="inv-primary inv-profile-add"
-                            disabled={!temTecnicaDezSombras || !imagemSelecionada || Boolean(salvandoImagemPerfilId)}
-                            onClick={() => void adicionarFichaPreProntaComImagem(chaveImagem,
-                              () => criarPacoteDezSombras(character.id, incluirTigreFunebre).find(
-                                novo => novo.subcategoria === 'dez-sombras:' + perfil.id
-                              ),
-                              perfil.nome,
-                            )}
-                          >
-                            <span className="inv-profile-add-symbol" aria-hidden="true">+</span>
-                            {!temTecnicaDezSombras ? 'Técnica necessária' : salvandoImagem ? 'Guardando imagem…' : imagemSelecionada ? 'Adicionar à biblioteca' : 'Escolha uma imagem'}
-                          </button>
-                        )}
-                      </footer>
-                    </article>
-                  );
-                })}
-            </div>
-          </div>
-        )}
-
         <div className="inv-profile-group inv-profile-group-derived">
           <div className="inv-profile-group-heading">
             <div className="inv-profile-group-title">
@@ -1117,10 +1082,10 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
             <article key={forma.id} className="inv-derived-note">
               <div className="inv-derived-note-symbol" aria-hidden="true">↻</div>
               <div className="inv-derived-note-copy">
-                <p className="inv-profile-kind">Transformação · sem ficha-base adicional</p>
+                <p className="inv-profile-kind">Quimera · ficha derivada separada</p>
                 <h5>{forma.nome}</h5>
                 <p>{'descricao' in forma ? forma.descricao : 'Descrição não informada nesta referência.'}</p>
-                <p>A Totalidade transforma o Cão sobrevivente após o exorcismo permanente do outro. É uma transformação, não uma ficha-base separada; o catálogo não adiciona uma identidade extra.</p>
+                <p>A Totalidade é criada ao combinar os dois Cães já domados em um ritual. A perda permanente de um Cão não transforma automaticamente o outro. Se um shikigami foi domado antes de ser exorcizado, ele ainda pode compor uma quimera.</p>
               </div>
             </article>
           ))}
@@ -1200,6 +1165,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
 {erro && <p role="alert" className="text-xs inv-error">{erro}</p>}
       {catalogo.filter(inv => (inv.nome + ' ' + (inv.apelido ?? '')).toLocaleLowerCase().includes(libraryQuery.trim().toLocaleLowerCase())).map(inv => {
         const arte = assetForFicha(inv);
+        const auditoriaFormaDerivada = auditarValoresProvisoriosFormaDerivadaDezSombras(inv);
         const estadoIntermediario = validarIntermediarioInvocacao(inv, character, itensInventario, catalogo);
         const instanciaHorda = [...(character.instanciasInvocacao ?? [])].reverse().find(item =>
           item.estado !== 'dissipada' && item.composicaoHorda &&
@@ -1222,6 +1188,12 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
           ? character.instanciasInvocacao?.find(item => item.id === token.invocationInstanceId || item.tokenId === token.id)
           : instanciaHorda ?? [...(character.instanciasInvocacao ?? [])].reverse().find(item => item.modeloId === inv.id);
         const estadoInstancia = token?.invocationState ?? instancia?.estado;
+        const acaoAgarrarGama = inv.acoes.find(acao => acao.efeitoEspecial?.tipo === 'agarrar_gama_apos_acerto');
+        const agarrarLinguaPendente = instancia?.agarrarLinguaPendente;
+        const janelaAgarrarGama = Boolean(acaoAgarrarGama?.efeitoEspecial?.tipo === 'agarrar_gama_apos_acerto' &&
+          agarrarLinguaPendente && inCombat && currentActorId === character.id &&
+          agarrarLinguaPendente.combateId === combatId && agarrarLinguaPendente.rodada === round &&
+          agarrarLinguaPendente.turnoIndex === currentTurnIndex && estadoInstancia === 'ativa');
         const pvAtualExibido = emHorda
           ? tokenHorda?.hp ?? instanciaHorda?.hpAtual ?? inv.hpAtual
           : token?.hp ?? instancia?.hpAtual ?? inv.hpAtual;
@@ -1247,6 +1219,28 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
                     : `Tempo extra inválido: ${tempoConfigurado.motivo}`;
         const derrotaPendente = estadoInstancia === 'derrotada' && !resolucaoDerrota;
         const permiteAlvosInimigos = inv.acoes.some(acao => acao.permiteInimigos === true);
+        const acaoLinguaSombria = inv.acoes.find(acao => acao.efeitoEspecial?.tipo === 'puxar_aliado_gama');
+        const linguaSombriaUsada = Boolean(instancia?.usoLinguaSombriaGama &&
+          instancia.usoLinguaSombriaGama.combateId === combatId && instancia.usoLinguaSombriaGama.rodada === round);
+        const linguaSombriaDisponivel = Boolean(inCombat && combatId && estadoInstancia === 'ativa' &&
+          (instancia?.economiaAcoes?.reacao?.atual ?? 0) > 0 && !linguaSombriaUsada);
+        const alvosAliadosLinguaSombria = [...new Map(Object.values(entities)
+          .filter(entity => !entity.hidden && (entity.layer ?? 'tokens') !== 'map' &&
+            (entity.layer == null || useMapStore.getState().layerVisible[entity.layer] !== false))
+          .flatMap(entity => {
+            if (entity.invocationId && entity.ownerCharId && entity.id !== token?.id) {
+              const donoAlvo = allCharacters.find(alvo => alvo.id === entity.ownerCharId);
+              const modeloAlvo = donoAlvo?.invocacoesConhecidas?.find(modelo => modelo.id === entity.invocationId);
+              if (!donoAlvo || !modeloAlvo || (donoAlvo.category === 'INIMIGO') !== (character.category === 'INIMIGO')) return [];
+              return [[`invoc:${entity.id}`, entity.label || modeloAlvo.apelido?.trim() || modeloAlvo.nome] as const];
+            }
+            if (entity.characterId) {
+              const alvo = allCharacters.find(item => item.id === entity.characterId);
+              if (!alvo || (alvo.category === 'INIMIGO') !== (character.category === 'INIMIGO')) return [];
+              return [[alvo.id, alvo.name] as const];
+            }
+            return [];
+          })).values()];
         const personagensAlvoSuporte = [...new Map(Object.values(entities)
           .filter(entity => entity.characterId && !entity.invocationId && !entity.hidden &&
             (permiteAlvosInimigos || allCharacters.find(alvo => alvo.id === entity.characterId)?.category !== 'INIMIGO' || entity.characterId === character.id))
@@ -1285,34 +1279,40 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
         const alcanceConfigurado = Number.isFinite(inv.alcanceInvocacaoM) && (inv.alcanceInvocacaoM ?? -1) >= 0;
         const aguardandoRodadaHorda = character.instanciasInvocacao?.some(item =>
           item.membrosHordaRemovidos?.some(membro => membro.modeloId === inv.id && membro.bloqueioRodadas > 0));
-        const podeSelecionar = !aguardandoRodadaHorda && !emHorda && inv.domado !== false && !inv.perdaPermanente && !ativo && !derrotaPendente && aprovado && alcanceConfigurado && (estadoIntermediario.ok || (isMaster && Boolean(motivosOverride[inv.id]?.trim())));
+        const bloqueioDomesticao = mensagemDomesticaoPendente(inv);
+        const podeSelecionar = !aguardandoRodadaHorda && !emHorda && !bloqueioDomesticao && !inv.perdaPermanente && !ativo && !derrotaPendente && aprovado && alcanceConfigurado && (estadoIntermediario.ok || (isMaster && Boolean(motivosOverride[inv.id]?.trim())));
         return (
         <div key={inv.id} className="inv-card flex flex-wrap items-center justify-between gap-2 rounded border border-border p-2">
           <div className="inv-card-header flex items-center gap-3">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded border" style={{ borderColor: inv.corIdentificacao ?? '#8055bd' }}>
               {arte ? <img key={assetsTick} src={arte.url} alt={inv.imagemAltText || inv.apelido || inv.nome} className="h-full w-full object-cover" /> : <span className="text-xs text-muted-foreground">Sem arte</span>}
             </div>
-            <div><h3>{inv.apelido?.trim() || inv.nome}</h3><p className="inv-card-kind">{inv.tipo === 'shikigami' ? 'Shikigami' : 'Corpo Amaldiçoado'} · {inv.acoes.length} ações</p><dl className="inv-card-hud" aria-label={'Valores de ' + inv.nome}><div><dt>PV{emHorda ? ' compartilhados' : ''}</dt><dd>{pvAtualExibido}/{pvMaximoExibido}</dd></div><div><dt>Defesa</dt><dd>{inv.defesa}</dd></div><div><dt>Movimento</dt><dd>{inv.deslocamentoM} m</dd></div><div><dt>Invocação</dt><dd>{inv.custoInvocacaoPE} PE</dd></div></dl></div>
+            <div><h3>{inv.apelido?.trim() || inv.nome}</h3><p className="inv-card-kind">{rotuloTipoInvocacao(inv.tipo)} · {inv.acoes.length} ações</p><dl className="inv-card-hud" aria-label={'Valores de ' + inv.nome}><div><dt>PV{emHorda ? ' compartilhados' : ''}</dt><dd>{pvAtualExibido}/{pvMaximoExibido}</dd></div><div><dt>Defesa</dt><dd>{inv.defesa}</dd></div><div><dt>Movimento</dt><dd>{inv.deslocamentoM} m</dd></div><div><dt>Invocação</dt><dd>{inv.custoInvocacaoPE} PE</dd></div></dl></div>
           </div>
-          <div className="inv-acquisition-status basis-full text-xs" data-status={inv.aprovacaoMestre}>Aquisição: {inv.aprovacaoMestre === 'pendente' ? 'Aguardando aprovação do Mestre' : inv.aprovacaoMestre === 'rejeitada' ? 'Rejeitada — edite e solicite novamente' : 'Aprovada'}</div>
+          <div className="inv-acquisition-status basis-full text-xs" data-status={inv.aprovacaoMestre}>Aprovação da ficha: {inv.aprovacaoMestre === 'pendente' ? 'Aguardando o Mestre' : inv.aprovacaoMestre === 'rejeitada' ? 'Rejeitada — edite e solicite novamente' : 'Aprovada'}</div>
+          {inv.formaDerivada && inv.acoes.length === 0 && <p role="status" className="basis-full text-xs inv-warning">Esta forma ainda não tem ações cadastradas. Complete a ficha derivada e solicite nova aprovação antes de invocar.</p>}
           <div className={'basis-full text-xs ' + (derrotaPendente ? 'inv-error' : estadoInstancia === 'caida' ? 'inv-warning' : 'text-muted-foreground')}>Estado de combate: {rotuloEstado}{estadoInstancia === 'derrotada' && instancia ? ` (PV ${instancia.hpAtual})` : ''}</div>
           {(instancia?.agarradoPorInvocacao?.length ?? 0) > 0 && <div className="basis-full flex flex-wrap items-center gap-2 rounded border border-amber-500/40 bg-amber-500/5 p-2 text-xs">
             <span>Agarrado por {instancia?.agarradoPorInvocacao?.[0]?.nome}. Tente escapar no início do turno:</span>
             <button type="button" disabled={busyFugaInvocacao} className="rounded border px-2 py-1 disabled:opacity-50" onClick={() => void escaparInvocacao(instancia!.id, 'Atletismo')}>Escapar · Atletismo</button>
             <button type="button" disabled={busyFugaInvocacao} className="rounded border px-2 py-1 disabled:opacity-50" onClick={() => void escaparInvocacao(instancia!.id, 'Acrobacia')}>Escapar · Acrobacia</button>
           </div>}
-          {inv.pacoteRegras === 'dez-sombras' && inv.domado === false && <div className="basis-full space-y-1 text-xs">
+          {bloqueioDomesticao && (inv.tipo === 'maldicao_domada' || inv.pacoteRegras === 'dez-sombras') && <div className="basis-full space-y-1 text-xs">
             {inv.formaDerivada ? <>
               <p>Forma derivada bloqueada; não pode ser invocada até o Mestre confirmar manualmente os requisitos listados. O sistema não verifica os pré-requisitos automaticamente.</p>
               {inv.requisitosFormaDerivada && <ul className="list-disc pl-5">{inv.requisitosFormaDerivada.map(requisito => <li key={requisito}>{requisito}</li>)}</ul>}
               {isMaster && <button type="button" className="rounded border px-2 py-1" onClick={() => confirmarRequisitosFormaDerivada(inv.id)}>Confirmar requisitos e liberar forma</button>}
+            </> : inv.tipo === 'maldicao_domada' ? <>
+              <p>{bloqueioDomesticao} Criar ou aprovar a ficha não substitui o processo de domesticação da campanha.</p>
+              {isMaster && <button type="button" className="rounded border px-2 py-1" onClick={() => registrarDomesticaoConcluida(inv.id)}>Confirmar domesticação concluída</button>}
             </> : <>
               <p>Ritual de domar pendente; esta ficha não pode ser invocada.</p>
-              {isMaster && <button type="button" className="rounded border px-2 py-1" onClick={() => registrarRitualConcluido(inv.id)}>Registrar ritual bem-sucedido</button>}
+              {isMaster && <button type="button" className="rounded border px-2 py-1" onClick={() => registrarDomesticaoConcluida(inv.id)}>Registrar ritual bem-sucedido</button>}
             </>}
           </div>}
-          {inv.formaDerivada && <div className="basis-full text-xs text-muted-foreground"><strong>Forma derivada — não ocupa vaga de indivíduo-base.</strong>{inv.lacunasFormaDerivada && <ul className="list-disc pl-5">{inv.lacunasFormaDerivada.map(lacuna => <li key={lacuna}>{lacuna}</li>)}</ul>}{inv.valoresProvisoriosFormaDerivada?.length ? <p>Valores provisórios: {inv.valoresProvisoriosFormaDerivada.join(', ')}.</p> : null}</div>}
-          {inv.opcionalHomebrew && <div className="basis-full text-xs text-amber-500">Homebrew opcional — especulativo segundo a própria fonte.</div>}
+          {inv.formaDerivada && <div className="basis-full text-xs text-muted-foreground"><strong>Forma derivada — não ocupa vaga de indivíduo-base.</strong>{inv.lacunasFormaDerivada && <ul className="list-disc pl-5">{inv.lacunasFormaDerivada.map(lacuna => <li key={lacuna}>{lacuna}</li>)}</ul>}{inv.valoresProvisoriosFormaDerivada?.length ? <><p>Valores provisórios: {inv.valoresProvisoriosFormaDerivada.join(', ')}.</p><p>Comparação com a base do grau ({inv.grau}); diferenças para revisão do Mestre, sem funcionarem como limites:</p><ul className="list-disc pl-5">{auditoriaFormaDerivada.map(item => <li key={item.campo}>{item.campo}: {item.valorProvisorio} vs referência {item.referenciaGrau} ({item.diferenca > 0 ? '+' : ''}{item.diferenca}).</li>)}</ul></> : null}</div>}
+          {inv.opcionalHomebrew && !(inv.pacoteRegras === 'dez-sombras' && inv.subcategoria === 'dez-sombras:tigre-funebre') && <div className="basis-full text-xs text-amber-500">Homebrew opcional — especulativo segundo a própria fonte.</div>}
+          {inv.pacoteRegras === 'dez-sombras' && inv.referenciaRegra?.includes('v0.9') && <div className="basis-full text-xs text-amber-500">Ficha importada da edição anterior. O catálogo usa agora a v1.1.1; esta ficha salva foi preservada para não sobrescrever ajustes personalizados.</div>}
           {inv.referenciaRegra && <div className="basis-full text-xs text-muted-foreground">{inv.referenciaRegra}</div>}
           {inv.pacoteRegras === 'dez-sombras' && !alcanceConfigurado && <p role="status" className="basis-full text-xs inv-warning">O livro não define o alcance de posicionamento após domar. Edite a ficha para configurar essa distância antes de invocar.</p>}
           {inv.pacoteRegras === 'dez-sombras' && inv.descricao && <InvocationDisclosure className="inv-card-disclosure basis-full"><summary>Resumo da ficha e ressalvas da fonte</summary><p className="text-xs text-muted-foreground">{inv.descricao}</p></InvocationDisclosure>}
@@ -1448,6 +1448,12 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
                     title={ehAbismo && !isMaster ? 'Somente o Mestre pode confirmar a quantidade de sapos vivos.' : ehAbismo && !quantidadeSaposValida ? 'Informe a quantidade de sapos confirmada pelo Mestre.' : undefined}
                     className="mt-1 rounded border px-2 py-1 disabled:opacity-50"
                     onClick={() => void segurar(inv.id)}>Segurar alvo selecionado</button>}
+                  {acao.efeitoEspecial?.tipo === 'vantagem_pericia_controlador' && ativo && <button type="button"
+                    disabled={busyHabilidadeId !== null || inv.perdaPermanente || inv.aprovacaoMestre === 'pendente'}
+                    className="mt-1 rounded border border-violet-400/40 bg-violet-500/10 px-2 py-1 text-violet-100 disabled:opacity-50"
+                    onClick={() => usarHabilidadeInvocacao(inv.id, acao.id)}>
+                    {busyHabilidadeId === `${inv.id}:${acao.id}` ? 'Resolvendo…' : `Usar ${acao.nome} · vantagem em ${acao.efeitoEspecial.pericia} para rastrear`}
+                  </button>}
                 </li>)}
               </ul>
             </InvocationDisclosure>
@@ -1459,6 +1465,13 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
                   value={alvosAtaque[inv.id] ?? ''} onChange={e => setAlvosAtaque(v => ({ ...v, [inv.id]: e.target.value }))}>
                   <option value="">Selecione uma ficha ou invocação no mapa</option>
                   {alvosDisponiveis.filter(alvo => alvo.id !== `invoc:${token?.id}`).map(alvo => <option key={alvo.id} value={alvo.id}>{alvo.nome}</option>)}
+                </InvocationSelect>
+              </label>}
+              {acaoLinguaSombria && ativo && <label className="block text-xs">Aliado para Língua Sombria
+                <InvocationSelect aria-label={`Aliado para Língua Sombria de ${inv.nome}`} className="mt-1 w-full rounded border border-input bg-background p-2"
+                  value={alvosPuxarGama[inv.id] ?? ''} onChange={event => setAlvosPuxarGama(current => ({ ...current, [inv.id]: event.target.value }))}>
+                  <option value="">Selecione um aliado no mapa</option>
+                  {alvosAliadosLinguaSombria.map(([id, nome]) => <option key={id} value={id}>{nome}</option>)}
                 </InvocationSelect>
               </label>}
               {acoesDeAtaque(inv).some(acao => configOmniDaAcao(acao)?.tipo_alvo === 'area') && <p className="text-xs text-muted-foreground">Ações em área: ao usar, posicione e confirme a forma no mapa. O raio em si usa o centro da invocação.</p>}
@@ -1480,23 +1493,54 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
               <div className="flex flex-wrap gap-1">
                 {acoesDeAtaque(inv).map(a => {
                   const multiplo = configOmniDaAcao(a)?.tipo_alvo === 'multiplo';
-                const area = configOmniDaAcao(a)?.tipo_alvo === 'area';
-                  const temAlvos = multiplo
+                  const area = configOmniDaAcao(a)?.tipo_alvo === 'area';
+                  const eLinguaSombria = a.efeitoEspecial?.tipo === 'puxar_aliado_gama';
+                  const temAlvos = eLinguaSombria
+                    ? Boolean(alvosPuxarGama[inv.id])
+                    : multiplo
                     ? (alvosAtaqueMultiplo[`${inv.id}:${a.id}`]?.length ?? 0) > 0
                     : area || Boolean(alvosAtaque[inv.id]);
-                return <button key={a.id} type="button" disabled={busyAtaque || !temAlvos || a.statusAutomacao === 'manual'}
-                    title={a.statusAutomacao === 'manual' ? 'A fonte deixa uma etapa sem regra suficiente para automação.' : a.statusAutomacao === 'parcial' ? 'O dano/TR foi aplicado; consulte a descrição para os efeitos restantes.' : undefined}
+                  return <button key={a.id} type="button" disabled={busyAtaque || !temAlvos || a.statusAutomacao === 'manual' || (eLinguaSombria && !linguaSombriaDisponivel)}
+                    title={eLinguaSombria && !linguaSombriaDisponivel
+                      ? linguaSombriaUsada ? 'Língua Sombria já foi usada nesta rodada.' : 'Requer combate ativo e uma Reação disponível do Gama.'
+                      : a.statusAutomacao === 'manual' ? 'A fonte deixa uma etapa sem regra suficiente para automação.' : a.statusAutomacao === 'parcial' ? 'O dano/TR foi aplicado; consulte a descrição para os efeitos restantes.' : undefined}
                     onClick={() => void atacar(inv.id, a.id)}
                     className="rounded border border-primary px-2 py-1 text-xs disabled:opacity-50">
                     Usar ação: {a.nome}{a.statusAutomacao === 'parcial' ? ' (parcial)' : a.statusAutomacao === 'manual' ? ' (manual)' : ''}
                   </button>;
                 })}
+                {janelaAgarrarGama && acaoAgarrarGama?.efeitoEspecial?.tipo === 'agarrar_gama_apos_acerto' && instancia && (
+                  <div className="space-y-2">
+                    <fieldset className="space-y-1 text-xs text-muted-foreground">
+                      <legend className="font-medium text-foreground">Anfíbio Sombrio · +2 em manobras</legend>
+                      <label className="flex items-center gap-2">
+                        <input type="checkbox" checked={gamaSubmerso} disabled={busyAgarrarGama} onChange={event => setGamaSubmerso(event.target.checked)} />
+                        Gama está submerso
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input type="checkbox" checked={gamaEscuridaoTotal} disabled={busyAgarrarGama} onChange={event => setGamaEscuridaoTotal(event.target.checked)} />
+                        Gama está em Escuridão Total
+                      </label>
+                      <p>O bônus de +2 é aplicado uma vez, mesmo se as duas condições forem verdadeiras.</p>
+                    </fieldset>
+                    <button
+                      type="button"
+                      data-testid="gama-grapple-followup"
+                      disabled={busyAgarrarGama || (character.peCurrent ?? 0) < acaoAgarrarGama.efeitoEspecial.custoPE}
+                      title={(character.peCurrent ?? 0) < acaoAgarrarGama.efeitoEspecial.custoPE ? 'PE insuficiente para tentar Agarrar.' : undefined}
+                      onClick={() => void agarrarGama(inv.id, instancia.id, agarrarLinguaPendente!.eventoId)}
+                      className="rounded border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-xs text-emerald-100 disabled:opacity-50"
+                    >
+                      {busyAgarrarGama ? 'Resolvendo…' : `Gastar ${acaoAgarrarGama.efeitoEspecial.custoPE} PE e tentar Agarrar · Ação Livre`}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}
           {ativos.some(e => e.invocationId === inv.id) && (
             <div className="basis-full space-y-2 border-t border-border/60 pt-2">
-              <label className="block text-xs">Teste de perícia do Shikigami
+              <label className="block text-xs">Teste de perícia da invocação
                 <InvocationSelect aria-label={`Perícia de ${inv.nome}`} className="mt-1 w-full rounded border border-input bg-background p-2"
                   value={periciasSelecionadas[inv.id] ?? ''}
                   onChange={event => setPericiasSelecionadas(current => ({ ...current, [inv.id]: event.target.value }))}>
@@ -1579,10 +1623,12 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
               </label>;
             })}
         </fieldset>}
-        {hordaPreview?.ok
-          ? <p className="text-xs" role="status">Prévia: PV compartilhados {hordaPreview.horda.pvAtual}/{hordaPreview.horda.pvMaximo} · custo {hordaPreview.horda.custoInvocacaoPE} PE · {hordaPreview.horda.quantidadeMembros} membro(s) · tempo único +{hordaTempoPreview.ok ? formatarSegundosTempoInvocacao(hordaTempoPreview.segundos) : '—'} s.</p>
+        {hordaPreview?.ok && limiteHordaPreview?.ok
+          ? <p className="text-xs" role="status">Prévia: PV compartilhados {hordaPreview.horda.pvAtual}/{hordaPreview.horda.pvMaximo} · custo {hordaPreview.horda.custoInvocacaoPE} PE · {hordaPreview.horda.quantidadeMembros} membro(s) ocupam {hordaPreview.horda.vagasInvocacao} vagas · tempo único +{hordaTempoPreview.ok ? formatarSegundosTempoInvocacao(hordaTempoPreview.segundos) : '—'} s.</p>
+          : hordaPreview?.ok && limiteHordaPreview && !limiteHordaPreview.ok
+            ? <p className="text-xs inv-warning" role="status">{limiteHordaPreview.motivo}</p>
           : hordaLiderId && hordaMembrosIds.length > 0 && <p className="text-xs inv-warning" role="status">{hordaPreview && !hordaPreview.ok ? hordaPreview.motivo : 'Confira o grau e o tempo da composição.'}</p>}
-        <button type="button" className="rounded border border-primary px-3 py-2 text-xs disabled:opacity-50" disabled={!!carregandoArteId || !hordaPreview?.ok || !hordaTempoPreview.ok || !hordaMembrosIds.length} onClick={() => void formarHorda()}>
+        <button type="button" className="rounded border border-primary px-3 py-2 text-xs disabled:opacity-50" disabled={!!carregandoArteId || !hordaPreview?.ok || !limiteHordaPreview?.ok || !hordaTempoPreview.ok || !hordaMembrosIds.length} onClick={() => void formarHorda()}>
           {carregandoArteId === 'horda' ? 'Preparando Horda…' : 'Posicionar Horda no mapa'}
         </button>
       </InvocationDisclosure>}
@@ -1596,9 +1642,10 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
         </label>
         <label className="block text-xs">Tipo
           <InvocationSelect value={tipo} onChange={e => setTipo(e.target.value as TipoInvocacaoControlador)} className="mt-1 w-full rounded border border-input bg-background p-2">
-            <option value="shikigami">Shikigami</option><option value="corpo_amaldicoado">Corpo Amaldiçoado</option>
+            <option value="shikigami">Shikigami</option><option value="corpo_amaldicoado">Corpo Amaldiçoado</option><option value="maldicao_domada">Maldição Domada</option>
           </InvocationSelect>
         </label>
+        {tipo === 'maldicao_domada' && <p role="note" className="text-xs text-muted-foreground">Criar a ficha não adquire a criatura. Ela precisa ser aprovada e a domesticação concluída na campanha; o Mestre registra essa confirmação separadamente.</p>}
         {!escolhido && <>
           <label className="block text-xs">Nome<input value={nome} onChange={e => setNome(e.target.value)} className="mt-1 w-full rounded border border-input bg-background p-2" /></label>
           <div className="grid grid-cols-3 gap-2">
@@ -1614,7 +1661,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
       </InvocationDisclosure>
 </div>
 
-      <p className="text-xs inv-warning">{controlador ? `Progressão do livro: ${max} invocações; além disso exige Interlúdio. Limite simultâneo: ${ativas}.` : 'Outras especializações obtêm Shikigamis durante Interlúdios; podem manter apenas 1 invocação em campo por padrão.'}</p>
+      <p className="text-xs inv-warning">{controlador ? `Progressão do livro: ${max} invocações; além disso exige Interlúdio. Limite simultâneo: ${ativas}.` : 'Outras especializações obtêm invocações durante Interlúdios; podem manter apenas 1 invocação em campo por padrão.'}</p>
       <p className="text-xs text-muted-foreground">Invocar é uma Ação Livre por enquanto e gasta PE. Posicione as invocações clicando no mapa, dentro do alcance definido em cada ficha; um uso permite selecionar até duas. Reposicionamento custa uma Ação Bônus e ataques comandados gastam uma Ação Comum.</p>
     </div>
   );

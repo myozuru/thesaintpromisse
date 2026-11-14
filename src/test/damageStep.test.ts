@@ -46,6 +46,13 @@ describe('damageStep — overflow acima de +3', () => {
     expect(stepDamageStr('1d12', 5)).toBe('1d12+1d12');
     expect(stepDamageStr('1d12', 6)).toBe('1d12+1d12+1d4');
   });
+  it('preserva fórmulas grandes ao avançar níveis quando a aproximação da tabela diminuiria o dano', () => {
+    const dano = parseDamage('2d12+1d12+10d8');
+    const aumentado = stepDamage(dano, 2);
+
+    expect(formatDamage(aumentado)).toBe('2d12+1d12+10d12');
+    expect(maxOf(aumentado)).toBeGreaterThan(maxOf(dano));
+  });
 });
 
 describe('damageStep — redução abaixo de -2', () => {

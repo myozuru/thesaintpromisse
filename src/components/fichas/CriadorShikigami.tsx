@@ -3,7 +3,7 @@ import { InvocationDisclosure } from "@/components/invocacoes/InvocationDisclosu
 import { InvocationSelect } from "@/components/invocacoes/InvocationSelect";
 import { useEffect, useRef, useState } from 'react';
 import type { Character } from '@/types';
-import { DEFAULT_SAVING_THROWS } from '@/types';
+import { ALL_CONDITIONS, DEFAULT_SAVING_THROWS } from '@/types';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
@@ -135,7 +135,7 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
   const [origemReferencia, setOrigemReferencia] = useState(initial?.origem?.entidadeId ?? '');
   const [origemAquisicao, setOrigemAquisicao] = useState(initial?.origemAquisicao ?? '');
   const [referenciaInterludio, setReferenciaInterludio] = useState(initial?.referenciaInterludio ?? '');
-  const [tipo, setTipo] = useState<'shikigami' | 'corpo_amaldicoado'>(initial?.tipo ?? 'shikigami');
+  const [tipo, setTipo] = useState<InvocacaoControlador['tipo']>(initial?.tipo ?? 'shikigami');
   const [alcanceInvocacaoM, setAlcanceInvocacaoM] = useState(initial?.alcanceInvocacaoM?.toString() ?? '');
   const [grau, setGrau] = useState<GrauShikigami>((initial?.grau as GrauShikigami) ?? 'quarto');
   const [nivelEvolucao, setNivelEvolucao] = useState(initial?.nivelEvolucao?.toString() ?? '');
@@ -190,6 +190,7 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
   const [acaoAtributoDano, setAcaoAtributoDano] = useState<keyof AtributosShikigami | ''>('');
   const [acaoMultiplicadorDanoAtributo, setAcaoMultiplicadorDanoAtributo] = useState('');
   const [acaoResistenciaAlvo, setAcaoResistenciaAlvo] = useState(DEFAULT_SAVING_THROWS[1]);
+  const [acaoCondicaoAlvoId, setAcaoCondicaoAlvoId] = useState('');
   const [acaoAtributoCD, setAcaoAtributoCD] = useState<keyof AtributosShikigami>('presenca');
   const [acaoDanoNoSucesso, setAcaoDanoNoSucesso] = useState<'nenhum' | 'metade'>('nenhum');
   const [acaoMargemCritico, setAcaoMargemCritico] = useState('20');
@@ -294,7 +295,9 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
   const hpMaximoComCaracteristicas = valoresFinais.hpMaximo + bonusPVCaracteristicas({ grau, caracteristicas });
   const alertas = [
     ...auditarFichaShikigami({
-      grau, nivelUsuario: character.level, bonusTreinamentoUsuario: bonusTreinamento, atributos,
+      grau, tipo,
+      domado: tipo === 'maldicao_domada' && initial?.tipo === tipo ? initial.domado : false,
+      nivelUsuario: character.level, bonusTreinamentoUsuario: bonusTreinamento, atributos,
       atributoBasePericias: atributoBasePericias || undefined, periciasTreinadas,
       valoresAtuais: { pv: valoresFinais.hpMaximo, defesa: valoresFinais.defesa, deslocamentoM: valoresFinais.deslocamentoM, custoInvocacaoPE: valoresFinais.custoInvocacaoPE },
     }),
@@ -367,6 +370,7 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
     setAcaoBonus(acao.bonusAtaque?.toString() ?? '0');
     setAcaoCusto(acao.custoPE?.toString() ?? '0');
     setAcaoResistenciaAlvo(acao.resistenciaAlvo ?? DEFAULT_SAVING_THROWS[0]);
+    setAcaoCondicaoAlvoId(acao.condicaoAlvoId ?? '');
     setAcaoDanoNoSucesso(acao.danoNoSucesso ?? 'nenhum');
     if (acao.alcanceM !== undefined) setAcaoTipoAtaque(acao.alcanceM > 1.5 ? 'distancia' : 'corpo_a_corpo');
   };
@@ -430,7 +434,12 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
       ...(efeitoSuporte ? { efeitoSuporte } : {}),
       ...(testeSalvo ? { teste: testeSalvo } : {}),
       ...(acaoTeste === 'ataque' ? { tipoAtaque: acaoTipoAtaque, atributoAtaque: acaoAtributoAtaque, margemCritico, multiplicadorCritico } : {}),
-      ...(acaoTeste === 'resistencia' ? { resistenciaAlvo: acaoResistenciaAlvo, atributoCD: acaoAtributoCD, danoNoSucesso: acaoDanoNoSucesso } : {}),
+      ...(acaoTeste === 'resistencia' ? {
+        resistenciaAlvo: acaoResistenciaAlvo,
+        atributoCD: acaoAtributoCD,
+        danoNoSucesso: acaoDanoNoSucesso,
+        ...(acaoCondicaoAlvoId ? { condicaoAlvoId: acaoCondicaoAlvoId } : {}),
+      } : {}),
       ...(acaoTeste !== 'nenhum' && acaoAtributoDano ? { atributoDano: acaoAtributoDano } : {}),
       ...(acaoTeste !== 'nenhum' && multiplicadorDanoAtributo !== undefined ? { multiplicadorDanoAtributo } : {}),
       ...((acaoOmniResolvida?.dano ?? acaoDano.trim()) ? { dano: acaoOmniResolvida?.dano ?? acaoDano.trim() } : {}),
@@ -462,7 +471,7 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
     if (acaoModoCusto === 'evento_automatico' || debitos.length) {
       setCustosComandos(previous => ({ ...previous, [actionId]: { execucao: acaoModoCusto, debitos } }));
     }
-    setAcaoNome(''); setAcaoDano(''); setAcaoAlcance(''); setAcaoBonus(''); setAcaoCusto(''); setAcaoCustoDonoPE(''); setAcaoCustoRecursoId(''); setAcaoCustoRecurso(''); setAcaoModoCusto('manual'); setAcaoRecargaQuantidade(''); setAcaoRecargaUnidade(''); setAcaoTipoDano(''); setAcaoAlvo(''); setAcaoEfeitoSuporte(''); setAcaoAlvosSuporte('unico'); setAcaoAtributoCura('sabedoria'); setAcaoTiposDanoRD(['DCO']);
+    setAcaoNome(''); setAcaoDano(''); setAcaoAlcance(''); setAcaoBonus(''); setAcaoCusto(''); setAcaoCustoDonoPE(''); setAcaoCustoRecursoId(''); setAcaoCustoRecurso(''); setAcaoModoCusto('manual'); setAcaoRecargaQuantidade(''); setAcaoRecargaUnidade(''); setAcaoTipoDano(''); setAcaoAlvo(''); setAcaoEfeitoSuporte(''); setAcaoAlvosSuporte('unico'); setAcaoAtributoCura('sabedoria'); setAcaoTiposDanoRD(['DCO']); setAcaoCondicaoAlvoId('');
     setErro('');
   };
   const adicionarRecurso = () => {
@@ -636,9 +645,13 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
         dissipacaoVoluntariaMinSegundos: 10,
         contribuicaoNaDerrotaDefinitiva: 'preservar_saldo_restante',
       } as const;
+      const domado = initial?.tipo === tipo
+        ? initial.domado
+        : tipo === 'maldicao_domada' ? false : initial?.domado;
       const snapshot = {
         schemaVersion: INVOCACAO_SCHEMA_VERSION,
         version, id, donoCharacterId: character.id, tipo, nome: nome.trim(),
+        ...(domado !== undefined ? { domado } : {}),
         ...(apelido.trim() ? { apelido: apelido.trim() } : {}),
         ...(subcategoria.trim() ? { subcategoria: subcategoria.trim() } : {}),
         ...(nivEvolucao !== undefined ? { nivelEvolucao: nivEvolucao } : {}),
@@ -828,7 +841,8 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
       <summary className="cursor-pointer text-sm font-semibold">Identidade, origem e aquisição</summary>
       <div className="inv-section-body mt-3 grid gap-2 sm:grid-cols-2">
         <label className="text-xs">Nome<input aria-label="Nome da invocação" maxLength={160} value={nome} onChange={event => setNome(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
-        <label className="text-xs">Tipo<InvocationSelect value={tipo} onChange={event => setTipo(event.target.value as 'shikigami' | 'corpo_amaldicoado')} className="mt-1 w-full rounded border bg-background p-2"><option value="shikigami">Shikigami</option><option value="corpo_amaldicoado">Corpo amaldiçoado</option></InvocationSelect></label>
+        <label className="text-xs">Tipo<InvocationSelect value={tipo} onChange={event => setTipo(event.target.value as InvocacaoControlador['tipo'])} className="mt-1 w-full rounded border bg-background p-2"><option value="shikigami">Shikigami</option><option value="corpo_amaldicoado">Corpo amaldiçoado</option><option value="maldicao_domada">Maldição domada</option></InvocationSelect></label>
+        {tipo === 'maldicao_domada' && <p role="note" className="text-xs text-muted-foreground sm:col-span-2">Criar a ficha não adquire a criatura. Ela precisa ser aprovada e a domesticação concluída na campanha; o Mestre registra essa confirmação separadamente antes da invocação.</p>}
         <label className="text-xs">Grau<InvocationSelect value={grau} onChange={event => setGrau(event.target.value as GrauShikigami)} className="mt-1 w-full rounded border bg-background p-2">{todosGraus.map(value => <option key={value} value={value}>{rotulosGraus[value]}{grausDisponiveis(character.level).includes(value) ? '' : ' · acima do nível atual'}</option>)}</InvocationSelect></label>
 
         <label className="text-xs">Apelido<input value={apelido} onChange={event => setApelido(event.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
@@ -964,6 +978,7 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
         </>}
         {acaoTeste === 'resistencia' && <>
           {acaoExecucao === 'manual' && <label className="text-xs">TR do alvo<InvocationSelect value={acaoResistenciaAlvo} onChange={event => setAcaoResistenciaAlvo(event.target.value)} className="mt-1 w-full rounded border bg-background p-2">{DEFAULT_SAVING_THROWS.map(nome => <option key={nome} value={nome}>{nome}</option>)}</InvocationSelect></label>}
+          {acaoExecucao === 'manual' && <label className="text-xs">Condição que o TR tenta evitar (adaptação de Mahoraga)<InvocationSelect aria-label="Condição aplicada pela ação" value={acaoCondicaoAlvoId} onChange={event => setAcaoCondicaoAlvoId(event.target.value)} className="mt-1 w-full rounded border bg-background p-2"><option value="">Não especificada</option>{ALL_CONDITIONS.map(condicao => <option key={condicao.id} value={condicao.id}>{condicao.name}</option>)}</InvocationSelect><span className="mt-1 block text-muted-foreground">Selecione a condição aplicada por esta ação para que Mahoraga receba o bônus acumulado contra o mesmo efeito.</span></label>}
           <label className="text-xs">Atributo da CD<InvocationSelect value={acaoAtributoCD} onChange={event => setAcaoAtributoCD(event.target.value as keyof AtributosShikigami)} className="mt-1 w-full rounded border bg-background p-2">{ATRIBUTOS_SHIKIGAMI.map(atributo => <option key={atributo} value={atributo}>{rotulosAtributos[atributo]}</option>)}</InvocationSelect></label>
           {acaoExecucao === 'manual' && <label className="text-xs">Dano no sucesso do TR<InvocationSelect value={acaoDanoNoSucesso} onChange={event => setAcaoDanoNoSucesso(event.target.value as 'nenhum' | 'metade')} className="mt-1 w-full rounded border bg-background p-2"><option value="nenhum">Nenhum</option><option value="metade">Metade</option></InvocationSelect></label>}
         </>}

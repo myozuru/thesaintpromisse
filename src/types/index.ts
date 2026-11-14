@@ -168,6 +168,8 @@ export interface ActiveBuff {
   peCostPerRound?: number;
   /** Caster id — used to enforce "1 sustentado por player". */
   sourceCharId?: string;
+  /** Identifica buffs produzidos por técnica inata para regras de dissipação em área. */
+  sourceKind?: 'tecnica_inata' | 'feitico' | 'outro';
   /** Expiração por rodada usada por bônus concedidos por suporte de Shikigami. */
   expiraNaRodada?: number;
   /** Bônus de um ataque consome o efeito mesmo se o ataque errar. */
@@ -333,6 +335,8 @@ export interface Character {
   ultimoSegundoAtivo?: boolean;
   name: string;
   category: CharacterCategory;
+  /** Grau de combate definido pelo Mestre; não é inferido do nível do personagem. */
+  grauCombate?: 'quarto' | 'terceiro' | 'segundo' | 'primeiro' | 'especial';
   /** Quem criou esta ficha. PLAYER fichas criadas por jogadores são visíveis ao Mestre; fichas criadas pelo Mestre não são visíveis aos players. */
   createdBy?: 'PLAYER' | 'MASTER';
   /** Se true, esta ficha (geralmente INIMIGO/NPC) fica oculta para os players. Apenas o Mestre vê. */

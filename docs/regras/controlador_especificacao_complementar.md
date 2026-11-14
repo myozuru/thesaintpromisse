@@ -2,21 +2,24 @@
 
 **Data da decisão:** 2026-10-08  
 **Status:** decisões de produto aprovadas pelo usuário; **não equivale a funcionalidades já implementadas**.  
-**Fonte normativa preservada, sem alterações:** [Invocações — TXT original](./invocacoes_texto_original_2026-10-08.txt).
+**Fonte normativa atual:** [Enciclopédia Maldita — v1.1.1](./fonte-canonica-enciclopedia.md). O [TXT de invocações de 2026-10-08](./invocacoes_texto_original_2026-10-08.txt) fica preservado como registro histórico, não como fonte normativa.
 
 ## Prioridade e interpretação
-- O TXT original permanece intacto e fornece as regras-base do livro.
+- A Enciclopédia Maldita (F&M 2.5.2), versão de arquivo v1.1.1, fornece as regras-base atuais do livro e substitui a referência anterior à Enciclopédia Amaldiçoada v0.9.
 - Este documento especifica decisões de implementação, personalização e exceções expressamente autorizadas pelo usuário.
+- Uma decisão de produto aprovada pelo usuário continua sendo exceção somente quando especifica explicitamente uma regra diferente; nos demais casos, seguir a edição v1.1.1.
 - Divergências entre funcionalidades existentes e estas decisões geram tarefas de correção; não devem ser tratadas como já resolvidas.
 - Sempre que houver dúvida relevante de regra, comportamento ou design, **perguntar ao usuário antes de decidir**.
 - Criador de Shikigamis: interface de **ficha completa**, com todos os campos em seções, não um assistente de etapas.
+
+**Atualização de fonte em 2026-11-13:** os perfis padrão e as citações do pacote Dez Sombras foram atualizados para a edição v1.1.1. Não reutilizar páginas ou fichas da v0.9 sem conferência. As regras de Manipulação de Maldições estão referenciadas nas pp. 131–137 e na p. 232; elas complementam as decisões específicas da especialização Controlador.
 
 ## Decisões anteriores confirmadas
 1. **Livro como referência, com liberdade de edição:** usar os valores e tabelas do livro como sugestões/padrões; permitir alterações livres.
 2. **Motor único OMNI:** ações, efeitos, gatilhos, características e fórmulas dos Shikigamis usam o OMNI; ampliar o motor quando necessário em vez de duplicá-lo.
 3. **Evolução decidida pelo Controlador:** o jogador escolhe como evoluir sua invocação, inclusive suas opções e distribuição, em vez de impor uma reconstrução fixa.
 4. **Limites informativos:** mostrar avisos de divergência em relação ao livro, sem bloquear salvamento ou edição apenas por exceder valores recomendados; preservar validações técnicas e de segurança.
-5. **Combate conforme a fonte:** substituir comportamentos provisórios conflitantes, especialmente comandos e movimentação, pelas regras do TXT ou por exceções explicitamente aprovadas.
+5. **Combate conforme a fonte:** substituir comportamentos provisórios conflitantes, especialmente comandos e movimentação, pelas regras da Enciclopédia Maldita v1.1.1 ou por exceções explicitamente aprovadas. O TXT antigo é apenas histórico.
 
 ## Sete esclarecimentos adicionais aprovados
 ### 1. Alternância automática/manual por campo
@@ -43,7 +46,7 @@ O **Mestre possui controle e edição total sobre qualquer Shikigami**, independ
 
 ## Decisões adicionais de controle, autonomia e tempo — 2026-10-09
 
-**Status:** especificação aprovada; a implementação existente precisa ser revisada e validada. Estas decisões são complementares ao TXT original e, em caso de diferença, representam uma personalização solicitada pelo usuário, sem alterar a fonte.
+**Status:** especificação aprovada; a implementação existente precisa ser revisada e validada. Estas decisões complementam a fonte normativa v1.1.1; quando uma decisão aprovada especifica uma regra diferente, ela vale como personalização da campanha sem alterar a fonte.
 
 ### 8. Duas formas de controle individual
 Cada Shikigami deve permitir **ambas as interfaces**: (a) selecionar seu token e assumir o controle pela HUD própria da invocação; (b) selecioná-lo e enviar comandos pela HUD do Controlador. O controle e a seleção são individuais por Shikigami, mesmo quando vários pertencem ao mesmo jogador.
@@ -111,7 +114,7 @@ Cada Shikigami deve ter identidade visual, imagem/token, ficha, HUD e indicadore
 
 ## Acesso universal ao criador de Shikigamis — 2026-10-09
 
-**Decisão do usuário:** a seção de criação deve estar disponível para **todas as especializações**, não apenas Controladores. O acesso ao editor não significa aquisição gratuita no jogo: seguem válidas as condições do TXT original.
+**Decisão do usuário:** a seção de criação deve estar disponível para **todas as especializações**, não apenas Controladores. O acesso ao editor não significa aquisição gratuita no jogo: seguem válidas as condições da fonte normativa atual.
 
 - **Controlador:** obtém 2 invocações no nível 1 e mais 1 a cada 3 níveis (níveis 4, 7, 10, 13, 16, 19...). Invocações adicionais dependem de Interlúdio.
 - **Demais personagens:** podem construir/obter invocações por Interlúdio, conforme as regras de talismãs e Corpos Amaldiçoados. O trecho fornecido não fixa um limite numérico geral para invocações conhecidas por outros personagens; não inventar esse número.
@@ -145,4 +148,17 @@ Cada Shikigami deve ter identidade visual, imagem/token, ficha, HUD e indicadore
 - [ ] Nova aprovação do Mestre após cada alteração de uma ficha já aprovada.
 - [ ] Testes automatizados e validação em navegador dos fluxos finais.
 
-**Nota:** marcar itens somente depois de implementação e testes verificáveis. O TXT original não deve ser alterado para acomodar estas decisões.
+**Nota:** marcar itens somente depois de implementação e verificação. A fonte v1.1.1 e o TXT histórico não devem ser alterados para acomodar estas decisões.
+
+## Base canônica para Manipulação de Maldições — v1.1.1
+
+Esta seção registra o ponto de partida para o controle de várias maldições em campo. As exceções aprovadas neste documento continuam válidas nos pontos em que especificam uma regra própria; nos demais, usar a regra publicada.
+
+- **Absorção e ficha (p. 131):** normalmente exige derrotar a maldição em combate direto; uma maldição até dois Graus abaixo pode ser absorvida sem combate. Absorver usa Ação de Movimento ou Reação, a até 9 m. A maldição fica no Grau em que foi capturada. Ao adaptar a ficha, atributos, Defesa e deslocamento são mantidos; PV são recalculados como os de um Shikigami do mesmo Grau, com a base dobrada. Ações e características são adaptadas diretamente, sem o limite normal de Shikigamis; Dots não são adaptados e feitiços passam a ser ações.
+- **Invocações (p. 132):** Rápida é Ação Bônus, até 9 m em espaço desocupado, até quatro maldições e metade do custo de invocação. Explosiva é Ação Completa, invoca quantidade igual ao bônus de treinamento pelo dobro do custo e permite comandá-las imediatamente. Emergencial é Ação Completa, custa cinco vezes o custo de invocação e concede PV temporários iguais ao total pago; dano que exceder esses PV passa à maldição.
+- **Opções para ampliar controle (pp. 133–134):** Disparo de Maldições (2 PE, 4d8 perfurante; pode sacrificar duas maldições de 4º Grau para +2d8); Invocação Reativa (usa Reação e paga outra invocação); Invocação Distante (até 3 m); Cobertura de Maldições (uma de tamanho Grande ou maior dá Cobertura Leve); Invocação Persistente (+2 em Constituição para uma maldição); Auxiliar Invocativo (uma maldição de 3º/4º Grau a até 24 m permanece em campo e executa a ordem); Ação Amaldiçoada (Ação Bônus somente para invocar); Invocação Destrutiva (+2 níveis de dano); Invocação Protetora (Reação para evitar ataque, pagando o custo da invocação).
+- **Técnicas de sacrifício (pp. 135–137):** Uzumaki (12 PE, Ação Bônus, toque) exige e consome ao menos quatro maldições de 3º/4º Grau; acerto causa 16d10 de Energia e ignora até 8 RD. Técnica Máxima (20 PE, Ação Completa, alcance 48 m, raio de 18 m) causa dano por maldição sacrificada: 4º +1d12; 3º +2d12; 2º +3d12; 1º +4d12; Especial +5d12, no máximo uma com Técnica Inata. Alvos fazem TR de Reflexos, sofrendo dano total na falha ou metade no sucesso; a técnica ignora imunidade, resistência e redução e transforma a área em terreno difícil. Extração Espiral (p. 137) converte características e ações de uma maldição sacrificada em efeitos temporários: maldições de 1º Grau viram efeitos equivalentes a Feitiços de Nível 4, e maldições Especiais a Nível 5. Ações complexas viram ações comuns, ações simples viram ações bônus, e habilidades viram passivas conforme o limite de nível. O efeito pode ser usado uma vez; ao ativar ou descarregar, perde-se permanentemente a maldição extraída. Técnicas Máximas não podem ser extraídas.
+- **Libertação e morte do usuário (p. 232):** libertação voluntária de maldições de 1º Grau ou Especial ocorre apenas em Interlúdio, custa o dobro do custo original e não pode ser desfeita; a maldição passa a agir por instinto. Se o usuário morrer após chegar a 0 PV, todas as maldições armazenadas são libertadas. Maldições de 4º, 3º e 2º Graus formam uma Horda; as de 1º Grau restantes coordenam-se taticamente sob espíritos de Grau maior.
+- **Fuga dos Coelhos (pp. 81–82):** é uma Horda oficial com crescimento periódico, líder, regras de dispersão e até seis coelhos individuais de 1 PV. Essas regras específicas prevalecem para essa forma; o relógio permanece uma única contribuição da Horda conforme a decisão de produto aprovada.
+
+Custos, requisitos e ações são parte do texto canônico, mas não significam que o aplicativo já os automatize. Enquanto não houver estado de combate adequado, crescimento de Horda, transferência de dano, consumo de maldições e adaptação de fichas ficam explicitamente manuais.

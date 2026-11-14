@@ -12,6 +12,7 @@ export interface TouchEntity {
   w: number;
   h: number;
   characterId?: string;
+  carriedBy?: string | null;
   ownerProfileId?: string;
   avatarProfileId?: string;
 }
@@ -91,7 +92,7 @@ export function outOfRangeMessage(distM: number, maxM: number, label?: string): 
  * Menor distância entre as peças de dois personagens. Considera TODAS as peças
  * vinculadas a cada ficha (tokens duplicados), ignorando peças carregadas.
  */
-export function charsDistanceMeters<E extends TouchEntity & { characterId?: string; carriedBy?: string }>(
+export function charsDistanceMeters<E extends TouchEntity & { characterId?: string }>(
   aId: string,
   bId: string,
   entities: Record<string, E>,

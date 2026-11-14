@@ -25,7 +25,7 @@ export function mesmoLado(a: Character, b: Character): boolean {
   return lado(a) === lado(b);
 }
 
-type Ent = TouchEntity & { characterId?: string; carriedBy?: string };
+type Ent = TouchEntity & { characterId?: string };
 
 const adjacentes = (
   aId: string,

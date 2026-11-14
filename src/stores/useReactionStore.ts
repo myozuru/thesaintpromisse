@@ -32,7 +32,9 @@ export type ReactionKind =
   | 'condition_end_tr_offer'    // Condição com modo "TR todos os rounds" / "Até passar em TR" — rolar TR no turno do alvo
   | 'lua_reacao_offer'         // Postura da Lua — atingido por ataque: usar reação para reduzir dano?
   | 'persistent_area_tr_offer'  // Área Persistente — rolar TR para evitar dano/condição do tick
-  | 'aura_start_turn_tr_offer'; // Aura OMNI — TR no início do turno dentro do raio
+  | 'aura_start_turn_tr_offer'  // Aura OMNI — TR no início do turno dentro do raio
+  | 'tigre_reflexos_offer'      // Tigre Fúnebre — oferecer Retalhar após erro corpo a corpo
+  | 'tigre_sangramento_offer';  // Tigre Fúnebre — oferecer 6 PE após crítico de Retalhar
 
 export interface ReactionPrompt {
   id: string;
@@ -69,6 +71,17 @@ export interface ReactionPrompt {
     conditionIcon?: string;
     /** condition_end_tr_offer — modo (apenas pra log/texto). */
     durationMode?: 'tr_todo_round' | 'ate_passar_tr';
+    /** Alvo invocação cujo TR é rolado pelo controlador. */
+    targetInvocation?: {
+      tokenId: string;
+      ownerCharacterId: string;
+      invocationId: string;
+      invocationInstanceId: string;
+      name: string;
+    };
+    /** Bônus já calculado da ficha de invocação, sem usar os atributos do controlador. */
+    bonusOverride?: number;
+    bonusBreakdownOverride?: string;
     /** persistent_area_tr_offer — id do template/zona no mapa. */
     zoneTemplateId?: string;
     /** persistent_area_tr_offer — id da entidade (token) do mapa do alvo. */

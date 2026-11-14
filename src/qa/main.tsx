@@ -28,6 +28,7 @@ function PainelQa() {
       <header className="hero">
         <p className="eyebrow">Ambiente local isolado · 127.0.0.1:5181</p>
         <h1>QA — Dez Sombras</h1>
+        <p className="note">Fonte normativa: Enciclopédia Maldita (F&amp;M 2.5.2), v1.1.1.</p>
         <p>O painel é informativo. A validação de combate roda em Vitest com fixtures descartáveis e controladores reais.</p>
       </header>
 
@@ -46,9 +47,7 @@ function PainelQa() {
         <p>Execute a suíte focada na raiz do projeto:</p>
         <pre><code>npm run test:dez-sombras</code></pre>
         <ul>
-          <li>Os perfis identificados, ataques, agarrão do Sapo, cura, Torrente do Elefante e Investida do Touro percorrem controladores reais com rolagens determinísticas.</li>
-          <li>Há cenários de combate para Totalidade, Abismo e Agito, além do ciclo de invocação e regressões de mapa/autonomia/horda.</li>
-          <li>Robustez verifica PV do perfil e das instâncias/tokens criados ao invocar Elefante Máximo e Mahoraga.</li>
+          <li>A suíte contém cenários determinísticos de invocação, mapa, ações e formas derivadas. Os valores e ações desta versão precisam ser conferidos contra a edição v1.1.1 ao executar a suíte.</li>
           <li>São cenários selecionados com personagens e mapas sintéticos; não representam todas as combinações possíveis nem um aceite visual ao vivo no portal principal.</li>
         </ul>
       </section>
@@ -57,19 +56,17 @@ function PainelQa() {
         <h2 id="rules-title">Arbitragem manual preservada</h2>
         <p>O material-fonte deixa parâmetros operacionais em aberto. O módulo mantém esses efeitos sem execução automática até o Mestre decidir:</p>
         <ul>
-          <li>Alcateia dos Cães e da Totalidade: o referente do bônus não identifica com clareza quem o recebe.</li>
-          <li>Nue e Abismo: a fonte informa voo e deslocamento, mas não fecha altitude, manobras, queda ou procedimento de Montaria.</li>
-          <li>Sapo: Arremessar publica dano e Caída na falha, mas não define a fórmula do TR, dano no sucesso nem todas as validações de destino; Fora de Risco deixa empate e deslocamento sem consentimento em aberto.</li>
-          <li>Grande Serpente: Entrelaçar não fecha alcance, limite de tamanho ou economia exata da fuga.</li>
-          <li>Elefante Máximo: Defesa Alternativa por Constituição não traz fórmula de recálculo; a geometria da Torrente exige decisão no mapa.</li>
-          <li>Cervo Circular: Fluxo Reverso não especifica seleção de objetos nem aplicação geral do bônus situacional.</li>
-          <li>Touro: Movimento Alternativo não fornece fórmula para recalcular deslocamento por Força.</li>
-          <li>Mahoraga: adaptações não definem integralmente início, duração, escopo por alvo/tipo e reinício dos contadores.</li>
-          <li>Tigre Fúnebre: perfil especulativo opcional; Arauto do Funeral ainda não bloqueia cura no combate.</li>
-          <li>Abismo: Grupo não modela PV e ordem de perda dos três sapos como unidades individuais. Agito mantém cura e regeneração superior manuais onde custo/gatilhos não bastam para automação.</li>
-          <li>Estoque, Ocultação, Passo Sombrio, Fuga do Coelho e Jardim das Sombras Sobrepostas têm lacunas de seleção, geometria, duração ou execução e seguem sem resolução automática.</li>
+          <li>Fuga dos Coelhos é uma Horda oficial: crescimento de PV/tamanho, dano de enxame, líder e dispersão em coelhos individuais exigem estado próprio no combate.</li>
+          <li>Elefante Máximo: Torrente de Água depende da geometria de uma linha no mapa; Massa Esmagadora depende da queda e da distância vertical.</li>
+          <li>Cervo Circular: aura, remoção de condições e Neutralização precisam consultar condições e técnicas ativas em área.</li>
+          <li>Touro Perfurante: a Investida integra movimento e ataque, soma +1d8 por 3 m retos, reconhece curvas acima de 45° e aplica crítico automático ao completar o deslocamento; Inércia dobra o deslocamento na rodada, ignora redução e impedimento de movimento e eleva a Investida em dois níveis de dano. Ruptura dobra o dano contra objetos, mas a defesa e a durabilidade desses objetos precisam de arbitragem do Mestre.</li>
+          <li>Mahoraga: dano recebido pelo fluxo do mapa atualiza automaticamente os estágios, a Roda por propriedade de dano, RD, reduções e o limite de 1 PV; a Vontade Divina aciona e conta rodadas no turno do Controlador, ignorando controle mental/intimidação externa durante Máquina. O Mestre pré-registra contatos não danosos para o bloqueio do 4º giro, acompanha condições e TR na HUD e executa manualmente a prioridade/ação da Máquina, a revelação de efeitos invisíveis e adaptações a ambiente/obstáculos quando a fonte não está integrada ao mapa.</li>
+          <li>Tigre Fúnebre: perfil oficial. Redução cumulativa de Defesa, reação extra e recuperação de Defesa requerem estado por alvo e turno.</li>
+          <li>Totalidade, Abismo, Nue: Totalidade e Agito são formas oficiais listadas na p. 69, mas a edição não publica fichas numéricas completas; os valores locais são provisórios e ficam pendentes de aprovação do Mestre.</li>
+          <li>Manipulação de Maldições: absorção, invocações Rápida/Explosiva/Emergencial, efeitos de sacrifício e libertação dependem de integração do motor e seguem manuais até haver estado de combate específico.</li>
+          <li>Estoque, Ocultação, Passo Sombrio, Fuga do Coelho e Jardim das Sombras Sobrepostas ainda exigem integração de custos, seleção, geometria ou duração.</li>
         </ul>
-        <p className="note">A Enciclopédia anuncia dez shikigamis e menciona o Tigre Fúnebre, mas não publica uma ficha mecânica canônica para ele nem declara literalmente que essa menção é o ordinal décimo.</p>
+        <p className="note">A lista oficial da p. 65 contém dez entradas: os dois Cães aparecem em fichas separadas; Fuga dos Coelhos e Tigre Fúnebre são perfis oficiais.</p>
       </section>
     </main>
   );

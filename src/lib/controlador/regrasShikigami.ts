@@ -1,5 +1,6 @@
 /**
- * Regras-base de Invocações conforme docs/regras/invocacoes_texto_original_2026-10-08.txt.
+ * Regras de referência do criador de Invocações conforme a fonte normativa atual
+ * registrada em docs/regras/fonte-canonica-enciclopedia.md.
  * Os valores do livro são referências: divergências podem ser auditadas sem bloquear
  * escolhas manuais autorizadas em docs/regras/controlador_especificacao_complementar.md.
  */
@@ -221,6 +222,8 @@ export function custoInvocacaoComOpcoes(
 
 export interface ConfiguracaoAuditoriaShikigami {
   grau: GrauShikigami;
+  tipo?: "shikigami" | "corpo_amaldicoado" | "maldicao_domada";
+  domado?: boolean;
   nivelUsuario: number;
   bonusTreinamentoUsuario: number;
   atributos: AtributosShikigami;
@@ -242,6 +245,14 @@ export function auditarFichaShikigami(
 ): AvisoRegraShikigami[] {
   const avisos = auditarAtributosShikigami(ficha.grau, ficha.atributos);
   if (avisos.some((item) => item.severidade === "erro")) return avisos;
+
+  if (ficha.tipo === "maldicao_domada" && ficha.domado !== true) {
+    avisos.push({
+      codigo: "domesticacao_pendente",
+      severidade: "aviso",
+      detalhe: "A ficha pode ser aprovada, mas a invocação continuará bloqueada até o Mestre confirmar a domesticação.",
+    });
+  }
 
   const opcoes = ficha.acoesCaracteristicas ?? [];
   const regras = TABELA[ficha.grau];

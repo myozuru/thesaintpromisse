@@ -1,94 +1,66 @@
 import { describe, expect, it } from 'vitest';
-import { criarFormasDerivadasDezSombras } from '@/lib/controlador/dezSombrasDerivadas';
+import {
+  auditarValoresProvisoriosFormaDerivadaDezSombras,
+  criarFormasDerivadasDezSombras,
+} from '@/lib/controlador/dezSombrasDerivadas';
+import { criarPacoteDezSombras } from '@/lib/controlador/dezSombras';
 
-describe('Dez Sombras: formas derivadas importadas separadamente', () => {
+describe('Dez Sombras: formas derivadas e auditoria de valores provisórios', () => {
   const forms = criarFormasDerivadasDezSombras('feiticeira');
 
-  it('cria apenas Abismo e Agito como formas derivadas, sem preencher a décima vaga-base', () => {
+  it('cria as quatro formas da p. 69 fora da lista de indivíduos-base', () => {
     expect(forms.map(form => form.subcategoria)).toEqual([
+      'dez-sombras:totalidade',
       'dez-sombras:abismo-desconhecido-do-poco',
+      'dez-sombras:nue-totalidade',
       'dez-sombras:agito',
     ]);
     expect(forms.every(form => form.formaDerivada && form.domado === false)).toBe(true);
     expect(forms.every(form => form.donoCharacterId === 'feiticeira')).toBe(true);
-    expect(forms[0].referenciaRegra).toContain('pp. 64, 66');
-    expect(forms[1].referenciaRegra).toContain('pp. 64, 68');
+    expect(forms.every(form => form.referenciaRegra?.includes('p. 69'))).toBe(true);
+    expect(criarPacoteDezSombras('feiticeira').some(form => form.formaDerivada)).toBe(false);
   });
 
-  it('preserva o perfil publicado do Abismo e marca como parcial apenas Segurar com contagem do Mestre', () => {
-    const abismo = forms[0];
-    expect(abismo).toMatchObject({
-      grau: 'quarto',
-      custoInvocacaoPE: 6,
-      hpAtual: 50,
-      hpMaximo: 50,
-      defesa: 21,
-      deslocamentoM: 10.5,
-      porte: 'Médio',
-      valoresProvisoriosFormaDerivada: ['porte', 'atributos'],
-      requisitosFormaDerivada: ['Nue domado', 'Sapo domado', 'Especialização Quimera'],
-    });
-    expect(abismo.lacunasFormaDerivada?.join(' ').toLowerCase()).toContain('porte e atributos');
-    expect(abismo.acoes.map(action => action.nome)).toEqual(['Segurar', 'Fora de Risco', 'Alado', 'Grupo (3 sapos)']);
-    expect(abismo.acoes[0]).toMatchObject({
-      statusAutomacao: 'parcial',
-      tipoExecucao: 'manual',
-      categoriaAcao: 'acao_simples',
-      alcanceM: 9,
-    });
-    expect(abismo.acoes.slice(1).every(action =>
-      action.statusAutomacao === 'manual' && action.tipoExecucao === 'manual',
-    )).toBe(true);
-    expect(abismo.acoes[0].descricaoRegra).toContain('+7 com dois');
-    expect(abismo.acoes[0].descricaoRegra).toContain('Não inferir a contagem pelos PV.');
-  });
-
-  it('preserva Agito executável apenas onde a ficha publica os parâmetros necessários', () => {
-    const agito = forms[1];
-    expect(agito).toMatchObject({
-      grau: 'segundo',
-      custoInvocacaoPE: 7,
-      hpAtual: 120,
-      hpMaximo: 120,
-      defesa: 27,
-      deslocamentoM: 18,
-      porte: 'Grande',
-      requisitosFormaDerivada: [
-        'Nue como forma-base',
-        'Heranças de Grande Serpente, Tigre Fúnebre e Cervo Circular',
-      ],
-    });
-    expect(agito.opcionalHomebrew).toBe(false);
-    expect(agito.lacunasFormaDerivada?.join(' ')).toContain('Tigre Fúnebre');
-    expect(agito.acoes.map(action => action.nome)).toEqual([
-      'Golpes Eletrificados',
-      'Cura Concentrada',
-      'Regeneração Superior',
+  it('mantém grau, composição e lacunas oficiais, sem liberar fichas provisórias', () => {
+    expect(forms.map(({ grau, requisitosFormaDerivada }) => ({ grau, requisitosFormaDerivada }))).toEqual([
+      { grau: 'terceiro', requisitosFormaDerivada: ['Cão Branco domado', 'Cão Preto domado', 'ritual de quimera'] },
+      { grau: 'terceiro', requisitosFormaDerivada: ['Gama domado', 'Nue domado', 'ritual de quimera'] },
+      { grau: 'segundo', requisitosFormaDerivada: ['Nue domado', 'Orochi domado', 'ritual de quimera'] },
+      { grau: 'especial', requisitosFormaDerivada: ['Nue domado', 'Orochi domado', 'Cervo Circular domado', 'Tigre Fúnebre domado', 'ritual de quimera'] },
     ]);
-    expect(agito.acoes[0]).toMatchObject({
-      teste: 'ataque',
-      bonusAtaque: 11,
-      dano: '5d10+6',
-      tipoDano: 'DCC',
-      statusAutomacao: 'executavel',
-    });
-    expect(agito.acoes[1]).toMatchObject({
-      tipo: 'suporte',
-      categoriaAcao: 'acao_complexa',
-      alcanceM: 4.5,
-      formulaCura: '5d10+3',
-      efeitoSuporte: { alvos: 'unico' },
-      statusAutomacao: 'manual',
-      tipoExecucao: 'manual',
-    });
-    expect(agito.acoes[1].descricaoRegra).toContain('custo');
-    expect(agito.acoes[2]).toMatchObject({
-      categoriaAcao: 'reacao',
-      statusAutomacao: 'manual',
-      tipoExecucao: 'manual',
-    });
-    expect(agito.acoes[2].descricaoRegra).toContain('Ao receber dano');
-    expect(agito.acoes[2].descricaoRegra).toContain('5d10+3');
-    expect(agito.acoes[2].descricaoRegra).toContain('múltiplas instâncias de dano');
+    for (const form of forms) {
+      expect(form.aprovacaoMestre).toBe('pendente');
+      expect(form.valoresProvisoriosFormaDerivada).toEqual(
+        expect.arrayContaining(['PV', 'Defesa', 'deslocamentoM', 'custoInvocacaoPE', 'porte', 'atributos', 'ações']),
+      );
+      expect(form.acoes).toEqual([]);
+      expect(form.lacunasFormaDerivada?.join(' ')).toContain('não publica');
+    }
+  });
+
+  it('compara apenas métricas numéricas que têm referência publicada para o grau', () => {
+    expect(auditarValoresProvisoriosFormaDerivadaDezSombras(forms[0]!)).toEqual([
+      { campo: 'PV', valorProvisorio: 35, referenciaGrau: 25, diferenca: 10 },
+      { campo: 'Defesa', valorProvisorio: 22, referenciaGrau: 12, diferenca: 10 },
+      { campo: 'Custo de invocação', valorProvisorio: 4, referenciaGrau: 4, diferenca: 0 },
+    ]);
+    expect(auditarValoresProvisoriosFormaDerivadaDezSombras(forms[3]!)).toEqual([
+      { campo: 'PV', valorProvisorio: 120, referenciaGrau: 80, diferenca: 40 },
+      { campo: 'Defesa', valorProvisorio: 27, referenciaGrau: 24, diferenca: 3 },
+      { campo: 'Custo de invocação', valorProvisorio: 7, referenciaGrau: 12, diferenca: -5 },
+    ]);
+    expect(auditarValoresProvisoriosFormaDerivadaDezSombras(forms[1]!)
+      .some(item => String(item.campo) === 'Deslocamento')).toBe(false);
+  });
+
+  it('ignora campos que não estão marcados como provisórios e não audita fichas comuns', () => {
+    expect(auditarValoresProvisoriosFormaDerivadaDezSombras({
+      ...forms[0]!,
+      valoresProvisoriosFormaDerivada: ['PV'],
+    })).toEqual([{ campo: 'PV', valorProvisorio: 35, referenciaGrau: 25, diferenca: 10 }]);
+    expect(auditarValoresProvisoriosFormaDerivadaDezSombras({
+      ...forms[0]!,
+      formaDerivada: false,
+    })).toEqual([]);
   });
 });

@@ -148,7 +148,20 @@ export function stepDamage(dice: DamageDice, delta: number): DamageDice {
   let row: number;
   let col: number;
   if (pos) { row = pos.row; col = pos.col; }
-  else { row = approximateRow(dice); col = 2; }
+  else {
+    row = approximateRow(dice);
+    col = 2;
+    const equivalentePadrao = ROWS_NORMALIZED[row][col];
+    // A aproximação da tabela serve para fórmulas próximas dos níveis canônicos.
+    // Em fórmulas grandes (ex.: 3d12+10d8), ela pode escolher um dano-base menor
+    // que o original. Ao subir níveis, preserva a expressão e aplica a sequência
+    // de overflow ao último grupo, evitando que um bônus de dano reduza o total.
+    if (delta > 0 && maxOf(equivalentePadrao) < maxOf(dice)) {
+      let overflow = dice.map(d => ({ ...d }));
+      for (let nivel = 0; nivel < delta; nivel++) overflow = stepUpOverflow(overflow);
+      return overflow;
+    }
+  }
 
   let current: DamageDice = ROWS_NORMALIZED[row][col].map(d => ({ ...d }));
   let remaining = delta;

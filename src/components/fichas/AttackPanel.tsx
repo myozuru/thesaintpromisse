@@ -43,6 +43,10 @@ import { useMapStore } from '@/stores/useMapStore';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { CombatTrackersCard } from './CombatTrackersCard';
+import { fragilizarAlvoFugaAtingidoPorArea } from '@/lib/controlador/dezSombrasFuga';
+import { causarDanoInvocacao, oferecerReflexosFelinosTigre } from '@/lib/controlador/mapa';
+import { penalidadeGarrasTigre, TIGRE_FUNEBRE_SUBCATEGORIA } from '@/lib/controlador/dezSombrasTigre';
+import { touchDistanceMeters } from '@/lib/touchRange';
 import { GolpeEspecialSection } from './GolpeEspecialSection';
 import {
   hasGolpeEspecial, custoGolpeEspecial, isGolpeAtivo, longoBonusMeters, penetranteRD,
@@ -244,6 +248,7 @@ export function AttackPanel({ character: cProp }: Props) {
   const requestAoEPlacement = useMapStore((s) => s.requestAoEPlacement);
   const applyDamage = useCharacterStore((s) => s.applyDamage);
   const mapEntities = useMapStore((s) => s.entities);
+  const mapLayerVisible = useMapStore((s) => s.layerVisible);
   const gridConfig = useMapStore((s) => s.gridConfig);
 
 
@@ -262,7 +267,32 @@ export function AttackPanel({ character: cProp }: Props) {
   const ataqueAposMira = useRef(false);
   const [targetId, setTargetId] = useState<string>('');
   const [defenseOverride, setDefenseOverride] = useState<number | null>(null);
+  const attackTargetIdRef = useRef<string>('');
+  const invocationAttackEventIdRef = useRef<string | null>(null);
   const target = useMemo(() => characters.find(x => x.id === targetId) ?? null, [characters, targetId]);
+  const targetInvocation = useMemo(() => {
+    if (!targetId.startsWith('invoc:')) return null;
+    const token = mapEntities[targetId.slice('invoc:'.length)];
+    if (!token?.invocationId || !token.ownerCharId || token.hidden || token.carriedBy ||
+      (token.hp ?? 0) <= 0 || (token.invocationState && token.invocationState !== 'ativa') ||
+      mapLayerVisible[token.layer ?? 'tokens'] === false) return null;
+    const owner = characters.find(character => character.id === token.ownerCharId);
+    const model = owner?.invocacoesConhecidas?.find(item => item.id === token.invocationId);
+    const instance = owner?.instanciasInvocacao?.find(item => item.id === token.invocationInstanceId);
+    if (!owner || !model || !instance || instance.estado !== 'ativa' || mapEntities[token.id].ownerCharId !== owner.id) return null;
+    return { token, owner, model, instance, name: model.apelido?.trim() || model.nome };
+  }, [targetId, mapEntities, characters, mapLayerVisible]);
+  const invocationTargets = useMemo(() => Object.values(mapEntities).flatMap(token => {
+    if (!token?.invocationId || !token.ownerCharId || token.ownerCharId === c.id || token.hidden || token.carriedBy ||
+      (token.hp ?? 0) <= 0 || (token.invocationState && token.invocationState !== 'ativa') ||
+      mapLayerVisible[token.layer ?? 'tokens'] === false) return [];
+    const owner = characters.find(character => character.id === token.ownerCharId);
+    const model = owner?.invocacoesConhecidas?.find(item => item.id === token.invocationId);
+    const instance = owner?.instanciasInvocacao?.find(item => item.id === token.invocationInstanceId);
+    return owner && model && instance?.estado === 'ativa'
+      ? [{ id: `invoc:${token.id}`, name: model.apelido?.trim() || model.nome }]
+      : [];
+  }), [mapEntities, mapLayerVisible, characters, c.id]);
   // Zona de Risco: ataque liberado → pré-seleciona o inimigo que entrou no alcance.
   const zonaAtaque = useZonaRiscoStore((s) => (s.ataque?.espId === c.id ? s.ataque : null));
   useEffect(() => {
@@ -279,22 +309,31 @@ export function AttackPanel({ character: cProp }: Props) {
     return mainWeapon.range === 'melee' ? 'melee' : 'ranged';
   }, [mainWeapon]);
   const autoDefense = useMemo(
-    () =>
-      target
-        ? computeTotalDefense(
-            target,
-            {
-              items,
-              omniInventory: omniInventoryList,
-              omniEntidadesMap,
-              omniRuntimeEffects: omniRuntimeEffectsList,
-            },
-            attackKind,
-          )
-        : 15,
+    () => target
+      ? computeTotalDefense(
+          target,
+          {
+            items,
+            omniInventory: omniInventoryList,
+            omniEntidadesMap,
+            omniRuntimeEffects: omniRuntimeEffectsList,
+          },
+          attackKind,
+        )
+      : 15,
     [target, items, omniInventoryList, omniEntidadesMap, omniRuntimeEffectsList, attackKind],
   );
-  const targetDef = target ? autoDefense : (defenseOverride ?? 15);
+  const garrasPenalty = target
+    ? penalidadeGarrasTigre(characters, target.id, useCombatStore.getState().combatId ?? undefined)
+    : targetInvocation
+      ? penalidadeGarrasTigre(characters, `invoc:${targetInvocation.instance.id}`, useCombatStore.getState().combatId ?? undefined)
+      : 0;
+  const targetDef = target
+    ? Math.max(0, autoDefense - garrasPenalty)
+    : targetInvocation
+      ? Math.max(0, (targetInvocation.token.invocationDefense ?? targetInvocation.model.defesa) - garrasPenalty)
+      : defenseOverride ?? 15;
+  const targetSelected = Boolean(target || targetInvocation);
 
   // ─── Alcance da arma no mapa (grade, borda a borda) ──────────────────────
   const meleeRangeBonus = ((c as { meleeRangeBonus?: number }).meleeRangeBonus ?? 0) + extensaoAlcanceBonus(c);
@@ -303,9 +342,13 @@ export function AttackPanel({ character: cProp }: Props) {
   const mapIdentities = target
     ? { casterProfileId: c.profileId, targetProfileId: target.profileId }
     : undefined;
+  const attackerMapToken = Object.values(mapEntities).find(entity => entity?.characterId === c.id ||
+    (c.profileId && (entity.avatarProfileId === c.profileId || entity.ownerProfileId === c.profileId)));
   const targetDistanceM = target
     ? distanceBetweenChars(c.id, target.id, mapEntities, gridConfig, mapIdentities)
-    : null;
+    : targetInvocation && attackerMapToken
+      ? touchDistanceMeters(attackerMapToken, targetInvocation.token, gridConfig)
+      : null;
   const isLancaWeapon = mainWeapon?.specialFeatureId === 'lanca-vetorial-rubra';
   const isAetherisWeapon = isBaculoAetheris(mainWeapon);
   const lancaKey = isLancaWeapon ? lancaInstanceKey(c.id, c.mainHandWeaponInstanceId, mainWeapon.name) : null;
@@ -315,9 +358,14 @@ export function AttackPanel({ character: cProp }: Props) {
   const lancaMarks = target && lancaRecord?.targetId === target.id ? lancaRecord.marks : 0;
   const lancaFractureAvailable = lancaRecord?.fractureAvailable ?? true;
   const lancaSuppressedTarget = target?.activeConditions?.some((condition) => condition.conditionId === 'lanca-vetorial-sem-reacoes') ?? false;
-  const rangeBlockReason =
-    mainWeapon && target
-      ? checkWeaponRange(c.id, target.id, mainWeapon, mapEntities, gridConfig, meleeRangeBonus, mapIdentities, posturaAlcanceMult(c))
+  const rangeBlockReason = mainWeapon && target
+    ? checkWeaponRange(c.id, target.id, mainWeapon, mapEntities, gridConfig, meleeRangeBonus, mapIdentities, posturaAlcanceMult(c))
+    : mainWeapon && targetInvocation
+      ? !attackerMapToken || targetDistanceM === null
+        ? 'O ataque contra invocação exige as peças do atacante e do alvo no mapa.'
+        : weaponRangeM !== null && targetDistanceM > weaponRangeM + 0.05
+          ? `Alvo a ${targetDistanceM.toFixed(1)} m; alcance da arma ${weaponRangeM} m.`
+          : null
       : null;
 
   // Ao trocar de alvo, limpa override
@@ -339,8 +387,17 @@ export function AttackPanel({ character: cProp }: Props) {
         if (id) ids.add(id);
       }
     }
+    for (const condition of targetInvocation?.instance.condicoes ?? []) {
+      const id = typeof condition === 'string'
+        ? condition
+        : condition && typeof condition === 'object' && typeof (condition as { conditionId?: unknown }).conditionId === 'string'
+          ? (condition as { conditionId: string }).conditionId
+          : '';
+      if (id) ids.add(id);
+    }
+    for (const id of targetInvocation?.token.invocationConditionIds ?? []) ids.add(id);
     return ids;
-  }, [target, omniRuntimeEffectsList]);
+  }, [target, targetInvocation, omniRuntimeEffectsList]);
   const autoUnaware = targetConditionIds.has('desprevenido') || targetConditionIds.has('agarrado') || targetConditionIds.has('atordoado');
   const autoProne = targetConditionIds.has('caido');
 
@@ -528,6 +585,19 @@ export function AttackPanel({ character: cProp }: Props) {
     if (!mainWeapon) {
       addLog('combat', `⚠️ ${c.name} não tem arma equipada na mão principal.`);
       return;
+    }
+    if (targetId.startsWith('invoc:') && !targetInvocation) {
+      addLog('combat', '⚠️ A invocação selecionada não está mais ativa ou visível no mapa. Selecione outro alvo.');
+      setTargetId('');
+      return;
+    }
+    if (!target && !targetInvocation && !weaponAoE) {
+      addLog('combat', `⚠️ ${c.name}: selecione um personagem ou uma invocação ativa como alvo.`);
+      return;
+    }
+    if (!isReroll) {
+      attackTargetIdRef.current = target?.id ?? (targetInvocation ? `invoc:${targetInvocation.token.id}` : '');
+      invocationAttackEventIdRef.current = `attackpanel:${c.id}:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
     }
     const lancaMode: LancaAttackMode | null = isLancaWeapon
       ? (opts?.lancaMode ?? (isReroll ? lancaAttackResolutionRef.current?.mode : 'normal') ?? 'normal')
@@ -838,7 +908,8 @@ export function AttackPanel({ character: cProp }: Props) {
         setAmploTargetId('');
         if (g.amploTarget) {
           const alvo2 = g.amploTarget;
-          const def2 = computeTotalDefense(alvo2, { items, omniInventory: omniInventoryList, omniEntidadesMap, omniRuntimeEffects: omniRuntimeEffectsList }, attackKind);
+          const def2 = Math.max(0, computeTotalDefense(alvo2, { items, omniInventory: omniInventoryList, omniEntidadesMap, omniRuntimeEffects: omniRuntimeEffectsList }, attackKind) -
+            penalidadeGarrasTigre(characters, alvo2.id, useCombatStore.getState().combatId ?? undefined));
           const ctx2 = buildAttackContext({
             attacker: c, weapon: mainWeapon, targetDefense: def2, targetId: alvo2.id,
             semRecursao: true,
@@ -967,8 +1038,15 @@ export function AttackPanel({ character: cProp }: Props) {
         'combat',
         `   💥 Dano: ${damageTotal} (${mainWeapon.damage}${abMod ? (abMod > 0 ? '+' : '') + abMod : ''} = ${rolls.join('+')}${abMod ? (abMod > 0 ? '+' : '') + abMod : ''})`,
       );
+      const eventId = `attack-area:${c.id}:${Date.now()}`;
       for (const target of hitChars) {
-        await applyDamage(target.id, damageTotal, dmgType, { attackerId: c.id, source: 'arma', isMelee: mainWeapon.range === 'melee' });
+        await applyDamage(target.id, damageTotal, dmgType, {
+          attackerId: c.id,
+          source: 'arma',
+          isMelee: mainWeapon.range === 'melee',
+          attack: { isAreaAttack: true, kind: mainWeapon.range === 'melee' ? 'melee' : 'ranged' },
+        });
+        fragilizarAlvoFugaAtingidoPorArea({ characterId: target.id }, `${eventId}:${target.id}`);
       }
       setPhase('done');
     } catch (err) {
@@ -1003,7 +1081,7 @@ export function AttackPanel({ character: cProp }: Props) {
       ? { ...result, damageTotal: 0, damageRolls: [] }
       : result;
     setLastResult(hitOnlyResult);
-    const targetLabel = target ? target.name : 'alvo';
+    const targetLabel = targetInvocation?.name ?? target?.name ?? 'alvo';
     const verdict = result.criticalFail
       ? '💀 Falha crítica'
       : result.critical
@@ -1020,7 +1098,7 @@ export function AttackPanel({ character: cProp }: Props) {
     const prefix = isReroll ? `🔁 ${c.name} re-rolou o ataque` : `🗡️ ${c.name} atacou com ${weaponName}`;
     addLog('combat', `${prefix}: ${rollLabel} · ${verdict}`);
     if (result.notes.length) addLog('combat', `   ↳ ${result.notes.join(' · ')}`);
-    if (result.hit && result.critical) checarRenovacaoCritico(true, target?.name);
+    if (result.hit && result.critical) checarRenovacaoCritico(true, targetInvocation?.name ?? target?.name);
     registrarAtaqueCompensar(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, target?.id, result.hit, mainWeapon?.range === 'melee');
 
     setPendingRerollMeta(null);
@@ -1028,6 +1106,10 @@ export function AttackPanel({ character: cProp }: Props) {
 
     if (!result.hit) {
       if (mainWeapon) notificarResultadoAtaque(c.id, target?.id, mainWeapon, result, metadadosAtaqueRef.current);
+      if (mainWeapon?.range === 'melee' && targetInvocation?.model.subcategoria === TIGRE_FUNEBRE_SUBCATEGORIA) {
+        const eventId = invocationAttackEventIdRef.current ?? `attackpanel:${c.id}:${Date.now()}`;
+        await oferecerReflexosFelinosTigre(targetInvocation.token.id, { tipo: 'personagem', id: c.id }, eventId);
+      }
       setPendingResult(null);
       setPhase('done');
       return;
@@ -1069,7 +1151,40 @@ export function AttackPanel({ character: cProp }: Props) {
       addLog('combat', `   ↳ Arremessos Potentes: ignora ${arremessosRdIgnorada(useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c, mainWeapon, turnInfo)} de RD.`);
     }
     try {
-      if (target && result.damageTotal > 0) {
+      const targetInvocationId = attackTargetIdRef.current.startsWith('invoc:')
+        ? attackTargetIdRef.current.slice('invoc:'.length)
+        : null;
+      if (targetInvocationId && result.damageTotal > 0) {
+        const mapaAtual = useMapStore.getState();
+        const tokenAtual = mapaAtual.entities[targetInvocationId];
+        const personagensAtuais = useCharacterStore.getState().characters;
+        const donoAtual = tokenAtual?.ownerCharId
+          ? personagensAtuais.find(character => character.id === tokenAtual.ownerCharId)
+          : undefined;
+        const modeloAtual = donoAtual?.invocacoesConhecidas?.find(item => item.id === tokenAtual?.invocationId);
+        const instanciaAtual = donoAtual?.instanciasInvocacao?.find(item => item.id === tokenAtual?.invocationInstanceId);
+        if (!tokenAtual || !donoAtual || !modeloAtual || !instanciaAtual || instanciaAtual.estado !== 'ativa' ||
+          tokenAtual.hidden || tokenAtual.carriedBy || (tokenAtual.hp ?? 0) <= 0 ||
+          (tokenAtual.invocationState && tokenAtual.invocationState !== 'ativa') ||
+          mapaAtual.layerVisible[tokenAtual.layer ?? 'tokens'] === false) {
+          addLog('combat', '⚠️ O alvo invocação saiu do campo antes da aplicação do dano; nenhum dano foi aplicado.');
+        } else {
+          const aplicado = causarDanoInvocacao(
+            tokenAtual.id,
+            result.damageTotal,
+            (result.damageType ?? undefined) as never,
+            instanciaAtual.id,
+            {
+              tipoAlvo: 'unico',
+              eventoId: invocationAttackEventIdRef.current ?? `attackpanel:${c.id}:${Date.now()}`,
+              critico: result.critical,
+              rdIgnore: rdIgn,
+              ataqueCorpoACorpo: mainWeapon.range === 'melee',
+            },
+          );
+          if (!aplicado.ok) addLog('combat', `⚠️ ${modeloAtual.apelido?.trim() || modeloAtual.nome}: ${aplicado.motivo}`);
+        }
+      } else if (target && result.damageTotal > 0) {
         await applyDamage(target.id, result.damageTotal, (result.damageType ?? undefined) as never, {
           attackerId: c.id, source: 'arma', isMelee: mainWeapon.range === 'melee', rdIgnore: rdIgn,
           attack: { ...metadadosAtaqueRef.current, critical: result.critical, criticalFail: result.criticalFail },
@@ -1092,7 +1207,8 @@ export function AttackPanel({ character: cProp }: Props) {
   const ataqueExtra = async (alvo: Character, arma: Weapon): Promise<AttackResult | null> => {
     const eu = useCharacterStore.getState().characters.find((x) => x.id === c.id) ?? c;
     const kind: AttackKind = arma.range === 'melee' ? 'melee' : 'ranged';
-    const def = computeTotalDefense(alvo, { items, omniInventory: omniInventoryList, omniEntidadesMap, omniRuntimeEffects: omniRuntimeEffectsList }, kind);
+    const def = Math.max(0, computeTotalDefense(alvo, { items, omniInventory: omniInventoryList, omniEntidadesMap, omniRuntimeEffects: omniRuntimeEffectsList }, kind) -
+      penalidadeGarrasTigre(useCharacterStore.getState().characters, alvo.id, useCombatStore.getState().combatId ?? undefined));
     const ids = new Set((alvo.activeConditions ?? []).map((x) => (x as { conditionId?: string }).conditionId));
     const furtivo = escondidoDe(eu, alvo.id);
     const unaware = ids.has('desprevenido') || ids.has('agarrado') || ids.has('atordoado') || escondidoDe(eu, alvo.id);
@@ -1253,11 +1369,12 @@ export function AttackPanel({ character: cProp }: Props) {
     const spend = spendPreparo(c.id, 1);
     if (!spend.ok) { addLog('combat', `🚫 ${c.name}: ${spend.reason}`); return; }
     const ability2 = pickAttackAbility(c, arma);
-    const def2 = computeTotalDefense(
+    const def2Base = computeTotalDefense(
       alvo2,
       { items, omniInventory: omniInventoryList, omniEntidadesMap, omniRuntimeEffects: omniRuntimeEffectsList },
       'ranged',
     );
+    const def2 = Math.max(0, def2Base - penalidadeGarrasTigre(characters, alvo2.id, useCombatStore.getState().combatId ?? undefined));
     const ctx2 = buildAttackContext({
       attacker: c, weapon: arma, targetDefense: def2, targetId: alvo2.id,
       semRecursao: true,
@@ -1959,13 +2076,30 @@ export function AttackPanel({ character: cProp }: Props) {
           </div>
         )}
         <div className="flex items-center gap-2 text-xs">
-          <span>{target ? `Alvo: ${target.name}` : 'Selecione o alvo no mapa ao atacar.'}</span>
+          <span>{target ? `Alvo: ${target.name}` : targetInvocation ? `Alvo: ${targetInvocation.name}` : 'Selecione um alvo no mapa ou na lista.'}</span>
+          <select
+            aria-label="Alvo do ataque"
+            value={targetId}
+            disabled={phase === 'rolling-hit' || phase === 'await-second-d20' || phase === 'rolling-second-d20' || phase === 'await-dmg' || phase === 'rolling-dmg'}
+            onChange={(event) => setTargetId(event.target.value)}
+            className="max-w-56 rounded border border-border bg-background px-2 py-1"
+          >
+            <option value="">Selecionar alvo…</option>
+            <optgroup label="Personagens">
+              {possibleTargets.map(option => <option key={option.id} value={option.id}>{option.name}</option>)}
+            </optgroup>
+            {invocationTargets.length > 0 && (
+              <optgroup label="Invocações">
+                {invocationTargets.map(option => <option key={option.id} value={option.id}>{option.name}</option>)}
+              </optgroup>
+            )}
+          </select>
           <button type="button" disabled={!mainWeapon || mirando} onClick={() => void selecionarAlvoNoMapa()}
             className="rounded border border-border px-2 py-1">Selecionar alvo no mapa</button>
         </div>
 
         {/* ─── Alcance (medido no mapa, borda a borda) ────────────────────── */}
-        {mainWeapon && target && weaponRangeM !== null && targetDistanceM !== null && (
+        {mainWeapon && (target || targetInvocation) && weaponRangeM !== null && targetDistanceM !== null && (
           <div
             className={cn(
               'flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs',
@@ -2251,7 +2385,7 @@ export function AttackPanel({ character: cProp }: Props) {
         <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
-            onClick={() => target ? void handleRoll() : void selecionarAlvoNoMapa(true)}
+            onClick={() => targetSelected ? void handleRoll() : void selecionarAlvoNoMapa(true)}
             disabled={mirando || !mainWeapon || !rangeOk || phase === 'rolling-hit' || phase === 'await-second-d20' || phase === 'rolling-second-d20' || phase === 'await-dmg' || phase === 'rolling-dmg'}
             title={!rangeOk ? rangeBlockReason ?? undefined : investidaCobreDistancia ? 'Investida Imediata cobre a distância' : longoCobre ? 'Golpe Longo cobre a distância' : undefined}
             className={cn(

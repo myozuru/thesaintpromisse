@@ -17,6 +17,7 @@ import { aetherisRequiemReady, aetherisRoundUseReady, validAetherisFeatherAlloca
 import { getReactionsAvailable } from '@/lib/reactionBudget';
 import { useBaculoAetherisCounterattackStore } from '@/lib/baculoAetherisState';
 import { saoAliados } from '@/lib/omni/observadores';
+import { penalidadeGarrasTigre } from '@/lib/controlador/dezSombrasTigre';
 
 interface Props { character: Character; weaponInstanceId: string; weapon?: Weapon; ruptureTargetId: string | null; onRupturePromptClose: () => void }
 type Ability = 'trono' | 'requiem';
@@ -134,7 +135,9 @@ export function BaculoAetherisPanel({ character, weaponInstanceId, weapon: equip
         if (!victim) continue;
         for (let i = 0; i < count; i += 1) {
           const rangedWeapon = { ...weapon, range: 'ranged' as const };
-          const ctx = buildAttackContext({ attacker, weapon: rangedWeapon, targetId: id, targetDefense: computeTotalDefense(victim, {}, 'ranged'), alcanceM: 18,
+          const defesa = Math.max(0, computeTotalDefense(victim, {}, 'ranged') -
+            penalidadeGarrasTigre(useCharacterStore.getState().characters, victim.id, useCombatStore.getState().combatId ?? undefined));
+          const ctx = buildAttackContext({ attacker, weapon: rangedWeapon, targetId: id, targetDefense: defesa, alcanceM: 18,
             situation: { twoHanded: true, preferredAbility: pickAttackAbility(attacker, rangedWeapon) },
             trainedRanges: [...(attacker.meleeTrained ? (['melee'] as const) : []), ...(attacker.rangedTrained ? (['ranged', 'thrown'] as const) : [])] });
           const attack = await rollAttack(ctx);

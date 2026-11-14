@@ -55,6 +55,7 @@ import { computeTotalDefense } from '@/lib/defenseCalc';
 import { replicaWeaponName } from '@/lib/replicas';
 import { getSkillModFromConditions } from '@/lib/conditionEffects';
 import { weaponMaxRangeMeters } from '@/lib/weaponRange';
+import { penalidadeGarrasTigre } from '@/lib/controlador/dezSombrasTigre';
 
 // ─── Regras puras ────────────────────────────────────────────────────
 
@@ -607,7 +608,9 @@ async function executarAcaoAtivaInterna(
       aplicaEfeitos = grauTR !== 'sucesso' || efeitosTR.length > 0 || !!ramo?.dano_extra || !!ramo?.dano_maximizado || !!ramo?.dano && ramo.dano !== 'nenhum';
       cabecalho = resTR.texto;
     } else if (cfg.teste === 'ataque') {
-      const def = computeTotalDefense(t, {}, arma!.range === 'melee' ? 'melee' : 'ranged');
+      const defBase = computeTotalDefense(t, {}, arma!.range === 'melee' ? 'melee' : 'ranged');
+      const def = Math.max(0, defBase -
+        penalidadeGarrasTigre(useCharacterStore.getState().characters, t.id, useCombatStore.getState().combatId ?? undefined));
       const ctx = buildAttackContext({
         attacker: u, weapon: arma!, targetDefense: def, targetId: t.id, alcanceM: cfg.alcanceM, ignorarReacoes: opcoes.ignorarReacoes,
         situation: { twoHanded: requiresTwoHands(arma!) || Boolean(u.mainHandWeaponInstanceId && u.offHandWeaponInstanceId ? u.mainHandWeaponInstanceId === u.offHandWeaponInstanceId : u.mainHandWeaponName && u.mainHandWeaponName === u.offHandWeaponName), rolarDano: cfg.tipo_efeito !== 'buff' && !!cfg.incluirArma && !/@ARMA\.DANO/i.test([cfg.dano, ...mods.danos].filter(Boolean).join('+')), hitBonusExtra: cfg.mod_acerto, critBonusExtra: critExtra || undefined, advantageExtra: mods.vantagemAcerto, critMultiplierExtra: mods.multiplicador },

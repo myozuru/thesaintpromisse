@@ -348,7 +348,8 @@ export function drawEntity(ctx: CanvasRenderingContext2D, e: Entity, scale: numb
     if (e.shape === 'ELLIPSE') ctx.ellipse(0, 0, hw, hh, 0, 0, Math.PI * 2);
     else ctx.rect(-hw, -hh, e.w, e.h);
     ctx.stroke();
-    const terrainLabel = e.difficultTerrain === 'natural' ? 'TERRENO NATURAL / CUSTO 2:1' : 'TERRENO MAGICO / CUSTO 2:1';
+    const terrenoKind = e.difficultTerrainKind === 'water' ? 'ÁGUA' : e.difficultTerrainKind === 'mud' ? 'LAMA' : 'OUTRO';
+    const terrainLabel = `${e.difficultTerrain === 'natural' ? 'TERRENO NATURAL' : 'TERRENO MÁGICO'} / ${terrenoKind} / CUSTO 2:1`;
     ctx.font = `${11 / scale}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';

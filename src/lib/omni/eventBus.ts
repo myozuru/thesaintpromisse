@@ -46,12 +46,25 @@ function pegarChar(id?: string) {
   return useCharacterStore.getState().characters.find((c) => c.id === id);
 }
 
+const despachosAutonomiaPendentes = new Set<Promise<void>>();
+
 function despacharAutonomias(evento: GatilhoId, opts: EmitirOpts, cadeia: CadeiaOmni): void {
-  void import('@/lib/controlador/autonomia').then(({ despacharAutonomiasInvocacao }) =>
+  let pendencia!: Promise<void>;
+  pendencia = import('@/lib/controlador/autonomia').then(({ despacharAutonomiasInvocacao }) =>
     despacharAutonomiasInvocacao(evento, opts, cadeia),
   ).catch((error) => {
     console.warn('[eventBus] erro despachando automações de invocação:', error);
+  }).finally(() => {
+    despachosAutonomiaPendentes.delete(pendencia);
   });
+  despachosAutonomiaPendentes.add(pendencia);
+}
+
+/** Aguarda ações autônomas disparadas por eventos antes do teardown de testes. */
+export async function aguardarDespachosAutonomia(): Promise<void> {
+  while (despachosAutonomiaPendentes.size > 0) {
+    await Promise.all([...despachosAutonomiaPendentes]);
+  }
 }
 
 export function emitirEvento(evento: GatilhoId, opts: EmitirOpts = {}): number {

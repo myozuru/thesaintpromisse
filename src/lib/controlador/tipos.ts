@@ -3,13 +3,44 @@ import type {
   EstadoAquisicaoInvocacao,
   ModeloInvocacao,
   ConfiguracaoEfeitoSuporteInvocacao,
+  EfeitoEspecialInvocacao,
 } from "@/lib/invocacoes/schema";
 
 /** Catálogo persistente de invocações do Controlador.
  * A materialização em tokens e os comandos pertencem às fases seguintes.
  * Referências preservam a origem no Grimório/OMNI sem duplicar entidades.
  */
-export type TipoInvocacaoControlador = 'shikigami' | 'corpo_amaldicoado';
+export type TipoInvocacaoControlador = ModeloInvocacao["tipo"];
+
+export function rotuloTipoInvocacao(tipo: TipoInvocacaoControlador): string {
+  switch (tipo) {
+    case 'shikigami': return 'Shikigami';
+    case 'corpo_amaldicoado': return 'Corpo Amaldiçoado';
+    case 'maldicao_domada': return 'Maldição Domada';
+    default: return 'Invocação';
+  }
+}
+
+/** Compatibilidade legada não dispensa a confirmação em fichas modernas de Maldição Domada. */
+export function mensagemDomesticaoPendente(
+  invocacao: Pick<InvocacaoControlador, 'nome' | 'tipo' | 'domado' | 'aprovacaoMestre' | 'schemaVersion' | 'version' | 'versaoModelo' | 'aquisicao'>,
+): string | null {
+  if (invocacao.domado === true) return null;
+  if (invocacao.tipo === 'maldicao_domada') {
+    const estadoAquisicao = invocacao.aquisicao?.estado;
+    const revisaoPendente = invocacao.aprovacaoMestre === 'pendente'
+      || invocacao.aprovacaoMestre === 'rejeitada'
+      || estadoAquisicao === 'pendente'
+      || estadoAquisicao === 'rejeitada';
+    // Saves anteriores à introdução de `domado` podem ter schemaVersion,
+    // version ou até aprovação preenchidos. Só um estado explicitamente
+    // pendente/rejeitado bloqueia a compatibilidade quando o campo está ausente.
+    if (invocacao.domado === undefined && !revisaoPendente) return null;
+    return `A domesticação de ${invocacao.nome} ainda não foi confirmada pelo Mestre.`;
+  }
+  if (invocacao.domado !== false) return null;
+  return `${invocacao.nome} ainda precisa ser domado no ritual.`;
+}
 
 export interface InvocacaoControlador {
   id: string;
@@ -96,14 +127,20 @@ export interface InvocacaoControlador {
     nome: string;
     tipo?: 'ataque' | 'habilidade' | 'movimento' | 'bonus' | 'suporte';
     efeitoSuporte?: ConfiguracaoEfeitoSuporteInvocacao;
+    efeitoEspecial?: EfeitoEspecialInvocacao;
     teste?: 'ataque' | 'resistencia';
     tipoAtaque?: 'corpo_a_corpo' | 'distancia';
     atributoAtaque?: 'forca' | 'destreza';
     atributoDano?: 'forca' | 'destreza' | 'constituicao' | 'inteligencia' | 'sabedoria' | 'presenca';
     multiplicadorDanoAtributo?: number;
+    /** Condição específica imposta pela ação, usada para calcular adaptação de TR de Mahoraga. */
+    condicaoAlvoId?: string;
     resistenciaAlvo?: string;
     atributoCD?: 'forca' | 'destreza' | 'constituicao' | 'inteligencia' | 'sabedoria' | 'presenca';
     danoNoSucesso?: 'nenhum' | 'metade';
+    tipo_alvo?: 'unico' | 'multiplo' | 'area' | 'proprio';
+    filtro_alvo?: 'inimigos' | 'aliados' | 'todos' | 'todos_exceto_si';
+    area?: { forma: 'cone' | 'linha' | 'raio_em_si' | 'raio_no_ponto'; tamanho_m: number; largura_m?: number };
     margemCritico?: number;
     multiplicadorCritico?: number;
     alcanceM?: number;

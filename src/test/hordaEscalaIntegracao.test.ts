@@ -1,11 +1,45 @@
 import { describe, expect, it } from 'vitest';
-import { calcularEscalaHorda, verificarPerdaMembrosHorda } from '@/lib/controlador/hordas';
+import {
+  calcularEscalaHorda,
+  validarLimiteHorda,
+  vagasInvocacaoEmCampo,
+  verificarPerdaMembrosHorda,
+} from '@/lib/controlador/hordas';
 import { calcularEfeitoSuporte } from '@/lib/controlador/suporte';
 import { stepDamage, parseDamage, formatDamage } from '@/lib/damageStep';
 import { resolverPerdaMembrosHorda, acumularCuraParaLimiarHorda } from '@/lib/controlador/hordas';
 import { calcularPrejuizoRepeticaoHorda, calcularTamanhoEfetivoHorda } from '@/lib/controlador/hordas';
 
 describe('escala verificada de Horda', () => {
+  it('conta cada integrante da Horda no limite de invocações, apesar do token compartilhado', () => {
+    expect(vagasInvocacaoEmCampo({})).toBe(1);
+    expect(vagasInvocacaoEmCampo({
+      invocationHordeId: 'horda-1',
+      invocationHordeMemberIds: ['membro-1'],
+    })).toBe(2);
+    expect(vagasInvocacaoEmCampo({
+      invocationHordeId: 'horda-1',
+      invocationHordeMemberIds: ['membro-1', 'membro-2'],
+    })).toBe(3);
+  });
+
+  it('recusa criar invocação quando Horda mais indivíduos excedem as vagas efetivas', () => {
+    expect(validarLimiteHorda({
+      limiteInvocacoesEmCampo: 4,
+      hordasAtivas: 1,
+      invocacoesIndividuaisAposCriacao: 2,
+      vagasOcupadasPorHordas: 2,
+      vagasNovaHorda: 1,
+    })).toMatchObject({ ok: false, codigo: 'limite_invocacoes_em_campo' });
+    expect(validarLimiteHorda({
+      limiteInvocacoesEmCampo: 4,
+      hordasAtivas: 1,
+      invocacoesIndividuaisAposCriacao: 1,
+      vagasOcupadasPorHordas: 2,
+      vagasNovaHorda: 1,
+    })).toEqual({ ok: true });
+  });
+
   it('aplica um uso adicional por par e resolve tamanho pela composição atual', () => {
     const membros = [{ grau: 'quarto' as const }, { grau: 'segundo' as const }];
     expect([0, 1, 2, 3, 4].map(usos => calcularPrejuizoRepeticaoHorda(usos, membros))).toEqual([0, 0, 1, 1, 2]);

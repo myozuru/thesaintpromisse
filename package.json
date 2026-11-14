@@ -11,7 +11,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "dev:qa": "node scripts/launch-qa.mjs",
-    "test:dez-sombras": "vitest run src/test/dezSombras.test.ts src/test/dezSombrasCombateReal.test.ts src/test/dezSombrasDerivadas.test.ts src/test/dezSombrasTotalidade.test.ts src/test/dezSombrasQaGate.test.ts src/test/autonomiaInvocacao.test.ts src/test/controladorMapa.test.ts src/test/hordaEscalaIntegracao.test.ts"
+    "test:dez-sombras": "vitest run src/test/dezSombras.test.ts src/test/dezSombrasCombateReal.test.ts src/test/dezSombrasMahoraga.test.ts src/test/dezSombrasDerivadas.test.ts src/test/dezSombrasTotalidade.test.ts src/test/dezSombrasQaGate.test.ts src/test/autonomiaInvocacao.test.ts src/test/controladorMapa.test.ts src/test/hordaEscalaIntegracao.test.ts"
   },
   "overrides": {
     "rolldown": "1.2.1"

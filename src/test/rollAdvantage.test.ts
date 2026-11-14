@@ -50,6 +50,21 @@ describe('Vantagem/Desvantagem — escopos básicos', () => {
     expect(consumeAdvantageFor('adv-test-1', { kind: 'skill', name: 'Atletismo' }).net).toBe('normal');
   });
 
+  it('skill_specific equipara nomes com e sem acento', () => {
+    grantAdvantage('adv-test-1', 'advantage', 'skill_specific', { target: 'Percepção' });
+    expect(consumeAdvantageFor('adv-test-1', { kind: 'skill', name: 'percepcao' }).net).toBe('advantage');
+  });
+
+  it('continua lendo modificadores persistidos antes da normalização sem acentos', () => {
+    useCharacterStore.setState({ characters: [{
+      ...baseChar,
+      omniAdvMods: {
+        legado: { id: 'legado', kind: 'advantage', scope: 'skill_specific', target: 'Percepção', expires: 'use' },
+      },
+    } as unknown as Character] });
+    expect(consumeAdvantageFor('adv-test-1', { kind: 'skill', name: 'percepcao' }).net).toBe('advantage');
+  });
+
   it('save_specific:Reflexos confere vantagem só nesse TR', () => {
     grantAdvantage('adv-test-1', 'advantage', 'save_specific', { target: 'Reflexos' });
     expect(consumeAdvantageFor('adv-test-1', { kind: 'save', name: 'Reflexos' }).net).toBe('advantage');

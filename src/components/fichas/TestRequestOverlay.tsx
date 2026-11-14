@@ -43,10 +43,14 @@ import { guardaEstudadaTrBonus } from '@/lib/guardaEstudada';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { selectOmniModifiers } from '@/lib/omni/omniBridge';
 import { resolveAuraTurnTest } from '@/lib/auraTurnResolution';
-import { resolverDanoAposTRInvocacao } from '@/lib/controlador/resolucaoTR';
+import { resolverDanoAposTRInvocacao, resolverSangramentoForteTigre } from '@/lib/controlador/resolucaoTR';
+import { bonusAuraQuietudeNoTR } from '@/lib/controlador/dezSombrasCervo';
+import { resolverNeutralizacaoCervo } from '@/lib/controlador/dezSombrasCervo';
 
 const invocationRequestsResolving = new Set<string>();
 const aetherisRequestsResolving = new Set<string>();
+const cervoRequestsResolving = new Set<string>();
+const tigreSangramentoRequestsResolving = new Set<string>();
 
 /** Modificadores externos de combate que valem para qualquer teste pedido. */
 function bonusDeCombate(c: Character, req: TestRequest): { bonus: number; parts: string[] } {
@@ -252,6 +256,9 @@ export function TestRequestOverlay() {
   const dismiss = useTestRequestStore((s) => s.dismiss);
   const ackResult = useTestRequestStore((s) => s.ackResult);
   const characters = useCharacterStore((s) => s.characters);
+  const mapEntities = useMapStore((s) => s.entities);
+  const gridConfig = useMapStore((s) => s.gridConfig);
+  const layerVisible = useMapStore((s) => s.layerVisible);
   const addLog = useLogStore((s) => s.addLog);
 
   const isMaster = role === 'MASTER';
@@ -261,6 +268,22 @@ export function TestRequestOverlay() {
     for (const request of requests) {
       if (request.auraResolution && request.result && !request.resolutionApplied) {
         resolveAuraTurnTest(request);
+      }
+    }
+  }, [isMaster, requests]);
+
+  useEffect(() => {
+    if (!isMaster) return;
+    for (const request of requests) {
+      if (!request.cervoNeutralizationResolution || !request.result || request.resolutionApplied || cervoRequestsResolving.has(request.id)) continue;
+      cervoRequestsResolving.add(request.id);
+      try {
+        if (!resolverNeutralizacaoCervo(request)) {
+          useTestRequestStore.getState().markResolutionApplied(request.id);
+          useLogStore.getState().addLog('combat', `⛔ Neutralização: não foi possível aplicar o resultado do TR de ${request.charName}.`);
+        }
+      } finally {
+        cervoRequestsResolving.delete(request.id);
       }
     }
   }, [isMaster, requests]);
@@ -297,6 +320,22 @@ export function TestRequestOverlay() {
           useTestRequestStore.getState().markResolutionApplied(request.id);
           invocationRequestsResolving.delete(request.id);
         });
+    }
+  }, [isMaster, requests]);
+
+  useEffect(() => {
+    if (!isMaster) return;
+    for (const request of requests) {
+      if (!request.tigreSangramentoResolution || !request.result || request.resolutionApplied || tigreSangramentoRequestsResolving.has(request.id)) continue;
+      tigreSangramentoRequestsResolving.add(request.id);
+      try {
+        resolverSangramentoForteTigre(request);
+      } catch (error) {
+        useLogStore.getState().addLog('combat', `🐅 Tigre Fúnebre: não foi possível resolver Sangramento Forte contra ${request.charName}. ${error instanceof Error ? error.message : ''}`);
+      } finally {
+        useTestRequestStore.getState().markResolutionApplied(request.id);
+        tigreSangramentoRequestsResolving.delete(request.id);
+      }
     }
   }, [isMaster, requests]);
 
@@ -368,11 +407,16 @@ export function TestRequestOverlay() {
   }
 
   const char = characters.find((c) => c.id === current.charId);
-  const { bonus, breakdown } = current.bonusOverride != null
+  const bonusBase = current.bonusOverride != null
     ? { bonus: current.bonusOverride, breakdown: current.bonusBreakdownOverride || 'override' }
     : char
       ? computeBonus(char, current)
       : { bonus: 0, breakdown: '?' };
+  const cervoAuraBonus = char && current.kind === 'save'
+    ? bonusAuraQuietudeNoTR(char.id, current.conditionIds, { characters, entities: mapEntities, gridConfig, layerVisible })
+    : 0;
+  const bonus = bonusBase.bonus + cervoAuraBonus;
+  const breakdown = [bonusBase.breakdown, ...(cervoAuraBonus ? [`Aura da Quietude +${cervoAuraBonus}`] : [])].filter(Boolean).join(' · ');
 
   const showDc = current.dc != null && (isMaster || !current.hideDcFromPlayer);
   const showOutcome = current.dc != null && (isMaster || !current.hideOutcomeFromPlayer);
@@ -391,7 +435,7 @@ export function TestRequestOverlay() {
     setRolling(true);
     playDiceSound();
 
-    const alvoInvocacao = current.invocationResolution?.targetInvocation;
+    const alvoInvocacao = current.invocationResolution?.targetInvocation ?? current.targetInvocation;
     // 1) Sucesso/falha garantida (Omni) tem prioridade — pula a rolagem.
     const ctx = buildRollContext(current);
     const outCtx: OutcomeContext =

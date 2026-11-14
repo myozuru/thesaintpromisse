@@ -4,10 +4,12 @@ import { findWeaponModelById } from '@/lib/weapons';
 import { distanceBetweenChars } from '@/lib/weaponRange';
 import { rollDiceCom } from '@/lib/dice';
 import { useCharacterStore } from '@/stores/useCharacterStore';
+import { useCombatStore } from '@/stores/useCombatStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { BACULO_AETHERIS_ID, BACULO_AETHERIS_NAME, baculoAetherisEquipped } from '@/lib/baculoAetheris';
 import type { BaculoAetherisCounterattack } from '@/lib/baculoAetherisState';
+import { penalidadeGarrasTigre } from '@/lib/controlador/dezSombrasTigre';
 
 export async function dispararContraRajadaBaculo(request: BaculoAetherisCounterattack): Promise<{ ok: boolean; reason?: string }> {
   const characters = useCharacterStore.getState().characters;
@@ -25,7 +27,8 @@ export async function dispararContraRajadaBaculo(request: BaculoAetherisCountera
     weapon,
     targetId: attacker.id,
     alcanceM: 18,
-    targetDefense: computeTotalDefense(attacker, {}, 'ranged'),
+    targetDefense: Math.max(0, computeTotalDefense(attacker, {}, 'ranged') -
+      penalidadeGarrasTigre(characters, attacker.id, useCombatStore.getState().combatId ?? undefined)),
     situation: { twoHanded: true, preferredAbility: pickAttackAbility(wielder, weapon) },
     trainedRanges: [...(wielder.meleeTrained ? (['melee'] as const) : []), ...(wielder.rangedTrained ? (['ranged', 'thrown'] as const) : [])],
   }));

@@ -21,9 +21,23 @@ import { solicitarConfirmacaoAutonomia, cancelarPropostaAutonomia, propostasAuto
 import { integracaoInvocacoes, metricasIntegracaoInvocacoes } from './integracaoFlags';
 import { calcularTamanhoEfetivoHorda } from './hordas';
 
-const filaPorInstancia = new Map<string, Promise<void>>();
-const idsCadeia = new WeakMap<object, string>();
-let sequenciaCadeia = 0;
+// `eventBus` and `mapa` form an import cycle. An event can arrive while this
+// module is still evaluating, so this lazily initialized state must not live
+// behind a top-level `let`/`const` binding that could still be in its TDZ.
+var estadoAutonomia: {
+  filaPorInstancia: Map<string, Promise<void>>;
+  idsCadeia: WeakMap<object, string>;
+  sequenciaCadeia: number;
+} | undefined;
+
+function obterEstadoAutonomia() {
+  estadoAutonomia ??= {
+    filaPorInstancia: new Map<string, Promise<void>>(),
+    idsCadeia: new WeakMap<object, string>(),
+    sequenciaCadeia: 0,
+  };
+  return estadoAutonomia;
+}
 
 type ContextoCondicao = {
   evento: {
@@ -52,16 +66,18 @@ function registrar(mensagem: string): void {
 }
 
 function cadeiaId(cadeia: CadeiaOmni): string {
+  const estado = obterEstadoAutonomia();
   const chave = cadeia.orcamento as object;
-  const atual = idsCadeia.get(chave);
+  const atual = estado.idsCadeia.get(chave);
   if (atual) return atual;
-  sequenciaCadeia += 1;
-  const id = `auto-chain-${sequenciaCadeia}`;
-  idsCadeia.set(chave, id);
+  estado.sequenciaCadeia += 1;
+  const id = `auto-chain-${estado.sequenciaCadeia}`;
+  estado.idsCadeia.set(chave, id);
   return id;
 }
 
 function enfileirar(instanciaId: string, tarefa: () => Promise<void>): Promise<void> {
+  const filaPorInstancia = obterEstadoAutonomia().filaPorInstancia;
   const anterior = filaPorInstancia.get(instanciaId) ?? Promise.resolve();
   const atual = anterior.catch(() => undefined).then(tarefa);
   filaPorInstancia.set(instanciaId, atual);

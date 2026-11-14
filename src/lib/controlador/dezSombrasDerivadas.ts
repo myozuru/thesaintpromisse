@@ -1,126 +1,163 @@
 import type { InvocacaoControlador } from './tipos';
-import { ataque, cura } from './dezSombras';
+import { FONTE_ENCICLOPEDIA_MALDITA } from './dezSombras';
+import { regrasGrau, type GrauShikigami } from './regrasShikigami';
 
-/** Formas descritas à parte no material da Enciclopédia; não são novos membros-base. */
+/** Formas oficiais da p. 69; a nova edição lista composição e grau, sem publicar fichas completas. */
 export const DEZ_SOMBRAS_FORMAS_DERIVADAS = [
+  {
+    id: 'totalidade',
+    nome: 'Cão Divino: Totalidade',
+    pagina: 69,
+    grau: 'terceiro',
+    requisitos: ['Cão Branco domado', 'Cão Preto domado', 'ritual de quimera'],
+    lacunas: ['A fonte não publica atributos, PV, Defesa, deslocamento, custo ou ações da forma.'],
+  },
   {
     id: 'abismo-desconhecido-do-poco',
     nome: 'O Abismo Desconhecido do Poço',
-    pagina: 66,
-    requisitos: ['Nue domado', 'Sapo domado', 'Especialização Quimera'],
-    lacunas: [
-      'Porte e atributos não são especificados; o porte Médio exibido é provisório.',
-      'A composição da quimera e a perda de membros não têm regra operacional definida.',
-      'Segurar exige que o Mestre informe explicitamente 1-3 sapos vivos; a fuga, Fora de Risco, Alado e Grupo (3 sapos) permanecem manuais.',
-    ],
+    pagina: 69,
+    grau: 'terceiro',
+    requisitos: ['Gama domado', 'Nue domado', 'ritual de quimera'],
+    lacunas: ['A fonte não publica atributos, PV, Defesa, deslocamento, custo ou ações da forma.'],
+  },
+  {
+    id: 'nue-totalidade',
+    nome: 'Nue: Totalidade',
+    pagina: 69,
+    grau: 'segundo',
+    requisitos: ['Nue domado', 'Orochi domado', 'ritual de quimera'],
+    lacunas: ['A fonte não publica atributos, PV, Defesa, deslocamento, custo ou ações da forma.'],
   },
   {
     id: 'agito',
     nome: 'Agito',
-    pagina: 68,
-    requisitos: [
-      'Nue como forma-base',
-      'Heranças de Grande Serpente, Tigre Fúnebre e Cervo Circular',
-    ],
-    lacunas: [
-      'A fórmula de composição e os gatilhos de herança são incompletos.',
-      'A composição depende do Tigre Fúnebre, ficha marcada como especulativa e homebrew opcional.',
-      'Golpes Eletrificados é executável. Cura Concentrada permanece manual porque a fonte não informa custo; Regeneração Superior permanece manual por lacunas de gatilho e frequência.',
-    ],
+    pagina: 69,
+    grau: 'especial',
+    requisitos: ['Nue domado', 'Orochi domado', 'Cervo Circular domado', 'Tigre Fúnebre domado', 'ritual de quimera'],
+    lacunas: ['A fonte não publica atributos, PV, Defesa, deslocamento, custo ou ações da forma.'],
   },
 ] as const;
 
-const habilidadeManual = (id: string, nome: string, descricaoRegra: string, extra: Record<string, unknown> = {}) => ({
-  id,
-  nome,
-  tipo: 'habilidade' as const,
-  tipoExecucao: 'manual' as const,
-  statusAutomacao: 'manual' as const,
-  descricaoRegra,
-  ...extra,
-});
+export interface ComparacaoBenchmarkFormaDerivada {
+  campo: 'PV' | 'Defesa' | 'Custo de invocação';
+  valorProvisorio: number;
+  referenciaGrau: number;
+  diferenca: number;
+}
 
-/** Cria fichas isoladas, inicialmente bloqueadas para confirmação manual do Mestre. */
-export function criarFormasDerivadasDezSombras(donoCharacterId: string): InvocacaoControlador[] {
-  const base: Omit<InvocacaoControlador, 'id' | 'nome' | 'hpAtual' | 'hpMaximo' | 'defesa' | 'deslocamentoM' | 'porte' | 'grau' | 'custoInvocacaoPE' | 'acoes'> = {
-    donoCharacterId,
+/** Compara valores herdados/provisórios com a base do grau para dar ao Mestre
+ * um resumo de auditoria. A referência não é limite: a fonte não publica a ficha
+ * das formas derivadas e os deltas continuam sujeitos à aprovação da mesa. */
+export function auditarValoresProvisoriosFormaDerivadaDezSombras(
+  ficha: Pick<InvocacaoControlador, 'formaDerivada' | 'grau' | 'hpMaximo' | 'defesa' | 'deslocamentoM' | 'custoInvocacaoPE' | 'valoresProvisoriosFormaDerivada'>,
+): ComparacaoBenchmarkFormaDerivada[] {
+  if (!ficha.formaDerivada || !ficha.grau) return [];
+  const base = regrasGrau(ficha.grau as GrauShikigami);
+  const valores: Array<[ComparacaoBenchmarkFormaDerivada['campo'], number, number, string]> = [
+    ['PV', ficha.hpMaximo, base.pvBase, 'PV'],
+    ['Defesa', ficha.defesa, base.defesaBase, 'Defesa'],
+    ['Custo de invocação', ficha.custoInvocacaoPE, base.custo, 'custoInvocacaoPE'],
+  ];
+  const provisórios = new Set(ficha.valoresProvisoriosFormaDerivada ?? []);
+  return valores.filter(([, atual, , chave]) => provisórios.has(chave) && Number.isFinite(atual))
+    .map(([campo, valorProvisorio, referenciaGrau]) => ({
+      campo,
+      valorProvisorio,
+      referenciaGrau,
+      diferenca: valorProvisorio - referenciaGrau,
+    }));
+}
+
+const fontePagina = `${FONTE_ENCICLOPEDIA_MALDITA}, Cap. 2, p. 69`;
+const lacunaNumerica = 'A p. 69 lista a composição e o Grau, mas não fornece uma ficha numérica. Os valores desta ficha são estimativas locais herdadas do pacote anterior e precisam ser revisados/aprovados pelo Mestre.';
+
+function criarFichaDerivada(input: {
+  donoCharacterId: string;
+  id: typeof DEZ_SOMBRAS_FORMAS_DERIVADAS[number]['id'];
+  nome: string;
+  grau: NonNullable<InvocacaoControlador['grau']>;
+  custoPE: number;
+  hp: number;
+  defesa: number;
+  deslocamentoM: number;
+  porte: NonNullable<InvocacaoControlador['porte']>;
+  requisitos: readonly string[];
+  lacunas: readonly string[];
+  origem: readonly string[];
+}): InvocacaoControlador {
+  const grauDescricao = input.grau === 'especial'
+    ? 'Grau Especial'
+    : `${({ primeiro: '1º', segundo: '2º', terceiro: '3º', quarto: '4º' } as const)[input.grau]} Grau`;
+  return {
+    id: `${input.donoCharacterId}-dez-sombras-${input.id}`,
+    donoCharacterId: input.donoCharacterId,
+    nome: input.nome,
     tipo: 'shikigami',
     pacoteRegras: 'dez-sombras',
+    subcategoria: `dez-sombras:${input.id}`,
     formaDerivada: true,
     domado: false,
     opcionalHomebrew: false,
-    aprovacaoMestre: 'aprovada',
+    aprovacaoMestre: 'pendente',
     versaoModelo: 1,
     versaoAprovada: 1,
     atributoBasePericias: 'sabedoria',
     economiaAcoesConfigurada: { acaoComum: 1, acaoBonus: 1, acaoMovimento: 1, reacao: 1 },
     intermediario: { tipo: 'tecnica', tecnicaId: 'Dez Sombras' },
-    origemAquisicao: 'Feiticeiros e Maldições — Enciclopédia Amaldiçoada v0.9, Cap. 2',
-    alcanceInvocacaoM: undefined,
+    origemAquisicao: `Feiticeiros e Maldições — ${fontePagina}`,
+    referenciaRegra: fontePagina,
+    hpAtual: input.hp,
+    hpMaximo: input.hp,
+    defesa: input.defesa,
+    deslocamentoM: input.deslocamentoM,
+    porte: input.porte,
+    grau: input.grau,
+    custoInvocacaoPE: input.custoPE,
+    requisitosFormaDerivada: [...input.requisitos],
+    lacunasFormaDerivada: [...input.lacunas, lacunaNumerica],
+    valoresProvisoriosFormaDerivada: ['custoInvocacaoPE', 'PV', 'Defesa', 'deslocamentoM', 'porte', 'atributos', 'ações'],
+    descricao: `${input.nome}: forma derivada oficial de ${grauDescricao}. ${lacunaNumerica}`,
+    historico: `${input.nome} — composição e Grau conforme ${fontePagina}. ${lacunaNumerica}`,
+    acoes: [],
+    caracteristicas: [
+      { tipo: 'fonte', texto: fontePagina },
+      { tipo: 'forma_derivada', texto: 'Não ocupa vaga de indivíduo-base.' },
+      { tipo: 'requisito', texto: input.origem.join('; ') },
+      { tipo: 'provisorio', texto: lacunaNumerica },
+    ],
   };
+}
 
+/** Cria as quatro fichas oficiais como rascunhos: valores numéricos provisórios exigem aprovação. */
+export function criarFormasDerivadasDezSombras(donoCharacterId: string): InvocacaoControlador[] {
   return [
-    {
-      ...base,
-      id: `${donoCharacterId}-dez-sombras-abismo-desconhecido-do-poco`,
-      nome: 'O Abismo Desconhecido do Poço',
-      subcategoria: 'dez-sombras:abismo-desconhecido-do-poco',
-      referenciaRegra: 'Enciclopédia Amaldiçoada v0.9, Cap. 2, pp. 64, 66',
-      hpAtual: 50,
-      hpMaximo: 50,
-      defesa: 21,
-      deslocamentoM: 10.5,
-      porte: 'Médio',
-      valoresProvisoriosFormaDerivada: ['porte', 'atributos'],
-      grau: 'quarto',
-      custoInvocacaoPE: 6,
-      requisitosFormaDerivada: [...DEZ_SOMBRAS_FORMAS_DERIVADAS[0].requisitos],
-      lacunasFormaDerivada: [
-        'Porte e atributos não são especificados; o porte Médio exibido é provisório.',
-        'A composição da quimera e a perda de membros não têm regra operacional definida.',
-        'Fuga de Segurar, Fora de Risco, Alado e Grupo (3 sapos) permanecem manuais.',
-      ],
-      descricao: 'Quimera de Nue e Sapo, grau 4, 6 PE, 50 PV, Defesa 21, voo e deslocamento 10,5 m. Requisitos ainda precisam de confirmação manual do Mestre. Porte e atributos não especificados; o porte exibido é provisório. Segurar é parcial: exige contagem de sapos vivos confirmada pelo Mestre; a fuga, Fora de Risco, Alado e Grupo permanecem manuais.',
-      historico: 'Quimera de Nue e Sapo — Enciclopédia Amaldiçoada v0.9, Cap. 2, pp. 64, 66.',
-      acoes: [
-        habilidadeManual('segurar', 'Segurar', 'Ação Simples: disputa o Luta do Abismo contra Atletismo do alvo até 9 m e aplica Agarrado em caso de sucesso. O Mestre informa a quantidade atual de sapos vivos: +5 com um, +7 com dois ou +9 com três. Não inferir a contagem pelos PV. A tentativa de fuga é indicada no início de cada turno, mas custo de ação e comparação exata permanecem manuais.', { categoriaAcao: 'acao_simples', alcanceM: 9, statusAutomacao: 'parcial' }),
-        habilidadeManual('fora-de-risco', 'Fora de Risco', 'A habilidade consta na ficha derivada; reação, alvo e resolução permanecem manuais.'),
-        habilidadeManual('alado', 'Alado', 'A ficha indica voo. Movimento aéreo e limites operacionais permanecem manuais.'),
-        habilidadeManual('grupo', 'Grupo (3 sapos)', 'A forma inclui 3 sapos. A composição, tokens, PV partilhados e comandos não têm regra operacional definida e permanecem manuais.'),
-      ],
-      caracteristicas: [
-        { tipo: 'forma_derivada', texto: 'Não conta como indivíduo-base adicional das Dez Sombras.' },
-        { tipo: 'requisito', texto: 'Nue domado; Sapo domado; Especialização Quimera. Confirmação manual do Mestre.' },
-        { tipo: 'provisorio', texto: 'Porte e atributos não especificados na fonte; porte exibido como Médio provisório.' },
-      ],
-    },
-    {
-      ...base,
-      id: `${donoCharacterId}-dez-sombras-agito`,
-      nome: 'Agito',
-      subcategoria: 'dez-sombras:agito',
-      referenciaRegra: 'Enciclopédia Amaldiçoada v0.9, Cap. 2, pp. 64, 68',
-      hpAtual: 120,
-      hpMaximo: 120,
-      defesa: 27,
-      deslocamentoM: 18,
-      porte: 'Grande',
-      grau: 'segundo',
-      custoInvocacaoPE: 7,
-      requisitosFormaDerivada: [...DEZ_SOMBRAS_FORMAS_DERIVADAS[1].requisitos],
-      lacunasFormaDerivada: [...DEZ_SOMBRAS_FORMAS_DERIVADAS[1].lacunas],
-      descricao: 'Forma derivada de Nue com heranças de Grande Serpente, Tigre Fúnebre e Cervo Circular; grau 2, 7 PE, 120 PV, Defesa 27, deslocamento 18 m, porte Grande. A fórmula de composição e os gatilhos são incompletos; a dependência do Tigre Fúnebre é especulativa/homebrew. Golpes Eletrificados (+11, 5d10+6 chocante) é executável. Cura Concentrada (5d10+3) permanece manual porque o custo não está publicado; Regeneração Superior como reação também permanece manual.',
-      historico: 'Forma descrita como oficial pelo RPG; composição dependente da ficha especulativa do Tigre Fúnebre — Enciclopédia Amaldiçoada v0.9, Cap. 2, pp. 64, 68.',
-      acoes: [
-        ataque({ id: 'golpes-eletrificados', nome: 'Golpes Eletrificados', dano: '5d10+6', tipoDano: 'DCC', alcanceM: 3, bonusAtaque: 11 }),
-        { ...cura({ id: 'cura-concentrada', nome: 'Cura Concentrada', formula: '5d10+3', alcanceM: 4.5, alvos: 'unico', descricaoRegra: 'Um alvo a até 4,5 m recupera 5d10+3 PV. O custo não é informado pela fonte; a execução permanece manual até decisão do Mestre.' }), statusAutomacao: 'manual' },
-        habilidadeManual('regeneracao-superior', 'Regeneração Superior', 'Ao receber dano, Agito pode usar uma reação para curar a si mesmo em valor igual à Cura Concentrada (5d10+3). A fonte não define o uso diante de múltiplas instâncias de dano nem o limite de PV; esses pontos permanecem manuais.', { categoriaAcao: 'reacao' }),
-      ],
-      caracteristicas: [
-        { tipo: 'forma_derivada', texto: 'Não conta como indivíduo-base adicional das Dez Sombras.' },
-        { tipo: 'requisito', texto: 'Nue como forma-base e heranças de Grande Serpente, Tigre Fúnebre e Cervo Circular. Confirmação manual do Mestre.' },
-        { tipo: 'homebrew', texto: 'A composição depende do Tigre Fúnebre, perfil especulativo e opcional.' },
-      ],
-    },
+    criarFichaDerivada({
+      donoCharacterId, id: 'totalidade', nome: 'Cão Divino: Totalidade', grau: 'terceiro',
+      custoPE: 4, hp: 35, defesa: 22, deslocamentoM: 12, porte: 'Grande',
+      requisitos: [...DEZ_SOMBRAS_FORMAS_DERIVADAS[0].requisitos],
+      lacunas: [...DEZ_SOMBRAS_FORMAS_DERIVADAS[0].lacunas],
+      origem: ['Cão Branco domado', 'Cão Preto domado', 'ritual de quimera'],
+    }),
+    criarFichaDerivada({
+      donoCharacterId, id: 'abismo-desconhecido-do-poco', nome: 'O Abismo Desconhecido do Poço', grau: 'terceiro',
+      custoPE: 6, hp: 50, defesa: 21, deslocamentoM: 10.5, porte: 'Médio',
+      requisitos: [...DEZ_SOMBRAS_FORMAS_DERIVADAS[1].requisitos],
+      lacunas: [...DEZ_SOMBRAS_FORMAS_DERIVADAS[1].lacunas],
+      origem: ['Gama domado', 'Nue domado', 'ritual de quimera'],
+    }),
+    criarFichaDerivada({
+      donoCharacterId, id: 'nue-totalidade', nome: 'Nue: Totalidade', grau: 'segundo',
+      custoPE: 3, hp: 26, defesa: 13, deslocamentoM: 12, porte: 'Médio',
+      requisitos: [...DEZ_SOMBRAS_FORMAS_DERIVADAS[2].requisitos],
+      lacunas: [...DEZ_SOMBRAS_FORMAS_DERIVADAS[2].lacunas],
+      origem: ['Nue domado', 'Orochi domado', 'ritual de quimera'],
+    }),
+    criarFichaDerivada({
+      donoCharacterId, id: 'agito', nome: 'Agito', grau: 'especial',
+      custoPE: 7, hp: 120, defesa: 27, deslocamentoM: 18, porte: 'Grande',
+      requisitos: [...DEZ_SOMBRAS_FORMAS_DERIVADAS[3].requisitos],
+      lacunas: [...DEZ_SOMBRAS_FORMAS_DERIVADAS[3].lacunas],
+      origem: ['Nue domado', 'Orochi domado', 'Cervo Circular domado', 'Tigre Fúnebre domado', 'ritual de quimera'],
+    }),
   ];
 }

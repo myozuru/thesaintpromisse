@@ -51,7 +51,11 @@ export function montarMesa(chars: Character[], posicoes: Record<string, [number,
   useCharacterStore.setState({ characters: chars } as never);
   const entities: Record<string, unknown> = {};
   for (const [cid, [cx, cy]] of Object.entries(posicoes)) {
-    entities[`e-${cid}`] = { id: `e-${cid}`, characterId: cid, type: 'character', x: cx * CASA, y: cy * CASA, w: CASA, h: CASA };
+    entities[`e-${cid}`] = {
+      id: `e-${cid}`, characterId: cid, type: 'character', shape: 'RECT',
+      x: cx * CASA, y: cy * CASA, w: CASA, h: CASA, rotation: 0,
+      color: '#ffffff', locked: false, layer: 'tokens',
+    };
   }
   useMapStore.setState({ entities, gridConfig: { ...useMapStore.getState().gridConfig, dpi: CASA, metersPerCell: 1.5 } } as never);
 }

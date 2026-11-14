@@ -7,6 +7,19 @@ export interface DifficultTerrainArea {
   rotation?: number;
   shape: 'RECT' | 'ELLIPSE';
   difficultTerrain?: 'natural' | 'magical';
+  difficultTerrainKind?: 'water' | 'mud' | 'other';
+}
+
+export interface DifficultTerrainIgnoreOptions {
+  ignoreAll?: boolean;
+  ignoresNatural?: boolean;
+  ignoreKinds?: readonly ('water' | 'mud' | 'other')[];
+}
+
+type DifficultTerrainIgnore = boolean | DifficultTerrainIgnoreOptions;
+
+function normalizeIgnoreOptions(ignore: DifficultTerrainIgnore): DifficultTerrainIgnoreOptions {
+  return typeof ignore === 'boolean' ? { ignoresNatural: ignore } : ignore;
 }
 
 const EPSILON = 1e-9;
@@ -69,10 +82,15 @@ export function difficultTerrainPenaltyMeters(
   end: Point2D,
   metersPerPx: number,
   areas: readonly DifficultTerrainArea[],
-  ignoresNatural = false,
+  ignore: DifficultTerrainIgnore = false,
 ): number {
   if (!Number.isFinite(metersPerPx) || metersPerPx <= 0) return 0;
-  const eligible = areas.filter((area) => area.difficultTerrain && !(ignoresNatural && area.difficultTerrain === 'natural'));
+  const ignores = normalizeIgnoreOptions(ignore);
+  if (ignores.ignoreAll) return 0;
+  const ignoredKinds = new Set(ignores.ignoreKinds ?? []);
+  const eligible = areas.filter((area) => area.difficultTerrain &&
+    !(ignores.ignoresNatural && area.difficultTerrain === 'natural') &&
+    !ignoredKinds.has(area.difficultTerrainKind ?? 'other'));
   if (!eligible.length) return 0;
   const intervals = eligible
     .map((area) => segmentInsideTerrainInterval(start, end, area))
@@ -94,10 +112,10 @@ export function movementCostForTerrainSegment(
   end: Point2D,
   metersPerPx: number,
   areas: readonly DifficultTerrainArea[],
-  ignoresNatural = false,
+  ignore: DifficultTerrainIgnore = false,
 ): number {
   return Math.hypot(end.x - start.x, end.y - start.y) * metersPerPx
-    + difficultTerrainPenaltyMeters(start, end, metersPerPx, areas, ignoresNatural);
+    + difficultTerrainPenaltyMeters(start, end, metersPerPx, areas, ignore);
 }
 
 /** Truncate a map route at a physical distance, preserving its intermediate waypoints. */

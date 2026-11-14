@@ -22,6 +22,7 @@ export const ALL_CONDITIONS: ConditionDef[] = [
 
   // INCAPACITAÇÃO
   { id: 'atordoado', name: 'Atordoado', category: 'INCAPACITAÇÃO', icon: '💫', description: 'Fica desprevenido. Não pode realizar ações ou reações.' },
+  { id: 'tecnica-inata-suprimida', name: 'Técnica Inata Suprimida', category: 'INCAPACITAÇÃO', icon: '🔕', description: 'Não pode usar sua técnica inata até o início do próximo turno.' },
   { id: 'inconsciente', name: 'Inconsciente', category: 'INCAPACITAÇÃO', icon: '💤', description: 'Não pode agir, fica caído. Falha em Reflexos, ataques acertam e são críticos.' },
   { id: 'paralisado', name: 'Paralisado', category: 'INCAPACITAÇÃO', icon: '🧊', description: 'Não pode agir exceto ações mentais. -10 Defesa, falha Reflexos, corpo a corpo = crítico.' },
   { id: 'indefeso', name: 'Indefeso', category: 'INCAPACITAÇÃO', icon: '🚫', description: 'Fica Imóvel e Atordoado. Pode ser morto com ação completa ao alcance de toque.' },
@@ -87,6 +88,8 @@ export interface ActiveCondition {
   sourceCharName?: string;
   /** Origem identificada para gatilhos; não é inferida pelo nome. */
   sourceCharId?: string;
+  /** Marca condições aplicadas por uma técnica inata, que podem ser dissolvidas por energia positiva. */
+  sourceKind?: 'tecnica_inata' | 'feitico' | 'outro';
   /** Termina no início do próximo turno deste personagem (ex.: quem aplicou). */
   expiraNoInicioDoTurnoDe?: string;
   /** ID da entidade que aplicou a condição (arma, item, talento ou feitiço). */
@@ -101,6 +104,13 @@ export interface ActiveCondition {
   endCD?: number;
   /** Nome do TR a rolar (ex.: 'fortitude','reflexos','vontade','astucia','integridade'). */
   endTrType?: string;
+  /** Condição com resolução e teste no fim do turno, em vez do início. */
+  endTrTiming?: 'turn_end';
+  /** Fórmula de perda de vida aplicada automaticamente no início do turno. */
+  tickDamageFormula?: string;
+  /** Chaves de turno já processadas para impedir ticks e ofertas duplicados. */
+  lastDamageTickTurnKey?: string;
+  lastEndTrOfferTurnKey?: string;
 }
 
 export interface SpellCondition {

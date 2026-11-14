@@ -2267,6 +2267,22 @@ export const useCharacterStore = create<CharacterStore>()(
         // Fase 9 — captura "antes/depois" para detectar gatilho de Absorção Elemental.
         const NON_ELEMENTAL = new Set<DamageType>(['DCO', 'DP', 'DI', 'DPS', 'DAL']);
         const beforeChar = get().characters.find((cc) => cc.id === id);
+        const ataqueDeAlvoUnico = Boolean(opts?.attackerId && (opts.attack || opts.isMelee !== undefined) && !opts.attack?.isAreaAttack);
+        const protegidoPorFuga = ataqueDeAlvoUnico && get().characters.some((owner) =>
+          (owner.instanciasInvocacao ?? []).some((instance) => {
+            const vínculo = instance.fugaCoelhosAlvo;
+            if (instance.estado !== 'ativa' || vínculo?.lado !== 'aliado' || vínculo.targetCharacterId !== id) return false;
+            const model = owner.invocacoesConhecidas?.find(invocation => invocation.id === instance.modeloId);
+            const hordeToken = useMapStore.getState().entities[instance.tokenId];
+            return model?.subcategoria === 'dez-sombras:fuga-do-coelho' && Boolean(hordeToken &&
+              (hordeToken.hp ?? 1) > 0 && (!hordeToken.invocationState || hordeToken.invocationState === 'ativa') &&
+              !hordeToken.hidden && useMapStore.getState().layerVisible[hordeToken.layer ?? 'tokens'] !== false);
+          }),
+        );
+        if (beforeChar && protegidoPorFuga) {
+          useLogStore.getState().addLog('combat', `🐇 Cobertura Completa da Fuga dos Coelhos impede o ataque de alvo único contra ${beforeChar.name}.`);
+          return;
+        }
         const reservarContinuidadeReacao = () => {
           const continuidade = reservarPassoOmni(cadeia);
           if (!continuidade) return false;
@@ -2632,9 +2648,9 @@ export const useCharacterStore = create<CharacterStore>()(
               rdApplied += Math.min(parcela.valor, effectiveRd);
               const vulneravel = !!parcela.tipo && vulns.includes(parcela.tipo);
               const resistente = !!parcela.tipo && resistencias.includes(parcela.tipo);
-              if (!opts?.ignoresResistance && vulneravel !== resistente) {
-                if (resistente) mitigado = Math.floor(mitigado / 2);
-                else mitigado = Math.floor(mitigado * 1.5);
+              if (!opts?.ignoresResistance && vulneravel && !resistente) mitigado = Math.floor(mitigado * 1.5);
+              else if (!opts?.ignoresResistance && resistente && !vulneravel && !opts?.ignoresOnlyResistance) {
+                mitigado = Math.floor(mitigado / 2);
               }
               damageFinal += mitigado;
             }

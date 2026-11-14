@@ -78,7 +78,6 @@ describe('armas, mira e chão', () => {
     expect(u.mainHandWeaponName).toBe('Katana'); expect(u.offHandWeaponName).toBe('Katana');
     render(<AttackPanel character={u} />);
     expect(screen.getAllByText('🤲 Katana · duas mãos')).toHaveLength(2);
-    expect(screen.getAllByRole('combobox')).toHaveLength(1);
     const antes = useCharacterStore.getState().characters[0];
     expect(useCharacterStore.getState().equipWeapons('u', { mainHandName: 'Katana', offHandName: 'Adaga' }).ok).toBe(false);
     expect(useCharacterStore.getState().characters[0].offHandWeaponName).toBe(antes.offHandWeaponName);

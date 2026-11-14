@@ -574,6 +574,7 @@ describe('Controlador — materialização real no mapa', () => {
     const dono = pegarFicha('dono');
     useCharacterStore.getState().updateCharacter('dono', {
       level: 4,
+      treinoControle: 2,
       invocacoesConhecidas: (dono.invocacoesConhecidas ?? []).map(item => item.id === 'a'
         ? { ...item, atributos: { forca: 20, destreza: 10, constituicao: 10, inteligencia: 10, sabedoria: 10, presenca: 10 },
           economiaAcoesConfigurada: { acaoComum: 1 },
@@ -628,7 +629,7 @@ describe('Controlador — materialização real no mapa', () => {
     const b = invocarControlador('dono', 'b', 'sul');
     if (!a.ok || !b.ok) throw new Error('As duas invocações iniciais deveriam ser aceitas.');
     expect(causarDanoInvocacao(a.tokenId, 12)).toMatchObject({ ok: true, hpRestante: 0, destruida: false });
-    expect(invocarControlador('dono', 'c', 'oeste')).toEqual({ ok: false, motivo: 'Limite de invocações ativas atingido.' });
+    expect(invocarControlador('dono', 'c', 'oeste')).toEqual({ ok: false, motivo: 'Limite de vagas de invocação ativas atingido.' });
     expect(tokensInvocados('dono')).toHaveLength(2);
     expect(pegarFicha('dono').peCurrent).toBe(4);
   });
@@ -998,7 +999,8 @@ describe('Controlador — materialização real no mapa', () => {
     expect(result).toEqual({ ok: true, acertou: true, totalAtaque: 15, dano: 6 });
     expect(damage).toHaveBeenCalledWith('inimigo', 6, 'DP', {
       attackerId: 'dono', source: 'omni', isMelee: true,
-      attack: { critical: false, criticalFail: false, kind: 'melee' },
+      ignoresRD: false, ignoresResistance: false, ignoresOnlyResistance: false, rdIgnore: 0,
+      attack: { critical: false, criticalFail: false, isAreaAttack: false, kind: 'melee' },
     });
     expect(pegarFicha('dono').actionsCurrent).toBe(1);
     expect(pegarFicha('dono').instanciasInvocacao?.[0].economiaAcoes?.acaoComum).toEqual({ atual: 0, maximo: 1 });

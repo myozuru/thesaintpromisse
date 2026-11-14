@@ -11,7 +11,7 @@ import { Character, Attribute, Passive, Spell, ActiveBuff, DAMAGE_TYPES, DAMAGE_
 import { SpellCreationAssistant } from './SpellCreationAssistant';
 import { OmniVinculadosList } from './OmniVinculadosList';
 import { podeUsarVersaoAprovada } from '@/lib/controlador/aprovacao';
-import { escaparAgarradoPorInvocacao, type PericiaFugaSapo } from '@/lib/controlador/mapa';
+import { escaparAgarradoPorInvocacao, type PericiaFugaAgarrado } from '@/lib/controlador/mapa';
 import { BlindfoldSlot } from './BlindfoldSlot';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useRoleStore } from '@/stores/useRoleStore';
@@ -126,6 +126,14 @@ interface RollResult {
 }
 
 /** Calculate D&D-style attribute modifier: (value - 10) / 2, floored */
+const GRAU_COMBATE_LABELS: Record<NonNullable<Character['grauCombate']>, string> = {
+  quarto: 'Quarto',
+  terceiro: 'Terceiro',
+  segundo: 'Segundo',
+  primeiro: 'Primeiro',
+  especial: 'Especial',
+};
+
 export function getAttrModifier(value: number): number {
   return Math.floor((value - 10) / 2);
 }
@@ -487,13 +495,13 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     addLog('combat', `${c.name} gastou uma ação de movimento para se levantar.`);
   };
 
-  const tentarFugaDoSapo = async (conditionId: string, pericia: PericiaFugaSapo) => {
+  const tentarFugaAgarrado = async (conditionId: string, pericia: PericiaFugaAgarrado) => {
     if (busyFugaAgarrado) return;
     setBusyFugaAgarrado(true);
     try {
       const resultado = await escaparAgarradoPorInvocacao(c.id, conditionId, pericia);
       if (!resultado.ok) { toast.error(resultado.motivo); return; }
-      if (resultado.escapou) toast.success(c.name + ' escapou do Sapo com ' + pericia + '.');
+      if (resultado.escapou) toast.success(c.name + ' escapou do agarrão com ' + pericia + '.');
       else toast.info(c.name + ' continua Agarrado; ' + pericia + ' perdeu o teste.');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível tentar escapar.');
@@ -1641,6 +1649,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
             {c.isGrimorioCreature ? ' · Criatura' : (c.characterClass === 'Feiticeiro' && c.specialization && c.specialization !== 'Lutador' ? ` · ${c.specialization}` : '')}
             {c.characterClass === 'Maldição' && c.motivation ? ` · ${c.motivation}` : ''}
             {c.characterClass === 'Feiticeiro' && c.origin && c.origin !== 'Inato' ? ` · ${c.origin}` : ''}
+            {c.grauCombate ? ` · Grau ${GRAU_COMBATE_LABELS[c.grauCombate]}` : ''}
             {' · '}
             <span className="text-pe">Maestria: +{getMasteryBonus(c.level)}</span>
             {' · '}
@@ -2198,13 +2207,13 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
             return (
               <span key={cd.id} className="rounded-full bg-hp/20 border border-hp/30 px-2 py-0.5 text-xs text-hp font-medium group cursor-pointer" title={`${cd.name}${cd.sourceCharName ? ` (por ${cd.sourceCharName})` : ''}`}>
                 {cd.icon} {cd.name} ({dur})
-                {cd.conditionId === 'agarrado' && cd.sourceEntityId === 'dez-sombras:sapo' && cd.sourceInstanceId && (
+                {cd.conditionId === 'agarrado' && (cd.sourceEntityId === 'dez-sombras:sapo' || cd.sourceEntityId === 'dez-sombras:grande-serpente') && cd.sourceInstanceId && (
                   <span className="ml-2 inline-flex gap-1">
-                    <button type="button" disabled={busyFugaAgarrado || !canManageThisCharacter || (combatInProgress && activeTurnCharId !== c.id)} title="Tentar escapar no início do seu turno, sem gastar ação" onClick={() => void tentarFugaDoSapo(cd.id, 'Atletismo')} className="rounded border px-1 text-[10px] disabled:opacity-50">Escapar · Atletismo</button>
-                    <button type="button" disabled={busyFugaAgarrado || !canManageThisCharacter || (combatInProgress && activeTurnCharId !== c.id)} title="Tentar escapar no início do seu turno, sem gastar ação" onClick={() => void tentarFugaDoSapo(cd.id, 'Acrobacia')} className="rounded border px-1 text-[10px] disabled:opacity-50">Escapar · Acrobacia</button>
+                    <button type="button" disabled={busyFugaAgarrado || !canManageThisCharacter || (combatInProgress && activeTurnCharId !== c.id)} title="Tentar escapar no início do seu turno, sem gastar ação" onClick={() => void tentarFugaAgarrado(cd.id, 'Atletismo')} className="rounded border px-1 text-[10px] disabled:opacity-50">Escapar · Atletismo</button>
+                    <button type="button" disabled={busyFugaAgarrado || !canManageThisCharacter || (combatInProgress && activeTurnCharId !== c.id)} title="Tentar escapar no início do seu turno, sem gastar ação" onClick={() => void tentarFugaAgarrado(cd.id, 'Acrobacia')} className="rounded border px-1 text-[10px] disabled:opacity-50">Escapar · Acrobacia</button>
                   </span>
                 )}
-                {cd.conditionId !== 'caido' && cd.sourceEntityId !== 'dez-sombras:sapo' && <button onClick={() => removeCondition(c.id, cd.id)} className="ml-1 text-destructive/60 hover:text-destructive hidden group-hover:inline">✕</button>}
+                {cd.conditionId !== 'caido' && cd.sourceEntityId !== 'dez-sombras:sapo' && cd.sourceEntityId !== 'dez-sombras:grande-serpente' && <button onClick={() => removeCondition(c.id, cd.id)} className="ml-1 text-destructive/60 hover:text-destructive hidden group-hover:inline">✕</button>}
               </span>
             );
           })}
@@ -2652,6 +2661,27 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                   </p>
                 )}
               </div>
+              {isMaster && (
+                <div className="space-y-1">
+                  <label className="text-muted-foreground text-xs">Grau de combate</label>
+                  <select
+                    aria-label="Grau de combate"
+                    value={c.grauCombate ?? ''}
+                    onChange={(e) => updateCharacter(c.id, {
+                      grauCombate: e.target.value ? e.target.value as NonNullable<Character['grauCombate']> : undefined,
+                    })}
+                    className="w-full h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground"
+                  >
+                    <option value="">Não definido</option>
+                    <option value="especial">Grau Especial</option>
+                    <option value="primeiro">Primeiro Grau</option>
+                    <option value="segundo">Segundo Grau</option>
+                    <option value="terceiro">Terceiro Grau</option>
+                    <option value="quarto">Quarto Grau</option>
+                  </select>
+                  <p className="text-xs text-muted-foreground">Defina conforme a mesa; regras que verificam grau usam este campo, sem deduzi-lo do nível.</p>
+                </div>
+              )}
               {/* Especialização - show for Feiticeiro only */}
               {c.characterClass === 'Feiticeiro' && (
                 <div className="space-y-1">

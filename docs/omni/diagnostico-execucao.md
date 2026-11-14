@@ -27,7 +27,7 @@ São 345 entradas: 337 sondadas como nomes simples e 8 modelos/comandos que exig
 
 Comando: `OMNI_AUDIT_REPORT=1 npx vitest run src/test/omniNaturalInventoryAudit.test.ts src/test/omniComposicaoEscrita.test.ts src/test/omniKeysAudit.test.ts src/test/omniScriptCompatibility.test.ts`.
 
-Resultado: 4 arquivos, 465 testes aprovados. Os testes novos verificam resultados da sondagem e comportamento legado; não afirmam que as lacunas estão corrigidas. Para regenerar o inventário estático, fornecer o TXT original ao script `scripts/auditar_catalogo_natural.py`; depois regenerar esta sondagem com a variável indicada.
+Resultado histórico: 4 arquivos, 465 testes aprovados. Os testes novos verificam resultados da sondagem e comportamento legado; não afirmam que as lacunas estão corrigidas. Para reproduzir este inventário estático, fornecer o TXT original ao script `scripts/auditar_catalogo_natural.py`; esse insumo preserva a auditoria anterior e não é fonte normativa atual. Depois, regenerar esta sondagem com a variável indicada.
 
 ## Complemento: oito modelos e comandos parametrizados
 

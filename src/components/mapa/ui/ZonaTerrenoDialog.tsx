@@ -26,6 +26,7 @@ export function ZonaTerrenoDialog({ entityId, onClose }: { entityId: string | nu
   const [gatilhos, setGatilhos] = useState<GatilhoZonaTerreno[]>(['entrada']);
   const [efeitos, setEfeitos] = useState<CombatEffect[]>([]);
   const [difficultTerrain, setDifficultTerrain] = useState<'none' | 'natural' | 'magical'>('none');
+  const [difficultTerrainKind, setDifficultTerrainKind] = useState<'water' | 'mud' | 'other'>('other');
 
   useEffect(() => {
     const zona = entity?.terrainZone;
@@ -34,6 +35,7 @@ export function ZonaTerrenoDialog({ entityId, onClose }: { entityId: string | nu
     setGatilhos(zona?.gatilhos ?? ['entrada']);
     setEfeitos(zona?.efeitos ?? []);
     setDifficultTerrain(entity?.difficultTerrain ?? 'none');
+    setDifficultTerrainKind(entity?.difficultTerrainKind ?? 'other');
   }, [entity?.id, entity?.terrainZone]);
 
   const toggleGatilho = (gatilho: GatilhoZonaTerreno) => {
@@ -57,13 +59,13 @@ export function ZonaTerrenoDialog({ entityId, onClose }: { entityId: string | nu
     const restantes = parsed === null ? null
       : zonaAnterior?.duracaoRodadas === parsed ? (zonaAnterior.rodadasRestantes ?? parsed) : parsed;
     pushHistory();
-    updateEntity(entity.id, { terrainZone: { sourceCharId: origemId || undefined, duracaoRodadas: parsed, rodadasRestantes: restantes, gatilhos, efeitos }, difficultTerrain: difficultTerrain === 'none' ? undefined : difficultTerrain });
+    updateEntity(entity.id, { terrainZone: { sourceCharId: origemId || undefined, duracaoRodadas: parsed, rodadasRestantes: restantes, gatilhos, efeitos }, difficultTerrain: difficultTerrain === 'none' ? undefined : difficultTerrain, difficultTerrainKind: difficultTerrain === 'none' ? undefined : difficultTerrainKind });
     onClose();
   };
   const remover = () => {
     if (!entity) return;
     pushHistory();
-    updateEntity(entity.id, { terrainZone: undefined, difficultTerrain: undefined });
+    updateEntity(entity.id, { terrainZone: undefined, difficultTerrain: undefined, difficultTerrainKind: undefined });
     onClose();
   };
 
@@ -85,7 +87,14 @@ export function ZonaTerrenoDialog({ entityId, onClose }: { entityId: string | nu
               <option value="magical">Magico ? custo 2:1</option>
             </select>
           </label>
-          <p className="text-xs text-muted-foreground">Cruzar a area custa o dobro do deslocamento; o Baculo Aetheris ignora apenas o terreno natural.</p>
+          {difficultTerrain !== 'none' && <label className="block space-y-1 text-sm">Subtipo de terreno
+            <select aria-label="Subtipo de terreno difícil" className="w-full rounded border border-input bg-background p-2" value={difficultTerrainKind} onChange={(event) => setDifficultTerrainKind(event.target.value as 'water' | 'mud' | 'other')}>
+              <option value="water">Água</option>
+              <option value="mud">Lama</option>
+              <option value="other">Outro</option>
+            </select>
+          </label>}
+          <p className="text-xs text-muted-foreground">Cruzar a área custa o dobro do deslocamento. O Báculo Aetheris ignora terreno natural; Gama ignora água e lama; Nue ignora terreno difícil durante o voo.</p>
           <label className="block space-y-1 text-sm">Origem da zona
             <select aria-label="Origem da zona" className="w-full rounded border border-input bg-background p-2" value={origemId} onChange={e => setOrigemId(e.target.value)}>
               <option value="">Ambiente (sem autor)</option>

@@ -50,6 +50,7 @@ function enqueueConditionEndTRPrompts(charId: string) {
   if (!char) return;
   const conds = char.activeConditions || [];
   for (const cd of conds) {
+    if (cd.endTrTiming === 'turn_end') continue;
     const mode = (cd as any).durationMode;
     if (mode !== 'tr_todo_round' && mode !== 'ate_passar_tr') continue;
     const trType = (cd as any).endTrType || 'reflexos';
@@ -822,6 +823,10 @@ export const useCombatStore = create<CombatStore>()(
         const first = sorted[0];
         if (first) {
           useCharacterStore.getState().applyTurnStartSpecHooks(first.charId);
+          import('@/lib/controlador/mapa').then(({ resolverAuraQuietudeInicioTurno, expirarSupressaoTecnicaInicioTurno }) => {
+            resolverAuraQuietudeInicioTurno(first.charId);
+            expirarSupressaoTecnicaInicioTurno(first.charId);
+          });
           import('@/lib/omni/auras').then(({ verificarAurasInicioTurno }) =>
             verificarAurasInicioTurno(first.charId, 1),
           );
@@ -985,6 +990,16 @@ export const useCombatStore = create<CombatStore>()(
           import('@/stores/useMapStore').then(({ useMapStore }) => useMapStore.getState().setPendingMove(null));
           const firstEntry = us.ordem[0];
           if (firstEntry) {
+            import('@/lib/controlador/mapa').then(({ resolverAuraQuietudeInicioTurno, expirarSupressaoTecnicaInicioTurno }) => {
+              resolverAuraQuietudeInicioTurno(firstEntry.charId);
+              expirarSupressaoTecnicaInicioTurno(firstEntry.charId);
+            });
+            import('@/lib/controlador/mapa').then(({ tickAgarradosOrochiInicioTurno }) => {
+              void tickAgarradosOrochiInicioTurno(firstEntry.charId);
+            });
+            import('@/lib/controlador/dezSombrasFuga').then(({ processarCrescimentoFugaCoelhosInicioRodada }) => {
+              void processarCrescimentoFugaCoelhosInicioRodada(combateAtualId, newRound);
+            });
             iniciarTurnoLanca(firstEntry.charId);
             expireBaculoAetherisConditionsForTurnStart(firstEntry.charId);
             charStore.updateCharacter(firstEntry.charId, { weaponSwapsThisTurn: 0, attacksThisTurn: 0, lastAttackHit: undefined, mobilidadeReacaoM: 0, mobilidadeReacaoBase: 0, arteGolpeDescendente: null, baculoAetherisSafeMoveM: 0, baculoAetherisSafeMoveRemainingM: 0 });
@@ -1086,6 +1101,13 @@ export const useCombatStore = create<CombatStore>()(
         }
         const nextEntry = initiativeOrder[nextIndex];
         if (nextEntry) {
+          import('@/lib/controlador/mapa').then(({ resolverAuraQuietudeInicioTurno, expirarSupressaoTecnicaInicioTurno }) => {
+            resolverAuraQuietudeInicioTurno(nextEntry.charId);
+            expirarSupressaoTecnicaInicioTurno(nextEntry.charId);
+          });
+          import('@/lib/controlador/mapa').then(({ tickAgarradosOrochiInicioTurno }) => {
+            void tickAgarradosOrochiInicioTurno(nextEntry.charId);
+          });
           iniciarTurnoLanca(nextEntry.charId);
           expireBaculoAetherisConditionsForTurnStart(nextEntry.charId);
           useCharacterStore.getState().updateCharacter(nextEntry.charId, { weaponSwapsThisTurn: 0, attacksThisTurn: 0, lastAttackHit: undefined, mobilidadeReacaoM: 0, mobilidadeReacaoBase: 0, arteGolpeDescendente: null, baculoAetherisSafeMoveM: 0, baculoAetherisSafeMoveRemainingM: 0 });
@@ -1126,6 +1148,11 @@ export const useCombatStore = create<CombatStore>()(
           expirarEfeitosSuporteInvocacoes(round, true);
         });
         const participants = initiativeOrder.map((e) => e.charId);
+        for (const character of charStore.characters) {
+          for (const condition of character.activeConditions ?? []) {
+            if (condition.conditionId === 'tecnica-inata-suprimida') charStore.removeCondition(character.id, condition.id);
+          }
+        }
         limparSupressoesLanca();
         encerrarReservasDoCombate(combatId, Date.now());
         // Limpa todos os AdO ao fim do combate.

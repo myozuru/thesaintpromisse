@@ -107,7 +107,7 @@ function instalarListenerRemocaoAuraRuntime() {
   });
 }
 
-type TokenLike = { id: string; x: number; y: number; characterId?: string; name?: string; label?: string; layer?: string; carriedBy?: string };
+type TokenLike = { id: string; x: number; y: number; characterId?: string; name?: string; label?: string; layer?: string; carriedBy?: string | null };
 
 const normNome = (s: string | undefined) => (s ?? '').trim().toLowerCase();
 

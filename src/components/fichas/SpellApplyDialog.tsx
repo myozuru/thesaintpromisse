@@ -33,6 +33,7 @@ import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import { aplicarReducaoCustoFeitico } from '@/lib/omni/spellCostReduction';
 import { selectOmniModifiers } from '@/lib/omni/omniBridge';
 import { canStartConcentration, concentrationLimit, createActiveConcentration, getActiveConcentrationCount } from '@/lib/concentration';
+import { fragilizarAlvoFugaAtingidoPorArea } from '@/lib/controlador/dezSombrasFuga';
 
 interface Props {
   spell: Spell;
@@ -72,6 +73,13 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
   const [phase, setPhase] = useState<'select' | 'sustain_confirm' | 'saves' | 'attacks' | 'done'>('select');
   const [pendingNext, setPendingNext] = useState<'saves' | 'attacks' | 'direct' | null>(null);
   const [targetSaves, setTargetSaves] = useState<TargetSaveState[]>([]);
+  const fugaAreaEventoRef = useRef('');
+  const obterEventoFugaArea = () => {
+    if (!fugaAreaEventoRef.current) {
+      fugaAreaEventoRef.current = `fuga-area-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    }
+    return fugaAreaEventoRef.current;
+  };
   const [targetAttacks, setTargetAttacks] = useState<{ id: string; name: string; roll: string; result: 'pending' | 'hit' | 'miss' | 'crit_hit' }[]>([]);
   const [damageResults, setDamageResults] = useState<{ name: string; rawDmg: number; finalDmg: number; multiplier: number; saveLabel: string; conditions: string[]; diceRolls?: number[]; diceSides?: number; flatBonus?: number; isCrit?: boolean }[]>([]);
   // ===== Especialista em Técnica — Fundamentos ativáveis no cast =====
@@ -103,6 +111,11 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
   // Conjuração Aprimorada (Especialista em Técnica): bônus fixo por nível do feitiço.
   // Agora resolvido via `calculateSpellDamageBonus` (tabela oficial + dicionário custom).
   const isTecnica = source.characterClass === 'Feiticeiro' && source.specialization === 'Especialista em Técnica';
+  const spellSourceKind = source.characterClass === 'Feiticeiro' || source.characterClass === 'Maldição'
+    ? 'tecnica_inata' as const
+    : 'feitico' as const;
+  const tecnicaInataSuprimida = spellSourceKind === 'tecnica_inata' &&
+    source.activeConditions?.some(condition => condition.conditionId === 'tecnica-inata-suprimida');
   const tecnicaKeyMod = isTecnica ? getKeyAttrMod(source.attributes || [], source.keyAttribute) : 0;
   const conjuracaoBonus = calculateSpellDamageBonus({
     isTecnica,
@@ -317,6 +330,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
   const canCast = () => {
     const source = useCharacterStore.getState().characters.find(c => c.id === sourceCharId);
     if (!source || (source.hpCurrent ?? 1) <= 0) return false;
+    if (tecnicaInataSuprimida) return false;
     if (!spellLevelAllowed) return false;
     if (!canStartConcentration(source, spell)) return false;
     if (currentCooldown > 0) return false;
@@ -329,6 +343,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
   };
 
   const getBlockReason = () => {
+    if (tecnicaInataSuprimida) return 'Técnica Inata Suprimida: aguarde o início do próximo turno.';
     if (!spellLevelAllowed) return `Feitiço Nv ${spell.spellLevel} bloqueado — seu personagem (Nv ${source.level}) só pode lançar até Nv ${getMaxSpellLevel(source.level, source.specialization)}`;
     if (!canStartConcentration(source, spell)) return `Sem slots de concentração (${getActiveConcentrationCount(source)}/${concentrationLimit(source)}). Encerre uma concentração ativa antes de lançar este feitiço.`;
     if (currentCooldown > 0) return `Em recarga: faltam ${currentCooldown} turno(s)`;
@@ -752,6 +767,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
         bonusOverride: bonus,
         bonusBreakdownOverride: `TR ${raw} (calc. pelo feitiço)`,
         sourceTag: tag,
+        conditionIds: (spell.conditions ?? []).map(condition => condition.conditionId),
       });
       sentReqIdsRef.current.set(ts.id, tag);
       count++;
@@ -855,7 +871,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
       updateCharacter(source.id, patch);
     }
     for (const b of buffs) {
-      addBuff(source.id, b);
+      addBuff(source.id, { ...b, sourceKind: spellSourceKind });
     }
     if (buffs.length > 0 && castPlan.hooks.defensiveCasting) {
       const lvl = buffs[0]?.value ?? 0;
@@ -981,15 +997,18 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
         if (dmg > 0) applyDamage(ta.id, dmg, spell.damageType, {
           attackerId: source.id, source: 'feitico', ignoresRD: kokusenArmed,
           isMelee: spell.attackType === undefined ? undefined : spell.attackType === 'melee',
-          attack: { kind: spell.attackType ?? 'cursed', critical: isCrit, criticalFail: false },
+          attack: { kind: spell.attackType ?? 'cursed', critical: isCrit, criticalFail: false, isAreaAttack: Boolean(areaMode) },
         });
+        if (dmg > 0 && areaMode && (spell.spellType === 'damage' || spell.spellType === 'condition')) {
+          fragilizarAlvoFugaAtingidoPorArea({ characterId: ta.id }, obterEventoFugaArea());
+        }
         if (kokusenArmed) updateCharacter(source.id, { kokusenArmedDamage: false });
         
         // Apply buffs/conditions
         if (spell.buffs && spell.buffs.length > 0) {
           const pePerRound = isSustainedSpell ? getSustainedPEPerRound(spell.spellLevel) : 0;
           enforceSingleSustained();
-          spell.buffs.forEach(buff => addBuff(ta.id, { ...buff, id: crypto.randomUUID(), spellName: spell.name, remainingTurns: hasConcentration ? -1 : buff.durationTurns, peCostPerRound: pePerRound, sourceCharId, isSustained: isSustainedSpell, sustainInstanceId, concentrationInstanceId }));
+          spell.buffs.forEach(buff => addBuff(ta.id, { ...buff, id: crypto.randomUUID(), spellName: spell.name, remainingTurns: hasConcentration ? -1 : buff.durationTurns, peCostPerRound: pePerRound, sourceCharId, sourceKind: spellSourceKind, isSustained: isSustainedSpell, sustainInstanceId, concentrationInstanceId }));
         }
 
         if (applyConditions && spell.conditions && spell.conditions.length > 0) {
@@ -1008,6 +1027,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
               remainingRounds: hasConcentration ? -1 : (sc.durationRounds > 0 ? sc.durationRounds : -1),
               sourceCharName: source.name,
               sourceCharId: source.id,
+              sourceKind: spellSourceKind,
               sourceEntityId: spell.id,
               sourceInstanceId: effectInstanceId,
               durationMode: mode,
@@ -1143,7 +1163,14 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
         if (source.category === 'PLAYER' && target.category === 'PLAYER') {
           dmg = Math.floor(dmg * 0.34);
         }
-        if (dmg > 0) applyDamage(ts.id, dmg, spell.damageType, { attackerId: source.id, source: 'feitico', attack: { kind: 'cursed' } });
+        if (dmg > 0) applyDamage(ts.id, dmg, spell.damageType, {
+          attackerId: source.id, source: 'feitico',
+          attack: { kind: 'cursed', isAreaAttack: Boolean(areaMode || spell.targetMode === 'area_tr') },
+        });
+        if (dmg > 0 && (areaMode || spell.targetMode === 'area_tr') && !skipDamageRoll &&
+          (spell.spellType === 'damage' || spell.spellType === 'condition')) {
+          fragilizarAlvoFugaAtingidoPorArea({ characterId: ts.id }, obterEventoFugaArea());
+        }
         const pvpNote = (source.category === 'PLAYER' && target.category === 'PLAYER') ? ' (PvP -66%)' : '';
         
         results.push({ name: target.name, rawDmg: baseTotal, finalDmg: dmg, multiplier: dmgMultiplier, saveLabel, conditions: [], diceRolls: rolls, diceSides: baseRoll.sides, flatBonus: spell.damageBonus + dmgBonusFromBuffs + extraDicePreCrit + conjuracaoBonus + destBonusSav });
@@ -1202,6 +1229,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
             remainingTurns: hasConcentration ? -1 : buff.durationTurns,
             peCostPerRound: pePerRound,
             sourceCharId,
+            sourceKind: spellSourceKind,
             isSustained: isSustainedSpell,
             sustainInstanceId,
             concentrationInstanceId,
@@ -1284,7 +1312,11 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
         if (source.category === 'PLAYER' && target.category === 'PLAYER') {
           dmg = Math.floor(dmg * 0.34);
         }
-        applyDamage(id, dmg, spell.damageType, { attackerId: source.id, source: 'feitico', attack: { kind: 'cursed' } });
+        applyDamage(id, dmg, spell.damageType, {
+          attackerId: source.id, source: 'feitico',
+          attack: { kind: 'cursed', isAreaAttack: Boolean(areaMode) },
+        });
+        if (dmg > 0 && areaMode) fragilizarAlvoFugaAtingidoPorArea({ characterId: id }, obterEventoFugaArea());
         const pvpNote = (source.category === 'PLAYER' && target.category === 'PLAYER') ? ' (PvP -66%)' : '';
         const breakdown = buildDamageBreakdown(rolls, baseRoll.sides, total, [
           { label: 'feitiço', value: spell.damageBonus },
@@ -1329,6 +1361,7 @@ export function SpellApplyDialog({ spell, sourceCharId, onClose, initialTargetId
             remainingTurns: hasConcentration ? -1 : buff.durationTurns,
             peCostPerRound: pePerRound,
             sourceCharId,
+            sourceKind: spellSourceKind,
             isSustained: isSustainedSpell,
             sustainInstanceId,
             concentrationInstanceId,

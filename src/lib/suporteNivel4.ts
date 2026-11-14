@@ -172,7 +172,7 @@ export type GrauCondicao = 'fraca' | 'media' | 'forte' | 'extrema' | 'variavel' 
 
 export const GRAU_CONDICAO: Record<string, GrauCondicao> = {
   condenado: 'media', engasgando: 'media', enjoado: 'media', envenenado: 'media', sangramento: 'variavel', sofrendo: 'fraca',
-  atordoado: 'extrema', inconsciente: 'extrema', paralisado: 'extrema', indefeso: 'especial',
+  atordoado: 'extrema', inconsciente: 'extrema', paralisado: 'extrema', indefeso: 'especial', 'tecnica-inata-suprimida': 'especial',
   abalado: 'fraca', amedrontado: 'media', aterrorizado: 'forte', confuso: 'media', enfeiticado: 'media',
   agarrado: 'media', caido: 'fraca', enredado: 'media', imovel: 'forte', lento: 'media',
   cego: 'forte', desorientado: 'fraca', desprevenido: 'fraca', invisivel: 'especial', surdo: 'media', surpreso: 'especial',

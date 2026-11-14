@@ -120,6 +120,32 @@ export const AcaoInvocacaoSchema = z.object({
   tipoExecucao: z.enum(["omni", "referencia_omni", "manual", "legada"]),
   tipo: z.enum(["ataque", "habilidade", "movimento", "bonus", "suporte"]).optional(),
   efeitoSuporte: ConfiguracaoEfeitoSuporteInvocacaoSchema.optional(),
+  efeitoEspecial: z.discriminatedUnion("tipo", [
+    z.object({
+      tipo: z.literal("vantagem_pericia_controlador"),
+      pericia: textSchema,
+      contexto: z.literal("rastreamento"),
+    }).strict(),
+    z.object({
+      tipo: z.literal("agarrar_gama_apos_acerto"),
+      custoPE: nonNegativeIntSchema.min(1),
+      categoriaAcao: z.literal("acaoLivre"),
+    }).strict(),
+    z.object({
+      tipo: z.literal("agarrar_orochi_apos_acerto"),
+      custoPE: nonNegativeIntSchema.min(1),
+      categoriaAcao: z.literal("acaoLivre"),
+    }).strict(),
+    z.object({
+      tipo: z.literal("puxar_aliado_gama"),
+    }).strict(),
+    z.object({
+      tipo: z.literal("toque_da_vida_cervo"),
+    }).strict(),
+    z.object({
+      tipo: z.literal("neutralizacao_cervo"),
+    }).strict(),
+  ]).optional(),
   /** Fluxo de rolagem usado pela ação manual desta ficha. */
   teste: z.enum(["ataque", "resistencia"]).optional(),
   tipoAtaque: z.enum(["corpo_a_corpo", "distancia"]).optional(),
@@ -127,9 +153,22 @@ export const AcaoInvocacaoSchema = z.object({
   atributoDano: z.enum(["forca", "destreza", "constituicao", "inteligencia", "sabedoria", "presenca"]).optional(),
   /** Multiplicador do modificador do atributo no dano; ausente usa a regra do grau. */
   multiplicadorDanoAtributo: z.number().int().min(0).max(5).optional(),
+  /** Fórmula alternativa usada quando uma ação em área encontra um único alvo. */
+  formulaDanoAlvoUnico: textSchema.max(120).optional(),
+  /** Fenômeno compartilhado pela Roda; variações de um mesmo feitiço usam o mesmo identificador. */
+  fenomenoAdaptacaoId: idSchema.optional(),
   resistenciaAlvo: z.string().trim().min(1).max(80).optional(),
+  /** Condição específica que a ação tenta impor; permite aplicar adaptação de TR ao mesmo efeito. */
+  condicaoAlvoId: idSchema.optional(),
   atributoCD: z.enum(["forca", "destreza", "constituicao", "inteligencia", "sabedoria", "presenca"]).optional(),
   danoNoSucesso: z.enum(["nenhum", "metade"]).optional(),
+  tipo_alvo: z.enum(["unico", "multiplo", "area", "proprio"]).optional(),
+  filtro_alvo: z.enum(["inimigos", "aliados", "todos", "todos_exceto_si"]).optional(),
+  area: z.object({
+    forma: z.enum(["cone", "linha", "raio_em_si", "raio_no_ponto"]),
+    tamanho_m: finiteNumberSchema.min(0),
+    largura_m: finiteNumberSchema.min(0).optional(),
+  }).strict().optional(),
   margemCritico: z.number().int().min(2).max(20).optional(),
   multiplicadorCritico: z.number().int().min(1).max(5).optional(),
   categoriaAcao: z.enum(["acao_comum", "acao_simples", "acao_complexa", "acao_bonus", "movimento", "livre", "reacao"]).optional(),
@@ -143,6 +182,7 @@ export const AcaoInvocacaoSchema = z.object({
   recargaConfigurada: RecargaAcaoSchema.optional(),
 }).passthrough();
 export type AcaoInvocacao = z.infer<typeof AcaoInvocacaoSchema>;
+export type EfeitoEspecialInvocacao = NonNullable<AcaoInvocacao['efeitoEspecial']>;
 
 export const RecursoInvocacaoSchema = z.object({
   id: idSchema,
@@ -239,6 +279,7 @@ export const ModeloInvocacaoSchema = z.object({
   donoCharacterId: idSchema,
   donoProfileId: idSchema.optional(),
   tipo: TipoModeloInvocacaoSchema,
+  domado: z.boolean().optional(),
   nome: textSchema.max(160),
   apelido: z.string().max(160).optional(),
   nivelEvolucao: nonNegativeIntSchema.optional(),
@@ -459,6 +500,34 @@ export const InstanciaInvocacaoSchema = z.object({
     combateId: idSchema.optional(), bloqueioRodadas: nonNegativeIntSchema,
   }).strict()).optional(),
   eventosDanoHordaProcessados: z.array(idSchema).optional(),
+  /** Fuga dos Coelhos: crescimento contado em rodadas completas da cena de combate. */
+  crescimentoFugaCoelhos: z.object({
+    combateId: idSchema,
+    rodadaInicio: nonNegativeIntSchema,
+    totalCrescimentos: nonNegativeIntSchema,
+    crescimentosNestaCena: nonNegativeIntSchema.optional(),
+    ultimaRodadaCrescimento: nonNegativeIntSchema.optional(),
+  }).strict().optional(),
+  /** Vínculo da ação Fuga; duração não especificada pela fonte, encerrada pela mesa. */
+  fugaCoelhosAlvo: z.object({
+    targetEntityId: idSchema,
+    targetCharacterId: idSchema.optional(),
+    targetName: textSchema.max(120),
+    lado: z.enum(['aliado', 'inimigo']),
+    tipoAlvo: z.enum(['personagem', 'invocacao']),
+    combateId: idSchema.optional(),
+    rodada: nonNegativeIntSchema,
+  }).strict().optional(),
+  fugaCoelhosEventosAreaProcessados: z.array(idSchema).max(500).optional(),
+  /** Histórico idempotente de dispersões; os coelhos ativos são os tokens subordinados presentes no mapa. */
+  fugaCoelhosDispersoes: z.array(z.object({
+    eventoId: idSchema,
+    tokenIds: z.array(idSchema).min(1).max(6),
+    pvMaximoRestante: finiteNumberSchema.min(1),
+    porteRestante: textSchema.max(32),
+    combateId: idSchema.optional(),
+    rodada: nonNegativeIntSchema,
+  }).strict()).max(200).optional(),
   /** Vínculos de agarrão aplicados por shikigami a esta instância. */
   agarradoPorInvocacao: z.array(z.object({
     donoId: idSchema,
@@ -474,6 +543,8 @@ export const InstanciaInvocacaoSchema = z.object({
   marcadoresResetEconomia: z.record(z.string(), idSchema).optional(),
   /** Evento de uso persistente por instância; protege comandos repetidos após refresh. */
   eventosAcoesProcessados: z.array(idSchema).optional(),
+  /** Turnos já curados pela Aura da Quietude; evita cura duplicada em replay. */
+  eventosAuraQuietudeProcessados: z.array(idSchema).max(500).optional(),
   deslocamentoUsado: z.boolean().optional(),
   usoAcaoComCusto: z.record(z.string(), z.unknown()).optional(),
   /** Contagem persistente por tipo de auxílio e rodada, individual desta instância. */
@@ -489,9 +560,137 @@ export const InstanciaInvocacaoSchema = z.object({
     turnoIndex: nonNegativeIntSchema,
     combateId: idSchema.optional(),
     distanciaM: nonNegativeNumberSchema.max(1000),
+    direcao: z.object({ x: finiteNumberSchema, y: finiteNumberSchema }).strict().optional(),
+  }).strict().optional(),
+  /** Inércia Imparável do Touro dura somente durante a rodada e o combate registrados. */
+  inerciaImparavelTouro: z.object({
+    combateId: idSchema,
+    rodada: nonNegativeIntSchema,
+    requestId: idSchema.optional(),
+  }).strict().optional(),
+  /** Janela de Ação Livre oferecida pelo acerto de Protusão de Língua do Gama. */
+  agarrarLinguaPendente: z.object({
+    eventoId: idSchema,
+    alvoId: idSchema,
+    combateId: idSchema.optional(),
+    rodada: nonNegativeIntSchema,
+    turnoIndex: nonNegativeIntSchema,
+  }).strict().optional(),
+  /** Janela de Ação Livre oferecida pelo acerto do Bote Sombrio de Orochi. */
+  agarrarOrochiPendente: z.object({
+    eventoId: idSchema,
+    alvoId: idSchema,
+    combateId: idSchema.optional(),
+    rodada: nonNegativeIntSchema,
+    turnoIndex: nonNegativeIntSchema,
+  }).strict().optional(),
+  /** Limite explícito de uma ativação de Língua Sombria do Gama por rodada de combate. */
+  usoLinguaSombriaGama: z.object({
+    combateId: idSchema,
+    rodada: nonNegativeIntSchema,
   }).strict().optional(),
   /** O dono ou o Mestre pode interromper a autonomia desta instância em campo. */
   automacaoSuspensa: z.boolean().optional(),
+  /** Estado de combate exclusivo de Mahoraga; separado dos PV para tornar o ciclo reproduzível. */
+  estadoMahoraga: z.object({
+    combateId: idSchema.optional(),
+    estagioVida: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+    despertarPendente: z.boolean().default(false),
+    fenomenos: z.array(z.object({
+      id: idSchema,
+      nome: textSchema.max(120),
+      tipoDano: TipoDanoInvocacaoSchema.optional(),
+      eventoPrimeiroGiroId: idSchema.optional(),
+      eventoUltimoGiroId: idSchema.optional(),
+      giros: z.number().int().min(1).max(5),
+      ultimaRodadaGiro: nonNegativeIntSchema,
+      proximaRodadaGiroAutomatico: nonNegativeIntSchema.optional(),
+      expiraReducaoDanoNaRodada: nonNegativeIntSchema.optional(),
+    }).strict()).max(100).default([]),
+    ataquesCorpoACorpoRecebidos: nonNegativeIntSchema.default(0),
+    regeneracoesRodaPendentes: nonNegativeIntSchema.default(0),
+    alvoFocoId: idSchema.optional(),
+    adaptacoesCombate: z.array(z.object({
+      alvoId: idSchema,
+      nomeAlvo: textSchema.max(120),
+      giros: z.number().int().min(1).max(4),
+      defesaRegistrada: nonNegativeNumberSchema.optional(),
+    }).strict()).max(100).default([]),
+    adaptacoesCondicoes: z.array(z.object({
+      conditionId: idSchema,
+      nome: textSchema.max(120),
+      grau: z.enum(['fraca', 'media', 'forte', 'extrema']).optional(),
+      rodadasConsecutivas: nonNegativeIntSchema.default(0),
+      bonusTRConsecutivo: nonNegativeIntSchema.default(0),
+      condicaoAtiva: z.boolean().default(true),
+      bonusTRPermanente: nonNegativeIntSchema.default(0),
+      ultimaRodadaProcessada: nonNegativeIntSchema.optional(),
+    }).strict()).max(100).default([]),
+    /** Ferimentos e membros de Mahoraga são registrados pelo Mestre; a ficha base não modela anatomia. */
+    ferimentosComplexos: z.array(z.object({
+      id: idSchema,
+      descricao: textSchema.max(120),
+      ferimentoAtivo: z.boolean(),
+      membroSeparado: textSchema.max(80).optional(),
+      membroDisponivel: z.boolean().default(false),
+      membroReanexado: z.boolean().default(false),
+    }).strict()).max(50).default([]),
+    recuperacoesFerimentoProcessadas: z.array(z.object({
+      requestId: idSchema,
+      ferimentoId: idSchema,
+      operacao: z.enum(['curar_ferimento', 'reanexar_membro']),
+      custoPE: nonNegativeIntSchema,
+      categoriaAcao: CategoriaEconomiaInvocacaoSchema,
+      rodada: nonNegativeIntSchema,
+      combateId: idSchema.optional(),
+    }).strict()).max(500).default([]),
+    vontadeDivina: z.object({
+      ativa: z.boolean(),
+      rodadasRestantes: nonNegativeIntSchema,
+      rodadasTotais: nonNegativeIntSchema,
+      bloqueadaAteRecuperar: z.boolean().optional(),
+      combateId: idSchema.optional(),
+      ultimaRodadaProcessada: nonNegativeIntSchema.optional(),
+      prioridade: z.enum(['ultima_ordem', 'eliminar_ameaca', 'proteger_corpo']).default('ultima_ordem'),
+      alvoPrioritarioId: idSchema.optional(),
+      ultimaOrdem: textSchema.max(240).optional(),
+    }).strict().optional(),
+    ataqueAdaptativoTipo: TipoDanoInvocacaoSchema.optional(),
+    regeneracaoLivreUsada: z.object({
+      combateId: idSchema.optional(),
+      rodada: nonNegativeIntSchema,
+    }).strict().optional(),
+    ultimoTurnoProcessado: idSchema.optional(),
+    eventosDanoProcessados: z.array(idSchema).max(500).default([]),
+    eventosRodaProcessados: z.array(idSchema).max(500).default([]),
+    regeneracoesProcessadas: z.array(z.object({
+      requestId: idSchema,
+      valorPV: nonNegativeNumberSchema,
+      modo: z.enum(['temporarios', 'cura']),
+      custoPE: nonNegativeIntSchema,
+      categoriaAcao: CategoriaEconomiaInvocacaoSchema,
+      rodada: nonNegativeIntSchema,
+      combateId: idSchema.optional(),
+    }).strict()).max(500).default([]),
+  }).strict().optional(),
+  /** Estado de combate do Tigre Fúnebre: garras, Predador Ápice e idempotência de turnos. */
+  estadoTigreFunebre: z.object({
+    combateId: idSchema.optional(),
+    garras: z.array(z.object({
+      alvoId: idSchema,
+      nomeAlvo: textSchema.max(120),
+      penalidade: nonNegativeIntSchema.max(4),
+      ultimaRodadaAcerto: nonNegativeIntSchema,
+      ultimoTurnoRecuperacao: idSchema.optional(),
+    }).strict()).max(100).default([]),
+    predadorApice: z.object({
+      combateId: idSchema.optional(),
+      rodadaAtivacao: nonNegativeIntSchema,
+      rodadaAlvo: nonNegativeIntSchema,
+      retalharesUsados: nonNegativeIntSchema.max(2),
+    }).strict().optional(),
+    turnosProcessados: z.array(idSchema).max(100).default([]),
+  }).strict().optional(),
   /** Orçamento de automações da rodada; reentrada não restaura ações já executadas. */
   usosAutomacaoRodada: z.object({
     rodada: nonNegativeIntSchema,
@@ -623,6 +822,9 @@ export function normalizarModeloInvocacao(valor: unknown): ResultadoMigracaoInvo
   if (!donoCharacterId) avisos.push(aviso("dono_ausente", "O modelo legado foi preservado, mas não pode ser convertido sem o dono.", "erro", id ?? undefined));
   if (!nome) avisos.push(aviso("nome_ausente", "O modelo legado foi preservado, mas não pode ser convertido sem nome.", "erro", id ?? undefined));
   if (!tipo.success) avisos.push(aviso("tipo_invalido", "O tipo do modelo legado não é reconhecido.", "erro", id ?? undefined));
+  if (registro.domado !== undefined && typeof registro.domado !== "boolean") {
+    avisos.push(aviso("domesticao_legada_invalida", "O estado legado de domesticação precisa ser booleano.", "erro", id ?? undefined));
+  }
 
   let aquisicao: EstadoAquisicaoInvocacao;
   const aprovacaoLegada = registro.aprovacaoMestre;
@@ -730,6 +932,7 @@ export function normalizarModeloInvocacao(valor: unknown): ResultadoMigracaoInvo
     donoCharacterId,
     ...(textoNaoVazio(registro.donoProfileId) ? { donoProfileId: textoNaoVazio(registro.donoProfileId)! } : {}),
     tipo: tipo.data,
+    ...(typeof registro.domado === "boolean" ? { domado: registro.domado } : {}),
     nome,
     ...(origemRegistro && textoNaoVazio(origemRegistro.tipo) ? { origem: origemRegistro } : {}),
     ...(textoNaoVazio(registro.grau) ? { grau: textoNaoVazio(registro.grau)! } : {}),
