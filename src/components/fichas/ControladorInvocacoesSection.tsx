@@ -62,7 +62,7 @@ function criaturasGrimorio(): Fonte[] {
     }));
   } catch { return []; }
 }
-export function ControladorInvocacoesSection({ character, view = 'catalog', onBrowseCatalog, onEditFicha, onCreateFicha }: { character: Character; view?: InvocationSectionView; onBrowseCatalog?: () => void; onEditFicha?: (id: string) => void; onCreateFicha?: () => void }) {
+export function ControladorInvocacoesSection({ character, view = 'catalog', canViewCatalog = true, onBrowseCatalog, onEditFicha, onCreateFicha }: { character: Character; view?: InvocationSectionView; canViewCatalog?: boolean; onBrowseCatalog?: () => void; onEditFicha?: (id: string) => void; onCreateFicha?: () => void }) {
   const updateCharacter = useCharacterStore(s => s.updateCharacter);
   const allCharacters = useCharacterStore(s => s.characters);
   const isMaster = useRoleStore(s => s.role) === 'MASTER';
@@ -1160,9 +1160,12 @@ export function ControladorInvocacoesSection({ character, view = 'catalog', onBr
       </section>}
       <OwnedInvocationsCollection
         variant={view}
+        canViewCatalog={canViewCatalog}
         title={view === 'owned' ? 'Minhas invocações' : 'Fichas do personagem'}
         description={view === 'owned'
-          ? 'Invocações domadas e disponíveis. Rituais pendentes e fichas arquivadas ficam no Catálogo.'
+          ? canViewCatalog
+            ? 'Invocações domadas e disponíveis. Rituais pendentes e fichas arquivadas ficam no Catálogo.'
+            : 'Invocações domadas e disponíveis para o personagem.'
           : 'Fichas salvas, rituais pendentes e registros arquivados. Os perfis de referência ficam acima.'}
         totalCount={invocacoesDaVisao.length}
         baseLimit={max}

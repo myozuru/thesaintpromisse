@@ -14,3 +14,7 @@ Build client e SSR validada com sucesso. QA visual em 1440×900, 1024×768 e 390
 Capturas em `evidence/`: owned-1440x900.png, catalog-1440x900.png, owned-1024x768.png, catalog-390x844.png, owned-top-390x844.png e owned-card-390x844.png.
 
 Branch `feature/invocacoes-player-tabs` publicada em `origin` e enviada em fast-forward para `main` por solicitação explícita do usuário. O push inicial foi de `a40b5cf` a `cbed843`; os commits da tarefa são `b304417` e `cbed843`.
+
+Regra de acesso: a aba e o conteúdo do Catálogo não são renderizados para o papel PLAYER. O rótulo e as instruções do acervo também não apontam para o Catálogo nesse papel. MASTER mantém acesso; ao perder permissão com Catálogo aberto, a navegação volta para Minhas invocações.
+
+QA adicional: papel PLAYER com duas abas, sem referência textual ou pacote do Catálogo; papel MASTER com as três abas. Captura `evidence/player-no-catalog-390x844.png`.

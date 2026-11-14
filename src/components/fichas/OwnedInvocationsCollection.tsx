@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 export interface OwnedInvocationsCollectionProps {
   /** Conteúdo e copy do estado vazio, independente do título exibido. */
   variant: 'owned' | 'catalog';
+  /** Exibe instruções que apontam para o Catálogo quando ele estiver disponível. */
+  canViewCatalog?: boolean;
   /** Título da seção */
   title?: string;
   /** Subtítulo ou descrição curta */
@@ -46,6 +48,7 @@ export interface OwnedInvocationsCollectionProps {
 
 export function OwnedInvocationsCollection({
   variant,
+  canViewCatalog = true,
   title = 'Minhas invocações',
   description,
   totalCount,
@@ -110,7 +113,9 @@ export function OwnedInvocationsCollection({
           <h3>{isOwned ? 'Nenhuma invocação domada ainda' : 'Nenhuma ficha no acervo'}</h3>
           <p>
             {isOwned
-              ? 'Rituais pendentes aparecem no Catálogo.'
+              ? canViewCatalog
+                ? 'Rituais pendentes aparecem no Catálogo.'
+                : 'Apenas invocações domadas e disponíveis aparecem aqui.'
               : 'Adicione um perfil de referência ou crie uma ficha.'}
           </p>
         </div>

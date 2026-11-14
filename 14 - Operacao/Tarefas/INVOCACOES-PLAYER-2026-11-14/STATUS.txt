@@ -4,11 +4,11 @@ Branch: feature/invocacoes-player-tabs
 Base: origin/main a40b5cf
 Pasta de trabalho: C:/Users/justs/Downloads/TSP-invocacoes-player
 Escopo: reformular a experiência de Invocações, separar o catálogo das invocações realmente possuídas e manter intactos dados e regras.
-Progresso: abas Minhas invocações, Catálogo e Criar ou editar integradas; posse separada de rituais pendentes e fichas arquivadas; busca independente por aba; draft preservado ao alternar abas.
+Progresso: abas Minhas invocações, Catálogo e Criar ou editar integradas; Catálogo visível apenas fora do papel PLAYER; posse separada de rituais pendentes e fichas arquivadas; busca independente por aba; draft preservado ao alternar abas.
 Revisão: Claude Opus criou OwnedInvocationsCollection.tsx e fez revisão somente leitura. O fluxo de edição está conectado ao criador existente; o salvamento agora lê a lista atual do store após a resposta assíncrona.
-QA visual: Maestri Portal em 1440x900, 1024x768 e 390x844; sem overflow horizontal; busca, estado sem resultados e troca de abas observados; buffer de console vazio.
+QA visual: Maestri Portal em 1440x900, 1024x768 e 390x844; sem overflow horizontal; busca, estado sem resultados e troca de abas observados. PLAYER vê apenas Minhas invocações e Criar ou editar; MASTER mantém acesso ao Catálogo. O console registrou avisos de sincronização fora do escopo: coluna `realtime_world.revision` ausente.
 Build: `node node_modules/vite/bin/vite.js build` concluído com sucesso (client e SSR). Testes automatizados não executados.
-Evidências: evidence/owned-1440x900.png, catalog-1440x900.png, owned-1024x768.png, catalog-390x844.png, owned-top-390x844.png e owned-card-390x844.png.
+Evidências: evidence/owned-1440x900.png, catalog-1440x900.png, owned-1024x768.png, catalog-390x844.png, owned-top-390x844.png, owned-card-390x844.png e player-no-catalog-390x844.png.
 Próximas etapas: nenhuma pendente para esta tarefa.
-Publicação: push fast-forward para origin/main concluído após autorização explícita do usuário; branch de trabalho preservada.
+Publicação: fast-forward para origin/main autorizado pelo usuário; branch de trabalho preservada.
 Guardrails: preservar a navegação e a lógica de combate/aprovação; não truncar nomes nem descrições.

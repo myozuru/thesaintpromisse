@@ -38,7 +38,7 @@ export function InvocacoesModule() {
       <ModuleHeader
         icon={Ghost}
         title="Invocações"
-        description="Veja suas invocações, explore o catálogo e crie fichas."
+        description={role === "PLAYER" ? "Veja suas invocações e crie fichas." : "Veja suas invocações, explore o catálogo e crie fichas."}
       />
 
       {role === "MASTER" && selectableCharacters.length > 0 && (
@@ -61,7 +61,7 @@ export function InvocacoesModule() {
 
       </div>
       {selectedCharacter ? (
-        <ControladorShikigamisAba key={selectedCharacter.id} character={selectedCharacter} />
+        <ControladorShikigamisAba key={selectedCharacter.id} character={selectedCharacter} canViewCatalog={role !== "PLAYER"} />
       ) : (
         <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
           {role === "PLAYER"
