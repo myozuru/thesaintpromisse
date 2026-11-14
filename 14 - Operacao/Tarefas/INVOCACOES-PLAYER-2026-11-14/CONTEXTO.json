@@ -18,7 +18,7 @@
     "src/styles.css"
   ],
   "preview": "local Vite server at http://127.0.0.1:5182; visual QA complete",
-  "status": "published_for_review",
+  "status": "pushed_to_main",
   "reviewer": "Claude Opus (read-only)",
   "build": "passed",
   "automatedTests": "not_run",
