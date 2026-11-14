@@ -1,5 +1,5 @@
 ﻿ID: INVOCACOES-PLAYER-2026-11-14
-Estado: pronto para revisão
+Estado: publicada para revisão
 Branch: feature/invocacoes-player-tabs
 Base: origin/main a40b5cf
 Pasta de trabalho: C:/Users/justs/Downloads/TSP-invocacoes-player
@@ -9,5 +9,5 @@ Revisão: Claude Opus criou OwnedInvocationsCollection.tsx e fez revisão soment
 QA visual: Maestri Portal em 1440x900, 1024x768 e 390x844; sem overflow horizontal; busca, estado sem resultados e troca de abas observados; buffer de console vazio.
 Build: `node node_modules/vite/bin/vite.js build` concluído com sucesso (client e SSR). Testes automatizados não executados.
 Evidências: evidence/owned-1440x900.png, catalog-1440x900.png, owned-1024x768.png, catalog-390x844.png, owned-top-390x844.png e owned-card-390x844.png.
-Próximas etapas: revisão humana e eventual pedido de push/merge.
-Guardrails: sem push/merge nesta etapa; preservar a navegação e a lógica de combate/aprovação; não truncar nomes nem descrições.
+Próximas etapas: revisão humana; abrir PR ou mesclar quando solicitado.
+Guardrails: branch publicada; main não alterada; sem merge sem pedido explícito. Preservar a navegação e a lógica de combate/aprovação; não truncar nomes nem descrições.
