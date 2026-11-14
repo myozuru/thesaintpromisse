@@ -27,6 +27,8 @@ export interface OriginChoices {
   secondaryAttr?: AttrName;
   /** Clã selecionado (Herdado). */
   clan?: ClanId;
+  /** Técnica herdada selecionada dentro do clã. */
+  inheritedTechnique?: string;
   /** Aptidão de Aura selecionada (Derivado). */
   auraAptitudeId?: string;
   /** IDs de Anatomias selecionadas (FAH; pode ter múltiplas conforme nível). */
@@ -205,6 +207,12 @@ export function applyOriginEffects(
         tags.push(`Feitiço Focado ×${earned}`);
         automationLog.push(`Clã ${clan.id}: ${earned} tag(s) "Feitiço Focado".`);
       }
+    }
+    const inheritedTechnique = clan.inheritedTechniqueOptions?.find(
+      technique => technique === choices.inheritedTechnique,
+    );
+    if (inheritedTechnique) {
+      automation.tecnicaAmaldicoada = inheritedTechnique;
     }
     if (clan.perLevel?.bonusAtLevel) {
       for (const b of clan.perLevel.bonusAtLevel) {

@@ -719,7 +719,7 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
         }
         return Object.keys(caps).length ? caps : undefined;
       })(),
-      // ===== Sem Técnica / Novo Estilo da Sombra =====
+      // ===== Técnica amaldiçoada definida pela origem, incluindo Novo Estilo da Sombra =====
       tecnicaAmaldicoada: effects.automation.tecnicaAmaldicoada,
       aptidaoAmaldicoadaConcedida: effects.automation.aptidaoConcedida,
       styleTechniques: effects.blockSpells && effects.automation.hasShadowStyle ? styleTechniques : undefined,

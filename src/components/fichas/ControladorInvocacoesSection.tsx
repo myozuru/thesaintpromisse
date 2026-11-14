@@ -988,7 +988,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
             <span className="inv-profile-group-count">10 entradas · 11 fichas com os dois Cães</span>
           </div>
 
-          <div className="inv-profile-grid">
+          <div className="inv-profile-grid" role="list">
             {DEZ_SOMBRAS_MODELOS
               .filter(perfil => !perfil.opcionalHomebrew) // Excluir homebrew
               .map(perfil => {
@@ -1000,7 +1000,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
                 );
                 const isAlreadyInCatalog = Boolean(fichaExistente);
                 return (
-                  <article key={perfil.id} className="inv-profile-card" data-added={isAlreadyInCatalog} data-image-ready={imagemSelecionada}>
+                  <article key={perfil.id} className="inv-profile-card" role="listitem" data-added={isAlreadyInCatalog} data-image-ready={imagemSelecionada}>
                     <div className="inv-profile-card-top">
                       {fichaExistente ? renderImagemPerfilExistente(fichaExistente, perfil.nome) : renderSeletorImagemPerfilPrePronto(chaveImagem, perfil.nome)}
                       <div className="inv-profile-card-name">
@@ -1089,7 +1089,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
               </div>
             </article>
           ))}
-          <div className="inv-profile-grid">
+          <div className="inv-profile-grid" role="list">
             {DEZ_SOMBRAS_FORMAS_DERIVADAS.map(forma => {
               const chaveImagem = `derivada:${forma.id}`;
               const imagemSelecionada = Boolean(imagensPerfisPreProntos[chaveImagem]);
@@ -1099,7 +1099,7 @@ export function ControladorInvocacoesSection({ character, onEditFicha, onCreateF
               );
               const isAlreadyInCatalog = Boolean(fichaExistente);
               return (
-                <article key={forma.id} className="inv-profile-card" data-variant="derived" data-added={isAlreadyInCatalog} data-image-ready={imagemSelecionada}>
+                <article key={forma.id} className="inv-profile-card" role="listitem" data-variant="derived" data-added={isAlreadyInCatalog} data-image-ready={imagemSelecionada}>
                   <div className="inv-profile-card-top">
                     {fichaExistente ? renderImagemPerfilExistente(fichaExistente, forma.nome) : renderSeletorImagemPerfilPrePronto(chaveImagem, forma.nome)}
                     <div className="inv-profile-card-name">

@@ -1,0 +1,26 @@
+{
+  "taskId": "HERDADO-DEZ-SOMBRAS-2026-11-14",
+  "workspace": "C:\\Users\\justs\\Downloads\\TSP-revisao-integracao",
+  "branch": "feat/herdado-dez-sombras",
+  "objective": "Integrar Dez Sombras como técnica selecionável na origem Herdado do clã Zenin e persistir a escolha na ficha para habilitar o catálogo de invocações.",
+  "decisions": {
+    "optionalTechnique": "A escolha fica opcional porque nem todo personagem Zenin precisa usar Dez Sombras; o campo explica que sem seleção a técnica não é concedida.",
+    "shikigamiAcquisition": "Selecionar Dez Sombras não adiciona fichas a invocacoesConhecidas nem substitui aquisição em jogo. O catálogo exige ação explícita e escolha de imagens.",
+    "staleSelection": "Troca de origem limpa todas as escolhas; troca de clã limpa inheritedTechnique e escolhas de atributo. O motor valida a opção contra o catálogo do clã."
+  },
+  "review": {
+    "reviewer": "Claude via Maestri",
+    "result": "Sem bloqueadores; confirmou que tecnicaAmaldicoada habilita importação sem auto-adicionar shikigamis.",
+    "file": "evidencias/revisao-claude.md"
+  },
+  "validation": {
+    "typescript": "rtk tsc --noEmit: passou",
+    "build": "rtk npm run build: passou; warnings existentes de dynamic imports/code splitting",
+    "diffCheck": "rtk git diff --check: passou",
+    "automatedTests": "Não executados nesta alteração",
+    "visualQA": "Incompleto: portal RPG Revisao Local em http://127.0.0.1:5178 mostrou a tela de autenticação; CharacterWizard autenticado não inspecionado."
+  },
+  "authorization": {
+    "commitAndPushMain": "Usuário solicitou explicitamente em 2026-11-14"
+  }
+}

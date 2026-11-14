@@ -127,6 +127,8 @@ export const CLANS: ClanId[] = ['Gojo', 'Inumaki', 'Kamo', 'Zenin'];
 export interface ClanData {
   id: ClanId;
   description: string;
+  /** Técnicas herdadas do clã que a criação de personagem consegue registrar automaticamente. */
+  inheritedTechniqueOptions?: readonly string[];
   attrChoice: AttrChoiceSpec;
   training: TrainingChoice;
   abilities: OriginAbility[];
@@ -218,6 +220,7 @@ export const CLAN_DATA: Record<ClanId, ClanData> = {
   Zenin: {
     id: 'Zenin',
     description: 'Tradição militar dos Três Grandes Clãs — disciplina e Feitiço Focado.',
+    inheritedTechniqueOptions: ['Dez Sombras'],
     attrChoice: { hint: 'Escolha +2 em qualquer atributo; outro atributo recebe +1.' },
     training: {
       count: 2,

@@ -135,14 +135,16 @@ export function OriginStep({ origin, setOrigin, choices, setChoices, anatomyAllo
       {/* Sub-menu: Clã (Herdado) */}
       {origin === 'Herdado' && (
         <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-3">
-          <label className="text-sm font-bold text-primary flex items-center gap-1">
+          <p id="inherited-clan-choice-label" className="text-sm font-bold text-primary flex items-center gap-1">
             <Crown className="h-3.5 w-3.5" /> Selecionar Clã
-          </label>
-          <div className="grid grid-cols-2 gap-2">
+          </p>
+          <div className="grid grid-cols-2 gap-2" role="group" aria-labelledby="inherited-clan-choice-label">
             {CLANS.map(c => (
               <button
                 key={c}
-                onClick={() => update({ clan: c, primaryAttr: undefined, secondaryAttr: undefined })}
+                type="button"
+                aria-pressed={choices.clan === c}
+                onClick={() => update({ clan: c, inheritedTechnique: undefined, primaryAttr: undefined, secondaryAttr: undefined })}
                 className={cn(
                   'rounded-lg border px-3 py-2 text-xs font-bold transition-all text-left',
                   choices.clan === c
@@ -157,6 +159,29 @@ export function OriginStep({ origin, setOrigin, choices, setChoices, anatomyAllo
               </button>
             ))}
           </div>
+
+          {choices.clan && (CLAN_DATA[choices.clan].inheritedTechniqueOptions?.length ?? 0) > 0 && (
+            <div className="space-y-2 rounded-lg border border-primary/25 bg-background/60 p-3" role="group" aria-labelledby="inherited-clan-technique-label">
+              <label htmlFor="inherited-clan-technique" className="text-sm font-bold text-foreground">
+                <span id="inherited-clan-technique-label">Técnica herdada do clã (opcional)</span>
+              </label>
+              <select
+                id="inherited-clan-technique"
+                value={choices.inheritedTechnique ?? ''}
+                onChange={event => update({ inheritedTechnique: event.target.value || undefined })}
+                className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-describedby="inherited-clan-technique-help"
+              >
+                <option value="">— escolher depois —</option>
+                {CLAN_DATA[choices.clan].inheritedTechniqueOptions?.map(technique => (
+                  <option key={technique} value={technique}>{technique}</option>
+                ))}
+              </select>
+              <p id="inherited-clan-technique-help" className="text-xs leading-relaxed text-muted-foreground">
+                Deixe em “escolher depois” se não for usar uma técnica automatizada nesta ficha. Escolher Dez Sombras salva a técnica e libera seu catálogo na seção de invocações; os shikigamis ainda precisam ser adicionados e adquiridos separadamente em jogo.
+              </p>
+            </div>
+          )}
 
           {/* Painel detalhado do clã (rolável) */}
           {choices.clan && (

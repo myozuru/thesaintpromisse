@@ -1,0 +1,7 @@
+Portal: RPG Revisao Local
+URL: http://127.0.0.1:5178/
+Viewport informado: 390x836 CSS px
+
+Snapshot inicial: tela pública com botão "Entrar em The Saint Promisse". Após abrir a entrada, o portal exibiu o formulário de acesso/criação de conta. Não foi usada nem criada uma conta para contornar autenticação.
+
+Resultado: não foi possível alcançar o CharacterWizard para capturar ou exercitar a escolha de origem. Esta evidência registra a limitação, não aprova visualmente a interface alterada.

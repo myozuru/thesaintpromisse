@@ -1,0 +1,17 @@
+Tarefa: HERDADO-DEZ-SOMBRAS-2026-11-14
+Branch de implementação: feat/herdado-dez-sombras
+
+Comportamento entregue:
+- Herdado + Zenin oferece a escolha opcional Dez Sombras.
+- Ao selecioná-la, a ficha criada recebe tecnicaAmaldicoada = "Dez Sombras".
+- A seção de invocações reconhece esse campo e habilita a importação do catálogo.
+- Os shikigamis não são adicionados nem adquiridos automaticamente.
+- Trocar de clã/origem limpa a escolha dependente; os controles anunciam seleção e agrupamento para tecnologia assistiva.
+
+Revisão Claude: confirmou a persistência, habilitação do catálogo sem concessão automática de fichas e ausência de bloqueadores. Registro em evidencias/revisao-claude.md.
+
+Validação técnica: TypeScript, build e diff check passaram. Testes automatizados não foram executados nesta tarefa.
+
+Limite de QA: Portal local permaneceu na autenticação. A prévia autenticada do wizard não foi inspecionada; não usar este registro como aprovação visual.
+
+O usuário autorizou explicitamente push para main. Consultar o commit desta tarefa no histórico Git para o estado integrado.

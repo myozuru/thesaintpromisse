@@ -1,0 +1,14 @@
+Tarefa: HERDADO-DEZ-SOMBRAS-2026-11-14
+Objetivo: permitir selecionar Herdado > Zenin > Dez Sombras na criação e registrar a técnica na ficha para liberar o catálogo de invocações.
+
+Implementação concluída: OriginChoices guarda a escolha, originEngine valida que ela pertence ao clã selecionado e CharacterWizard persiste Character.tecnicaAmaldicoada. Trocar de clã ou origem limpa escolhas incompatíveis.
+
+Importação confirmada pelo Claude: a técnica habilita o catálogo, mas as fichas só entram em invocacoesConhecidas após escolha de imagem e ação explícita do usuário. A seleção da técnica não concede os shikigamis.
+
+Revisão independente: sem bloqueadores. Os pontos de acessibilidade de OriginStep foram corrigidos; os cartões do catálogo receberam semântica de lista. A escolha da técnica fica opcional, com essa condição indicada no campo.
+
+Validações: tsc --noEmit passou; npm run build passou; git diff --check passou. A suíte de testes não foi executada nesta alteração.
+
+QA visual: o Portal RPG Revisao Local abriu a tela de autenticação em 390x836. Não foi possível acessar o CharacterWizard sem uma sessão; nenhuma conta foi criada. A tela alterada não foi declarada visualmente aprovada.
+
+Integração: usuário solicitou explicitamente commit/push para origin/main em 2026-11-14. O resultado final fica registrado no histórico Git.
