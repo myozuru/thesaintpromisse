@@ -913,14 +913,14 @@ export function useMultiplayerSync() {
         // nunca grava diretamente a fatia nem a transmite por broadcast aberto.
         void (async () => {
           const readLatest = async () => supabase.from('realtime_world')
-            .select('data,revision').eq('slice', 'characters').maybeSingle();
+            .select('*').eq('slice', 'characters').maybeSingle();
           const initial = await readLatest();
           if (initial.error) {
             console.warn('[sync] falha ao carregar revisão de personagens:', initial.error.message);
             return;
           }
           let currentData = Array.isArray(initial.data?.data) ? initial.data.data as never[] : [];
-          let currentRevision = initial.data?.revision ?? 0;
+          let currentRevision = (initial.data as { revision?: number } | null)?.revision ?? 0;
           for (let attempt = 0; attempt < 2; attempt += 1) {
             const requestId = crypto.randomUUID();
             const characters = pickNewestPerCharacter(json as never[], currentData) as unknown as Record<string, unknown>[];
@@ -930,6 +930,12 @@ export function useMultiplayerSync() {
               | { ok: true; revision: number; data: Json; duplicate: boolean }
               | { ok: false; code: string; message: string };
             if (result.ok) return;
+            if (result.code === 'failed') {
+              // Sem a gravação segura instalada no banco, grava direto para que
+              // edições e exclusões de fichas não fiquem presas só nesta tela.
+              void save(characters as unknown as Json);
+              return;
+            }
             if (result.code !== 'stale' || attempt > 0) {
               console.warn('[sync] gravação segura de personagens recusada:', result.message);
               return;
@@ -940,7 +946,7 @@ export function useMultiplayerSync() {
               return;
             }
             currentData = Array.isArray(latest.data?.data) ? latest.data.data as never[] : [];
-            currentRevision = latest.data?.revision ?? 0;
+            currentRevision = (latest.data as { revision?: number } | null)?.revision ?? 0;
           }
         })().catch((error: unknown) => {
           console.warn('[sync] falha ao salvar personagens pela RPC segura:', error);
