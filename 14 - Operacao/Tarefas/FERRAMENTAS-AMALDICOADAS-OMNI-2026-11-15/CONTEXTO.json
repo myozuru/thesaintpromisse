@@ -3,6 +3,7 @@
   "created_at": "2026-11-15",
   "owner": "Codex",
   "branch": "feature/dez-sombras-hud-mapa",
+  "commit": "2edc868",
   "state": "implementation_local_reviewed",
   "preset": "public/omni-presets/ferramentas-amaldicoadas.json",
   "entities": ["Seraphiel", "Báculo Aetheris", "Sagitta", "Raijin", "Ruína Esmeralda", "Crepúsculo da Última Lua", "Lança Vetorial Rubra"],

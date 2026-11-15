@@ -2,9 +2,9 @@ Estado: implementado; QA visual, 51 testes focados, suíte Dez Sombras (217 test
 Responsável: Codex
 Revisor independente: revisão combinada recebida e revalidada; Claude reclassificou os falsos positivos P0 do HUD.
 Atualização: 2026-11-15
-Branch: feature/dez-sombras-hud-mapa (base bb6f36a); alterações ainda não commitadas/publicadas.
+Branch: feature/dez-sombras-hud-mapa (base bb6f36a); commit local 6e3bef4. Não publicado.
 Escopo: HUD no viewport real de combate com Invocar, Em campo e Rituais; limites Player/Mestre; integração dos rituais e layouts desktop/tablet/mobile.
 Verificações: 217 testes em 9 suítes Dez Sombras passaram; 51 testes focados em 10 suítes passaram; Playwright sem erros de console e sem overflow em 1440×900, 1024×768 e 390×844; TypeScript e build de produção passaram.
 Evidências: evidencias/REVISAO-QA.md e evidencias/.
 Revisões recebidas: revisoes/ (originais preservados, achados revalidados contra o código atual).
-Pendência de fechamento: revisão final de arquivos/QA e commits locais organizados. Sem push informado.
+Pendência de fechamento: nenhuma verificação de implementação; commit local registrado. Sem push.

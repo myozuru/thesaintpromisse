@@ -5,6 +5,7 @@
   "owner": "Codex",
   "branch": "feature/dez-sombras-hud-mapa",
   "base_commit": "bb6f36a",
+  "commit": "6e3bef4",
   "state": "local_qa_passed",
   "scope": ["HUD de combate no viewport real do mapa", "permissões Player/Mestre", "rituais e ações em campo", "layout desktop/tablet/mobile"],
   "qa": {
