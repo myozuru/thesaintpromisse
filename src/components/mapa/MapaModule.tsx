@@ -89,6 +89,8 @@ import { PendingAoEOverlay } from './ui/PendingAoEOverlay';
 import { LootOverlay } from './ui/LootOverlay';
 import { ChestOverlay } from './ui/ChestOverlay';
 import { ShikigamiTokenHud } from './ui/ShikigamiTokenHud';
+import { DezSombrasCombatHud } from './ui/DezSombrasCombatHud';
+import './mapaMobile.css';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { useFogStore } from '@/stores/fogStore';
 import { buildSegments as buildFogSegments } from '@/lib/fog/visibility';
@@ -356,6 +358,7 @@ export function MapaModule() {
   const entityDragMovedRef = useRef(false);
   const clickCountRef = useRef<{ id: string | null; count: number; t: number }>({ id: null, count: 0, t: 0 });
   const [selectionToolbarVisible, setSelectionToolbarVisible] = useState(false);
+  const [dezSombrasHudOpen, setDezSombrasHudOpen] = useState(false);
   const [tokenCropEntityId, setTokenCropEntityId] = useState<string | null>(null);
   const [terrainZoneEditId, setTerrainZoneEditId] = useState<string | null>(null);
   const [altitudeEditId, setAltitudeEditId] = useState<string | null>(null);
@@ -368,12 +371,28 @@ export function MapaModule() {
   const setImmersive = useMapStore((s) => s.setImmersive);
   const partyCollapsed = useMapStore((s) => s.partyCollapsed);
   const setPartyCollapsed = useMapStore((s) => s.setPartyCollapsed);
+  const [compactMapLayout, setCompactMapLayout] = useState(false);
+  const [compactPartyOpen, setCompactPartyOpen] = useState(false);
   const activeTool = useMapStore((s) => s.activeTool);
   const setActiveTool = useMapStore((s) => s.setActiveTool);
   const shapeShape = useMapStore((s) => s.toolSettings.shape.shape);
   const shapeColor = useMapStore((s) => s.toolSettings.shape.color);
   
   const setToolSettings = useMapStore((s) => s.setToolSettings);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 1100px)');
+    const update = () => setCompactMapLayout(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  const partyPanelCollapsed = compactMapLayout ? !compactPartyOpen : partyCollapsed;
+  const togglePartyPanel = () => {
+    if (compactMapLayout) setCompactPartyOpen((open) => !open);
+    else setPartyCollapsed(!partyCollapsed);
+  };
 
   const [gridOpen, setGridOpen] = useState(false);
   const [layerPanelOpen, setLayerPanelOpen] = useState(false);
@@ -3345,7 +3364,7 @@ export function MapaModule() {
 
   return (
     <div
-      className="w-full flex select-none overflow-hidden"
+      className="mapa-layout-shell relative w-full flex select-none overflow-hidden"
       style={{
         height: shellHeight,
         minHeight: 480,
@@ -3429,6 +3448,7 @@ export function MapaModule() {
           <NotesOverlay containerRef={containerRef as React.RefObject<HTMLDivElement>} />
           <SelectionToolbar visible={selectionToolbarVisible} onAdjustToken={setTokenCropEntityId} onEditTerrainZone={setTerrainZoneEditId} onEditAltitude={setAltitudeEditId} />
       <ShikigamiTokenHud />
+          <DezSombrasCombatHud open={dezSombrasHudOpen} onOpenChange={setDezSombrasHudOpen} />
           <ZonaTerrenoDialog entityId={terrainZoneEditId} onClose={() => setTerrainZoneEditId(null)} />
           <AltitudeDialog entityId={altitudeEditId} onClose={() => setAltitudeEditId(null)} />
           <PendingMoveOverlay />
@@ -3702,8 +3722,9 @@ export function MapaModule() {
 
       {/* ============ COLUNA DIREITA: Party ============ */}
       <PartyPanel
-        collapsed={partyCollapsed}
-        onToggleCollapsed={() => setPartyCollapsed(!partyCollapsed)}
+        collapsed={partyPanelCollapsed}
+        onToggleCollapsed={togglePartyPanel}
+        hideSelectedInvocationPanel={dezSombrasHudOpen}
       />
 
       {pendingAssets.length > 0 && (() => {

@@ -11,7 +11,7 @@
  * os itens da lista são informativos (nome + descrição). A execução real
  * continua sendo feita pelos painéis dedicados da ficha.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Swords, Sparkles, Zap, Package, X, Target, AlertTriangle, Check, HeartHandshake, BatteryCharging } from 'lucide-react';
 import { isSuporte } from '@/lib/suporteAbilities';
 import { parseRangeMeters, touchDistanceMeters, outOfRangeMessage } from '@/lib/touchRange';
@@ -58,6 +58,7 @@ interface ListEntry {
 
 
 export function PlayerActionBar() {
+  const actionBarRef = useRef<HTMLDivElement>(null);
   const role = useRoleStore((s) => s.role);
   const activeProfileId = useProfileStore((s) => s.activeProfileId);
   const allCharacters = useCharacterStore((s) => s.characters);
@@ -120,6 +121,34 @@ export function PlayerActionBar() {
     if (activeProfileId && activeChar.profileId === activeProfileId) return true;
     return false;
   }, [role, inCombat, activeChar, myChar, activeProfileId]);
+
+  useEffect(() => {
+    if (!isMyTurn || !activeChar || isFreeformFor(activeChar as any, freeformMode)) return;
+    const actionBar = actionBarRef.current;
+    const viewport = actionBar?.closest<HTMLElement>('[data-map-viewport]');
+    if (!actionBar || !viewport) return;
+
+    const property = '--player-action-bar-clearance';
+    const previousValue = viewport.style.getPropertyValue(property);
+    let measuredValue = '';
+    const syncClearance = () => {
+      measuredValue = `${Math.ceil(actionBar.getBoundingClientRect().height + 24)}px`;
+      viewport.style.setProperty(property, measuredValue);
+    };
+
+    syncClearance();
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(syncClearance);
+    observer?.observe(actionBar);
+    window.addEventListener('resize', syncClearance);
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', syncClearance);
+      if (viewport.style.getPropertyValue(property) !== measuredValue) return;
+      if (previousValue) viewport.style.setProperty(property, previousValue);
+      else viewport.style.removeProperty(property);
+    };
+  }, [isMyTurn, activeChar, freeformMode]);
 
 
   const omniAcaoLabel: Record<string, string> = {
@@ -457,7 +486,7 @@ export function PlayerActionBar() {
   const activeLabel = open ? buttons.find((b) => b.key === open)?.label : '';
 
   return (
-    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-40 pointer-events-none flex flex-col items-center gap-2">
+    <div ref={actionBarRef} data-player-action-bar className="absolute bottom-3 left-1/2 -translate-x-1/2 z-40 pointer-events-none flex flex-col items-center gap-2">
       {/* Painel de conjuração (rola TR / acerto / dano) — no MESMO lugar do overlay de Mira */}
       {castingSpell && activeChar && (
         <div className="pointer-events-auto min-w-[360px] max-w-[460px] w-full animate-fade-in">

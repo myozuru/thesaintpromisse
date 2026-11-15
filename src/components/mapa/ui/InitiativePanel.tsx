@@ -139,7 +139,18 @@ export function InitiativePanel({ onClose }: Props) {
       .map((e) => {
         const ent = e.entityId ? ents[e.entityId] : undefined;
         const ch = ent?.characterId ? all.find((c) => c.id === ent.characterId) : null;
-        if (!ch) return null;
+        if (!ch) {
+          if (ent?.masterControlled && ent.ritualId && ent.invocationId && ent.invocationInstanceId) {
+            return {
+              charId: ent.id,
+              charName: e.name || ent.label || 'Sombra do ritual',
+              roll: Math.max(1, e.init),
+              bonus: 0,
+              total: e.init,
+            };
+          }
+          return null;
+        }
         const astucia = ch.attributes.find((a) => a.name === 'Astúcia');
         const bonus = astucia ? getAttrModifier(astucia.value) : 0;
         return {

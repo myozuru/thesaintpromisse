@@ -1,0 +1,28 @@
+@media (max-width: 1100px) {
+  .mapa-layout-shell > .mapa-party-panel {
+    position: absolute;
+    z-index: 48;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(624px, calc(100% - 48px)) !important;
+  }
+
+  .mapa-layout-shell > .mapa-party-panel.mapa-party-panel--collapsed {
+    width: 24px !important;
+  }
+
+  .mapa-layout-shell > .mapa-party-panel > aside {
+    width: min(600px, calc(100% - 24px)) !important;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1100px) {
+  .mapa-layout-shell > .mapa-party-panel {
+    width: min(560px, 48vw) !important;
+  }
+
+  .mapa-layout-shell > .mapa-party-panel > aside {
+    width: min(536px, calc(100% - 24px)) !important;
+  }
+}

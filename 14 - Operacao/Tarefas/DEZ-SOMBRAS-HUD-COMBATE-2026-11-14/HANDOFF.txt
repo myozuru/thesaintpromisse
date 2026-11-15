@@ -1,0 +1,7 @@
+O HUD está montado dentro de [data-map-viewport] no MapaModule. Ele oferece Invocar, Em campo e Rituais, restringe a biblioteca ao pacote Dez Sombras e preserva o controle masterControlled.
+
+QA visual usa ficha e tokens sintéticos; não grava campanha. Capturas com dimensões exatas e detalhes de permissões, acionamento por teclado e espaçamento do PlayerActionBar estão em evidencias/REVISAO-QA.md.
+
+Revisões antigas estão em revisoes/. R02/R05 e os achados descritos como problemas fora de combate foram revalidados como resolvidos ou falsos positivos. O breakpoint intermediário 761–1100px é intencional; 1024×768 não usa o painel mobile estreito. A posição é relativa ao viewport do mapa, abaixo da MapTopBar.
+
+Revisões recebidas e QA registrado. Estado Git ainda não está commitado nem publicado; não dizer que houve push.

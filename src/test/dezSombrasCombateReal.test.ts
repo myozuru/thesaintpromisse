@@ -1121,6 +1121,20 @@ describe('Dez Sombras: Gama em combate', () => {
     vi.restoreAllMocks();
   });
 
+  it('mantém a reação do Gama sob controle do Mestre quando a sombra é um alvo de ritual', async () => {
+    const gama = modelo('sapo');
+    const tokenGama = await invocarUma('sapo');
+    useMapStore.getState().updateEntity(tokenGama, { masterControlled: true, ritualId: 'ritual-gama' });
+
+    const resultado = comandarPuxarAliadoGama(ID_DONO, gama.id, ID_ALIADO, {
+      instanciaId: useMapStore.getState().entities[tokenGama]?.invocationInstanceId,
+      requestId: 'gama-ritual-controle-mestre',
+    });
+
+    expect(resultado).toMatchObject({ ok: false, motivo: 'Esta sombra está sob controle do Mestre.' });
+    expect(instanciaAtiva(gama.id).economiaAcoes?.reacao?.atual).toBe(1);
+  });
+
   it('oferece Agarrar só após acerto e gasta 4 PE sem debitar uma segunda ação', async () => {
     const gama = modelo('sapo');
     const tokenGama = await invocarUma('sapo');
@@ -1342,6 +1356,22 @@ describe('Dez Sombras: Nue em combate', () => {
       color: '#667788', label: id, locked: false, layer: 'tokens', invocationEffectiveSize: tamanho,
     });
   }
+
+  it('bloqueia carga e soltura do Nue ritual para o jogador mesmo fora de combate', async () => {
+    const tokenId = await invocarUma('nue', 420, 420);
+    adicionarPassageiro('passageiro-ritual-nue', 'Pequeno');
+    useMapStore.getState().updateEntity(tokenId, { masterControlled: true, ritualId: 'ritual-nue' });
+    useCombatStore.setState({ inCombat: false, initiativeOrder: [], currentTurnIndex: 0 } as never);
+
+    expect(comandarCargaAereaNue(ID_DONO, tokenId, 'passageiro-ritual-nue', true)).toMatchObject({ ok: false });
+    expect(useMapStore.getState().entities['passageiro-ritual-nue'].carriedBy).toBeUndefined();
+
+    useRoleStore.setState({ role: 'MASTER' } as never);
+    expect(comandarCargaAereaNue(ID_DONO, tokenId, 'passageiro-ritual-nue', true)).toMatchObject({ ok: true });
+    useRoleStore.setState({ role: 'PLAYER' } as never);
+    expect(comandarSoltarCargaNue(ID_DONO, tokenId, 'passageiro-ritual-nue')).toMatchObject({ ok: false });
+    expect(useMapStore.getState().entities['passageiro-ritual-nue'].carriedBy).toBe(tokenId);
+  });
 
   it('alterna voo e caminhada e aplica os limites de carga por tamanho', async () => {
     const tokenId = await invocarUma('nue', 420, 420);
@@ -2215,6 +2245,38 @@ describe('Dez Sombras: Elefante Máximo', () => {
 
 describe('Dez Sombras: Cervo Circular', () => {
   beforeEach(prepararMesa);
+
+  it('Aura da Quietude alcança o Cervo ritual mesmo sem token do Controlador no mapa', async () => {
+    const cervo = modelo('cervo-circular');
+    const tokenId = await invocarUma('cervo-circular', 210, 140);
+    const token = useMapStore.getState().entities[tokenId];
+    if (!token) throw new Error('Combat test setup is missing the ritual Cervo token.');
+    const instancia = instanciaAtiva(cervo.id);
+    const hpDanificado = Math.max(1, instancia.hpAtual - 5);
+    const fichaDono = pegarFicha(ID_DONO);
+    useCharacterStore.getState().updateCharacter(ID_DONO, {
+      instanciasInvocacao: (fichaDono.instanciasInvocacao ?? []).map(item => item.id === instancia.id
+        ? { ...item, version: item.version + 1, hpAtual: hpDanificado }
+        : item),
+    });
+    useMapStore.getState().updateEntity(tokenId, { hp: hpDanificado, masterControlled: true, ritualId: 'ritual-cervo' });
+    const tokensDoDono = Object.values(useMapStore.getState().entities)
+      .filter(entity => entity.characterId === ID_DONO && !entity.invocationId)
+      .map(entity => entity.id);
+    useMapStore.getState().removeEntities(tokensDoDono);
+    expect(Object.values(useMapStore.getState().entities).some(entity => entity.characterId === ID_DONO && !entity.invocationId)).toBe(false);
+    useCombatStore.setState({
+      inCombat: true,
+      combatId: 'combate-ritual-cervo',
+      currentTurnIndex: 0,
+      initiativeOrder: [{ charId: token.id, charName: cervo.nome, roll: 10, bonus: 0, total: 10 }],
+    } as never);
+
+    const curado = resolverAuraQuietudeInicioTurno(tokenId);
+
+    expect(curado).toBeGreaterThan(0);
+    expect(useMapStore.getState().entities[tokenId].hp).toBeGreaterThan(hpDanificado);
+  });
 
   it('Bênção recupera 3d12 + Sabedoria, debita 2 PE e consome a Ação Complexa', async () => {
     const tokenId = await invocarUma('cervo-circular', 210, 140);

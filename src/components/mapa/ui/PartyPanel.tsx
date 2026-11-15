@@ -16,12 +16,13 @@ import { ShikigamiOwnerPanel } from './ShikigamiOwnerPanel';
 interface Props {
   collapsed: boolean;
   onToggleCollapsed: () => void;
+  hideSelectedInvocationPanel?: boolean;
 }
 
 const PANEL_WIDTH_GM_DEFAULT = 240;
 const PANEL_WIDTH_WITH_SHEET = 600;
 
-export function PartyPanel({ collapsed, onToggleCollapsed }: Props) {
+export function PartyPanel({ collapsed, onToggleCollapsed, hideSelectedInvocationPanel = false }: Props) {
   const role = useRoleStore((s) => s.role);
   const isPlayer = role === 'PLAYER';
 
@@ -50,7 +51,10 @@ export function PartyPanel({ collapsed, onToggleCollapsed }: Props) {
   if (!role) return null;
 
   return (
-    <div className="h-full shrink-0 flex" style={{ width: collapsed ? 24 : panelWidth + 24 }}>
+    <div
+      className={`mapa-party-panel h-full shrink-0 flex${collapsed ? ' mapa-party-panel--collapsed' : ''}`}
+      style={{ width: collapsed ? 24 : panelWidth + 24 }}
+    >
       <button
         type="button"
         onClick={onToggleCollapsed}
@@ -76,7 +80,7 @@ export function PartyPanel({ collapsed, onToggleCollapsed }: Props) {
         >
           {showSheet ? (
             <div className="flex-1 overflow-y-auto overflow-x-hidden p-2">
-              {selectedInvocationTokenId && <ShikigamiOwnerPanel tokenId={selectedInvocationTokenId} />}
+              {selectedInvocationTokenId && !hideSelectedInvocationPanel && <ShikigamiOwnerPanel tokenId={selectedInvocationTokenId} />}
               <CharacterCard character={sheetToShow!} hideAttackPanel compactHeader />
             </div>
           ) : isPlayer ? (

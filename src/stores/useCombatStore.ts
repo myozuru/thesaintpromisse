@@ -32,6 +32,9 @@ function inicioTurnoPostura(charId: string) {
 }
 import { persist } from 'zustand/middleware';
 import { useCharacterStore } from './useCharacterStore';
+import { useMapStore } from './useMapStore';
+import { normalizarEstadoMahoraga } from '@/lib/controlador/dezSombrasMahoraga';
+import { normalizarEstadoTigreFunebre } from '@/lib/controlador/dezSombrasTigre';
 import { ladoIniciativaPorFicha } from '@/lib/mapa/ladoIniciativa';
 import { useReactionStore } from './useReactionStore';
 import type { InstanciaInvocacao, LimiteResetEconomiaInvocacao } from '@/lib/invocacoes/schema';
@@ -295,6 +298,7 @@ interface CombatStore {
   toggleParticipant: (charId: string) => void;
   setParticipants: (ids: string[]) => void;
   clearParticipants: () => void;
+  removeCombatParticipant: (charId: string) => void;
   startCombat: (entries: InitiativeEntry[]) => void;
   nextTurn: () => { endOfRound: boolean };
   endCombat: () => void;
@@ -494,6 +498,52 @@ function aplicarResetEconomiaInvocacoes(
       return atualizada;
     });
     if (alterou) store.updateCharacter(personagem.id, { instanciasInvocacao: atualizadas });
+  }
+}
+
+function resetarInstanciaDeRitualNoInicioDoTurno(charId: string, eventoId: string): void {
+  const token = useMapStore.getState().entities[charId];
+  if (!token?.masterControlled || !token.ritualId || !token.ownerCharId || !token.invocationId || !token.invocationInstanceId) return;
+  const owner = useCharacterStore.getState().characters.find(character => character.id === token.ownerCharId);
+  const model = owner?.invocacoesConhecidas?.find(invocation => invocation.id === token.invocationId);
+  const instance = owner?.instanciasInvocacao?.find(invocation => invocation.id === token.invocationInstanceId);
+  if (!owner || !model || !instance || instance.estado !== 'ativa') return;
+  const updated = processarResetEconomiaInstancia(instance, model, 'inicio_turno_dono', eventoId);
+  if (updated === instance) return;
+  useCharacterStore.getState().updateCharacter(owner.id, {
+    instanciasInvocacao: (owner.instanciasInvocacao ?? []).map(item => item.id === instance.id ? updated : item),
+  });
+}
+
+function vincularInstanciasRituaisAoCombate(combateId: string): void {
+  const entidades = useMapStore.getState().entities;
+  const store = useCharacterStore.getState();
+
+  for (const personagem of store.characters) {
+    let alterou = false;
+    const instancias = (personagem.instanciasInvocacao ?? []).map(instancia => {
+      const token = entidades[instancia.tokenId];
+      const ehAlvoDeRitual = token?.masterControlled && !!token.ritualId &&
+        token.ownerCharId === personagem.id && token.invocationId === instancia.modeloId &&
+        token.invocationInstanceId === instancia.id;
+      if (!ehAlvoDeRitual || instancia.combateId === combateId) return instancia;
+
+      const modelo = personagem.invocacoesConhecidas?.find(item => item.id === instancia.modeloId);
+      const atualizada = {
+        ...instancia,
+        combateId,
+        ...(modelo?.subcategoria === 'dez-sombras:mahoraga'
+          ? { estadoMahoraga: normalizarEstadoMahoraga(instancia.estadoMahoraga, combateId) }
+          : {}),
+        ...(modelo?.subcategoria === 'dez-sombras:tigre-funebre'
+          ? { estadoTigreFunebre: normalizarEstadoTigreFunebre(instancia.estadoTigreFunebre, combateId) }
+          : {}),
+      };
+      alterou = true;
+      return atualizada;
+    });
+
+    if (alterou) store.updateCharacter(personagem.id, { instanciasInvocacao: instancias });
   }
 }
 
@@ -755,6 +805,39 @@ export const useCombatStore = create<CombatStore>()(
         })),
       setParticipants: (ids) => set({ participantIds: ids }),
       clearParticipants: () => set({ participantIds: [] }),
+      removeCombatParticipant: (charId) => {
+        let combatBecameEmpty = false;
+        set((state) => {
+          const removedIndex = state.initiativeOrder.findIndex(entry => entry.charId === charId);
+          const clockOwnerWasRemoved = state.turnClockOwnerCharId === charId;
+          if (removedIndex < 0 && !clockOwnerWasRemoved) return state;
+          const initiativeOrder = removedIndex < 0
+            ? state.initiativeOrder
+            : state.initiativeOrder.filter(entry => entry.charId !== charId);
+          const wasCurrent = removedIndex >= 0 && removedIndex === state.currentTurnIndex;
+          const currentTurnIndex = removedIndex < 0
+            ? state.currentTurnIndex
+            : removedIndex < state.currentTurnIndex
+              ? state.currentTurnIndex - 1
+              : Math.min(state.currentTurnIndex, Math.max(0, initiativeOrder.length - 1));
+          const now = Date.now();
+          const resetClock = wasCurrent || clockOwnerWasRemoved;
+          const nextActorId = resetClock ? initiativeOrder[currentTurnIndex]?.charId ?? null : state.turnClockOwnerCharId;
+          combatBecameEmpty = state.inCombat && initiativeOrder.length === 0;
+          return {
+            initiativeOrder,
+            currentTurnIndex,
+            ...(resetClock ? {
+              turnClockOwnerCharId: nextActorId,
+              turnBaseRemainingAtStart: state.turnDurationSec,
+              turnRemainingAtStart: state.turnDurationSec + totalReservasTempoDoDono(nextActorId, state.combatId),
+              turnStartedAt: now,
+              turnPaused: !state.turnTimerEnabled,
+            } : {}),
+          };
+        });
+        if (combatBecameEmpty) get().endCombat();
+      },
       startCombat: (entries) => {
         void import('@/lib/conquistas/motor').then((m) => m.dispararGatilhoConquista('primeiro_combate', entries.map((e) => (e as { characterId?: string }).characterId).filter(Boolean) as string[])).catch(() => {});
         for (const c of useCharacterStore.getState().characters) {
@@ -796,10 +879,17 @@ export const useCombatStore = create<CombatStore>()(
           turnStartedAt: Date.now(),
           turnPaused: !s.turnTimerEnabled,
         }));
+        vincularInstanciasRituaisAoCombate(combatId);
         aplicarResetEconomiaInvocacoes('inicio_combate', `${combatId}:inicio_combate`);
         if (firstOwnerCharId) {
-          expireBaculoAetherisConditionsForTurnStart(firstOwnerCharId);
-          aplicarResetEconomiaInvocacoes('inicio_turno_dono', `${combatId}:turno:1:0:${firstOwnerCharId}`, firstOwnerCharId);
+          const eventoTurnoInicial = `${combatId}:turno:1:0:${firstOwnerCharId}`;
+          const firstActorToken = useMapStore.getState().entities[firstOwnerCharId];
+          if (firstActorToken?.masterControlled && firstActorToken.ritualId) {
+            resetarInstanciaDeRitualNoInicioDoTurno(firstOwnerCharId, eventoTurnoInicial);
+          } else {
+            expireBaculoAetherisConditionsForTurnStart(firstOwnerCharId);
+            aplicarResetEconomiaInvocacoes('inicio_turno_dono', eventoTurnoInicial, firstOwnerCharId);
+          }
         }
         // Limpa a telemetria de reações ao iniciar combate.
         import('@/stores/useReactionStore').then(({ useReactionStore }) =>
@@ -985,7 +1075,13 @@ export const useCombatStore = create<CombatStore>()(
           aplicarResetEconomiaInvocacoes('inicio_rodada', `${combateAtualId}:rodada:${newRound}`);
           const primeiroDonoId = us.ordem[0]?.charId;
           if (primeiroDonoId) {
-            aplicarResetEconomiaInvocacoes('inicio_turno_dono', `${combateAtualId}:turno:${newRound}:0:${primeiroDonoId}`, primeiroDonoId);
+            const eventoPrimeiroTurno = `${combateAtualId}:turno:${newRound}:0:${primeiroDonoId}`;
+            const primeiroToken = useMapStore.getState().entities[primeiroDonoId];
+            if (primeiroToken?.masterControlled && primeiroToken.ritualId) {
+              resetarInstanciaDeRitualNoInicioDoTurno(primeiroDonoId, eventoPrimeiroTurno);
+            } else {
+              aplicarResetEconomiaInvocacoes('inicio_turno_dono', eventoPrimeiroTurno, primeiroDonoId);
+            }
           }
           import('@/stores/useMapStore').then(({ useMapStore }) => useMapStore.getState().setPendingMove(null));
           const firstEntry = us.ordem[0];
@@ -1081,6 +1177,7 @@ export const useCombatStore = create<CombatStore>()(
         const combateAtualId = get().combatId ?? `turno-${round}`;
         if (nextOwnerCharId) {
           aplicarResetEconomiaInvocacoes('inicio_turno_dono', `${combateAtualId}:turno:${round}:${nextIndex}:${nextOwnerCharId}`, nextOwnerCharId);
+          resetarInstanciaDeRitualNoInicioDoTurno(nextOwnerCharId, `${combateAtualId}:turno:${round}:${nextIndex}:${nextOwnerCharId}`);
         }
         import('@/stores/useMapStore').then(({ useMapStore }) => useMapStore.getState().setPendingMove(null));
         // Zera movimento do novo personagem ativo.

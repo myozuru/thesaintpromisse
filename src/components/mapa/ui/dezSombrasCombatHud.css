@@ -1,0 +1,252 @@
+/* Este HUD é filho de [data-map-viewport], abaixo da MapTopBar e à direita da ToolRail. */
+.dez-sombras-hud-trigger {
+  position: absolute;
+  z-index: 45;
+  top: 12px;
+  left: 12px;
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 9px;
+  padding: 0 13px;
+  border: 1px solid hsl(var(--primary) / .48);
+  border-radius: 11px;
+  background: hsl(var(--card) / .97);
+  color: hsl(var(--foreground));
+  box-shadow: 0 8px 22px hsl(var(--background) / .42);
+  font-family: var(--font-display, "Cinzel", serif);
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.dez-sombras-hud-trigger svg { color: hsl(var(--primary)); }
+.dez-sombras-hud-trigger-count,
+.dez-sombras-combat-hud__nav-count {
+  display: inline-grid;
+  min-width: 20px;
+  height: 20px;
+  place-items: center;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: hsl(var(--primary) / .16);
+  color: hsl(var(--foreground));
+  font: 600 11px/1 var(--font-mono, monospace);
+}
+
+.dez-sombras-hud-trigger:hover { border-color: hsl(var(--primary)); background: hsl(var(--card)); }
+.dez-sombras-hud-trigger:focus-visible,
+.dez-sombras-combat-hud button:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.dez-sombras-combat-hud {
+  position: absolute;
+  z-index: 46;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  width: min(410px, calc(100% - 24px));
+  max-height: calc(100% - 24px);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid hsl(var(--border));
+  border-radius: 14px;
+  background: hsl(var(--card) / .98);
+  color: hsl(var(--foreground));
+  box-shadow: 0 14px 34px hsl(var(--background) / .5);
+  touch-action: pan-y;
+}
+
+.dez-sombras-combat-hud__header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+}
+
+.dez-sombras-combat-hud__identity { display: flex; min-width: 0; align-items: center; gap: 10px; }
+.dez-sombras-combat-hud__mark {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid hsl(var(--primary) / .4);
+  border-radius: 10px;
+  background: hsl(var(--primary) / .12);
+  color: hsl(var(--primary));
+}
+.dez-sombras-combat-hud__heading { min-width: 0; }
+.dez-sombras-combat-hud__heading h2 {
+  margin: 0;
+  font-family: var(--font-display, "Cinzel", serif);
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+.dez-sombras-combat-hud__heading p {
+  overflow: hidden;
+  margin: 3px 0 0;
+  color: hsl(var(--muted-foreground));
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dez-sombras-combat-hud__close {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid hsl(var(--border));
+  border-radius: 9px;
+  background: hsl(var(--background));
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+}
+.dez-sombras-combat-hud__close:hover { color: hsl(var(--foreground)); border-color: hsl(var(--primary) / .55); }
+
+.dez-sombras-combat-hud__nav {
+  display: grid;
+  flex: 0 0 auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  padding: 8px;
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--background) / .65);
+}
+.dez-sombras-combat-hud__nav button {
+  display: flex;
+  min-width: 0;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 5px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.dez-sombras-combat-hud__nav button:hover { background: hsl(var(--card)); color: hsl(var(--foreground)); }
+.dez-sombras-combat-hud__nav button[aria-pressed="true"] {
+  border-color: hsl(var(--primary) / .4);
+  background: hsl(var(--primary) / .13);
+  color: hsl(var(--foreground));
+}
+.dez-sombras-combat-hud__nav button[aria-pressed="true"] svg { color: hsl(var(--primary)); }
+.dez-sombras-combat-hud__nav-count { min-width: 18px; height: 18px; font-size: 10px; }
+.dez-sombras-combat-hud__nav-label-compact { display: none; }
+
+.dez-sombras-combat-hud__content {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: hsl(var(--muted-foreground) / .45) transparent;
+  scrollbar-width: thin;
+}
+.dez-sombras-combat-hud__content::-webkit-scrollbar { width: 8px; }
+.dez-sombras-combat-hud__content::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 999px; background: hsl(var(--muted-foreground) / .4); background-clip: padding-box; }
+.dez-sombras-combat-hud__content::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / .65); background-clip: padding-box; }
+.dez-sombras-combat-hud__content .invocations-workspace { border-radius: 0; background: transparent; padding: 0; font-family: inherit; font-size: 14px; line-height: 1.4; }
+.dez-sombras-combat-hud__content .invocations-view { gap: 10px; padding: 10px; }
+.dez-sombras-combat-hud__content .inv-card-grid,
+.dez-sombras-combat-hud__content .inv-profile-grid { grid-template-columns: minmax(0, 1fr); }
+.dez-sombras-combat-hud__content .inv-library-hud { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.dez-sombras-combat-hud__content .inv-library-hud > div { padding: 8px 10px; }
+.dez-sombras-combat-hud__content .inv-library-hud dd { font-size: 16px; }
+.dez-sombras-combat-hud__content .inv-library-utilities { margin-top: 16px; }
+.dez-sombras-combat-hud__content .rituals-panel { padding: 12px; }
+.dez-sombras-combat-hud__content .rituals-header { gap: 8px; }
+.dez-sombras-combat-hud__content .rituals-header h2 { font-size: 17px; }
+.dez-sombras-combat-hud__content .rituals-header p { font-size: 12px; }
+
+.dez-sombras-combat-hud__field { display: grid; gap: 12px; padding: 12px; }
+.dez-sombras-combat-hud__token-list { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 5px; scrollbar-width: thin; }
+.dez-sombras-combat-hud__token-list button {
+  display: grid;
+  min-width: 124px;
+  max-width: 190px;
+  min-height: 48px;
+  gap: 3px;
+  padding: 7px 9px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 9px;
+  background: hsl(var(--background) / .75);
+  color: hsl(var(--foreground));
+  text-align: left;
+  cursor: pointer;
+}
+.dez-sombras-combat-hud__token-list button[aria-pressed="true"] { border-color: hsl(var(--primary) / .65); background: hsl(var(--primary) / .13); }
+.dez-sombras-combat-hud__token-list button span { overflow: hidden; font-size: 12px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.dez-sombras-combat-hud__token-list button small { color: hsl(var(--muted-foreground)); font: 11px/1.2 var(--font-mono, monospace); }
+.dez-sombras-combat-hud__abilities { min-width: 0; }
+.dez-sombras-combat-hud__abilities > h3 { margin: 0 0 8px; font-family: var(--font-display, "Cinzel", serif); font-size: 14px; }
+.dez-sombras-combat-hud__abilities [data-testid="shikigami-owner-panel"] { margin: 0; }
+.dez-sombras-combat-hud__master-control,
+.dez-sombras-combat-hud__source-hint {
+  margin: 0;
+  padding: 10px 11px;
+  border: 1px solid hsl(var(--accent) / .34);
+  border-radius: 9px;
+  background: hsl(var(--accent) / .08);
+  color: hsl(var(--foreground));
+  font-size: 12px;
+  line-height: 1.45;
+}
+.dez-sombras-combat-hud__empty {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding: 18px 14px;
+}
+.dez-sombras-combat-hud__empty > svg { color: hsl(var(--primary)); }
+.dez-sombras-combat-hud__empty h3 { margin: 0; font-family: var(--font-display, "Cinzel", serif); font-size: 15px; }
+.dez-sombras-combat-hud__empty p { margin: 0; color: hsl(var(--muted-foreground)); font-size: 12px; line-height: 1.5; }
+.dez-sombras-combat-hud__empty button {
+  min-height: 38px;
+  padding: 7px 11px;
+  border: 1px solid hsl(var(--primary) / .5);
+  border-radius: 8px;
+  background: hsl(var(--primary) / .14);
+  color: hsl(var(--foreground));
+  font-size: 12px;
+  cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .dez-sombras-combat-hud {
+    top: auto;
+    right: 8px;
+    bottom: var(--player-action-bar-clearance, 58px);
+    left: 8px;
+    width: auto;
+    max-height: min(72%, 580px);
+    border-radius: 13px;
+  }
+  .dez-sombras-hud-trigger { top: 8px; left: 8px; }
+  .dez-sombras-combat-hud__header { padding: 10px 12px 8px; }
+  .dez-sombras-combat-hud__nav { gap: 3px; padding: 6px; }
+  .dez-sombras-combat-hud__nav button { gap: 3px; padding-right: 2px; padding-left: 2px; font-size: 10px; }
+  .dez-sombras-combat-hud__nav button > svg { display: none; }
+  .dez-sombras-combat-hud__nav-label-wide { display: none; }
+  .dez-sombras-combat-hud__nav-label-compact { display: inline; }
+}
+
+@media (min-width: 761px) and (max-width: 1100px) {
+  .dez-sombras-combat-hud { width: min(380px, 42vw); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dez-sombras-combat-hud *, .dez-sombras-hud-trigger { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}

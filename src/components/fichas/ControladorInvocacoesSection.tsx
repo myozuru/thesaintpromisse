@@ -62,7 +62,7 @@ function criaturasGrimorio(): Fonte[] {
     }));
   } catch { return []; }
 }
-export function ControladorInvocacoesSection({ character, view = 'catalog', canViewCatalog = true, onBrowseCatalog, onEditFicha, onCreateFicha }: { character: Character; view?: InvocationSectionView; canViewCatalog?: boolean; onBrowseCatalog?: () => void; onEditFicha?: (id: string) => void; onCreateFicha?: () => void }) {
+export function ControladorInvocacoesSection({ character, view = 'catalog', canViewCatalog = true, onBrowseCatalog, onEditFicha, onCreateFicha, scopeToTenShadows = false }: { character: Character; view?: InvocationSectionView; canViewCatalog?: boolean; onBrowseCatalog?: () => void; onEditFicha?: (id: string) => void; onCreateFicha?: () => void; scopeToTenShadows?: boolean }) {
   const updateCharacter = useCharacterStore(s => s.updateCharacter);
   const allCharacters = useCharacterStore(s => s.characters);
   const isMaster = useRoleStore(s => s.role) === 'MASTER';
@@ -133,7 +133,10 @@ export function ControladorInvocacoesSection({ character, view = 'catalog', canV
   }, []);
 
   const entities = useMapStore(s => s.entities);
-  const ativos = Object.values(entities).filter(e => e.ownerCharId === character.id && !!e.invocationId);
+  const catalogo = character.invocacoesConhecidas ?? [];
+  const ativos = Object.values(entities).filter(e => e.ownerCharId === character.id && !!e.invocationId &&
+    (!scopeToTenShadows || !e.masterControlled) &&
+    (!scopeToTenShadows || catalogo.some(invocacao => invocacao.id === e.invocationId && invocacao.pacoteRegras === 'dez-sombras')));
   useEffect(() => { if (ativos.some(e => (e.hp ?? 0) <= 0)) limparInvocacoesDerrotadas(character.id); }, [entities, character.id]);
   const invocarSelecionadas = async () => {
     if (carregandoArteId) return;
@@ -373,8 +376,8 @@ export function ControladorInvocacoesSection({ character, view = 'catalog', canV
   const [catalogQuery, setCatalogQuery] = useState('');
   const libraryQuery = view === 'owned' ? ownedQuery : catalogQuery;
   const setLibraryQuery = view === 'owned' ? setOwnedQuery : setCatalogQuery;
-  const catalogo = character.invocacoesConhecidas ?? [];
-  const invocacoesPossuidas = catalogo.filter(inv => !mensagemDomesticaoPendente(inv) && !inv.perdaPermanente);
+  const invocacoesPossuidas = catalogo.filter(inv => !mensagemDomesticaoPendente(inv) && !inv.perdaPermanente &&
+    (!scopeToTenShadows || inv.pacoteRegras === 'dez-sombras'));
   const invocacoesDaVisao = view === 'owned' ? invocacoesPossuidas : catalogo;
   const invocacoesFiltradas = invocacoesDaVisao.filter(inv =>
     (inv.nome + ' ' + (inv.apelido ?? '')).toLocaleLowerCase().includes(libraryQuery.trim().toLocaleLowerCase()),

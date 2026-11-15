@@ -14,7 +14,7 @@ import type { OpcoesDano } from '@/lib/omni/contextoDano';
 import { create } from 'zustand';
 import type { DamageType } from '@/types';
 import type { Character } from '@/types';
-import { destinatarioReacao, podeResponderReacao } from '@/lib/omni/destinatarioReacao';
+import { DESTINATARIO_MESTRE, destinatarioReacao, podeResponderReacao } from '@/lib/omni/destinatarioReacao';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { getReactionsAvailable } from '@/lib/reactionBudget';
 import { useCombatStore } from '@/stores/useCombatStore';
@@ -313,6 +313,7 @@ function remoteRecipientById(id: string): string | undefined { return remoteProm
 /** Abre a decisão no controlador da ficha e só então deixa o dano prosseguir. */
 export async function requestReactionDecision(
   p: Omit<ReactionPrompt, 'id' | 'createdAt'>,
+  options: { forceMaster?: boolean } = {},
 ): Promise<number | null> {
   const prompt = buildPrompt({ ...p, expiresAt: Date.now() + REACTION_DECISION_TIMEOUT_MS });
   const answer = new Promise<number | null>((resolve) => {
@@ -324,14 +325,16 @@ export async function requestReactionDecision(
     completeReactionDecision(prompt.id, null);
     return answer;
   }
-  const destinatario = destinatarioReacao(character);
+  const destinatario = options.forceMaster ? DESTINATARIO_MESTRE : destinatarioReacao(character);
   const hasBus = typeof window !== 'undefined' && !!(window as unknown as { __worldBus?: { send?: unknown } }).__worldBus?.send;
-  if (podeResponderReacao(destinatario) || !hasBus) {
+  if (podeResponderReacao(destinatario) || (!hasBus && !options.forceMaster)) {
     useReactionStore.setState((state) => ({ prompts: [...state.prompts, prompt] }));
     schedulePromptExpiry(prompt);
-  } else {
+  } else if (hasBus) {
     schedulePromptExpiry(prompt, destinatario);
     sendPromptMessage({ tipo: 'prompt', requestId: prompt.id, destinatario, prompt });
+  } else {
+    completeReactionDecision(prompt.id, null);
   }
   return answer;
 }

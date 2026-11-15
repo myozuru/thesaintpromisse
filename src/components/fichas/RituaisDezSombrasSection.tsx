@@ -5,6 +5,11 @@ import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { useProfileStore } from '@/stores/useProfileStore';
 import { useRoleStore } from '@/stores/useRoleStore';
+import { useCombatStore } from '@/stores/useCombatStore';
+import { novaInstanciaInvocacao } from '@/lib/controlador/estadoInvocacao';
+import { economiaAcoesInicial, recursosInvocacaoIniciais } from '@/lib/controlador/economiaAcoes';
+import { estadoInicialMahoraga } from '@/lib/controlador/dezSombrasMahoraga';
+import { estadoInicialTigreFunebre } from '@/lib/controlador/dezSombrasTigre';
 import {
   requisitosComponentesQuimera,
   ritualAtivoParaAlvo,
@@ -56,20 +61,27 @@ function resolverCharacter(characterId: string): Character | undefined {
 function limparAlvoDoMapa(ritual: RitualDezSombras): void {
   const entityId = ritual.entidadeMapaId;
   if (!entityId) return;
-  if (ritual.iniciativaMapaId) useMapStore.getState().removeInitiative(ritual.iniciativaMapaId);
-
-  const mapa = useMapStore.getState();
-  const aindaNaIniciativa = mapa.initiative.entries.some(entry => entry.entityId === entityId);
-  const referenciadoPorOutroRitual = useCharacterStore.getState().characters.some(ficha =>
+  const personagens = useCharacterStore.getState().characters;
+  const referenciadoPorOutroRitual = personagens.some(ficha =>
     (ficha.rituaisDezSombras ?? []).some(outro =>
       outro.id !== ritual.id && outro.entidadeMapaId === entityId &&
       (outro.estado === 'solicitado' || outro.estado === 'em_andamento'),
     ),
   );
+  const mapa = useMapStore.getState();
   const entidade = mapa.entities[entityId];
-  const criadaPorEsteRitual = entidade && (!entidade.ritualId || entidade.ritualId === ritual.id);
-  if (criadaPorEsteRitual && !aindaNaIniciativa && !referenciadoPorOutroRitual) {
-    mapa.removeEntities([entityId]);
+  const criadaPorEsteRitual = !entidade || !entidade.ritualId || entidade.ritualId === ritual.id;
+  if (criadaPorEsteRitual && !referenciadoPorOutroRitual) {
+    mapa.removeInitiativeByEntity(entityId);
+    useCombatStore.getState().removeCombatParticipant(entityId);
+    const instanciaId = entidade?.invocationInstanceId ?? `ritual-instancia-${ritual.id}`;
+    for (const personagem of personagens) {
+      if (!personagem.instanciasInvocacao?.some(instancia => instancia.id === instanciaId)) continue;
+      useCharacterStore.getState().updateCharacter(personagem.id, {
+        instanciasInvocacao: personagem.instanciasInvocacao.filter(instancia => instancia.id !== instanciaId),
+      });
+    }
+    if (entidade) mapa.removeEntities([entityId]);
   }
 }
 
@@ -129,6 +141,7 @@ export function RituaisDezSombrasSection({ character }: Props) {
     const base = atualAtivo ?? novoRitual(alvo, tipo, profileId);
     let entidadeMapaId: string | undefined;
     let iniciativaMapaId: string | undefined;
+    let instanciaMapa: NonNullable<Character['instanciasInvocacao']>[number] | undefined;
 
     if (modo === 'mapa') {
       const mapa = useMapStore.getState();
@@ -144,9 +157,32 @@ export function RituaisDezSombrasSection({ character }: Props) {
       const deslocamento = (encontrosAbertos % 3) * 82;
       const nomeAlvo = alvo.apelido?.trim() || alvo.nome;
       const tamanho = 68;
+      const entidadeId = `ritual-alvo-${base.id}`;
+      const instanciaId = `ritual-instancia-${base.id}`;
+      const combate = useCombatStore.getState();
+      instanciaMapa = novaInstanciaInvocacao({
+        id: instanciaId,
+        modeloId: alvo.id,
+        donoCharacterId: atual.id,
+        ...(atual.profileId ? { donoProfileId: atual.profileId } : {}),
+        tokenId: entidadeId,
+        hpAtual: alvo.hpMaximo,
+        hpMaximoAtual: alvo.hpMaximo,
+        estado: alvo.hpMaximo > 0 ? 'ativa' : 'caida',
+        economiaAcoes: economiaAcoesInicial(alvo),
+        recursosAtuais: recursosInvocacaoIniciais(alvo),
+        ...(combate.inCombat && combate.combatId ? { combateId: combate.combatId } : {}),
+        ...(alvo.subcategoria === 'dez-sombras:mahoraga'
+          ? { estadoMahoraga: estadoInicialMahoraga(combate.inCombat ? combate.combatId ?? undefined : undefined) }
+          : {}),
+        ...(alvo.subcategoria === 'dez-sombras:tigre-funebre'
+          ? { estadoTigreFunebre: estadoInicialTigreFunebre(combate.inCombat ? combate.combatId ?? undefined : undefined) }
+          : {}),
+      });
       const centroX = largura / (2 * escala) - mapa.camera.x;
       const centroY = altura / (2 * escala) - mapa.camera.y;
       entidadeMapaId = mapa.addEntity({
+        id: entidadeId,
         shape: alvo.formaToken ?? 'ELLIPSE',
         x: centroX - tamanho / 2 + deslocamento,
         y: centroY - tamanho / 2,
@@ -160,8 +196,17 @@ export function RituaisDezSombrasSection({ character }: Props) {
         nameplate: true,
         ritualId: base.id,
         masterControlled: true,
+        ownerCharId: atual.id,
+        ...(atual.profileId ? { ownerProfileId: atual.profileId } : {}),
+        invocationId: alvo.id,
+        invocationInstanceId: instanciaId,
+        invocationDefense: alvo.defesa,
+        invocationMovementM: alvo.deslocamentoM,
+        invocationEffectiveSize: alvo.tamanho ?? alvo.porte,
+        invocationState: alvo.hpMaximo > 0 ? 'ativa' : 'caida',
         hp: alvo.hpMaximo,
         hpMax: alvo.hpMaximo,
+        ...(alvo.subcategoria === 'dez-sombras:nue' ? { invocationMovementMode: 'voo' as const } : {}),
         ...(alvo.imagemAssetId ? { assetId: alvo.imagemAssetId } : {}),
         ...(alvo.imagemFallbackAssetId ? { invocationFallbackAssetId: alvo.imagemFallbackAssetId } : {}),
       });
@@ -187,6 +232,9 @@ export function RituaisDezSombrasSection({ character }: Props) {
         ...(atual.rituaisDezSombras ?? []).filter(item => item.id !== base.id),
         emAndamento,
       ],
+      ...(instanciaMapa
+        ? { instanciasInvocacao: [...(atual.instanciasInvocacao ?? []).filter(item => item.id !== instanciaMapa!.id), instanciaMapa] }
+        : {}),
     });
 
     if (modo === 'mapa') {

@@ -1,0 +1,19 @@
+{
+  "id": "DEZ-SOMBRAS-HUD-COMBATE-2026-11-14",
+  "created_at": "2026-11-14",
+  "updated_at": "2026-11-15",
+  "owner": "Codex",
+  "branch": "feature/dez-sombras-hud-mapa",
+  "base_commit": "bb6f36a",
+  "state": "local_qa_passed",
+  "scope": ["HUD de combate no viewport real do mapa", "permissões Player/Mestre", "rituais e ações em campo", "layout desktop/tablet/mobile"],
+  "qa": {
+    "viewport_sizes": ["1440x900", "1024x768", "390x844"],
+    "dez_sombras_tests": "217 passed / 9 suites",
+    "build": "passed",
+    "typescript": "passed",
+    "focused_tests": "51 passed / 10 suites",
+    "campaign_writes": false
+  },
+  "publish": "not_pushed"
+}

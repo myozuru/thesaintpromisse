@@ -34,7 +34,7 @@ import { distanciaCircularMetros } from '@/lib/mapa/alcanceCircular';
 import { ALL_CONDITIONS, type ActiveCondition } from '@/types/conditions';
 import { GRAU_CONDICAO } from '@/lib/suporteNivel4';
 import { dissiparDominioSimples } from '@/lib/specialActivation';
-import { CERVO_AURA_CURA, CERVO_AURA_RAIO_M, CERVO_NEUTRALIZACAO_RAIO_M, condicaoInvocacaoCervo, nivelCondicaoCervo, mesmaEquipe, tokenEmRaioCircular, tokenVisivel } from './dezSombrasCervo';
+import { CERVO_AURA_CURA, CERVO_AURA_RAIO_M, CERVO_NEUTRALIZACAO_RAIO_M, condicaoInvocacaoCervo, nivelCondicaoCervo, tokenEmRaioCircular, tokenVisivel } from './dezSombrasCervo';
 import { InstanciaInvocacaoSchema, type CategoriaEconomiaInvocacao, type InstanciaInvocacao } from '@/lib/invocacoes/schema';
 import { alcanceCuraInvocacao, calcularEfeitoSuporte, capacidadeEnergiaReversaInvocacao } from './suporte';
 import { bonusPericiaCaracteristicas, reducaoDanoCaracteristicas } from './passivas';
@@ -181,6 +181,8 @@ function gravarInstancia(
   extras: Partial<Character> = {},
 ): void {
   const personagemAtual = useCharacterStore.getState().characters.find(item => item.id === personagem.id) ?? personagem;
+  const token = useMapStore.getState().entities[instancia.tokenId];
+  const instanciasRitualMestre = Boolean(token?.masterControlled && token.ritualId);
   const modeloCatalogo = personagemAtual.invocacoesConhecidas?.find(modelo => modelo.id === instancia.modeloId);
   const limiteCatalogo = modeloCatalogo?.subcategoria === 'dez-sombras:fuga-do-coelho'
     ? modeloCatalogo.hpMaximo ?? instancia.hpMaximoAtual
@@ -188,9 +190,11 @@ function gravarInstancia(
   const hpCatalogo = Math.max(0, Math.min(limiteCatalogo, instancia.hpAtual));
   useCharacterStore.getState().updateCharacter(personagemAtual.id, {
     instanciasInvocacao: instanciasComAtualizada(personagemAtual, instancia),
-    invocacoesConhecidas: (personagemAtual.invocacoesConhecidas ?? []).map(modelo => modelo.id === instancia.modeloId
-      ? { ...modelo, hpAtual: hpCatalogo }
-      : modelo),
+    ...(!instanciasRitualMestre ? {
+      invocacoesConhecidas: (personagemAtual.invocacoesConhecidas ?? []).map(modelo => modelo.id === instancia.modeloId
+        ? { ...modelo, hpAtual: hpCatalogo }
+        : modelo),
+    } : {}),
     ...extras,
   });
 }
@@ -536,6 +540,19 @@ export function tokensInvocados(donoCharacterId: string) {
   return Object.values(useMapStore.getState().entities).filter(e =>
     e.ownerCharId === donoCharacterId && !!e.invocationId && e.invocationSubordinate?.kind !== 'fuga-coelho',
   );
+}
+
+function estaNoTimeInimigo(personagem: Character, token?: Entity): boolean {
+  return Boolean(token?.masterControlled && token.ritualId) || personagem.category === 'INIMIGO';
+}
+
+function mesmaEquipeNoMapa(
+  personagemA: Character,
+  tokenA: Entity | undefined,
+  personagemB: Character,
+  tokenB?: Entity,
+): boolean {
+  return estaNoTimeInimigo(personagemA, tokenA) === estaNoTimeInimigo(personagemB, tokenB);
 }
 
 function coelhosDispersosAtivos(entities: Record<string, Entity>, parentTokenId: string, instanciaId: string): Entity[] {
@@ -1703,11 +1720,38 @@ export function limparInvocacoesDerrotadas(donoId: string): number {
 }
 
 /** Invocações não agem sozinhas; comandos no turno do dono serão implementados na Fase 4. */
-export function podeComandarInvocacao(donoId: string): boolean {
+export function podeComandarInvocacao(donoId: string, invocacaoId?: string): boolean {
   const combat = useCombatStore.getState();
   const dono = useCharacterStore.getState().characters.find(character => character.id === donoId);
-  return combat.inCombat && combat.initiativeOrder[combat.currentTurnIndex]?.charId === donoId &&
-    !!dono && !possuiTecnicaInataSuprimida(dono);
+  if (!dono || possuiTecnicaInataSuprimida(dono)) return false;
+  const mapa = useMapStore.getState();
+  const role = useRoleStore.getState().role;
+  // O relógio de combate é a fonte de turno durante combate; a iniciativa do mapa só vale fora dele.
+  const atorAtualId = combat.inCombat
+    ? combat.initiativeOrder[combat.currentTurnIndex]?.charId
+    : mapa.initiative.entries[mapa.initiative.turnIndex]?.entityId;
+  const tokenMestre = atorAtualId ? mapa.entities[atorAtualId] : undefined;
+  const sombrasSobControleMestre = Object.values(mapa.entities).filter(token =>
+    token.masterControlled && token.ownerCharId === donoId && token.invocationId &&
+    (!invocacaoId || token.invocationId === invocacaoId),
+  );
+  if (sombrasSobControleMestre.length) {
+    if (role !== 'MASTER') return false;
+    if (!combat.inCombat) return true;
+    return sombrasSobControleMestre.some(token => token.id === atorAtualId &&
+      (token.invocationState === undefined || token.invocationState === 'ativa') && (token.hp ?? 1) > 0);
+  }
+  if (!combat.inCombat) return true;
+  if (combat.initiativeOrder[combat.currentTurnIndex]?.charId === donoId) return true;
+  return Boolean(role === 'MASTER' && tokenMestre?.masterControlled && tokenMestre.ownerCharId === donoId && tokenMestre.invocationId &&
+    (!invocacaoId || tokenMestre.invocationId === invocacaoId));
+}
+
+function jogadorBloqueadoPorControleMestre(donoId: string, invocacaoId: string): boolean {
+  if (useRoleStore.getState().role !== 'PLAYER') return false;
+  return Object.values(useMapStore.getState().entities).some(token =>
+    token.masterControlled && token.ownerCharId === donoId && token.invocationId === invocacaoId,
+  );
 }
 
 function possuiTecnicaInataSuprimida(personagem: Character): boolean {
@@ -1727,8 +1771,8 @@ export function podeMoverInvocacao(donoId: string, tokenId: string): boolean {
   const inerciaTouro = modelo.subcategoria === 'dez-sombras:touro-perfurante' &&
     inerciaImparavelTouroAtiva(instancia.inerciaImparavelTouro, combat);
   if ((instancia.agarradoPorInvocacao?.length ?? 0) > 0 && !inerciaTouro) return false;
+  if (!podeComandarInvocacao(donoId, token?.invocationId)) return false;
   if (!combat.inCombat) return true;
-  if (!podeComandarInvocacao(donoId)) return false;
   if (isFreeformFor(dono, combat.freeformMode)) return true;
   return (instancia.economiaAcoes?.acaoMovimento?.atual ?? 0) > 0;
 }
@@ -1755,7 +1799,7 @@ export function comandarCargaAereaNue(
   if ((token.hp ?? 0) <= 0 || token.invocationState === 'caida' || token.invocationState === 'derrotada' || token.invocationState === 'dissipada') {
     return { ok: false, motivo: 'Um Nue caído ou inativo não pode carregar criaturas.' };
   }
-  if (useCombatStore.getState().inCombat && !turnoAtualDoPersonagem(donoId)) {
+  if (!podeComandarInvocacao(donoId, token.invocationId)) {
     return { ok: false, motivo: 'O Nue só pode iniciar ou encerrar o transporte no turno do Controlador.' };
   }
   if (mapa.pendingMove?.entityId === tokenId) {
@@ -1792,7 +1836,7 @@ export function comandarSoltarCargaNue(
     return { ok: false, motivo: 'A ação só pode ser comandada pelo Nue ativo deste Controlador.' };
   }
   if (!alvo || alvo.carriedBy !== tokenId) return { ok: false, motivo: 'Esta criatura não está sendo carregada pelo Nue.' };
-  if (useCombatStore.getState().inCombat && !turnoAtualDoPersonagem(donoId)) {
+  if (!podeComandarInvocacao(donoId, token.invocationId)) {
     return { ok: false, motivo: 'O Nue só pode soltar a carga no turno do Controlador.' };
   }
   if (mapa.pendingMove?.entityId === tokenId) {
@@ -1843,6 +1887,9 @@ export function confirmarMovimentoInvocacao(input: {
 
   const dono = useCharacterStore.getState().characters.find(character => character.id === token.ownerCharId);
   if (!dono) return { ok: false, motivo: 'Dono da invocação não encontrado.' };
+  if (!podeComandarInvocacao(dono.id, token.invocationId)) {
+    return { ok: false, motivo: 'Só é possível mover a invocação no turno do dono.' };
+  }
   const modelo = obterModeloDoToken(dono, token);
   if (!modelo || !Number.isFinite(modelo.deslocamentoM) || modelo.deslocamentoM <= 0) {
     return { ok: false, motivo: 'Deslocamento da invocação inválido.' };
@@ -1915,7 +1962,6 @@ export function confirmarMovimentoInvocacao(input: {
 
   let instancia = instanciaAtiva;
   if (combat.inCombat) {
-    if (!podeComandarInvocacao(dono.id)) return { ok: false, motivo: 'Só é possível mover a invocação no turno do dono.' };
     if (isFreeformFor(dono, combat.freeformMode)) return { ok: true, distanciaM };
     const gasto = gastarAcaoDaInstancia(instancia, 'acaoMovimento', 1, input.requestId);
     if (!gasto.ok) return gasto;
@@ -1953,6 +1999,9 @@ export function resetarEconomiaManualInvocacao(
   const token = useMapStore.getState().entities[tokenId];
   if (!dono || !token || token.ownerCharId !== donoId || !token.invocationId) {
     return { ok: false, motivo: 'Instância da invocação não encontrada para este dono.' };
+  }
+  if (!podeComandarInvocacao(donoId, token.invocationId)) {
+    return { ok: false, motivo: 'Só é possível atualizar a economia da invocação no turno do dono.' };
   }
   const modelo = obterModeloDoToken(dono, token);
   if (!modelo) return { ok: false, motivo: 'Modelo da invocação não encontrado.' };
@@ -2020,6 +2069,7 @@ export function causarDanoInvocacao(
   const dono = useCharacterStore.getState().characters.find(c => c.id === token.ownerCharId);
   if (!dono) return { ok: false, motivo: 'Dono da invocação não encontrado.' };
   const modelo = obterModeloDoToken(dono, token);
+  const alvoRitualControladoPeloMestre = Boolean(token.masterControlled && token.ritualId);
   if (!modelo) return { ok: false, motivo: 'Modelo da invocação não encontrado.' };
   const atual = obterInstanciaDoToken(dono, token, modelo);
   const ehMahoraga = modelo.subcategoria === 'dez-sombras:mahoraga';
@@ -2234,7 +2284,18 @@ export function causarDanoInvocacao(
     releaseGrapples(dono.id, instanciaAtualizada.id, modelo.subcategoria);
   }
   if (instanciaAtualizada.estado === 'derrotada') {
-    mapa.removeEntities([tokenId]);
+    if (alvoRitualControladoPeloMestre) {
+      mapa.updateEntity(tokenId, {
+        hp: instanciaAtualizada.hpAtual,
+        hpMax: instanciaAtualizada.hpMaximoAtual,
+        invocationState: 'derrotada',
+        invocationTempHp: instanciaAtualizada.pvTemporarios ?? 0,
+      });
+      mapa.removeInitiativeByEntity(tokenId);
+      useCombatStore.getState().removeCombatParticipant(tokenId);
+    } else {
+      mapa.removeEntities([tokenId]);
+    }
     const restante = instanciaAtualizada.contribuicaoTempo?.estado === 'consolacao'
       ? instanciaAtualizada.contribuicaoTempo.quantidadeRestante
       : 0;
@@ -2508,7 +2569,7 @@ export async function comandarRegeneracaoAdaptativaMahoraga(
   if (!Number.isInteger(entrada.peAdicional) || entrada.peAdicional < 0 || entrada.peAdicional > limitePEAdicional) {
     return { ok: false, motivo: `PE adicional deve ser um número inteiro entre 0 e ${limitePEAdicional} (modificador de Constituição + 8).` };
   }
-  if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
+  if (!podeComandarInvocacao(donoId, invocacaoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
   const duplicada = inicial.instancia.estadoMahoraga?.regeneracoesProcessadas.find(evento => evento.requestId === requestId);
   if (duplicada) return {
     ok: true,
@@ -2573,7 +2634,7 @@ export async function comandarRegeneracaoAdaptativaMahoraga(
   if (!atual.dono || atual.modelo?.subcategoria !== 'dez-sombras:mahoraga' || !atual.instancia || !atual.token || !atual.acao) {
     return { ok: false, motivo: 'Mahoraga saiu do campo durante a rolagem; nenhum recurso foi gasto.' };
   }
-  if (!podeComandarInvocacao(donoId) || atual.instancia.id !== inicial.instancia.id || atual.instancia.estado !== 'ativa') {
+  if (!podeComandarInvocacao(donoId, invocacaoId) || atual.instancia.id !== inicial.instancia.id || atual.instancia.estado !== 'ativa') {
     return { ok: false, motivo: 'O turno ou estado de Mahoraga mudou durante a rolagem; nenhum recurso foi gasto.' };
   }
   const estadoAtual = normalizarEstadoMahoraga(atual.instancia.estadoMahoraga, combateInicial.inCombat ? combateInicial.combatId ?? undefined : undefined);
@@ -2724,7 +2785,7 @@ export function comandarRecuperacaoFerimentoMahoraga(
 ): { ok: true; custoPE: number; categoriaAcao: CategoriaEconomiaInvocacao; duplicado?: boolean } | { ok: false; motivo: string } {
   const requestId = entrada.requestId.trim();
   if (!requestId || requestId.length > 120) return { ok: false, motivo: 'ID idempotente da recuperação é obrigatório e deve ter até 120 caracteres.' };
-  if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
+  if (!podeComandarInvocacao(donoId, invocacaoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
   const dono = useCharacterStore.getState().characters.find(character => character.id === donoId);
   const modelo = dono?.invocacoesConhecidas?.find(item => item.id === invocacaoId && item.donoCharacterId === donoId);
   const token = tokensInvocados(donoId).find(entity => entity.invocationId === invocacaoId && entity.invocationInstanceId);
@@ -2807,7 +2868,7 @@ export function comandarAtaqueAdaptativoMahoraga(
 ): { ok: true; tipoDano: DamageType } | { ok: false; motivo: string } {
   const requestId = entrada.requestId.trim();
   if (!requestId) return { ok: false, motivo: 'ID idempotente do Ataque Adaptativo é obrigatório.' };
-  if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
+  if (!podeComandarInvocacao(donoId, invocacaoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
   const dono = useCharacterStore.getState().characters.find(character => character.id === donoId);
   const modelo = dono?.invocacoesConhecidas?.find(item => item.id === invocacaoId && item.donoCharacterId === donoId);
   const token = tokensInvocados(donoId).find(entity => entity.invocationId === invocacaoId && entity.invocationInstanceId);
@@ -2954,10 +3015,23 @@ export function resolverAuraQuietudeInicioTurno(charId: string): number {
   const rodada = combate.round ?? 1;
   if (!combate.inCombat || !combateId || combate.initiativeOrder[turnoIndex]?.charId !== charId) return 0;
   const personagens = useCharacterStore.getState().characters;
-  const ator = personagens.find(character => character.id === charId);
-  if (!ator) return 0;
   const mapa = useMapStore.getState();
+  const tokenAtorRitual = mapa.entities[charId];
+  const ator = personagens.find(character => character.id === charId) ??
+    (tokenAtorRitual?.masterControlled && tokenAtorRitual.ritualId && tokenAtorRitual.ownerCharId
+      ? personagens.find(character => character.id === tokenAtorRitual.ownerCharId)
+      : undefined);
+  if (!ator) return 0;
   const alvos: Array<{ chave: string; token: Entity; dono: Character }> = [];
+  if (tokenAtorRitual?.masterControlled && tokenAtorRitual.ritualId && tokenAtorRitual.invocationId &&
+    tokenAtorRitual.invocationInstanceId && tokenVisivel(tokenAtorRitual, mapa.layerVisible) &&
+    (tokenAtorRitual.hp ?? 0) > 0 && (!tokenAtorRitual.invocationState || tokenAtorRitual.invocationState === 'ativa')) {
+    const modeloAtor = ator.invocacoesConhecidas?.find(item => item.id === tokenAtorRitual.invocationId);
+    const instanciaAtor = ator.instanciasInvocacao?.find(item => item.id === tokenAtorRitual.invocationInstanceId);
+    if (modeloAtor && instanciaAtor?.estado === 'ativa') {
+      alvos.push({ chave: `invocacao:${instanciaAtor.id}`, token: tokenAtorRitual, dono: ator });
+    }
+  }
   const tokensAtor = Object.values(mapa.entities).filter(token => token.characterId === charId && !token.invocationId && tokenVisivel(token, mapa.layerVisible));
   for (const tokenAtor of tokensAtor) alvos.push({ chave: `ficha:${charId}`, token: tokenAtor, dono: ator });
   for (const token of Object.values(mapa.entities)) {
@@ -2973,7 +3047,6 @@ export function resolverAuraQuietudeInicioTurno(charId: string): number {
 
   let totalCurado = 0;
   for (const donoCervo of personagens) {
-    if (!mesmaEquipe(donoCervo, ator)) continue;
     for (const modeloCervo of donoCervo.invocacoesConhecidas ?? []) {
       if (modeloCervo.subcategoria !== 'dez-sombras:cervo-circular') continue;
       const tokensCervo = tokensInvocados(donoCervo.id).filter(token => token.invocationId === modeloCervo.id &&
@@ -2982,6 +3055,7 @@ export function resolverAuraQuietudeInicioTurno(charId: string): number {
         const instanciaCervo = obterInstanciaDoToken(donoCervo, tokenCervo, modeloCervo);
         if (instanciaCervo.estado !== 'ativa') continue;
         for (const alvo of alvos) {
+          if (!mesmaEquipeNoMapa(donoCervo, tokenCervo, ator, alvo.token)) continue;
           if (!tokenEmRaioCircular(tokenCervo, alvo.token, mapa.gridConfig, CERVO_AURA_RAIO_M)) continue;
           const evento = `${combateId}:${rodada}:${turnoIndex}:${charId}:${alvo.chave}`;
           if (instanciaCervo.eventosAuraQuietudeProcessados?.includes(evento)) continue;
@@ -3015,7 +3089,10 @@ export function resolverAuraQuietudeInicioTurno(charId: string): number {
       }
     }
   }
-  if (totalCurado > 0) useLogStore.getState().addLog('combat', `🦌 Aura da Quietude: ${ator.name} e suas invocações recuperam ${totalCurado} PV no início do turno.`);
+  if (totalCurado > 0) {
+    const nomeAtor = tokenAtorRitual?.label || ator.name;
+    useLogStore.getState().addLog('combat', `🦌 Aura da Quietude: ${nomeAtor} e seus aliados recuperam ${totalCurado} PV no início do turno.`);
+  }
   return totalCurado;
 }
 
@@ -3061,7 +3138,7 @@ export function comandarReposicionamento(
 ): { ok: true } | { ok: false; motivo: string } {
   const dono = useCharacterStore.getState().characters.find(c => c.id === donoId);
   if (!dono) return { ok: false, motivo: 'Personagem inválido.' };
-  if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Só é possível comandar no turno do Controlador.' };
+  if (!podeComandarInvocacao(donoId, invocacaoId)) return { ok: false, motivo: 'Só é possível comandar no turno do Controlador.' };
   const token = tokensInvocados(donoId).find(e => e.invocationId === invocacaoId && (!instanciaId || e.invocationInstanceId === instanciaId));
   if (!token || (token.hp ?? 0) <= 0) return { ok: false, motivo: 'Invocação não está ativa.' };
   const modelo = obterModeloDoToken(dono, token);
@@ -3296,7 +3373,7 @@ export function comandarPredadorApiceTigre(
   if (!dono || modelo?.subcategoria !== TIGRE_FUNEBRE_SUBCATEGORIA || !acao || acao.statusAutomacao === 'manual') {
     return { ok: false, motivo: 'Predador Ápice não está disponível nesta ficha do Tigre.' };
   }
-  if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
+  if (!podeComandarInvocacao(donoId, invocacaoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
   const combate = useCombatStore.getState();
   if (!combate.inCombat || !combate.combatId) return { ok: false, motivo: 'Predador Ápice exige combate ativo para definir a próxima rodada.' };
   const token = tokensInvocados(donoId).find(entity => entity.invocationId === invocacaoId &&
@@ -3368,15 +3445,15 @@ export async function oferecerReflexosFelinosTigre(
   const tigre = dono?.instanciasInvocacao?.find(item => item.id === tokenTigre.invocationInstanceId);
   const atacante = resolverAtacanteReflexosFelinos(atacanteRef, map.entities, map.layerVisible);
   if (!dono || !modelo || modelo.subcategoria !== TIGRE_FUNEBRE_SUBCATEGORIA || !tigre || tigre.estado !== 'ativa' ||
-    !atacante || mesmaEquipe(dono, atacante.owner) || touchDistanceMeters(tokenTigre, atacante.token, map.gridConfig) > 3.05 ||
+    !atacante || mesmaEquipeNoMapa(dono, tokenTigre, atacante.owner, atacante.token) || touchDistanceMeters(tokenTigre, atacante.token, map.gridConfig) > 3.05 ||
     (tigre.economiaAcoes?.reacao?.atual ?? 0) < 1) return;
   const resposta = await requestReactionDecision({
     charId: dono.id,
     charName: dono.name,
     kind: 'tigre_reflexos_offer',
     message: `${modelo.apelido?.trim() || modelo.nome} pode gastar 1 das ${tigre.economiaAcoes?.reacao?.maximo ?? 2} Reações para Retalhar ${atacante.nome}.`,
-  });
-  if (resposta !== 1) return;
+  }, { forceMaster: tokenTigre.masterControlled });
+  if (resposta !== 1 || jogadorBloqueadoPorControleMestre(dono.id, modelo.id)) return;
 
   const estadoAtual = useMapStore.getState();
   const alvoAtual = estadoAtual.entities[tokenTigreId];
@@ -3386,7 +3463,7 @@ export async function oferecerReflexosFelinosTigre(
   const instanciaAtual = donoAtual?.instanciasInvocacao?.find(item => item.id === tokenTigre.invocationInstanceId);
   if (!alvoAtual?.invocationInstanceId || !tokenVisivel(alvoAtual, estadoAtual.layerVisible) || (alvoAtual.hp ?? 0) <= 0 ||
     !donoAtual || !modeloAtual || !instanciaAtual || instanciaAtual.estado !== 'ativa' ||
-    !atacanteAtual || mesmaEquipe(donoAtual, atacanteAtual.owner) ||
+    !atacanteAtual || mesmaEquipeNoMapa(donoAtual, alvoAtual, atacanteAtual.owner, atacanteAtual.token) ||
     touchDistanceMeters(alvoAtual, atacanteAtual.token, estadoAtual.gridConfig) > 3.05 ||
     (instanciaAtual.economiaAcoes?.reacao?.atual ?? 0) < 1) {
     useLogStore.getState().addLog('combat', `🐅 Reflexos Felinos de ${modelo.nome}: a janela de Retalhar terminou porque o alvo, o Tigre ou a Reação mudou.`);
@@ -3417,13 +3494,14 @@ async function oferecerSangramentoForteTigre(
   if (!dono || !modelo || modelo.subcategoria !== TIGRE_FUNEBRE_SUBCATEGORIA || !tigre || tigre.estado !== 'ativa') return;
   const cd = calcularCDInvocacao(dono, modelo, 'constituicao');
   if (cd === null || (dono.peCurrent ?? 0) < 6) return;
+  const tokenTigre = useMapStore.getState().entities[tigre.tokenId];
   const resposta = await requestReactionDecision({
     charId: dono.id,
     charName: dono.name,
     kind: 'tigre_sangramento_offer',
     message: `Retalhar foi crítico. Você pode gastar 6 PE para forçar Fortitude contra CD ${cd} e aplicar Sangramento Forte (4d10). A Enciclopédia não fixa CD própria; aplica-se a CD padrão das ações de invocação.`,
-  });
-  if (resposta !== 1) return;
+  }, { forceMaster: Boolean(tokenTigre?.masterControlled) });
+  if (resposta !== 1 || jogadorBloqueadoPorControleMestre(donoId, modeloId)) return;
 
   const donoAtual = useCharacterStore.getState().characters.find(character => character.id === donoId);
   const modeloAtual = donoAtual?.invocacoesConhecidas?.find(item => item.id === modeloId);
@@ -3519,7 +3597,7 @@ export function comandarInerciaImparavelTouro(
   if (!dono || modelo?.subcategoria !== 'dez-sombras:touro-perfurante' || !acao || acao.statusAutomacao === 'manual') {
     return { ok: false, motivo: 'Inércia Imparável não está disponível nesta ficha do Touro.' };
   }
-  if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
+  if (!podeComandarInvocacao(donoId, invocacaoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
   const combate = useCombatStore.getState();
   if (!combate.inCombat || !combate.combatId) return { ok: false, motivo: 'Inércia Imparável exige um combate ativo.' };
   const token = tokensInvocados(donoId).find(entity => entity.invocationId === invocacaoId &&
@@ -3543,7 +3621,7 @@ export function comandarInerciaImparavelTouro(
   if (!gasto.ok) return gasto;
   const combateAtual = useCombatStore.getState();
   if (combateAtual.combatId !== combate.combatId || combateAtual.round !== combate.round ||
-    combateAtual.currentTurnIndex !== combate.currentTurnIndex || !podeComandarInvocacao(donoId)) {
+    combateAtual.currentTurnIndex !== combate.currentTurnIndex || !podeComandarInvocacao(donoId, invocacaoId)) {
     return { ok: false, motivo: 'O turno mudou durante a ativação; a ação não foi registrada.' };
   }
   const atualizada = InstanciaInvocacaoSchema.parse({
@@ -3568,7 +3646,7 @@ export function comandarHabilidadeInvocacao(
   const modelo = dono?.invocacoesConhecidas?.find(item => item.id === invocacaoId && item.donoCharacterId === donoId);
   const acao = modelo?.acoes.find(item => item.id === acaoId);
   if (!dono || !modelo || !acao) return { ok: false, motivo: 'Ação ou invocação não encontrada.' };
-  if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
+  if (!podeComandarInvocacao(donoId, invocacaoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
   if (acao.tipo !== 'habilidade' || acao.statusAutomacao === 'manual' ||
     acao.efeitoEspecial?.tipo !== 'vantagem_pericia_controlador' ||
     acao.efeitoEspecial.contexto !== 'rastreamento') {
@@ -3687,7 +3765,7 @@ export function comandarToqueDaVidaCervo(
   if (!atual || atual.acao.efeitoEspecial?.tipo !== 'toque_da_vida_cervo') {
     return { ok: false, motivo: 'O Cervo Circular ou Toque da Vida não está disponível.' };
   }
-  if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
+  if (!podeComandarInvocacao(donoId, invocacaoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
   const mapa = useMapStore.getState();
   const characterStore = useCharacterStore.getState();
   let personagemAlvo: Character | undefined;
@@ -3722,7 +3800,7 @@ export function comandarToqueDaVidaCervo(
     conditionName = condition?.name ?? '';
   }
   if (!tokenAlvo || !personagemAlvo) return { ok: false, motivo: 'O aliado precisa ter um token visível e adjacente ao Cervo.' };
-  if (!mesmaEquipe(atual.dono, personagemAlvo)) return { ok: false, motivo: 'Toque da Vida só pode atingir aliados.' };
+  if (!mesmaEquipeNoMapa(atual.dono, atual.token, personagemAlvo, tokenAlvo)) return { ok: false, motivo: 'Toque da Vida só pode atingir aliados.' };
   if (!isWithinTouch(atual.token, tokenAlvo, mapa.gridConfig)) return { ok: false, motivo: 'Toque da Vida exige um aliado adjacente.' };
   if (!conditionId) return { ok: false, motivo: 'A condição selecionada não existe mais no alvo.' };
   const nivel = nivelCondicaoCervo(conditionId);
@@ -3783,7 +3861,7 @@ export function comandarNeutralizacaoCervo(
   if (!atual || atual.acao.efeitoEspecial?.tipo !== 'neutralizacao_cervo') {
     return { ok: false, motivo: 'O Cervo Circular ou Neutralização não está disponível.' };
   }
-  if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
+  if (!podeComandarInvocacao(donoId, invocacaoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
   if (atual.acao.statusAutomacao === 'manual' || String(atual.acao.resistenciaAlvo ?? '').toLocaleLowerCase('pt-BR') !== 'vontade') {
     return { ok: false, motivo: 'Neutralização não tem um TR de Vontade executável configurado.' };
   }
@@ -3883,7 +3961,7 @@ export function comandarNeutralizacaoCervo(
         kind: 'save',
         testName: 'Vontade',
         dc: cd,
-        hideDcFromPlayer: atual.dono.category === 'INIMIGO',
+        hideDcFromPlayer: estaNoTimeInimigo(atual.dono, atual.token),
         note: `${atual.modelo.nome} usa Neutralização — role TR de Vontade; na falha, sua técnica inata fica suprimida até o início do próximo turno.`,
         originId: donoId,
         sourceTag: `cervo-neutralizacao:${atual.instancia.id}:${requestId}:${alvo.id}`,
@@ -3939,7 +4017,7 @@ export async function comandarMassaEsmagadoraElefante(
       (token.hp ?? 0) <= 0 || (token.invocationState && token.invocationState !== 'ativa')) {
       return { ok: false as const, motivo: 'O Elefante precisa estar ativo e visível no mapa.' };
     }
-    if (!turnoAtualDoPersonagem(donoId)) return { ok: false as const, motivo: 'Fora do turno do Controlador.' };
+    if (!podeComandarInvocacao(donoId, invocacaoId)) return { ok: false as const, motivo: 'Fora do turno do Controlador.' };
     const instancia = obterInstanciaDoToken(dono, token, modelo);
     if (instancia.estado !== 'ativa') return { ok: false as const, motivo: 'Um Elefante caído ou inativo não pode usar Massa Esmagadora.' };
     if (instancia.eventosAcoesProcessados?.includes(requestId)) return { ok: false as const, motivo: 'Este comando já foi processado.' };
@@ -4169,7 +4247,7 @@ export function comandarLevantarInvocacao(
     return { ok: false, motivo: 'A invocação não está Caída ou ficou inativa.' };
   }
   if ((instancia.agarradoPorInvocacao?.length ?? 0) > 0) return { ok: false, motivo: 'Uma invocação Agarrada não pode se levantar.' };
-  if (!turnoAtualDoPersonagem(donoId)) return { ok: false, motivo: 'Levantar só pode ser comandado no turno do Controlador.' };
+  if (!podeComandarInvocacao(donoId, token.invocationId)) return { ok: false, motivo: 'Levantar só pode ser comandado no turno do Controlador.' };
   if (!requestId.trim()) return { ok: false, motivo: 'ID de comando inválido.' };
   if (instancia.eventosAcoesProcessados?.includes(requestId)) return { ok: false, motivo: 'Este comando já foi processado.' };
 
@@ -4213,7 +4291,7 @@ export function comandarFugaCoelhos(
   if (token.hp !== undefined && token.hp <= 0 || token.hidden || mapa.layerVisible[token.layer ?? 'tokens'] === false) {
     return { ok: false, motivo: 'A Horda precisa estar ativa e visível no mapa.' };
   }
-  if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
+  if (!podeComandarInvocacao(donoId, invocacaoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
   const targetCharacterId = alvo.invocationId ? alvo.ownerCharId : alvo.characterId;
   const fichaAlvo = targetCharacterId ? characters.find(character => character.id === targetCharacterId) : undefined;
   if (!fichaAlvo || alvo.id === token.id || (alvo.invocationId && ((alvo.hp ?? 0) <= 0 || alvo.invocationState === 'caida'))) {
@@ -4238,7 +4316,7 @@ export function comandarFugaCoelhos(
   const requestId = opcoes?.requestId ?? novoIdInvocacao('fuga-coelhos');
   const gasto = gastarAcaoDaInstancia(instancia, categoria, 1, requestId);
   if (!gasto.ok) return gasto;
-  const lado = (fichaAlvo.category === 'INIMIGO') === (dono.category === 'INIMIGO') ? 'aliado' : 'inimigo';
+  const lado = mesmaEquipeNoMapa(dono, token, fichaAlvo, alvo) ? 'aliado' : 'inimigo';
   const combate = useCombatStore.getState();
   const atualizada = InstanciaInvocacaoSchema.parse({
     ...registrarRecargaDaAcao({ ...gasto.instancia, recursosAtuais: debito.recursosRestantes }, acao),
@@ -4336,7 +4414,7 @@ export function comandarDispersaoTaticaFugaCoelhos(
       token.invocationState === 'caida' || instancia.estado !== 'ativa') {
       return { ok: false, motivo: 'A Horda precisa estar ativa e visível para se dispersar.' };
     }
-    if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
+    if (!podeComandarInvocacao(donoId, invocacaoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
     if (acao.tipo !== 'habilidade' || acao.categoriaAcao !== 'acao_bonus' || acao.statusAutomacao === 'manual') {
       return { ok: false, motivo: 'Dispersão Tática precisa estar configurada como Ação Bônus resolvível.' };
     }
@@ -4509,7 +4587,7 @@ export async function comandarAtaqueCoelhoDisperso(
   if ((coelho.hp ?? 0) <= 0 || coelho.hidden || mapa.layerVisible[coelho.layer ?? 'tokens'] === false) {
     return { ok: false, motivo: 'Este coelho não está ativo e visível no mapa.' };
   }
-  if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
+  if (!podeComandarInvocacao(donoId, horda.invocationId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
 
   const combate = useCombatStore.getState();
   const rodada = combate.round ?? 0;
@@ -4547,7 +4625,7 @@ export async function comandarAtaqueCoelhoDisperso(
     }
     const donoAlvoId = alvoToken.invocationId ? alvoToken.ownerCharId : alvoToken.characterId;
     alvoFicha = donoAlvoId ? personagens.find(character => character.id === donoAlvoId) : undefined;
-    if (!alvoFicha || alvoFicha.id === donoId || (alvoFicha.category === 'INIMIGO') === (dono.category === 'INIMIGO')) {
+    if (!alvoFicha || mesmaEquipeNoMapa(dono, horda, alvoFicha, alvoToken)) {
       return { ok: false as const, motivo: 'O coelho só pode atacar uma criatura hostil ligada a uma ficha.' };
     }
     if (alvoToken.invocationId) {
@@ -4597,7 +4675,7 @@ export async function comandarAtaqueCoelhoDisperso(
     const instanciaAtual = donoAtual?.instanciasInvocacao?.find(item => item.id === coelho?.invocationInstanceId);
     if (!coelho || !hordaAtual || !instanciaAtual || instanciaAtual.estado !== 'ativa' ||
       hordaAtual.invocationInstanceId !== instanciaAtual.id || (coelho.hp ?? 0) <= 0 ||
-      coelho.hidden || mapa.layerVisible[coelho.layer ?? 'tokens'] === false || !podeComandarInvocacao(donoId)) {
+      coelho.hidden || mapa.layerVisible[coelho.layer ?? 'tokens'] === false || !podeComandarInvocacao(donoId, hordaAtual.invocationId)) {
       return { ok: false, motivo: 'A Horda ou o coelho mudou durante a rolagem; nenhum dano foi aplicado.' };
     }
     alvoResolvido = resolverAlvo();
@@ -4673,10 +4751,9 @@ export function alvoFlanqueadoPelaMatilha(
 ): boolean {
   if (modelo.subcategoria !== 'dez-sombras:cao-branco' && modelo.subcategoria !== 'dez-sombras:cao-preto') return false;
   const dono = characters.find(character => character.id === modelo.donoCharacterId);
-  const donoEstaNoTimeInimigo = dono?.category === 'INIMIGO';
   const tokenDoAlvoId = alvo.invocationId ? alvo.ownerCharId : alvo.characterId;
   const personagemAlvo = tokenDoAlvoId ? characters.find(character => character.id === tokenDoAlvoId) : undefined;
-  if (!dono || !personagemAlvo || (personagemAlvo.category === 'INIMIGO') === donoEstaNoTimeInimigo ||
+  if (!dono || !personagemAlvo || mesmaEquipeNoMapa(dono, servo, personagemAlvo, alvo) ||
     !isWithinTouch(servo, alvo, grid)) return false;
 
   return Object.values(entities).some(aliado => {
@@ -4685,7 +4762,7 @@ export function alvoFlanqueadoPelaMatilha(
     if (aliado.invocationId && ((aliado.hp ?? 0) <= 0 || (aliado.invocationState && aliado.invocationState !== 'ativa'))) return false;
     const aliadoCharacterId = aliado.invocationId ? aliado.ownerCharId : aliado.characterId;
     const personagemAliado = aliadoCharacterId ? characters.find(character => character.id === aliadoCharacterId) : undefined;
-    if (!personagemAliado || ((personagemAliado.category === 'INIMIGO') !== donoEstaNoTimeInimigo)) return false;
+    if (!personagemAliado || !mesmaEquipeNoMapa(dono, servo, personagemAliado, aliado)) return false;
     return isWithinTouch(aliado, alvo, grid);
   });
 }
@@ -4702,6 +4779,8 @@ function resolverAlvoAgarrar(
 ): { ok: true; alvo: AlvoAgarrarInvocacao } | { ok: false; motivo: string } {
   const mapa = useMapStore.getState();
   const personagens = useCharacterStore.getState().characters;
+  const donoFonte = personagens.find(personagem => personagem.id === donoId);
+  if (!donoFonte) return { ok: false, motivo: 'O Controlador da invocação não está disponível.' };
   let alvo: AlvoAgarrarInvocacao | undefined;
   if (alvoId.startsWith('invoc:')) {
     const token = mapa.entities[alvoId.slice('invoc:'.length)];
@@ -4713,18 +4792,24 @@ function resolverAlvoAgarrar(
     const dono = personagens.find(personagem => personagem.id === token.ownerCharId);
     const modelo = dono?.invocacoesConhecidas?.find(invocacao => invocacao.id === token.invocationId);
     if (!dono || !modelo) return { ok: false, motivo: 'A ficha da invocação-alvo não está mais disponível.' };
+    if (mesmaEquipeNoMapa(donoFonte, servo, dono, token)) {
+      return { ok: false, motivo: 'A Língua Sombria só pode agarrar uma criatura hostil.' };
+    }
     const instancia = obterInstanciaDoToken(dono, token, modelo);
     if (instancia.estado !== 'ativa') return { ok: false, motivo: 'Uma invocação caída não pode ser agarrada.' };
     if ((instancia.agarradoPorInvocacao?.length ?? 0) > 0) return { ok: false, motivo: 'A invocação-alvo já está Agarrada.' };
     alvo = { tipo: 'invocacao', dono, modelo, instancia, token, nome: modelo.apelido?.trim() || modelo.nome };
   } else {
     const personagem = personagens.find(item => item.id === alvoId);
-    if (!personagem || personagem.id === donoId || (personagem.hpCurrent ?? 1) <= 0) {
+    if (!personagem || (personagem.hpCurrent ?? 1) <= 0) {
       return { ok: false, motivo: 'O alvo da língua não está mais ativo.' };
     }
     const token = resolverTokenDaFicha(personagem, mapa.entities, mapa.layerVisible);
     if (!token || token.hidden || mapa.layerVisible[token.layer ?? 'tokens'] === false) {
       return { ok: false, motivo: 'O alvo da língua não está mais visível no mapa.' };
+    }
+    if (mesmaEquipeNoMapa(donoFonte, servo, personagem, token)) {
+      return { ok: false, motivo: 'A Língua Sombria só pode agarrar uma criatura hostil.' };
     }
     if ((personagem.activeConditions ?? []).some(condicao => condicao.conditionId === 'agarrado')) {
       return { ok: false, motivo: 'O alvo já está Agarrado.' };
@@ -4774,14 +4859,15 @@ function resolverAlvoPuxarGama(dono: Character, alvoId: string, servo: Entity):
     if (!personagem || !modelo) return { ok: false, motivo: 'A ficha da invocação aliada não está mais disponível.' };
     const instancia = obterInstanciaDoToken(personagem, token, modelo);
     if (instancia.estado !== 'ativa') return { ok: false, motivo: 'Uma invocação caída não pode ser puxada.' };
-    if ((personagem.category === 'INIMIGO') !== (dono.category === 'INIMIGO')) {
+    if (!mesmaEquipeNoMapa(dono, servo, personagem, token)) {
       return { ok: false, motivo: 'Língua Sombria só pode puxar um aliado.' };
     }
     alvo = { personagem, modelo, instancia, token, nome: modelo.apelido?.trim() || modelo.nome };
   } else {
     const personagem = personagens.find(item => item.id === alvoId);
     if (!personagem || (personagem.hpCurrent ?? 1) <= 0) return { ok: false, motivo: 'O aliado selecionado não está ativo.' };
-    if ((personagem.category === 'INIMIGO') !== (dono.category === 'INIMIGO')) {
+    const tokenPersonagem = resolverTokenDaFicha(personagem, mapa.entities, mapa.layerVisible);
+    if (!mesmaEquipeNoMapa(dono, servo, personagem, tokenPersonagem)) {
       return { ok: false, motivo: 'Língua Sombria só pode puxar um aliado.' };
     }
     const token = resolverTokenDaFicha(personagem, mapa.entities, mapa.layerVisible);
@@ -4807,6 +4893,9 @@ export function comandarPuxarAliadoGama(
   alvoId: string,
   opcoes?: { instanciaId?: string; requestId?: string },
 ): { ok: true; nomeAlvo: string; destino: { x: number; y: number } } | { ok: false; motivo: string } {
+  if (jogadorBloqueadoPorControleMestre(donoId, invocacaoId)) {
+    return { ok: false, motivo: 'Esta sombra está sob controle do Mestre.' };
+  }
   const combate = useCombatStore.getState();
   if (!combate.inCombat || !combate.combatId || !Number.isInteger(combate.round) || combate.round < 1 ||
     !combate.initiativeOrder[combate.currentTurnIndex]) {
@@ -4921,7 +5010,7 @@ export async function comandarAgarrarGama(
     acao?.efeitoEspecial?.tipo !== 'agarrar_gama_apos_acerto') {
     return { ok: false, motivo: 'Esta opção só existe após um acerto da Protusão de Língua do Gama.' };
   }
-  if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'A tentativa de Agarrar só pode ser resolvida no turno do Controlador.' };
+  if (!podeComandarInvocacao(donoId, invocacaoId)) return { ok: false, motivo: 'A tentativa de Agarrar só pode ser resolvida no turno do Controlador.' };
 
   const mapa = useMapStore.getState();
   const servo = tokensInvocados(donoId).find(token => token.invocationId === invocacaoId &&
@@ -4935,7 +5024,7 @@ export async function comandarAgarrarGama(
   const combate = useCombatStore.getState();
   if (instancia.estado !== 'ativa' || !pendencia || !combate.inCombat ||
     pendencia.combateId !== combate.combatId || pendencia.rodada !== combate.round ||
-    pendencia.turnoIndex !== combate.currentTurnIndex || combate.initiativeOrder[combate.currentTurnIndex]?.charId !== donoId) {
+    pendencia.turnoIndex !== combate.currentTurnIndex || !podeComandarInvocacao(donoId, invocacaoId)) {
     return { ok: false, motivo: 'O acerto não tem mais uma janela de Agarrar válida neste turno.' };
   }
 
@@ -4982,7 +5071,7 @@ export async function comandarAgarrarGama(
     const combateAtual = useCombatStore.getState();
     if (!donoAtual || !modeloAtual || !servoAtual || !instanciaAtual ||
       instanciaAtual.agarrarLinguaPendente?.eventoId !== pendencia.eventoId ||
-      !podeComandarInvocacao(donoId) || combateAtual.combatId !== pendencia.combateId ||
+      !podeComandarInvocacao(donoId, invocacaoId) || combateAtual.combatId !== pendencia.combateId ||
       combateAtual.round !== pendencia.rodada || combateAtual.currentTurnIndex !== pendencia.turnoIndex) {
       return { ok: false, motivo: 'O turno, Gama ou a janela de Agarrar mudou durante a rolagem. Nenhum PE foi gasto.' };
     }
@@ -5078,7 +5167,7 @@ export async function comandarAgarrarOrochi(
     acao?.efeitoEspecial?.tipo !== 'agarrar_orochi_apos_acerto') {
     return { ok: false, motivo: 'Esta opção só existe após um acerto do Bote Sombrio de Orochi.' };
   }
-  if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'A tentativa de Agarrar só pode ser resolvida no turno do Controlador.' };
+  if (!podeComandarInvocacao(donoId, invocacaoId)) return { ok: false, motivo: 'A tentativa de Agarrar só pode ser resolvida no turno do Controlador.' };
 
   const mapa = useMapStore.getState();
   const servo = tokensInvocados(donoId).find(token => token.invocationId === invocacaoId &&
@@ -5093,7 +5182,7 @@ export async function comandarAgarrarOrochi(
   const combate = useCombatStore.getState();
   if (instancia.estado !== 'ativa' || !pendencia || !combate.inCombat || !combate.combatId ||
     pendencia.combateId !== combate.combatId || pendencia.rodada !== combate.round ||
-    pendencia.turnoIndex !== combate.currentTurnIndex || combate.initiativeOrder[combate.currentTurnIndex]?.charId !== donoId) {
+    pendencia.turnoIndex !== combate.currentTurnIndex || !podeComandarInvocacao(donoId, invocacaoId)) {
     return { ok: false, motivo: 'O acerto não tem mais uma janela de Agarrar válida neste turno.' };
   }
 
@@ -5137,7 +5226,7 @@ export async function comandarAgarrarOrochi(
     const combateAtual = useCombatStore.getState();
     if (!donoAtual || !modeloAtual || !servoAtual || !instanciaAtual ||
       instanciaAtual.agarrarOrochiPendente?.eventoId !== pendencia.eventoId ||
-      !podeComandarInvocacao(donoId) || combateAtual.combatId !== pendencia.combateId ||
+      !podeComandarInvocacao(donoId, invocacaoId) || combateAtual.combatId !== pendencia.combateId ||
       combateAtual.round !== pendencia.rodada || combateAtual.currentTurnIndex !== pendencia.turnoIndex) {
       return { ok: false, motivo: 'O turno, Orochi ou a janela de Agarrar mudou durante a rolagem. Nenhum PE foi gasto.' };
     }
@@ -5366,7 +5455,7 @@ export async function comandarSegurarSapo(
     (opcoes?.membrosSapoVivos ?? 0) < 1 || (opcoes?.membrosSapoVivos ?? 0) > 3)) {
     return { ok: false, motivo: 'Informe explicitamente de 1 a 3 sapos vivos; a contagem não pode ser inferida pelos PV.' };
   }
-  if (useCombatStore.getState().inCombat && !podeComandarInvocacao(donoId)) {
+  if (!podeComandarInvocacao(donoId, modelo.id)) {
     return { ok: false, motivo: 'Segurar só pode ser comandado no turno do dono.' };
   }
   const acao = modelo.acoes.find(item => item.id === 'segurar');
@@ -5744,7 +5833,10 @@ async function executarAtaqueInvocacao(
 ): Promise<ResultadoAtaqueUnicoInvocacao | ResultadoAtaqueMultiploInvocacao | { ok: false; motivo: string }> {
   let dono = useCharacterStore.getState().characters.find(c => c.id === donoId);
   if (!dono) return { ok: false, motivo: 'Personagem inválido.' };
-  if (modoExecucao !== 'reacao' && modoExecucao !== 'tigre_reacao' && !podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
+  if ((modoExecucao === 'tigre_reacao' || modoExecucao === 'reacao') && jogadorBloqueadoPorControleMestre(donoId, invocacaoId)) {
+    return { ok: false, motivo: 'Esta sombra está sob controle do Mestre.' };
+  }
+  if (modoExecucao !== 'reacao' && modoExecucao !== 'tigre_reacao' && !podeComandarInvocacao(donoId, invocacaoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
   let inv = dono.invocacoesConhecidas?.find(i => i.id === invocacaoId && i.donoCharacterId === donoId);
   let acaoOriginal = inv?.acoes.find(a => a.id === acaoId);
   if (!inv || !acaoOriginal) return { ok: false, motivo: 'Ação ou invocação não encontrada.' };
@@ -5792,7 +5884,7 @@ async function executarAtaqueInvocacao(
     // Releia a mesa depois da colocação: alvo, posição, filtros e custo podem
     // ter mudado enquanto o jogador escolhia o ponto no mapa.
     dono = useCharacterStore.getState().characters.find(character => character.id === donoId);
-    if (!dono || !podeComandarInvocacao(donoId)) return { ok: false, motivo: 'O turno do Controlador terminou durante a seleção da área.' };
+    if (!dono || !podeComandarInvocacao(donoId, invocacaoId)) return { ok: false, motivo: 'O turno do Controlador terminou durante a seleção da área.' };
     inv = dono.invocacoesConhecidas?.find(item => item.id === invocacaoId && item.donoCharacterId === donoId);
     acaoOriginal = inv?.acoes.find(item => item.id === acaoId);
     if (!inv || !acaoOriginal) return { ok: false, motivo: 'Ação ou invocação removida durante a seleção da área.' };
@@ -6511,7 +6603,7 @@ async function executarAtaqueInvocacao(
         const tokenAtual = useMapStore.getState().entities[alvo.token.id];
         const turnoAindaValido = combateAtual.inCombat && combateAtual.combatId === estadoTurnoAtaque.combatId &&
           combateAtual.round === rodadaAtaque && combateAtual.currentTurnIndex === estadoTurnoAtaque.currentTurnIndex &&
-          combateAtual.initiativeOrder[combateAtual.currentTurnIndex]?.charId === donoId;
+          podeComandarInvocacao(donoId, invocacaoId);
         const alvoAindaAtivo = alvo.tipo === 'personagem'
           ? (useCharacterStore.getState().characters.find(character => character.id === alvo.personagem.id)?.hpCurrent ?? 1) > 0
           : Boolean(tokenAtual && (tokenAtual.hp ?? 0) > 0 && (!tokenAtual.invocationState || tokenAtual.invocationState === 'ativa'));
@@ -6542,7 +6634,7 @@ async function executarAtaqueInvocacao(
         const tokenAtual = useMapStore.getState().entities[alvo.token.id];
         const turnoAindaValido = combateAtual.inCombat && combateAtual.combatId === estadoTurnoAtaque.combatId &&
           combateAtual.round === rodadaAtaque && combateAtual.currentTurnIndex === estadoTurnoAtaque.currentTurnIndex &&
-          combateAtual.initiativeOrder[combateAtual.currentTurnIndex]?.charId === donoId;
+          podeComandarInvocacao(donoId, invocacaoId);
         const alvoAindaAtivo = alvo.tipo === 'personagem'
           ? (useCharacterStore.getState().characters.find(character => character.id === alvo.personagem.id)?.hpCurrent ?? 1) > 0
           : Boolean(tokenAtual && (tokenAtual.hp ?? 0) > 0 && (!tokenAtual.invocationState || tokenAtual.invocationState === 'ativa'));
@@ -6603,7 +6695,7 @@ export async function comandarSuporte(
 ): Promise<{ ok: true; efeito: string; valor: number; alvos: number; curaReal?: boolean; formula?: string } | { ok: false; motivo: string }> {
   const dono = useCharacterStore.getState().characters.find(character => character.id === donoId);
   if (!dono) return { ok: false, motivo: 'Personagem inválido.' };
-  if (!podeComandarInvocacao(donoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
+  if (!podeComandarInvocacao(donoId, invocacaoId)) return { ok: false, motivo: 'Fora do turno do Controlador.' };
   const modelo = dono.invocacoesConhecidas?.find(item => item.id === invocacaoId && item.donoCharacterId === donoId);
   const acaoOriginal = modelo?.acoes.find(item => item.id === acaoId);
   if (!modelo || !acaoOriginal) {
@@ -6661,7 +6753,8 @@ export async function comandarSuporte(
   if (acao.somenteProprio && alvos.some(alvo => alvo.tipo !== 'invocacao' || alvo.token.id !== servo.id)) {
     return { ok: false, motivo: 'Esta habilidade só pode atingir a própria invocação.' };
   }
-  if (!acao.permiteInimigos && alvos.some(alvo => alvo.personagem.category === 'INIMIGO' && alvo.personagem.id !== donoId)) {
+  if (!acao.permiteInimigos && alvos.some(alvo => !mesmaEquipeNoMapa(dono, servo, alvo.personagem, alvo.token) &&
+    !(alvo.personagem.id === donoId && !servo.masterControlled))) {
     return { ok: false, motivo: 'Ações de suporte só podem escolher o próprio Controlador ou aliados.' };
   }
   if (alvos.some(alvo => alvo.tipo === 'invocacao' &&
@@ -6840,7 +6933,7 @@ export async function rolarPericiaInvocacao(
   if (!Object.hasOwn(SISTEMA_PERICIAS, pericia)) return { ok: false, motivo: 'Perícia não reconhecida.' };
   const token = tokensInvocados(donoId).find(item => item.invocationId === invocacaoId && (!opcoes?.instanciaId || item.invocationInstanceId === opcoes.instanciaId) && (item.hp ?? 0) > 0);
   if (!token) return { ok: false, motivo: 'A invocação precisa estar ativa no mapa para fazer o teste.' };
-  if (useCombatStore.getState().inCombat && !podeComandarInvocacao(donoId)) return { ok: false, motivo: 'O teste só pode ser rolado no turno do dono durante o combate.' };
+  if (useCombatStore.getState().inCombat && !podeComandarInvocacao(donoId, invocacaoId)) return { ok: false, motivo: 'O teste só pode ser rolado no turno do dono durante o combate.' };
   const bonus = calcularBonusPericiaInvocacao(dono, modelo, pericia);
   if (!bonus) return { ok: false, motivo: 'Defina Inteligência ou Sabedoria como atributo-base das perícias na ficha.' };
   if (!invocacaoTreinadaNaPericia(modelo, pericia) && bonusPericiaCaracteristicas(modelo, pericia) <= 0) {

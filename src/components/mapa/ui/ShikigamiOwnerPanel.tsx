@@ -1,6 +1,6 @@
 import { Crosshair, Ruler, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { causarDanoInvocacao, comandarAgarrarGama, comandarAgarrarOrochi, comandarAtaque, comandarAtaqueAdaptativoMahoraga, comandarAtaqueCoelhoDisperso, comandarCargaAereaNue, comandarDispersaoTaticaFugaCoelhos, comandarFugaCoelhos, comandarHabilidadeInvocacao, comandarInerciaImparavelTouro, comandarLevantarInvocacao, comandarMassaEsmagadoraElefante, comandarNeutralizacaoCervo, comandarPuxarAliadoGama, comandarRecuperacaoFerimentoMahoraga, comandarRegeneracaoAdaptativaMahoraga, comandarSoltarCargaNue, comandarSuporte, comandarToqueDaVidaCervo, configurarVontadeDivinaMahoraga, encerrarCondicaoMahoraga, encerrarFugaCoelhos, registrarCondicaoMahoraga, registrarFenomenoRodaMahoraga, registrarFerimentoMahoraga, removerFragilizadoFugaCoelhos, resetarEconomiaManualInvocacao } from '@/lib/controlador/mapa';
+import { causarDanoInvocacao, comandarAgarrarGama, comandarAgarrarOrochi, comandarAtaque, comandarAtaqueAdaptativoMahoraga, comandarAtaqueCoelhoDisperso, comandarCargaAereaNue, comandarDispersaoTaticaFugaCoelhos, comandarFugaCoelhos, comandarHabilidadeInvocacao, comandarInerciaImparavelTouro, comandarLevantarInvocacao, comandarMassaEsmagadoraElefante, comandarNeutralizacaoCervo, comandarPuxarAliadoGama, comandarRecuperacaoFerimentoMahoraga, comandarRegeneracaoAdaptativaMahoraga, comandarSoltarCargaNue, comandarSuporte, comandarToqueDaVidaCervo, configurarVontadeDivinaMahoraga, encerrarCondicaoMahoraga, encerrarFugaCoelhos, podeComandarInvocacao, registrarCondicaoMahoraga, registrarFenomenoRodaMahoraga, registrarFerimentoMahoraga, removerFragilizadoFugaCoelhos, resetarEconomiaManualInvocacao } from '@/lib/controlador/mapa';
 import { deslocamentoInvocacaoM, estadoCargaNue, modoMovimentoNue } from '@/lib/controlador/dezSombrasMovimento';
 import { condicaoInvocacaoCervo, nivelCondicaoCervo } from '@/lib/controlador/dezSombrasCervo';
 import { limitePEAdicionalRegeneracaoMahoraga } from '@/lib/controlador/dezSombrasMahoraga';
@@ -95,11 +95,10 @@ export function ShikigamiOwnerPanel({ tokenId }: { tokenId: string }) {
   const combatId = useCombatStore((state) => state.combatId);
   const round = useCombatStore((state) => state.round);
   const currentTurnIndex = useCombatStore((state) => state.currentTurnIndex);
-  const currentActorId = useCombatStore((state) => state.initiativeOrder[state.currentTurnIndex]?.charId);
-
   const owner = characters.find((character) => character.id === token?.ownerCharId);
   const model = owner?.invocacoesConhecidas?.find((invocation) => invocation.id === token?.invocationId);
   const instance = owner?.instanciasInvocacao?.find((item) => item.id === token?.invocationInstanceId);
+  const canCommand = Boolean(owner && model && podeComandarInvocacao(owner.id, model.id));
   const grappleAction = model?.acoes.find((item) => item.efeitoEspecial?.tipo === 'agarrar_gama_apos_acerto');
   const orochiGrappleAction = model?.acoes.find((item) => item.efeitoEspecial?.tipo === 'agarrar_orochi_apos_acerto');
   const shadowTongueUsedThisRound = Boolean(instance?.usoLinguaSombriaGama &&
@@ -193,11 +192,11 @@ export function ShikigamiOwnerPanel({ tokenId }: { tokenId: string }) {
   const nueMovementRange = token ? deslocamentoInvocacaoM(token.id, nueMovementMode) : 0;
   const nueCargo = token ? estadoCargaNue(token.id) : null;
   const pendingGrapple = instance?.agarrarLinguaPendente;
-  const grappleAvailable = Boolean(pendingGrapple && inCombat && currentActorId === owner?.id &&
+  const grappleAvailable = Boolean(pendingGrapple && inCombat && canCommand &&
     pendingGrapple.combateId === combatId && pendingGrapple.rodada === round &&
     pendingGrapple.turnoIndex === currentTurnIndex && instance?.estado === 'ativa');
   const pendingOrochiGrapple = instance?.agarrarOrochiPendente;
-  const orochiGrappleAvailable = Boolean(pendingOrochiGrapple && inCombat && currentActorId === owner?.id &&
+  const orochiGrappleAvailable = Boolean(pendingOrochiGrapple && inCombat && canCommand &&
     pendingOrochiGrapple.combateId === combatId && pendingOrochiGrapple.rodada === round &&
     pendingOrochiGrapple.turnoIndex === currentTurnIndex && instance?.estado === 'ativa');
   const target = selectedTargetId ? entities[selectedTargetId] : undefined;
@@ -913,7 +912,7 @@ export function ShikigamiOwnerPanel({ tokenId }: { tokenId: string }) {
               Gastar um giro pendente para usar como Ação Simples
             </label>
             <button type="button" onClick={() => void usarRegeneracaoMahoraga(mahoragaUsarGiro)}
-              disabled={busyActionId !== null || instance?.estado !== 'ativa' || (inCombat && currentActorId !== owner.id) ||
+              disabled={busyActionId !== null || instance?.estado !== 'ativa' || (inCombat && !canCommand) ||
                 (mahoragaUsarGiro && (mahoragaState?.regeneracoesRodaPendentes ?? 0) < 1) ||
                 (mahoragaModoRegeneracao === 'cura' && (instance?.hpAtual ?? 0) >= (instance?.hpMaximoAtual ?? model.hpMaximo))}
               className="mt-2 min-h-9 w-full rounded border border-emerald-400/40 bg-emerald-500/10 px-2 py-1.5 text-xs text-emerald-100 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50">
@@ -933,7 +932,7 @@ export function ShikigamiOwnerPanel({ tokenId }: { tokenId: string }) {
                 {tiposAdaptadosMahoraga.map(tipo => <option key={tipo} value={tipo}>{DAMAGE_TYPE_LABELS[tipo]}</option>)}
               </select>
               <button type="button" onClick={prepararAtaqueAdaptativoMahoraga}
-                disabled={!mahoragaTipoAdaptativo || busyActionId !== null || instance?.estado !== 'ativa' || (inCombat && currentActorId !== owner.id)}
+                disabled={!mahoragaTipoAdaptativo || busyActionId !== null || instance?.estado !== 'ativa' || (inCombat && !canCommand)}
                 className="min-h-9 rounded border border-amber-400/40 bg-amber-500/10 px-2 py-1.5 text-xs text-amber-100 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50">
                 Preparar próximo ataque
               </button>
@@ -969,7 +968,7 @@ export function ShikigamiOwnerPanel({ tokenId }: { tokenId: string }) {
                   </select>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <button type="button" onClick={() => recuperarFerimentoMahoraga('curar_ferimento')}
-                      disabled={!mahoragaFerimentoAtivo?.ferimentoAtivo || Boolean(mahoragaFerimentoAtivo.membroSeparado && mahoragaFerimentoAtivo.membroDisponivel && !mahoragaFerimentoAtivo.membroReanexado) || busyActionId !== null || instance?.estado !== 'ativa' || (inCombat && currentActorId !== owner?.id)}
+                      disabled={!mahoragaFerimentoAtivo?.ferimentoAtivo || Boolean(mahoragaFerimentoAtivo.membroSeparado && mahoragaFerimentoAtivo.membroDisponivel && !mahoragaFerimentoAtivo.membroReanexado) || busyActionId !== null || instance?.estado !== 'ativa' || (inCombat && !canCommand)}
                       title={mahoragaFerimentoAtivo?.membroSeparado && mahoragaFerimentoAtivo.membroDisponivel && !mahoragaFerimentoAtivo.membroReanexado
                         ? 'O membro está disponível para reanexação por 4 PE e Ação Simples.'
                         : 'Regenera um Ferimento Complexo por 8 PE e Ação Complexa.'}
@@ -977,7 +976,7 @@ export function ShikigamiOwnerPanel({ tokenId }: { tokenId: string }) {
                       Regenerar ferimento · 8 PE + Complexa
                     </button>
                     <button type="button" onClick={() => recuperarFerimentoMahoraga('reanexar_membro')}
-                      disabled={!mahoragaFerimentoAtivo?.membroSeparado || mahoragaFerimentoAtivo.membroReanexado || !mahoragaFerimentoAtivo.membroDisponivel || busyActionId !== null || instance?.estado !== 'ativa' || (inCombat && currentActorId !== owner?.id)}
+                      disabled={!mahoragaFerimentoAtivo?.membroSeparado || mahoragaFerimentoAtivo.membroReanexado || !mahoragaFerimentoAtivo.membroDisponivel || busyActionId !== null || instance?.estado !== 'ativa' || (inCombat && !canCommand)}
                       className="min-h-9 rounded border border-emerald-400/40 bg-emerald-500/10 px-2 py-1.5 text-xs text-emerald-100 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50">
                       Reanexar membro · 4 PE + Simples
                     </button>
@@ -1187,7 +1186,7 @@ export function ShikigamiOwnerPanel({ tokenId }: { tokenId: string }) {
       {token.invocationConditionIds?.includes('caido') && instance?.estado === 'ativa' && (
         <button
           type="button"
-          disabled={busyActionId !== null || (instance.economiaAcoes?.acaoMovimento?.atual ?? 0) < 1 || (inCombat && currentActorId !== owner?.id)}
+          disabled={busyActionId !== null || (instance.economiaAcoes?.acaoMovimento?.atual ?? 0) < 1 || (inCombat && !canCommand)}
           onClick={() => {
             if (!owner || !instance) return;
             const result = comandarLevantarInvocacao(owner.id, token.id, instance.id, `levantar-${token.id}-${Date.now()}`);
@@ -1255,7 +1254,7 @@ export function ShikigamiOwnerPanel({ tokenId }: { tokenId: string }) {
                 (precisaAlvo && !targetCommandId) || invocationAction.statusAutomacao === 'manual' ||
                 (isTouro && invocationAction.id === 'inercia-imparavel' && (touroInerciaAtiva || !inCombat)) ||
                 (isTigre && invocationAction.id === 'predador-apice' && (
-                  !inCombat || currentActorId !== owner?.id || instance?.estado !== 'ativa' ||
+                  !inCombat || !canCommand || instance?.estado !== 'ativa' ||
                   (instance.economiaAcoes?.acaoSimples?.atual ?? 0) < 1 || tigrePredadorAtivo || tigrePredadorPendente
                 )) ||
                 (invocationAction.efeitoEspecial?.tipo === 'toque_da_vida_cervo' && !toqueCondicaoSelecionada) ||
@@ -1276,7 +1275,7 @@ export function ShikigamiOwnerPanel({ tokenId }: { tokenId: string }) {
                     ? 'Predador Ápice já está ativo nesta rodada.'
                     : isTigre && invocationAction.id === 'predador-apice' && tigrePredadorPendente
                     ? `Predador Ápice já está preparado para a rodada ${tigreState?.predadorApice?.rodadaAlvo}.`
-                    : isTigre && invocationAction.id === 'predador-apice' && (!inCombat || currentActorId !== owner?.id)
+                    : isTigre && invocationAction.id === 'predador-apice' && (!inCombat || !canCommand)
                     ? 'Ação Simples disponível apenas no turno do Controlador, durante combate.'
                     : isTigre && invocationAction.id === 'predador-apice' && (instance?.economiaAcoes?.acaoSimples?.atual ?? 0) < 1
                     ? 'Ação Simples do Tigre indisponível neste turno.'
