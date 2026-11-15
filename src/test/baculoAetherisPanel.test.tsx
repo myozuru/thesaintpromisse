@@ -97,7 +97,7 @@ describe('Aetheris combat panel', () => {
     expect((fireButton as HTMLButtonElement).disabled).toBe(false);
     await act(async () => { fireEvent.click(fireButton); });
     await waitFor(() => expect(attack).toHaveBeenCalledTimes(3));
-    expect(roll.mock.calls.map((call) => call[1])).toEqual(['6d8', '6d8', '6d8']);
+    expect(roll.mock.calls.map((call) => call[1])).toEqual(['8d8', '8d8', '8d8']);
     expect(damage).toHaveBeenCalledTimes(3);
     expect(damage).toHaveBeenCalledWith('alvo', 21, 'DCO', expect.objectContaining({ attackerId: ownerId }));
     expect(pegarFicha(ownerId)).toMatchObject({ peCurrent: 2, actionsCurrent: 0, baculoAetherisSafeMoveM: 4.5, baculoAetherisSafeMoveRemainingM: 4.5 });

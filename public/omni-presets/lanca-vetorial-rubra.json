@@ -2,14 +2,14 @@
   "formato": "omni-engine.v1",
   "nome": "Lança Vetorial Rubra",
   "autor": "OMNI",
-  "geradoEm": 1792195200000,
+  "geradoEm": 1794700800000,
   "entidades": [
     {
       "id": "preset-lanca-vetorial-rubra",
       "versao": 1,
       "nome": "Lança Vetorial Rubra",
       "categoria": "arma",
-      "descricao": "**Complexa • Corpo-a-corpo • Grupo Haste**\nDano: 1d10 Perfurante\nMargem de crítico: 19-20\nEspaços: 3 • Grau: 1º • Raridade: Épico\nPropriedades: Estendida, Duas Mãos, Especial\n\n**Núcleo Carmesim (Passiva):** cada acerto aplica 1 Marca Vetorial (máximo 3); críticos aplicam 2. Somente um inimigo pode estar marcado por vez. Com 1 marca, o portador recebe +2 nos ataques contra o alvo. Com 2, os ataques ignoram 3 pontos de Defesa e causam +2d8 uma vez por rodada. Com 3, a margem de crítico passa a 18–20 contra o alvo.\n\n**Avanço Escarlate (Ação Comum, 4 PE):** avance em linha reta até 3 m e ataque; no acerto, causa o dano normal e aplica exatamente 2 marcas, inclusive em crítico.\n\n**Sentença Rubra (Ação Comum, 10 PE; exige 3 marcas):** no acerto, causa o dano-base +10d8 Perfurante, impede Reações do alvo até o início do próximo turno do portador e consome as marcas. Em crítico, dobra os dados-base e os 10d8, sem dobrar modificadores fixos. Não recebe o +2d8 de Fratura Energética. As marcas desaparecem ao fim do combate.",
+      "descricao": "**Lança de Haste Complexa • 3 espaços • 1º Grau • Épico**\nDano base: 1d10 Perfurante • Crítico: 19–20/×2 • Propriedades: Estendida, Duas Mãos, Especial.\n\n**Núcleo Carmesim (Passiva):** ataques acertados aplicam 1 Marca Vetorial; críticos aplicam 2. Máximo de 3 marcas e apenas um inimigo marcado por vez. Com 1 marca: +2 nos ataques contra ele. Com 2: ataques ignoram 3 pontos de Defesa e causam +2d8 uma vez por rodada. Com 3: margem de crítico 18–20 contra ele e acesso à Sentença Rubra. Marcas acabam ao final do combate.\n\n**Avanço Escarlate (Ação Comum, 4 PE):** avance em linha reta até 3 m e ataque. No acerto, aplique 2 Marcas Vetoriais em vez de 1.\n\n**Sentença Rubra (Ação Comum, 10 PE; exige 3 marcas):** faça um ataque corpo a corpo. No acerto, causa dano base +10d8 Perfurante Amaldiçoado, impede Reações até o início do próximo turno do portador e consome as 3 marcas. O +2d8 de Fratura Energética não se aplica.",
       "icone": "🔱",
       "tags": [
         "preset",
@@ -25,7 +25,8 @@
         "mao:2",
         "grau:1",
         "raridade:epico",
-        "feature:lanca-vetorial-rubra"
+        "feature:lanca-vetorial-rubra",
+        "ferramenta_amaldicoada"
       ],
       "duracao": {
         "tipo": "permanente"
@@ -69,6 +70,15 @@
         "rangeType": "touch",
         "aoeShape": "single",
         "isActive": true
+      },
+      "comercio": {
+        "basePrice": 0,
+        "hiddenTags": [
+          "amaldicoado",
+          "ferramenta_amaldicoada"
+        ],
+        "isBought": false,
+        "categoriasAceitas": []
       }
     }
   ]

@@ -25,7 +25,8 @@ describe('Báculo Aetheris — catálogo e importação OMNI', () => {
     expect(parsed.success).toBe(true);
     if (!parsed.success) return;
     const entity = parsed.data.entidades[0];
-    expect(entity.comercio).toBeUndefined();
+    expect(entity.comercio).toMatchObject({ basePrice: 0, isBought: false });
+    expect(entity.comercio?.hiddenTags).toContain('ferramenta_amaldicoada');
     expect(entity.tags).toContain('feature:baculo-aetheris');
     expect(entity.tags).toContain('mao:2');
     expect(entity.combatData?.critRange).toBe(19);

@@ -89,23 +89,18 @@ export async function resolverAcertoBaculoAetheris(
   }
 
   if (!critical) return { julgamento: false, rupturaPodeSerOferecida: false };
-  await aplicarDanoBaculo(attackerId, targetId, '5d8', 'DS', 'Julgamento dos Ventos');
+  await aplicarDanoBaculo(attackerId, targetId, '11d8', 'DS', 'Julgamento dos Ventos');
   pedirTRBaculoAetheris(attacker, target, 'Julgamento dos Ventos', {
     conditionOnFailure: 'sem-reacoes',
     sourceInstanceId: weaponInstanceId ?? undefined,
   });
   useLogStore.getState().addLog('combat', `Julgamento dos Ventos: TR de Fortitude (CD ${specDCFor(attacker)}) contra Sem Reações.`);
-  const ruptureKey = attackerId + ':' + (weaponInstanceId || BACULO_AETHERIS_ID) + ':ruptura';
-  const ruptureReady = aetherisRoundUseReady(combat.aetherisRoundUse[ruptureKey], combat.combatId ?? null, combat.round);
   const reactions = getReactionsAvailable(attacker);
-  if (ruptureReady && reactions <= 0) useLogStore.getState().addLog('combat', 'Ruptura do Firmamento não disparou: Reação indisponível');
-  return { julgamento: true, rupturaPodeSerOferecida: ruptureReady && reactions > 0 };
+  if (reactions <= 0) useLogStore.getState().addLog('combat', 'Ruptura do Firmamento não disparou: Reação indisponível');
+  return { julgamento: true, rupturaPodeSerOferecida: reactions > 0 };
 }
 
-export function motivoBloqueioRupturaBaculo(source: Character, weaponInstanceId?: string | null): string | null {
-  const combat = useCombatStore.getState();
-  const key = source.id + ':' + (weaponInstanceId || BACULO_AETHERIS_ID) + ':ruptura';
-  if (!aetherisRoundUseReady(combat.aetherisRoundUse[key], combat.combatId ?? null, combat.round)) return 'Ruptura já foi usada nesta rodada';
+export function motivoBloqueioRupturaBaculo(source: Character, _weaponInstanceId?: string | null): string | null {
   if (getReactionsAvailable(source) <= 0) return 'Sem Reação disponível nesta rodada';
   const pe = (source.peCurrent ?? 0) + (source.tempPE ?? 0);
   if (pe < 2) return 'PE insuficiente: requer 2, você possui ' + pe;
@@ -113,7 +108,7 @@ export function motivoBloqueioRupturaBaculo(source: Character, weaponInstanceId?
 }
 
 export async function ativarRupturaBaculoAetheris(sourceId: string, targetId: string, weaponInstanceId?: string | null): Promise<{ ok: boolean; reason?: string }> {
-  const useKey = `${sourceId}:${weaponInstanceId || BACULO_AETHERIS_ID}:ruptura`;
+  const useKey = `${sourceId}:${weaponInstanceId || BACULO_AETHERIS_ID}:ruptura-em-curso`;
   if (rupturasEmResolucao.has(useKey)) return { ok: false, reason: 'Ruptura do Firmamento já está sendo resolvida.' };
   const inicial = useCharacterStore.getState().characters.find((character) => character.id === sourceId);
   if (!inicial || !useCharacterStore.getState().characters.some((character) => character.id === targetId)) {
@@ -132,7 +127,7 @@ export async function ativarRupturaBaculoAetheris(sourceId: string, targetId: st
     try {
       // A rolagem não altera o combate; resolvê-la antes do débito preserva
       // PE e Reação se o serviço de dados falhar.
-      rolled = await rollDiceCom(sourceId, '10d10', { label: 'Ruptura do Firmamento' });
+      rolled = await rollDiceCom(sourceId, '8d12', { label: 'Ruptura do Firmamento' });
     } catch (error) {
       const detalhe = error instanceof Error ? ` ${error.message}` : '';
       const reason = 'Ruptura não iniciada: a rolagem falhou; PE e Reação foram preservados.';
@@ -158,12 +153,11 @@ export async function ativarRupturaBaculoAetheris(sourceId: string, targetId: st
       peCurrent: Math.max(0, (source.peCurrent ?? 0) - (2 - gastoTemporario)),
       reactionsCurrent: getReactionsAvailable(source) - 1,
     });
-    useCombatStore.getState().markAetherisRoundUse(useKey);
     try {
-      await aplicarDanoBaculoRolado(sourceId, targetId, rolled.total, 'DS', '10d10', 'Ruptura do Firmamento');
+      await aplicarDanoBaculoRolado(sourceId, targetId, rolled.total, 'DS', '8d12', 'Ruptura do Firmamento');
       const empurraoAplicado = empurrarAlvo(sourceId, targetId, 6, 'Ruptura do Firmamento');
       pedirTRBaculoAetheris(source, target, 'Ruptura do Firmamento', { conditionOnFailure: 'caido', sourceInstanceId: weaponInstanceId ?? undefined });
-      useLogStore.getState().addLog('combat', `Ruptura do Firmamento: 10d10 Sônico${empurraoAplicado ? ', alvo empurrado 6 m' : '; empurrão não aplicado'}; TR de Fortitude para evitar Caído.`);
+      useLogStore.getState().addLog('combat', `Ruptura do Firmamento: 8d12 Sônico${empurraoAplicado ? ', alvo empurrado 6 m' : '; empurrão não aplicado'}; TR de Fortitude para evitar Caído.`);
     } catch (error) {
       const detalhe = error instanceof Error ? ` ${error.message}` : '';
       const reason = 'resolução interrompida após o débito; confira dano e condições antes de repetir';

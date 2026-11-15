@@ -1,0 +1,1087 @@
+{
+  "formato": "omni-engine.v1",
+  "nome": "Ferramentas Amaldiçoadas",
+  "autor": "OMNI",
+  "geradoEm": 1794700800000,
+  "entidades": [
+    {
+      "id": "preset-baculo-aetheris",
+      "versao": 1,
+      "nome": "Báculo Aetheris",
+      "categoria": "arma",
+      "descricao": "**Báculo Complexo • 2 espaços • Grau Especial • Lendário**\nDano base: 2d8 Impacto • Crítico: 19–20/×2 • Propriedades: Duas Mãos, Estendida, Especial.\n\n**Asas do Firmamento (Passiva):** +3 m de Deslocamento; ignora Terreno Difícil natural; pode planar e anula dano de quedas de até 18 m.\n\n**Rajada Sônica (Passiva):** uma vez por rodada, ao acertar com o báculo, causa +3d8 Sônico e empurra o alvo até 3 m.\n\n**Julgamento dos Ventos (Crítico especial):** em um crítico, causa +11d8 Sônico. O alvo faz TR de Fortitude contra a CD do usuário; em falha, não pode realizar Reações até o início do próximo turno do portador.\n\n**Plumas da Tempestade (Ação Comum, 8 PE):** faça até três ataques à distância independentes contra criaturas a até 18 m; cada acerto causa 8d8 Cortante. Depois, mova-se até 4,5 m sem provocar Ataques de Oportunidade.\n\n**Reversão dos Ventos (Reação, 7 PE):** quando um ataque à distância for feito contra o portador ou um aliado a até 9 m, conceda +5 na Defesa contra aquele ataque. Se ele errar, o portador pode fazer um ataque à distância contra o agressor; o acerto causa 5d8 Sônico.\n\n**Trono das Nuvens (Ação Comum, 9 PE):** escolha uma área de raio 3 m a até 18 m. Criaturas escolhidas fazem TR de Fortitude. Falha: 5d8 Impacto e ficam Suspensas a 4,5 m até o início do próximo turno do portador. Sucesso: metade do dano, sem suspensão. Criaturas suspensas sem voo não podem usar deslocamento de caminhada; ao terminar, descem sem dano.\n\n**Réquiem dos Céus (Ação Completa, 18 PE, 1 vez por cena):** escolha um ponto a até 24 m; criaturas escolhidas em raio de 9 m fazem TR de Fortitude. Falha: 18d12 Sônico, empurrão de 6 m e Caído. Sucesso: metade do dano, sem efeitos adicionais. Alvos suspensos sofrem –2 no TR. O portador pode transportar até três aliados na área por até 9 m sem dano.\n\n**Ruptura do Firmamento (Reação, 2 PE):** imediatamente após um crítico com Aetheris, causa +8d12 Sônico, empurra o alvo até 6 m e exige TR de Fortitude; falha deixa Caído. O dano ocorre depois do ataque e não é multiplicado pelo crítico. Pode ser combinada com Julgamento dos Ventos se ainda houver Reação.",
+      "icone": "🪄",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:haste",
+        "prop:estendida",
+        "prop:duas_maos",
+        "prop:especial",
+        "modelo:baculo-aetheris",
+        "espacos:2",
+        "mao:2",
+        "feature:baculo-aetheris",
+        "grau:especial",
+        "raridade:lendario",
+        "ferramenta_amaldicoada"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "baculo-aetheris-equipar",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1792454400000,
+      "atualizadoEm": 1792454400000,
+      "acoesAtivas": [
+        {
+          "id": "baculo-aetheris-reversao",
+          "nome": "Reversão dos Ventos",
+          "acao": "reacao",
+          "custoPE": "7",
+          "alcanceM": 9,
+          "tipo_alvo": "unico",
+          "filtro_alvo": "todos",
+          "teste": "nenhum",
+          "tipo_efeito": "buff",
+          "reacao": {
+            "gatilho": "quando_alvo_declarar_ataque",
+            "alcance_m": 9,
+            "tipo_ataque": "ranged",
+            "protegido": "todos",
+            "alvo": "protegido",
+            "defesa_bonus": 5
+          }
+        },
+        {
+          "id": "aa-aetheris-plumas",
+          "nome": "Plumas da Tempestade",
+          "acao": "comum",
+          "custoPE": "8",
+          "alcanceM": 18,
+          "tipo_alvo": "multiplo",
+          "filtro_alvo": "inimigos",
+          "max_alvos": "3",
+          "teste": "ataque",
+          "dano": "8d8",
+          "tipoDano": "Cortante"
+        },
+        {
+          "id": "aa-aetheris-reversao",
+          "nome": "Reversão dos Ventos (contra-rajada)",
+          "acao": "reacao",
+          "custoPE": "7",
+          "alcanceM": 9,
+          "tipo_alvo": "unico",
+          "filtro_alvo": "inimigos",
+          "teste": "ataque",
+          "dano": "5d8",
+          "tipoDano": "Sônico"
+        },
+        {
+          "id": "aa-aetheris-trono",
+          "nome": "Trono das Nuvens",
+          "acao": "comum",
+          "custoPE": "9",
+          "alcanceM": 18,
+          "tipo_alvo": "area",
+          "filtro_alvo": "todos_exceto_si",
+          "area": {
+            "forma": "raio_no_ponto",
+            "tamanho_m": 3
+          },
+          "teste": "tr",
+          "tr": "fortitude",
+          "metadeNoSucesso": true,
+          "dano": "5d8",
+          "tipoDano": "Impacto",
+          "desfechosTR": {
+            "falha": {
+              "dano": "total",
+              "efeitos": [
+                {
+                  "tipo": "condicao",
+                  "condicao": "suspenso",
+                  "rodadas": 0,
+                  "ate_inicio_turno_usuario": true
+                }
+              ]
+            },
+            "sucesso": {
+              "dano": "metade"
+            }
+          }
+        },
+        {
+          "id": "aa-aetheris-requiem",
+          "nome": "Réquiem dos Céus",
+          "acao": "completa",
+          "usos_por_cena": 1,
+          "custoPE": "18",
+          "alcanceM": 24,
+          "tipo_alvo": "area",
+          "filtro_alvo": "todos_exceto_si",
+          "area": {
+            "forma": "raio_no_ponto",
+            "tamanho_m": 9
+          },
+          "teste": "tr",
+          "tr": "fortitude",
+          "metadeNoSucesso": true,
+          "dano": "18d12",
+          "tipoDano": "Sônico",
+          "condicionais": [
+            {
+              "id": "requiem-suspensos",
+              "se_alvo": [
+                {
+                  "tipo": "tem_condicao",
+                  "nome": "suspenso"
+                }
+              ],
+              "mod_tr_alvo": -2
+            }
+          ]
+        },
+        {
+          "id": "aa-aetheris-ruptura",
+          "nome": "Ruptura do Firmamento (após crítico)",
+          "acao": "reacao",
+          "custoPE": "2",
+          "alcanceM": 0,
+          "tipo_alvo": "unico",
+          "filtro_alvo": "inimigos",
+          "teste": "nenhum",
+          "dano": "8d12",
+          "tipoDano": "Sônico"
+        }
+      ],
+      "combatData": {
+        "effects": [
+          {
+            "id": "baculo-aetheris-dano",
+            "formula": "2d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "baculo-aetheris-dano",
+            "formula": "2d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 19,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 0,
+        "hiddenTags": [
+          "amaldicoado",
+          "ferramenta_amaldicoada"
+        ],
+        "isBought": false,
+        "categoriasAceitas": []
+      }
+    },
+    {
+      "id": "preset-sagitta",
+      "versao": 1,
+      "nome": "Sagitta — O Juízo do Firmamento",
+      "categoria": "arma",
+      "descricao": "**Arco Longo Celestial Marcial • 2 espaços • Grau Especial • Santo**\nDano base: 5d12 Perfurante • Crítico: 19–20/×2 • Propriedades: Distância, Duas Mãos, Especial.\n\n**Cartografia Celestial (Passiva):** Sagitta cria as próprias flechas douradas. Elas atravessam coberturas parciais, superiores e totais, paredes, rochas e outras estruturas sem destruí-las. Podem atingir criaturas ocultas se o portador conhecer sua localização. Ainda respeitam Defesa, armaduras e proteções de técnicas. Uma vez por rodada, ao acertar uma criatura, a Explosão Estelar causa +8d10 Energético.\n\n**Constelação do Caçador (Ação Comum, 10 PE):** dispare até três flechas contra até três inimigos dentro do alcance do arco. Cada alvo recebe um ataque à distância; acerto causa o dano base da arma +6d8 Queimante. Contra um único inimigo, as estrelas convergem em um projétil: um acerto causa o dano base +10d8 Queimante.\n\n**Equinócio Sagrado (Reação, 9 PE):** quando o portador ou aliado a até 9 m sofrer dano de um ataque, reduza-o em 5d10. Se o agressor estiver visível e dentro do alcance do arco, uma flecha retorna e causa dano Queimante igual à metade do dano efetivamente impedido.\n\n**Decreto do Zênite (Ação Completa, 20 PE, 1 vez por cena):** escolha uma criatura a até 36 m cuja localização seja conhecida. Faça um ataque à distância com +6, ignorando cobertura total. O ataque é automaticamente crítico: dano crítico da arma +20d10 Queimante, ignora até 10 de Resistência a Queimante, inclui Sentença das Estrelas (+6d8 Queimante) e, se ainda disponível nesta rodada, Explosão Estelar (+8d10 Energético). TR de Fortitude falho deixa o alvo Atordoado por 1 rodada. A preparação e o disparo impedem deslocamento.\n\n**Sentença das Estrelas (Crítico especial):** em crítico, causa +6d8 Queimante e revela a posição do alvo; ele não recebe benefícios de invisibilidade ou camuflagem até o início do próximo turno do portador.",
+      "icone": "🏹",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "ranged",
+        "grupo:arco",
+        "prop:duas_maos",
+        "prop:especial",
+        "prop:marcial",
+        "modelo:sagitta",
+        "espacos:2",
+        "mao:2",
+        "ferramenta_amaldicoada",
+        "grau:especial",
+        "raridade:santo",
+        "alcance:36/72"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "sagitta-equipar",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1794700800000,
+      "atualizadoEm": 1794700800000,
+      "comercio": {
+        "basePrice": 0,
+        "hiddenTags": [
+          "amaldicoado",
+          "ferramenta_amaldicoada"
+        ],
+        "isBought": false,
+        "categoriasAceitas": []
+      },
+      "acoesAtivas": [
+        {
+          "id": "sagitta-constelacao",
+          "nome": "Constelação do Caçador (dispersa)",
+          "acao": "comum",
+          "custoPE": "10",
+          "alcanceM": 0,
+          "tipo_alvo": "multiplo",
+          "filtro_alvo": "inimigos",
+          "max_alvos": "3",
+          "teste": "ataque",
+          "tipo_efeito": "dano",
+          "dano": "6d8",
+          "tipoDano": "Queimante",
+          "incluirArma": true
+        },
+        {
+          "id": "sagitta-constelacao-convergida",
+          "nome": "Constelação do Caçador (convergida)",
+          "acao": "comum",
+          "custoPE": "10",
+          "alcanceM": 0,
+          "tipo_alvo": "unico",
+          "filtro_alvo": "inimigos",
+          "teste": "ataque",
+          "tipo_efeito": "dano",
+          "dano": "10d8",
+          "tipoDano": "Queimante",
+          "incluirArma": true
+        },
+        {
+          "id": "sagitta-explosao-estelar",
+          "nome": "Explosão Estelar (após acerto, 1/rodada)",
+          "acao": "livre",
+          "custoPE": "0",
+          "alcanceM": 0,
+          "tipo_alvo": "unico",
+          "filtro_alvo": "inimigos",
+          "teste": "nenhum",
+          "tipo_efeito": "dano",
+          "dano": "8d10",
+          "tipoDano": "Energético"
+        },
+        {
+          "id": "sagitta-sentenca-estrelas",
+          "nome": "Sentença das Estrelas (após crítico)",
+          "acao": "livre",
+          "custoPE": "0",
+          "alcanceM": 0,
+          "tipo_alvo": "unico",
+          "filtro_alvo": "inimigos",
+          "teste": "nenhum",
+          "tipo_efeito": "dano",
+          "dano": "6d8",
+          "tipoDano": "Queimante"
+        }
+      ],
+      "combatData": {
+        "effects": [
+          {
+            "id": "sagitta-dano-base",
+            "formula": "5d12",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "sagitta-dano-base",
+            "formula": "5d12",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 19,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "ranged",
+        "aoeShape": "single",
+        "isActive": true
+      }
+    },
+    {
+      "id": "preset-raijin",
+      "versao": 1,
+      "nome": "Raijin — O Trovão Carmesim",
+      "categoria": "arma",
+      "descricao": "**Katana Complexa • 2 espaços • 1º Grau • Épico**\nDano base: 2d8 Cortante • Crítico: 19–20/×2 • Propriedades: Duas Mãos, Versátil, Especial.\n\n**Sangue do Trovão (Passiva):** uma vez por rodada, ao acertar, causa +3d8 Energético. Se houver outro inimigo a até 3 m do alvo atingido, o relâmpago salta até ele e causa 2d8 Energético.\n\n**Dança do Relâmpago Escarlate (Ação Comum, 12 PE):** mova-se até 18 m sem provocar Ataques de Oportunidade e faça ataques contra até três inimigos diferentes durante o percurso. Cada acerto causa o dano base da arma +3d8 Energético.\n\n**Contratempo do Trovão (Reação, 5 PE):** quando um inimigo fizer um ataque corpo a corpo contra o portador, receba +4 na Defesa contra ele. Se errar, o atacante sofre 4d8 de dano Elétrico Amaldiçoado/Energético e não pode realizar Reações até o início do próximo turno do portador.\n\n**Execução do Deus Trovejante (Ação Comum, 15 PE):** faça um ataque corpo a corpo. Acerto causa o dano base +8d12 Energético. O alvo faz TR de Fortitude; falha causa Atordoado por 1 rodada, aumentando 1 rodada a cada 5 pontos de diferença abaixo da CD. Este TR não tem falha crítica.\n\n**Trovão sem Som (Crítico especial):** causa +5d8 Energético e ignora metade da Resistência a esse dano. Se o alvo usar Reforço de Energia, TR de Fortitude falho deixa-o Paralisado por 1 rodada.",
+      "icone": "⚡",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:espada",
+        "prop:duas_maos",
+        "prop:versatil",
+        "prop:especial",
+        "modelo:raijin",
+        "espacos:2",
+        "mao:2",
+        "ferramenta_amaldicoada",
+        "grau:1",
+        "raridade:epico"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "raijin-equipar",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1794700800000,
+      "atualizadoEm": 1794700800000,
+      "comercio": {
+        "basePrice": 0,
+        "hiddenTags": [
+          "amaldicoado",
+          "ferramenta_amaldicoada"
+        ],
+        "isBought": false,
+        "categoriasAceitas": []
+      },
+      "acoesAtivas": [
+        {
+          "id": "raijin-sangue-trovao",
+          "nome": "Sangue do Trovão (após acerto, 1/rodada)",
+          "acao": "livre",
+          "custoPE": "0",
+          "alcanceM": 0,
+          "tipo_alvo": "unico",
+          "filtro_alvo": "inimigos",
+          "teste": "nenhum",
+          "tipo_efeito": "dano",
+          "dano": "3d8",
+          "tipoDano": "Energético"
+        },
+        {
+          "id": "raijin-danca-relampago",
+          "nome": "Dança do Relâmpago Escarlate (até 3 alvos)",
+          "acao": "comum",
+          "custoPE": "12",
+          "alcanceM": 18,
+          "tipo_alvo": "multiplo",
+          "filtro_alvo": "inimigos",
+          "max_alvos": "3",
+          "teste": "ataque",
+          "tipo_efeito": "dano",
+          "dano": "3d8",
+          "tipoDano": "Energético",
+          "incluirArma": true
+        },
+        {
+          "id": "raijin-contratempo",
+          "nome": "Contratempo do Trovão",
+          "acao": "reacao",
+          "custoPE": "5",
+          "alcanceM": 1.5,
+          "tipo_alvo": "unico",
+          "filtro_alvo": "inimigos",
+          "teste": "nenhum",
+          "tipo_efeito": "buff",
+          "reacao": {
+            "gatilho": "quando_alvo_declarar_ataque",
+            "alcance_m": 1.5,
+            "tipo_ataque": "melee",
+            "protegido": "usuario",
+            "alvo": "protegido",
+            "defesa_bonus": 4
+          }
+        },
+        {
+          "id": "raijin-contratempo-descarga",
+          "nome": "Descarga do Contratempo (se o ataque errar)",
+          "acao": "livre",
+          "custoPE": "0",
+          "alcanceM": 1.5,
+          "tipo_alvo": "unico",
+          "filtro_alvo": "inimigos",
+          "teste": "nenhum",
+          "tipo_efeito": "dano",
+          "dano": "4d8",
+          "tipoDano": "Energético"
+        },
+        {
+          "id": "raijin-execucao",
+          "nome": "Execução do Deus Trovejante",
+          "acao": "comum",
+          "custoPE": "15",
+          "alcanceM": 0,
+          "tipo_alvo": "unico",
+          "filtro_alvo": "inimigos",
+          "teste": "ataque",
+          "tipo_efeito": "dano",
+          "dano": "8d12",
+          "tipoDano": "Energético",
+          "incluirArma": true,
+          "tr_apos_acerto": true,
+          "tr": "fortitude",
+          "desfechosTR": {
+            "falha": {
+              "efeitos": [
+                {
+                  "tipo": "condicao",
+                  "condicao": "atordoado",
+                  "rodadas": 1
+                }
+              ]
+            },
+            "falha_critica": {
+              "efeitos": [
+                {
+                  "tipo": "condicao",
+                  "condicao": "atordoado",
+                  "rodadas": 1
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "raijin-trovao-sem-som",
+          "nome": "Trovão sem Som (após crítico)",
+          "acao": "livre",
+          "custoPE": "0",
+          "alcanceM": 0,
+          "tipo_alvo": "unico",
+          "filtro_alvo": "inimigos",
+          "teste": "nenhum",
+          "tipo_efeito": "dano",
+          "dano": "5d8",
+          "tipoDano": "Energético"
+        }
+      ],
+      "combatData": {
+        "effects": [
+          {
+            "id": "raijin-dano-base",
+            "formula": "2d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "raijin-dano-base",
+            "formula": "2d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 19,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      }
+    },
+    {
+      "id": "preset-ruina-esmeralda",
+      "versao": 1,
+      "nome": "Ruína Esmeralda",
+      "categoria": "arma",
+      "descricao": "**Katana Complexa • 3 espaços • 1º Grau • Épico**\nDano base: 2d8 Cortante • Crítico: 19–20/×2 • Propriedades: Duas Mãos, Especial.\n\n**Podridão Esmeralda (Passiva):** ao acertar, o alvo faz TR de Fortitude contra a CD do usuário. Falha aplica Corrosão por 2 rodadas; no início de cada turno, sofre 2d8 Venenoso Amaldiçoado e –2 na Defesa. Reaplicações renovam a duração sem acumular efeitos.\n\n**Miasma da Decadência (Ação Comum, 7 PE):** libere uma nuvem em raio de 4,5 m ao redor do portador. Criaturas escolhidas fazem TR de Fortitude. Falha: 6d8 Venenoso Amaldiçoado e Corrosão por 2 rodadas. Sucesso: metade do dano, sem Corrosão. A nuvem persiste até o início do próximo turno do portador e obscurece parcialmente a visão.\n\n**Decomposição Irreversível (Ação Comum, 11 PE):** ataque corpo a corpo; acerto causa o dano base +8d8 Venenoso Amaldiçoado. Se o alvo estiver Corroído, também recebe Deterioração Profunda por 2 rodadas: recuperação de PV reduzida à metade e –2 em Fortitude.\n\n**Necrose Viridiana (Crítico especial):** crítico causa +4d8 Venenoso Amaldiçoado, aplica Corrosão por 2 rodadas sem TR inicial e impõe mais –2 na Defesa até o início do próximo turno do portador.",
+      "icone": "☣️",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:espada",
+        "prop:duas_maos",
+        "prop:especial",
+        "modelo:ruina-esmeralda",
+        "espacos:3",
+        "mao:2",
+        "ferramenta_amaldicoada",
+        "grau:1",
+        "raridade:epico"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "ruina-esmeralda-equipar",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1794700800000,
+      "atualizadoEm": 1794700800000,
+      "comercio": {
+        "basePrice": 0,
+        "hiddenTags": [
+          "amaldicoado",
+          "ferramenta_amaldicoada"
+        ],
+        "isBought": false,
+        "categoriasAceitas": []
+      },
+      "acoesAtivas": [
+        {
+          "id": "ruina-miasma",
+          "nome": "Miasma da Decadência",
+          "acao": "comum",
+          "custoPE": "7",
+          "alcanceM": 0,
+          "tipo_alvo": "area",
+          "filtro_alvo": "inimigos",
+          "area": {
+            "forma": "raio_em_si",
+            "tamanho_m": 4.5
+          },
+          "teste": "tr",
+          "tr": "fortitude",
+          "metadeNoSucesso": true,
+          "dano": "6d8",
+          "tipoDano": "Venenoso",
+          "desfechosTR": {
+            "falha": {
+              "dano": "total"
+            },
+            "sucesso": {
+              "dano": "metade"
+            }
+          }
+        },
+        {
+          "id": "ruina-decomposicao",
+          "nome": "Decomposição Irreversível",
+          "acao": "comum",
+          "custoPE": "11",
+          "alcanceM": 0,
+          "tipo_alvo": "unico",
+          "filtro_alvo": "inimigos",
+          "teste": "ataque",
+          "tipo_efeito": "dano",
+          "dano": "8d8",
+          "tipoDano": "Venenoso",
+          "incluirArma": true
+        },
+        {
+          "id": "ruina-necrose",
+          "nome": "Necrose Viridiana (após crítico)",
+          "acao": "livre",
+          "custoPE": "0",
+          "alcanceM": 0,
+          "tipo_alvo": "unico",
+          "filtro_alvo": "inimigos",
+          "teste": "nenhum",
+          "tipo_efeito": "dano",
+          "dano": "4d8",
+          "tipoDano": "Venenoso"
+        }
+      ],
+      "combatData": {
+        "effects": [
+          {
+            "id": "ruina-esmeralda-dano-base",
+            "formula": "2d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "ruina-esmeralda-dano-base",
+            "formula": "2d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 19,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      }
+    },
+    {
+      "id": "preset-crepusculo-ultima-lua",
+      "versao": 1,
+      "nome": "Crepúsculo da Última Lua",
+      "categoria": "arma",
+      "descricao": "**Foice de Guerra Complexa • 3 espaços • 1º Grau • Épico**\nDano base: 2d8 Cortante • Crítico: 19–20/×2 • Propriedades: Estendida, Pesada, Duas Mãos, Especial.\n\n**Lâmina de Retorno (Passiva):** uma vez por rodada, ao errar um ataque corpo a corpo, redirecione a foice contra outra criatura ao alcance, com –2 no acerto.\n\n**Dança do Horizonte Partido (Ação Comum, 7 PE):** projete um arco de 6 m à frente. Criaturas escolhidas fazem TR de Reflexos. Falha: 6d8 Cortante Amaldiçoado e são puxadas até 3 m. Sucesso: metade do dano, sem deslocamento.\n\n**Ceifa do Eclipse (Ação Comum, 12 PE):** ataque corpo a corpo; acerto causa o dano base +8d8 Cortante Amaldiçoado e exige TR de Fortitude. Falha deixa Caído. Se o alvo foi puxado pela Dança nesta rodada, a margem de crítico aumenta em 2.\n\n**Reflexo da Lua Morta (Reação, 5 PE):** quando for alvo de ataque corpo a corpo, receba +3 na Defesa contra esse ataque. Se errar, o atacante faz TR de Fortitude; falha empurra-o 1,5 m.\n\n**Cisão Carmesim (Crítico especial):** crítico causa +4d8 Cortante Amaldiçoado e impede Reações do alvo até o início do próximo turno do portador.",
+      "icone": "🌙",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:haste",
+        "prop:estendida",
+        "prop:pesada",
+        "prop:duas_maos",
+        "prop:especial",
+        "modelo:crepusculo-ultima-lua",
+        "espacos:3",
+        "mao:2",
+        "ferramenta_amaldicoada",
+        "grau:1",
+        "raridade:epico"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "crepusculo-ultima-lua-equipar",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1794700800000,
+      "atualizadoEm": 1794700800000,
+      "comercio": {
+        "basePrice": 0,
+        "hiddenTags": [
+          "amaldicoado",
+          "ferramenta_amaldicoada"
+        ],
+        "isBought": false,
+        "categoriasAceitas": []
+      },
+      "acoesAtivas": [
+        {
+          "id": "crepusculo-lamina-retorno",
+          "nome": "Lâmina de Retorno (após errar, 1/rodada)",
+          "acao": "livre",
+          "custoPE": "0",
+          "alcanceM": 0,
+          "tipo_alvo": "unico",
+          "filtro_alvo": "inimigos",
+          "teste": "ataque",
+          "tipo_efeito": "dano",
+          "mod_acerto": -2,
+          "incluirArma": true
+        },
+        {
+          "id": "crepusculo-danca-horizonte",
+          "nome": "Dança do Horizonte Partido",
+          "acao": "comum",
+          "custoPE": "7",
+          "alcanceM": 0,
+          "tipo_alvo": "area",
+          "filtro_alvo": "inimigos",
+          "area": {
+            "forma": "cone",
+            "tamanho_m": 6
+          },
+          "teste": "tr",
+          "tr": "reflexos",
+          "metadeNoSucesso": true,
+          "dano": "6d8",
+          "tipoDano": "Cortante",
+          "desfechosTR": {
+            "falha": {
+              "dano": "total",
+              "efeitos": [
+                {
+                  "tipo": "puxar",
+                  "metros": 3
+                }
+              ]
+            },
+            "sucesso": {
+              "dano": "metade"
+            }
+          }
+        },
+        {
+          "id": "crepusculo-ceifa-eclipse",
+          "nome": "Ceifa do Eclipse",
+          "acao": "comum",
+          "custoPE": "12",
+          "alcanceM": 0,
+          "tipo_alvo": "unico",
+          "filtro_alvo": "inimigos",
+          "teste": "ataque",
+          "tipo_efeito": "dano",
+          "dano": "8d8",
+          "tipoDano": "Cortante",
+          "incluirArma": true,
+          "tr_apos_acerto": true,
+          "tr": "fortitude",
+          "desfechosTR": {
+            "falha": {
+              "efeitos": [
+                {
+                  "tipo": "condicao",
+                  "condicao": "caido",
+                  "rodadas": 1
+                }
+              ]
+            },
+            "falha_critica": {
+              "efeitos": [
+                {
+                  "tipo": "condicao",
+                  "condicao": "caido",
+                  "rodadas": 1
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "crepusculo-reflexo-lua",
+          "nome": "Reflexo da Lua Morta",
+          "acao": "reacao",
+          "custoPE": "5",
+          "alcanceM": 1.5,
+          "tipo_alvo": "unico",
+          "filtro_alvo": "todos",
+          "teste": "nenhum",
+          "tipo_efeito": "buff",
+          "reacao": {
+            "gatilho": "quando_alvo_declarar_ataque",
+            "alcance_m": 1.5,
+            "tipo_ataque": "melee",
+            "protegido": "usuario",
+            "alvo": "protegido",
+            "defesa_bonus": 3
+          }
+        },
+        {
+          "id": "crepusculo-cisao-carmesim",
+          "nome": "Cisão Carmesim (após crítico)",
+          "acao": "livre",
+          "custoPE": "0",
+          "alcanceM": 0,
+          "tipo_alvo": "unico",
+          "filtro_alvo": "inimigos",
+          "teste": "nenhum",
+          "tipo_efeito": "dano",
+          "dano": "4d8",
+          "tipoDano": "Cortante"
+        }
+      ],
+      "combatData": {
+        "effects": [
+          {
+            "id": "crepusculo-ultima-lua-dano-base",
+            "formula": "2d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "crepusculo-ultima-lua-dano-base",
+            "formula": "2d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Cortante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 19,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      }
+    },
+    {
+      "id": "preset-seraphiel",
+      "versao": 1,
+      "nome": "Seraphiel — As Seis Sentenças",
+      "categoria": "arma",
+      "descricao": "**Cetro de Guerra Complexo • 2 espaços • 2º Grau • Precioso**\nDano base: 2d8 Impacto • Crítico: 19–20/×2 • Propriedades: Duas Mãos, Estendida, Especial.\n\n**Arsenal dos Serafins (Passiva):** seis lanças luminosas orbitam o cetro. Uma vez por rodada, escolha um efeito. **Punição:** ao acertar com o cetro, uma lança ataca o mesmo inimigo com +1; se atingir, causa 2d8 Radiante. **Proteção:** quando o portador ou um aliado a até 6 m for alvo de um ataque, gaste sua Reação para receber +2 na Defesa contra esse ataque. As lanças se recompõem sem munição ou cargas.\n\n**Perseguição Divina (Ação Comum, 6 PE):** escolha até três criaturas a até 18 m; cada uma recebe um ataque à distância independente com +1 e causa 2d8 Radiante se atingida. É permitido concentrar os três disparos no mesmo alvo.\n\n**Prisão dos Seis Céus (Ação Comum, 8 PE):** cerque uma área de raio 3 m centrada em um ponto a até 18 m por 1 rodada. Inimigos fazem TR de Reflexos contra a CD do usuário. Falha: 3d8 Radiante e Imóvel até o fim da prisão. Sucesso: metade do dano, sem condição. Ao tentar atravessar a borda, cada inimigo pode sofrer uma interceptação por rodada: ataque individual +1; acerto causa 2d8 Radiante e interrompe o movimento, erro permite atravessar.\n\n**O Sexto Julgamento (Ação Completa, 12 PE, 1 vez por cena):** escolha uma criatura a até 24 m e faça seis ataques independentes, ou distribua os seis ataques entre duas ou três criaturas no alcance. Cada lança recebe +1 e causa 1d12 Radiante ao acertar. Role ataque e dano separadamente; críticos afetam somente a respectiva lança.",
+      "icone": "✨",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:haste",
+        "prop:duas_maos",
+        "prop:estendida",
+        "prop:especial",
+        "modelo:seraphiel",
+        "espacos:2",
+        "mao:2",
+        "ferramenta_amaldicoada",
+        "grau:2",
+        "raridade:precioso"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "seraphiel-equipar",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1794700800000,
+      "atualizadoEm": 1794700800000,
+      "comercio": {
+        "basePrice": 0,
+        "hiddenTags": [
+          "amaldicoado",
+          "ferramenta_amaldicoada"
+        ],
+        "isBought": false,
+        "categoriasAceitas": []
+      },
+      "acoesAtivas": [
+        {
+          "id": "seraphiel-punicao",
+          "nome": "Punição — usar após acerto (1/rodada)",
+          "acao": "livre",
+          "custoPE": "0",
+          "alcanceM": 0,
+          "tipo_alvo": "unico",
+          "filtro_alvo": "inimigos",
+          "teste": "ataque",
+          "tipo_efeito": "dano",
+          "mod_acerto": 1,
+          "dano": "2d8",
+          "tipoDano": "Radiante"
+        },
+        {
+          "id": "seraphiel-protecao",
+          "nome": "Proteção (Arsenal dos Serafins)",
+          "acao": "reacao",
+          "custoPE": "0",
+          "alcanceM": 6,
+          "tipo_alvo": "unico",
+          "filtro_alvo": "aliados",
+          "teste": "nenhum",
+          "tipo_efeito": "buff",
+          "reacao": {
+            "gatilho": "quando_alvo_declarar_ataque",
+            "alcance_m": 6,
+            "protegido": "aliados",
+            "alvo": "protegido",
+            "defesa_bonus": 2
+          }
+        },
+        {
+          "id": "seraphiel-perseguicao",
+          "nome": "Perseguição Divina (até 3 alvos)",
+          "acao": "comum",
+          "custoPE": "6",
+          "alcanceM": 18,
+          "tipo_alvo": "multiplo",
+          "filtro_alvo": "inimigos",
+          "max_alvos": "3",
+          "teste": "ataque",
+          "tipo_efeito": "dano",
+          "dano": "2d8",
+          "tipoDano": "Radiante",
+          "mod_acerto": 1
+        },
+        {
+          "id": "seraphiel-prisao",
+          "nome": "Prisão dos Seis Céus",
+          "acao": "comum",
+          "custoPE": "8",
+          "alcanceM": 18,
+          "tipo_alvo": "area",
+          "filtro_alvo": "inimigos",
+          "area": {
+            "forma": "raio_no_ponto",
+            "tamanho_m": 3
+          },
+          "teste": "tr",
+          "tr": "reflexos",
+          "metadeNoSucesso": true,
+          "dano": "3d8",
+          "tipoDano": "Radiante",
+          "desfechosTR": {
+            "falha": {
+              "dano": "total",
+              "efeitos": [
+                {
+                  "tipo": "condicao",
+                  "condicao": "imovel",
+                  "rodadas": 1,
+                  "ate_inicio_turno_usuario": true
+                }
+              ]
+            },
+            "sucesso": {
+              "dano": "metade"
+            }
+          }
+        }
+      ],
+      "combatData": {
+        "effects": [
+          {
+            "id": "seraphiel-dano-base",
+            "formula": "2d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "seraphiel-dano-base",
+            "formula": "2d8",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Impacto",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 19,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      }
+    },
+    {
+      "id": "preset-lanca-vetorial-rubra",
+      "versao": 1,
+      "nome": "Lança Vetorial Rubra",
+      "categoria": "arma",
+      "descricao": "**Lança de Haste Complexa • 3 espaços • 1º Grau • Épico**\nDano base: 1d10 Perfurante • Crítico: 19–20/×2 • Propriedades: Estendida, Duas Mãos, Especial.\n\n**Núcleo Carmesim (Passiva):** ataques acertados aplicam 1 Marca Vetorial; críticos aplicam 2. Máximo de 3 marcas e apenas um inimigo marcado por vez. Com 1 marca: +2 nos ataques contra ele. Com 2: ataques ignoram 3 pontos de Defesa e causam +2d8 uma vez por rodada. Com 3: margem de crítico 18–20 contra ele e acesso à Sentença Rubra. Marcas acabam ao final do combate.\n\n**Avanço Escarlate (Ação Comum, 4 PE):** avance em linha reta até 3 m e ataque. No acerto, aplique 2 Marcas Vetoriais em vez de 1.\n\n**Sentença Rubra (Ação Comum, 10 PE; exige 3 marcas):** faça um ataque corpo a corpo. No acerto, causa dano base +10d8 Perfurante Amaldiçoado, impede Reações até o início do próximo turno do portador e consome as 3 marcas. O +2d8 de Fratura Energética não se aplica.",
+      "icone": "🔱",
+      "tags": [
+        "preset",
+        "arma",
+        "complexa",
+        "melee",
+        "grupo:haste",
+        "prop:estendida",
+        "prop:duas_maos",
+        "prop:especial",
+        "modelo:lanca-vetorial-rubra",
+        "espacos:3",
+        "mao:2",
+        "grau:1",
+        "raridade:epico",
+        "feature:lanca-vetorial-rubra",
+        "ferramenta_amaldicoada"
+      ],
+      "duracao": {
+        "tipo": "permanente"
+      },
+      "custos": [],
+      "gatilhos": [
+        {
+          "id": "lanca-vetorial-rubra-equipar",
+          "evento": "aoEquipar",
+          "blocos": []
+        }
+      ],
+      "slotType": "maos",
+      "criadoEm": 1792195200000,
+      "atualizadoEm": 1792195200000,
+      "combatData": {
+        "effects": [
+          {
+            "id": "lanca-vetorial-rubra-dano",
+            "formula": "1d10",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "effectsPassive": [],
+        "effectsActive": [
+          {
+            "id": "lanca-vetorial-rubra-dano",
+            "formula": "1d10",
+            "type": "SUBTRAIR",
+            "target": "ALVO",
+            "damageType": "Perfurante",
+            "resourcePath": "vida_atual"
+          }
+        ],
+        "critRange": 19,
+        "critMultiplier": 2,
+        "actionCost": "action_standard",
+        "rangeType": "touch",
+        "aoeShape": "single",
+        "isActive": true
+      },
+      "comercio": {
+        "basePrice": 0,
+        "hiddenTags": [
+          "amaldicoado",
+          "ferramenta_amaldicoada"
+        ],
+        "isBought": false,
+        "categoriasAceitas": []
+      }
+    }
+  ]
+}

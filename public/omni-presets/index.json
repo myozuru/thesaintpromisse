@@ -48,6 +48,12 @@
       "nome": "Báculo Aetheris",
       "descricao": "Arma lendária de Grau Especial (2d8 Impacto, crítico 19–20): Plumas da Tempestade, Reversão dos Ventos, Trono das Nuvens, Réquiem dos Céus e Ruptura do Firmamento.",
       "arquivo": "/omni-presets/baculo-aetheris.json"
+    },
+    {
+      "id": "ferramentas-amaldicoadas",
+      "nome": "Ferramentas Amaldiçoadas",
+      "descricao": "Sete armas OMNI editáveis: Aetheris, Sagitta, Raijin, Ruína Esmeralda, Crepúsculo da Última Lua, Seraphiel e Lança Vetorial Rubra. Imagens e preços ficam em branco para configuração pelo Mestre.",
+      "arquivo": "/omni-presets/ferramentas-amaldicoadas.json"
     }
   ]
 }

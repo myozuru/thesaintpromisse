@@ -13,7 +13,7 @@ import { useMapStore, type Entity } from '@/stores/useMapStore';
 import { findEntitiesInTemplate } from '@/lib/mapAoE';
 import { rollDiceCom } from '@/lib/dice';
 import { aplicarMovimentoAtivo, validarPlanoMovimento } from '@/lib/omni/movimentosAtivos';
-import { aetherisRequiemReady, aetherisRoundUseReady, validAetherisFeatherAllocation, BACULO_AETHERIS_ID, BACULO_AETHERIS_SUSPENSO } from '@/lib/baculoAetheris';
+import { aetherisRequiemReady, validAetherisFeatherAllocation, BACULO_AETHERIS_ID, BACULO_AETHERIS_SUSPENSO } from '@/lib/baculoAetheris';
 import { getReactionsAvailable } from '@/lib/reactionBudget';
 import { useBaculoAetherisCounterattackStore } from '@/lib/baculoAetherisState';
 import { saoAliados } from '@/lib/omni/observadores';
@@ -58,8 +58,6 @@ export function BaculoAetherisPanel({ character, weaponInstanceId, weapon: equip
   const counterattack = useBaculoAetherisCounterattackStore((s) => s.pending?.wielderId === character.id ? s.pending : null);
   const clearCounterattack = useBaculoAetherisCounterattackStore((s) => s.clearPending);
   const usedRequiem = useCombatStore((s) => s.aetherisRequiemUse[character.id]);
-  const aetherisRoundUse = useCombatStore((s) => s.aetherisRoundUse);
-  const round = useCombatStore((s) => s.round);
   const addLog = useLogStore((s) => s.addLog);
   const current = characters.find((x) => x.id === character.id) ?? character;
   const sourceToken = tokenOf(entities, current.id);
@@ -143,7 +141,7 @@ export function BaculoAetherisPanel({ character, weaponInstanceId, weapon: equip
           const attack = await rollAttack(ctx);
           addLog('combat', 'Plumas da Tempestade: d20 ' + attack.natural + ' contra ' + victim.name + (attack.hit ? ' — acerto.' : ' — erro.'));
           if (!attack.hit) continue;
-          const formula = attack.critical ? '12d8' : '6d8';
+          const formula = attack.critical ? '16d8' : '8d8';
           const rolled = await rollDiceCom(attacker.id, formula, { label: 'Plumas da Tempestade' });
           await applyDamage(victim.id, rolled.total, 'DCO', { attackerId: attacker.id, source: 'arma', isMelee: false, attack: { critical: attack.critical, criticalFail: false } });
           addLog('combat', formula + ' Cortante = ' + rolled.total + ' contra ' + victim.name + '.');
@@ -185,7 +183,7 @@ export function BaculoAetherisPanel({ character, weaponInstanceId, weapon: equip
     for (const target of affected) {
       const suspended = target.activeConditions?.some((condition) => condition.conditionId === BACULO_AETHERIS_SUSPENSO);
       pedirTRBaculoAetheris(current, target, 'Réquiem dos Céus', {
-        damageFormula: '15d10', damageType: 'DS', halfOnSuccess: true, pushMetersOnFailure: 6,
+        damageFormula: '18d12', damageType: 'DS', halfOnSuccess: true, pushMetersOnFailure: 6,
         conditionOnFailure: 'caido', saveModifier: suspended ? -2 : undefined, sourceInstanceId: weaponInstanceId });
     }
     for (const id of safe) {
@@ -211,11 +209,8 @@ export function BaculoAetherisPanel({ character, weaponInstanceId, weapon: equip
   const ruptureTarget = characters.find((c) => c.id === ruptureTargetId);
   const counterattackTarget = counterattack ? characters.find((c) => c.id === counterattack.attackerId) : undefined;
   const counterattackDistance = counterattackTarget ? distanceBetweenChars(current.id, counterattackTarget.id, entities, grid, { casterProfileId: current.profileId, targetProfileId: counterattackTarget.profileId }) : null;
-  const ruptureUseKey = current.id + ':' + (weaponInstanceId || BACULO_AETHERIS_ID) + ':ruptura';
-  const ruptureUsed = !aetherisRoundUseReady(aetherisRoundUse[ruptureUseKey], combatId ?? null, round);
-  const ruptureReason = ruptureUsed ? 'Ruptura já foi usada nesta rodada'
-    : getReactionsAvailable(current) <= 0 ? 'Sem Reação disponível nesta rodada'
-      : totalPE < 2 ? 'PE insuficiente: requer 2, você possui ' + totalPE : null;
+  const ruptureReason = getReactionsAvailable(current) <= 0 ? 'Sem Reação disponível nesta rodada'
+    : totalPE < 2 ? 'PE insuficiente: requer 2, você possui ' + totalPE : null;
   const toggleSafe = (id: string) => setSafe((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : prev.length < 3 ? [...prev, id] : prev);
   const activateRupture = async () => {
     if (!ruptureTargetId) return;
@@ -240,7 +235,7 @@ export function BaculoAetherisPanel({ character, weaponInstanceId, weapon: equip
     {usedRequiem === (combatId ?? 'sem-combate') && <p role="status" className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm font-semibold text-amber-200">⚠ Réquiem já foi usada 1× nesta cena</p>}
     {inCombat && (current.baculoAetherisSafeMoveRemainingM ?? 0) > 0 && <p role="status" className="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">Ventos Favoráveis: restam até {(current.baculoAetherisSafeMoveRemainingM ?? 0).toFixed(1).replace('.', ',')} m sem provocar AdO.</p>}
     {ruptureTarget && <div role="dialog" aria-labelledby="aetheris-rupture-title" className="space-y-2 rounded-lg border border-primary/50 bg-background p-3">
-      <h4 id="aetheris-rupture-title" className="text-sm font-bold">Ruptura do Firmamento</h4><p className="text-xs text-muted-foreground">Contra {ruptureTarget.name}: +10d10 Sônico, empurrão de 6 m e TR de Fortitude para Caído.</p>
+    <h4 id="aetheris-rupture-title" className="text-sm font-bold">Ruptura do Firmamento</h4><p className="text-xs text-muted-foreground">Contra {ruptureTarget.name}: +8d12 Sônico, empurrão de 6 m e TR de Fortitude para Caído.</p>
       <div className="flex flex-wrap gap-2"><button type="button" onClick={() => void activateRupture()} disabled={!!ruptureReason || busy} title={ruptureReason ?? 'Gasta 2 PE e 1 Reação'} className="rounded-md bg-primary px-3 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50">Ativar Ruptura do Firmamento (2 PE • 1 Reação)</button><button type="button" onClick={onRupturePromptClose} className="rounded-md border border-border px-3 py-2 text-sm">Ignorar / Guardar Reação</button></div>
       {ruptureReason && <p role="status" className="text-xs text-muted-foreground">{ruptureReason}</p>}
     </div>}
@@ -252,7 +247,7 @@ export function BaculoAetherisPanel({ character, weaponInstanceId, weapon: equip
     <Dialog.Root open={!!mode && !busy} onOpenChange={(open) => { if (!open && !busy) close(); }}>
       <Dialog.Portal><Dialog.Overlay className="fixed inset-0 z-[90] bg-black/70" />
       <Dialog.Content aria-labelledby="aetheris-modal-title" aria-describedby={undefined} className="fixed left-1/2 top-1/2 z-[91] max-h-[85vh] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-border bg-background p-4 shadow-xl">
-      <div className="mb-3 flex items-start gap-3"><div className="min-w-0 flex-1"><h3 id="aetheris-modal-title" className="text-base font-bold">{mode === 'plumas' ? 'Plumas da Tempestade' : mode === 'trono' ? 'Trono das Nuvens' : 'Réquiem dos Céus'}</h3><p className="mt-1 text-sm text-muted-foreground">{mode === 'plumas' ? 'Distribua até 3 ataques de 6d8 Cortante entre alvos a até 18 m.' : mode === 'trono' ? 'Posicione o raio de 3 m a até 18 m e confira os alvos.' : 'Posicione o raio de 9 m e escolha até 3 aliados para transporte seguro.'}</p></div><button type="button" onClick={close} aria-label="Fechar" className="rounded p-1"><X className="h-4 w-4"/></button></div>
+      <div className="mb-3 flex items-start gap-3"><div className="min-w-0 flex-1"><h3 id="aetheris-modal-title" className="text-base font-bold">{mode === 'plumas' ? 'Plumas da Tempestade' : mode === 'trono' ? 'Trono das Nuvens' : 'Réquiem dos Céus'}</h3><p className="mt-1 text-sm text-muted-foreground">{mode === 'plumas' ? 'Distribua até 3 ataques independentes de 8d8 Cortante entre alvos a até 18 m.' : mode === 'trono' ? 'Posicione o raio de 3 m a até 18 m e confira os alvos.' : 'Posicione o raio de 9 m e escolha até 3 aliados para transporte seguro.'}</p></div><button type="button" onClick={close} aria-label="Fechar" className="rounded p-1"><X className="h-4 w-4"/></button></div>
       {mode === 'plumas' && <div className="space-y-2">{reachable.length === 0 && <p className="text-sm text-muted-foreground">Nenhum inimigo visível a até 18 m.</p>}{reachable.map((c) => { const count = allocation[c.id] ?? 0; const total = Object.values(allocation).reduce((a, n) => a+n, 0); const d = distanceBetweenChars(current.id, c.id, entities, grid, { casterProfileId: current.profileId, targetProfileId: c.profileId }) ?? 0; return <div key={c.id} className="flex items-center gap-3 border-b border-border py-2"><span className="min-w-0 flex-1 truncate text-sm">{c.name} · {d.toFixed(1).replace('.', ',')} m</span><button type="button" aria-label={'Remover pluma de '+c.name} onClick={() => setAllocationFor(c.id,-1)} disabled={count===0} className="h-8 w-8 rounded border border-border disabled:opacity-40">−</button><span className="w-5 text-center tabular-nums">{count}</span><button type="button" aria-label={'Adicionar pluma a '+c.name} onClick={() => setAllocationFor(c.id,1)} disabled={total>=3||count>=3} className="h-8 w-8 rounded border border-border disabled:opacity-40">+</button></div>; })}<div className="flex items-center justify-between border-t border-border pt-3"><span className="text-sm text-muted-foreground">{Object.values(allocation).reduce((a,n)=>a+n,0)}/3 plumas</span><button type="button" onClick={() => void fire()} disabled={!validAetherisFeatherAllocation(allocation)||busy} className="rounded-md bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50">Disparar Plumas (8 PE)</button></div></div>}
       {mode !== 'plumas' && !area && <p role="status" className="rounded-md bg-muted px-3 py-3 text-sm text-muted-foreground">{busy?'Abrindo a retícula no mapa…':'Escolha um ponto no mapa para posicionar a área.'}</p>}
       {mode !== 'plumas' && area && <div className="space-y-3"><h4 className="text-sm font-semibold">Alvos afetados</h4>{affected.length?affected.map((c)=><p key={c.id} className="border-b border-border py-1 text-sm">{c.name}</p>):<p className="text-sm text-muted-foreground">Nenhum alvo dentro da área.</p>}

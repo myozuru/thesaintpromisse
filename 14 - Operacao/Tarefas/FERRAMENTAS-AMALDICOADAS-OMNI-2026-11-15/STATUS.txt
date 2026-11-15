@@ -1,0 +1,10 @@
+Estado: pacote de sete ferramentas gerado e editável; import/schema, 42 testes de itens focados, TypeScript e build aprovados localmente.
+Responsável: Codex
+Revisor independente: Claude Opus revisou via Maestri; reclassificou os falsos positivos de runtime Aetheris/Lança e apontou diferenças entre ações genéricas e painéis especializados.
+Atualização: 2026-11-15
+Branch: feature/dez-sombras-hud-mapa; alterações locais ainda não commitadas/publicadas.
+Escopo: registrar Seraphiel, Aetheris, Sagitta, Raijin, Ruína Esmeralda, Crepúsculo da Última Lua e Lança Vetorial Rubra como preset OMNI editável e modelos de arma.
+Importação: Master importa uma vez pelo pacote Ferramentas Amaldiçoadas. Valores de preço iniciam em 0; imagens não são preenchidas. Mestre pode editar o registro antes de distribuir ou listar em loja/baú.
+QA atual: 42 testes focados de itens passaram; suíte Dez Sombras 217/217; TypeScript e build aprovados.
+Evidências e limites de automação: evidencias/MATRIZ-FUNCIONAL.md.
+Pendência de fechamento: conferência final e commit local; sem push informado. Há poderes cuja resolução automática completa depende de uma fase própria, descritos na matriz funcional.

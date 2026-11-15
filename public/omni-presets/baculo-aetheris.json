@@ -2,14 +2,14 @@
   "formato": "omni-engine.v1",
   "nome": "Báculo Aetheris",
   "autor": "OMNI",
-  "geradoEm": 1792454400000,
+  "geradoEm": 1794700800000,
   "entidades": [
     {
       "id": "preset-baculo-aetheris",
       "versao": 1,
       "nome": "Báculo Aetheris",
       "categoria": "arma",
-      "descricao": "**Complexa • Corpo-a-corpo • Grupo Haste**\nDano: 2d8 Impacto\nMargem de crítico: 19–20\nAlcance: 3 m\nEspaços: 2\nPropriedades: Estendida, Duas Mãos, Especial\n\n**Asas do Firmamento:** +3 m de deslocamento, ignora terreno difícil natural e reduz dano de queda para o excedente acima de 18 m.\n\n**Rajada Sônica:** primeiro acerto de cada rodada causa +3d8 Sônico e empurra 3 m. **Julgamento dos Ventos:** acerto crítico causa +5d8 Sônico e exige TR de Fortitude; falha suprime Reações até o início do próximo turno do portador. **Ruptura do Firmamento:** após crítico, Reação e 2 PE para +10d10 Sônico, empurrão 6 m e TR de Fortitude para Caído.\n\n**Plumas da Tempestade** (Ação Comum, 8 PE): até 3 ataques independentes de 6d8 Cortante a até 18 m; depois, até 4,5 m de movimento sem AdO. **Reversão dos Ventos** (Reação, 7 PE): +5 Defesa contra ataque à distância contra o portador ou aliado a até 9 m; se tornar o ataque uma falha, libera contra-ataque de 5d8 Sônico a até 18 m. **Trono das Nuvens** (Ação Comum, 9 PE): raio de 3 m a até 18 m, 5d8 Impacto e Suspenso a 4,5 m em falha no TR de Fortitude até o próximo turno do portador. **Réquiem dos Céus** (Ação Completa, 18 PE, 1× por cena): raio de 9 m, 15d10 Sônico, empurrão de 6 m e Caído em falha; até 3 aliados são transportados em segurança até 9 m.",
+      "descricao": "**Báculo Complexo • 2 espaços • Grau Especial • Lendário**\nDano base: 2d8 Impacto • Crítico: 19–20/×2 • Propriedades: Duas Mãos, Estendida, Especial.\n\n**Asas do Firmamento (Passiva):** +3 m de Deslocamento; ignora Terreno Difícil natural; pode planar e anula dano de quedas de até 18 m.\n\n**Rajada Sônica (Passiva):** uma vez por rodada, ao acertar com o báculo, causa +3d8 Sônico e empurra o alvo até 3 m.\n\n**Julgamento dos Ventos (Crítico especial):** em um crítico, causa +11d8 Sônico. O alvo faz TR de Fortitude contra a CD do usuário; em falha, não pode realizar Reações até o início do próximo turno do portador.\n\n**Plumas da Tempestade (Ação Comum, 8 PE):** faça até três ataques à distância independentes contra criaturas a até 18 m; cada acerto causa 8d8 Cortante. Depois, mova-se até 4,5 m sem provocar Ataques de Oportunidade.\n\n**Reversão dos Ventos (Reação, 7 PE):** quando um ataque à distância for feito contra o portador ou um aliado a até 9 m, conceda +5 na Defesa contra aquele ataque. Se ele errar, o portador pode fazer um ataque à distância contra o agressor; o acerto causa 5d8 Sônico.\n\n**Trono das Nuvens (Ação Comum, 9 PE):** escolha uma área de raio 3 m a até 18 m. Criaturas escolhidas fazem TR de Fortitude. Falha: 5d8 Impacto e ficam Suspensas a 4,5 m até o início do próximo turno do portador. Sucesso: metade do dano, sem suspensão. Criaturas suspensas sem voo não podem usar deslocamento de caminhada; ao terminar, descem sem dano.\n\n**Réquiem dos Céus (Ação Completa, 18 PE, 1 vez por cena):** escolha um ponto a até 24 m; criaturas escolhidas em raio de 9 m fazem TR de Fortitude. Falha: 18d12 Sônico, empurrão de 6 m e Caído. Sucesso: metade do dano, sem efeitos adicionais. Alvos suspensos sofrem –2 no TR. O portador pode transportar até três aliados na área por até 9 m sem dano.\n\n**Ruptura do Firmamento (Reação, 2 PE):** imediatamente após um crítico com Aetheris, causa +8d12 Sônico, empurra o alvo até 6 m e exige TR de Fortitude; falha deixa Caído. O dano ocorre depois do ataque e não é multiplicado pelo crítico. Pode ser combinada com Julgamento dos Ventos se ainda houver Reação.",
       "icone": "🪄",
       "tags": [
         "preset",
@@ -25,7 +25,8 @@
         "mao:2",
         "feature:baculo-aetheris",
         "grau:especial",
-        "raridade:lendario"
+        "raridade:lendario",
+        "ferramenta_amaldicoada"
       ],
       "duracao": {
         "tipo": "permanente"
@@ -71,7 +72,7 @@
           "filtro_alvo": "inimigos",
           "max_alvos": "3",
           "teste": "ataque",
-          "dano": "6d8",
+          "dano": "8d8",
           "tipoDano": "Cortante"
         },
         {
@@ -136,7 +137,7 @@
           "teste": "tr",
           "tr": "fortitude",
           "metadeNoSucesso": true,
-          "dano": "15d10",
+          "dano": "18d12",
           "tipoDano": "Sônico",
           "condicionais": [
             {
@@ -160,7 +161,7 @@
           "tipo_alvo": "unico",
           "filtro_alvo": "inimigos",
           "teste": "nenhum",
-          "dano": "10d10",
+          "dano": "8d12",
           "tipoDano": "Sônico"
         }
       ],
@@ -192,6 +193,15 @@
         "rangeType": "touch",
         "aoeShape": "single",
         "isActive": true
+      },
+      "comercio": {
+        "basePrice": 0,
+        "hiddenTags": [
+          "amaldicoado",
+          "ferramenta_amaldicoada"
+        ],
+        "isBought": false,
+        "categoriasAceitas": []
       }
     }
   ]

@@ -29,22 +29,24 @@ describe('Lança Vetorial Rubra como arma externa OMNI', () => {
     expect(parsed.success).toBe(true);
     if (!parsed.success) return;
     const entity = parsed.data.entidades[0];
-    expect(entity.comercio).toBeUndefined();
+    expect(entity.comercio).toMatchObject({ basePrice: 0, isBought: false });
+    expect(entity.comercio?.hiddenTags).toContain('ferramenta_amaldicoada');
     expect(entity.tags).toContain('feature:lanca-vetorial-rubra');
     expect(entity.tags).toContain('mao:2');
     expect(entity.combatData?.effectsActive?.[0]).toMatchObject({ formula: '1d10', damageType: 'Perfurante' });
-    expect(buildWeaponTags(EXTERNAL_WEAPONS[0])).toContain('feature:lanca-vetorial-rubra');
-    const rebuilt = applyWeaponModel(entity as EntidadeOmni, EXTERNAL_WEAPONS[0]);
+    const weaponModel = EXTERNAL_WEAPONS.find((weapon) => weapon.id === 'lanca-vetorial-rubra')!;
+    expect(buildWeaponTags(weaponModel)).toContain('feature:lanca-vetorial-rubra');
+    const rebuilt = applyWeaponModel(entity as EntidadeOmni, weaponModel);
     expect(rebuilt.tags).toContain('feature:lanca-vetorial-rubra');
     expect(rebuilt.combatData?.critRange).toBe(19);
     expect(rebuilt.combatData?.effectsActive?.[0]?.formula).toBe('1d10');
-    expect(rebuilt.comercio).toBeUndefined();
+    expect(rebuilt.comercio).toMatchObject({ basePrice: 0, isBought: false });
   });
 
   it('percorre exemplarArma->armaDoPersonagem e preserva feature, empunhadura e crítico', () => {
     const entity = pacote.entidades[0] as EntidadeOmni;
     const item = useInventoryStore.getState().add('portador', entity, { instanceId: 'lanca-vetorial-rubra-u' });
-    expect(item.entity.comercio).toBeUndefined();
+    expect(item.entity.comercio).toMatchObject({ basePrice: 0, isBought: false });
     const weapon = armaDoPersonagem('portador', entity.nome, item.instanceId);
     expect(weapon).toMatchObject({
       id: 'lanca-vetorial-rubra', specialFeatureId: 'lanca-vetorial-rubra', group: 'Haste',

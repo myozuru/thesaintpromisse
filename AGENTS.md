@@ -57,3 +57,18 @@
 
 
 - Confira as dimensões reais de cada PNG contra o viewport CSS do Portal. Se houver corte, marque a evidência como parcial, registre a diferença e obtenha captura completa por método alternativo antes de aprovar.
+
+## Gate de conclusão: HUD de combate no mapa
+
+- HUD de combate só está concluído quando estiver montado no viewport real de `MapaModule`, e não apenas em ficha, modal ou harness isolado. Verifique Invocar, Em campo e Rituais no fluxo de combate.
+- Confira as fronteiras Mestre/Player com tokens possuídos e `masterControlled`, incluindo execução de habilidades e rituais, troca de alvo e fechamento por teclado.
+- Valide as habilidades existentes do pacote no fluxo real do mapa; quando dependerem de painel específico, teste também esse caminho e o vínculo de iniciativa/instância.
+- Registre viewport e dimensões exatas das capturas em desktop, tablet e celular; confira foco, Escape, reduced motion, overflow e erros de console. Dados de campanha não entram no fixture de QA.
+- Antes de aceitar achados de revisão, reproduza cada um contra o código e os testes atuais. Registre falsos positivos, correções e riscos residuais no handoff; não repita apontamentos já resolvidos como defeitos abertos.
+- Relate somente ações de Git observadas. Push, merge, publicação e estado de `main` só podem ser afirmados após conferir a referência remota correspondente.
+
+## Gate de presets OMNI editáveis
+
+- Antes de entregar um preset que o Mestre vai personalizar, valide o JSON com `PacoteOmniSchema` e confirme que o schema preserva os campos comerciais do tipo (`basePrice`, `hiddenTags`, `isBought`, `currencyId`, `categoriasAceitas`).
+- Geradores de seed não podem sobrescrever presets existentes por padrão. Regeneração exige flag explícita (`--force`) e aviso de que descrição, preço, imagem e categorias podem ser substituídos.
+- Verifique importação, entrega ao inventário, edição no ConstrutorEntidade e filtros de loja/baú. Não conclua que habilidades descritas em texto já estão automatizadas no combate.

@@ -108,11 +108,8 @@ describe('Aetheris combat', () => {
     expect(failed.ok).toBe(false);
     expect(failed.reason).toContain('PE e Reação foram preservados');
     expect(pegarFicha(donoId)).toMatchObject({ peCurrent: 10, reactionsCurrent: 1 });
-    expect(useCombatStore.getState().aetherisRoundUse['portador:baculo-1:ruptura']).toBeUndefined();
-
     await expect(ativarRupturaBaculoAetheris(donoId, alvoId, 'baculo-1')).resolves.toEqual({ ok: true });
     expect(pegarFicha(donoId)).toMatchObject({ peCurrent: 8, reactionsCurrent: 0 });
-    expect(useCombatStore.getState().aetherisRoundUse['portador:baculo-1:ruptura']).toBeDefined();
   });
 
   it('aplica Rajada uma vez por rodada e o cr?tico abre Julgamento com Fortitude', async () => {
@@ -122,7 +119,7 @@ describe('Aetheris combat', () => {
     expect(useMapStore.getState().entities['e-alvo'].x).toBe(280);
 
     await resolverAcertoBaculoAetheris(donoId, alvoId, 'baculo-1', true);
-    expect(rollCalls).toEqual(['3d8', '5d8']);
+    expect(rollCalls).toEqual(['3d8', '11d8']);
     expect(useMapStore.getState().entities['e-alvo'].x).toBe(280);
     expect(useTestRequestStore.getState().requests[0]).toMatchObject({
       kind: 'save', testName: 'Fortitude', charId: alvoId,
@@ -132,19 +129,20 @@ describe('Aetheris combat', () => {
     expect(pegarFicha(donoId).reactionsCurrent).toBe(1);
   });
 
-  it('Ruptura consome 2 PE e Rea??o, usa 10d10 sem duplicar e bloqueia uma segunda ativa??o', async () => {
+  it('Ruptura consome 2 PE e uma Reacao por uso, causa 8d12 e permite outro uso com outra Reacao', async () => {
+    useCharacterStore.getState().updateCharacter(donoId, { reactionsCurrent: 2, reactionsMax: 2 });
     const crit = await resolverAcertoBaculoAetheris(donoId, alvoId, 'baculo-1', true);
     expect(crit.rupturaPodeSerOferecida).toBe(true);
 
     expect(await ativarRupturaBaculoAetheris(donoId, alvoId, 'baculo-1')).toEqual({ ok: true });
-    expect(rollCalls).toEqual(['3d8', '5d8', '10d10']);
-    expect(pegarFicha(donoId)).toMatchObject({ peCurrent: 8, reactionsCurrent: 0 });
+    expect(rollCalls).toEqual(['3d8', '11d8', '8d12']);
+    expect(pegarFicha(donoId)).toMatchObject({ peCurrent: 8, reactionsCurrent: 1 });
     expect(useMapStore.getState().entities['e-alvo'].x).toBe(560);
 
     const second = await ativarRupturaBaculoAetheris(donoId, alvoId, 'baculo-1');
-    expect(second.ok).toBe(false); expect(second.reason).toContain('Ruptura'); expect(second.reason).toContain('nesta rodada');
-    expect(pegarFicha(donoId)).toMatchObject({ peCurrent: 8, reactionsCurrent: 0 });
-    expect(rollCalls).toEqual(['3d8', '5d8', '10d10']);
+    expect(second.ok).toBe(true);
+    expect(pegarFicha(donoId)).toMatchObject({ peCurrent: 6, reactionsCurrent: 0 });
+    expect(rollCalls).toEqual(['3d8', '11d8', '8d12', '8d12']);
 
     const ruptureRequest = useTestRequestStore.getState().requests.find((request) => request.aetherisResolution?.conditionOnFailure === 'caido');
     expect(ruptureRequest).toBeDefined();

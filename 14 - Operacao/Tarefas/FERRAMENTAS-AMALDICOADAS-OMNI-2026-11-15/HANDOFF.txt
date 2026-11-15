@@ -1,0 +1,7 @@
+O pacote está em `public/omni-presets/ferramentas-amaldicoadas.json`, listado em `public/omni-presets/index.json`. O Mestre importa pelo PresetsDialog para OMNI; itens importados podem ser editados e entregues pelo módulo OMNI, e o banco de itens alimenta lojas e baús.
+
+Importe antes de configurar preço e imagem. O script `scripts/build-ferramentas-amaldicoadas-preset.mjs` é um gerador de seed. Ele recusa sobrescrever o pacote existente por padrão; `--force` substitui presets, descrições e comércio e só deve ser usado após preservar as customizações do Mestre.
+
+Modelos de arma dos cinco itens novos estão em `src/lib/weapons.ts`; Aetheris e Lança mantêm os painéis especializados existentes. Consulte `evidencias/MATRIZ-FUNCIONAL.md` para separar resolução automatizada e adjudicação manual.
+
+Estado Git local e não publicado. Não afirmar push/merge até existir confirmação no Git.

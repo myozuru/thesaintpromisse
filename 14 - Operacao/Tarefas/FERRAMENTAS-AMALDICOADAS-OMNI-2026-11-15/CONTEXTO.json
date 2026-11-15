@@ -1,0 +1,12 @@
+{
+  "id": "FERRAMENTAS-AMALDICOADAS-OMNI-2026-11-15",
+  "created_at": "2026-11-15",
+  "owner": "Codex",
+  "branch": "feature/dez-sombras-hud-mapa",
+  "state": "implementation_local_reviewed",
+  "preset": "public/omni-presets/ferramentas-amaldicoadas.json",
+  "entities": ["Seraphiel", "Báculo Aetheris", "Sagitta", "Raijin", "Ruína Esmeralda", "Crepúsculo da Última Lua", "Lança Vetorial Rubra"],
+  "customization": {"price_seed": 0, "images_seeded": false, "import_once_before_master_customization": true},
+  "qa": {"focused_tests": "42 passed", "hud_and_ritual_focus": "51 passed / 10 suites", "dez_sombras_tests": "217 passed / 9 suites", "build": "passed", "typescript": "passed"},
+  "publish": "not_pushed"
+}

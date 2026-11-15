@@ -260,6 +260,8 @@ const EntidadeSchema = z.object({
       basePrice: z.number(),
       hiddenTags: z.array(z.string()),
       isBought: z.boolean(),
+      currencyId: z.string().optional(),
+      categoriasAceitas: z.array(z.string()).optional(),
     })
     .optional(),
   criadoEm: z.number(),

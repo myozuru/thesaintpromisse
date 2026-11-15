@@ -319,6 +319,47 @@ export const ALL_WEAPONS: Weapon[] = [
 
 export const EXTERNAL_WEAPONS: Weapon[] = [
   {
+    id: 'seraphiel',
+    name: 'Seraphiel — As Seis Sentenças',
+    category: 'complexa', range: 'melee', group: 'Haste',
+    damage: '2d8', damageType: 'Im', critRange: 19,
+    properties: [P.duasMaos(), P.estendida(), P.especial()], spaces: 2,
+    specialText: 'Ferramenta Amaldiçoada de 2º Grau, Preciosa. Arsenal dos Serafins, Perseguição Divina, Prisão dos Seis Céus e O Sexto Julgamento: consulte a descrição completa do item no preset Ferramentas Amaldiçoadas.',
+  },
+  {
+    id: 'sagitta',
+    name: 'Sagitta — O Juízo do Firmamento',
+    category: 'complexa', range: 'ranged', group: 'Arco',
+    damage: '5d12', damageType: 'Pf', critRange: 19,
+    rangeShort: 36, rangeLong: 72,
+    properties: [P.duasMaos(), P.especial(), P.marcial()], spaces: 2,
+    specialText: 'Ferramenta Amaldiçoada de Grau Especial, Santa. Cartografia Celestial, Constelação do Caçador, Equinócio Sagrado, Decreto do Zênite e Sentença das Estrelas: consulte a descrição completa do item no preset Ferramentas Amaldiçoadas.',
+  },
+  {
+    id: 'raijin',
+    name: 'Raijin — O Trovão Carmesim',
+    category: 'complexa', range: 'melee', group: 'Espada',
+    damage: '2d8', damageType: 'Ct', critRange: 19,
+    properties: [P.duasMaos(), P.versatil(), P.especial()], spaces: 2,
+    specialText: 'Ferramenta Amaldiçoada de 1º Grau, Épica. Sangue do Trovão, Dança do Relâmpago Escarlate, Contratempo do Trovão, Execução do Deus Trovejante e Trovão sem Som: consulte a descrição completa do item no preset Ferramentas Amaldiçoadas.',
+  },
+  {
+    id: 'ruina-esmeralda',
+    name: 'Ruína Esmeralda',
+    category: 'complexa', range: 'melee', group: 'Espada',
+    damage: '2d8', damageType: 'Ct', critRange: 19,
+    properties: [P.duasMaos(), P.especial()], spaces: 3,
+    specialText: 'Ferramenta Amaldiçoada de 1º Grau, Épica. Podridão Esmeralda, Miasma da Decadência, Decomposição Irreversível e Necrose Viridiana: consulte a descrição completa do item no preset Ferramentas Amaldiçoadas.',
+  },
+  {
+    id: 'crepusculo-ultima-lua',
+    name: 'Crepúsculo da Última Lua',
+    category: 'complexa', range: 'melee', group: 'Haste',
+    damage: '2d8', damageType: 'Ct', critRange: 19,
+    properties: [P.estendida(), P.duasMaos(), { kind: 'pesada' }, P.especial()], spaces: 3,
+    specialText: 'Ferramenta Amaldiçoada de 1º Grau, Épica. Lâmina de Retorno, Dança do Horizonte Partido, Ceifa do Eclipse, Reflexo da Lua Morta e Cisão Carmesim: consulte a descrição completa do item no preset Ferramentas Amaldiçoadas.',
+  },
+  {
     id: 'lanca-vetorial-rubra',
     name: 'Lança Vetorial Rubra',
     category: 'complexa',
@@ -330,7 +371,7 @@ export const EXTERNAL_WEAPONS: Weapon[] = [
     properties: [P.estendida(), P.duasMaos(), P.especial()],
     spaces: 3,
     specialFeatureId: 'lanca-vetorial-rubra',
-    specialText: 'Ferramenta Amaldi\u00e7oada - Grau 1 - Raridade \u00c9pico. N\u00facleo Carmesim: cada acerto aplica 1 Marca Vetorial (m\u00e1ximo 3); acertos cr\u00edticos aplicam 2. Somente um inimigo pode estar marcado por vez. Com 1 marca, o portador recebe +2 nos ataques contra o alvo. Com 2, os ataques ignoram 3 pontos de Defesa e causam +2d8 de dano uma vez por rodada. Com 3, a margem de cr\u00edtico passa a 18\u201320 contra o alvo. Avan\u00e7o Escarlate (A\u00e7\u00e3o Comum, 4 PE): avance em linha reta at\u00e9 3 m e ataque; no acerto, causa o dano normal e aplica exatamente 2 marcas, inclusive em cr\u00edtico. Senten\u00e7a Rubra (A\u00e7\u00e3o Comum, 10 PE; exige 3 marcas): no acerto, causa o dano-base +10d8 Perfurante, impede Rea\u00e7\u00f5es do alvo at\u00e9 o in\u00edcio do pr\u00f3ximo turno do portador e consome as marcas. Em cr\u00edtico, dobra os dados-base e os 10d8, sem dobrar modificadores fixos. Senten\u00e7a Rubra n\u00e3o recebe o +2d8 de Fratura Energ\u00e9tica. As marcas desaparecem ao fim do combate.',
+    specialText: "Ferramenta Amaldiçoada de 1º Grau, Épica. Núcleo Carmesim: 1 marca por acerto (2 em crítico), máximo 3 e um alvo; 1 marca dá +2 no ataque, 2 ignoram 3 Defesa e causam +2d8 uma vez por rodada, 3 ampliam a margem para 18–20. Avanço Escarlate (4 PE): mova 3 m em linha e ataque; acerto aplica 2 marcas. Sentença Rubra (10 PE, 3 marcas): ataque causa dano base +10d8 Perfurante Amaldiçoado, suprime Reações e consome as marcas; não recebe Fratura Energética. As marcas terminam no combate.",
   },
   {
     id: 'baculo-aetheris',
@@ -344,7 +385,7 @@ export const EXTERNAL_WEAPONS: Weapon[] = [
     properties: [P.duasMaos(), P.estendida(), P.especial()],
     spaces: 2,
     specialFeatureId: 'baculo-aetheris',
-    specialText: 'Arma de duas mãos, ocupa 2 espaços, alcance corpo a corpo de 3 m. Ataque básico: 2d8 Impacto, crítico 19–20. Asas do Firmamento: +3 m de deslocamento, ignora terreno difícil natural e reduz dano de queda para a distância que exceder 18 m. Rajada Sônica: no primeiro acerto de cada rodada, +3d8 Sônico e empurrão de 3 m. Julgamento dos Ventos: em crítico, +5d8 Sônico e TR de Fortitude; falha suprime Reações até o início do próximo turno do portador. Ruptura do Firmamento: após um crítico, pode gastar 2 PE e uma Reação para causar +10d10 Sônico, empurrar 6 m e exigir TR de Fortitude para Caído. Plumas da Tempestade (Ação Comum, 8 PE): até 3 ataques de 6d8 Cortante, alcance 18 m, com até 4,5 m de movimento sem Ataques de Oportunidade após o disparo. Reversão dos Ventos (Reação, 7 PE): +5 Defesa para o portador ou aliado a até 9 m contra ataque à distância; se o bônus fizer o ataque errar, libera contra-ataque de 5d8 Sônico a até 18 m. Trono das Nuvens (Ação Comum, 9 PE): raio 3 m a até 18 m, 5d8 Impacto e suspensão a 4,5 m em falha no TR de Fortitude até o próximo turno do portador. Réquiem dos Céus (Ação Completa, 18 PE, 1× por cena): raio 9 m, 15d10 Sônico, empurrão de 6 m e Caído em falha no TR de Fortitude; até 3 aliados podem ser transportados em segurança até 9 m.',
+    specialText: "Ferramenta Amaldiçoada de Grau Especial, Lendária. Asas do Firmamento: +3 m de Deslocamento, ignora terreno difícil natural e anula queda até 18 m. Rajada Sônica: 1 vez por rodada, acerto causa +3d8 e empurra 3 m. Crítico: +11d8 Sônico e TR de Fortitude para suprimir Reações. Plumas da Tempestade (8 PE): até 3 ataques independentes de 8d8 Cortante a 18 m, depois mova 4,5 m sem AdO. Reversão dos Ventos (7 PE): Reação, +5 Defesa contra ataque à distância a 9 m; se errar, pode contra-atacar por 5d8 Sônico. Trono das Nuvens (9 PE): raio 3 m a 18 m, 5d8 Impacto e Suspenso em falha no TR de Fortitude. Réquiem dos Céus (18 PE, completa, 1/cena): raio 9 m a 24 m, 18d12 Sônico, empurra 6 m e Caído em falha; transporta até 3 aliados por 9 m. Ruptura (2 PE e Reação após crítico): +8d12 Sônico, empurra 6 m e TR para Caído; não multiplica pelo crítico.",
   },
 ];
 
