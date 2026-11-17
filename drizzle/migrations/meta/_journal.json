@@ -15,6 +15,13 @@
       "when": 1794951218390,
       "tag": "0001_install_invocation_approval_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794951267807,
+      "tag": "0002_combat_action_requests",
+      "breakpoints": true
     }
   ]
 }

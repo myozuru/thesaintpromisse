@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      combat_action_requests: {
+        Row: {
+          actor_character_id: string
+          claimed_at: string | null
+          claimed_by: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          intent: Json
+          lease_expires_at: string | null
+          request_id: string
+          result: Json | null
+          status: string
+          submitted_by: string
+          updated_at: string
+        }
+        Insert: {
+          actor_character_id: string
+          claimed_at?: string | null
+          claimed_by?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          intent: Json
+          lease_expires_at?: string | null
+          request_id: string
+          result?: Json | null
+          status?: string
+          submitted_by: string
+          updated_at?: string
+        }
+        Update: {
+          actor_character_id?: string
+          claimed_at?: string | null
+          claimed_by?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          intent?: Json
+          lease_expires_at?: string | null
+          request_id?: string
+          result?: Json | null
+          status?: string
+          submitted_by?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       combat_character_owners: {
         Row: {
           assigned_at: string
