@@ -14,6 +14,75 @@ export type Database = {
   }
   public: {
     Tables: {
+      combat_character_owners: {
+        Row: {
+          assigned_at: string
+          assigned_by: string
+          character_id: string
+          owner_user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by: string
+          character_id: string
+          owner_user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string
+          character_id?: string
+          owner_user_id?: string
+        }
+        Relationships: []
+      }
+      invocation_approval_requests: {
+        Row: {
+          approved_version: number | null
+          invocation_id: string
+          owner_character_id: string
+          reason: string | null
+          request_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          snapshot: Json
+          status: string
+          submission_origin: string
+          submitted_at: string
+          submitted_by: string
+          version_submitted: number
+        }
+        Insert: {
+          approved_version?: number | null
+          invocation_id: string
+          owner_character_id: string
+          reason?: string | null
+          request_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          snapshot: Json
+          status: string
+          submission_origin?: string
+          submitted_at?: string
+          submitted_by: string
+          version_submitted: number
+        }
+        Update: {
+          approved_version?: number | null
+          invocation_id?: string
+          owner_character_id?: string
+          reason?: string | null
+          request_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          snapshot?: Json
+          status?: string
+          submission_origin?: string
+          submitted_at?: string
+          submitted_by?: string
+          version_submitted?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar: string | null

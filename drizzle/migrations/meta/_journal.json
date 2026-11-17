@@ -8,6 +8,13 @@
       "when": 1794581951069,
       "tag": "0000_restrict_shared_tables_to_signed_in",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794951218390,
+      "tag": "0001_install_invocation_approval_tables",
+      "breakpoints": true
     }
   ]
 }
