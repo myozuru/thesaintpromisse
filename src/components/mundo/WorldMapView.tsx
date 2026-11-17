@@ -269,7 +269,7 @@ export function WorldMapView() {
             </div>
           )}
           {worldMap && unplaced.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
               Colocar no mapa:
               {unplaced.map((b) => (
                 <button
@@ -283,7 +283,7 @@ export function WorldMapView() {
               ))}
             </div>
           )}
-          {placing && <span className="text-xs text-accent">Clique no mapa para posicionar o chefe.</span>}
+          {placing && <span className="text-sm text-accent">Clique no mapa para posicionar o chefe.</span>}
         </div>
       )}
 
@@ -369,7 +369,7 @@ export function WorldMapView() {
                 <div className="pointer-events-none absolute" data-grupo-viagem
                   style={{ left: `${viagem.grupo.x}%`, top: `${viagem.grupo.y}%`, transform: `translate(-50%, -50%) scale(${1 / view.scale})` }}>
                   <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-primary bg-card text-lg shadow-lg">🧭</div>
-                  <div className="absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap rounded bg-background/85 px-1.5 py-0.5 text-xs font-semibold">Grupo</div>
+                  <div className="absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap rounded bg-background/85 px-1.5 py-0.5 text-sm font-semibold">Grupo</div>
                 </div>
               )}
               {markers.map((m) => {
@@ -408,7 +408,7 @@ export function WorldMapView() {
                         <Skull className="h-5 w-5 text-accent" />
                       )}
                     </button>
-                    <div className="pointer-events-none absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap rounded bg-background/85 px-1.5 py-0.5 text-xs font-semibold">
+                    <div className="pointer-events-none absolute left-1/2 top-full mt-1 -translate-x-1/2 whitespace-nowrap rounded bg-background/85 px-1.5 py-0.5 text-sm font-semibold">
                       {misterio ? '???' : b.nome}
                     </div>
                     {isMaster && (
@@ -443,10 +443,10 @@ export function WorldMapView() {
               </button>
             </div>
 
-            <div className="pointer-events-none absolute bottom-3 left-3 flex max-w-[90%] flex-wrap items-center gap-x-1 gap-y-0.5 rounded-md bg-background/75 px-2 py-1 text-xs text-muted-foreground">
+            <div className="pointer-events-none absolute bottom-3 left-3 flex max-w-[90%] flex-wrap items-center gap-x-1 gap-y-0.5 rounded-md bg-background/75 px-2 py-1 text-sm text-muted-foreground">
               <MousePointerClick className="h-3 w-3 shrink-0" aria-hidden />
               <span>Arraste livremente · roda para zoom · botão direito marca o local.</span>
-              {isMaster && <span className="basis-full pl-4 text-[10px]">Mestre: arraste marcadores para mover; use × para remover.</span>}
+              {isMaster && <span className="basis-full pl-4 text-sm">Mestre: arraste marcadores para mover; use × para remover.</span>}
             </div>
           </div>
 

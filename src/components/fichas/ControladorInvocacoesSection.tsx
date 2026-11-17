@@ -1,8 +1,12 @@
 import { InvocationDisclosure } from "@/components/invocacoes/InvocationDisclosure";
 import { InvocationSelect } from "@/components/invocacoes/InvocationSelect";
 import { OwnedInvocationsCollection } from './OwnedInvocationsCollection';
-import { useEffect, useRef, useState } from 'react';
+import { Crop, ImagePlus } from 'lucide-react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { Character } from '@/types';
+import { TokenCropDialog } from '@/components/mapa/ui/TokenCropDialog';
+import { getTokenImageRect, normalizeTokenCrop } from '@/components/mapa/EntityEngine';
+import type { Entity, TokenCrop } from '@/stores/useMapStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { useRoleStore } from '@/stores/useRoleStore';
@@ -10,12 +14,14 @@ import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useMapStore } from '@/stores/useMapStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { validarIntermediarioInvocacao } from '@/lib/controlador/intermediario';
-import { invocarControladores, invocarHordaControlador, recolherInvocacao, limparInvocacoesDerrotadas, levantarInvocacao, resolverDerrotaPendenteInvocacao, comandarReposicionamento, comandarAgarrarGama, comandarAtaque, comandarPuxarAliadoGama, comandarSuporte, comandarSegurarSapo, comandarHabilidadeInvocacao, escaparInvocacaoAgarrada, rolarPericiaInvocacao, type DirecaoInvocacao, type PericiaFugaAgarrado } from '@/lib/controlador/mapa';
+import { ALCANCE_BASE_INVOCACAO_M, alcancePosicionamentoInvocacao } from '@/lib/controlador/alcanceInvocacao';
+import { invocarControladores, invocarHordaControlador, recolherInvocacao, limparInvocacoesDerrotadas, levantarInvocacao, resolverDerrotaPendenteInvocacao, comandarReposicionamento, comandarAgarrarGama, comandarAtaque, comandarPuxarAliadoGama, comandarSuporte, comandarSegurarSapo, comandarHabilidadeInvocacao, escaparInvocacaoAgarrada, rolarPericiaInvocacao, type DirecaoInvocacao, type PericiaFugaAgarrado, type PericiaFugaSapo } from '@/lib/controlador/mapa';
 import { limiteInvocacoesConhecidas, limiteAtivasPersonagem, mensagemDomesticaoPendente, rotuloTipoInvocacao, validarCatalogoControlador, type InvocacaoControlador, type TipoInvocacaoControlador } from '@/lib/controlador/tipos';
 import { podeUsarVersaoAprovada } from '@/lib/controlador/aprovacao';
-import { carregarAssetFicha, salvarAssetFicha } from '@/lib/controlador/assetFicha';
+import { carregarAssetFicha, prepararArteInvocacao, salvarAssetFicha } from '@/lib/controlador/assetFicha';
 import { formatarSegundosTempoInvocacao, tempoAdicionalEmSegundos } from '@/lib/controlador/tempo';
 import { assetCache } from '@/components/mapa/assetCache';
+import { resolverTokenControladorDaFicha } from '@/lib/mapa/tokenDaFicha';
 import { decidirAprovacaoInvocacao, decidirAprovacaoLegadaInvocacao, submeterAprovacaoInvocacao } from '@/lib/controlador/aprovacao.functions';
 import { SISTEMA_PERICIAS, ROTULOS_PERICIAS } from '@/lib/omni/constantesDoSistema';
 import { calcularBonusAtaqueInvocacao, invocacaoTreinadaNaPericia, parseFormulaDanoInvocacao } from '@/lib/controlador/rolagens';
@@ -25,6 +31,55 @@ import { useProfileStore } from '@/stores/useProfileStore';
 import { calcularHorda, validarLimiteHorda, vagasInvocacaoEmCampo } from '@/lib/controlador/hordas';
 import { DEZ_SOMBRAS_FORMAS_DERIVADAS as DEZ_SOMBRAS_FORMAS_REFERENCIA, DEZ_SOMBRAS_MODELOS, HABILIDADES_TECNICA_DEZ_SOMBRAS, criarPacoteDezSombras, possuiTecnicaDezSombras } from '@/lib/controlador/dezSombras';
 import { auditarValoresProvisoriosFormaDerivadaDezSombras, DEZ_SOMBRAS_FORMAS_DERIVADAS, criarFormasDerivadasDezSombras } from '@/lib/controlador/dezSombrasDerivadas';
+
+type ImagemPerfilPrePronto = {
+  arquivo: File;
+  url: string;
+  tokenCrop: TokenCrop;
+  largura: number;
+  altura: number;
+};
+
+type AlvoRecorteImagem =
+  | { modo: 'pendente'; chave: string; nome: string; assetId: string; arquivo: File; recorteInicial?: TokenCrop }
+  | { modo: 'trocar'; chave: string; nome: string; assetId: string; arquivo: File; invocacaoId: string; recorteInicial?: TokenCrop }
+  | { modo: 'ajustar'; chave: string; nome: string; assetId: string; invocacaoId: string; recorteInicial?: TokenCrop };
+
+function dimensoesImagem(arquivo: File): Promise<{ largura: number; altura: number }> {
+  if (typeof createImageBitmap === 'function') {
+    return createImageBitmap(arquivo).then(bitmap => {
+      const dimensoes = { largura: bitmap.width, altura: bitmap.height };
+      bitmap.close();
+      return dimensoes;
+    });
+  }
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(arquivo);
+    const imagem = new Image();
+    imagem.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve({ largura: imagem.naturalWidth, altura: imagem.naturalHeight });
+    };
+    imagem.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('O arquivo não pôde ser aberto como imagem.'));
+    };
+    imagem.src = url;
+  });
+}
+
+function estiloRecortePreview(largura: number, altura: number, recorte: TokenCrop): CSSProperties | undefined {
+  if (largura <= 0 || altura <= 0) return undefined;
+  const rect = getTokenImageRect(largura, altura, 72, 72, recorte);
+  return {
+    position: 'absolute',
+    left: `calc(50% + ${rect.x}px)`,
+    top: `calc(50% + ${rect.y}px)`,
+    width: `${rect.w}px`,
+    height: `${rect.h}px`,
+    maxWidth: 'none',
+  };
+}
 
 type Fonte = { id: string; nome: string; tipo: 'grimorio' | 'omni'; hp: number; defesa: number; deslocamento: number; porte: InvocacaoControlador['porte']; acoes: InvocacaoControlador['acoes'] };
 type InvocationSectionView = 'owned' | 'catalog';
@@ -80,14 +135,17 @@ export function ControladorInvocacoesSection({ character, view = 'catalog', canV
   const [defesa, setDefesa] = useState(10);
   const [deslocamento, setDeslocamento] = useState(9);
   const [custoPE, setCustoPE] = useState(3);
-  const [alcanceInvocacaoM, setAlcanceInvocacaoM] = useState('');
+  const [alcanceInvocacaoM, setAlcanceInvocacaoM] = useState(String(ALCANCE_BASE_INVOCACAO_M));
   const [fonte, setFonte] = useState('');
   const [erro, setErro] = useState('');
   const [busyAprovacao, setBusyAprovacao] = useState(false);
   const [carregandoArteId, setCarregandoArteId] = useState<string | null>(null);
   const [assetsTick, setAssetsTick] = useState(0);
-  const [imagensPerfisPreProntos, setImagensPerfisPreProntos] = useState<Record<string, { arquivo: File; url: string }>>({});
+  const [imagensPerfisPreProntos, setImagensPerfisPreProntos] = useState<Record<string, ImagemPerfilPrePronto>>({});
   const [salvandoImagemPerfilId, setSalvandoImagemPerfilId] = useState<string | null>(null);
+  const [preparandoRecorteImagemId, setPreparandoRecorteImagemId] = useState<string | null>(null);
+  const [alvoRecorteImagem, setAlvoRecorteImagem] = useState<AlvoRecorteImagem | null>(null);
+  const [erroRecorteImagem, setErroRecorteImagem] = useState('');
   const urlsImagensPerfisPreProntos = useRef<Record<string, string>>({});
   const [motivosRejeicao, setMotivosRejeicao] = useState<Record<string, string>>({});
   const [motivosOverride, setMotivosOverride] = useState<Record<string, string>>({});
@@ -132,8 +190,15 @@ export function ControladorInvocacoesSection({ character, view = 'catalog', canV
     urlsImagensPerfisPreProntos.current = {};
   }, []);
 
+  useEffect(() => {
+    if (!alvoRecorteImagem || alvoRecorteImagem.modo === 'ajustar') return;
+    const assetTemporarioId = alvoRecorteImagem.assetId;
+    return () => { void assetCache.destroy(assetTemporarioId); };
+  }, [alvoRecorteImagem]);
+
   const entities = useMapStore(s => s.entities);
-  const catalogo = character.invocacoesConhecidas ?? [];
+const catalogo = character.invocacoesConhecidas ?? [];
+  const atualizarEntidadeMapa = useMapStore(s => s.updateEntity);
   const ativos = Object.values(entities).filter(e => e.ownerCharId === character.id && !!e.invocationId &&
     (!scopeToTenShadows || !e.masterControlled) &&
     (!scopeToTenShadows || catalogo.some(invocacao => invocacao.id === e.invocationId && invocacao.pacoteRegras === 'dez-sombras')));
@@ -145,10 +210,10 @@ export function ControladorInvocacoesSection({ character, view = 'catalog', canV
     const modelos = ids.map(id => character.invocacoesConhecidas?.find(item => item.id === id));
     if (modelos.some(modelo => !modelo)) { setErro('Uma das invocações selecionadas não está no catálogo.'); return; }
     const modelosValidos = modelos as InvocacaoControlador[];
-    if (!Object.values(useMapStore.getState().entities).some(entity => entity.characterId === character.id && !entity.invocationId)) {
+    if (!resolverTokenControladorDaFicha(character, useMapStore.getState().entities, useMapStore.getState().layerVisible)) {
       setErro('Coloque o token do Controlador no mapa primeiro.'); return;
     }
-    if (modelosValidos.some(modelo => !Number.isFinite(modelo.alcanceInvocacaoM) || (modelo.alcanceInvocacaoM ?? -1) < 0)) {
+    if (modelosValidos.some(modelo => !Number.isFinite(alcancePosicionamentoInvocacao(modelo)) || alcancePosicionamentoInvocacao(modelo) < 0)) {
       setErro('Defina o alcance de posicionamento em cada ficha selecionada.'); return;
     }
     const eventoId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
@@ -156,14 +221,13 @@ export function ControladorInvocacoesSection({ character, view = 'catalog', canV
       : 'evento-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
     try {
       setErro(''); setMensagem(''); setCarregandoArteId('lote');
-      const assetIds = modelosValidos.flatMap(modelo => [modelo.imagemAssetId, modelo.imagemFallbackAssetId].filter((assetId): assetId is string => Boolean(assetId)));
-      if (assetIds.length) await Promise.all(assetIds.map(assetId => carregarAssetFicha(assetId)));
+      await Promise.all(modelosValidos.map(modelo => prepararArteInvocacao(modelo)));
       const posicoes = await useMapStore.getState().requestInvocationPlacement({
         ownerCharacterId: character.id,
         items: modelosValidos.map(modelo => ({
           invocationId: modelo.id,
           label: modelo.apelido?.trim() || modelo.nome,
-          alcanceM: modelo.alcanceInvocacaoM!,
+          alcanceM: alcancePosicionamentoInvocacao(modelo),
           color: modelo.corIdentificacao ?? '#8055bd',
         })),
       });
@@ -420,7 +484,13 @@ export function ControladorInvocacoesSection({ character, view = 'catalog', canV
         const chaveImagem = chaveImagemParaFichaDezSombras(ficha)!;
         const imagem = imagensPerfisPreProntos[chaveImagem];
         const imagemAssetId = await salvarAssetFicha(imagem.arquivo);
-        return { ...ficha, imagemAssetId, imagemAltText: ficha.nome };
+        return {
+          ...ficha,
+          imagemAssetId,
+          imagemAltText: ficha.nome,
+          formaToken: 'ELLIPSE' as const,
+          tokenCrop: imagem.tokenCrop,
+        };
       }));
       updateCharacter(character.id, {
         invocacoesConhecidas: [...catalogo, ...novosComImagem],
@@ -463,7 +533,13 @@ export function ControladorInvocacoesSection({ character, view = 'catalog', canV
     setErro('');
     setMensagem(ficha.nome + ' foi adicionada à biblioteca.');
   };
-  const selecionarImagemPerfilPrePronto = (chave: string, arquivo: File) => {
+  const selecionarImagemPerfilPrePronto = async (
+    chave: string,
+    nomePerfil: string,
+    arquivo: File,
+    ficha?: InvocacaoControlador,
+    recorteInicial?: TokenCrop,
+  ) => {
     if (!arquivo.type.startsWith('image/')) {
       setErro('Escolha um arquivo de imagem para este perfil.');
       return;
@@ -472,13 +548,32 @@ export function ControladorInvocacoesSection({ character, view = 'catalog', canV
       setErro('A imagem precisa ter no máximo 12 MB.');
       return;
     }
-    const urlAnterior = urlsImagensPerfisPreProntos.current[chave];
-    if (urlAnterior) URL.revokeObjectURL(urlAnterior);
-    const url = URL.createObjectURL(arquivo);
-    urlsImagensPerfisPreProntos.current[chave] = url;
-    setImagensPerfisPreProntos(atual => ({ ...atual, [chave]: { arquivo, url } }));
+    if (salvandoImagemPerfilId || preparandoRecorteImagemId) return;
+    if (arquivo.size === 0) {
+      setErro('O arquivo de imagem está vazio. Escolha outra imagem.');
+      return;
+    }
+    setPreparandoRecorteImagemId(chave);
     setErro('');
+    setErroRecorteImagem('');
     setMensagem('');
+    try {
+      const dimensoes = await dimensoesImagem(arquivo);
+      if (dimensoes.largura <= 0 || dimensoes.altura <= 0) throw new Error('O arquivo não contém uma imagem válida.');
+      const assetId = await assetCache.put(arquivo, arquivo.type);
+      setAlvoRecorteImagem(ficha
+        ? {
+          modo: 'trocar', chave, nome: nomePerfil, assetId, arquivo, invocacaoId: ficha.id,
+          recorteInicial: recorteInicial ?? normalizeTokenCrop(ficha.tokenCrop as Partial<TokenCrop> | undefined),
+        }
+        : { modo: 'pendente', chave, nome: nomePerfil, assetId, arquivo, recorteInicial: recorteInicial ?? imagensPerfisPreProntos[chave]?.tokenCrop });
+    } catch (error) {
+      const mensagemErro = error instanceof Error ? error.message : 'Não foi possível abrir esta imagem.';
+      setErro(mensagemErro);
+      setErroRecorteImagem(mensagemErro);
+    } finally {
+      setPreparandoRecorteImagemId(null);
+    }
   };
   const limparImagemPerfilPrePronto = (chave: string) => {
     const url = urlsImagensPerfisPreProntos.current[chave];
@@ -490,32 +585,163 @@ export function ControladorInvocacoesSection({ character, view = 'catalog', canV
       return proximo;
     });
   };
-  const renderSeletorImagemPerfilPrePronto = (chave: string, nomePerfil: string) => {
+
+  const atualizarImagemInvocacao = (invocacaoId: string, patch: Partial<InvocacaoControlador>) => {
+    const fichaAtual = useCharacterStore.getState().characters.find(item => item.id === character.id);
+    const invocacoesAtuais = fichaAtual?.invocacoesConhecidas;
+    if (!invocacoesAtuais?.some(item => item.id === invocacaoId)) return false;
+    updateCharacter(character.id, {
+      invocacoesConhecidas: invocacoesAtuais.map(item => item.id === invocacaoId ? { ...item, ...patch } : item),
+    });
+    return true;
+  };
+
+  const atualizarTokensAtivosDaInvocacao = (invocacaoId: string, patch: Partial<Entity>) => {
+    Object.values(useMapStore.getState().entities)
+      .filter(entity => entity.ownerCharId === character.id && entity.invocationId === invocacaoId)
+      .forEach(entity => atualizarEntidadeMapa(entity.id, patch));
+  };
+
+  const abrirRecorteImagemExistente = async (ficha: InvocacaoControlador, nomePerfil: string, chave: string) => {
+    const assetId = ficha.imagemAssetId ?? ficha.imagemFallbackAssetId;
+    if (!assetId || preparandoRecorteImagemId || salvandoImagemPerfilId) return;
+    setPreparandoRecorteImagemId(chave);
+    setErro('');
+    setErroRecorteImagem('');
+    try {
+      await carregarAssetFicha(assetId);
+      if (!assetCache.get(assetId)) throw new Error('A imagem vinculada não está disponível neste dispositivo. Troque a imagem para enviar uma nova.');
+      setAlvoRecorteImagem({
+        modo: 'ajustar',
+        chave,
+        nome: nomePerfil,
+        assetId,
+        invocacaoId: ficha.id,
+        recorteInicial: normalizeTokenCrop(ficha.tokenCrop as Partial<TokenCrop> | undefined),
+      });
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : 'Não foi possível abrir o recorte desta imagem.');
+    } finally {
+      setPreparandoRecorteImagemId(null);
+    }
+  };
+
+  const aplicarRecorteImagem = async (recorte: TokenCrop) => {
+    const alvo = alvoRecorteImagem;
+    if (!alvo) return;
+    setErroRecorteImagem('');
+    if (alvo.modo === 'pendente') {
+      const entrada = assetCache.get(alvo.assetId);
+      if (!entrada?.ready) {
+        setErroRecorteImagem('A imagem ainda está carregando. Aguarde um instante e tente aplicar o recorte novamente.');
+        return;
+      }
+      const urlAnterior = urlsImagensPerfisPreProntos.current[alvo.chave];
+      if (urlAnterior) URL.revokeObjectURL(urlAnterior);
+      const url = URL.createObjectURL(alvo.arquivo);
+      urlsImagensPerfisPreProntos.current[alvo.chave] = url;
+      setImagensPerfisPreProntos(atual => ({
+        ...atual,
+        [alvo.chave]: {
+          arquivo: alvo.arquivo,
+          url,
+          tokenCrop: recorte,
+          largura: entrada.img.naturalWidth,
+          altura: entrada.img.naturalHeight,
+        },
+      }));
+      setMensagem(`Recorte circular de ${alvo.nome} aplicado. Escolha outra imagem se quiser trocá-la.`);
+      setAlvoRecorteImagem(null);
+      return;
+    }
+
+    if (alvo.modo === 'ajustar') {
+      if (!atualizarImagemInvocacao(alvo.invocacaoId, { tokenCrop: recorte, formaToken: 'ELLIPSE' })) {
+        setErroRecorteImagem('Esta ficha saiu da biblioteca. Feche o recorte e abra novamente.');
+        return;
+      }
+      atualizarTokensAtivosDaInvocacao(alvo.invocacaoId, { tokenCrop: recorte, shape: 'ELLIPSE' });
+      setAssetsTick(tick => tick + 1);
+      setMensagem(`Recorte de ${alvo.nome} atualizado.`);
+      setAlvoRecorteImagem(null);
+      return;
+    }
+
+    setSalvandoImagemPerfilId(alvo.chave);
+    try {
+      const imagemAssetId = await salvarAssetFicha(alvo.arquivo);
+      const atualizada = atualizarImagemInvocacao(alvo.invocacaoId, {
+        imagemAssetId,
+        imagemFallbackAssetId: undefined,
+        imagemAltText: alvo.nome,
+        tokenCrop: recorte,
+        formaToken: 'ELLIPSE',
+      });
+      if (!atualizada) throw new Error('Esta ficha saiu da biblioteca. A imagem não foi aplicada.');
+      atualizarTokensAtivosDaInvocacao(alvo.invocacaoId, {
+        assetId: imagemAssetId,
+        invocationFallbackAssetId: undefined,
+        tokenCrop: recorte,
+        shape: 'ELLIPSE',
+      });
+      setAssetsTick(tick => tick + 1);
+      setMensagem(`Imagem de ${alvo.nome} trocada e recorte circular salvo.`);
+      setAlvoRecorteImagem(null);
+    } catch (error) {
+      setErroRecorteImagem(error instanceof Error ? error.message : 'Não foi possível salvar a nova imagem. Tente novamente.');
+    } finally {
+      setSalvandoImagemPerfilId(null);
+    }
+  };
+
+  const renderSeletorImagemPerfilPrePronto = (chave: string, nomePerfil: string, ficha?: InvocacaoControlador) => {
     const imagem = imagensPerfisPreProntos[chave];
+    const arte = ficha ? assetForFicha(ficha) : null;
+    const temImagemSalva = Boolean(ficha?.imagemAssetId || ficha?.imagemFallbackAssetId);
+    const src = imagem?.url ?? arte?.url;
+    const recorte = imagem?.tokenCrop ?? normalizeTokenCrop(ficha?.tokenCrop as Partial<TokenCrop> | undefined);
+    const largura = imagem?.largura ?? arte?.img.naturalWidth ?? 0;
+    const altura = imagem?.altura ?? arte?.img.naturalHeight ?? 0;
+    const podeAjustar = Boolean(imagem || temImagemSalva);
+    const ocupado = Boolean(salvandoImagemPerfilId || preparandoRecorteImagemId);
     return (
-      <div className="inv-profile-art-picker" data-selected={Boolean(imagem)}>
+      <div className="inv-profile-art-picker" data-selected={Boolean(imagem || temImagemSalva)}>
         <div className="inv-profile-art-frame">
-          {imagem
-            ? <img src={imagem.url} alt={`Prévia da imagem de ${nomePerfil}`} />
-            : <span aria-hidden="true">◇</span>}
+          {src
+            ? <img key={`${src}-${assetsTick}`} src={src} alt={`Prévia circular da imagem de ${nomePerfil}`} style={estiloRecortePreview(largura, altura, recorte)} />
+            : <ImagePlus className="h-6 w-6" aria-hidden="true" />}
+          {podeAjustar && <button
+            type="button"
+            className="inv-profile-crop-button"
+            aria-label={`Ajustar recorte circular de ${nomePerfil}`}
+            title={`Ajustar recorte de ${nomePerfil}`}
+            disabled={ocupado}
+            onClick={() => {
+              if (imagem) {
+                void selecionarImagemPerfilPrePronto(chave, nomePerfil, imagem.arquivo, undefined, imagem.tokenCrop);
+              } else if (ficha) {
+                void abrirRecorteImagemExistente(ficha, nomePerfil, chave);
+              }
+            }}
+          ><Crop className="h-5 w-5" aria-hidden="true" /></button>}
         </div>
         <label className="inv-profile-image-select">
           <input
             type="file"
             accept="image/*"
-            aria-label={`Selecionar imagem para ${nomePerfil}`}
-            aria-required="true"
-            disabled={Boolean(salvandoImagemPerfilId)}
+            aria-label={`${temImagemSalva ? 'Trocar' : 'Escolher'} imagem de ${nomePerfil}`}
+            aria-required={!ficha && !imagem}
+            disabled={ocupado}
             onChange={event => {
               const arquivo = event.currentTarget.files?.[0];
               event.currentTarget.value = '';
-              if (arquivo) selecionarImagemPerfilPrePronto(chave, arquivo);
+              if (arquivo) void selecionarImagemPerfilPrePronto(chave, nomePerfil, arquivo, ficha, recorte);
             }}
           />
-          <span aria-hidden="true">{imagem ? '↻' : '+'}</span>
-          {imagem ? 'Trocar imagem' : 'Escolher imagem'}
+          <ImagePlus className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>{temImagemSalva ? 'Trocar imagem' : imagem ? 'Trocar seleção' : 'Escolher imagem'}</span>
         </label>
-        <span className="inv-profile-image-hint">{imagem ? 'Imagem pronta' : 'Imagem obrigatória'}</span>
+        <span className="inv-profile-image-hint">{preparandoRecorteImagemId === chave ? 'Abrindo recorte…' : temImagemSalva ? 'Arte circular vinculada' : imagem ? 'Recorte pronto' : 'Imagem obrigatória'}</span>
       </div>
     );
   };
@@ -539,7 +765,13 @@ export function ControladorInvocacoesSection({ character, view = 'catalog', canV
     setMensagem('');
     try {
       const imagemAssetId = await salvarAssetFicha(imagem.arquivo);
-      adicionarFichaDezSombras({ ...ficha, imagemAssetId, imagemAltText: nomeFicha });
+      adicionarFichaDezSombras({
+        ...ficha,
+        imagemAssetId,
+        imagemAltText: nomeFicha,
+        formaToken: 'ELLIPSE',
+        tokenCrop: imagem.tokenCrop,
+      });
       setAssetsTick(tick => tick + 1);
       limparImagemPerfilPrePronto(chaveImagem);
     } catch (error) {
@@ -565,17 +797,8 @@ export function ControladorInvocacoesSection({ character, view = 'catalog', canV
     return principal?.ready ? principal : fallback ?? principal;
   };
   const renderImagemPerfilExistente = (ficha: InvocacaoControlador, nomePerfil: string) => {
-    const arte = assetForFicha(ficha);
-    return (
-      <div className="inv-profile-art-picker" data-selected={Boolean(arte)}>
-        <div className="inv-profile-art-frame">
-          {arte
-            ? <img key={assetsTick} src={arte.url} alt={ficha.imagemAltText || nomePerfil} />
-            : <span aria-hidden="true">◇</span>}
-        </div>
-        <span className="inv-profile-image-hint">{arte ? 'Imagem vinculada' : 'Imagem ausente nesta ficha'}</span>
-      </div>
-    );
+    const chave = chaveImagemParaFichaDezSombras(ficha) ?? ficha.id;
+    return renderSeletorImagemPerfilPrePronto(chave, nomePerfil, ficha);
   };
   useEffect(() => {
     let mounted = true;
@@ -648,7 +871,7 @@ export function ControladorInvocacoesSection({ character, view = 'catalog', canV
     if (!hordaPreview.ok) { setErro(hordaPreview.motivo); return; }
     if (limiteHordaPreview && !limiteHordaPreview.ok) { setErro(limiteHordaPreview.motivo); return; }
     if (!hordaTempoPreview.ok) { setErro(hordaTempoPreview.motivo); return; }
-    if (!Object.values(useMapStore.getState().entities).some(entity => entity.characterId === character.id && !entity.invocationId)) {
+    if (!resolverTokenControladorDaFicha(character, useMapStore.getState().entities, useMapStore.getState().layerVisible)) {
       setErro('Coloque o token do Controlador no mapa primeiro.'); return;
     }
     const eventoId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
@@ -656,14 +879,13 @@ export function ControladorInvocacoesSection({ character, view = 'catalog', canV
       : 'evento-horda-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
     try {
       setErro(''); setMensagem(''); setCarregandoArteId('horda');
-      const assetIds = [hordaLider.imagemAssetId, hordaLider.imagemFallbackAssetId].filter((assetId): assetId is string => Boolean(assetId));
-      if (assetIds.length) await Promise.all(assetIds.map(assetId => carregarAssetFicha(assetId)));
+      await prepararArteInvocacao(hordaLider);
       const posicoes = await useMapStore.getState().requestInvocationPlacement({
         ownerCharacterId: character.id,
         items: [{
           invocationId: 'horda-' + eventoId,
           label: `Horda de ${hordaLider.apelido?.trim() || hordaLider.nome}`,
-          alcanceM: hordaLider.alcanceInvocacaoM ?? 0,
+          alcanceM: alcancePosicionamentoInvocacao(hordaLider),
           color: hordaLider.corIdentificacao ?? '#8055bd',
         }],
       });
@@ -761,7 +983,7 @@ export function ControladorInvocacoesSection({ character, view = 'catalog', canV
 
   const salvar = async () => {
     if (busyAprovacao) return;
-    const alcance = alcanceInvocacaoM.trim() === '' ? Number.NaN : Number(alcanceInvocacaoM);
+    const alcance = alcanceInvocacaoM.trim() === '' ? ALCANCE_BASE_INVOCACAO_M : Number(alcanceInvocacaoM);
     if (!Number.isFinite(alcance) || alcance < 0) { setErro('Defina o alcance de posicionamento em metros.'); return; }
     const novo: InvocacaoControlador = {
       id: crypto.randomUUID(), donoCharacterId: character.id,
@@ -792,7 +1014,7 @@ export function ControladorInvocacoesSection({ character, view = 'catalog', canV
         solicitacaoAprovacaoId: solicitacao.requestId,
       };
       updateCharacter(character.id, { invocacoesConhecidas: [...catalogo, salvo], limiteInvocacoesConhecidas: max ?? undefined, limiteInvocacoesAtivas: ativas });
-      setFonte(''); setNome(''); setAlcanceInvocacaoM(''); setErro('');
+      setFonte(''); setNome(''); setAlcanceInvocacaoM(String(ALCANCE_BASE_INVOCACAO_M)); setErro('');
       setMensagem(solicitacao.status === 'aprovada' ? 'Invocação aprovada pelo Mestre.' : 'Solicitação enviada ao Mestre.');
     } catch (error) {
       setErro(error instanceof Error ? error.message : 'Não foi possível enviar a solicitação ao Mestre.');
@@ -1292,7 +1514,7 @@ export function ControladorInvocacoesSection({ character, view = 'catalog', canV
         const automacoesAtivas = (inv.automacoesOmni ?? []).filter(automacao => automacao.habilitada).length;
         const podeIntervirNaAutonomia = isMaster || Boolean(character.profileId && activeProfileId === character.profileId);
         const podeResolverDerrota = isMaster;
-        const alcanceConfigurado = Number.isFinite(inv.alcanceInvocacaoM) && (inv.alcanceInvocacaoM ?? -1) >= 0;
+        const alcanceConfigurado = Number.isFinite(alcancePosicionamentoInvocacao(inv)) && alcancePosicionamentoInvocacao(inv) >= 0;
         const aguardandoRodadaHorda = character.instanciasInvocacao?.some(item =>
           item.membrosHordaRemovidos?.some(membro => membro.modeloId === inv.id && membro.bloqueioRodadas > 0));
         const bloqueioDomesticao = mensagemDomesticaoPendente(inv);
@@ -1366,7 +1588,7 @@ export function ControladorInvocacoesSection({ character, view = 'catalog', canV
             </div>
           )}
           <div className={'basis-full text-xs ' + (estadoIntermediario.ok ? 'text-muted-foreground' : 'inv-warning')}>Intermediário: {estadoIntermediario.ok ? 'disponível — ' + estadoIntermediario.resumo : 'pendente de validação — ' + estadoIntermediario.motivo}</div>
-          <div className={'basis-full text-xs ' + (alcanceConfigurado ? 'text-muted-foreground' : 'inv-warning')}>Alcance de posicionamento: {alcanceConfigurado ? (inv.alcanceInvocacaoM ?? 0) + ' m' : 'não definido — edite a ficha antes de invocar'}</div>
+          <div className={'basis-full text-xs ' + (alcanceConfigurado ? 'text-muted-foreground' : 'inv-warning')}>Alcance de posicionamento: {alcanceConfigurado ? alcancePosicionamentoInvocacao(inv) + ' m' : 'inválido — edite a ficha antes de invocar'}</div>
           {inv.origemAquisicao && <div className="basis-full text-xs text-muted-foreground">Origem da aquisição: {inv.origemAquisicao === 'interludio' ? 'Interlúdio' : inv.origemAquisicao}</div>}
           {inv.referenciaInterludio && <div className="basis-full text-xs text-muted-foreground">Referência do Interlúdio: {inv.referenciaInterludio}</div>}
           {isMaster && !emHorda && !estadoIntermediario.ok && podeUsarVersaoAprovada({ estado: inv.aprovacaoMestre, versaoAtual: inv.versaoModelo, versaoAprovada: inv.versaoAprovada }) && !ativos.some(e => e.invocationId === inv.id) && (
@@ -1678,7 +1900,31 @@ export function ControladorInvocacoesSection({ character, view = 'catalog', canV
       </InvocationDisclosure>
       </div>}
 
-      {view === 'catalog' && <p className="text-xs inv-warning">{controlador ? `Progressão do Controlador: ${max} invocações conhecidas; extras exigem Interlúdio. Limite simultâneo: ${ativas}.` : 'Esta especialização recebe invocações em Interlúdios e mantém uma em campo por padrão.'}</p>}
+{view === 'catalog' && <p className="text-xs inv-warning">{controlador ? `Progressão do Controlador: ${max} invocações conhecidas; extras exigem Interlúdio. Limite simultâneo: ${ativas}.` : 'Esta especialização recebe invocações em Interlúdios e mantém uma em campo por padrão.'}</p>}
+      <p className="text-xs text-muted-foreground">Invocar é uma Ação Livre por enquanto e gasta PE. Posicione as invocações clicando no mapa, dentro do alcance definido em cada ficha; um uso permite selecionar até duas. Reposicionamento custa uma Ação Bônus e ataques comandados gastam uma Ação Comum.</p>
+      {alvoRecorteImagem && <TokenCropDialog
+        key={alvoRecorteImagem.assetId}
+        entity={{
+          id: `recorte-dez-sombras-${alvoRecorteImagem.chave}`,
+          shape: 'ELLIPSE',
+          x: 0,
+          y: 0,
+          w: 1,
+          h: 1,
+          rotation: 0,
+          color: '#8055bd',
+          locked: false,
+          assetId: alvoRecorteImagem.assetId,
+          label: alvoRecorteImagem.nome,
+          nameplate: false,
+          tokenCrop: alvoRecorteImagem.recorteInicial,
+        } satisfies Entity}
+        circularOnly
+        busy={salvandoImagemPerfilId === alvoRecorteImagem.chave}
+        error={erroRecorteImagem}
+        onCancel={() => { setAlvoRecorteImagem(null); setErroRecorteImagem(''); }}
+        onConfirm={recorte => void aplicarRecorteImagem(recorte)}
+      />}
     </div>
   );
 }

@@ -47,7 +47,7 @@ export function AssetTypeDialog({ name, previewUrl, onChoose, onCancel }: Props)
         )}
 
         {!escolhendoBau ? (<>
-          <div className="text-muted-foreground text-xs mb-3">Como deseja usar esta imagem?</div>
+          <div className="text-muted-foreground text-sm mb-3">Como deseja usar esta imagem?</div>
           <div className={`grid gap-2 ${isMaster ? 'grid-cols-4' : 'grid-cols-3'}`}>
             <Choice icon={<MapIcon className="h-5 w-5" />} label="Mapa" hint="Fundo da cena" onClick={() => onChoose('map')} />
             <Choice icon={<User className="h-5 w-5" />} label="Personagem" hint="Token 1 célula" onClick={() => onChoose('character')} />
@@ -55,7 +55,7 @@ export function AssetTypeDialog({ name, previewUrl, onChoose, onCancel }: Props)
             {isMaster && <Choice icon={<Archive className="h-5 w-5" />} label="Baú" hint="Do catálogo" onClick={() => setEscolhendoBau(true)} />}
           </div>
         </>) : (<>
-          <div className="text-muted-foreground text-xs mb-2">Qual baú do catálogo esta imagem representa?</div>
+          <div className="text-muted-foreground text-sm mb-2">Qual baú do catálogo esta imagem representa?</div>
           <div className="space-y-1 max-h-60 overflow-y-auto">
             {lista.map(c => (
               <button key={c.id} type="button" onClick={() => onChoose('chest', c.id)}
@@ -88,8 +88,8 @@ function Choice({
       className="flex flex-col items-center gap-1 p-3 rounded border border-border hover:bg-secondary transition-colors"
     >
       <div className="text-foreground">{icon}</div>
-      <div className="text-foreground text-xs font-medium">{label}</div>
-      <div className="text-muted-foreground text-xs">{hint}</div>
+      <div className="text-foreground text-sm font-medium">{label}</div>
+      <div className="text-muted-foreground text-sm">{hint}</div>
     </button>
   );
 }

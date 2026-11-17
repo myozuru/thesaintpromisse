@@ -13,6 +13,7 @@ import type { Entity, TokenCrop, Vector2 } from '@/stores/useMapStore';
 import { drawTokenBorder } from '@/lib/mapa/tokenBorders';
 import { assetCache } from './assetCache';
 import { imagemDaEntidade, imagemPronta } from '@/lib/omni/imagemItem';
+import { canvasFontSizeAtScale, UI_READING_FLOOR_PX } from '@/lib/uiTypography';
 
 
 
@@ -331,7 +332,7 @@ export function drawEntity(ctx: CanvasRenderingContext2D, e: Entity, scale: numb
       ctx.fillStyle = 'rgba(255,255,255,0.95)';
       ctx.strokeStyle = 'rgba(0,0,0,0.6)';
       ctx.lineWidth = 3 / scale;
-      ctx.font = `${Math.max(10, Math.min(e.w, e.h) * 0.22)}px sans-serif`;
+      ctx.font = `${canvasFontSizeAtScale(Math.min(e.w, e.h) * 0.22, scale, UI_READING_FLOOR_PX)}px 'Cormorant Garamond', Georgia, serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.rotate(-e.rotation);
@@ -415,10 +416,10 @@ export function drawNameplate(
   const tokenH = b.y2 - b.y;
   // Tamanhos proporcionais ao TOKEN (crescem com zoom-in), com mínimo legível em tela.
   const barW = Math.max(tokenW * 1.0, 80 / scale);
-  const barH = Math.max(tokenH * 0.075, 10 / scale);
+  const barH = Math.max(tokenH * 0.075, (UI_READING_FLOOR_PX + 4) / scale);
   const gap = Math.max(tokenH * 0.02, 2.5 / scale);
   const radius = barH / 2;
-  const fontPx = barH * 0.92;
+  const fontPx = Math.max(barH * 0.8, UI_READING_FLOOR_PX / scale);
 
 
 
@@ -495,8 +496,8 @@ export function drawNameplate(
 
 
   if (showLabel && label) {
-    const fontPx = 12 / scale;
-    ctx.font = `${fontPx}px sans-serif`;
+    const fontPx = canvasFontSizeAtScale(12 / scale, scale, UI_READING_FLOOR_PX);
+    ctx.font = `${fontPx}px 'Cormorant Garamond', Georgia, serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     const padX = 6 / scale;

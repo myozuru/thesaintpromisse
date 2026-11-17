@@ -41,7 +41,7 @@ export function OmniItemDescription({ effects, variante = 'inline', className = 
     const resumo = frases.join(' · ');
     return (
       <div
-        className={`text-xs text-muted-foreground italic mt-1 ${className}`}
+        className={`text-sm text-muted-foreground italic mt-1 ${className}`}
         title={frases.join('\n')}
       >
         ✨ Efeito: {resumo}
@@ -65,11 +65,11 @@ export function OmniItemDescription({ effects, variante = 'inline', className = 
         return (
           <div key={i}>
             {mostrarGat && (
-              <div className="text-xs text-amber-300/90 mt-1">
+              <div className="text-sm text-amber-300/90 mt-1">
                 ⚡ Gatilho: <span className="text-amber-200">{gat}</span>
               </div>
             )}
-            <div className="text-[12px] text-foreground/95">
+            <div className="text-sm text-foreground/95">
               {effects.length > 1 && (
                 <span className="text-emerald-400/70 font-mono mr-1">#{i + 1}</span>
               )}

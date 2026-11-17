@@ -53,8 +53,22 @@
   --font-display: "Cinzel Decorative", "Cinzel", serif;
   --font-body: "Cormorant Garamond", Georgia, serif;
   --font-mono: "JetBrains Mono", monospace;
-  --text-xs: 0.8125rem;
-  --text-xs--line-height: 1rem;
+  --text-xs: max(0.875rem, 14px);
+  --text-xs--line-height: max(1.25rem, 20px);
+  --text-sm: max(1rem, 16px);
+  --text-sm--line-height: max(1.375rem, 22px);
+  --text-base: max(1rem, 16px);
+  --text-base--line-height: max(1.5rem, 24px);
+  --text-lg: max(1.125rem, 18px);
+  --text-lg--line-height: max(1.75rem, 28px);
+  --text-xl: max(1.25rem, 20px);
+  --text-xl--line-height: max(1.75rem, 28px);
+  --text-2xl: max(1.5rem, 22px);
+  --text-2xl--line-height: max(2rem, 30px);
+  --text-3xl: max(1.875rem, 24px);
+  --text-3xl--line-height: max(2.25rem, 32px);
+  --text-4xl: max(2.25rem, 28px);
+  --text-4xl--line-height: max(2.5rem, 36px);
 }
 
 /*
@@ -66,6 +80,8 @@
   :root {
     color-scheme: dark;
     --radius: 0.625rem;
+    --ui-text-floor: max(0.875rem, 14px);
+    --ui-reading-floor: max(1rem, 16px);
 
     /* Sombrio místico — violeta profundo + dourado oculto */
     --background: 265 28% 6%;
@@ -183,6 +199,8 @@
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
+    font-size: var(--ui-reading-floor);
+    line-height: 1.5;
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-weight: 500;
     font-variant-numeric: lining-nums tabular-nums;
@@ -202,6 +220,9 @@
     font-family: 'JetBrains Mono', monospace;
     font-weight: 500;
   }
+  small, sup, sub {
+    font-size: max(var(--ui-text-floor), 1em);
+  }
   .text-xs, .text-sm {
     font-weight: 600;
   }
@@ -213,10 +234,79 @@
   .text-\[8px\],
   .text-\[9px\],
   .text-\[10px\],
-  .text-\[11px\] {
+  .text-\[10\.5px\],
+  .text-\[11px\],
+  .text-\[12px\],
+  .text-\[13px\],
+  .text-\[0\.8rem\] {
     font-size: var(--text-xs);
     line-height: var(--text-xs--line-height);
   }
+}
+
+/* Absolute typography floor: CSS uses these root tokens; canvas uses src/lib/uiTypography.ts. */
+:where(button, input, select, textarea, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="option"]) {
+  font-size: var(--ui-reading-floor);
+}
+
+:where(button, input, select, textarea, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="option"]):focus-visible {
+  outline: 2px solid hsl(var(--primary) / 0.7);
+  outline-offset: 2px;
+}
+
+  :where(label) {
+  font-size: max(var(--ui-reading-floor), 1em);
+}
+
+:where(label)[class*="text-xs"],
+:where(label) [class*="text-xs"] {
+  font-size: var(--ui-reading-floor) !important;
+  line-height: max(1.5rem, 24px) !important;
+}
+
+:where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea) {
+  min-height: max(2.25rem, 36px);
+}
+
+button {
+  min-height: max(2.25rem, 36px);
+}
+
+:where([role="option"]) {
+  min-height: max(2.25rem, 36px);
+}
+
+:where([role="button"], [role="tab"], [role="menuitem"]) {
+  min-height: max(2.25rem, 36px);
+}
+
+:where(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="option"])[class*="text-xs"],
+:where(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="option"])[class*="text-[0.8rem]"],
+:where(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="option"]) [class*="text-xs"],
+:where(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="option"]) [class*="text-[7px]"],
+:where(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="option"]) [class*="text-[8px]"],
+:where(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="option"]) [class*="text-[9px]"],
+:where(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="option"]) [class*="text-[10px]"],
+:where(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="option"]) [class*="text-[10.5px]"],
+:where(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="option"]) [class*="text-[11px]"],
+:where(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="option"]) [class*="text-[12px]"],
+:where(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="option"]) [class*="text-[13px]"],
+:where(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="option"])[class*="text-[14px]"],
+:where(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="option"])[class*="text-[15px]"],
+:where(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="option"]) [class*="text-[14px]"],
+:where(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="option"]) [class*="text-[15px]"] {
+  font-size: var(--ui-reading-floor) !important;
+}
+
+:where(p, li, dd, blockquote)[class*="text-xs"],
+:where(p, li, dd, blockquote) [class*="text-xs"] {
+  font-size: var(--ui-reading-floor) !important;
+  line-height: max(1.5rem, 24px) !important;
+}
+
+:where(h1, h2, h3, h4, h5, h6, [role="heading"])[class*="text-xs"] {
+  font-size: var(--ui-reading-floor) !important;
+  line-height: max(1.5rem, 24px) !important;
 }
 
 /* Firefox: barras de rolagem no tema (o Webkit abaixo cobre Chrome/Edge/Safari) */
@@ -284,9 +374,11 @@ html {
     box-shadow: inset 0 0 15px hsl(268 85% 62% / 0.05), 0 0 20px hsl(268 85% 62% / 0.45), 0 0 60px hsl(268 85% 62% / 0.12);
   }
   .card-enigmatic {
-    background: linear-gradient(145deg, hsl(265 25% 10%), hsl(270 28% 7%));
-    border: 1px solid hsl(268 22% 18%);
-    box-shadow: var(--shadow-occult), inset 0 1px 0 hsl(268 30% 22% / 0.3);
+    background:
+      radial-gradient(ellipse at 92% 0%, hsl(var(--primary) / 0.055), transparent 38%),
+      linear-gradient(145deg, hsl(265 25% 10%), hsl(270 28% 7%));
+    border: 1px solid hsl(var(--border) / 0.9);
+    box-shadow: var(--shadow-occult), inset 0 1px 0 hsl(268 30% 22% / 0.24);
   }
   .card-mystic {
     background:
@@ -298,6 +390,76 @@ html {
       inset 0 1px 0 hsl(268 50% 30% / 0.2),
       0 0 0 1px hsl(268 50% 22% / 0.15);
     backdrop-filter: blur(8px);
+  }
+  .atlas-module-header {
+    position: relative;
+    isolation: isolate;
+    border-color: hsl(var(--accent) / 0.25);
+    background:
+      radial-gradient(ellipse at 96% 0%, hsl(var(--accent) / 0.08), transparent 35%),
+      radial-gradient(ellipse at 0% 100%, hsl(var(--primary) / 0.08), transparent 44%),
+      linear-gradient(145deg, hsl(var(--card) / 0.98), hsl(var(--background) / 0.96));
+    box-shadow: 0 18px 44px -30px hsl(265 80% 3% / 0.9), inset 0 1px 0 hsl(var(--foreground) / 0.035);
+  }
+  .atlas-module-header::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 1px;
+    pointer-events: none;
+    background: linear-gradient(90deg, transparent 3%, hsl(var(--accent) / 0.45), hsl(var(--primary) / 0.35) 70%, transparent);
+  }
+  .atlas-module-mark {
+    border-color: hsl(var(--accent) / 0.3) !important;
+    background: linear-gradient(145deg, hsl(var(--primary) / 0.16), hsl(var(--accent) / 0.06)) !important;
+    color: hsl(var(--accent)) !important;
+    box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.06), 0 8px 22px -14px hsl(var(--primary) / 0.7);
+  }
+  .atlas-character-card {
+    background:
+      radial-gradient(ellipse at 100% 0%, hsl(var(--primary) / 0.085), transparent 34%),
+      linear-gradient(150deg, hsl(var(--card) / 0.99), hsl(var(--background) / 0.96));
+    border-color: hsl(var(--accent) / 0.22);
+    box-shadow: 0 24px 56px -42px hsl(265 80% 2% / 0.95), inset 0 1px 0 hsl(var(--foreground) / 0.035);
+  }
+  .atlas-header {
+    background: linear-gradient(90deg, hsl(var(--background) / 0.97), hsl(var(--card) / 0.94) 45%, hsl(var(--background) / 0.97));
+    border-color: hsl(var(--accent) / 0.18);
+    box-shadow: 0 12px 36px -20px hsl(265 80% 3% / 0.95);
+  }
+  .atlas-log-panel {
+    background: linear-gradient(180deg, hsl(var(--card) / 0.98), hsl(var(--background) / 0.98));
+    border-color: hsl(var(--accent) / 0.16);
+    box-shadow: 14px 0 34px -30px hsl(var(--accent) / 0.5);
+  }
+  .atlas-atmosphere::before {
+    content: "";
+    position: absolute;
+    inset: 64px 0 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(hsl(var(--accent) / 0.026) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--accent) / 0.026) 1px, transparent 1px);
+    background-size: 72px 72px;
+    mask-image: linear-gradient(90deg, transparent 3%, black 48%, black 92%, transparent);
+  }
+  .atlas-atmosphere::after {
+    content: "";
+    position: absolute;
+    top: 48%;
+    right: -8vw;
+    width: min(58vw, 900px);
+    aspect-ratio: 1;
+    border: 1px solid hsl(var(--accent) / 0.075);
+    border-radius: 50%;
+    box-shadow: 0 0 0 56px hsl(var(--accent) / 0.022), 0 0 0 118px hsl(var(--primary) / 0.025);
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+  .atlas-action-strip {
+    border-color: hsl(var(--border) / 0.75);
+    background: linear-gradient(120deg, hsl(var(--card) / 0.78), hsl(var(--background) / 0.55));
+    box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.025), 0 14px 34px -30px hsl(265 80% 2% / 0.9);
   }
   .gradient-mystic { background: var(--gradient-mystic); }
   .gradient-gold { background: var(--gradient-gold); }
@@ -480,6 +642,15 @@ input[type="radio"]:checked::after {
   80% { transform: translate(3px, -1px); }
 }
 
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-up {
+  animation: slideUp 200ms ease-out;
+}
+
 /* Conquistas: cor de cada raridade (HSL) */
 :root {
   --raridade-comum: 210 12% 70%;
@@ -590,6 +761,10 @@ input[type="radio"]:checked::after {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .atlas-immersive-shell {
+    transition: none !important;
+  }
+
   .splash-swirl,
   .splash-title,
   .splash-subtitle,

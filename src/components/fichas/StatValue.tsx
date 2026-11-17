@@ -80,7 +80,7 @@ export function StatValue({
     <TooltipProvider delayDuration={150}>
       <Tooltip>
         <TooltipTrigger asChild>{node}</TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs space-y-1 text-[13px]">
+        <TooltipContent side="top" className="max-w-xs space-y-1 text-xs">
           <div className="font-semibold text-foreground">
             Base: <span className="font-mono">{valorBase}</span>
           </div>

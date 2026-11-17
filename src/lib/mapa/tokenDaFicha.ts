@@ -23,3 +23,24 @@ export function resolverTokenDaFicha(
 ): Entity | undefined {
   return resolverTokensDaFicha(char, entities, layerVisible)[0];
 }
+
+/** Origem de invocação: aceita o avatar do perfil, mas nunca outra invocação. */
+export function resolverTokenControladorDaFicha(
+  char: Pick<Character, 'id' | 'profileId'> | null | undefined,
+  entities: Record<string, Entity>, layerVisible: Record<string, boolean>,
+): Entity | undefined {
+  if (!char) return undefined;
+  const semInvocacoes = Object.fromEntries(
+    Object.entries(entities).filter(([, entity]) => !entity.invocationId),
+  );
+  // O avatar marcado como "Eu" representa a posição atual do controlador.
+  // A posse de imagens antigas do perfil não deve deslocar a origem da invocação.
+  const avatarAtivo = char.profileId ? Object.values(semInvocacoes)
+    .filter(entity => entity.avatarProfileId === char.profileId &&
+      (!entity.characterId || entity.characterId === char.id) &&
+      !entity.hidden && !entity.carriedBy && !entity.groundItem && !entity.chestId &&
+      (entity.layer ?? 'tokens') === 'tokens' && layerVisible[entity.layer ?? 'tokens'] !== false)
+    .sort((a, b) => a.id.localeCompare(b.id))[0] : undefined;
+  if (avatarAtivo) return avatarAtivo;
+  return resolverTokenDaFicha(char, semInvocacoes, layerVisible);
+}

@@ -284,11 +284,11 @@ export function DotesPanel({
                 {isOpen && (
                   <div className="px-3 pb-2 space-y-1 border-t border-border/40">
                     {d.short && (
-                      <div className="text-xs italic text-emerald-300/80 pt-2">{d.short}</div>
+                      <div className="text-sm italic text-emerald-300/80 pt-2">{d.short}</div>
                     )}
-                    <div className="text-xs text-foreground whitespace-pre-line pt-1">{d.descricao}</div>
+                    <div className="text-sm text-foreground whitespace-pre-line pt-1">{d.descricao}</div>
                     {d.prereq && (
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-sm text-muted-foreground">
                         <span className="font-bold text-primary/80">Pré-req:</span> {d.prereq}
                       </div>
                     )}
@@ -363,9 +363,9 @@ export function DotesPanel({
                       {isCatOpen && (
                         <div className="px-3 pb-2 space-y-1 border-t border-border/40">
                           {d.short && (
-                            <div className="text-xs italic text-emerald-300/80 pt-2">{d.short}</div>
+                            <div className="text-sm italic text-emerald-300/80 pt-2">{d.short}</div>
                           )}
-                          <div className="text-xs text-foreground whitespace-pre-line pt-1">{d.descricao}</div>
+                          <div className="text-sm text-foreground whitespace-pre-line pt-1">{d.descricao}</div>
                         </div>
                       )}
                     </div>

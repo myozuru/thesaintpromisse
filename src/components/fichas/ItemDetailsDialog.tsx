@@ -147,7 +147,7 @@ function OmniDetails({
             </div>
             <ul className="space-y-0.5">
               {bonusEntries.map(({ k, v, f }) => (
-                <li key={k} className="text-[12px] flex items-baseline justify-between gap-2">
+                <li key={k} className="text-xs flex items-baseline justify-between gap-2">
                   <span className="text-muted-foreground">{BONUS_LABELS[k] ?? k}</span>
                   <span className="font-mono text-foreground">
                     {v !== 0 && <span className="text-primary">{v >= 0 ? '+' : ''}{v}</span>}
@@ -159,8 +159,8 @@ function OmniDetails({
                   </span>
                 </li>
               ))}
-              {rollBonusEntries.map(({ k, v }) => <li key={k} className="text-[12px] flex items-baseline justify-between gap-2"><span className="text-muted-foreground">{k}</span><span className="font-mono text-primary">{v > 0 ? '+' : ''}{v}</span></li>)}
-              {mitigationEntries.map(({ label, value }) => <li key={label} className="text-[12px] flex items-baseline justify-between gap-2"><span className="text-muted-foreground">{label}</span><span className="font-mono text-primary">{value}</span></li>)}
+              {rollBonusEntries.map(({ k, v }) => <li key={k} className="text-xs flex items-baseline justify-between gap-2"><span className="text-muted-foreground">{k}</span><span className="font-mono text-primary">{v > 0 ? '+' : ''}{v}</span></li>)}
+              {mitigationEntries.map(({ label, value }) => <li key={label} className="text-xs flex items-baseline justify-between gap-2"><span className="text-muted-foreground">{label}</span><span className="font-mono text-primary">{value}</span></li>)}
             </ul>
           </section>
         )}
@@ -174,7 +174,7 @@ function OmniDetails({
             <div className="text-xs uppercase tracking-wider text-amber-300/80">
               Dados de Combate
             </div>
-            <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[12px]">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
               {findActionLabel(cd.actionCost) && (
                 <div className="flex items-center gap-1">
                   <Zap className="h-3 w-3 text-amber-400" />
@@ -253,7 +253,7 @@ function LegacyDetails({ item }: { item: Item }) {
             </div>
             <div className="flex flex-wrap gap-2">
               {bonusList.map((b) => (
-                <span key={b.label} className={`text-[12px] font-mono ${b.cls ?? 'text-foreground'}`}>
+                <span key={b.label} className={`text-xs font-mono ${b.cls ?? 'text-foreground'}`}>
                   {b.label}{b.value >= 0 ? '+' : ''}{b.value}
                 </span>
               ))}
@@ -266,7 +266,7 @@ function LegacyDetails({ item }: { item: Item }) {
             <div className="text-xs uppercase tracking-wider text-neon-yellow">
               Restauração ao Consumir
             </div>
-            <div className="flex flex-wrap gap-2 text-[12px]">
+            <div className="flex flex-wrap gap-2 text-xs">
               {(item.hungerRestore ?? 0) > 0 && <span className="text-neon-yellow">🍞 Fome +{item.hungerRestore}</span>}
               {(item.hpRestore ?? 0)     > 0 && <span className="text-hp">❤️ HP +{item.hpRestore}</span>}
               {(item.peRestore ?? 0)     > 0 && <span className="text-pe">💠 PE +{item.peRestore}</span>}

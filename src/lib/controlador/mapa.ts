@@ -7,6 +7,8 @@ import { useRoleStore } from '@/stores/useRoleStore';
 import { validarIntermediarioInvocacao } from './intermediario';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { limiteAtivasPersonagem, mensagemDomesticaoPendente, type InvocacaoControlador } from './tipos';
+import { alcancePosicionamentoInvocacao } from './alcanceInvocacao';
+import { aparenciaTokenInvocacao } from './aparenciaToken';
 import { useLogStore } from '@/stores/useLogStore';
 import { useTestRequestStore } from '@/stores/useTestRequestStore';
 import { podeUsarVersaoAprovada } from '@/lib/controlador/aprovacao';
@@ -24,7 +26,7 @@ import { DEFAULT_SAVING_THROWS, type ActiveBuff, type Character, type DamageType
 import { getTrainingBonusByLevel } from '@/lib/levelEngine';
 import type { MapTemplate } from '@/components/mapa/TemplateEngine';
 import { findEntitiesInTemplate, resolveAreaTargetCharacters } from '@/lib/mapAoE';
-import { resolverTokenDaFicha } from '@/lib/mapa/tokenDaFicha';
+import { resolverTokenDaFicha, resolverTokenControladorDaFicha } from '@/lib/mapa/tokenDaFicha';
 import { broadcastEntityPatches } from '@/lib/mapa/broadcastEntityPatches';
 import { isWithinTouch, touchDistanceMeters } from '@/lib/touchRange';
 import { defaultSizeForLevel } from '@/lib/camCores';
@@ -1028,7 +1030,7 @@ export function invocarControlador(
   if (ativos.reduce((total, token) => total + vagasInvocacaoEmCampo(token), 0) >= limiteAtivasPersonagem(dono.specialization, dono.treinoControle ?? 0)) return { ok: false, motivo: 'Limite de vagas de invocação ativas atingido.' };
   if (!Number.isFinite(modelo.custoInvocacaoPE) || modelo.custoInvocacaoPE < 0) return { ok: false, motivo: 'Custo de PE inválido.' };
   if ((dono.peCurrent ?? 0) < modelo.custoInvocacaoPE) return { ok: false, motivo: 'PE insuficiente.' };
-  const origem = Object.values(mapa.entities).find(e => e.characterId === donoId && !e.invocationId);
+  const origem = resolverTokenControladorDaFicha(dono, mapa.entities, mapa.layerVisible);
   if (!origem) return { ok: false, motivo: 'Coloque o token do Controlador no mapa primeiro.' };
   const passo = mapa.gridConfig.dpi;
   if (!(passo > 0) || !(mapa.gridConfig.metersPerCell > 0)) return { ok: false, motivo: 'Grade do mapa inválida.' };
@@ -1039,7 +1041,7 @@ export function invocarControlador(
   if (!deslocamento) return { ok: false, motivo: 'Direção inválida.' };
   const x = origem.x + passo * deslocamento[0];
   const y = origem.y + passo * deslocamento[1];
-  const alcance = modelo.alcanceInvocacaoM;
+  const alcance = alcancePosicionamentoInvocacao(modelo);
   if (!Number.isFinite(alcance) || (alcance ?? -1) < 0) return { ok: false, motivo: 'Defina o alcance de posicionamento na ficha antes de invocar.' };
   const distanciaM = Math.hypot(x - origem.x, y - origem.y) / passo * mapa.gridConfig.metersPerCell;
   if (distanciaM > alcance!) return { ok: false, motivo: 'A célula escolhida está fora do alcance de posicionamento.' };
@@ -1073,14 +1075,10 @@ export function invocarControlador(
   try {
     mapa.addEntity({
       id: tokenId,
+      ...aparenciaTokenInvocacao(modelo),
       shape: modelo.subcategoria === 'dez-sombras:fuga-do-coelho' ? 'RECT' : modelo.formaToken ?? 'ELLIPSE',
       x, y, w: passo * celulasFuga, h: passo * celulasFuga, rotation: 0,
-      color: modelo.corIdentificacao ?? '#8055bd',
-      label: modelo.apelido?.trim() || modelo.nome, locked: false, layer: 'tokens',
-      nameplate: modelo.nomeplate ?? true,
-      ...(modelo.imagemAssetId ? { assetId: modelo.imagemAssetId } : modelo.imagemFallbackAssetId ? { assetId: modelo.imagemFallbackAssetId } : {}),
-      ...(modelo.imagemFallbackAssetId ? { invocationFallbackAssetId: modelo.imagemFallbackAssetId } : {}),
-      ...(modelo.tokenCrop ? { tokenCrop: modelo.tokenCrop as import('@/stores/useMapStore').TokenCrop } : {}),
+      locked: false, layer: 'tokens',
       hp: modelo.hpAtual, hpMax: modelo.hpMaximo, ownerCharId: donoId,
       ownerProfileId: dono.profileId || undefined, invocationId: modelo.id,
       invocationEventId: eventoId, invocationInstanceId: instanciaId,
@@ -1259,12 +1257,12 @@ export function invocarHordaControlador(
       return { ok: false, motivo: 'Somente o Mestre pode ignorar a validação do intermediário.' };
     }
     if (!validacao.ok && motivo) motivosOverride.push({ modelo, motivo });
-    if (modelo.id === liderModelo.id && (!Number.isFinite(modelo.alcanceInvocacaoM) || (modelo.alcanceInvocacaoM ?? -1) < 0)) {
+    if (modelo.id === liderModelo.id && (!Number.isFinite(alcancePosicionamentoInvocacao(modelo)) || alcancePosicionamentoInvocacao(modelo) < 0)) {
       return { ok: false, motivo: `Defina o alcance de invocação na ficha ${modelo.nome}.` };
     }
   }
 
-  const origem = Object.values(mapa.entities).find(entity => entity.characterId === donoId && !entity.invocationId);
+  const origem = resolverTokenControladorDaFicha(dono, mapa.entities, mapa.layerVisible);
   if (!origem) return { ok: false, motivo: 'Coloque o token do Controlador no mapa primeiro.' };
   const passo = mapa.gridConfig.dpi;
   const metrosPorCelula = mapa.gridConfig.metersPerCell;
@@ -1275,7 +1273,7 @@ export function invocarHordaControlador(
     return { ok: false, motivo: 'Escolha uma célula válida da grade para a Horda.' };
   }
   const distancia = Math.hypot(entrada.x - origem.x, entrada.y - origem.y) / passo * metrosPorCelula;
-  if (distancia > liderModelo.alcanceInvocacaoM!) return { ok: false, motivo: 'A posição da Horda está fora do alcance definido na ficha do líder.' };
+  if (distancia > alcancePosicionamentoInvocacao(liderModelo)) return { ok: false, motivo: 'A posição da Horda está fora do alcance definido na ficha do líder.' };
   const ocupado = Object.values(mapa.entities).some(entity => entity.layer !== 'map' && !entity.hidden &&
     Math.abs(entity.x - entrada.x) < (entity.w + passo) / 2 && Math.abs(entity.y - entrada.y) < (entity.h + passo) / 2);
   if (ocupado) return { ok: false, motivo: 'A célula escolhida para a Horda está ocupada.' };
@@ -1338,13 +1336,10 @@ export function invocarHordaControlador(
   try {
     mapa.addEntity({
       id: tokenId,
-      shape: liderModelo.formaToken ?? 'ELLIPSE', x: entrada.x, y: entrada.y, w: passo, h: passo, rotation: 0,
-      color: liderModelo.corIdentificacao ?? '#8055bd',
+      ...aparenciaTokenInvocacao(liderModelo),
+      x: entrada.x, y: entrada.y, w: passo, h: passo, rotation: 0,
       label: `Horda de ${liderModelo.apelido?.trim() || liderModelo.nome}`,
-      locked: false, layer: 'tokens', nameplate: liderModelo.nomeplate ?? true,
-      ...(liderModelo.imagemAssetId ? { assetId: liderModelo.imagemAssetId } : liderModelo.imagemFallbackAssetId ? { assetId: liderModelo.imagemFallbackAssetId } : {}),
-      ...(liderModelo.imagemFallbackAssetId ? { invocationFallbackAssetId: liderModelo.imagemFallbackAssetId } : {}),
-      ...(liderModelo.tokenCrop ? { tokenCrop: liderModelo.tokenCrop as import('@/stores/useMapStore').TokenCrop } : {}),
+      locked: false, layer: 'tokens',
       hp: hordaAtual.horda.pvAtual, hpMax: hordaAtual.horda.pvMaximo,
       ownerCharId: donoId, ownerProfileId: dono.profileId || undefined, invocationId: liderModelo.id,
       invocationEventId: eventoId, invocationInstanceId: instanciaId,
@@ -1465,7 +1460,7 @@ export function invocarControladores(
     if (override && useRoleStore.getState().role !== 'MASTER') return { ok: false, motivo: 'Somente o Mestre pode ignorar a validação do intermediário.' };
     const tempoAdicional = tempoAdicionalEmSegundos(modelo.tempoAdicional);
     if (!tempoAdicional.ok) return { ok: false, motivo: modelo.nome + ': ' + tempoAdicional.motivo };
-    const alcance = modelo.alcanceInvocacaoM;
+    const alcance = alcancePosicionamentoInvocacao(modelo);
     if (!Number.isFinite(alcance) || (alcance ?? -1) < 0) return { ok: false, motivo: 'Defina o alcance de posicionamento na ficha ' + modelo.nome + ' antes de invocar.' };
     if (!Number.isFinite(modelo.custoInvocacaoPE) || modelo.custoInvocacaoPE < 0) return { ok: false, motivo: 'Custo de PE inválido para ' + modelo.nome + '.' };
     validacoesOverride.push({ modelo, motivo, override });
@@ -1479,7 +1474,7 @@ export function invocarControladores(
   if (vagasAtivas + posicoes.length > limite) return { ok: false, motivo: 'O lote ultrapassa o limite de vagas de invocação ativas.' };
   const custoTotal = modelosValidos.reduce((total, modelo) => total + modelo.custoInvocacaoPE, 0);
 
-  const origem = Object.values(mapa.entities).find(entity => entity.characterId === donoId && !entity.invocationId);
+  const origem = resolverTokenControladorDaFicha(dono, mapa.entities, mapa.layerVisible);
   if (!origem) return { ok: false, motivo: 'Coloque o token do Controlador no mapa primeiro.' };
   const passo = mapa.gridConfig.dpi;
   const metrosPorCelula = mapa.gridConfig.metersPerCell;
@@ -1494,7 +1489,7 @@ export function invocarControladores(
       return { ok: false, motivo: 'Escolha uma célula válida da grade para ' + modelo.nome + '.' };
     }
     const distanciaM = Math.hypot(posicao.x - origem.x, posicao.y - origem.y) / passo * metrosPorCelula;
-    if (distanciaM > modelo.alcanceInvocacaoM!) return { ok: false, motivo: 'A posição de ' + modelo.nome + ' está fora do alcance definido na ficha.' };
+    if (distanciaM > alcancePosicionamentoInvocacao(modelo)) return { ok: false, motivo: 'A posição de ' + modelo.nome + ' está fora do alcance definido na ficha.' };
     const ocupado = Object.values(mapa.entities).some(entity => entity.layer !== 'map' && !entity.hidden &&
       Math.abs(entity.x - posicao.x) < (entity.w + passo) / 2 && Math.abs(entity.y - posicao.y) < (entity.h + passo) / 2);
     if (ocupado) return { ok: false, motivo: 'A célula escolhida para ' + modelo.nome + ' está ocupada.' };
@@ -1537,14 +1532,10 @@ export function invocarControladores(
       const contribuicaoTempo = contribuicaoResult.contribuicao;
       mapa.addEntity({
         id: tokenId,
+        ...aparenciaTokenInvocacao(modelo),
         shape: modelo.subcategoria === 'dez-sombras:fuga-do-coelho' ? 'RECT' : modelo.formaToken ?? 'ELLIPSE',
         x, y, w: passo * celulasFuga, h: passo * celulasFuga, rotation: 0,
-        color: modelo.corIdentificacao ?? '#8055bd',
-        label: modelo.apelido?.trim() || modelo.nome, locked: false, layer: 'tokens',
-        nameplate: modelo.nomeplate ?? true,
-        ...(modelo.imagemAssetId ? { assetId: modelo.imagemAssetId } : modelo.imagemFallbackAssetId ? { assetId: modelo.imagemFallbackAssetId } : {}),
-        ...(modelo.imagemFallbackAssetId ? { invocationFallbackAssetId: modelo.imagemFallbackAssetId } : {}),
-        ...(modelo.tokenCrop ? { tokenCrop: modelo.tokenCrop as import('@/stores/useMapStore').TokenCrop } : {}),
+        locked: false, layer: 'tokens',
         hp: modelo.hpAtual, hpMax: modelo.hpMaximo, ownerCharId: donoId,
         ownerProfileId: dono.profileId || undefined, invocationId: modelo.id,
         invocationEventId: eventoDaInstancia, invocationBatchId: eventoId, invocationInstanceId: instanciaId,

@@ -95,7 +95,7 @@ function MasterMoneyView() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <ModuleHeader
         icon={Coins}
         title="Money"
@@ -104,133 +104,147 @@ function MasterMoneyView() {
         actions={
           <button
             onClick={() => setShowCurrencyPanel((v) => !v)}
-            className="flex items-center gap-1.5 rounded-md border border-border bg-background/40 px-3 py-1.5 text-sm hover:bg-secondary/60 hover:border-primary/40 transition-colors"
+            className="flex items-center gap-1.5 rounded-lg border border-border bg-background/40 px-3 py-1.5 text-sm font-medium hover:bg-secondary/60 hover:border-primary/40 transition-all duration-300"
           >
             <Settings2 className="h-4 w-4" /> Moedas
           </button>
         }
       />
 
-      {showCurrencyPanel && <CurrencyManager />}
+      {/* Desktop: two-pane layout — actions & wallets left, currency panel & history right (sticky) */}
+      <div className="lg:grid lg:grid-cols-[1fr_420px] lg:gap-6 lg:items-start">
+        {/* Main Content Pane */}
+        <div className="space-y-6 animate-fade-in">
+          {/* Criar carteira pessoal */}
+          <section className="rounded-xl border border-border bg-card p-4 card-enigmatic glow-border space-y-3">
+            <h2 className="text-sm font-bold text-primary uppercase tracking-wider flex items-center gap-2" style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.06em' }}>
+              <WalletIcon className="h-4 w-4" /> Criar carteira pessoal
+            </h2>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <select
+                value={personalCharacterId}
+                onChange={(event) => setPersonalCharacterId(event.target.value)}
+                className="min-w-0 flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm h-10"
+              >
+                <option value="">Selecione a ficha e o player…</option>
+                {playerChars.map((character) => {
+                  const alreadyHasWallet = wallets.some(
+                    (wallet) => wallet.isPersonal && wallet.members.length === 1 && wallet.members[0] === character.id,
+                  );
+                  return (
+                    <option key={character.id} value={character.id} disabled={alreadyHasWallet}>
+                      {character.name} — {profileName(character.profileId)}{alreadyHasWallet ? ' (já possui)' : ''}
+                    </option>
+                  );
+                })}
+              </select>
+              <button
+                onClick={handleCreatePersonal}
+                disabled={!personalCharacterId}
+                className="h-10 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground flex items-center gap-2 glow-primary transition-all duration-300 hover:bg-primary/90 disabled:opacity-40"
+              >
+                <Plus className="h-4 w-4" /> Criar e atribuir
+              </button>
+            </div>
+            {playerChars.length === 0 && (
+              <p className="text-sm text-muted-foreground" style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}>Vincule uma ficha de jogador a uma conta para criar sua carteira.</p>
+            )}
+          </section>
 
-      <section className="rounded-lg border border-border bg-card p-4 space-y-3">
-        <h2 className="font-semibold flex items-center gap-2">
-          <WalletIcon className="h-4 w-4" /> Criar carteira pessoal
-        </h2>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <select
-            value={personalCharacterId}
-            onChange={(event) => setPersonalCharacterId(event.target.value)}
-            className="min-w-0 flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-sm"
-          >
-            <option value="">Selecione a ficha e o player…</option>
-            {playerChars.map((character) => {
-              const alreadyHasWallet = wallets.some(
-                (wallet) => wallet.isPersonal && wallet.members.length === 1 && wallet.members[0] === character.id,
-              );
-              return (
-                <option key={character.id} value={character.id} disabled={alreadyHasWallet}>
-                  {character.name} — {profileName(character.profileId)}{alreadyHasWallet ? ' (já possui)' : ''}
-                </option>
-              );
-            })}
-          </select>
-          <button
-            onClick={handleCreatePersonal}
-            disabled={!personalCharacterId}
-            className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-40"
-          >
-            <Plus className="mr-1.5 inline h-4 w-4" /> Criar e atribuir
-          </button>
+          {/* Conceder dinheiro */}
+          <section className="rounded-xl border border-border bg-card p-4 card-enigmatic glow-border space-y-3">
+            <h2 className="text-sm font-bold text-primary uppercase tracking-wider flex items-center gap-2" style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.06em' }}>
+              <Send className="h-4 w-4" /> Conceder / Retirar dinheiro
+            </h2>
+            <div className="grid gap-2 md:grid-cols-5">
+              <select
+                value={grantWalletId}
+                onChange={(e) => setGrantWalletId(e.target.value)}
+                className="rounded-lg border border-input bg-background px-3 py-2 text-sm h-10 md:col-span-2"
+              >
+                <option value="">Selecione a carteira…</option>
+                {wallets.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.name} ({w.members.map(memberName).join(', ')})
+                  </option>
+                ))}
+              </select>
+              <select
+                value={grantCurrencyId}
+                onChange={(e) => setGrantCurrencyId(e.target.value)}
+                className="rounded-lg border border-input bg-background px-3 py-2 text-sm h-10"
+              >
+                {currencies.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.symbol} {c.name}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="number"
+                value={grantAmount || ''}
+                onChange={(e) => setGrantAmount(Math.max(0, Number(e.target.value) || 0))}
+                placeholder="Quantia"
+                className="rounded-lg border border-input bg-background px-3 py-2 text-sm h-10"
+              />
+              <button
+                onClick={handleGrant}
+                disabled={!grantWalletId || grantAmount <= 0}
+                className="h-10 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground glow-primary transition-all duration-300 hover:bg-primary/90 disabled:opacity-40"
+              >
+                Conceder
+              </button>
+              <button
+                onClick={handleRemove}
+                disabled={!grantWalletId || grantAmount <= 0}
+                className="h-10 rounded-lg bg-destructive px-4 text-sm font-medium text-destructive-foreground transition-all duration-300 hover:bg-destructive/90 disabled:opacity-40"
+              >
+                Retirar
+              </button>
+            </div>
+            <input
+              type="text"
+              value={grantReason}
+              onChange={(e) => setGrantReason(e.target.value)}
+              placeholder="Motivo (ex.: 'Recompensa pela missão da floresta')"
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm h-10"
+            />
+            {playerChars.length === 0 && (
+              <p className="text-sm text-muted-foreground" style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}>
+                Nenhuma ficha de player encontrada. Players precisam criar suas fichas para terem carteiras.
+              </p>
+            )}
+          </section>
+
+          {/* Lista de carteiras */}
+          <section className="space-y-3">
+            <h2 className="text-sm font-bold text-primary uppercase tracking-wider flex items-center gap-2" style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.06em' }}>
+              <WalletIcon className="h-4 w-4" /> Carteiras <span className="text-muted-foreground font-normal text-base">({wallets.length})</span>
+            </h2>
+            {wallets.length === 0 ? (
+              <p className="text-sm text-muted-foreground" style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}>Nenhuma carteira ainda.</p>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2">
+                {wallets.map((w) => (
+                  <WalletCard key={w.id} wallet={w} viewerRole="MASTER" />
+                ))}
+              </div>
+            )}
+          </section>
         </div>
-        {playerChars.length === 0 && (
-          <p className="text-xs text-muted-foreground">Vincule uma ficha de jogador a uma conta para criar sua carteira.</p>
-        )}
-      </section>
 
-      {/* Conceder dinheiro */}
-      <section className="rounded-lg border border-border bg-card p-4 space-y-3">
-        <h2 className="font-semibold flex items-center gap-2">
-          <Send className="h-4 w-4" /> Conceder dinheiro
-        </h2>
-        <div className="grid gap-2 md:grid-cols-5">
-          <select
-            value={grantWalletId}
-            onChange={(e) => setGrantWalletId(e.target.value)}
-            className="rounded-md border border-border bg-background px-2 py-1.5 text-sm md:col-span-2"
-          >
-            <option value="">Selecione a carteira…</option>
-            {wallets.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.name} ({w.members.map(memberName).join(', ')})
-              </option>
-            ))}
-          </select>
-          <select
-            value={grantCurrencyId}
-            onChange={(e) => setGrantCurrencyId(e.target.value)}
-            className="rounded-md border border-border bg-background px-2 py-1.5 text-sm"
-          >
-            {currencies.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.symbol} {c.name}
-              </option>
-            ))}
-          </select>
-          <input
-            type="number"
-            value={grantAmount || ''}
-            onChange={(e) => setGrantAmount(Math.max(0, Number(e.target.value) || 0))}
-            placeholder="Quantia"
-            className="rounded-md border border-border bg-background px-2 py-1.5 text-sm"
-          />
-          <button
-            onClick={handleGrant}
-            disabled={!grantWalletId || grantAmount <= 0}
-            className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-40"
-          >
-            Conceder
-          </button>
-          <button
-            onClick={handleRemove}
-            disabled={!grantWalletId || grantAmount <= 0}
-            className="rounded-md bg-destructive px-3 py-1.5 text-sm font-medium text-destructive-foreground hover:opacity-90 disabled:opacity-40"
-          >
-            Retirar
-          </button>
+        {/* Right Pane — sticky on desktop: Currency Manager + Transaction History */}
+        <div className="lg:sticky lg:top-24 space-y-4 animate-fade-in" style={{ animationDelay: '60ms' }}>
+          {showCurrencyPanel && <CurrencyManager />}
+          <TransactionHistory limit={50} />
         </div>
-        <input
-          type="text"
-          value={grantReason}
-          onChange={(e) => setGrantReason(e.target.value)}
-          placeholder="Motivo (ex.: 'Recompensa pela missão da floresta')"
-          className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
-        />
-        {playerChars.length === 0 && (
-          <p className="text-xs text-muted-foreground">
-            Nenhuma ficha de player encontrada. Players precisam criar suas fichas para terem carteiras.
-          </p>
-        )}
-      </section>
+      </div>
 
-      {/* Lista de carteiras */}
-      <section className="space-y-3">
-        <h2 className="font-semibold flex items-center gap-2">
-          <WalletIcon className="h-4 w-4" /> Carteiras ({wallets.length})
-        </h2>
-        {wallets.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhuma carteira ainda.</p>
-        ) : (
-          <div className="grid gap-3 md:grid-cols-2">
-            {wallets.map((w) => (
-              <WalletCard key={w.id} wallet={w} viewerRole="MASTER" />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Histórico */}
-      <TransactionHistory limit={50} />
+      {/* Mobile: stacked layout */}
+      <div className="lg:hidden animate-fade-in" style={{ animationDelay: '120ms' }}>
+        {showCurrencyPanel && <CurrencyManager />}
+        <TransactionHistory limit={50} />
+      </div>
     </div>
   );
 }
@@ -241,25 +255,25 @@ function CurrencyManager() {
   const [symbol, setSymbol] = useState('');
 
   return (
-    <section className="rounded-lg border border-border bg-card p-4 space-y-3">
-      <h2 className="font-semibold">Moedas customizadas</h2>
+    <section className="rounded-xl border border-border bg-card p-4 card-enigmatic glow-border space-y-3 animate-fade-in">
+      <h2 className="text-sm font-bold text-primary uppercase tracking-wider" style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.06em' }}>Moedas customizadas</h2>
       <div className="space-y-2">
         {currencies.map((c) => (
-          <div key={c.id} className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-1.5">
-            <span className="font-mono text-lg w-8 text-center">{c.symbol}</span>
-            <span className="flex-1 text-sm">{c.name}</span>
+          <div key={c.id} className="flex items-center gap-2 rounded-lg border border-border bg-background/50 px-3 py-2">
+            <span className="font-mono text-lg w-8 text-center text-primary">{c.symbol}</span>
+            <span className="flex-1 text-sm text-foreground">{c.name}</span>
             {c.isDefault ? (
-              <span className="text-xs text-primary">Padrão</span>
+              <span className="text-xs font-medium text-primary px-2 py-0.5 rounded bg-primary/10">Padrão</span>
             ) : (
               <button
                 onClick={() => setDefaultCurrency(c.id)}
-                className="text-xs text-muted-foreground hover:text-foreground"
+                className="text-xs text-muted-foreground hover:text-foreground hover:text-primary transition-colors px-2 py-0.5 rounded hover:bg-primary/10"
               >
                 Tornar padrão
               </button>
             )}
             {currencies.length > 1 && (
-              <button onClick={() => removeCurrency(c.id)} className="text-muted-foreground hover:text-destructive">
+              <button onClick={() => removeCurrency(c.id)} className="text-muted-foreground hover:text-destructive transition-colors p-1" aria-label="Remover moeda">
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
             )}
@@ -271,13 +285,13 @@ function CurrencyManager() {
           value={symbol}
           onChange={(e) => setSymbol(e.target.value.slice(0, 3))}
           placeholder="Símb."
-          className="w-16 rounded-md border border-border bg-background px-2 py-1.5 text-sm text-center"
+          className="w-16 rounded-lg border border-input bg-background px-2 py-2 text-sm text-center h-10"
         />
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Nome (ex.: Créditos)"
-          className="flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+          className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm h-10"
         />
         <button
           onClick={() => {
@@ -285,10 +299,11 @@ function CurrencyManager() {
             addCurrency(name.trim(), symbol.trim());
             setName('');
             setSymbol('');
+            playClickSound();
           }}
-          className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:opacity-90"
+          className="h-10 rounded-lg bg-primary px-4 text-sm text-primary-foreground flex items-center gap-2 glow-primary transition-all duration-300 hover:bg-primary/90"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-4 w-4" /> Adicionar
         </button>
       </div>
     </section>
@@ -322,9 +337,9 @@ function PlayerMoneyView() {
 
   if (playerChars.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-card p-6 text-center text-muted-foreground">
-        <Coins className="mx-auto mb-3 h-8 w-8 opacity-50" />
-        Sua conta ainda não está vinculada a uma ficha. Peça ao Mestre para fazer o vínculo em Contas.
+      <div className="rounded-xl border border-border bg-card p-8 text-center card-enigmatic glow-border animate-fade-in">
+        <Coins className="mx-auto mb-3 h-10 w-10 opacity-50 text-primary" />
+        <p className="text-sm text-muted-foreground" style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}>Sua conta ainda não está vinculada a uma ficha. Peça ao Mestre para fazer o vínculo em Contas.</p>
       </div>
     );
   }
@@ -333,26 +348,25 @@ function PlayerMoneyView() {
   const myInvites = activeChar ? invites.filter((i) => i.toCharacterId === activeChar.id) : [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="flex items-center gap-2 text-2xl font-bold" style={{ fontFamily: "'Cinzel', serif" }}>
-          <Coins className="h-6 w-6 text-primary" /> Money
+        <h1 className="text-2xl font-bold flex items-center gap-2 text-primary" style={{ fontFamily: "'Cinzel Decorative', serif" }}>
+          <Coins className="h-7 w-7" /> Money
         </h1>
         <div className="flex items-center gap-2">
           <select
             value={activeCharId}
             onChange={(e) => setActiveCharId(e.target.value)}
-            className="rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+            className="rounded-lg border border-input bg-background px-3 py-2 text-sm h-10"
+            style={{ fontFamily: "'Cinzel', serif" }}
           >
             {playerChars.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
+              <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
           <button
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:opacity-90"
+            onClick={() => { setShowCreate(true); playClickSound(); }}
+            className="h-10 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground flex items-center gap-2 glow-primary transition-all duration-300 hover:bg-primary/90"
           >
             <Plus className="h-4 w-4" /> Nova panelinha
           </button>
@@ -367,40 +381,52 @@ function PlayerMoneyView() {
         />
       )}
 
-      {myInvites.length > 0 && (
-        <section className="rounded-lg border border-primary/40 bg-primary/5 p-4 space-y-2">
-          <h2 className="font-semibold text-sm">Convites pendentes</h2>
-          {myInvites.map((inv) => (
-            <div key={inv.id} className="flex items-center justify-between rounded-md bg-background/60 px-3 py-2">
-              <span className="text-sm">
-                Você foi convidado para <strong>{inv.walletName}</strong>
-              </span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => acceptInvite(inv.id)}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-xs text-primary-foreground"
-                >
-                  <Check aria-hidden="true" className="h-3.5 w-3.5" /> Aceitar
-                </button>
-                <button
-                  onClick={() => declineInvite(inv.id)}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs"
-                >
-                  <X aria-hidden="true" className="h-3.5 w-3.5" /> Recusar
-                </button>
-              </div>
-            </div>
-          ))}
-        </section>
-      )}
+      {/* Desktop: two-pane layout — wallets left, invites + history right (sticky) */}
+      <div className="lg:grid lg:grid-cols-[1fr_380px] lg:gap-6 lg:items-start">
+        {/* Wallets Pane */}
+        <div className="animate-fade-in">
+          {myInvites.length > 0 && (
+            <section className="rounded-xl border border-primary/30 bg-primary/5 p-4 card-enigmatic glow-border space-y-2 mb-6 animate-fade-in">
+              <h2 className="text-sm font-bold text-primary uppercase tracking-wider" style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.06em' }}>Convites pendentes</h2>
+              {myInvites.map((inv) => (
+                <div key={inv.id} className="flex items-center justify-between rounded-lg bg-background/60 px-3 py-2">
+                  <span className="text-sm text-foreground">Você foi convidado para <strong className="text-primary">{inv.walletName}</strong></span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { acceptInvite(inv.id); playClickSound(); }}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs text-primary-foreground glow-primary transition-all duration-300 hover:bg-primary/90"
+                    >
+                      <Check className="h-3.5 w-3.5" /> Aceitar
+                    </button>
+                    <button
+                      onClick={() => { declineInvite(inv.id); playClickSound(); }}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs transition-all duration-300 hover:bg-secondary hover:border-primary/30"
+                    >
+                      <X className="h-3.5 w-3.5" /> Recusar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </section>
+          )}
 
-      <section className="grid gap-3 md:grid-cols-2 items-start">
-        {myWallets.map((w) => (
-          <WalletCard key={w.id} wallet={w} viewerRole="PLAYER" viewerCharacterId={activeChar?.id} />
-        ))}
-      </section>
+          <section className="grid gap-3 md:grid-cols-2">
+            {myWallets.map((w) => (
+              <WalletCard key={w.id} wallet={w} viewerRole="PLAYER" viewerCharacterId={activeChar?.id} />
+            ))}
+          </section>
+        </div>
 
-      <TransactionHistory limit={20} filterCharacterId={activeChar?.id} />
+        {/* Right Pane — sticky: Transaction History */}
+        <div className="lg:sticky lg:top-24 animate-fade-in" style={{ animationDelay: '60ms' }}>
+          <TransactionHistory limit={20} filterCharacterId={activeChar?.id} />
+        </div>
+      </div>
+
+      {/* Mobile: stacked */}
+      <div className="lg:hidden animate-fade-in" style={{ animationDelay: '120ms' }}>
+        <TransactionHistory limit={20} filterCharacterId={activeChar?.id} />
+      </div>
     </div>
   );
 }
@@ -425,7 +451,6 @@ function WalletCard({ wallet, viewerRole, viewerCharacterId }: WalletCardProps) 
 
   const memberNames = wallet.members.map((id) => characters.find((c) => c.id === id)?.name ?? '???');
   const displayName = wallet.name?.trim() || 'Panelinha';
-  // Desambigua carteiras com mesmo nome anexando um sufixo curto do id.
   const sameName = wallets.filter((w) => (w.name?.trim() || 'Panelinha') === displayName);
   const needsSuffix = sameName.length > 1;
   const suffix = needsSuffix ? ` #${wallet.id.slice(0, 4)}` : '';
@@ -450,33 +475,35 @@ function WalletCard({ wallet, viewerRole, viewerCharacterId }: WalletCardProps) 
   };
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4 space-y-3 self-start">
+    <div className="rounded-xl border border-border bg-card p-4 card-enigmatic glow-border space-y-3 self-start animate-fade-in">
       <div className="flex items-start justify-between">
         <div>
-          <h3 className="font-semibold flex items-center gap-2">
-            {wallet.isPersonal ? <WalletIcon className="h-4 w-4" /> : <Users className="h-4 w-4" />}
-            {displayName}
+          <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+            {wallet.isPersonal ? <WalletIcon className="h-4 w-4 text-primary" /> : <Users className="h-4 w-4 text-primary" />}
+            <span className="text-base">{displayName}</span>
             {needsSuffix && (
               <span className="ml-1 font-mono text-xs text-muted-foreground">{suffix}</span>
             )}
           </h3>
-          <p className="text-xs text-muted-foreground">{memberNames.join(' • ')}</p>
+          <p className="text-xs text-muted-foreground mt-0.5" style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}>{memberNames.join(' • ')}</p>
         </div>
         <div className="flex gap-1">
           {canAct && !wallet.isPersonal && (
             <button
-              onClick={() => setShowInvite(true)}
-              className="text-muted-foreground hover:text-primary"
+              onClick={() => { setShowInvite(true); playClickSound(); }}
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all duration-300"
               title="Convidar para a panelinha"
+              aria-label="Convidar para a panelinha"
             >
               <UserPlus className="h-4 w-4" />
             </button>
           )}
           {viewerRole === 'MASTER' && !wallet.isPersonal && (
             <button
-              onClick={() => deleteWallet(wallet.id)}
-              className="text-muted-foreground hover:text-destructive"
+              onClick={() => { if (confirm(`Excluir "${displayName}"?`)) deleteWallet(wallet.id); }}
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-300"
               title="Excluir carteira"
+              aria-label="Excluir carteira"
             >
               <Trash2 className="h-4 w-4" />
             </button>
@@ -484,8 +511,9 @@ function WalletCard({ wallet, viewerRole, viewerCharacterId }: WalletCardProps) 
           {canAct && !wallet.isPersonal && (
             <button
               onClick={() => leaveWallet(wallet.id, viewerCharacterId!)}
-              className="text-muted-foreground hover:text-destructive"
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-300"
               title="Sair da carteira"
+              aria-label="Sair da carteira"
             >
               <LogOut className="h-4 w-4" />
             </button>
@@ -505,10 +533,10 @@ function WalletCard({ wallet, viewerRole, viewerCharacterId }: WalletCardProps) 
         {currencies.map((c) => (
           <div
             key={c.id}
-            className="flex items-baseline justify-between rounded-md border border-border bg-background px-3 py-2"
+            className="flex items-baseline justify-between rounded-lg border border-border bg-background/50 px-3 py-2"
           >
             <span className="text-xs text-muted-foreground">{c.name}</span>
-            <span className="font-mono text-lg font-semibold">{formatMoney(wallet.balances[c.id] || 0, c.symbol)}</span>
+            <span className="font-mono text-base font-semibold text-foreground">{formatMoney(wallet.balances[c.id] || 0, c.symbol)}</span>
           </div>
         ))}
       </div>
@@ -518,8 +546,8 @@ function WalletCard({ wallet, viewerRole, viewerCharacterId }: WalletCardProps) 
           <button
             onClick={() => setTab(tab === 'spend' ? null : 'spend')}
             className={cn(
-              'flex-1 rounded-md border border-border px-2 py-1.5 text-xs',
-              tab === 'spend' && 'bg-secondary',
+              'flex-1 h-9 rounded-lg border border-border px-3 text-xs font-medium transition-all duration-300',
+              tab === 'spend' ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:bg-primary/5 hover:text-primary hover:border-primary/30'
             )}
           >
             Gastar
@@ -528,8 +556,8 @@ function WalletCard({ wallet, viewerRole, viewerCharacterId }: WalletCardProps) 
             onClick={() => setTab(tab === 'transfer' ? null : 'transfer')}
             disabled={otherWallets.length === 0}
             className={cn(
-              'flex-1 rounded-md border border-border px-2 py-1.5 text-xs disabled:opacity-40',
-              tab === 'transfer' && 'bg-secondary',
+              'flex-1 h-9 rounded-lg border border-border px-3 text-xs font-medium transition-all duration-300 disabled:opacity-40',
+              tab === 'transfer' ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:bg-primary/5 hover:text-primary hover:border-primary/30'
             )}
           >
             Transferir
@@ -538,17 +566,15 @@ function WalletCard({ wallet, viewerRole, viewerCharacterId }: WalletCardProps) 
       )}
 
       {tab && canAct && (
-        <div className="space-y-2 rounded-md border border-border bg-background/40 p-3">
+        <div className="space-y-2 rounded-lg border border-border bg-background/40 p-3 animate-fade-in">
           <div className="flex gap-2">
             <select
               value={currencyId}
               onChange={(e) => setCurrencyId(e.target.value)}
-              className="rounded-md border border-border bg-background px-2 py-1 text-xs"
+              className="rounded-lg border border-input bg-background px-2 py-1.5 text-xs h-9"
             >
               {currencies.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.symbol}
-                </option>
+                <option key={c.id} value={c.id}>{c.symbol}</option>
               ))}
             </select>
             <input
@@ -556,14 +582,14 @@ function WalletCard({ wallet, viewerRole, viewerCharacterId }: WalletCardProps) 
               value={amount || ''}
               onChange={(e) => setAmount(Math.max(0, Number(e.target.value) || 0))}
               placeholder="Quantia"
-              className="flex-1 rounded-md border border-border bg-background px-2 py-1 text-xs"
+              className="flex-1 rounded-lg border border-input bg-background px-2 py-1.5 text-xs h-9"
             />
           </div>
           {tab === 'transfer' && (
             <select
               value={destWalletId}
               onChange={(e) => setDestWalletId(e.target.value)}
-              className="w-full rounded-md border border-border bg-background px-2 py-1 text-xs"
+              className="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-xs h-9"
             >
               <option value="">Carteira destino…</option>
               {otherWallets.map((w) => (
@@ -577,12 +603,12 @@ function WalletCard({ wallet, viewerRole, viewerCharacterId }: WalletCardProps) 
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Motivo"
-            className="w-full rounded-md border border-border bg-background px-2 py-1 text-xs"
+            className="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-xs h-9"
           />
           <button
             onClick={tab === 'spend' ? onSpend : onTransfer}
             disabled={amount <= 0 || (tab === 'transfer' && !destWalletId)}
-            className="w-full rounded-md bg-primary px-2 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-40"
+            className="w-full h-10 rounded-lg bg-primary px-3 text-xs font-medium text-primary-foreground glow-primary transition-all duration-300 hover:bg-primary/90 disabled:opacity-40"
           >
             Confirmar
           </button>
@@ -591,8 +617,6 @@ function WalletCard({ wallet, viewerRole, viewerCharacterId }: WalletCardProps) 
     </div>
   );
 }
-
-/* ============================ Create Wallet ============================ */
 
 /* ============================ Invite to Wallet ============================ */
 
@@ -626,37 +650,39 @@ function InviteToWalletDialog({
     if (selected.length === 0) return;
     inviteToWallet(wallet.id, selected, fromCharacterId);
     onClose();
+    playClickSound();
   };
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-fade-in"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-lg border border-border bg-card p-5 space-y-3"
+        className="w-full max-w-md rounded-xl border border-border bg-card p-5 card-enigmatic glow-border space-y-3"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-semibold">Convidar para "{wallet.name?.trim() || 'Panelinha'}"</h2>
+        <h2 className="text-base font-bold text-foreground" style={{ fontFamily: "'Cinzel', serif" }}>Convidar para "{wallet.name?.trim() || 'Panelinha'}"</h2>
         {candidates.length === 0 ? (
-          <p className="text-xs text-muted-foreground italic">
+          <p className="text-sm text-muted-foreground italic" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
             Nenhum player disponível para convidar (já são membros ou têm convite pendente).
           </p>
         ) : (
           <>
-            <p className="text-xs text-muted-foreground">Selecione players:</p>
-            <div className="space-y-1 max-h-48 overflow-y-auto">
+            <p className="text-sm text-muted-foreground">Selecione players:</p>
+            <div className="space-y-1 max-h-56 overflow-y-auto">
               {candidates.map((c) => (
                 <label
                   key={c.id}
-                  className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-1.5 cursor-pointer hover:bg-secondary"
+                  className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 cursor-pointer hover:bg-primary/5 hover:border-primary/30 transition-all duration-300"
                 >
                   <input
                     type="checkbox"
                     checked={selected.includes(c.id)}
                     onChange={() => toggle(c.id)}
+                    className="h-4 w-4 accent-primary"
                   />
-                  <span className="text-sm">{c.name}</span>
+                  <span className="text-sm text-foreground">{c.name}</span>
                 </label>
               ))}
             </div>
@@ -665,14 +691,14 @@ function InviteToWalletDialog({
         <div className="flex justify-end gap-2 pt-2">
           <button
             onClick={onClose}
-            className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-secondary"
+            className="h-9 rounded-lg border border-border px-4 text-sm text-muted-foreground hover:bg-secondary transition-all duration-300"
           >
             Cancelar
           </button>
           <button
             onClick={handleInvite}
             disabled={selected.length === 0}
-            className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-40"
+            className="h-9 rounded-lg bg-primary px-4 text-sm text-primary-foreground glow-primary transition-all duration-300 hover:bg-primary/90 disabled:opacity-40"
           >
             Enviar {selected.length > 0 && `(${selected.length})`}
           </button>
@@ -699,32 +725,33 @@ function CreateWalletDialog({ creatorId, allPlayerCharacters, onClose }: CreateW
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-md rounded-lg border border-border bg-card p-5 space-y-3">
-        <h2 className="text-lg font-semibold">Nova panelinha</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-fade-in">
+      <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 card-enigmatic glow-border space-y-3">
+        <h2 className="text-base font-bold text-foreground" style={{ fontFamily: "'Cinzel', serif" }}>Nova panelinha</h2>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Nome (ex.: Cofrinho da Guilda)"
-          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm h-10"
         />
         <div>
-          <p className="mb-2 text-xs text-muted-foreground">Convidar players:</p>
+          <p className="mb-2 text-sm text-muted-foreground">Convidar players:</p>
           {others.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic">Nenhum outro player disponível.</p>
+            <p className="text-sm text-muted-foreground italic" style={{ fontFamily: "'Cormorant Garamond', serif" }}>Nenhum outro player disponível.</p>
           ) : (
-            <div className="space-y-1 max-h-48 overflow-y-auto">
+            <div className="space-y-1 max-h-56 overflow-y-auto">
               {others.map((c) => (
                 <label
                   key={c.id}
-                  className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-1.5 cursor-pointer hover:bg-secondary"
+                  className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 cursor-pointer hover:bg-primary/5 hover:border-primary/30 transition-all duration-300"
                 >
                   <input
                     type="checkbox"
                     checked={selected.includes(c.id)}
                     onChange={() => toggle(c.id)}
+                    className="h-4 w-4 accent-primary"
                   />
-                  <span className="text-sm">{c.name}</span>
+                  <span className="text-sm text-foreground">{c.name}</span>
                 </label>
               ))}
             </div>
@@ -733,7 +760,7 @@ function CreateWalletDialog({ creatorId, allPlayerCharacters, onClose }: CreateW
         <div className="flex justify-end gap-2 pt-2">
           <button
             onClick={onClose}
-            className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-secondary"
+            className="h-9 rounded-lg border border-border px-4 text-sm text-muted-foreground hover:bg-secondary transition-all duration-300"
           >
             Cancelar
           </button>
@@ -742,9 +769,10 @@ function CreateWalletDialog({ creatorId, allPlayerCharacters, onClose }: CreateW
               if (!name.trim()) return;
               create(name, creatorId, selected);
               onClose();
+              playClickSound();
             }}
             disabled={!name.trim()}
-            className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-40"
+            className="h-9 rounded-lg bg-primary px-4 text-sm text-primary-foreground glow-primary transition-all duration-300 hover:bg-primary/90 disabled:opacity-40"
           >
             Criar
           </button>
@@ -780,29 +808,28 @@ function TransactionHistory({ limit, filterCharacterId }: { limit: number; filte
   };
 
   return (
-    <section className="rounded-lg border border-border bg-card p-4 space-y-2">
-      <h2 className="font-semibold">Histórico</h2>
+    <section className="rounded-xl border border-border bg-card p-4 card-enigmatic glow-border space-y-2 animate-fade-in">
+      <h2 className="text-sm font-bold text-primary uppercase tracking-wider" style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.06em' }}>Histórico</h2>
       {filtered.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Sem movimentações ainda.</p>
+        <p className="text-sm text-muted-foreground" style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}>Sem movimentações ainda.</p>
       ) : (
-        <ul className="divide-y divide-border max-h-80 overflow-y-auto">
+        <ul className="divide-y divide-border max-h-[500px] overflow-y-auto pr-1">
           {filtered.map((tx) => {
             const cur = curName(tx.currencyId);
             return (
               <li key={tx.id} className="flex items-start justify-between gap-3 py-2 text-sm">
-                <div className="flex-1">
-                  <div className="font-medium">
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-foreground">
                     {tx.kind === 'grant' && `📥 ${wName(tx.toWalletId)} recebeu do Mestre`}
                     {tx.kind === 'spend' && `💸 ${wName(tx.fromWalletId)} gastou`}
                     {tx.kind === 'transfer' && `🔁 ${wName(tx.fromWalletId)} → ${wName(tx.toWalletId)}`}
                     {tx.kind === 'adjust' && `⚙️ ${wName(tx.toWalletId ?? tx.fromWalletId)} ajustado`}
                   </div>
-                  <div className="text-xs text-muted-foreground">{tx.reason}</div>
+                  <div className="text-xs text-muted-foreground truncate" style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}>{tx.reason}</div>
                 </div>
-                <div className="text-right">
-                  <div className="font-mono">
-                    {cur?.symbol}
-                    {tx.amount}
+                <div className="text-right shrink-0">
+                  <div className="font-mono text-base font-semibold text-foreground">
+                    {cur?.symbol}{tx.amount}
                   </div>
                   <div className="text-xs text-muted-foreground">{fmtDate(tx.at)}</div>
                 </div>

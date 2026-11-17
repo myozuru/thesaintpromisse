@@ -507,7 +507,7 @@ function ReceitaCard({ receita, onAplicar }: { receita: ReceitaOmni; onAplicar?:
         <span className="text-lg leading-none">{receita.emoji}</span>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-semibold text-foreground">{receita.nome}</div>
-          <div className="text-xs text-muted-foreground mt-0.5">{receita.descricao}</div>
+          <div className="text-sm text-muted-foreground mt-0.5">{receita.descricao}</div>
         </div>
         {onAplicar && (
           <span className="text-xs uppercase tracking-wider text-primary font-semibold shrink-0">
@@ -523,8 +523,8 @@ function ContextoCard({ cor, nome, descricao, exemplo }: { cor: string; nome: st
   return (
     <div className={`rounded-md border p-2.5 ${cor}`}>
       <div className="font-mono font-bold text-sm">{nome}</div>
-      <div className="text-xs mt-1 opacity-90">{descricao}</div>
-      <div className="text-xs mt-1.5 font-mono bg-background/50 px-1.5 py-0.5 rounded">
+      <div className="text-sm mt-1 opacity-90">{descricao}</div>
+      <div className="text-sm mt-1.5 font-mono bg-background/50 px-1.5 py-0.5 rounded">
         {exemplo}
       </div>
     </div>

@@ -130,206 +130,325 @@ export function TestesModule({ compact = false }: TestesModuleProps) {
   }
 
   return (
-    <div className={compact ? 'space-y-4 p-4' : 'mx-auto max-w-4xl space-y-6 p-4 md:p-6'}>
-      {!compact && <ModuleHeader title="Pedidos de Teste" subtitle="Solicite rolagens aos jogadores" icon={Dice6} />}
-      <p className="text-xs text-muted-foreground">Selecione as fichas e o teste; CD e nota são opcionais.</p>
+    <div className={cn('animate-fade-in', compact ? 'space-y-4 p-4' : 'space-y-6')}>
+      {!compact && (
+        <ModuleHeader
+          icon={Dice6}
+          title="Pedidos de Teste"
+          description="Solicite rolagens aos jogadores — configure alvos, tipo, CD e opções."
+        />
+      )}
 
-      <div className={compact ? 'space-y-5' : 'space-y-5 rounded-lg border border-border/60 bg-card/60 p-5'}>
-        <div className={compact ? 'grid grid-cols-2 gap-3' : 'grid md:grid-cols-2 gap-4'}>
-          <div className={compact ? 'space-y-1.5 col-span-2' : 'space-y-1.5 md:col-span-2'}>
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.18em] text-accent/80">
-                <Users className="h-3.5 w-3.5" /> 01 · Alvos {selectedChars.length > 0 && `(${selectedChars.length})`}
-              </label>
-              {players.length > 0 && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-2 text-xs text-primary"
-                  onClick={toggleAll}
-                >
-                  {charIds.length === players.length ? 'Limpar' : 'Selecionar todos'}
-                </Button>
-              )}
-            </div>
-            <div className={compact ? 'max-h-32 overflow-y-auto rounded-md border border-border/70 bg-background/55 p-1.5' : 'max-h-40 overflow-y-auto rounded-md border border-border/60 bg-background/40 p-2'}>
-              {players.length === 0 ? (
-                <div className="text-xs text-muted-foreground text-center py-2">Nenhuma ficha PLAYER</div>
-              ) : (
-                <ul className="space-y-1">
-                  {players.map((c) => (
-                    <li key={c.id}>
-                      <label className="flex items-center gap-2 px-2 py-1 rounded hover:bg-muted/40 cursor-pointer text-sm">
-                        <Checkbox
-                          checked={charIds.includes(c.id)}
-                          onCheckedChange={() => toggleChar(c.id)}
-                        />
-                        <span className={charIds.includes(c.id) ? 'font-semibold text-foreground' : 'text-muted-foreground'}>{c.name}</span>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
+      <p className="text-sm text-muted-foreground" style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}>
+        Selecione as fichas e o teste; CD e nota são opcionais.
+      </p>
 
-          <div className="col-span-2 space-y-2">
-            <label className="text-xs font-bold uppercase tracking-[0.18em] text-accent/80">02 · Tipo de teste</label>
-            <div className="grid grid-cols-3 gap-1 rounded-md border border-border/70 bg-background/55 p-1">
-              {([['attribute', 'Atributo'], ['skill', 'Perícia'], ['save', 'TR']] as const).map(([value, label]) => (
-                <Button key={value} type="button" variant="ghost" size="sm" className={cn('h-8 text-xs uppercase', kind === value ? 'border border-accent/25 bg-accent/10 text-accent' : 'text-muted-foreground')} onClick={() => {
-                  setKind(value);
-                  const next = !refChar ? (value === 'save' ? DEFAULT_SAVING_THROWS : []) : value === 'attribute' ? refChar.attributes.map(a => a.name) : value === 'skill' ? refChar.skills.map(s => s.name) : (refChar.savingThrows ?? []).map(s => s.name);
-                  ensureValidName(next);
-                }}>{label}</Button>
-              ))}
-            </div>
-          </div>
-          <div className="col-span-2 space-y-1.5">
-            <label className="text-xs uppercase tracking-wider text-muted-foreground">Teste solicitado</label>
-            <Select value={testName} onValueChange={setTestName}>
-              <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
-              <SelectContent className="z-[220] max-h-72">
-                {options.length === 0 && (
-                  <SelectItem value="__none" disabled>Selecione uma ficha primeiro</SelectItem>
+      {/* Desktop: two-pane layout — form left, requests list right (sticky) */}
+      <div className={cn(!compact && 'lg:grid lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-6 lg:items-start')}>
+        {/* Form Pane */}
+        <div className="space-y-5 animate-fade-in">
+          <div className="rounded-xl border border-border bg-card p-5 card-enigmatic space-y-5">
+            {/* 01 · Alvos */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.18em] text-accent/80">
+                  <Users className="h-3.5 w-3.5" /> 01 · Alvos {selectedChars.length > 0 && `(${selectedChars.length})`}
+                </label>
+                {players.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs text-primary"
+                    onClick={toggleAll}
+                  >
+                    {charIds.length === players.length ? 'Limpar' : 'Selecionar todos'}
+                  </Button>
                 )}
-                {options.map((n) => (
-                  <SelectItem key={n} value={n}>{n}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              </div>
+              <div className="max-h-48 overflow-y-auto rounded-lg border border-border/60 bg-background/40 p-2">
+                {players.length === 0 ? (
+                  <div className="text-sm text-muted-foreground text-center py-3">Nenhuma ficha PLAYER</div>
+                ) : (
+                  <ul className="space-y-1">
+                    {players.map((c) => (
+                      <li key={c.id}>
+                        <label className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-primary/5 cursor-pointer text-sm transition-colors duration-300">
+                          <Checkbox
+                            checked={charIds.includes(c.id)}
+                            onCheckedChange={() => toggleChar(c.id)}
+                          />
+                          <span className={cn(
+                            charIds.includes(c.id) ? 'font-semibold text-foreground' : 'text-muted-foreground'
+                          )}>{c.name}</span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
 
-          <div className="col-span-2 space-y-2 rounded-md border border-border/70 bg-background/35 p-3">
-            <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.18em] text-accent/80"><EyeOff className="h-3.5 w-3.5" /> 03 · Desafio e sigilo</label>
-            <label className="text-xs uppercase tracking-wider text-muted-foreground">CD opcional</label>
-            <Input
-              type="number"
-              inputMode="numeric"
-              placeholder="ex.: 15"
-              value={dc}
-              onChange={(e) => setDc(e.target.value)}
-            />
-            {dc.trim() && (
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <label className={cn('flex cursor-pointer items-center gap-2 rounded-md border p-2 text-xs', hideDc ? 'border-accent/35 bg-accent/10 text-foreground' : 'border-border/60 text-muted-foreground')}>
-                  <Checkbox checked={hideDc} onCheckedChange={(v) => setHideDc(!!v)} />
-                  Esconder CD
-                </label>
-                <label className={cn('flex cursor-pointer items-center gap-2 rounded-md border p-2 text-xs', hideOutcome ? 'border-accent/35 bg-accent/10 text-foreground' : 'border-border/60 text-muted-foreground')}>
-                  <Checkbox checked={hideOutcome} onCheckedChange={(v) => setHideOutcome(!!v)} />
-                  Ocultar desfecho
-                </label>
+            {/* 02 · Tipo de teste + Teste solicitado */}
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-[0.18em] text-accent/80">02 · Tipo de teste</label>
+                <div className="grid grid-cols-3 gap-1 rounded-lg border border-border/60 bg-background/40 p-1">
+                  {([['attribute', 'Atributo'], ['skill', 'Perícia'], ['save', 'TR']] as const).map(([value, label]) => (
+                    <Button
+                      key={value}
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      aria-pressed={kind === value}
+                      className={cn('h-9 text-xs uppercase', kind === value ? 'border border-accent/25 bg-accent/10 text-accent' : 'text-muted-foreground hover:bg-primary/5')}
+                      onClick={() => {
+                        setKind(value);
+                        const next = !refChar
+                          ? (value === 'save' ? DEFAULT_SAVING_THROWS : [])
+                          : value === 'attribute'
+                            ? refChar.attributes.map((a) => a.name)
+                            : value === 'skill'
+                              ? refChar.skills.map((s) => s.name)
+                              : (refChar.savingThrows ?? []).map((s) => s.name);
+                        ensureValidName(next);
+                      }}
+                    >
+                      {label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs uppercase tracking-wider text-muted-foreground">Teste solicitado</label>
+                <Select value={testName} onValueChange={setTestName}>
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Selecione…" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[220] max-h-72">
+                    {options.length === 0 && (
+                      <SelectItem value="__none" disabled>Selecione uma ficha primeiro</SelectItem>
+                    )}
+                    {options.map((n) => (
+                      <SelectItem key={n} value={n}>{n}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* 03 · Desafio e sigilo */}
+            <div className="space-y-2 rounded-lg border border-border/60 bg-background/35 p-4">
+              <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.18em] text-accent/80">
+                <EyeOff className="h-3.5 w-3.5" /> 03 · Desafio e sigilo
+              </label>
+              <label className="text-xs uppercase tracking-wider text-muted-foreground">CD opcional</label>
+              <Input
+                type="number"
+                inputMode="numeric"
+                placeholder="ex.: 15"
+                value={dc}
+                onChange={(e) => setDc(e.target.value)}
+                className="h-10"
+              />
+              {dc.trim() && (
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <label className={cn(
+                    'flex cursor-pointer items-center gap-2 rounded-lg border p-2 text-xs transition-all duration-300',
+                    hideDc ? 'border-accent/35 bg-accent/10 text-foreground' : 'border-border/60 text-muted-foreground hover:border-primary/30'
+                  )}>
+                    <Checkbox checked={hideDc} onCheckedChange={(v) => setHideDc(!!v)} />
+                    Esconder CD
+                  </label>
+                  <label className={cn(
+                    'flex cursor-pointer items-center gap-2 rounded-lg border p-2 text-xs transition-all duration-300',
+                    hideOutcome ? 'border-accent/35 bg-accent/10 text-foreground' : 'border-border/60 text-muted-foreground hover:border-primary/30'
+                  )}>
+                    <Checkbox checked={hideOutcome} onCheckedChange={(v) => setHideOutcome(!!v)} />
+                    Ocultar desfecho
+                  </label>
+                </div>
+              )}
+            </div>
+
+            {/* Bônus secreto do Mestre */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold uppercase tracking-[0.18em] text-accent/80">Bônus secreto do Mestre</label>
+              <Input
+                type="number"
+                inputMode="numeric"
+                placeholder="ex.: 2 ou -3"
+                value={masterBonus}
+                onChange={(e) => setMasterBonus(e.target.value)}
+                className="h-10"
+              />
+              <p className="text-xs text-muted-foreground" style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}>
+                O jogador só descobre o valor quando o resultado aparecer.
+              </p>
+            </div>
+
+            {/* Quem força o teste */}
+            {kind !== 'attribute' && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-[0.18em] text-accent/80">Quem força o teste (opcional)</label>
+                <Select value={originId || 'none'} onValueChange={(v) => setOriginId(v === 'none' ? '' : v)}>
+                  <SelectTrigger className="h-10" aria-label="Quem força o teste">
+                    <SelectValue placeholder="Ninguém (sem reações)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Ninguém (sem reações)</SelectItem>
+                    {originOptions.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground" style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}>
+                  Escolha o inimigo que causa o teste para os aliados próximos poderem reagir (bônus, anular, punir).
+                </p>
               </div>
             )}
-          </div>
-        </div>
 
-        <div className="space-y-1.5">
-          <label className="text-xs font-bold uppercase tracking-[0.18em] text-accent/80">Bônus secreto do Mestre</label>
-          <Input type="number" inputMode="numeric" placeholder="ex.: 2 ou -3" value={masterBonus} onChange={(e) => setMasterBonus(e.target.value)} />
-          <p className="text-xs text-muted-foreground">O jogador só descobre o valor quando o resultado aparecer.</p>
-        </div>
+            {/* Drama da rolagem */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.18em] text-accent/80">
+                <Flame className="h-3.5 w-3.5" /> Drama da rolagem
+              </label>
+              <div className="grid grid-cols-4 gap-1 rounded-lg border border-border/60 bg-background/40 p-1">
+                {([[0, 'Normal'], [1, 'Tenso'], [2, 'Épico'], [3, 'Lendário']] as const).map(([value, label]) => (
+                  <Button
+                    key={value}
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    aria-pressed={drama === value}
+                    className={cn('h-9 text-xs uppercase', drama === value ? 'border border-accent/25 bg-accent/10 text-accent' : 'text-muted-foreground hover:bg-primary/5')}
+                    onClick={() => setDrama(value)}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </div>
+              <label className={cn(
+                'flex cursor-pointer items-center gap-3 rounded-lg border p-3 text-xs transition-all duration-300',
+                cinematicFocus ? 'border-accent/40 bg-accent/10 text-foreground' : 'border-border/60 bg-background/35 text-muted-foreground hover:border-primary/30'
+              )}>
+                <Checkbox checked={cinematicFocus} onCheckedChange={(value) => setCinematicFocus(!!value)} />
+                <Focus className="h-4 w-4 shrink-0 text-accent" />
+                <span>
+                  <strong className="block text-foreground">Foco no dado</strong>
+                  Acompanha e aproxima a câmera quando houver apenas um dado.
+                </span>
+              </label>
+            </div>
 
-        {kind !== 'attribute' && (
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold uppercase tracking-[0.18em] text-accent/80">Quem força o teste (opcional)</label>
-            <Select value={originId || 'none'} onValueChange={(v) => setOriginId(v === 'none' ? '' : v)}>
-              <SelectTrigger aria-label="Quem força o teste"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Ninguém (sem reações)</SelectItem>
-                {originOptions.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">Escolha o inimigo que causa o teste para os aliados próximos poderem reagir (bônus, anular, punir).</p>
-          </div>
-        )}
+            {/* 04 · Nota opcional */}
+            <div className="space-y-1.5 pt-2 border-t border-border/40">
+              <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.18em] text-accent/80">
+                <ScrollText className="h-3.5 w-3.5" /> 04 · Nota opcional
+              </label>
+              <Input
+                placeholder="ex.: você sente algo estranho no ar…"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                className="h-10"
+              />
+            </div>
 
-        <div className="space-y-2">
-          <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.18em] text-accent/80"><Flame className="h-3.5 w-3.5" /> Drama da rolagem</label>
-          <div className="grid grid-cols-4 gap-1 rounded-md border border-border/70 bg-background/55 p-1">
-            {([[0, 'Normal'], [1, 'Tenso'], [2, 'Épico'], [3, 'Lendário']] as const).map(([value, label]) => (
-              <Button key={value} type="button" variant="ghost" size="sm" className={cn('h-8 text-xs uppercase', drama === value ? 'border border-accent/25 bg-accent/10 text-accent' : 'text-muted-foreground')} onClick={() => setDrama(value)}>{label}</Button>
-            ))}
-          </div>
-          <label className={cn('flex cursor-pointer items-center gap-3 rounded-md border p-3 text-xs transition-colors', cinematicFocus ? 'border-accent/40 bg-accent/10 text-foreground' : 'border-border/70 bg-background/35 text-muted-foreground')}>
-            <Checkbox checked={cinematicFocus} onCheckedChange={(value) => setCinematicFocus(!!value)} />
-            <Focus className="h-4 w-4 shrink-0 text-accent" />
-            <span><strong className="block text-foreground">Foco no dado</strong>Acompanha e aproxima a câmera quando houver apenas um dado.</span>
-          </label>
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.18em] text-accent/80"><ScrollText className="h-3.5 w-3.5" /> 04 · Nota opcional</label>
-          <Input
-            placeholder="ex.: você sente algo estranho no ar…"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
-        </div>
-
-        <Button onClick={handleSend} className="h-12 w-full gap-2 bg-accent font-display text-sm font-black uppercase text-accent-foreground shadow-[0_10px_30px_-10px_hsl(var(--accent)/0.65)] hover:bg-accent/90" size={compact ? 'default' : 'lg'}>
-          <Send className="w-4 h-4" /> Lançar desafio
-        </Button>
-      </div>
-
-      <div className={compact ? 'space-y-2 border-t border-border/70 pt-4' : 'space-y-2'}>
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-accent/80">
-            Pedidos em cena · {requests.length}
-          </h3>
-          {requests.length > 0 && (
-            <Button variant="ghost" size="sm" onClick={clearAll} className="text-muted-foreground">
-              <Trash2 className="w-3.5 h-3.5 mr-1" /> Limpar todos
+            {/* Send Button */}
+            <Button
+              onClick={handleSend}
+              className="h-12 w-full gap-2 bg-accent font-display text-sm font-black uppercase text-accent-foreground shadow-[0_10px_30px_-10px_hsl(var(--accent)/0.65)] hover:bg-accent/90 transition-all duration-300"
+              size={compact ? 'default' : 'lg'}
+            >
+              <Send className="w-4 h-4" /> Lançar desafio
             </Button>
-          )}
+          </div>
         </div>
 
-        {sorted.length === 0 && (
-          <div className="text-center text-sm text-muted-foreground py-8 border border-dashed border-border/40 rounded-md">
-            Nenhum pedido ainda.
-          </div>
-        )}
-
-        <ul className="space-y-2">
-          {sorted.map((r) => {
-            const passed = r.result && r.dc != null ? r.result.total >= r.dc : null;
-            return (
-              <li
-                key={r.id}
-                className={cn('flex items-center gap-3 rounded-md border bg-background/40 p-3', r.result ? (passed === true ? 'border-neon-green/35' : passed === false ? 'border-neon-red/35' : 'border-primary/35') : 'border-border/70')}
-              >
-                <div className="shrink-0">
-                  {r.result ? (
-                    passed === true ? <CheckCircle2 className="w-5 h-5 text-neon-green" />
-                    : passed === false ? <XCircle className="w-5 h-5 text-neon-red" />
-                    : <CheckCircle2 className="w-5 h-5 text-primary" />
-                  ) : (
-                    <Clock className="w-5 h-5 text-muted-foreground animate-pulse" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm">
-                    <span className="font-semibold">{r.charName}</span>
-                    <span className="text-muted-foreground"> — {r.testName}</span>
-                    {r.dc != null && <Badge variant="outline" className="ml-2">CD {r.dc}</Badge>}
-                  </div>
-                  {r.note && <div className="text-xs text-muted-foreground italic truncate">“{r.note}”</div>}
-                  {r.result && (
-                    <div className="text-xs text-muted-foreground">
-                      d20 {r.result.d20} + {r.result.bonus} = <span className="font-bold text-foreground">{r.result.total}</span>
-                    </div>
-                  )}
-                </div>
-                <Button variant="ghost" size="icon" onClick={() => dismiss(r.id)} aria-label="Remover">
-                  <Trash2 className="w-4 h-4" />
+        {/* Requests List Pane — sticky on desktop */}
+        <div className={cn(!compact && 'lg:sticky lg:top-24', 'animate-fade-in')} style={{ animationDelay: '60ms' }}>
+          <div className="rounded-xl border border-border bg-card p-4 card-enigmatic space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-accent/80">
+                Pedidos em cena · <span className="text-primary font-mono">{requests.length}</span>
+              </h3>
+              {requests.length > 0 && (
+                <Button variant="ghost" size="sm" onClick={clearAll} className="text-muted-foreground hover:text-destructive transition-colors">
+                  <Trash2 className="w-3.5 h-3.5 mr-1" /> Limpar todos
                 </Button>
-              </li>
-            );
-          })}
-        </ul>
+              )}
+            </div>
+
+            {sorted.length === 0 && (
+              <div className="text-center text-sm text-muted-foreground py-8 border border-dashed border-border/40 rounded-lg">
+                Nenhum pedido ainda.
+              </div>
+            )}
+
+            <ul className={cn('space-y-2', !compact && 'lg:max-h-[500px] lg:overflow-y-auto lg:pr-1')}>
+              {sorted.map((r) => {
+                const passed = r.result && r.dc != null ? r.result.total >= r.dc : null;
+                return (
+                  <li
+                    key={r.id}
+                    className={cn(
+                      'flex items-start gap-3 rounded-lg border bg-background/40 p-3 transition-all duration-300',
+                      r.result
+                        ? passed === true
+                          ? 'border-neon-green/35 hover:border-neon-green/50'
+                          : passed === false
+                            ? 'border-neon-red/35 hover:border-neon-red/50'
+                            : 'border-primary/35 hover:border-primary/50'
+                        : 'border-border/60 hover:border-primary/30'
+                    )}
+                  >
+                    <div className="shrink-0 mt-0.5">
+                      {r.result ? (
+                        passed === true ? (
+                          <CheckCircle2 className="w-5 h-5 text-neon-green" />
+                        ) : passed === false ? (
+                          <XCircle className="w-5 h-5 text-neon-red" />
+                        ) : (
+                          <CheckCircle2 className="w-5 h-5 text-primary" />
+                        )
+                      ) : (
+                        <Clock className="w-5 h-5 text-muted-foreground animate-pulse" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm">
+                        <span className="font-semibold text-foreground">{r.charName}</span>
+                        <span className="text-muted-foreground"> — </span>
+                        <span className="text-foreground">{r.testName}</span>
+                        {r.dc != null && (
+                          <Badge variant="outline" className="ml-2 h-5 px-2 text-xs">
+                            CD {r.dc}
+                          </Badge>
+                        )}
+                      </div>
+                      {r.note && (
+                        <div className="text-sm text-muted-foreground italic truncate" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
+                          "{r.note}"
+                        </div>
+                      )}
+                      {r.result && (
+                        <div className="mt-1 text-sm text-muted-foreground font-mono">
+                          d20 {r.result.d20} + {r.result.bonus} = <span className="font-bold text-foreground">{r.result.total}</span>
+                        </div>
+                      )}
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => dismiss(r.id)} aria-label="Remover pedido" className="shrink-0">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </div>
       </div>
+
     </div>
   );
 }

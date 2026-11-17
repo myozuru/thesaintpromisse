@@ -62,7 +62,7 @@ export function ConquistaBanner() {
       <button type="button" onClick={() => setFila((f) => f.slice(1))} data-conquista-banner={atual.def.id}
         className="conquista-banner pointer-events-auto w-full max-w-md rounded-xl border-2 bg-card/95 p-4 text-left text-card-foreground backdrop-blur"
         style={{ ['--rar' as string]: `var(--raridade-${atual.def.raridade})`, borderColor: cor }}>
-        <div className="text-[11px] font-bold uppercase tracking-[0.25em]" style={{ color: cor }}>{info.cabecalho} · {info.nome}</div>
+        <div className="text-xs font-bold uppercase tracking-[0.25em]" style={{ color: cor }}>{info.cabecalho} · {info.nome}</div>
         <div className="mt-1 flex items-center gap-3">
           <span className="text-4xl">{atual.def.icone}</span>
           <div className="min-w-0">

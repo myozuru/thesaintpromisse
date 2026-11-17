@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useItemStore } from '@/stores/useItemStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
@@ -14,6 +14,23 @@ import { playClickSound, playToggleSound } from '@/lib/sounds';
 import { useToast } from '@/hooks/use-toast';
 import { ModuleHeader } from '@/components/ui/module-header';
 import { SearchInput } from '@/components/ui/search-input';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 
 /**
  * Constrói uma EntidadeOmni mínima a partir de um Item criado no banco
@@ -62,6 +79,28 @@ export function ItensModule() {
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [itemFormDirty, setItemFormDirty] = useState(false);
+  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
+  const returnFocusRef = useRef<HTMLButtonElement | null>(null);
+  const createButtonRef = useRef<HTMLButtonElement | null>(null);
+  const editingItem = editingId ? items.find((item) => item.id === editingId) : undefined;
+  const itemFormOpen = creating || editingId !== null;
+
+  const closeItemForm = () => {
+    setCreating(false);
+    setEditingId(null);
+    setItemFormDirty(false);
+    setDiscardConfirmOpen(false);
+  };
+
+  const requestItemFormClose = () => {
+    if (itemFormDirty) {
+      setDiscardConfirmOpen(true);
+      return;
+    }
+    closeItemForm();
+  };
+
   const searchLower = search.trim().toLowerCase();
   const filteredItems = searchLower
     ? items.filter((it) =>
@@ -73,16 +112,22 @@ export function ItensModule() {
   const handleCreate = (item: Item) => {
     addItem(item);
     setExpandedId(item.id);
-    setCreating(false);
+    closeItemForm();
   };
 
   const handleEditSave = (item: Item) => {
     updateItem(item.id, item);
-    setEditingId(null);
+    closeItemForm();
   };
 
   return (
-    <div className="space-y-4">
+    <Sheet
+      open={itemFormOpen}
+      onOpenChange={(open) => {
+        if (!open) requestItemFormClose();
+      }}
+    >
+      <div className="space-y-5">
       <ModuleHeader
         icon={Swords}
         title="Banco de Itens"
@@ -92,15 +137,22 @@ export function ItensModule() {
           <>
             <button
               onClick={() => { setEditMode(!editMode); playClickSound(); }}
-              className="rounded-md p-2 text-muted-foreground hover:bg-secondary/60 hover:text-foreground transition-colors"
+              aria-label={editMode ? 'Desativar edição de itens' : 'Ativar edição de itens'}
+              className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/70 bg-background/35 text-muted-foreground transition-colors hover:border-primary/35 hover:bg-primary/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
               title={editMode ? 'Modo visualização' : 'Modo edição'}
             >
               {editMode ? <Eye className="h-4 w-4 text-primary" /> : <EyeOff className="h-4 w-4" />}
             </button>
             {editMode && (
               <button
-                onClick={() => { setCreating(true); playClickSound(); }}
-                className="flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 glow-primary transition-all"
+                ref={createButtonRef}
+                onClick={(event) => {
+                  returnFocusRef.current = event.currentTarget;
+                  setEditingId(null);
+                  setCreating(true);
+                  playClickSound();
+                }}
+                className="flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 glow-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
               >
                 <Plus className="h-4 w-4" /> Criar Item
               </button>
@@ -109,56 +161,105 @@ export function ItensModule() {
         }
       />
 
-      {creating && (
-        <ItemForm
-          characters={characters}
-          onSave={handleCreate}
-          onCancel={() => setCreating(false)}
+      <div className="flex flex-col gap-3 border-y border-border/55 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <SearchInput
+          value={search}
+          onValueChange={setSearch}
+          placeholder="Buscar item por nome ou descrição..."
+          containerClassName="w-full sm:max-w-xl"
         />
-      )}
+        <p className="shrink-0 font-mono text-sm text-muted-foreground">
+          {filteredItems.length} de {items.length} itens
+        </p>
+      </div>
 
-      <SearchInput
-        value={search}
-        onValueChange={setSearch}
-        placeholder="Buscar item por nome ou descrição..."
-        containerClassName="max-w-md"
-      />
-
-      <div className="space-y-2">
+      <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-2 2xl:grid-cols-3">
         {filteredItems.map((item) => (
-          editingId === item.id ? (
-            <ItemForm
-              key={item.id}
-              characters={characters}
-              onSave={handleEditSave}
-              onCancel={() => setEditingId(null)}
-              initialItem={item}
-            />
-          ) : (
-            <ItemCard
-              key={item.id}
-              item={item}
-              expanded={expandedId === item.id}
-              onToggle={() => { setExpandedId(expandedId === item.id ? null : item.id); playToggleSound(); }}
-              editMode={editMode}
-              characters={characters}
-              onUpdate={(updates) => updateItem(item.id, updates)}
-              onRemove={() => removeItem(item.id)}
-              onSpend={() => spendItem(item.id)}
-              onEdit={() => setEditingId(item.id)}
-            />
-          )
+          <ItemCard
+            key={item.id}
+            item={item}
+            expanded={expandedId === item.id}
+            onToggle={() => { setExpandedId(expandedId === item.id ? null : item.id); playToggleSound(); }}
+            editMode={editMode}
+            characters={characters}
+            onUpdate={(updates) => updateItem(item.id, updates)}
+            onRemove={() => removeItem(item.id)}
+            onSpend={() => spendItem(item.id)}
+            onEdit={(trigger) => {
+              returnFocusRef.current = trigger;
+              setCreating(false);
+              setEditingId(item.id);
+              playClickSound();
+            }}
+          />
         ))}
       </div>
 
-      {items.length === 0 && !creating && (
+      {items.length === 0 && (
         <div className="flex items-center justify-center rounded-lg border border-border bg-card p-12 card-enigmatic">
           <p className="text-muted-foreground italic text-sm">
             {editMode ? 'Clique em "Criar Item" para começar.' : 'Nenhum item criado. Ative o modo edição (👁) para criar.'}
           </p>
         </div>
       )}
-    </div>
+
+      {items.length > 0 && filteredItems.length === 0 && (
+        <div className="rounded-lg border border-border/70 bg-card/60 px-5 py-8 text-center text-sm text-muted-foreground">
+          Nenhum item corresponde à busca. Ajuste o nome ou a descrição.
+        </div>
+      )}
+      </div>
+
+      <SheetContent
+        side="right"
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          requestAnimationFrame(() => {
+            if (returnFocusRef.current?.isConnected) returnFocusRef.current.focus();
+            else createButtonRef.current?.focus();
+          });
+        }}
+        className="flex h-[100dvh] w-full max-w-none flex-col gap-0 overflow-hidden border-l border-border/80 bg-card p-0 sm:max-w-[520px]"
+      >
+        <SheetHeader className="shrink-0 border-b border-border/70 bg-card/95 px-5 py-4 pr-14 text-left">
+          <SheetTitle>{editingItem ? 'Editar item' : 'Criar item'}</SheetTitle>
+          <SheetDescription>
+            Configure propriedades, efeitos e vínculos deste item.
+          </SheetDescription>
+        </SheetHeader>
+        {(creating || editingItem) && (
+          <ItemForm
+            key={editingItem?.id ?? 'new-item'}
+            characters={characters}
+            onSave={editingItem ? handleEditSave : handleCreate}
+            onCancel={requestItemFormClose}
+            onDirtyChange={setItemFormDirty}
+            initialItem={editingItem}
+          />
+        )}
+      </SheetContent>
+      <AlertDialog open={discardConfirmOpen} onOpenChange={setDiscardConfirmOpen}>
+        <AlertDialogContent className="card-enigmatic border-border/80 bg-card text-foreground">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display">Descartar alterações?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Há alterações não salvas neste item. Se descartá-las, o formulário será fechado.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="mt-0 min-h-11 border-border bg-secondary text-base text-foreground hover:bg-secondary/80">
+              Continuar editando
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={closeItemForm}
+              className="min-h-11 bg-destructive text-base text-destructive-foreground hover:bg-destructive/90"
+            >
+              Descartar alterações
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Sheet>
   );
 }
 
@@ -173,7 +274,7 @@ function ItemCard({
   onUpdate: (updates: Partial<Item>) => void;
   onRemove: () => void;
   onSpend: () => void;
-  onEdit: () => void;
+  onEdit: (trigger: HTMLButtonElement) => void;
 }) {
   const detailsId = useId();
   const { toast } = useToast();
@@ -201,16 +302,16 @@ function ItemCard({
 
 
   return (
-    <div className="rounded-lg border border-border overflow-hidden card-enigmatic">
+    <div className={cn('group min-w-0 overflow-hidden rounded-xl border border-border/80 card-enigmatic transition-[border-color,box-shadow,transform] duration-200 hover:border-primary/35 hover:shadow-mystic', expanded && 'xl:col-span-2 2xl:col-span-3')}>
       <button
         type="button"
         aria-expanded={expanded}
         aria-controls={detailsId}
         onClick={onToggle}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-primary/5 transition-all duration-300"
+        className="flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-200 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/70"
       >
         <span className="flex min-w-0 flex-1 flex-col text-left">
-          <span className="block truncate text-sm font-semibold text-foreground">
+          <span className="block truncate text-base font-semibold text-foreground">
             {item.name}
             {isAccessory && (
               <span className="ml-1.5 rounded-full border border-primary/30 bg-primary/15 px-1.5 py-0.5 text-xs font-normal text-primary">
@@ -272,7 +373,7 @@ function ItemCard({
             {/* Comida / Consumível restaurador */}
             {item.isFood && (
               <div className="rounded-md border border-neon-yellow/30 bg-neon-yellow/5 p-2">
-                <div className="text-xs font-bold uppercase tracking-wider text-neon-yellow mb-1">
+                <div className="text-sm font-bold uppercase tracking-wider text-neon-yellow mb-1">
                   🍽️ Comida / Consumível
                 </div>
                 <div className="flex flex-wrap gap-1.5 text-xs">
@@ -311,7 +412,7 @@ function ItemCard({
 
             {item.rollBonuses.length > 0 && (
               <div>
-                <h4 className="text-xs font-semibold text-muted-foreground mb-1">Bônus de Rolagem</h4>
+                <h4 className="text-sm font-semibold text-muted-foreground mb-1">Bônus de Rolagem</h4>
                 <div className="flex flex-wrap gap-1">
                   {item.rollBonuses.map((rb) => (
                     <span key={rb.id} className="rounded-full bg-neon-yellow/15 border border-neon-yellow/30 px-2 py-0.5 text-xs text-neon-yellow">
@@ -334,7 +435,7 @@ function ItemCard({
 
             {/* Assigned characters */}
             <div>
-              <h4 className="text-xs font-semibold text-muted-foreground mb-1.5">Vinculados</h4>
+              <h4 className="text-sm font-semibold text-muted-foreground mb-1.5">Vinculados</h4>
               {assignedChars.length === 0 && (
                 <p className="text-xs text-muted-foreground italic">Nenhum personagem vinculado.</p>
               )}
@@ -356,7 +457,7 @@ function ItemCard({
 
             {editMode && (
               <div>
-                <h4 className="text-xs font-semibold text-muted-foreground mb-1.5">Vincular:</h4>
+                <h4 className="text-sm font-semibold text-muted-foreground mb-1.5">Vincular:</h4>
                 <div className="flex flex-wrap gap-1.5">
                   {characters.filter((c) => !(item.assignedTo ?? []).includes(c.id)).map((c) => (
                     <button
@@ -377,7 +478,7 @@ function ItemCard({
             {/* Enviar ao inventário do jogador */}
             {characters.length > 0 && (
               <div>
-                <h4 className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                <h4 className="text-sm font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5">
                   <PackagePlus className="h-3 w-3" /> Enviar ao Inventário
                 </h4>
                 <div className="flex flex-wrap gap-1.5">
@@ -401,7 +502,8 @@ function ItemCard({
             {editMode && (
               <div className="flex justify-end gap-2 pt-1">
                 <button
-                  onClick={() => { onEdit(); playClickSound(); }}
+                  type="button"
+                  onClick={(event) => onEdit(event.currentTarget)}
                   className="flex items-center gap-1 rounded-lg bg-pe/20 border border-pe/30 px-3 py-1.5 text-sm font-medium text-pe hover:bg-pe/30 transition-colors"
                 >
                   <Pencil className="h-3 w-3" /> Editar
@@ -417,13 +519,15 @@ function ItemCard({
 }
 
 function ItemForm({
-  characters, onSave, onCancel, initialItem,
+  characters, onSave, onCancel, onDirtyChange, initialItem,
 }: {
   characters: { id: string; name: string }[];
   onSave: (item: Item) => void;
   onCancel: () => void;
+  onDirtyChange: (dirty: boolean) => void;
   initialItem?: Item;
 }) {
+  const formId = useId();
   const [form, setForm] = useState({
     name: initialItem?.name || '',
     category: initialItem?.category || '',
@@ -456,6 +560,12 @@ function ItemForm({
   const [showRdByType, setShowRdByType] = useState(false);
   const [rbName, setRbName] = useState('');
   const [rbVal, setRbVal] = useState('');
+  const initialDraftRef = useRef(JSON.stringify({ form, rbName: '', rbVal: '' }));
+  const isDirty = JSON.stringify({ form, rbName, rbVal }) !== initialDraftRef.current;
+
+  useEffect(() => {
+    onDirtyChange(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   const isAccessory = form.slotType !== 'nenhum';
 
@@ -475,18 +585,22 @@ function ItemForm({
   };
 
   return (
-    <div className="rounded-lg border border-primary/30 p-4 space-y-3 text-sm animate-fade-in card-enigmatic glow-border">
-      <h3 className="text-base font-bold text-foreground glow-text">{initialItem ? 'Editar Item' : 'Novo Item'}</h3>
-      <div className="grid grid-cols-2 gap-2">
-        <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nome" className="h-9 rounded border border-input bg-background px-2 text-foreground col-span-2 text-sm" />
+    <div className="flex min-h-0 flex-1 flex-col animate-fade-in">
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4 text-base">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="col-span-2 space-y-1">
+          <label htmlFor={`${formId}-name`} className="block text-sm font-semibold text-foreground">Nome</label>
+          <input id={`${formId}-name`} autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex.: Elixir de vigor" className="h-10 w-full rounded-md border border-input bg-background px-3 text-base text-foreground" />
+        </div>
         
         {/* Category selection */}
-        <div className="col-span-2 flex gap-1 items-center">
-          <label className="text-muted-foreground w-20 text-sm">Categoria</label>
+        <div className="col-span-2 space-y-1">
+          <label htmlFor={`${formId}-slotType`} className="block text-sm font-semibold text-foreground">Categoria</label>
           <select
+            id={`${formId}-slotType`}
             value={form.slotType}
             onChange={(e) => setForm({ ...form, slotType: e.target.value as ItemSlotType })}
-            className="h-9 w-full rounded border border-input bg-background px-2 text-foreground text-sm"
+            className="h-10 w-full rounded-md border border-input bg-background px-3 text-base text-foreground"
           >
             {ITEM_CATEGORIES.map((cat) => (
               <option key={cat.value} value={cat.value}>{cat.label}</option>
@@ -494,118 +608,125 @@ function ItemForm({
           </select>
         </div>
 
-        <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Descrição" className="h-9 rounded border border-input bg-background px-2 text-foreground text-sm col-span-2" />
-        <div className="flex gap-1 items-center">
-          <label className="text-muted-foreground w-10 text-sm">Peso</label>
-          <input type="number" value={form.weight || ''} onChange={(e) => setForm({ ...form, weight: parseFloat(e.target.value) || 0 })} className="h-9 w-full rounded border border-input bg-background px-2 text-foreground text-sm" />
+        <div className="col-span-2 space-y-1">
+          <label htmlFor={`${formId}-description`} className="block text-sm font-semibold text-foreground">Descrição</label>
+          <input id={`${formId}-description`} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Descreva o item" className="h-10 w-full rounded-md border border-input bg-background px-3 text-base text-foreground" />
         </div>
-        <div className="flex gap-1 items-center">
-          <label className="text-muted-foreground w-10 text-sm">Custo</label>
-          <input type="number" value={form.cost || ''} onChange={(e) => setForm({ ...form, cost: parseFloat(e.target.value) || 0 })} className="h-9 w-full rounded border border-input bg-background px-2 text-foreground text-sm" />
-        </div>
-        <div className="flex gap-1 items-center">
-          <label className="text-muted-foreground w-10 text-sm">Slots</label>
-          <input type="number" value={form.slots || ''} onChange={(e) => setForm({ ...form, slots: parseInt(e.target.value) || 0 })} className="h-9 w-full rounded border border-input bg-background px-2 text-foreground text-sm" />
-        </div>
-        <div className="flex gap-1 items-center">
-          <label className="text-muted-foreground w-10 text-sm">Qtd</label>
-          <input type="number" value={form.quantity || ''} onChange={(e) => setForm({ ...form, quantity: parseInt(e.target.value) || 1 })} className="h-9 w-full rounded border border-input bg-background px-2 text-foreground text-sm" />
-        </div>
+        {([
+          { key: 'weight', label: 'Peso', value: form.weight, parse: (value: string) => parseFloat(value) || 0 },
+          { key: 'cost', label: 'Custo', value: form.cost, parse: (value: string) => parseFloat(value) || 0 },
+          { key: 'slots', label: 'Slots', value: form.slots, parse: (value: string) => parseInt(value) || 0 },
+          { key: 'quantity', label: 'Quantidade', value: form.quantity, parse: (value: string) => parseInt(value) || 1 },
+        ] as const).map(({ key, label, value, parse }) => (
+          <div key={key} className="min-w-0 space-y-1">
+            <label htmlFor={`${formId}-${key}`} className="block text-sm font-semibold text-foreground">{label}</label>
+            <input
+              id={`${formId}-${key}`}
+              type="number"
+              value={value || ''}
+              onChange={(e) => setForm({ ...form, [key]: parse(e.target.value) })}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-base text-foreground"
+            />
+          </div>
+        ))}
       </div>
 
       <div className="space-y-2 rounded-lg border border-pe/20 bg-pe/5 p-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-pe">🔰 RD Geral</span>
+            <label htmlFor={`${formId}-bonusRD`} className="text-sm font-bold uppercase tracking-wider text-pe">RD geral</label>
             <input
+              id={`${formId}-bonusRD`}
               type="number"
               value={form.bonusRD || ''}
               onChange={(e) => setForm({ ...form, bonusRD: parseInt(e.target.value) || 0 })}
               placeholder="0"
-              className="h-8 w-20 rounded border border-pe/30 bg-background px-2 text-center text-sm font-mono font-bold text-pe"
+              className="h-10 w-24 rounded-md border border-pe/30 bg-background px-2 text-center text-base font-mono font-bold text-pe"
             />
           </div>
           <button
             type="button"
             onClick={() => setShowRdByType(!showRdByType)}
-            className="text-xs font-medium text-pe hover:text-pe/80 transition-colors"
+            aria-expanded={showRdByType}
+            aria-controls={`${formId}-rd-by-type`}
+            className="min-h-10 rounded-md border border-pe/25 px-3 text-sm font-medium text-pe transition-colors hover:bg-pe/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
           >
-            RD por tipo {showRdByType ? '▲' : '▼'}
+            RD por tipo {showRdByType ? '−' : '+'}
           </button>
         </div>
-        {showRdByType && (
-          <div>
-            <h4 className="text-xs font-semibold text-pe mb-1 flex items-center gap-1">🔰 RD por Tipo de Dano</h4>
-            <div className="grid grid-cols-3 gap-1">
+        <div id={`${formId}-rd-by-type`} hidden={!showRdByType} inert={!showRdByType}>
+            <h4 className="mb-2 text-sm font-semibold text-pe">RD por tipo de dano</h4>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {DAMAGE_TYPES.map((dt) => (
-                <div key={dt} className="flex items-center gap-1">
-                  <label className="text-xs text-muted-foreground w-10 truncate" title={DAMAGE_TYPE_LABELS[dt]}>{DAMAGE_TYPE_ABBR[dt]}</label>
+                <div key={dt} className="min-w-0 space-y-1">
+                  <label className="block truncate text-sm text-muted-foreground" title={DAMAGE_TYPE_LABELS[dt]}>{DAMAGE_TYPE_LABELS[dt]}</label>
                   <input
                     type="number"
                     value={form.bonusRdByType[dt] || ''}
                     onChange={(e) => setForm({ ...form, bonusRdByType: { ...form.bonusRdByType, [dt]: parseInt(e.target.value) || 0 } })}
-                    className="h-7 w-full rounded border border-input bg-background px-1 text-foreground text-xs"
+                    aria-label={`Redução de dano contra ${DAMAGE_TYPE_LABELS[dt]}`}
+                    className="h-9 w-full rounded-md border border-input bg-background px-2 text-base text-foreground"
                   />
                 </div>
               ))}
             </div>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Bônus disponíveis para qualquer item (geral ou acessório) */}
       <>
         <div>
-          <h4 className="text-xs font-semibold text-muted-foreground mb-1">Bônus de Status</h4>
-          <div className="grid grid-cols-5 gap-1">
+          <h4 className="mb-2 text-sm font-semibold text-muted-foreground">Bônus de status</h4>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {(['bonusHP', 'bonusPE', 'bonusESC', 'bonusCA', 'bonusDC', 'bonusSlots', 'bonusActions', 'bonusBonusActions', 'bonusReactions', 'bonusOpportunity'] as const).map((key) => {
               const labels: Record<string, string> = { bonusHP: 'HP', bonusPE: 'PE', bonusESC: 'ESC', bonusCA: 'CA', bonusDC: 'CD', bonusSlots: 'Slots', bonusActions: 'AC', bonusBonusActions: 'AB', bonusReactions: 'RÇ', bonusOpportunity: 'AO' };
               return (
-              <div key={key} className="flex items-center gap-1">
-                <label className="text-xs text-muted-foreground w-10">{labels[key]}</label>
-                <input type="number" value={(form as any)[key] || ''} onChange={(e) => setForm({ ...form, [key]: parseInt(e.target.value) || 0 })} className="h-7 w-full rounded border border-input bg-background px-1 text-foreground text-xs" />
+              <div key={key} className="min-w-0 space-y-1">
+                <label htmlFor={`${formId}-${key}`} className="block text-sm text-muted-foreground">{labels[key]}</label>
+                <input id={`${formId}-${key}`} type="number" value={(form as any)[key] || ''} onChange={(e) => setForm({ ...form, [key]: parseInt(e.target.value) || 0 })} className="h-9 w-full rounded-md border border-input bg-background px-2 text-base text-foreground" />
               </div>
             )})}
           </div>
-          <p className="text-xs text-muted-foreground italic mt-1">Itens gerais concedem bônus quando vinculados; acessórios precisam estar equipados em slot.</p>
+          <p className="mt-2 text-sm text-muted-foreground italic">Itens gerais concedem bônus quando vinculados; acessórios precisam estar equipados em slot.</p>
         </div>
 
         {/* Comida / Consumível restaurador */}
         <div className="rounded-md border border-neon-yellow/30 bg-neon-yellow/5 p-2">
-          <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neon-yellow cursor-pointer">
+          <label className="flex min-h-10 items-center gap-2 text-sm font-bold uppercase tracking-wider text-neon-yellow cursor-pointer">
             <input
               type="checkbox"
               checked={form.isFood}
               onChange={(e) => setForm({ ...form, isFood: e.target.checked })}
-              className="h-3.5 w-3.5 accent-neon-yellow"
+              className="h-5 w-5 accent-neon-yellow"
             />
             🍽️ É comida / consumível restaurador
           </label>
           {form.isFood && (
             <>
-              <div className="grid grid-cols-4 gap-1 mt-2">
+              <div className="mt-3 grid grid-cols-2 gap-2">
                 {([
                   { key: 'hungerRestore', label: '🍞 Fome', max: 24 },
                   { key: 'hpRestore', label: '❤️ PV', max: undefined },
                   { key: 'peRestore', label: '💠 PE', max: undefined },
                   { key: 'pvtRestore', label: '🛡️ PVT', max: undefined },
                 ] as const).map(({ key, label, max }) => (
-                  <div key={key} className="flex items-center gap-1">
-                    <label className="text-xs text-muted-foreground w-14 truncate" title={label}>{label}</label>
+                  <div key={key} className="min-w-0 space-y-1">
+                    <label className="block text-sm text-muted-foreground" title={label}>{label}</label>
                     <input
                       type="number"
+                      aria-label={`${label} ao consumir`}
                       min={0}
                       max={max}
                       value={(form as any)[key] || ''}
                       onChange={(e) =>
                         setForm({ ...form, [key]: Math.max(0, parseInt(e.target.value) || 0) })
                       }
-                      className="h-7 w-full rounded border border-input bg-background px-1 text-foreground text-xs"
+                      className="h-9 w-full rounded-md border border-input bg-background px-2 text-base text-foreground"
                     />
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground italic mt-1">
+              <p className="mt-2 text-sm text-muted-foreground italic">
                 Ao Gastar, aplica os efeitos aos personagens vinculados. Cada ponto de Fome cobre ~1 hora. Origem CAM não recebe efeito.
               </p>
             </>
@@ -613,28 +734,30 @@ function ItemForm({
         </div>
 
         <div>
-          <h4 className="text-xs font-semibold text-muted-foreground mb-1">Bônus de Rolagem</h4>
+          <h4 className="mb-2 text-sm font-semibold text-muted-foreground">Bônus de rolagem</h4>
           {form.rollBonuses.map((rb) => (
             <div key={rb.id} className="flex items-center gap-1 mb-1 text-sm">
               <span className="text-foreground">{rb.attributeName}: {rb.value >= 0 ? '+' : ''}{rb.value}</span>
-              <button onClick={() => setForm({ ...form, rollBonuses: form.rollBonuses.filter((r) => r.id !== rb.id) })} className="text-destructive/60 hover:text-destructive"><X className="h-3 w-3" /></button>
+              <button type="button" aria-label={`Remover bônus de ${rb.attributeName}`} onClick={() => setForm({ ...form, rollBonuses: form.rollBonuses.filter((r) => r.id !== rb.id) })} className="flex h-10 w-10 items-center justify-center rounded-md text-destructive/80 hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"><X className="h-4 w-4" /></button>
             </div>
           ))}
           <div className="flex gap-1">
-            <input value={rbName} onChange={(e) => setRbName(e.target.value)} placeholder="Atributo" className="h-8 flex-1 rounded border border-input bg-background px-2 text-foreground text-sm" />
-            <input value={rbVal} onChange={(e) => setRbVal(e.target.value)} placeholder="+Val" type="number" className="h-8 w-14 rounded border border-input bg-background px-2 text-foreground text-sm" />
-            <button onClick={addRollBonus} className="h-8 w-8 rounded bg-neon-yellow/20 text-neon-yellow flex items-center justify-center hover:bg-neon-yellow/30 transition-colors"><Plus className="h-3.5 w-3.5" /></button>
+            <input value={rbName} onChange={(e) => setRbName(e.target.value)} aria-label="Atributo do bônus de rolagem" placeholder="Atributo" className="h-10 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-base text-foreground" />
+            <input value={rbVal} onChange={(e) => setRbVal(e.target.value)} aria-label="Valor do bônus de rolagem" placeholder="Valor" type="number" className="h-10 w-24 rounded-md border border-input bg-background px-2 text-base text-foreground" />
+            <button type="button" aria-label="Adicionar bônus de rolagem" onClick={addRollBonus} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-neon-yellow/30 bg-neon-yellow/15 text-neon-yellow transition-colors hover:bg-neon-yellow/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"><Plus className="h-4 w-4" /></button>
           </div>
         </div>
       </>
 
       {characters.length > 0 && (
         <div>
-          <h4 className="text-xs font-semibold text-muted-foreground mb-1">Vincular a:</h4>
+          <h4 className="mb-2 text-sm font-semibold text-muted-foreground">Vincular a</h4>
           <div className="flex flex-wrap gap-1.5">
             {characters.map((c) => (
               <button
                 key={c.id}
+                type="button"
+                aria-pressed={(form.assignedTo ?? []).includes(c.id)}
                 onClick={() => setForm({
                   ...form,
                   assignedTo: (form.assignedTo ?? []).includes(c.id) ? (form.assignedTo ?? []).filter((id) => id !== c.id) : [...form.assignedTo, c.id],
@@ -654,9 +777,10 @@ function ItemForm({
         </div>
       )}
 
-      <div className="flex gap-2">
-        <button onClick={handleSave} className="h-9 rounded bg-primary px-4 text-primary-foreground font-medium glow-primary hover:glow-primary-strong transition-all text-sm">Salvar</button>
-        <button onClick={onCancel} className="h-9 rounded bg-secondary px-4 text-secondary-foreground text-sm">Cancelar</button>
+      </div>
+      <div className="sticky bottom-0 z-10 flex shrink-0 gap-2 border-t border-border/70 bg-card/95 px-5 py-4 backdrop-blur-sm">
+        <button type="button" onClick={handleSave} className="h-11 flex-1 rounded-lg bg-primary px-4 text-base font-semibold text-primary-foreground shadow-mystic transition-all hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70">Salvar item</button>
+        <button type="button" onClick={onCancel} className="h-11 rounded-lg border border-border bg-secondary px-4 text-base font-medium text-secondary-foreground transition-colors hover:bg-secondary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70">Cancelar</button>
       </div>
     </div>
   );

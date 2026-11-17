@@ -79,6 +79,42 @@ beforeEach(() => {
   }
   comoTela({ profileId: 'perfil-dono', role: 'PLAYER' });
 });
+
+describe('origem da invocação vinculada ao perfil', () => {
+  it('invoca em relação ao avatar ativo e acompanha a nova posição do controlador', () => {
+    const mapa = useMapStore.getState();
+    const antigo = Object.values(mapa.entities).find(entity => entity.characterId === 'dono')!;
+    useMapStore.setState({ entities: { ...mapa.entities, avatar: {
+      ...antigo, id: 'avatar', characterId: undefined, avatarProfileId: 'perfil-dono', x: 840, y: 840,
+    } } });
+    expect(invocarControladores('dono', [{ invocacaoId: 'a', x: 910, y: 840 }]).ok).toBe(true);
+    useMapStore.getState().updateEntity('avatar', { x: 1120 });
+    expect(invocarControladores('dono', [{ invocacaoId: 'b', x: 1190, y: 840 }]).ok).toBe(true);
+    expect(tokensInvocados('dono')).toHaveLength(2);
+    expect(pegarFicha('dono').peCurrent).toBe(4);
+  });
+  it.each(['avatarProfileId', 'ownerProfileId'] as const)('aceita token com %s sem characterId e cobra o lote uma vez', campo => {
+    const mapa = useMapStore.getState();
+    const token = Object.values(mapa.entities).find(entity => entity.characterId === 'dono')!;
+    useMapStore.setState({ entities: {
+      [token.id]: { ...token, characterId: undefined, avatarProfileId: undefined, ownerProfileId: undefined, [campo]: 'perfil-dono' },
+    } });
+    const posicoes = [{ invocacaoId: 'a', x: 210, y: 140 }, { invocacaoId: 'b', x: 140, y: 210 }];
+    const resultado = invocarControladores('dono', posicoes, { eventoId: 'perfil-lote' });
+    expect(resultado.ok).toBe(true);
+    expect(tokensInvocados('dono')).toHaveLength(2);
+    expect(pegarFicha('dono').peCurrent).toBe(4);
+    expect(invocarControladores('dono', posicoes, { eventoId: 'perfil-lote' })).toEqual(resultado);
+    expect(pegarFicha('dono').peCurrent).toBe(4);
+  });
+
+  it('não usa outra invocação como token do Controlador', () => {
+    const token = Object.values(useMapStore.getState().entities).find(entity => entity.characterId === 'dono')!;
+    useMapStore.setState({ entities: { [token.id]: { ...token, characterId: undefined, ownerProfileId: 'perfil-dono', invocationId: 'c', ownerCharId: 'dono' } } });
+    expect(invocarControladores('dono', [{ invocacaoId: 'a', x: 210, y: 140 }])).toMatchObject({ ok: false, motivo: 'Coloque o token do Controlador no mapa primeiro.' });
+    expect(pegarFicha('dono').peCurrent).toBe(10);
+  });
+});
 describe('Controlador — materialização real no mapa', () => {
   it('conta usos reais de Horda, reseta no turno e reescala suporte e tamanho ao mudar a composição', async () => {
     useCombatStore.setState({ inCombat: false, round: 1 } as never);
@@ -683,7 +719,7 @@ describe('Controlador — materialização real no mapa', () => {
     expect(tokensInvocados('dono')).toHaveLength(0);
     expect(pegarFicha('dono').peCurrent).toBe(10);
   });
-  it('bloqueia fichas legadas sem alcance de posicionamento', () => {
+  it.each(['individual', 'lote'] as const)('usa alcance base de 1 m para fichas legadas no fluxo %s', fluxo => {
     const dono = pegarFicha('dono');
     useCharacterStore.getState().updateCharacter('dono', {
       invocacoesConhecidas: (dono.invocacoesConhecidas ?? []).map(inv => {
@@ -692,8 +728,22 @@ describe('Controlador — materialização real no mapa', () => {
         return legada;
       }),
     });
-    const resultado = invocarControlador('dono', 'a', 'leste');
-    expect(resultado).toEqual({ ok: false, motivo: 'Defina o alcance de posicionamento na ficha antes de invocar.' });
+    useMapStore.setState({ gridConfig: { ...useMapStore.getState().gridConfig, metersPerCell: 1 } });
+    const resultado = fluxo === 'individual'
+      ? invocarControlador('dono', 'a', 'leste')
+      : invocarControladores('dono', [{ invocacaoId: 'a', x: 210, y: 140 }]);
+    expect(resultado.ok).toBe(true);
+    expect(tokensInvocados('dono')).toHaveLength(1);
+    expect(pegarFicha('dono').peCurrent).toBe(7);
+  });
+  it('rejeita uma célula além de 1 m para uma ficha sem alcance sem cobrar PE', () => {
+    const dono = pegarFicha('dono');
+    useCharacterStore.getState().updateCharacter('dono', {
+      invocacoesConhecidas: (dono.invocacoesConhecidas ?? []).map(inv => ({ ...inv, alcanceInvocacaoM: undefined })),
+    });
+    useMapStore.setState({ gridConfig: { ...useMapStore.getState().gridConfig, metersPerCell: 1 } });
+    const resultado = invocarControladores('dono', [{ invocacaoId: 'a', x: 280, y: 140 }]);
+    expect(resultado).toMatchObject({ ok: false, motivo: 'A posição de a está fora do alcance definido na ficha.' });
     expect(tokensInvocados('dono')).toHaveLength(0);
     expect(pegarFicha('dono').peCurrent).toBe(10);
   });

@@ -1,6 +1,7 @@
 import type { InvocacaoControlador } from './tipos';
 import { FONTE_ENCICLOPEDIA_MALDITA } from './dezSombras';
 import { regrasGrau, type GrauShikigami } from './regrasShikigami';
+import { ALCANCE_BASE_INVOCACAO_M } from './alcanceInvocacao';
 
 /** Formas oficiais da p. 69; a nova edição lista composição e grau, sem publicar fichas completas. */
 export const DEZ_SOMBRAS_FORMAS_DERIVADAS = [
@@ -104,6 +105,7 @@ function criarFichaDerivada(input: {
     atributoBasePericias: 'sabedoria',
     economiaAcoesConfigurada: { acaoComum: 1, acaoBonus: 1, acaoMovimento: 1, reacao: 1 },
     intermediario: { tipo: 'tecnica', tecnicaId: 'Dez Sombras' },
+    alcanceInvocacaoM: ALCANCE_BASE_INVOCACAO_M,
     origemAquisicao: `Feiticeiros e Maldições — ${fontePagina}`,
     referenciaRegra: fontePagina,
     hpAtual: input.hp,

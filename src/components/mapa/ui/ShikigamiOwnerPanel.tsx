@@ -19,13 +19,13 @@ import { useShikigamiHudStore } from '@/stores/useShikigamiHudStore';
 import { GRAU_CONDICAO } from '@/lib/suporteNivel4';
 
 const ACTION_POOLS = [
-  ['acaoComum', 'Ação Comum'],
-  ['acaoSimples', 'Ação Simples'],
-  ['acaoComplexa', 'Ação Complexa'],
-  ['acaoMovimento', 'Movimento'],
-  ['acaoBonus', 'Ação Bônus'],
-  ['acaoLivre', 'Ação Livre'],
-  ['reacao', 'Reação'],
+  ["acaoComum", "Ação Comum"],
+  ["acaoSimples", "Ação Simples"],
+  ["acaoComplexa", "Ação Complexa"],
+  ["acaoMovimento", "Movimento"],
+  ["acaoBonus", "Ação Bônus"],
+  ["acaoLivre", "Ação Livre"],
+  ["reacao", "Reação"],
 ] as const;
 
 function idFenomenoMahoraga(nome: string): string {
@@ -238,16 +238,18 @@ export function ShikigamiOwnerPanel({ tokenId }: { tokenId: string }) {
     ? nueMovementRange
     : action?.alcanceM;
   const measuredPoint = target ? { x: target.x, y: target.y } : measurementPoint;
-  const measuredMeters = token && measuredPoint
-    ? distanciaCircularMetros(token, measuredPoint, grid)
-    : null;
+  const measuredMeters =
+    token && measuredPoint ? distanciaCircularMetros(token, measuredPoint, grid) : null;
 
   const resources = useMemo(() => model?.recursosConfigurados ?? [], [model?.recursosConfigurados]);
-  const hasManualReset = Boolean(model && (
-    Object.values(model.economiaAcoesConfigurada?.resetPorCategoria ?? {}).includes('manual') ||
-    model.acoes.some((invocationAction) => invocationAction.recargaConfigurada?.unidade === 'manual') ||
-    resources.some((resource) => resource.recargaConfigurada?.unidade === 'manual')
-  ));
+  const hasManualReset = Boolean(
+    model &&
+    (Object.values(model.economiaAcoesConfigurada?.resetPorCategoria ?? {}).includes("manual") ||
+      model.acoes.some(
+        (invocationAction) => invocationAction.recargaConfigurada?.unidade === "manual",
+      ) ||
+      resources.some((resource) => resource.recargaConfigurada?.unidade === "manual")),
+  );
 
   const executeAction = async (actionId: string) => {
     if (!model || !owner || busyActionId) return;
@@ -643,30 +645,56 @@ export function ShikigamiOwnerPanel({ tokenId }: { tokenId: string }) {
   if (role === 'PLAYER' && token.masterControlled) return null;
   if (role === 'PLAYER' && (owner.profileId !== activeProfileId || (token.ownerProfileId && token.ownerProfileId !== activeProfileId))) return null;
 
-  const targetRangeLabel = rangeMeters === undefined
-    ? 'Sem alcance definido'
-    : measuredMeters === null
-      ? `${rangeMeters} m de alcance`
-      : `${measuredMeters.toFixed(1)} m${rangeMeters !== undefined ? ` / ${rangeMeters} m` : ''}${rangeMeters !== undefined && measuredMeters > rangeMeters + 0.05 ? ' · fora de alcance' : ''}`;
+  const targetRangeLabel =
+    rangeMeters === undefined
+      ? "Sem alcance definido"
+      : measuredMeters === null
+        ? `${rangeMeters} m de alcance`
+        : `${measuredMeters.toFixed(1)} m${rangeMeters !== undefined ? ` / ${rangeMeters} m` : ""}${rangeMeters !== undefined && measuredMeters > rangeMeters + 0.05 ? " · fora de alcance" : ""}`;
 
   return (
-    <section className="mb-3 rounded-lg border border-violet-500/30 bg-violet-500/5 p-3" data-testid="shikigami-owner-panel">
-      <header className="mb-2 flex items-start justify-between gap-2">
+    <section className="min-w-0 space-y-4" data-testid="shikigami-owner-panel">
+      <header className="flex items-start justify-between gap-3 border-b border-border pb-3">
         <div className="min-w-0">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-violet-300">Shikigami selecionado</div>
-          <h3 className="truncate text-sm font-semibold text-foreground">{isCoelhoDisperso ? 'Coelho disperso' : model.apelido?.trim() || model.nome}</h3>
-          <p className="text-xs text-muted-foreground">
-            {owner.name} · PV {token.hp ?? instance?.hpAtual ?? model.hpAtual}/{token.hpMax ?? instance?.hpMaximoAtual ?? model.hpMaximo}
-            {(instance?.pvTemporarios ?? token.invocationTempHp ?? 0) > 0 && <> · PVT {instance?.pvTemporarios ?? token.invocationTempHp}</>}
-            {' · '}Defesa {token.invocationDefense ?? model.defesa}
+          <h3 className="break-words font-display text-lg font-semibold leading-snug text-foreground">
+            {isCoelhoDisperso ? 'Coelho disperso' : model.apelido?.trim() || model.nome}
+          </h3>
+          <p className="mt-1 break-words text-base text-muted-foreground">
+            Controlador: {owner.name}
             {isCoelhoDisperso && <> · Deslocamento {token.invocationMovementM ?? 9} m</>}
             {isFugaCoelhos && <> · Porte {token.invocationEffectiveSize ?? model.porte ?? 'Médio'}</>}
           </p>
         </div>
-        <span className={`rounded px-1.5 py-0.5 text-[10px] ${token.invocationState === 'caida' ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/15 text-emerald-300'}`}>
-          {token.invocationState === 'caida' ? 'Caído' : 'Ativo'}
+        <span
+          className={`shrink-0 rounded-full px-2.5 py-1 text-sm ${token.invocationState === "caida" ? "bg-amber-500/15 text-amber-300" : "bg-emerald-500/15 text-emerald-300"}`}
+        >
+          {token.invocationState === "caida" ? "Caído" : "Ativo"}
         </span>
       </header>
+
+      <dl className="grid grid-cols-2 gap-3 rounded-lg bg-secondary/30 p-3">
+        <div className="min-w-0">
+          <dt className="text-sm text-muted-foreground">Pontos de vida</dt>
+          <dd className="mt-1 font-mono text-xl tabular-nums text-foreground">
+            {token.hp ?? instance?.hpAtual ?? model.hpAtual}
+            <span className="text-base text-muted-foreground">
+              {" "}
+              / {token.hpMax ?? instance?.hpMaximoAtual ?? model.hpMaximo}
+            </span>
+          </dd>
+          {(instance?.pvTemporarios ?? token.invocationTempHp ?? 0) > 0 && (
+            <dd className="mt-1 text-sm text-muted-foreground">
+              PVT {instance?.pvTemporarios ?? token.invocationTempHp}
+            </dd>
+          )}
+        </div>
+        <div className="min-w-0">
+          <dt className="text-sm text-muted-foreground">Defesa</dt>
+          <dd className="mt-1 font-mono text-xl tabular-nums text-accent">
+            {token.invocationDefense ?? model.defesa}
+          </dd>
+        </div>
+      </dl>
 
       {isMahoraga && (
         <section className="mb-2 rounded-md border border-amber-400/30 bg-amber-500/5 p-2 text-xs" data-testid="mahoraga-combat-status" aria-label="Ciclo de vida e Roda de Dharma de Mahoraga">
@@ -1140,8 +1168,14 @@ export function ShikigamiOwnerPanel({ tokenId }: { tokenId: string }) {
           const saldo = instance?.economiaAcoes?.[key];
           if (!saldo) return null;
           return (
-            <span key={key} className="rounded border border-border/70 bg-background/70 px-1.5 py-1 text-[10px] text-muted-foreground">
-              {label} <strong className="text-foreground">{saldo.atual}/{saldo.maximo}</strong>
+            <span
+              key={key}
+              className="max-w-full break-words rounded border border-border/70 bg-background/70 px-2 py-1.5 text-base text-muted-foreground"
+            >
+              {label}{" "}
+              <strong className="text-foreground">
+                {saldo.atual}/{saldo.maximo}
+              </strong>
             </span>
           );
         })}
@@ -1398,23 +1432,33 @@ export function ShikigamiOwnerPanel({ tokenId }: { tokenId: string }) {
           {resources.map((resource) => {
             const current = instance?.recursosAtuais?.[resource.id] ?? resource.valorInicial;
             return (
-              <span key={resource.id} className="rounded border border-border/70 bg-background/70 px-1.5 py-1 text-[10px] text-muted-foreground">
-                {resource.nome} <strong className="text-foreground">{current}{resource.valorMaximo === undefined ? '' : `/${resource.valorMaximo}`}</strong>
+              <span
+                key={resource.id}
+                className="max-w-full break-words rounded border border-border/70 bg-background/70 px-2 py-1.5 text-base text-muted-foreground"
+              >
+                {resource.nome}{" "}
+                <strong className="text-foreground">
+                  {current}
+                  {resource.valorMaximo === undefined ? "" : `/${resource.valorMaximo}`}
+                </strong>
               </span>
             );
           })}
         </div>
       )}
 
-      {hasManualReset && instance?.estado === 'ativa' && (
+      {hasManualReset && instance?.estado === "ativa" && (
         <div className="mb-2">
           <button
             type="button"
             onClick={() => {
               const resultado = resetarEconomiaManualInvocacao(owner.id, token.id);
-              setFeedback({ ok: resultado.ok, message: resultado.ok ? 'Reset manual aplicado à instância.' : resultado.motivo });
+              setFeedback({
+                ok: resultado.ok,
+                message: resultado.ok ? "Reset manual aplicado à instância." : resultado.motivo,
+              });
             }}
-            className="rounded border border-violet-400/30 bg-violet-500/10 px-2 py-1 text-[10px] text-violet-100 hover:bg-violet-500/20"
+            className="min-h-11 rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-base text-foreground hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
           >
             Aplicar reset manual
           </button>
@@ -1425,32 +1469,37 @@ export function ShikigamiOwnerPanel({ tokenId }: { tokenId: string }) {
         <button
           type="button"
           onClick={startTargetSelection}
-          aria-pressed={interaction === 'target'}
-          className={`inline-flex h-7 items-center gap-1 rounded border px-2 text-xs ${interaction === 'target' ? 'border-violet-400 bg-violet-500/20 text-violet-100' : 'border-border bg-background text-foreground hover:bg-secondary'}`}
+          aria-pressed={interaction === "target"}
+          className={`inline-flex min-h-11 items-center gap-2 rounded-md border px-3 py-2 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 ${interaction === "target" ? "border-primary bg-primary/15 text-foreground" : "border-border bg-background text-foreground hover:bg-secondary"}`}
         >
           <Crosshair className="h-3.5 w-3.5" /> Alvo
         </button>
         <button
           type="button"
           onClick={startMeasurement}
-          aria-pressed={interaction === 'measure'}
-          className={`inline-flex h-7 items-center gap-1 rounded border px-2 text-xs ${interaction === 'measure' ? 'border-violet-400 bg-violet-500/20 text-violet-100' : 'border-border bg-background text-foreground hover:bg-secondary'}`}
+          aria-pressed={interaction === "measure"}
+          className={`inline-flex min-h-11 items-center gap-2 rounded-md border px-3 py-2 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 ${interaction === "measure" ? "border-primary bg-primary/15 text-foreground" : "border-border bg-background text-foreground hover:bg-secondary"}`}
         >
           <Ruler className="h-3.5 w-3.5" /> Medir
         </button>
         {(target || measurementPoint) && (
-          <button type="button" onClick={clearTarget} title="Limpar alvo e medição" className="inline-flex h-7 items-center gap-1 rounded border border-border bg-background px-2 text-xs text-muted-foreground hover:text-foreground">
+          <button
+            type="button"
+            onClick={clearTarget}
+            title="Limpar alvo e medição"
+            className="inline-flex min-h-11 items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-base text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+          >
             <X className="h-3.5 w-3.5" /> Limpar
           </button>
         )}
       </div>
 
-      <div className="mb-2 flex flex-wrap gap-1.5">
+      <div className="flex flex-col gap-2">
         <button
           type="button"
-          onClick={() => setRangeMode({ kind: 'movement' })}
-          aria-pressed={rangeMode?.kind === 'movement'}
-          className={`rounded px-2 py-1 text-[10px] ${rangeMode?.kind === 'movement' ? 'bg-violet-500/20 text-violet-100' : 'bg-secondary text-muted-foreground hover:text-foreground'}`}
+          onClick={() => setRangeMode({ kind: "movement" })}
+          aria-pressed={rangeMode?.kind === "movement"}
+          className={`min-h-11 w-full whitespace-normal break-words rounded-md border px-3 py-2 text-left text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 ${rangeMode?.kind === "movement" ? "border-primary/40 bg-primary/15 text-foreground" : "border-border bg-secondary/40 text-foreground hover:bg-secondary"}`}
         >
           Movimento · {nueMovementRange} m
         </button>
@@ -1458,11 +1507,19 @@ export function ShikigamiOwnerPanel({ tokenId }: { tokenId: string }) {
           <button
             type="button"
             key={invocationAction.id}
-            onClick={() => setRangeMode({ kind: 'action', actionId: invocationAction.id })}
-            aria-pressed={rangeMode?.kind === 'action' && rangeMode.actionId === invocationAction.id}
-            className={`max-w-full truncate rounded px-2 py-1 text-[10px] ${rangeMode?.kind === 'action' && rangeMode.actionId === invocationAction.id ? 'bg-violet-500/20 text-violet-100' : 'bg-secondary text-muted-foreground hover:text-foreground'}`}
+            onClick={() => setRangeMode({ kind: "action", actionId: invocationAction.id })}
+            aria-pressed={
+              rangeMode?.kind === "action" && rangeMode.actionId === invocationAction.id
+            }
+            className={`min-h-11 w-full whitespace-normal break-words rounded-md border px-3 py-2 text-left text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 ${rangeMode?.kind === "action" && rangeMode.actionId === invocationAction.id ? "border-primary/40 bg-primary/15 text-foreground" : "border-border bg-secondary/40 text-foreground hover:bg-secondary"}`}
           >
-            {invocationAction.nome}{invocationAction.alcanceM === undefined ? '' : ` · ${invocationAction.alcanceM} m`}
+            {invocationAction.nome}
+            {invocationAction.alcanceM !== undefined && (
+              <>
+                {" "}
+                <span className="whitespace-nowrap">· {invocationAction.alcanceM} m</span>
+              </>
+            )}
           </button>
         ))}
       </div>
@@ -1474,10 +1531,14 @@ export function ShikigamiOwnerPanel({ tokenId }: { tokenId: string }) {
       )}
 
       <p className="text-xs text-muted-foreground" aria-live="polite">
-        {interaction === 'target' ? 'Clique em um token para defini-lo como alvo.'
-          : interaction === 'measure' ? 'Clique no mapa para medir a distância.'
-            : target ? `Alvo: ${target.label || 'Token'} · ${targetRangeLabel}`
-              : measurementPoint ? `Medição: ${measuredMeters?.toFixed(1) ?? '—'} m`
+        {interaction === "target"
+          ? "Clique em um token para defini-lo como alvo."
+          : interaction === "measure"
+            ? "Clique no mapa para medir a distância."
+            : target
+              ? `Alvo: ${target.label || "Token"} · ${targetRangeLabel}`
+              : measurementPoint
+                ? `Medição: ${measuredMeters?.toFixed(1) ?? "—"} m`
                 : `Arraste o token para mover até ${model.deslocamentoM} m por Ação de Movimento.`}
       </p>
       {feedback && <p role={feedback.ok ? 'status' : 'alert'} className={`mt-1 text-xs ${feedback.ok ? 'text-emerald-300' : 'text-rose-300'}`}>{feedback.message}</p>}

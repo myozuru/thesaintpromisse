@@ -13,6 +13,7 @@
  * Para isométrico, usa Chebyshev nos eixos diamante.
  */
 import type { GridConfig, Vector2, MeasurementStyle } from '@/stores/useMapStore';
+import { UI_READING_FLOOR_PX } from '@/lib/uiTypography';
 
 export interface MeasureResult {
   cells: number;
@@ -101,8 +102,8 @@ export const MeasureEngine = {
     const meters = cells * metersPerCell;
     const text = `${meters.toFixed(meters < 10 ? 1 : 0)}m`;
 
-    const fontPx = 13;
-    ctx.font = `600 ${fontPx / scale}px ui-sans-serif, system-ui, sans-serif`;
+    const fontPx = UI_READING_FLOOR_PX;
+    ctx.font = `600 ${fontPx / scale}px 'JetBrains Mono', monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const padX = 6 / scale;

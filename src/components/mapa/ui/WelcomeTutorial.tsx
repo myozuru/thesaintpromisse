@@ -58,8 +58,8 @@ export function WelcomeTutorial({ onClose, onOpenShortcuts }: Props) {
                 <Icon className="h-4 w-4 text-amber-300/80" />
               </div>
               <div>
-                <div className="text-xs font-semibold">{title}</div>
-                <div className="text-xs text-muted-foreground leading-snug">{body}</div>
+                <div className="text-sm font-semibold">{title}</div>
+                <div className="text-sm text-muted-foreground leading-snug">{body}</div>
               </div>
             </div>
           ))}

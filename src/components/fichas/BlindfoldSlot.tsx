@@ -81,7 +81,7 @@ export function BlindfoldSlot({ character }: Props) {
           </div>
           {inCombat && (
             <div
-              className={`text-[10.5px] rounded-md px-2 py-1 border ${
+              className={`text-xs rounded-md px-2 py-1 border ${
                 nextIsCommonAction
                   ? 'border-amber-400/40 bg-amber-500/10 text-amber-200'
                   : 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200'

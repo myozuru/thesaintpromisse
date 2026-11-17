@@ -1,114 +1,76 @@
 /**
- * MapTopBar — barra superior do mapa.
+ * MapTopBar — barra superior simplificada do mapa.
+ *
+ * Foco: gerenciamento de cena (abas, fundo, import/export) e controles globais
+ * (imersivo, ajuda, grade). Ferramentas específicas foram movidas para o ToolRail lateral.
  */
-import { Settings2, Maximize2, Minimize2, Layers, Undo2, Redo2, Swords, Lightbulb, Dices, HelpCircle } from 'lucide-react';
+import { Maximize2, Minimize2, HelpCircle, Grid as GridIcon, Settings2 } from 'lucide-react';
 import { RadioIconButton } from './RadioIconButton';
 import { useMapStore } from '@/stores/useMapStore';
-import { useDiceStore } from '@/stores/useDiceStore';
 import { SceneTabs } from './SceneTabs';
 import { BackgroundButton } from './BackgroundButton';
 import { SceneIOButtons } from './SceneIOButtons';
+import { cn } from '@/lib/utils';
+import { hasToolSettings } from './toolSettings';
+import { InvocationQuickHud } from './InvocationQuickHud';
 
 interface Props {
   immersive: boolean;
-  settingsOpen: boolean;
-  layerPanelOpen: boolean;
-  onToggleSettings: () => void;
   onToggleImmersive: () => void;
-  onToggleLayerPanel: () => void;
   onOpenHelp?: () => void;
+  gridOpen: boolean;
+  onToggleGrid: () => void;
 }
 
 export function MapTopBar({
   immersive,
-  settingsOpen,
-  layerPanelOpen,
-  onToggleSettings,
   onToggleImmersive,
-  onToggleLayerPanel,
   onOpenHelp,
+  gridOpen,
+  onToggleGrid,
 }: Props) {
-  const undo = useMapStore((s) => s.undo);
-  const redo = useMapStore((s) => s.redo);
-  const canUndo = useMapStore((s) => s._undo.length > 0);
-  const canRedo = useMapStore((s) => s._redo.length > 0);
-  const initiativeOpen = useMapStore((s) => s.initiativeOpen);
-  const setInitiativeOpen = useMapStore((s) => s.setInitiativeOpen);
-  const lightingEnabled = useMapStore((s) => s.lighting.enabled);
-  const setLighting = useMapStore((s) => s.setLighting);
-  const diceOpen = useDiceStore((s) => s.open);
-  const setDiceOpen = useDiceStore((s) => s.setOpen);
+  const activeTool = useMapStore((s) => s.activeTool);
+  const settingsOpen = useMapStore((s) => s.settingsPanelOpen);
+  const setSettingsPanelOpen = useMapStore((s) => s.setSettingsPanelOpen);
+  const canConfigureActiveTool = hasToolSettings(activeTool);
+
   return (
     <div
-      className="h-12 min-w-0 shrink-0 flex items-center overflow-x-auto overscroll-x-contain touch-pan-x px-2 gap-2 bg-card border-b border-border text-foreground [scrollbar-width:thin]"
+      className={cn("h-12 min-w-0 shrink-0 flex items-center overflow-x-auto overscroll-x-contain touch-pan-x px-2 gap-2 text-foreground [scrollbar-width:thin] border-b border-border", "card-enigmatic")}
+      style={{ backgroundColor: 'hsl(var(--card))' }}
     >
-      <div className="min-w-0 flex-1 overflow-hidden" style={{ minWidth: 'min(12rem, 35vw)' }}><SceneTabs /></div>
+      <div className="min-w-0 flex-1 overflow-hidden" style={{ minWidth: 'min(12rem, 35vw)' }}>
+        <SceneTabs />
+      </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-1">
         <BackgroundButton />
         <SceneIOButtons />
+        <InvocationQuickHud />
+        {canConfigureActiveTool && (
+          <RadioIconButton
+            variant="ghost"
+            title="Configurações da ferramenta"
+            label="Ajustes"
+            active={settingsOpen}
+            expanded={settingsOpen}
+            controls={settingsOpen ? 'map-tool-settings' : undefined}
+            onClick={() => setSettingsPanelOpen(!settingsOpen)}
+          >
+            <Settings2 className="h-4 w-4" />
+          </RadioIconButton>
+        )}
         <RadioIconButton
+          id="map-grid-trigger"
           variant="ghost"
-          title="Desfazer (Ctrl+Z)"
-          label="Desfazer"
-          active={false}
-          onClick={() => canUndo && undo()}
-        >
-          <Undo2 className={`h-4 w-4 ${canUndo ? '' : 'opacity-30'}`} />
-        </RadioIconButton>
-        <RadioIconButton
-          variant="ghost"
-          title="Refazer (Ctrl+Shift+Z)"
-          label="Refazer"
-          active={false}
-          onClick={() => canRedo && redo()}
-        >
-          <Redo2 className={`h-4 w-4 ${canRedo ? '' : 'opacity-30'}`} />
-        </RadioIconButton>
-        <RadioIconButton
-          variant="ghost"
-          title="Iniciativa (I)"
-          label="Iniciativa"
-          active={initiativeOpen}
-          onClick={() => setInitiativeOpen(!initiativeOpen)}
-        >
-          <Swords className="h-4 w-4" />
-        </RadioIconButton>
-        <RadioIconButton
-          variant="ghost"
-          title={lightingEnabled ? 'Iluminação dinâmica: ligada' : 'Iluminação dinâmica: desligada'}
-          label="Iluminação"
-          active={lightingEnabled}
-          onClick={() => setLighting({ enabled: !lightingEnabled })}
-        >
-          <Lightbulb className="h-4 w-4" />
-        </RadioIconButton>
-        <RadioIconButton
-          variant="ghost"
-          title="Dados (D)"
-          label="Dados"
-          active={diceOpen}
-          onClick={() => setDiceOpen(!diceOpen)}
-        >
-          <Dices className="h-4 w-4" />
-        </RadioIconButton>
-        <RadioIconButton
-          variant="ghost"
-          title="Camadas (L)"
-          label="Camadas"
-          active={layerPanelOpen}
-          onClick={onToggleLayerPanel}
-        >
-          <Layers className="h-4 w-4" />
-        </RadioIconButton>
-        <RadioIconButton
-          variant="ghost"
-          title="Configurações de grade"
+          title="Grade (G)"
           label="Grade"
-          active={settingsOpen}
-          onClick={onToggleSettings}
+          active={gridOpen}
+          expanded={gridOpen}
+          controls={gridOpen ? 'map-grid-settings' : undefined}
+          onClick={onToggleGrid}
         >
-          <Settings2 className="h-4 w-4" />
+          <GridIcon className="h-4 w-4" />
         </RadioIconButton>
         <RadioIconButton
           variant="ghost"
@@ -124,6 +86,7 @@ export function MapTopBar({
           title={immersive ? 'Sair do modo imersivo' : 'Modo imersivo'}
           label={immersive ? 'Sair' : 'Imersivo'}
           active={immersive}
+          pressed={immersive}
           onClick={onToggleImmersive}
         >
           {immersive ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}

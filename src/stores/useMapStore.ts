@@ -350,7 +350,7 @@ interface MapState {
   partyCollapsed: boolean;
   /** Ferramenta ativa do rail. */
   activeTool: ToolId;
-  /** Painel contextual de configurações da ferramenta (abre via clique-direito no rail). */
+  /** Painel contextual de configurações da ferramenta (botão Ajustes e clique-direito no rail). */
   settingsPanelOpen: boolean;
   /** Preferências por ferramenta (persistidas). */
   toolSettings: ToolSettingsMap;

@@ -50,9 +50,16 @@ const SECTIONS = [
   { id: "dotes",           label: "Dotes Gerais",           component: SectionDotes },
 ];
 
-export default function CreatureBuilder({ existingCreature, onSave, onCancel }) {
+export default function CreatureBuilder({ existingCreature, onSave, onCancel, onDirtyChange, embedded = false }) {
   const { draft, derived, warnings, actions, buildCreature } =
     useCreatureBuilder(existingCreature);
+  const [baselineSignature, setBaselineSignature] = useState(() => JSON.stringify(draft));
+  const draftSignature = JSON.stringify(draft);
+  const isDirty = draftSignature !== baselineSignature;
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   // Bug #39 fix: re-hidrata também quando o conteúdo da ficha existente
   // muda (ex: atualização externa via storage event multi-aba) — antes só
@@ -111,16 +118,24 @@ export default function CreatureBuilder({ existingCreature, onSave, onCancel }) 
       return;
     }
     const creature = buildCreature();
+    setBaselineSignature(draftSignature);
+    onDirtyChange?.(false);
     onSave(creature);
   };
 
   const isEditing = !!existingCreature;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-purple-950/30 text-white">
+    <div className={embedded
+      ? "min-h-0 min-w-0 rounded-2xl border border-border/60 bg-card/35 text-white card-enigmatic"
+      : "min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-purple-950/30 text-white"}>
       {/* ========== HEADER FIXO ========== */}
-      <header ref={headerRef} className="sticky top-0 z-30 bg-slate-950/95 backdrop-blur border-b border-purple-900/50">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
+      <header ref={headerRef} className={embedded
+        ? "sticky top-20 z-20 rounded-t-2xl bg-card/95 backdrop-blur border-b border-border/60"
+        : "sticky top-0 z-30 bg-slate-950/95 backdrop-blur border-b border-purple-900/50"}>
+        <div className={embedded
+          ? "w-full px-3 sm:px-4 py-3 flex items-center gap-3"
+          : "max-w-7xl mx-auto px-4 py-3 flex items-center gap-3"}>
           <button
             onClick={onCancel}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-sm text-slate-300 transition-colors"
@@ -154,7 +169,7 @@ export default function CreatureBuilder({ existingCreature, onSave, onCancel }) 
           {/* Toggle de preview (mobile) */}
           <button
             onClick={() => setMobilePreviewOpen(!mobilePreviewOpen)}
-            className="lg:hidden flex items-center gap-1 px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-xs text-slate-300"
+            className={`${embedded ? "xl:hidden" : "lg:hidden"} flex items-center gap-1 px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-xs text-slate-300`}
           >
             <Eye className="w-3.5 h-3.5" /> Preview
           </button>
@@ -181,9 +196,9 @@ export default function CreatureBuilder({ existingCreature, onSave, onCancel }) 
       </header>
 
       {/* ========== GRID PRINCIPAL ========== */}
-      <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className={`${embedded ? "w-full xl:grid-cols-3" : "max-w-7xl mx-auto lg:grid-cols-3"} px-3 sm:px-4 py-6 grid grid-cols-1 gap-6`}>
         {/* --- Coluna da esquerda: formulário --- */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className={`${embedded ? "xl:col-span-2" : "lg:col-span-2"} space-y-4`}>
           {SECTIONS.map((section) => {
             const SectionComponent = section.component;
             const isOpen = openSections.has(section.id);
@@ -206,7 +221,7 @@ export default function CreatureBuilder({ existingCreature, onSave, onCancel }) 
         </div>
 
         {/* --- Coluna da direita: preview (desktop) --- */}
-        <div className="hidden lg:block">
+        <div className={embedded ? "hidden xl:block" : "hidden lg:block"}>
           <div
             className="sticky overflow-y-auto rounded-lg"
             style={{
@@ -221,7 +236,7 @@ export default function CreatureBuilder({ existingCreature, onSave, onCancel }) 
 
       {/* Preview mobile (drawer) */}
       {mobilePreviewOpen && (
-        <div className="lg:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm"
+        <div className={`${embedded ? "xl:hidden" : "lg:hidden"} fixed inset-0 z-40 bg-black/70 backdrop-blur-sm`}
              onClick={() => setMobilePreviewOpen(false)}>
           <div className="absolute bottom-0 left-0 right-0 max-h-[85vh] overflow-y-auto bg-slate-950 border-t border-purple-900 rounded-t-xl p-4"
                onClick={(e) => e.stopPropagation()}>

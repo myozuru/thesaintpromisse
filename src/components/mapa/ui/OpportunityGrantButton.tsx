@@ -57,8 +57,8 @@ export function OpportunityGrantButton() {
         AdO
       </button>
       {open && (
-        <div className="absolute left-0 top-full mt-1 w-64 rounded-md border border-border bg-card p-2 shadow-xl z-50 text-[12px] text-foreground">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
+        <div className="absolute left-0 top-full mt-1 w-64 rounded-md border border-border bg-card p-2 shadow-xl z-50 text-sm text-foreground">
+          <div className="text-sm uppercase tracking-wider text-muted-foreground mb-1">
             Tipo de reação
           </div>
           <div className="flex gap-1 mb-2">
@@ -80,13 +80,13 @@ export function OpportunityGrantButton() {
               </button>
             ))}
           </div>
-          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
+          <div className="text-sm uppercase tracking-wider text-muted-foreground mb-1">
             Restringir a alvo (opcional)
           </div>
           <select
             value={restrictTo}
             onChange={(e) => setRestrictTo(e.target.value)}
-            className="w-full h-7 px-1 mb-2 rounded bg-secondary border border-border text-[12px]"
+            className="w-full h-7 px-1 mb-2 rounded bg-secondary border border-border text-xs"
           >
             <option value="">— qualquer um —</option>
             {characters.map((c) => (

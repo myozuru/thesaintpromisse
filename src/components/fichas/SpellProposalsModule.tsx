@@ -64,9 +64,9 @@ function PassiveDiffList({ diff }: { diff: PassiveDiffEntry[] }) {
 
 function PassiveSummary({ p }: { p: Passive }) {
   return (
-    <div className="rounded-md border border-border bg-background/50 p-2 text-xs space-y-0.5">
+    <div className="rounded-md border border-border bg-background/50 p-2 text-sm space-y-0.5">
       <div className="font-bold text-primary">{p.name}</div>
-      <div className="flex flex-wrap gap-2 text-xs">
+      <div className="flex flex-wrap gap-2 text-sm">
         <span className="text-muted-foreground">Nv {p.spellLevel ?? '1'}</span>
         {p.bonusHP ? <span className="text-hp">HP {p.bonusHP >= 0 ? '+' : ''}{p.bonusHP}</span> : null}
         {p.bonusPE ? <span className="text-pe">PE {p.bonusPE >= 0 ? '+' : ''}{p.bonusPE}</span> : null}
@@ -161,14 +161,14 @@ function PassiveProposalCard({ proposal, asMaster }: { proposal: PassiveProposal
         <div className="space-y-2 pt-1">
           <PassiveSummary p={last.passive} />
           {last.note && (
-            <div className="rounded-md border border-border bg-secondary/30 px-2 py-1 text-xs">
+            <div className="rounded-md border border-border bg-secondary/30 px-2 py-1 text-sm">
               <span className="font-bold text-muted-foreground">Comentário ({last.by === 'PLAYER' ? 'Player' : 'Mestre'}): </span>
               {last.note}
             </div>
           )}
           {last.diff.length > 0 && (
             <div>
-              <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Mudanças desta revisão</div>
+              <div className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-1">Mudanças desta revisão</div>
               <PassiveDiffList diff={last.diff} />
             </div>
           )}
@@ -181,10 +181,10 @@ function PassiveProposalCard({ proposal, asMaster }: { proposal: PassiveProposal
             <div className="space-y-2 border-l-2 border-border pl-2">
               {proposal.revisions.slice(0, -1).map((rev, i) => (
                 <div key={i} className="space-y-1">
-                  <div className="text-xs font-bold uppercase text-muted-foreground">
+                  <div className="text-sm font-bold uppercase text-muted-foreground">
                     Revisão {i + 1} · {rev.by === 'PLAYER' ? 'Player' : 'Mestre'} · {new Date(rev.createdAt).toLocaleString()}
                   </div>
-                  {rev.note && <div className="text-xs italic text-muted-foreground">"{rev.note}"</div>}
+                  {rev.note && <div className="text-sm italic text-muted-foreground">"{rev.note}"</div>}
                   {rev.diff.length > 0 && <PassiveDiffList diff={rev.diff} />}
                 </div>
               ))}
@@ -216,7 +216,7 @@ function PassiveProposalCard({ proposal, asMaster }: { proposal: PassiveProposal
           )}
           {counterMode && (
             <div className="border-t border-border pt-2">
-              <div className="mb-2 text-xs text-muted-foreground">
+              <div className="mb-2 text-sm text-muted-foreground">
                 <MessageSquare className="inline h-3 w-3 mr-1" />
                 Edite a passiva abaixo. Ao enviar, as mudanças serão destacadas para o player.
               </div>
@@ -250,12 +250,12 @@ function PassiveProposalCard({ proposal, asMaster }: { proposal: PassiveProposal
 
 function SpellSummary({ spell }: { spell: Spell }) {
   return (
-    <div className="rounded-md border border-border bg-background/50 p-2 text-xs space-y-0.5">
+    <div className="rounded-md border border-border bg-background/50 p-2 text-sm space-y-0.5">
       <div className="font-bold text-primary">{spell.name}</div>
       <div className="text-muted-foreground">
         Nv {spell.spellLevel} · {spell.spellType} · {spell.actionType} · {spell.targetMode ?? '—'}
       </div>
-      <div className="flex flex-wrap gap-2 text-xs">
+      <div className="flex flex-wrap gap-2 text-sm">
         <span className="text-pe">PE: {spell.costPE}</span>
         {spell.damageDice && <span className="text-hp">{spell.damageDice}{spell.damageBonus ? `+${spell.damageBonus}` : ''}</span>}
         <span>Alc: {spell.range}</span>
@@ -357,7 +357,7 @@ function ProposalCard({ proposal, asMaster }: { proposal: SpellProposal; asMaste
         <div className="space-y-2 pt-1">
           <SpellSummary spell={last.spell} />
           {last.note && (
-            <div className="rounded-md border border-border bg-secondary/30 px-2 py-1 text-xs">
+            <div className="rounded-md border border-border bg-secondary/30 px-2 py-1 text-sm">
               <span className="font-bold text-muted-foreground">Comentário ({last.by === 'PLAYER' ? 'Player' : 'Mestre'}): </span>
               {last.note}
             </div>
@@ -365,7 +365,7 @@ function ProposalCard({ proposal, asMaster }: { proposal: SpellProposal; asMaste
 
           {last.diff.length > 0 && (
             <div>
-              <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+              <div className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-1">
                 Mudanças desta revisão
               </div>
               <DiffList diff={last.diff} />
@@ -385,10 +385,10 @@ function ProposalCard({ proposal, asMaster }: { proposal: SpellProposal; asMaste
             <div className="space-y-2 border-l-2 border-border pl-2">
               {proposal.revisions.slice(0, -1).map((rev, i) => (
                 <div key={i} className="space-y-1">
-                  <div className="text-xs font-bold uppercase text-muted-foreground">
+                  <div className="text-sm font-bold uppercase text-muted-foreground">
                     Revisão {i + 1} · {rev.by === 'PLAYER' ? 'Player' : 'Mestre'} · {new Date(rev.createdAt).toLocaleString()}
                   </div>
-                  {rev.note && <div className="text-xs italic text-muted-foreground">"{rev.note}"</div>}
+                  {rev.note && <div className="text-sm italic text-muted-foreground">"{rev.note}"</div>}
                   {rev.diff.length > 0 && <DiffList diff={rev.diff} />}
                 </div>
               ))}
@@ -429,7 +429,7 @@ function ProposalCard({ proposal, asMaster }: { proposal: SpellProposal; asMaste
 
           {counterMode && character && (
             <div className="border-t border-border pt-2">
-              <div className="mb-2 text-xs text-muted-foreground">
+              <div className="mb-2 text-sm text-muted-foreground">
                 <MessageSquare className="inline h-3 w-3 mr-1" />
                 Edite o feitiço abaixo. Ao enviar, as mudanças serão destacadas para a outra parte.
               </div>
@@ -513,7 +513,7 @@ function OmniSummary({ ent }: { ent: EntidadeOmni }) {
   const blocos = ent.gatilhos.reduce((s, g) => s + g.blocos.length, 0);
   const temEfeitosCombate = (ent.combatData?.effects?.length ?? 0) > 0;
   return (
-    <div className="rounded-md border border-border bg-background/50 p-2 text-xs space-y-2">
+    <div className="rounded-md border border-border bg-background/50 p-2 text-sm space-y-2">
       <div>
         <div className="font-bold text-primary">◇ {ent.nome}</div>
         <div className="text-muted-foreground capitalize">
@@ -533,7 +533,7 @@ function OmniSummary({ ent }: { ent: EntidadeOmni }) {
       {temEfeitosCombate && <OmniItemDescription effects={ent.combatData!.effects} variante="bloco" />}
       {ent.custos.length > 0 && (
         <div className="rounded-md border border-neon-yellow/30 bg-neon-yellow/5 p-2 space-y-1">
-          <div className="text-xs font-bold uppercase tracking-wider text-neon-yellow">Custos</div>
+          <div className="text-sm font-bold uppercase tracking-wider text-neon-yellow">Custos</div>
           {ent.custos.map((c, i) => (
             <div key={i} className="text-foreground/90">Consumir {valorOmniTexto(c.valor)} de {nomeAmigavelRecurso(c.caminhoRecurso)}</div>
           ))}
@@ -541,7 +541,7 @@ function OmniSummary({ ent }: { ent: EntidadeOmni }) {
       )}
       {ent.gatilhos.length > 0 && (
         <div className="rounded-md border border-primary/25 bg-primary/5 p-2 space-y-1.5">
-          <div className="text-xs font-bold uppercase tracking-wider text-primary">Gatilhos e lógica</div>
+          <div className="text-sm font-bold uppercase tracking-wider text-primary">Gatilhos e lógica</div>
           {ent.gatilhos.map((g) => (
             <div key={g.id} className="space-y-1">
               <div className="font-semibold text-foreground">{ROTULOS_GATILHOS[g.evento] ?? g.evento}</div>
@@ -686,14 +686,14 @@ function OmniProposalCard({ proposal, asMaster }: { proposal: OmniProposal; asMa
         <div className="space-y-2 pt-1">
           <OmniSummary ent={last.entidade} />
           {last.note && (
-            <div className="rounded-md border border-border bg-secondary/30 px-2 py-1 text-xs">
+            <div className="rounded-md border border-border bg-secondary/30 px-2 py-1 text-sm">
               <span className="font-bold text-muted-foreground">Comentário ({last.by === 'PLAYER' ? 'Player' : 'Mestre'}): </span>
               {last.note}
             </div>
           )}
           {last.diff.length > 0 && (
             <div>
-              <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Mudanças desta revisão</div>
+              <div className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-1">Mudanças desta revisão</div>
               <OmniDiffList diff={last.diff} />
             </div>
           )}
@@ -706,10 +706,10 @@ function OmniProposalCard({ proposal, asMaster }: { proposal: OmniProposal; asMa
             <div className="space-y-2 border-l-2 border-border pl-2">
               {proposal.revisions.slice(0, -1).map((rev, i) => (
                 <div key={i} className="space-y-1">
-                  <div className="text-xs font-bold uppercase text-muted-foreground">
+                  <div className="text-sm font-bold uppercase text-muted-foreground">
                     Revisão {i + 1} · {rev.by === 'PLAYER' ? 'Player' : 'Mestre'} · {new Date(rev.createdAt).toLocaleString()}
                   </div>
-                  {rev.note && <div className="text-xs italic text-muted-foreground">"{rev.note}"</div>}
+                  {rev.note && <div className="text-sm italic text-muted-foreground">"{rev.note}"</div>}
                   {rev.diff.length > 0 && <OmniDiffList diff={rev.diff} />}
                 </div>
               ))}
@@ -739,7 +739,7 @@ function OmniProposalCard({ proposal, asMaster }: { proposal: OmniProposal; asMa
           )}
           {counterMode && (
             <div className="border-t border-border pt-2">
-              <div className="mb-2 text-xs text-muted-foreground">
+              <div className="mb-2 text-sm text-muted-foreground">
                 <MessageSquare className="inline h-3 w-3 mr-1" />
                 Edite a entidade abaixo no construtor visual. Ao salvar, vira contraproposta com diff destacado.
               </div>
@@ -752,7 +752,7 @@ function OmniProposalCard({ proposal, asMaster }: { proposal: OmniProposal; asMa
               />
               <ConstrutorEntidade
                 aberto
-                onClose={() => { setCounterMode(false); setNote(''); }}
+                onCancelar={() => { setCounterMode(false); setNote(''); }}
                 entidadeInicial={last.entidade}
                 onSalvar={(e) => handleCounter({ ...e, id: last.entidade.id })}
               />
@@ -902,7 +902,7 @@ export function SpellProposalsModule() {
           )}
         </h2>
         {visible.length === 0 ? (
-          <div className="rounded-xl border border-border bg-card/50 p-4 text-center text-xs text-muted-foreground">
+          <div className="rounded-xl border border-border bg-card/50 p-4 text-center text-sm text-muted-foreground">
             Nenhum feitiço {filter === 'pending' ? 'pendente' : filter === 'closed' ? 'encerrado' : ''}.
           </div>
         ) : (
@@ -924,7 +924,7 @@ export function SpellProposalsModule() {
           )}
         </h2>
         {visiblePassives.length === 0 ? (
-          <div className="rounded-xl border border-border bg-card/50 p-4 text-center text-xs text-muted-foreground">
+          <div className="rounded-xl border border-border bg-card/50 p-4 text-center text-sm text-muted-foreground">
             Nenhuma passiva {filter === 'pending' ? 'pendente' : filter === 'closed' ? 'encerrada' : ''}.
           </div>
         ) : (
@@ -951,7 +951,7 @@ export function SpellProposalsModule() {
           nesses casos o Mestre pode abrir e completar a lógica antes de aprovar.
         </p>
         {visibleOmni.length === 0 ? (
-          <div className="rounded-xl border border-border bg-card/50 p-4 text-center text-xs text-muted-foreground">
+          <div className="rounded-xl border border-border bg-card/50 p-4 text-center text-sm text-muted-foreground">
             Nenhuma entidade {filter === 'pending' ? 'pendente' : filter === 'closed' ? 'encerrada' : ''}.
           </div>
         ) : (

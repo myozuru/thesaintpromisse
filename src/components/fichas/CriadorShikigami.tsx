@@ -14,6 +14,7 @@ import {
   modificadorAtributoShikigami, type AtributosShikigami, type GrauShikigami,
 } from '@/lib/controlador/regrasShikigami';
 import { limiteInvocacoesConhecidas, type InvocacaoControlador } from '@/lib/controlador/tipos';
+import { ALCANCE_BASE_INVOCACAO_M, alcancePosicionamentoInvocacao } from '@/lib/controlador/alcanceInvocacao';
 import { submeterAprovacaoInvocacao } from '@/lib/controlador/aprovacao.functions';
 import {
   ModeloInvocacaoSchema,
@@ -135,8 +136,8 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
   const [origemReferencia, setOrigemReferencia] = useState(initial?.origem?.entidadeId ?? '');
   const [origemAquisicao, setOrigemAquisicao] = useState(initial?.origemAquisicao ?? '');
   const [referenciaInterludio, setReferenciaInterludio] = useState(initial?.referenciaInterludio ?? '');
-  const [tipo, setTipo] = useState<InvocacaoControlador['tipo']>(initial?.tipo ?? 'shikigami');
-  const [alcanceInvocacaoM, setAlcanceInvocacaoM] = useState(initial?.alcanceInvocacaoM?.toString() ?? '');
+const [tipo, setTipo] = useState<InvocacaoControlador['tipo']>(initial?.tipo ?? 'shikigami');
+  const [alcanceInvocacaoM, setAlcanceInvocacaoM] = useState(() => String(alcancePosicionamentoInvocacao(initial ?? {})));
   const [grau, setGrau] = useState<GrauShikigami>((initial?.grau as GrauShikigami) ?? 'quarto');
   const [nivelEvolucao, setNivelEvolucao] = useState(initial?.nivelEvolucao?.toString() ?? '');
   const [atributos, setAtributos] = useState<AtributosShikigami>(() => initial?.atributos ? { ...atributosIniciaisShikigami(), ...initial.atributos } : atributosIniciaisShikigami());
@@ -581,7 +582,7 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
       const atualHP = pvAtual.trim() === '' && !initial ? maxHP : Number(pvAtual);
       if (!Number.isFinite(atualHP) || atualHP < 0 || atualHP > maxHP) throw new Error('PV atual precisa ficar entre zero e o PV máximo.');
       if (valoresFinais.defesa < 0 || valoresFinais.deslocamentoM < 0 || valoresFinais.custoInvocacaoPE < 0) throw new Error('Defesa, deslocamento e custos derivados não podem ser negativos.');
-      const alcancePosicionamento = numeroOpcional(alcanceInvocacaoM, 'Alcance de posicionamento');
+      const alcancePosicionamento = numeroOpcional(alcanceInvocacaoM, 'Alcance de posicionamento') ?? ALCANCE_BASE_INVOCACAO_M;
       if (alcancePosicionamento === undefined || alcancePosicionamento < 0) throw new Error('Defina um alcance de posicionamento igual ou maior que zero.');
       const timeQty = numeroOpcional(tempoQuantidade, 'Tempo adicional');
       if ((timeQty === undefined) !== !tempoUnidade.trim()) throw new Error('Preencha quantidade e unidade do tempo adicional juntas.');
@@ -1150,7 +1151,7 @@ export function CriadorShikigami({ character, initial, onSaved, onCancel }: Prop
           }}>Remover</button>
         </div>
         <label className="block">Condição segura (JSON, opcional)
-          <textarea aria-label={`Condição segura da automação ${item.id}`} rows={2} value={condicoesAutomacaoJson[item.id] ?? ''} onChange={event => setCondicoesAutomacaoJson(previous => ({ ...previous, [item.id]: event.target.value }))} placeholder={'{"op":"compare","path":"evento.cena.rodada","cmp":"gte","value":1}'} className="mt-1 w-full rounded border bg-background p-2 font-mono text-[11px]" />
+          <textarea aria-label={`Condição segura da automação ${item.id}`} rows={2} value={condicoesAutomacaoJson[item.id] ?? ''} onChange={event => setCondicoesAutomacaoJson(previous => ({ ...previous, [item.id]: event.target.value }))} placeholder={'{"op":"compare","path":"evento.cena.rodada","cmp":"gte","value":1}'} className="mt-1 w-full rounded border bg-background p-2 font-mono text-xs" />
         </label>
       </li>)}</ul>
       <p className="mt-2 text-xs text-muted-foreground">A automação só roda depois da aprovação do Mestre. Cada regra pode ser ativada ou pausada aqui; a condição aceita apenas comparações seguras sobre evento, dono, alvo e Shikigami.</p>

@@ -8,8 +8,10 @@ import { NullSafeInput } from '../fichas/NullSafeInput';
 import { Download, Upload, AlertTriangle, Users, Swords, Bot, Package, CalendarDays, Settings } from 'lucide-react';
 import { playClickSound, playDangerSound, playSuccessSound } from '@/lib/sounds';
 import { ModuleHeader } from '@/components/ui/module-header';
+import { cn } from '@/lib/utils';
 
 const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+const RESET_STEPS = ['Início', 'Confirmar', 'Revisar', 'Executar'];
 
 export function SistemaModule() {
   const characters = useCharacterStore((s) => s.characters);
@@ -37,9 +39,6 @@ export function SistemaModule() {
 
   const handleExport = () => {
     playSuccessSound();
-    // Backup COMPLETO: dump de todo o localStorage (todas as stores Zustand
-    // persist + dados crus como grimório, pastas etc.). Mantemos um espelho
-    // dos campos legados para compatibilidade com backups antigos.
     const lsDump: Record<string, string> = {};
     try {
       for (let i = 0; i < localStorage.length; i++) {
@@ -56,7 +55,6 @@ export function SistemaModule() {
       __format: 'rpg-backup-v2',
       __exportedAt: new Date().toISOString(),
       localStorage: lsDump,
-      // Espelho legado (compatibilidade reversa com importadores antigos)
       characters: useCharacterStore.getState().characters,
       items: useItemStore.getState().items,
       chronos: {
@@ -84,20 +82,15 @@ export function SistemaModule() {
       try {
         const data = JSON.parse(ev.target?.result as string);
 
-        // Formato v2: restaurar localStorage completo e recarregar a página
-        // para que todas as stores rehidratem do snapshot.
         if (data && typeof data.localStorage === 'object' && data.localStorage) {
           const confirmFull = window.confirm(
             'Importar backup completo? Isso vai SUBSTITUIR todos os dados locais (fichas, grimório, mapas, omni etc.) e recarregar a página.'
           );
           if (!confirmFull) return;
           try {
-            // Limpa só as chaves que vamos sobrescrever — preserva eventuais
-            // chaves não-rpg (ex.: preferências do navegador para outras apps).
             for (const k of Object.keys(data.localStorage)) {
               localStorage.setItem(k, data.localStorage[k]);
             }
-            // Remove chaves rpg/grimório/omni que existiam antes mas não estão no backup
             const incoming = new Set(Object.keys(data.localStorage));
             const toRemove: string[] = [];
             for (let i = 0; i < localStorage.length; i++) {
@@ -128,7 +121,6 @@ export function SistemaModule() {
           }
         }
 
-        // Fallback: backup antigo (v1) — restaura só os campos conhecidos.
         if (data.characters) useCharacterStore.setState({ characters: data.characters });
         if (data.items) useItemStore.setState({ items: data.items });
         if (data.chronos) {
@@ -166,130 +158,176 @@ export function SistemaModule() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <ModuleHeader
         icon={Settings}
         title="Sistema"
         description="Estatísticas globais, backup completo e zona de perigo."
       />
 
-      {/* Dashboard */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {stats.map((s) => (
-          <div key={s.label} className="rounded-lg border border-border bg-card p-4 flex items-center gap-3 card-enigmatic">
-            <s.icon className={`h-8 w-8 ${s.color}`} />
-            <div>
-              <div className="text-2xl font-bold text-foreground">{s.value}</div>
-              <div className="text-sm text-muted-foreground">{s.label}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Time/Date config */}
-      <div className="rounded-lg border border-border bg-card p-4 space-y-3 card-enigmatic">
-        <h3 className="text-base font-bold text-foreground">Configuração de Data/Hora</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-          <div className="space-y-1">
-            <label className="text-muted-foreground text-sm">Dia</label>
-            <NullSafeInput value={chronos.day} onChange={(v) => chronos.setDate(v, chronos.month, chronos.year)} className="w-full" />
-          </div>
-          <div className="space-y-1">
-            <label className="text-muted-foreground text-sm">Mês</label>
-            <select
-              value={chronos.month}
-              onChange={(e) => chronos.setDate(chronos.day, parseInt(e.target.value), chronos.year)}
-              className="h-8 w-full rounded border border-input bg-background px-2 text-foreground text-sm"
-            >
-              {MONTHS.map((m, i) => (
-                <option key={i} value={i + 1}>{m}</option>
+      {/* Desktop: two-pane layout — main content left, danger zone right (sticky) */}
+      <div className="lg:grid lg:grid-cols-[1fr_380px] lg:gap-6 lg:items-start">
+        {/* Main Content Pane */}
+        <div className="space-y-6 animate-fade-in">
+          {/* Dashboard */}
+          <div className="rounded-xl border border-border bg-card p-4 card-enigmatic">
+            <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-3" style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.06em' }}>Visão Geral</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 2xl:grid-cols-6 gap-3">
+              {stats.map((s) => (
+                <div key={s.label} className="rounded-lg border border-border bg-card p-3 card-enigmatic flex flex-col items-center text-center gap-1.5">
+                  <s.icon className={`h-7 w-7 ${s.color}`} />
+                  <div className="text-xl font-bold text-foreground tabular-nums">{s.value}</div>
+                  <div className="text-sm text-muted-foreground" style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.04em' }}>{s.label}</div>
+                </div>
               ))}
-            </select>
-          </div>
-          <div className="space-y-1">
-            <label className="text-muted-foreground text-sm">Ano</label>
-            <NullSafeInput value={chronos.year} onChange={(v) => chronos.setDate(chronos.day, chronos.month, v)} className="w-full" />
-          </div>
-          <div className="space-y-1">
-            <label className="text-muted-foreground text-sm">Hora</label>
-            <NullSafeInput value={chronos.hours} onChange={(v) => chronos.setTime(v, chronos.minutes, chronos.seconds)} className="w-full" />
-          </div>
-          <div className="space-y-1">
-            <label className="text-muted-foreground text-sm">Minuto</label>
-            <NullSafeInput value={chronos.minutes} onChange={(v) => chronos.setTime(chronos.hours, v, chronos.seconds)} className="w-full" />
-          </div>
-          <div className="space-y-1">
-            <label className="text-muted-foreground text-sm">Segundo</label>
-            <NullSafeInput value={chronos.seconds} onChange={(v) => chronos.setTime(chronos.hours, chronos.minutes, v)} className="w-full" />
-          </div>
-        </div>
-      </div>
-
-      {/* Portability */}
-      <div className="rounded-lg border border-border bg-card p-4 space-y-3 card-enigmatic">
-        <h3 className="text-base font-bold text-foreground">Portabilidade</h3>
-        <div className="flex flex-wrap gap-3">
-          <button onClick={handleExport} className="flex items-center gap-2 h-10 rounded-md bg-primary px-4 text-primary-foreground hover:bg-primary/90 text-sm transition-all duration-300">
-            <Download className="h-4 w-4" /> Exportar JSON
-          </button>
-          <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 h-10 rounded-md border border-input bg-background px-4 text-foreground hover:bg-secondary text-sm transition-all duration-300">
-            <Upload className="h-4 w-4" /> Importar JSON
-          </button>
-          <input ref={fileRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
-        </div>
-      </div>
-
-      {/* Danger Zone */}
-      <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-3">
-        <h3 className="text-base font-bold text-destructive flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4" /> Zona de Perigo
-        </h3>
-
-        {resetStep === 0 && (
-          <button onClick={() => { setResetStep(1); playDangerSound(); }} className="h-10 rounded-md border border-destructive bg-destructive/10 px-4 text-destructive hover:bg-destructive/20 text-sm transition-all duration-300">
-            Reset Global
-          </button>
-        )}
-        {resetStep === 1 && (
-          <div className="space-y-2 text-sm">
-            <p className="text-destructive">Isso apagará TODOS os dados. Tem certeza?</p>
-            <div className="flex gap-2">
-              <button onClick={() => { setResetStep(2); playDangerSound(); }} className="h-9 rounded bg-destructive px-4 text-destructive-foreground text-sm">Sim, continuar</button>
-              <button onClick={() => setResetStep(0)} className="h-9 rounded bg-secondary px-4 text-secondary-foreground text-sm">Cancelar</button>
             </div>
           </div>
-        )}
-        {resetStep === 2 && (
-          <div className="space-y-2 text-sm">
-            <p className="text-destructive font-bold">ÚLTIMA CHANCE! Esta ação é irreversível.</p>
-            <div className="flex gap-2">
-              <button onClick={() => { setResetStep(3); playDangerSound(); }} className="h-9 rounded bg-destructive px-4 text-destructive-foreground text-sm">Tenho certeza absoluta</button>
-              <button onClick={() => setResetStep(0)} className="h-9 rounded bg-secondary px-4 text-secondary-foreground text-sm">Cancelar</button>
+
+          {/* Time/Date config */}
+          <div className="rounded-xl border border-border bg-card p-4 card-enigmatic">
+            <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-3" style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.06em' }}>Configuração de Data / Hora</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+              <div className="space-y-1">
+                <label className="text-muted-foreground text-xs uppercase tracking-wider" style={{ fontFamily: "'Cinzel', serif" }}>Dia</label>
+                <NullSafeInput value={chronos.day} onChange={(v) => chronos.setDate(v, chronos.month, chronos.year)} className="h-10 w-full rounded-lg border border-input bg-background px-3 text-foreground text-sm" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-muted-foreground text-xs uppercase tracking-wider" style={{ fontFamily: "'Cinzel', serif" }}>Mês</label>
+                <select
+                  value={chronos.month}
+                  onChange={(e) => chronos.setDate(chronos.day, parseInt(e.target.value), chronos.year)}
+                  className="h-10 w-full rounded-lg border border-input bg-background px-3 text-foreground text-sm"
+                  style={{ fontFamily: "'Cinzel', serif" }}
+                >
+                  {MONTHS.map((m, i) => (
+                    <option key={i} value={i + 1}>{m}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-muted-foreground text-xs uppercase tracking-wider" style={{ fontFamily: "'Cinzel', serif" }}>Ano</label>
+                <NullSafeInput value={chronos.year} onChange={(v) => chronos.setDate(chronos.day, chronos.month, v)} className="h-10 w-full rounded-lg border border-input bg-background px-3 text-foreground text-sm" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-muted-foreground text-xs uppercase tracking-wider" style={{ fontFamily: "'Cinzel', serif" }}>Hora</label>
+                <NullSafeInput value={chronos.hours} onChange={(v) => chronos.setTime(v, chronos.minutes, chronos.seconds)} className="h-10 w-full rounded-lg border border-input bg-background px-3 text-foreground text-sm" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-muted-foreground text-xs uppercase tracking-wider" style={{ fontFamily: "'Cinzel', serif" }}>Minuto</label>
+                <NullSafeInput value={chronos.minutes} onChange={(v) => chronos.setTime(chronos.hours, v, chronos.seconds)} className="h-10 w-full rounded-lg border border-input bg-background px-3 text-foreground text-sm" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-muted-foreground text-xs uppercase tracking-wider" style={{ fontFamily: "'Cinzel', serif" }}>Segundo</label>
+                <NullSafeInput value={chronos.seconds} onChange={(v) => chronos.setTime(chronos.hours, chronos.minutes, v)} className="h-10 w-full rounded-lg border border-input bg-background px-3 text-foreground text-sm" />
+              </div>
             </div>
           </div>
-        )}
-        {resetStep === 3 && (
-          <div className="space-y-2 text-sm">
-            <p className="text-destructive">Digite <strong>APAGAR</strong> para confirmar a destruição total:</p>
-            <div className="flex flex-wrap gap-2">
-              <input
-                value={confirmText}
-                onChange={(e) => setConfirmText(e.target.value)}
-                placeholder="APAGAR"
-                className="h-9 min-w-[8rem] max-w-full flex-1 rounded border border-destructive bg-background px-3 text-foreground font-mono tracking-widest text-sm"
-              />
-              <button
-                onClick={handleReset}
-                disabled={confirmText !== 'APAGAR'}
-                className="h-9 shrink-0 whitespace-nowrap rounded bg-destructive px-4 text-destructive-foreground disabled:opacity-50 text-sm"
-              >
-                Executar Reset
+
+          {/* Portability */}
+          <div className="rounded-xl border border-border bg-card p-4 card-enigmatic">
+            <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-3" style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.06em' }}>Portabilidade</h3>
+            <div className="flex flex-wrap gap-3">
+              <button onClick={handleExport} className="h-10 rounded-lg bg-primary px-5 text-primary-foreground text-sm font-medium flex items-center gap-2 glow-primary transition-all duration-300 hover:bg-primary/90">
+                <Download className="h-4 w-4" />
+                <span>Exportar JSON</span>
               </button>
-              <button onClick={() => { setResetStep(0); setConfirmText(''); }} className="h-9 shrink-0 whitespace-nowrap rounded bg-secondary px-4 text-secondary-foreground text-sm">Cancelar</button>
+              <button onClick={() => fileRef.current?.click()} className="h-10 rounded-lg border border-input bg-background px-5 text-foreground text-sm font-medium flex items-center gap-2 transition-all duration-300 hover:bg-secondary hover:border-primary/30">
+                <Upload className="h-4 w-4" />
+                <span>Importar JSON</span>
+              </button>
+              <input ref={fileRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
             </div>
           </div>
-        )}
+        </div>
+
+        {/* Danger Zone Pane — sticky on desktop */}
+        <div className="lg:sticky lg:top-24 animate-fade-in" style={{ animationDelay: '60ms' }}>
+          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 card-enigmatic space-y-4">
+            <h3 className="text-sm font-bold text-destructive uppercase tracking-wider flex items-center gap-2" style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.06em' }}>
+              <AlertTriangle className="h-4 w-4" /> Zona de Perigo
+            </h3>
+            <ol aria-label={`Progresso do reset: etapa ${resetStep + 1} de ${RESET_STEPS.length}`} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {RESET_STEPS.map((step, index) => (
+                <li
+                  key={step}
+                  aria-current={index === resetStep ? 'step' : undefined}
+                  className={cn(
+                    'flex min-h-11 items-center gap-2 rounded-lg border px-2 text-sm transition-colors',
+                    index === resetStep
+                      ? 'border-destructive/50 bg-destructive/15 text-destructive'
+                      : index < resetStep
+                        ? 'border-destructive/25 bg-destructive/5 text-foreground'
+                        : 'border-border/60 bg-background/40 text-muted-foreground',
+                  )}
+                >
+                  <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-current font-mono text-sm">{index + 1}</span>
+                  <span>{step}</span>
+                </li>
+              ))}
+            </ol>
+
+            {resetStep === 0 && (
+              <button onClick={() => { setResetStep(1); playDangerSound(); }} className="w-full min-h-11 rounded-lg border border-destructive bg-destructive/10 px-4 text-destructive text-base font-medium hover:bg-destructive/20 transition-all duration-300">
+                Reset Global
+              </button>
+            )}
+
+            {resetStep === 1 && (
+              <div className="space-y-3 text-sm">
+                <p className="text-destructive">Isso apagará TODOS os dados. Tem certeza?</p>
+                <div className="flex gap-2">
+                  <button onClick={() => { setResetStep(2); playDangerSound(); }} className="flex-1 min-h-11 rounded-lg bg-destructive px-4 text-destructive-foreground text-base font-medium transition-all duration-300 hover:bg-destructive/90">
+                    Sim, continuar
+                  </button>
+                  <button onClick={() => setResetStep(0)} className="flex-1 min-h-11 rounded-lg bg-secondary px-4 text-secondary-foreground text-base font-medium transition-all duration-300 hover:bg-secondary/80">
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {resetStep === 2 && (
+              <div className="space-y-3 text-sm">
+                <p className="text-destructive font-bold">ÚLTIMA CHANCE! Esta ação é irreversível.</p>
+              <div className="flex flex-col gap-2">
+                <button onClick={() => { setResetStep(3); playDangerSound(); }} className="w-full min-h-11 rounded-lg bg-destructive px-4 py-2 text-destructive-foreground text-base font-medium transition-all duration-300 hover:bg-destructive/90">
+                    Tenho certeza absoluta
+                  </button>
+                <button onClick={() => setResetStep(0)} className="w-full min-h-11 rounded-lg bg-secondary px-4 py-2 text-secondary-foreground text-base font-medium transition-all duration-300 hover:bg-secondary/80">
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {resetStep === 3 && (
+              <div className="space-y-3 text-sm">
+                <p className="text-destructive">Digite <strong>APAGAR</strong> para confirmar a destruição total:</p>
+                <div className="flex flex-wrap gap-2">
+                  <input
+                    aria-label="Digite APAGAR para confirmar o reset"
+                    value={confirmText}
+                    onChange={(e) => setConfirmText(e.target.value)}
+                    placeholder="APAGAR"
+                    className="min-h-11 flex-1 min-w-[10rem] rounded-lg border border-destructive bg-background px-3 text-foreground font-mono tracking-widest text-base uppercase"
+                  />
+                  <button
+                    onClick={handleReset}
+                    disabled={confirmText !== 'APAGAR'}
+                    className="min-h-11 shrink-0 whitespace-nowrap rounded-lg bg-destructive px-4 text-destructive-foreground text-base font-medium disabled:opacity-50 transition-all duration-300"
+                  >
+                    Executar Reset
+                  </button>
+                  <button onClick={() => { setResetStep(0); setConfirmText(''); }} className="min-h-11 shrink-0 whitespace-nowrap rounded-lg bg-secondary px-4 text-secondary-foreground text-base font-medium transition-all duration-300 hover:bg-secondary/80">
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
+
     </div>
   );
 }

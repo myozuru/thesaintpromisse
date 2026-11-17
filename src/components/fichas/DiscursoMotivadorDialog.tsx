@@ -156,7 +156,7 @@ export function DiscursoMotivadorDialog({ source, open, onOpenChange }: Props) {
             </div>
           </div>
 
-          <div className="text-[10.5px] text-muted-foreground italic">
+          <div className="text-xs text-muted-foreground italic">
             Ação Completa em combate, ou 10 min de discurso fora de combate.
           </div>
         </div>

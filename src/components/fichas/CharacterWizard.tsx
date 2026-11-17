@@ -231,6 +231,9 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
     () => applyOriginEffects(origin, level, originChoices),
     [origin, level, originChoices],
   );
+  const tecnicaAmaldicoada = origin === 'Herdado' && originChoices.clan === 'Zenin'
+    ? originChoices.tecnicaAmaldicoada
+    : effects.automation.tecnicaAmaldicoada;
 
   // ===== Estatísticas DERIVADAS dos atributos + classe/spec + origem =====
   // Recalculadas a cada mudança em attrValues / charClass / specialization /
@@ -349,6 +352,8 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
       specialization,
       motivation,
       origin,
+      clanId: originChoices.clan,
+      tecnicaAmaldicoada,
       attributes: attrs,
       skills: sks,
       chosenTalents: wizardTalents.map(wt => ({
@@ -357,7 +362,8 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
     } as Character;
   }, [
     attrValues, effects.attrBonuses, oficioNames, skillBonuses, skillTrained, skillMastery,
-    name, category, level, charClass, specialization, motivation, origin, wizardTalents,
+    name, category, level, charClass, specialization, motivation, origin,
+    originChoices.clan, tecnicaAmaldicoada, wizardTalents,
   ]);
 
   const handlePickFromCatalog = (pick: CatalogPick) => {
@@ -419,6 +425,9 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
       // Se a origem exige escolha +2/+1 e não foi feita, bloqueia
       const requiresAttrChoice = attrChoiceFor(origin, originChoices.clan) !== null;
       if (requiresAttrChoice && (originChoices.primaryAttr === undefined || originChoices.secondaryAttr === undefined)) {
+        return false;
+      }
+      if (origin === 'Herdado' && originChoices.clan === 'Zenin' && tecnicaAmaldicoada !== 'Dez Sombras') {
         return false;
       }
       return true;
@@ -726,8 +735,8 @@ export function CharacterWizard({ onComplete, onCancel }: Props) {
         }
         return Object.keys(caps).length ? caps : undefined;
       })(),
-      // ===== Técnica amaldiçoada definida pela origem, incluindo Novo Estilo da Sombra =====
-      tecnicaAmaldicoada: effects.automation.tecnicaAmaldicoada,
+// ===== Técnica amaldiçoada: escolha explícita para Zenin (Herdado), automática para demais =====
+      tecnicaAmaldicoada,
       aptidaoAmaldicoadaConcedida: effects.automation.aptidaoConcedida,
       styleTechniques: effects.blockSpells && effects.automation.hasShadowStyle ? styleTechniques : undefined,
       activeStyleTechnique: effects.blockSpells && effects.automation.hasShadowStyle ? (activeStyleTechnique || undefined) : undefined,

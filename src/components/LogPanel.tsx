@@ -41,7 +41,7 @@ function hideRollResult(message: string) {
     .replace(/=\s*-?\d+/g, '= ??');
 }
 
-export function LogPanel() {
+export function LogPanel({ immersive = false }: { immersive?: boolean }) {
   const { logs, clearLogs, playerVisibility, setPlayerVisibility, showGameTime, toggleTimeMode, panelCollapsed, setPanelCollapsed } = useLogStore();
   const role = useRoleStore((s) => s.role);
   const isMaster = role === 'MASTER';
@@ -55,6 +55,10 @@ export function LogPanel() {
     : logs;
   const visibilityMeta = VISIBILITY_META[playerVisibility];
   const VisibilityIcon = visibilityMeta.icon;
+  const immersiveMotionClass = immersive
+    ? 'pointer-events-none -translate-x-full opacity-0 invisible'
+    : 'translate-x-0 opacity-100 visible';
+  const immersiveTransition = `opacity 300ms ease-in-out, transform 300ms ease-in-out, visibility 0s linear ${immersive ? '300ms' : '0ms'}`;
   const cycleVisibility = () => {
     const idx = VISIBILITY_SEQUENCE.indexOf(playerVisibility);
     setPlayerVisibility(VISIBILITY_SEQUENCE[(idx + 1) % VISIBILITY_SEQUENCE.length]);
@@ -62,11 +66,19 @@ export function LogPanel() {
 
   if (panelCollapsed) {
     return (
-      <aside className="fixed left-0 top-14 bottom-0 z-40 flex w-10 flex-col border-r border-border bg-card transition-all duration-500">
+      <aside
+        id="session-log-panel"
+        aria-hidden={immersive || undefined}
+        inert={immersive}
+        className={cn('atlas-immersive-shell atlas-log-panel fixed left-0 top-16 bottom-0 z-40 flex w-10 flex-col border-r border-border bg-card transition-[opacity,transform] duration-300 ease-in-out', immersiveMotionClass)}
+        style={{ transition: immersiveTransition }}
+      >
         <button
           onClick={() => setPanelCollapsed(false)}
           className="flex flex-col items-center gap-2 pt-3 text-muted-foreground hover:text-foreground transition-all duration-300"
           aria-label="Expandir painel de logs"
+          aria-expanded={false}
+          aria-controls="session-log-panel"
           title="Expandir Logs"
         >
           <ChevronRight className="h-4 w-4" />
@@ -80,11 +92,17 @@ export function LogPanel() {
   }
 
   return (
-    <aside className="fixed left-0 top-14 bottom-0 z-40 flex w-[85vw] max-w-xs sm:w-64 flex-col border-r border-border bg-card transition-all duration-500 shadow-2xl sm:shadow-none">
+    <aside
+      id="session-log-panel"
+      aria-hidden={immersive || undefined}
+      inert={immersive}
+      className={cn('atlas-immersive-shell atlas-log-panel fixed left-0 top-16 bottom-0 z-40 flex w-[85vw] max-w-xs sm:w-64 flex-col border-r border-border bg-card shadow-2xl sm:shadow-none transition-[opacity,transform] duration-300 ease-in-out', immersiveMotionClass)}
+      style={{ transition: immersiveTransition }}
+    >
       <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
         <div className="flex items-center gap-2 text-base font-semibold text-foreground">
           <Scroll className="h-4 w-4 text-primary float-subtle" />
-          <span style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.05em' }}>Logs</span>
+          <span style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.05em' }}>Registro</span>
         </div>
         <div className="flex items-center gap-1">
           {isMaster && (
@@ -127,6 +145,8 @@ export function LogPanel() {
             onClick={() => setPanelCollapsed(true)}
             className="rounded-lg p-1 text-muted-foreground transition-all duration-300 hover:bg-secondary hover:text-foreground"
             aria-label="Recolher painel de logs"
+              aria-expanded={true}
+              aria-controls="session-log-panel"
             title="Minimizar"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
@@ -137,7 +157,7 @@ export function LogPanel() {
       <ScrollArea className="flex-1">
         <div className="flex flex-col gap-0.5 p-2">
           {isMaster && (
-            <div className="mb-1 rounded-lg border border-border bg-background/40 px-2 py-1 text-xs text-muted-foreground">
+            <div className="mb-1 rounded-lg border border-border bg-background/40 px-2.5 py-2 text-sm text-muted-foreground">
               <span className="text-primary">Visão dos players:</span> {visibilityMeta.label}
             </div>
           )}
@@ -162,7 +182,7 @@ export function LogPanel() {
                   {sourceName && (
                     <p className="mb-0.5 truncate text-xs font-semibold text-primary">{sourceName}</p>
                   )}
-                  <p className="break-words font-mono text-[13px] font-medium leading-5 text-foreground tabular-nums">{log.message}</p>
+                  <p className="break-words font-mono text-base font-medium leading-6 text-foreground tabular-nums">{log.message}</p>
                   <span className="mt-0.5 block font-mono text-xs leading-4 text-muted-foreground tabular-nums">
                     {showGameTime ? (log.gameTime || '—') : new Date(log.timestamp).toLocaleTimeString('pt-BR')}
                   </span>

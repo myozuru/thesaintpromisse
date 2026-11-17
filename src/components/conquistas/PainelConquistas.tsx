@@ -44,7 +44,7 @@ function DialogConceder({ def, jogadores, inicial, onClose }: { def: ConquistaDe
         <DialogHeader><DialogTitle>{def.icone} Conceder “{def.titulo}”</DialogTitle></DialogHeader>
         <div className="space-y-3 text-sm">
           <div>
-            <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground"><span>Quem recebe?</span>
+            <div className="mb-1 flex items-center justify-between text-sm text-muted-foreground"><span>Quem recebe?</span>
               <button type="button" className="underline" onClick={() => setSel(sel.length === jogadores.length ? [] : jogadores.map((j) => j.id))}>{sel.length === jogadores.length ? 'Nenhum' : 'Todos'}</button></div>
             <div className="grid max-h-56 gap-1 overflow-auto rounded border border-border p-1">
               {jogadores.map((j) => {
@@ -52,7 +52,7 @@ function DialogConceder({ def, jogadores, inicial, onClose }: { def: ConquistaDe
                 return (
                   <label key={j.id} className={`flex items-center gap-2 rounded px-2 py-1.5 ${ja ? 'opacity-50' : 'cursor-pointer hover:bg-muted'}`}>
                     <input type="checkbox" disabled={!!ja} checked={sel.includes(j.id) && !ja} onChange={() => toggle(j.id)} />
-                    <span className="flex-1">{j.name}</span>{ja && <span className="text-[10px]">já possui</span>}
+                    <span className="flex-1">{j.name}</span>{ja && <span className="text-xs">já possui</span>}
                   </label>
                 );
               })}
@@ -131,20 +131,20 @@ export function PainelConquistas({ charId, master }: { charId?: string; master: 
                     <div className="min-w-0 flex-1">
                       <b className="block leading-tight">{oculta ? '???' : c.titulo}</b>
                       <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider" style={corTexto(c.raridade)}>{RARIDADE_INFO[c.raridade].nome}</span>
-                        {master && <span className={`rounded px-1.5 py-px text-[10px] font-medium ${c.secreta ? 'bg-destructive/20 text-destructive' : 'bg-primary/15 text-primary'}`}>{c.secreta ? '🔒 Secreta' : '👁 Pública'}</span>}
-                        {d && <span className="rounded bg-primary/20 px-1.5 py-px text-[10px] font-medium text-primary">✓ Obtida</span>}
+                        <span className="text-xs font-semibold uppercase tracking-wider" style={corTexto(c.raridade)}>{RARIDADE_INFO[c.raridade].nome}</span>
+                        {master && <span className={`rounded px-1.5 py-px text-xs font-medium ${c.secreta ? 'bg-destructive/20 text-destructive' : 'bg-primary/15 text-primary'}`}>{c.secreta ? '🔒 Secreta' : '👁 Pública'}</span>}
+                        {d && <span className="rounded bg-primary/20 px-1.5 py-px text-xs font-medium text-primary">✓ Obtida</span>}
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">{oculta ? 'Uma conquista secreta. Continue jogando…' : c.requisito}</p>
-                      {d && <p className="text-[11px] text-muted-foreground">Obtida em {new Date(d.em).toLocaleDateString('pt-BR')}{d.relato ? ` — “${d.relato}”` : ''}</p>}
+                      {d && <p className="text-xs text-muted-foreground">Obtida em {new Date(d.em).toLocaleDateString('pt-BR')}{d.relato ? ` — “${d.relato}”` : ''}</p>}
                     </div>
                   </div>
                   {(master || !oculta) && c.recompensas.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
-                      {c.recompensas.map((r, i) => <span key={i} className="rounded-full border border-border bg-muted/60 px-2 py-0.5 text-[11px]">{rotuloRecompensa(r, currencies, entidades)}</span>)}
+                      {c.recompensas.map((r, i) => <span key={i} className="rounded-full border border-border bg-muted/60 px-2 py-0.5 text-xs">{rotuloRecompensa(r, currencies, entidades)}</span>)}
                     </div>
                   )}
-                  {master && c.recompensas.length === 0 && <p className="mt-2 text-[11px] italic text-muted-foreground">Sem recompensas</p>}
+                  {master && c.recompensas.length === 0 && <p className="mt-2 text-xs italic text-muted-foreground">Sem recompensas</p>}
                   {master && (
                     <div className="mt-auto flex gap-2 pt-3">
                       {d ? <Button size="sm" variant="outline" onClick={() => useConquistaStore.getState().revogar(atual, c.id)}>Revogar</Button>
@@ -212,7 +212,7 @@ function EditorConquista({ def, onClose }: { def: ConquistaDef; onClose: () => v
           <Button size="sm" variant="outline" onClick={() => setF({ ...f, recompensas: [...f.recompensas, { tipo: 'pvt', valor: 5 }] })}>+ PVT</Button>
           <Button size="sm" variant="outline" onClick={() => setF({ ...f, recompensas: [...f.recompensas, { tipo: 'reduzir_exaustao', niveis: 1 }] })}>+ Aliviar exaustão</Button>
         </div>
-        <p className="text-[11px] text-muted-foreground">Dica: PE, vida, PVT e exaustão combinam com conquistas simples.</p>
+        <p className="text-xs text-muted-foreground">Dica: PE, vida, PVT e exaustão combinam com conquistas simples.</p>
       </div>
       <div className="flex justify-between gap-2">
         <Button size="sm" variant="destructive" onClick={() => { useConquistaStore.getState().apagarDef(f.id); onClose(); }}>Apagar</Button>

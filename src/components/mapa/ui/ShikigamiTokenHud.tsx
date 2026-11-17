@@ -29,7 +29,7 @@ export function ShikigamiTokenHud() {
 
   return (
     <div className="absolute pointer-events-none" style={{ left: x, top: y - 8, transform: 'translate(-50%, -100%)', zIndex: 36 }} data-testid="shikigami-token-hud">
-      <div className="rounded-md border border-violet-400/40 bg-card/95 px-2 py-1 text-[10px] text-foreground shadow-lg backdrop-blur whitespace-nowrap">
+      <div className="rounded-md border border-violet-400/40 bg-card/95 px-2 py-1 text-sm text-foreground shadow-lg backdrop-blur whitespace-nowrap">
         <strong>{token.label || 'Shikigami'}</strong>
         <span className="ml-2 text-muted-foreground">PV {token.hp ?? '—'}/{token.hpMax ?? '—'}</span>
         {token.invocationSubordinate?.kind === 'fuga-coelho' && <span className="ml-2 text-emerald-200">Coelho disperso</span>}

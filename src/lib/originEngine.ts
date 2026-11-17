@@ -29,6 +29,8 @@ export interface OriginChoices {
   clan?: ClanId;
   /** Técnica herdada selecionada dentro do clã. */
   inheritedTechnique?: string;
+  /** Técnica amaldiçoada escolhida à parte do clã Zenin. */
+  tecnicaAmaldicoada?: string;
   /** Aptidão de Aura selecionada (Derivado). */
   auraAptitudeId?: string;
   /** IDs de Anatomias selecionadas (FAH; pode ter múltiplas conforme nível). */
@@ -209,7 +211,7 @@ export function applyOriginEffects(
       }
     }
     const inheritedTechnique = clan.inheritedTechniqueOptions?.find(
-      technique => technique === choices.inheritedTechnique,
+      technique => technique === (choices.tecnicaAmaldicoada ?? choices.inheritedTechnique),
     );
     if (inheritedTechnique) {
       automation.tecnicaAmaldicoada = inheritedTechnique;

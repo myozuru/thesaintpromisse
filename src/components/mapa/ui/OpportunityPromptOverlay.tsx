@@ -33,7 +33,7 @@ export function OpportunityPromptOverlay() {
     <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] w-[420px] max-w-[92vw]">
       <div className="rounded-lg border border-amber-500/60 bg-card/95 backdrop-blur shadow-2xl">
         <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-amber-500/30">
-          <div className="flex items-center gap-2 text-amber-200 text-[12px] font-semibold uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-amber-200 text-sm font-semibold uppercase tracking-wider">
             <Swords className="h-4 w-4" />
             Ataque de Oportunidade
           </div>
@@ -45,7 +45,7 @@ export function OpportunityPromptOverlay() {
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
-        <div className="px-3 py-2 text-[12px] text-foreground">
+        <div className="px-3 py-2 text-sm text-foreground">
           <span className="text-amber-200 font-semibold">{pending.triggerCharName}</span>{' '}
           saiu da adjacência. Provocou:
         </div>
@@ -55,7 +55,7 @@ export function OpportunityPromptOverlay() {
               key={c.charId}
               className="flex items-center justify-between gap-2 rounded bg-secondary border border-border px-2 py-1.5"
             >
-              <span className="text-[12px] text-foreground truncate">{c.charName}</span>
+              <span className="text-sm text-foreground truncate">{c.charName}</span>
               {isMaster ? (
                 <div className="flex gap-1">
                   {(c.mode === 'reaction' || c.mode === 'either') && (
@@ -78,7 +78,7 @@ export function OpportunityPromptOverlay() {
                   )}
                 </div>
               ) : (
-                <span className="text-xs text-muted-foreground uppercase tracking-wider">aguardando mestre</span>
+                <span className="text-sm text-muted-foreground uppercase tracking-wider">aguardando mestre</span>
               )}
             </div>
           ))}

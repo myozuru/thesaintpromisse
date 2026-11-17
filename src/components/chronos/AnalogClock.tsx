@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { stepChronosDisplay } from '@/stores/useChronosDisplayStore';
+import { canvasFontSizeAtScale, UI_READING_FLOOR_PX } from '@/lib/uiTypography';
 
 const ROMAN = ['XII', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
 
@@ -24,7 +25,18 @@ export function AnalogClock({ size: canvasSize = 280 }: { size?: number }) {
     const faceCtx = faceCanvas.getContext('2d');
     if (!faceCtx) return;
     faceCtx.scale(dpr, dpr);
-    drawClockFace(faceCtx, canvasSize);
+
+    const drawResponsiveClockFace = () => {
+      const displayScale = canvas.clientWidth > 0 ? canvas.clientWidth / canvasSize : 1;
+      faceCtx.clearRect(0, 0, canvasSize, canvasSize);
+      drawClockFace(faceCtx, canvasSize, displayScale);
+    };
+
+    drawResponsiveClockFace();
+    const faceResizeObserver = typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(drawResponsiveClockFace)
+      : null;
+    faceResizeObserver?.observe(canvas);
 
     const draw = () => {
       const total = stepChronosDisplay(performance.now());
@@ -67,16 +79,19 @@ export function AnalogClock({ size: canvasSize = 280 }: { size?: number }) {
 
     rafRef.current = requestAnimationFrame(draw);
     return () => {
+      faceResizeObserver?.disconnect();
       cancelAnimationFrame(rafRef.current);
     };
   }, [canvasSize]);
 
-  return <canvas ref={canvasRef} width={canvasSize} height={canvasSize} className="mx-auto block aspect-square h-auto w-full max-w-[300px]" />;
+  return <canvas ref={canvasRef} width={canvasSize} height={canvasSize} className="mx-auto block aspect-square h-auto w-full max-w-[400px]" />;
 }
 
-function drawClockFace(ctx: CanvasRenderingContext2D, size: number) {
+function drawClockFace(ctx: CanvasRenderingContext2D, size: number, displayScale = 1) {
   const center = size / 2;
   const radius = Math.max(0, center - 10);
+  const safeDisplayScale = Math.max(Math.abs(displayScale), 0.01);
+  const numeralStep = safeDisplayScale >= 0.55 ? 1 : safeDisplayScale >= 0.3 ? 2 : safeDisplayScale >= 0.15 ? 3 : 0;
 
   const glowGrad = ctx.createRadialGradient(center, center, Math.max(0, radius - 5), center, center, radius + 8);
   glowGrad.addColorStop(0, 'hsla(270, 100%, 62%, 0.08)');
@@ -106,10 +121,11 @@ function drawClockFace(ctx: CanvasRenderingContext2D, size: number) {
   ctx.stroke();
 
   ctx.fillStyle = '#d4c8e8';
-  ctx.font = `700 ${radius * 0.16}px "Cinzel Decorative", "Cinzel", serif`;
+  ctx.font = `700 ${canvasFontSizeAtScale(radius * 0.16, safeDisplayScale, UI_READING_FLOOR_PX)}px "Cinzel Decorative", "Cinzel", serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   for (let i = 0; i < 12; i++) {
+    if (numeralStep === 0 || i % numeralStep !== 0) continue;
     const angle = (i * Math.PI) / 6 - Math.PI / 2;
     const x = center + Math.cos(angle) * radius * 0.76;
     const y = center + Math.sin(angle) * radius * 0.76;

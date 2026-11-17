@@ -6,7 +6,7 @@ import { useCharacterStore } from '@/stores/useCharacterStore';
 import { AnalogClock } from './AnalogClock';
 import { SmoothTimeDisplay } from './SmoothTimeDisplay';
 import { NullSafeInput } from '../fichas/NullSafeInput';
-import { Play, Pause } from 'lucide-react';
+import { Play, Pause, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { playClockClickSound, playSuccessSound, playTimeAdvanceSound } from '@/lib/sounds';
 
@@ -19,6 +19,8 @@ export function ChronosModule() {
 
   const [advanceMinutes, setAdvanceMinutes] = useState(0);
   const [advanceReason, setAdvanceReason] = useState('');
+  const [advanceControlsOpen, setAdvanceControlsOpen] = useState(true);
+  const [restControlsOpen, setRestControlsOpen] = useState(true);
   const [showYearPicker, setShowYearPicker] = useState(false);
   const [selectedRestTargets, setSelectedRestTargets] = useState<string[]>([]);
 
@@ -82,232 +84,261 @@ export function ChronosModule() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       {/* Title */}
       <h1 className="text-center text-2xl text-primary glow-text-strong tracking-[0.15em]" style={{ fontFamily: "'Cinzel Decorative', serif" }}>
         Sistema Chronos
       </h1>
 
-      {/* Clock */}
-      <div className="w-full rounded-xl border border-border bg-card p-4 sm:p-8 card-enigmatic glow-border border-glow flex flex-col items-center">
-        <AnalogClock size={300} />
-        <SmoothTimeDisplay
-          className="mt-5 text-center text-2xl sm:text-3xl text-foreground tracking-[0.08em] sm:tracking-[0.15em] tabular-nums glow-text-strong"
-          style={{ fontFamily: "'Cinzel Decorative', serif" }}
-        />
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-x-1 gap-y-1 text-center text-sm text-muted-foreground sm:text-base" style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}>
-          Dia {store.day} · Mês {store.month} ·{' '}
-          <span className="relative inline-block">
-            {isPlayer ? (
-              <span className="text-foreground">Ano {store.year}</span>
-            ) : (
-              <button
-                onClick={() => { setShowYearPicker(!showYearPicker); playClockClickSound(); }}
-                className="text-primary hover:text-primary/80 underline underline-offset-2 decoration-primary/40 transition-all duration-300"
-              >
-                Ano {store.year}
-              </button>
-            )}
-            {!isPlayer && showYearPicker && (
-              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 rounded-xl border border-border bg-card p-3 shadow-lg shadow-primary/10 animate-fade-in min-w-[200px]">
-                <div className="grid grid-cols-3 gap-1 max-h-40 overflow-y-auto">
-                  {Array.from({ length: 30 }, (_, i) => i + 1).map((yr) => (
-                    <button
-                      key={yr}
-                      onClick={() => { store.setDate(store.day, store.month, yr); setShowYearPicker(false); playClockClickSound(); }}
-                      className={cn(
-                        'rounded-lg px-2 py-1 text-sm font-mono transition-all duration-300',
-                        store.year === yr
-                          ? 'bg-primary text-primary-foreground glow-primary'
-                          : 'bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-foreground'
-                      )}
-                    >
-                      {yr}
-                    </button>
-                  ))}
+      {/* Desktop: two-pane layout — clock + time on left, master controls on right */}
+      <div className={cn('lg:grid lg:grid-cols-1 lg:gap-6 lg:items-start', !isPlayer && 'xl:grid-cols-[minmax(0,1fr)_380px]')}>
+        {/* Clock Pane — always visible */}
+        <div className="rounded-xl border border-border bg-card p-4 sm:p-8 card-enigmatic flex flex-col items-center">
+          <AnalogClock size={400} />
+          <SmoothTimeDisplay
+            className="mt-5 text-center text-2xl sm:text-3xl text-foreground tracking-[0.08em] sm:tracking-[0.15em] tabular-nums glow-text-strong"
+            style={{ fontFamily: "'Cinzel Decorative', serif" }}
+          />
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-x-1 gap-y-1 text-center text-sm text-muted-foreground sm:text-base" style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}>
+            Dia {store.day} · Mês {store.month} ·{' '}
+            <span className="relative inline-block">
+              {isPlayer ? (
+                <span className="text-foreground">Ano {store.year}</span>
+              ) : (
+                <button
+                  onClick={() => { setShowYearPicker(!showYearPicker); playClockClickSound(); }}
+                  className="text-primary hover:text-primary/80 underline underline-offset-2 decoration-primary/40 transition-all duration-300"
+                >
+                  Ano {store.year}
+                </button>
+              )}
+              {!isPlayer && showYearPicker && (
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 rounded-xl border border-border bg-card p-3 shadow-lg shadow-primary/10 animate-fade-in min-w-[200px]">
+                  <div className="grid grid-cols-3 gap-1 max-h-40 overflow-y-auto">
+                    {Array.from({ length: 30 }, (_, i) => i + 1).map((yr) => (
+                      <button
+                        key={yr}
+                        onClick={() => { store.setDate(store.day, store.month, yr); setShowYearPicker(false); playClockClickSound(); }}
+                        className={cn(
+                          'rounded-lg px-2 py-1 text-sm font-mono transition-all duration-300',
+                          store.year === yr
+                            ? 'bg-primary text-primary-foreground glow-primary'
+                            : 'bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-foreground'
+                        )}
+                      >
+                        {yr}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-2 flex items-center gap-1">
+                    <input
+                      type="number"
+                      placeholder="Ano..."
+                      className="h-8 flex-1 rounded-lg border border-input bg-background px-2 text-sm text-foreground text-center"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          const v = parseInt((e.target as HTMLInputElement).value);
+                          if (v > 0) { store.setDate(store.day, store.month, v); setShowYearPicker(false); }
+                        }
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="mt-2 flex items-center gap-1">
-                  <input
-                    type="number"
-                    placeholder="Ano..."
-                    className="h-8 flex-1 rounded-lg border border-input bg-background px-2 text-sm text-foreground text-center"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        const v = parseInt((e.target as HTMLInputElement).value);
-                        if (v > 0) { store.setDate(store.day, store.month, v); setShowYearPicker(false); }
-                      }
-                    }}
-                  />
+              )}
+            </span>
+          </div>
+
+          {/* Clock controls (play/pause + multiplier) — Master only, inline under clock */}
+          {!isPlayer && (
+            <div className="mt-5 w-full flex flex-col items-center gap-3 animate-fade-in">
+              <div className="flex items-center justify-center gap-3">
+                <button
+                  type="button"
+                  aria-label={store.isRunning ? 'Pausar relógio' : 'Iniciar relógio'}
+                  aria-pressed={store.isRunning}
+                  onClick={() => { store.setIsRunning(!store.isRunning); playClockClickSound(); }}
+                  className={cn(
+                    'flex h-11 w-11 items-center justify-center rounded-full transition-all duration-300',
+                    store.isRunning
+                      ? 'bg-primary text-primary-foreground glow-primary-strong shadow-lg shadow-primary/40'
+                      : 'bg-primary/80 text-primary-foreground hover:bg-primary glow-primary'
+                  )}
+                >
+                  {store.isRunning ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                </button>
+                <div className="flex items-center gap-2 text-base text-muted-foreground">
+                  <span style={{ fontFamily: "'Cinzel', serif" }}>×</span>
+                  <NullSafeInput value={store.multiplier} onChange={(v) => store.setMultiplier(Math.max(1, v))} className="w-16" />
                 </div>
               </div>
-            )}
-          </span>
+
+              <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground w-full">
+                <label className="flex items-center gap-2">
+                  <span style={{ fontFamily: "'Cinzel', serif" }}>Início (ms)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={50}
+                    value={store.easeStartMs}
+                    onChange={(e) => store.setEaseStartMs(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="h-8 w-20 rounded-lg border border-input bg-background px-2 text-center text-sm text-foreground"
+                  />
+                </label>
+                <label className="flex items-center gap-2">
+                  <span style={{ fontFamily: "'Cinzel', serif" }}>Parada (ms)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={50}
+                    value={store.easeStopMs}
+                    onChange={(e) => store.setEaseStopMs(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="h-8 w-20 rounded-lg border border-input bg-background px-2 text-center text-sm text-foreground"
+                  />
+                </label>
+              </div>
+            </div>
+          )}
         </div>
 
+        {/* Master Controls Pane — only for Master, sticky on desktop */}
         {!isPlayer && (
-          <div className="mt-5 flex flex-col items-center gap-3">
-            <div className="flex items-center justify-center gap-3">
+          <div className="lg:sticky lg:top-24 space-y-4 animate-fade-in" style={{ animationDelay: '60ms' }}>
+            {/* Manual Advance */}
+            <div className="rounded-xl border border-border bg-card overflow-hidden card-enigmatic p-5 space-y-3">
               <button
                 type="button"
-                aria-label={store.isRunning ? 'Pausar relógio' : 'Iniciar relógio'}
-                aria-pressed={store.isRunning}
-                onClick={() => { store.setIsRunning(!store.isRunning); playClockClickSound(); }}
-                className={cn(
-                  'flex h-11 w-11 items-center justify-center rounded-full transition-all duration-300',
-                  store.isRunning
-                    ? 'bg-primary text-primary-foreground glow-primary-strong shadow-lg shadow-primary/40'
-                    : 'bg-primary/80 text-primary-foreground hover:bg-primary glow-primary'
-                )}
+                aria-expanded={advanceControlsOpen}
+                aria-controls="chronos-manual-advance-controls"
+                onClick={() => setAdvanceControlsOpen((open) => !open)}
+                className="flex min-h-11 w-full items-center justify-between gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
               >
-                {store.isRunning ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                <span className="text-base font-bold text-primary tracking-wider" style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.06em' }}>
+                  Adicionar Passagem de Tempo
+                </span>
+                <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', !advanceControlsOpen && '-rotate-90')} />
               </button>
-              <div className="flex items-center gap-2 text-base text-muted-foreground">
-                <span style={{ fontFamily: "'Cinzel', serif" }}>×</span>
-                <NullSafeInput value={store.multiplier} onChange={(v) => store.setMultiplier(Math.max(1, v))} className="w-16" />
+              <div id="chronos-manual-advance-controls" hidden={!advanceControlsOpen} inert={!advanceControlsOpen} className="space-y-3">
+              <input
+                value={advanceReason}
+                onChange={(e) => setAdvanceReason(e.target.value)}
+                placeholder="Motivo"
+                className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground"
+              />
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  value={advanceMinutes || ''}
+                  onChange={(e) => setAdvanceMinutes(Math.max(0, parseInt(e.target.value) || 0))}
+                  placeholder="Minutos"
+                  className="h-10 flex-1 rounded-lg border border-input bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground"
+                />
+                <button
+                  onClick={handleManualAdvance}
+                  disabled={advanceMinutes <= 0}
+                  className="h-10 rounded-lg bg-primary px-6 text-sm text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50 glow-primary transition-all duration-300"
+                >
+                  Avançar
+                </button>
+              </div>
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground">
-              <label className="flex items-center gap-2">
-                <span style={{ fontFamily: "'Cinzel', serif" }}>Início (ms)</span>
-                <input
-                  type="number"
-                  min={0}
-                  step={50}
-                  value={store.easeStartMs}
-                  onChange={(e) => store.setEaseStartMs(Math.max(0, parseInt(e.target.value) || 0))}
-                  className="h-8 w-20 rounded-lg border border-input bg-background px-2 text-center text-sm text-foreground"
-                />
-              </label>
-              <label className="flex items-center gap-2">
-                <span style={{ fontFamily: "'Cinzel', serif" }}>Parada (ms)</span>
-                <input
-                  type="number"
-                  min={0}
-                  step={50}
-                  value={store.easeStopMs}
-                  onChange={(e) => store.setEaseStopMs(Math.max(0, parseInt(e.target.value) || 0))}
-                  className="h-8 w-20 rounded-lg border border-input bg-background px-2 text-center text-sm text-foreground"
-                />
-              </label>
+            {/* Group Rests */}
+            <div className="rounded-xl border border-border bg-card overflow-hidden card-enigmatic p-5 space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  aria-expanded={restControlsOpen}
+                  aria-controls="chronos-rest-controls"
+                  onClick={() => setRestControlsOpen((open) => !open)}
+                  className="flex min-h-11 items-center gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+                >
+                  <span className="text-base font-bold text-primary tracking-wider" style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.06em' }}>
+                    Conceder Descansos
+                  </span>
+                  <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', !restControlsOpen && '-rotate-90')} />
+                </button>
+                <div className="flex items-center gap-2 text-xs">
+                  <button
+                    onClick={() => setSelectedRestTargets(visibleCharacters.map((c) => c.id))}
+                    className="text-primary hover:text-primary/80 transition-colors"
+                  >
+                    Todos
+                  </button>
+                  <button
+                    onClick={() => setSelectedRestTargets([])}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Nenhum
+                  </button>
+                </div>
+              </div>
+
+              <div id="chronos-rest-controls" hidden={!restControlsOpen} inert={!restControlsOpen} className="space-y-4">
+              <p className="text-base text-muted-foreground -mt-2">
+                Conceder libera o botão "Descansar" na ficha do jogador (apenas no tipo concedido). Ele decide quando acionar.
+              </p>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm uppercase tracking-wider text-muted-foreground">
+                  <span>Alvos do descanso</span>
+                  <span className="text-xs">{selectedRestTargets.length} selecionado(s)</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {visibleCharacters.length === 0 ? (
+                    <div className="w-full rounded-lg border border-border bg-background/40 px-3 py-2 text-sm text-muted-foreground">
+                      Nenhuma ficha disponível para descanso.
+                    </div>
+                  ) : visibleCharacters.map((char) => {
+                    const selected = selectedRestTargets.includes(char.id);
+                    const grant = char.restGrant;
+                    return (
+                      <button
+                        key={char.id}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => { toggleRestTarget(char.id); playClockClickSound(); }}
+                        className={cn(
+                          'rounded-full border px-3 py-1.5 text-sm transition-all duration-300 flex items-center gap-1.5',
+                          selected
+                            ? 'border-primary/40 bg-primary/15 text-primary glow-primary'
+                            : 'border-border bg-secondary/30 text-muted-foreground hover:border-primary/30 hover:text-foreground'
+                        )}
+                      >
+                        {char.name}
+                        {grant && (
+                          <span className="text-xs uppercase tracking-wider text-primary/80">
+                            {grant === 'short' ? '☕ pendente' : '🌙 pendente'}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3">
+                <button
+                  onClick={() => handleGroupRest('short')}
+                  disabled={selectedRestTargets.length === 0}
+                  className="min-h-11 rounded-lg bg-primary px-4 py-2 text-center text-sm font-medium leading-snug text-primary-foreground hover:bg-primary/90 disabled:opacity-50 glow-primary transition-all duration-300"
+                >
+                  Conceder Descanso Curto
+                </button>
+                <button
+                  onClick={() => handleGroupRest('long')}
+                  disabled={selectedRestTargets.length === 0}
+                  className="min-h-11 rounded-lg bg-secondary px-4 py-2 text-center text-sm font-medium leading-snug text-foreground hover:bg-secondary/80 disabled:opacity-50 transition-all duration-300"
+                >
+                  Conceder Descanso Longo
+                </button>
+              </div>
+              </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Manual Advance — Mestre apenas */}
-      {!isPlayer && (
-        <div className="rounded-xl border border-border bg-card overflow-hidden card-enigmatic p-5 space-y-3">
-          <h2 className="text-base font-bold text-primary tracking-wider" style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.06em' }}>
-            Adicionar Passagem de Tempo
-          </h2>
-          <input
-            value={advanceReason}
-            onChange={(e) => setAdvanceReason(e.target.value)}
-            placeholder="Motivo"
-            className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground"
-          />
-          <div className="flex items-center gap-3">
-            <input
-              type="number"
-              value={advanceMinutes || ''}
-              onChange={(e) => setAdvanceMinutes(Math.max(0, parseInt(e.target.value) || 0))}
-              placeholder="Minutos"
-              className="h-10 flex-1 rounded-lg border border-input bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground"
-            />
-            <button
-              onClick={handleManualAdvance}
-              disabled={advanceMinutes <= 0}
-              className="h-10 rounded-lg bg-primary px-6 text-sm text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50 glow-primary transition-all duration-300"
-            >
-              Avançar
-            </button>
-          </div>
-        </div>
-      )}
-
-      {!isPlayer && (
-        <div className="rounded-xl border border-border bg-card overflow-hidden card-enigmatic p-5 space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-base font-bold text-primary tracking-wider" style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.06em' }}>
-              Conceder Descansos
-            </h2>
-            <div className="flex items-center gap-2 text-xs">
-              <button
-                onClick={() => setSelectedRestTargets(visibleCharacters.map((c) => c.id))}
-                className="text-primary hover:text-primary/80 transition-colors"
-              >
-                Todos
-              </button>
-              <button
-                onClick={() => setSelectedRestTargets([])}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Nenhum
-              </button>
-            </div>
-          </div>
-
-          <p className="text-xs text-muted-foreground -mt-2">
-            Conceder libera o botão "Descansar" na ficha do jogador (apenas no tipo concedido). Ele decide quando acionar.
-          </p>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs uppercase tracking-wider text-muted-foreground">
-              <span>Alvos do descanso</span>
-              <span>{selectedRestTargets.length} selecionado(s)</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {visibleCharacters.length === 0 ? (
-                <div className="w-full rounded-lg border border-border bg-background/40 px-3 py-2 text-sm text-muted-foreground">
-                  Nenhuma ficha disponível para descanso.
-                </div>
-              ) : visibleCharacters.map((char) => {
-                const selected = selectedRestTargets.includes(char.id);
-                const grant = char.restGrant;
-                return (
-                  <button
-                    key={char.id}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => { toggleRestTarget(char.id); playClockClickSound(); }}
-                    className={cn(
-                      'rounded-full border px-3 py-1.5 text-sm transition-all duration-300 flex items-center gap-1.5',
-                      selected
-                        ? 'border-primary/40 bg-primary/15 text-primary glow-primary'
-                        : 'border-border bg-secondary/30 text-muted-foreground hover:border-primary/30 hover:text-foreground'
-                    )}
-                  >
-                    {char.name}
-                    {grant && (
-                      <span className="text-xs uppercase tracking-wider text-primary/80">
-                        {grant === 'short' ? '☕ pendente' : '🌙 pendente'}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <button
-              onClick={() => handleGroupRest('short')}
-              disabled={selectedRestTargets.length === 0}
-              className="h-11 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 glow-primary transition-all duration-300"
-            >
-              Conceder Descanso Curto
-            </button>
-            <button
-              onClick={() => handleGroupRest('long')}
-              disabled={selectedRestTargets.length === 0}
-              className="h-11 rounded-lg bg-secondary px-4 text-sm font-medium text-foreground hover:bg-secondary/80 disabled:opacity-50 transition-all duration-300"
-            >
-              Conceder Descanso Longo
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

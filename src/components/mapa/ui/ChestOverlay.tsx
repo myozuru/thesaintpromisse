@@ -403,7 +403,7 @@ function ChestDialog({
                         {it?.name ?? <span className="italic text-destructive">Item removido</span>}
                       </div>
                       {it?.description && (
-                        <div className="text-xs text-muted-foreground truncate">{it.description}</div>
+                        <div className="text-sm text-muted-foreground truncate">{it.description}</div>
                       )}
                     </div>
                     <span className="text-xs tabular-nums text-muted-foreground">x{entry.quantity}</span>
