@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-18T17:54:12Z",
+  "generatedAt": "2026-11-16T21:20:15.777Z",
   "title": "Design System: The Saint Promisse — TP Fichas",
   "extensions": {
     "colorMeta": {
@@ -441,6 +441,10 @@
       "label": {
         "displayName": "JetBrains Mono",
         "purpose": "Logs, timestamps, and data-oriented details."
+      },
+      "splashInstruction": {
+        "displayName": "Inter / system-ui",
+        "purpose": "Welcome-screen keyboard and click guidance only."
       }
     },
     "shadows": [
@@ -532,12 +536,14 @@
     }
   ],
   "narrative": {
-    "northStar": "grimório digital para a mesa de campanha",
-    "overview": "The current visual language is sombria e mística: a dark campaign workspace framed by ceremonial type, restrained ornament, and the violet-and-gold colors already present in the source. It serves the Master and players in the same campaign, so the shared interface keeps modules, character tools, and session activity close at hand.\n\nThe experience is organized around play rather than a marketing page. A fixed module bar and event log surround the selected RPG workspace; module-specific content uses a shared family of controls and surfaces. The interface is information-dense, with clear type roles for headings, reading text, and numeric or system data.",
+    "northStar": "atlas astral da campanha",
+    "overview": "The visual language turns the campaign workspace into an astral atlas: deep violet surfaces, a restrained gold secondary accent, ceremonial type, and subtle orbital geometry. It preserves the existing dark, mystical identity while making navigation and player resources easier to scan.\n\nThe experience is organized around play rather than a marketing page. A 64px module bar and session log frame the selected RPG workspace; module-specific content uses a shared family of controls and surfaces. Low-contrast coordinate lines, orbit arcs, and radial gradients stay behind interactive content. The interface remains information-dense, with clear type roles for headings, reading text, and numeric or system data.",
     "keyCharacteristics": [
-      "Dark HSL surfaces with violet primary and gold accent tokens.",
+      "Dark HSL surfaces with violet primary and a restrained gold accent.",
+      "Subtle atlas grid and orbit arcs behind panels, never over text or controls.",
       "Cinzel-family headings, Cormorant Garamond reading text, and JetBrains Mono data labels.",
-      "Persistent module navigation, a collapsible session log, and specialized RPG workspaces.",
+      "A 64px module bar, role-aware primary tabs, a collapsible 256px session log, and specialized RPG workspaces.",
+      "An absolute 14px text floor; reading copy and actionable controls are at least 16px.",
       "Layered panels and shadows, with glow reserved for actions and active emphasis."
     ],
     "rules": [
@@ -548,18 +554,24 @@
       },
       {
         "name": "The Type-by-Role Rule",
-        "body": "Keep display, reading, and data typography in their established roles; the global font links load these families from Google Fonts.",
+        "body": "Keep display, reading, and data typography in their established roles. All visible interface text is at least 14 CSS px; reading copy and actionable controls are at least 16 CSS px. Canvas labels account for zoom so their effective on-screen size respects the same floor. Inter/system-ui is limited to the splash keyboard and click instruction.",
         "section": "typography"
       },
       {
         "name": "The Focused-Glow Rule",
         "body": "Keep the underlying panels dark and layered; use the brighter glows to identify actions, selection, or emphasis.",
         "section": "elevation"
+      },
+      {
+        "name": "The Atlas Layer Rule",
+        "body": "Keep coordinate lines, orbit arcs, and radial gradients subtle and behind interactive content so they support the atlas identity without reducing readability.",
+        "section": "elevation"
       }
     ],
     "dos": [
       "Do use the existing semantic tokens for global surfaces, actions, and RPG resource states.",
       "Do preserve the display, reading, and monospace typography roles.",
+      "Do keep all interface text at or above 14px, and reading text and actionable controls at or above 16px.",
       "Do build module-specific interfaces from the shared buttons, fields, cards, badges, and module header.",
       "Do keep keyboard focus visible and preserve active, hover, and disabled states."
     ],

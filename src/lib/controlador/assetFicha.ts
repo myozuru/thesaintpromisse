@@ -2,6 +2,21 @@ import { assetCache } from "@/components/mapa/assetCache";
 import { assetDB } from "@/components/mapa/assetDB";
 import { getSocket } from "@/lib/socket";
 import { hasWorkspaceCloud, supabase } from "@/integrations/supabase/safeClient";
+import type { InvocacaoControlador } from './tipos';
+
+/** Não inicia o posicionamento com uma arte referenciada, mas indisponível ou ainda sem decodificar. */
+export async function prepararArteInvocacao(
+  modelo: Pick<InvocacaoControlador, 'nome' | 'imagemAssetId' | 'imagemFallbackAssetId'>,
+): Promise<void> {
+  const ids = [...new Set([modelo.imagemAssetId, modelo.imagemFallbackAssetId]
+    .filter((id): id is string => Boolean(id)))];
+  if (!ids.length) return;
+  await Promise.all(ids.map(id => carregarAssetFicha(id)));
+  const imagens = await Promise.all(ids.map(id => assetCache.ready(id)));
+  if (!imagens.some(Boolean)) {
+    throw new Error(`A imagem de ${modelo.nome} não pôde ser carregada. Reabra ou troque a imagem na ficha e tente novamente.`);
+  }
+}
 
 function blobBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {

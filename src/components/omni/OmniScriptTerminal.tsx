@@ -293,11 +293,11 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
       {compilado.efeitos.length > 0 && (
         <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 space-y-1.5">
           <div className="flex items-center justify-between">
-            <div className="text-xs uppercase tracking-wider text-emerald-300/80">
+            <div className="text-sm uppercase tracking-wider text-emerald-300/80">
               Plano de Execução
             </div>
             {personagemPreview && (
-              <div className="text-xs text-emerald-300/60">
+              <div className="text-sm text-emerald-300/60">
                 Preview: {personagemPreview.name}
               </div>
             )}
@@ -313,21 +313,21 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
             return (
               <div key={eff.id} className="space-y-0.5">
                 {mostrarWatcher && (
-                  <div className="text-[12px] text-amber-300 font-mono">
+                  <div className="text-sm text-amber-300 font-mono">
                     ⚡ Gatilho: <span className="text-amber-200">{humanizarWatcher(eff.watcher!)}</span>
                   </div>
                 )}
                 {mostrarTrigger && (
-                  <div className="text-[12px] text-amber-300 font-mono">
+                  <div className="text-sm text-amber-300 font-mono">
                     ⚡ Gatilho: <span className="text-amber-200">{eff.trigger}</span>
                   </div>
                 )}
                 {mostrarCondicao && (
-                  <div className="text-[12px] text-sky-300 font-mono">
+                  <div className="text-sm text-sky-300 font-mono">
                     ❓ Condição: <span className="text-sky-200">{eff.condition!.replace(/@USUARIO\./gi, '')}</span>
                   </div>
                 )}
-                <div className="flex items-baseline gap-2 text-[12px] text-foreground/95">
+                <div className="flex items-baseline gap-2 text-sm text-foreground/95">
                   <span className="text-emerald-400/70 font-mono shrink-0">#{i + 1}</span>
                   <span className="text-emerald-200">
                     ✅ {frasePlanoExecucao(eff, valoresMock[i])}
@@ -346,11 +346,11 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
 
       {compilado.erros.length > 0 && (
         <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 space-y-1">
-          <div className="text-xs uppercase tracking-wider text-destructive">
+          <div className="text-sm uppercase tracking-wider text-destructive">
             ⚠ Erros de Sintaxe
           </div>
           {compilado.erros.map((er, i) => (
-            <div key={i} className="text-xs font-mono text-destructive/90">
+            <div key={i} className="text-sm font-mono text-destructive/90">
               <span className="opacity-70">"{er.trecho}"</span> — {er.mensagem}
             </div>
           ))}
@@ -378,7 +378,7 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
         {/* Camada de highlight (visual). Cresce com o conteúdo e dita a altura do bloco. */}
         <pre
           aria-hidden
-          className="whitespace-pre-wrap break-words p-3 font-mono text-[13px] leading-[1.5] text-transparent min-h-[4.5em] m-0"
+          className="whitespace-pre-wrap break-words p-3 font-mono text-base leading-[1.5] text-transparent min-h-[4.5em] m-0"
           style={{ fontFamily: 'JetBrains Mono, Courier New, monospace' }}
         >
           {pendente ? texto : tokens.map((t, i) => (
@@ -396,7 +396,7 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
           onFocus={onFocus}
           placeholder={'somar treino * 2 em vida_max, somar 10 em vida_atual  ·  Tab para autocompletar'}
           spellCheck={false}
-          className={`absolute inset-0 h-full w-full resize-none overflow-hidden bg-transparent ${pendente ? 'text-zinc-100' : 'text-transparent'} caret-violet-300 selection:bg-violet-500/30 placeholder:text-muted-foreground/40 font-mono text-[13px] leading-[1.5] border-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-3`}
+          className={`absolute inset-0 h-full w-full resize-none overflow-hidden bg-transparent ${pendente ? 'text-zinc-100' : 'text-transparent'} caret-violet-300 selection:bg-violet-500/30 placeholder:text-muted-foreground/40 font-mono text-base leading-[1.5] border-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-3`}
           style={{ fontFamily: 'JetBrains Mono, Courier New, monospace' }}
         />
 
@@ -406,14 +406,14 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
             className="absolute left-3 top-full z-50 mt-1 max-h-64 w-72 overflow-auto rounded-md border border-violet-500/40 bg-zinc-950/95 shadow-xl shadow-violet-900/40 backdrop-blur"
             onMouseDown={(e) => e.preventDefault()}
           >
-            <div className="px-2 py-1 text-xs uppercase tracking-wider text-violet-300/70 border-b border-violet-500/20">
+            <div className="px-2 py-1 text-sm uppercase tracking-wider text-violet-300/70 border-b border-violet-500/20">
               "{prefixoAtual}" · {sugestoes.length} sugestão(ões) · Tab para ciclar · Enter aceita
             </div>
             {sugestoes.map((s, i) => (
               <button
                 key={s.valor + i}
                 type="button"
-                className={`block w-full text-left px-2 py-1 font-mono text-[12px] transition-colors ${
+                className={`block w-full text-left px-2 py-1 font-mono text-xs transition-colors ${
                   i === indiceSugestao
                     ? 'bg-violet-500/30 text-violet-100'
                     : 'text-zinc-200 hover:bg-violet-500/10'
@@ -430,7 +430,7 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
                 <span>{s.valor.slice(prefixoAtual.length)}</span>
                 <span className="ml-2 text-xs text-zinc-500">{s.categoria}</span>
                 {s.hint && (
-                  <div className="text-xs text-zinc-500 truncate">{s.hint}</div>
+                  <div className="text-sm text-zinc-500 truncate">{s.hint}</div>
                 )}
               </button>
             ))}
@@ -439,7 +439,7 @@ export function OmniScriptTerminal({ valor, onChange, onFocus, ativoParaInsercao
       </div>
 
       {/* Legenda das keywords */}
-      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+      <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
         <span><span className="text-violet-400 font-bold font-mono">somar</span> = +</span>
         <span><span className="text-violet-400 font-bold font-mono">subtrair</span> = −</span>
         <span><span className="text-violet-400 font-bold font-mono">definir</span> = =</span>

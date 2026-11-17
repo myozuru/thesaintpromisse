@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { lazyWithReload } from "@/lib/lazyWithReload";
 import { Header, getTabsForRole } from "@/components/Header";
 import { AuthScreen } from "@/components/AuthScreen";
@@ -85,6 +85,19 @@ export default function Index() {
   const zoomScale = ZOOM_SCALES[zoomIndex] / 100;
   const immersive = useMapStore((s) => s.immersive);
   const mapaImmersive = immersive && activeTab === 'mapa';
+  const workspaceLeftInset = mapaImmersive
+    ? '0px'
+    : isMobile
+      ? (panelCollapsed ? '2.5rem' : '0.5rem')
+      : (panelCollapsed ? '2.5rem' : '16rem');
+  const workspaceStyle = {
+    width: '100%',
+    paddingTop: mapaImmersive ? 0 : '4rem',
+    paddingLeft: workspaceLeftInset,
+    paddingRight: mapaImmersive ? 0 : '1rem',
+    paddingBottom: mapaImmersive ? 0 : (panelCollapsed ? '5rem' : '6rem'),
+    '--workspace-left-inset': workspaceLeftInset,
+  } as CSSProperties;
 
   // Auto-collapse log panel on mobile
   useEffect(() => {
@@ -186,6 +199,7 @@ export default function Index() {
         role="button"
         tabIndex={0}
         aria-label="Entrar em The Saint Promisse"
+        aria-describedby="splash-instructions"
         onClick={handleSplashClick}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
@@ -238,7 +252,10 @@ export default function Index() {
             Seja Bem-Vindo
           </p>
           {!flashActive && (
-            <p className="mx-auto mt-8 max-w-[calc(100vw-3rem)] px-4 text-sm font-medium leading-[1.6] text-muted-foreground text-pretty md:text-base splash-invitation" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>Clique ou pressione Enter ou Espaço para entrar</p>
+            <p id="splash-instructions" className="mx-auto mt-8 max-w-[calc(100vw-3rem)] px-4 text-sm font-medium leading-[1.6] text-muted-foreground text-pretty md:text-base splash-invitation" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
+              Clique em qualquer lugar para entrar
+              <span className="sr-only"> Pressione Enter ou Espaço para entrar.</span>
+            </p>
           )}
         </div>
       </div>
@@ -250,27 +267,21 @@ export default function Index() {
   }
 
   return (
-    <div className="min-h-screen bg-background relative overflow-x-hidden animate-fade-in w-full">
+    <div className="atlas-shell min-h-screen bg-background relative overflow-x-hidden animate-fade-in w-full">
         {!mapaImmersive && (
-          <div className="fixed inset-0 pointer-events-none z-0 flex items-center justify-center overflow-hidden">
-            <JjkSwirl size={1400} style={{ opacity: 0.18 }} />
+          <div className="atlas-atmosphere fixed inset-0 pointer-events-none z-0 flex items-center justify-center overflow-hidden" aria-hidden="true">
+            <JjkSwirl size={1400} style={{ opacity: 0.12 }} />
           </div>
         )}
 
         <GlobalClockTicker />
 
-        {!mapaImmersive && <Header activeTab={activeTab} onTabChange={handleTabChange} testsOpen={testsOpen} onToggleTests={() => setTestsOpen((open) => !open)} onOpenDiary={() => setDiaryOpen(true)} />}
+        <Header immersive={mapaImmersive} activeTab={activeTab} onTabChange={handleTabChange} testsOpen={testsOpen} onToggleTests={() => setTestsOpen((open) => !open)} onOpenDiary={() => setDiaryOpen(true)} />
         {diaryOpen && <DiarioQuests aberto onClose={() => setDiaryOpen(false)} charId={myCharacter?.id} master={role === 'MASTER'} />}
 
         <main
-          className="relative z-10 transition-[padding] duration-300"
-          style={{
-            width: '100%',
-            paddingTop: mapaImmersive ? 0 : '3.5rem',
-            paddingLeft: mapaImmersive ? 0 : (isMobile ? (panelCollapsed ? '3rem' : '0.5rem') : (panelCollapsed ? '3rem' : '17rem')),
-            paddingRight: mapaImmersive ? 0 : '1rem',
-            paddingBottom: mapaImmersive ? 0 : (panelCollapsed ? '5rem' : '6rem'),
-          }}
+          className="atlas-immersive-shell atlas-workspace relative z-10 transition-[padding] duration-300"
+          style={workspaceStyle}
         >
           <div
             className={mapaImmersive ? '' : 'px-2 py-3 sm:px-3 sm:py-4'}
@@ -303,42 +314,46 @@ export default function Index() {
           </div>
         </main>
 
-        {!mapaImmersive && <LogPanel />}
+        <LogPanel immersive={mapaImmersive} />
 
-      {!mapaImmersive && (
-        <div className="fixed bottom-4 sm:bottom-6 right-20 sm:right-24 z-50 flex items-center gap-1 rounded-full bg-card border border-border shadow-lg px-2 py-1">
-          <button
-            aria-label="Diminuir zoom"
-            onClick={zoomDown}
-            disabled={zoomIndex === 0}
-            className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+        {activeTab !== 'mapa' && (
+          <div
+            aria-hidden={mapaImmersive || undefined}
+            inert={mapaImmersive}
+            className={`atlas-immersive-shell fixed bottom-4 sm:bottom-6 right-20 sm:right-24 z-50 flex items-center gap-1 rounded-full border border-border bg-card px-2 py-1 shadow-lg transition-all duration-300 ease-in-out ${mapaImmersive ? 'translate-y-3 opacity-0 invisible pointer-events-none' : 'translate-y-0 opacity-100 visible'}`}
           >
-            <ZoomOut className="h-4 w-4" />
-          </button>
-          <span aria-live="polite" aria-atomic="true" className="text-xs font-mono text-muted-foreground w-8 text-center">
-            {ZOOM_LABELS[zoomIndex]}
-          </span>
-          <button
-            aria-label="Aumentar zoom"
-            onClick={zoomUp}
-            disabled={zoomIndex === ZOOM_SCALES.length - 1}
-            className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
-          >
-            <ZoomIn className="h-4 w-4" />
-          </button>
-        </div>
-      )}
+            <button
+              aria-label="Diminuir zoom"
+              onClick={zoomDown}
+              disabled={zoomIndex === 0}
+              className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+            >
+              <ZoomOut className="h-4 w-4" />
+            </button>
+            <span aria-live="polite" aria-atomic="true" className="w-10 text-center text-sm font-mono text-muted-foreground">
+              {ZOOM_LABELS[zoomIndex]}
+            </span>
+            <button
+              aria-label="Aumentar zoom"
+              onClick={zoomUp}
+              disabled={zoomIndex === ZOOM_SCALES.length - 1}
+              className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+            >
+              <ZoomIn className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
-      {!mapaImmersive && (
         <button
           aria-label={hubOpen ? "Fechar painel de dados" : "Abrir painel de dados"}
           aria-expanded={hubOpen}
+          aria-hidden={mapaImmersive || undefined}
+          inert={mapaImmersive}
           onClick={() => setHubOpen(!hubOpen)}
-          className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-50 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg glow-primary-strong hover:scale-110 transition-all duration-300"
+          className={`atlas-immersive-shell fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-50 flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg glow-primary-strong hover:scale-110 transition-all duration-300 ease-in-out ${mapaImmersive ? 'translate-y-3 opacity-0 invisible pointer-events-none' : 'translate-y-0 opacity-100 visible'}`}
         >
           <Dice6 className="h-5 w-5 sm:h-6 sm:w-6" />
         </button>
-      )}
 
         <DataHub open={hubOpen} onClose={() => setHubOpen(false)} />
         {role === 'MASTER' && <TestRequestPanel open={testsOpen} onClose={() => setTestsOpen(false)} />}

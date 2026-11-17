@@ -11,6 +11,7 @@ import { EditorAcoesAtivas } from './EditorAcoesAtivas';
 import type { ReplicaPorte } from '@/lib/omni/tipos';
 import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -55,9 +56,15 @@ import { AURA_APTITUDES } from '@/lib/auraAptitudes';
 
 interface Props {
   aberto: boolean;
-  onClose: () => void;
+  onCancelar: () => void;
   entidadeInicial: EntidadeOmni;
   onSalvar: (e: EntidadeOmni) => void;
+  /**
+   * Callback opcional para "Salvar e Fechar" — usado quando o salvamento
+   * não deve limpar a seleção (ex.: edição no OmniModule mantém entidadeSelecionadaId).
+   * Se não fornecido, faz fallback para onCancelar (comportamento legado).
+   */
+  onSalvarEFechar?: (e: EntidadeOmni) => void;
   /**
    * Quando fornecido, exibe o botão "Propor Apenas Conceito" (Modo Preguiça).
    * Recebe a entidade marcada como rascunho/conceito (apenas Nome + Descrição
@@ -83,7 +90,7 @@ const CATEGORIAS: { id: CategoriaEntidade; label: string }[] = [
   { id: 'voto', label: 'Voto' },
 ];
 
-export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar, onProporConceito, abaInicial }: Props) {
+export function ConstrutorEntidade({ aberto, onCancelar, entidadeInicial, onSalvar, onSalvarEFechar, onProporConceito, abaInicial }: Props) {
   const [ent, setEnt] = useState<EntidadeOmni>(entidadeInicial);
   useEffect(() => setEnt(entidadeInicial), [entidadeInicial]);
   const toggleMitigacao = (campo: 'resistencias' | 'vulnerabilidades' | 'imunidades_dano', tipo: DamageType) => {
@@ -183,9 +190,10 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
   };
 
   return (
-    <Dialog open={aberto} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent
-        className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col"
+    <Sheet open={aberto} onOpenChange={(o) => !o && onCancelar()}>
+      <SheetContent
+        side="right"
+        className="max-w-4xl sm:max-w-[52rem] max-h-[90vh] overflow-hidden flex flex-col w-[min(100%,52rem)]"
         // Impede que cliques no Omni-Helper (renderizado via portal no body)
         // sejam interpretados como "clique fora" e fechem o Construtor.
         onPointerDownOutside={(e) => {
@@ -201,15 +209,18 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
           if (helperAberto || originalTarget?.closest('[data-omni-helper]')) e.preventDefault();
         }}
       >
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+        <SheetHeader className="pr-14">
+          <SheetTitle className="flex items-center gap-2">
             <span className="text-primary">◇</span>
             Construtor No-Code
             <span className="text-xs text-muted-foreground font-normal ml-2">
               {CATEGORIAS.find((c) => c.id === ent.categoria)?.label}
             </span>
-          </DialogTitle>
-        </DialogHeader>
+          </SheetTitle>
+          <SheetDescription className="sr-only">
+            Configure a entidade, revise seus gatilhos e efeitos e salve as alterações.
+          </SheetDescription>
+        </SheetHeader>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 overflow-hidden">
           <div className="overflow-y-auto pr-2">
@@ -267,7 +278,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                       <Label>Imagem do item</Label>
                       <p className="text-xs text-muted-foreground">Aparece no inventário, no chão do mapa e no personagem ao empunhar.</p>
                       <div className="flex gap-2">
-                        <label className="cursor-pointer rounded border border-primary/50 px-2 py-1 text-xs hover:bg-primary/10">
+                        <label className="cursor-pointer rounded border border-primary/50 px-2 py-1 text-sm hover:bg-primary/10">
                           Escolher imagem
                           <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                             const f = e.target.files?.[0]; e.target.value = '';
@@ -331,7 +342,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
 
                 {ent.categoria === 'arma' && (
                   <div className="rounded-md border border-primary/40 bg-primary/5 p-3 space-y-2">
-                    <Label className="text-xs uppercase tracking-wider text-primary">
+                    <Label className="text-sm uppercase tracking-wider text-primary">
                       Modelo Base (Tipo de Arma)
                     </Label>
                     <p className="text-xs text-muted-foreground leading-relaxed">
@@ -384,12 +395,12 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                   const isDuasMaos = ent.tags.includes('prop:duas_maos');
                   return (
                     <div className="rounded-md border border-border/60 bg-background/40 p-3 space-y-3">
-                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                      <Label className="text-sm uppercase tracking-wider text-muted-foreground">
                         Ajustes do Modelo (substituem os valores do livro)
                       </Label>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <Label className="text-xs">Dano (fórmula)</Label>
+                          <Label className="text-sm">Dano (fórmula)</Label>
                           <Input
                             value={meta.dano ?? ''}
                             onChange={(e) => setEnt(setWeaponDamage(ent, e.target.value))}
@@ -400,7 +411,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                           </p>
                         </div>
                         <div>
-                          <Label className="text-xs">Espaços no inventário</Label>
+                          <Label className="text-sm">Espaços no inventário</Label>
                           <Input
                             type="number"
                             min={1}
@@ -414,7 +425,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <Label className="text-xs">
+                          <Label className="text-sm">
                             Empunhadura
                             {isDuasMaos && (
                               <span className="ml-1 text-xs text-amber-500">
@@ -444,7 +455,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                         </div>
                         {isRanged && (
                           <div>
-                            <Label className="text-xs">Alcance (curto / longo, em metros)</Label>
+                            <Label className="text-sm">Alcance (curto / longo, em metros)</Label>
                             <div className="flex gap-1 items-center">
                               <Input
                                 type="number"
@@ -477,17 +488,17 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
 
                 {(ent.categoria === 'item' || ent.categoria === 'arma') && ent.slotType && ent.slotType !== 'nenhum' && (
                   <div className="rounded-md border border-dashed border-border/60 bg-background/40 p-3 space-y-1">
-                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                    <Label className="text-sm uppercase tracking-wider text-muted-foreground">
                       Bônus do acessório
                     </Label>
                     <p className="text-xs text-muted-foreground leading-relaxed">Bônus fixos somados às rolagens enquanto este item estiver equipado.</p>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="flex items-center justify-between gap-2">
-                        <Label className="text-xs">Deslocamento fixo (m)</Label>
+                        <Label className="text-sm">Deslocamento fixo (m)</Label>
                         <Input type="number" className="h-7 w-20" value={ent.bonusEquipado?.deslocamento ?? 0}
                           onChange={(e) => setEnt({ ...ent, bonusEquipado: { ...ent.bonusEquipado, deslocamento: Number(e.target.value) || 0 } })} />
                       </div>
-                      <label className="text-xs">Fórmula de deslocamento
+                      <label className="text-sm">Fórmula de deslocamento
                         <Input aria-label="Fórmula de bônus de deslocamento" className="h-7" value={ent.bonusEquipadoFormula?.deslocamento ?? ''} placeholder="@USUARIO.treino"
                           onChange={e => atualizarFormulaDeslocamento(e.target.value)} />
                       </label>
@@ -498,7 +509,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                         {ORDEM_PERICIAS.map((key) => {
                           const bonusKey = key.toLowerCase().replace(/[0-9]+$/, (m) => `_${m}`);
                           return <div key={key} className="grid grid-cols-[1fr_auto_auto] items-center gap-2">
-                            <Label className="text-xs">{ROTULOS_PERICIAS[key]}</Label>
+                            <Label className="text-sm">{ROTULOS_PERICIAS[key]}</Label>
                             <Input aria-label={`Bônus fixo em ${ROTULOS_PERICIAS[key]}`} type="number" className="h-7 w-16" value={ent.bonusEquipado?.pericias?.[bonusKey] ?? 0}
                               onChange={(e) => setEnt({ ...ent, bonusEquipado: { ...ent.bonusEquipado, pericias: { ...ent.bonusEquipado?.pericias, [bonusKey]: Number(e.target.value) || 0 } } })} />
                             <Input aria-label={`Fórmula de bônus em ${ROTULOS_PERICIAS[key]}`} className="h-7 w-32" value={ent.bonusEquipadoFormula?.pericias?.[bonusKey] ?? ''} placeholder="Fórmula"
@@ -508,7 +519,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                         {ORDEM_TR.map((key) => {
                           const tr = key.toLowerCase() as 'astucia' | 'fortitude' | 'integridade' | 'reflexos' | 'vontade';
                           return <div key={key} className="grid grid-cols-[1fr_auto_auto] items-center gap-2">
-                            <Label className="text-xs">{ROTULOS_TR[key]}</Label>
+                            <Label className="text-sm">{ROTULOS_TR[key]}</Label>
                             <Input aria-label={`Bônus fixo em ${ROTULOS_TR[key]}`} type="number" className="h-7 w-16" value={ent.bonusEquipado?.trs?.[tr] ?? 0}
                               onChange={(e) => setEnt({ ...ent, bonusEquipado: { ...ent.bonusEquipado, trs: { ...ent.bonusEquipado?.trs, [tr]: Number(e.target.value) || 0 } } })} />
                             <Input aria-label={`Fórmula de bônus em ${ROTULOS_TR[key]}`} className="h-7 w-32" value={ent.bonusEquipadoFormula?.trs?.[tr] ?? ''} placeholder="Fórmula"
@@ -542,7 +553,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
 
                 {(ent.categoria === 'passiva' || ent.categoria === 'talento' || ent.categoria === 'aura') && (
                   <div className="rounded-md border border-dashed border-border/60 bg-background/40 p-3 space-y-3" data-testid="mitigacoes-passiva">
-                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                    <Label className="text-sm uppercase tracking-wider text-muted-foreground">
                       Resistências, vulnerabilidades e imunidades
                     </Label>
                     <p className="text-xs text-muted-foreground leading-relaxed">Valem automaticamente enquanto esta habilidade estiver vinculada à ficha.</p>
@@ -751,7 +762,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                           <div className="text-sm font-medium text-primary-700">
                             Réplica ativada
                           </div>
-                          <div className="text-xs text-primary-500">
+                          <div className="text-sm text-primary-500">
                             Quando ativado, define as propriedades de materialização
                           </div>
                         </div>
@@ -819,7 +830,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
 
                               {/* PE para Materializar */}
                               <div className="space-y-2">
-                                <Label className="text-xs font-medium tracking-wider text-primary-600 block">
+                                <Label className="text-sm font-medium tracking-wider text-primary-600 block">
                                   PE para Materializar
                                 </Label>
                                 <div className="relative">
@@ -841,7 +852,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
 
                               {/* PE de Sustentação */}
                               <div className="space-y-2">
-                                <Label className="text-xs font-medium tracking-wider text-primary-600 block">
+                                <Label className="text-sm font-medium tracking-wider text-primary-600 block">
                                   PE de Sustentação (por turno)
                                 </Label>
                                 <div className="relative">
@@ -889,7 +900,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                                   <div className="text-sm font-medium text-primary-700">
                                     Desintegrar ao soltar
                                   </div>
-                                  <div className="text-xs text-primary-500">
+                                  <div className="text-sm text-primary-500">
                                     O item desaparece quando o personagem solta a arma
                                   </div>
                                 </div>
@@ -914,7 +925,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                                   <div className="text-sm font-medium text-primary-700">
                                     Cobrar sustentação a cada turno
                                   </div>
-                                  <div className="text-xs text-primary-500">
+                                  <div className="text-sm text-primary-500">
                                     O custo de sustentação é aplicado automaticamente no início do turno
                                   </div>
                                 </div>
@@ -1108,7 +1119,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
               <TabsContent value="duracao" className="space-y-3 pt-3">
                 {ehCategoriaSempreAtiva(ent.categoria) ? (
                   <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-1.5">
-                    <Label className="text-xs uppercase tracking-wider text-primary">
+                    <Label className="text-sm uppercase tracking-wider text-primary">
                       Duração: Permanente (sempre ativa)
                     </Label>
                     <p className="text-xs text-muted-foreground leading-relaxed">
@@ -1163,7 +1174,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                 {ent.gatilhos.map((g) => (
                   <div key={g.id} className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-3">
                     <div className="flex items-center gap-2">
-                      <Label className="text-xs text-muted-foreground uppercase tracking-wider">Quando:</Label>
+                      <Label className="text-sm text-muted-foreground uppercase tracking-wider">Quando:</Label>
                       <Select value={g.evento} onValueChange={(v) => atualizarGatilho(g.id, { evento: v as GatilhoId })}>
                         <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
                         <SelectContent>
@@ -1214,7 +1225,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
 
                         {/* Ações */}
                         <div className="space-y-1.5 pt-2 border-t border-border/40">
-                          <div className="text-xs uppercase tracking-wider text-primary/80">Então</div>
+                          <div className="text-sm uppercase tracking-wider text-primary/80">Então</div>
                           {b.acoes.map((a) => (
                             <div key={a.id} className="flex flex-wrap items-center gap-1.5 rounded-md border border-border/60 bg-background/60 p-2">
                               <Select value={a.acao} onValueChange={(v) => atualizarBloco(g.id, {
@@ -1238,7 +1249,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                                 </SelectContent>
                               </Select>
                               {a.acao === 'DANO' && (
-                                <label className="flex items-center gap-1.5 text-xs">
+                                <label className="flex items-center gap-1.5 text-sm">
                                   Tipo de dano
                                   <select className="h-8 rounded-md border border-input bg-background px-2" value={resolverTipoDano(a.tipoDano) ?? a.tipoDano ?? ''}
                                     onChange={(e) => atualizarBloco(g.id, { ...b, acoes: b.acoes.map((x) => x.id === a.id ? { ...x, tipoDano: e.target.value || undefined } : x) })}>
@@ -1271,7 +1282,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                                     </SelectTrigger>
                                     <SelectContent>
                                       {entidadesDisponiveis.length === 0 && (
-                                        <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                                        <div className="px-2 py-1.5 text-sm text-muted-foreground">
                                           Nenhuma outra entidade cadastrada
                                         </div>
                                       )}
@@ -1539,7 +1550,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                               {/* Duração POR AÇÃO — só faz sentido em ações que produzem efeito persistente. */}
                               {(a.acao === 'APLICAR_CONDICAO' || a.acao === 'REROLL') && (
                                 <div className="basis-full flex flex-wrap items-center gap-1.5 mt-1 pt-1 border-t border-border/40">
-                                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                                  <Label className="text-sm uppercase tracking-wider text-muted-foreground">
                                     ⏱ Duração do efeito
                                   </Label>
                                   <Select
@@ -1639,7 +1650,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                     {helperAberto ? 'Omni-Helper ✓' : 'Omni-Helper'}
                   </Button>
                 </div>
-                <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
+                <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm text-muted-foreground">
                   ✦ Preencha para que esta entidade aplique um <span className="text-primary font-semibold">efeito direto</span>
                   {' '}(dano, cura ou modificador). Itens com efeitos exibem botões de ação no inventário.
                   <br />
@@ -1691,7 +1702,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                       <section className="rounded-md border border-emerald-500/40 bg-emerald-500/5 p-3 space-y-2">
                         <header className="flex items-baseline justify-between gap-2 flex-wrap">
                           <div>
-                            <div className="text-xs uppercase tracking-wider text-emerald-300 font-semibold">
+                            <div className="text-sm uppercase tracking-wider text-emerald-300 font-semibold">
                               🛡️ Script Passivo (Ao Equipar)
                             </div>
                             <p className="text-xs text-muted-foreground leading-snug">
@@ -1718,7 +1729,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                           defaultTarget="USUARIO"
                         />
                         {ehAcessorio && (
-                          <div className="text-xs text-amber-200/90 flex items-start gap-1.5">
+                          <div className="text-sm text-amber-200/90 flex items-start gap-1.5">
                             <span>📌</span>
                             <span>
                               Aplicado enquanto equipado em{' '}
@@ -1732,7 +1743,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                       <section className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 space-y-2">
                         <header className="flex items-baseline justify-between gap-2 flex-wrap">
                           <div>
-                            <div className="text-xs uppercase tracking-wider text-amber-300 font-semibold">
+                            <div className="text-sm uppercase tracking-wider text-amber-300 font-semibold">
                               ⚔️ Script Ativo (Ação/Uso)
                             </div>
                             <p className="text-xs text-muted-foreground leading-snug">
@@ -1756,7 +1767,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                           ativoParaInsercao
                           defaultTarget="ALVO"
                         />
-                        <div className="rounded-md border border-border/40 bg-background/40 p-2 text-xs text-muted-foreground leading-relaxed">
+                        <div className="rounded-md border border-border/40 bg-background/40 p-2 text-sm text-muted-foreground leading-relaxed">
                           💡 <strong className="text-violet-300">Dica:</strong>{' '}
                           <code className="mx-1 text-foreground/80">subtrair 1d8 + forca em alvo.vida_atual tipo DQ</code>{' '}
                           ou <code className="text-foreground/80">somar 2d4 em vida_atual</code> para curar o usuário.
@@ -1918,7 +1929,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                 <EditorAcoesAtivas ent={ent} setEnt={setEnt} />
               </TabsContent>
               <TabsContent value="comercio" className="space-y-3 pt-3">
-                <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
+                <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm text-muted-foreground">
                   ⚠ Esta camada é <span className="text-primary font-semibold">privada do Mestre</span>.
                   Jogadores nunca veem <code>hiddenTags</code> nem o flag <code>isBought</code> na ficha.
                 </div>
@@ -2016,7 +2027,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
           </div>
         </div>
 
-        <div className="flex flex-wrap justify-end items-center gap-2 pt-3 border-t border-border">
+        <SheetFooter className="flex flex-wrap justify-end items-center gap-2 pt-3 border-t border-border">
           {onProporConceito && (
             <Button
               type="button"
@@ -2028,11 +2039,21 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
               💡 Propor Apenas Conceito
             </Button>
           )}
-          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => { onSalvar(ent); onClose(); }} className="bg-primary hover:bg-primary/90">
+          <Button variant="ghost" onClick={onCancelar}>Cancelar</Button>
+          <Button
+            onClick={() => {
+              onSalvar(ent);
+              if (onSalvarEFechar) {
+                onSalvarEFechar(ent);
+              } else {
+                onCancelar();
+              }
+            }}
+            className="bg-primary hover:bg-primary/90"
+          >
             Salvar Entidade
           </Button>
-        </div>
+        </SheetFooter>
 
         {/* === Diálogo do Modo Preguiça (Propor Apenas Conceito) ============ */}
         {onProporConceito && (
@@ -2048,7 +2069,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
               </DialogHeader>
 
               <div className="space-y-3">
-                <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-[12px] text-amber-100/95 leading-relaxed space-y-1.5">
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-base text-amber-100/95 leading-relaxed space-y-1.5">
                   <p>
                     <strong>Como funciona:</strong> você não precisa preencher fórmulas, gatilhos
                     ou mecânica. Basta escrever <em>nome</em> e <em>descrição</em> da sua ideia.
@@ -2111,7 +2132,7 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
                     };
                     onProporConceito(conceito);
                     setConceitoAberto(false);
-                    onClose();
+                    onCancelar();
                   }}
                 >
                   💡 Enviar Conceito ao Mestre
@@ -2120,8 +2141,8 @@ export function ConstrutorEntidade({ aberto, onClose, entidadeInicial, onSalvar,
             </DialogContent>
           </Dialog>
         )}
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -2193,7 +2214,7 @@ function EffectCard({
               a ambiguidade entre dano e cura. */}
           <div className="grid gap-2 pt-2 grid-cols-1 md:grid-cols-3">
             <div>
-              <Label className="text-xs">Tipo de Ação</Label>
+              <Label className="text-sm">Tipo de Ação</Label>
               <Select
                 value={efeito.type}
                 onValueChange={(v) => onChange({ type: v as CombatEffect['type'] })}
@@ -2217,7 +2238,7 @@ function EffectCard({
               </Select>
             </div>
             <div>
-              <Label className="text-xs">Alvo do Efeito</Label>
+              <Label className="text-sm">Alvo do Efeito</Label>
               <Select
                 value={efeito.target}
                 onValueChange={(v) => onChange({ target: v as CombatEffect['target'] })}
@@ -2231,7 +2252,7 @@ function EffectCard({
               </Select>
             </div>
             <div>
-              <Label className="text-xs">Afetar Recurso</Label>
+              <Label className="text-sm">Afetar Recurso</Label>
               <SeletorRecurso
                 value={efeito.resourcePath ?? ''}
                 onChange={(v) => onChange({ resourcePath: v })}
@@ -2242,13 +2263,13 @@ function EffectCard({
           </div>
 
           {/* Legenda dinâmica: explica em linguagem natural o que vai acontecer */}
-          <div className="rounded-md border border-dashed border-primary/30 bg-primary/5 p-2 text-xs leading-relaxed text-muted-foreground">
+          <div className="rounded-md border border-dashed border-primary/30 bg-primary/5 p-2 text-sm leading-relaxed text-muted-foreground">
             <span className="text-primary/80 font-semibold mr-1">ⓘ</span>
             {descreverImpactoEfeito(efeito.type, efeito.resourcePath)}
           </div>
 
           {/* Resumo da regra (Ação + Recurso + Fórmula) ----------------- */}
-          <div className="rounded-md border border-border/50 bg-background/60 p-2 text-xs leading-relaxed">
+          <div className="rounded-md border border-border/50 bg-background/60 p-2 text-sm leading-relaxed">
             <span className="text-muted-foreground">Regra: </span>
             <span
               className={
@@ -2267,7 +2288,7 @@ function EffectCard({
             </code>
             <span className="text-muted-foreground"> ← </span>
             <code className="font-mono text-foreground/90">{efeito.formula || '—'}</code>
-            <div className="mt-1 text-xs text-muted-foreground italic">
+            <div className="mt-1 text-sm text-muted-foreground italic">
               ⇒ {rotuloTipo} <span className="text-foreground/70">→ {rotuloAlvo}</span>
             </div>
           </div>
@@ -2275,7 +2296,7 @@ function EffectCard({
           {/* Tipo de Dano (apenas Modo Simples, para descrever a natureza) */}
           {modo === 'simples' && (
             <div>
-              <Label className="text-xs">Tipo de Dano</Label>
+              <Label className="text-sm">Tipo de Dano</Label>
               <Select
                 value={resolverTipoDano(efeito.damageType) ?? efeito.damageType ?? 'sem_tipo'}
                 onValueChange={(v) => onChange({ damageType: v === 'sem_tipo' ? undefined : v })}
@@ -2294,7 +2315,7 @@ function EffectCard({
             </div>
           )}
           {modo === 'avancado' && (
-            <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-2 text-xs text-amber-200/90 leading-snug">
+            <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-2 text-sm text-amber-200/90 leading-snug">
               ⚠ <strong>Modo Avançado:</strong> a tríade <em>Ação + Alvo + Recurso</em> acima é obrigatória —
               ela elimina a ambiguidade entre dano e cura. A fórmula calcula o <em>Resultado</em> que será
               aplicado segundo a Ação escolhida (Dano subtrai, Cura soma, Modificar fixa).
@@ -2306,7 +2327,7 @@ function EffectCard({
           ) : (
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label className="text-xs">Fórmula de Efeito</Label>
+                <Label className="text-sm">Fórmula de Efeito</Label>
                 {onAbrirHelper && (
                   <Button
                     type="button"
@@ -2366,7 +2387,7 @@ function EffectCard({
                     {/* Encadeamento de efeitos */}
                     {indice > 1 && (
                       <>
-                        <div className="px-2 py-1 text-xs uppercase tracking-wider text-muted-foreground">Encadeamento</div>
+                        <div className="px-2 py-1 text-sm uppercase tracking-wider text-muted-foreground">Encadeamento</div>
                         {Array.from({ length: indice - 1 }).map((_, i) => (
                           <SelectItem key={`r${i + 1}`} value={`RESULTADO_${i + 1}`}>
                             <span className="font-mono text-amber-300">@RESULTADO_{i + 1}</span>
@@ -2548,14 +2569,14 @@ function SemanticBuilder({
 
   return (
     <div className="space-y-3 rounded-md border border-border/40 bg-background/40 p-2.5">
-      <div className="text-xs uppercase tracking-wider text-muted-foreground">
+      <div className="text-sm uppercase tracking-wider text-muted-foreground">
         Construtor de Frase Natural
       </div>
 
       {/* Linha BASE: [Base] [Ação] [Valor] ----------------------------------- */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
         <div>
-          <Label className="text-xs text-sky-400">① Base / Contexto</Label>
+          <Label className="text-sm text-sky-400">① Base / Contexto</Label>
           <Select value={ctx} onValueChange={(v) => atualizar({ ctx: v })}>
             <SelectTrigger className="h-8 text-xs border-sky-500/40 bg-sky-500/5">
               <SelectValue />
@@ -2568,7 +2589,7 @@ function SemanticBuilder({
           </Select>
         </div>
         <div>
-          <Label className="text-xs text-primary">② Operação</Label>
+          <Label className="text-sm text-primary">② Operação</Label>
           <Select value={acao} onValueChange={(v) => atualizar({ acao: v as typeof acao })}>
             <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -2579,7 +2600,7 @@ function SemanticBuilder({
           </Select>
         </div>
         <div>
-          <Label className="text-xs">③ Valor</Label>
+          <Label className="text-sm">③ Valor</Label>
           <Input
             type="number"
             value={valor}
@@ -2605,7 +2626,7 @@ function SemanticBuilder({
             }`}
           />
         </button>
-        <Label className="text-xs cursor-pointer" onClick={() => atualizar({ usarCondicao: !usarCondicao })}>
+        <Label className="text-sm cursor-pointer" onClick={() => atualizar({ usarCondicao: !usarCondicao })}>
           Aplicar uma condição (Se… então…)
         </Label>
       </div>
@@ -2613,12 +2634,12 @@ function SemanticBuilder({
       {/* Condicional ------------------------------------------------------- */}
       {usarCondicao && (
         <div className="space-y-2 rounded border border-amber-500/30 bg-amber-500/5 p-2">
-          <div className="text-xs uppercase tracking-wider text-amber-300/90 font-semibold">
+          <div className="text-sm uppercase tracking-wider text-amber-300/90 font-semibold">
             Se a condição for verdadeira…
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
             <div>
-              <Label className="text-xs">Se: Sujeito</Label>
+              <Label className="text-sm">Se: Sujeito</Label>
               <Select value={sujeitoId} onValueChange={(v) => atualizar({ sujeitoId: v })}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -2629,7 +2650,7 @@ function SemanticBuilder({
               </Select>
             </div>
             <div>
-              <Label className="text-xs">For: Operador</Label>
+              <Label className="text-sm">For: Operador</Label>
               <Select value={operadorId} onValueChange={(v) => atualizar({ operadorId: v })}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -2640,7 +2661,7 @@ function SemanticBuilder({
               </Select>
             </div>
             <div>
-              <Label className="text-xs">Limite</Label>
+              <Label className="text-sm">Limite</Label>
               <Select value={limiteId} onValueChange={(v) => atualizar({ limiteId: v })}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -2652,7 +2673,7 @@ function SemanticBuilder({
             </div>
           </div>
           <div>
-            <Label className="text-xs">Ação: então…</Label>
+            <Label className="text-sm">Ação: então…</Label>
             <Select value={acaoCondicaoId} onValueChange={(v) => atualizar({ acaoCondicaoId: v })}>
               <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -2667,10 +2688,10 @@ function SemanticBuilder({
 
       {/* Pré-visualização da fórmula gerada -------------------------------- */}
       <div className="rounded border border-border/40 bg-card/60 px-2 py-1.5">
-        <div className="text-xs uppercase tracking-wider text-muted-foreground mb-0.5">
+        <div className="text-sm uppercase tracking-wider text-muted-foreground mb-0.5">
           Fórmula gerada
         </div>
-        <code className="text-xs font-mono text-primary break-all">
+        <code className="text-sm font-mono text-primary break-all">
           {efeito.formula || '— vazio —'}
         </code>
       </div>

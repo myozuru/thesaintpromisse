@@ -1,5 +1,6 @@
 import type { DamageType } from '@/types';
 import type { InvocacaoControlador } from './tipos';
+import { ALCANCE_BASE_INVOCACAO_M } from './alcanceInvocacao';
 
 export type IdDezSombras =
   | 'cao-branco' | 'cao-preto' | 'nue' | 'sapo' | 'grande-serpente'
@@ -320,6 +321,7 @@ export function criarPacoteDezSombras(donoCharacterId: string, incluirHomebrew =
         grau: perfil.grau,
         atributos: { ...perfil.atributos },
         custoInvocacaoPE: perfil.custoPE,
+        alcanceInvocacaoM: ALCANCE_BASE_INVOCACAO_M,
         domado: perfil.domadoInicialmente,
         aprovacaoMestre: 'aprovada' as const,
         versaoModelo: 1,

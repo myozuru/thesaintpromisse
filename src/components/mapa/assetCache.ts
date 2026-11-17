@@ -47,11 +47,27 @@ export const assetCache = {
       if (!rec) return null;
       const entry = makeEntry(rec.blob);
       cache.set(id, entry);
-      inflight.delete(id);
       return entry;
     })();
     inflight.set(id, p);
-    return p;
+    try {
+      return await p;
+    } finally {
+      inflight.delete(id);
+    }
+  },
+  /** Aguarda a decodificação: existir no cache ainda não significa estar pronta para o canvas. */
+  async ready(id: string): Promise<CacheEntry | null> {
+    const entry = cache.get(id);
+    if (!entry) return null;
+    if (entry.ready) return entry;
+    try {
+      await entry.img.decode();
+      entry.ready = entry.img.naturalWidth > 0 && entry.img.naturalHeight > 0;
+      return entry.ready ? entry : null;
+    } catch {
+      return null;
+    }
   },
   /** Insere um blob novo no IDB + cache, retorna o id. */
   async put(blob: Blob, mime?: string): Promise<string> {

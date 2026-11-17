@@ -187,7 +187,7 @@ export function CombatTrackersCard({ character: c }: Props) {
               <span className="text-accent">{row.icon}</span>
               <div>
                 <div className="font-bold">{row.label}</div>
-                <div className="text-[10.5px] text-muted-foreground">{row.description}</div>
+                <div className="text-xs text-muted-foreground">{row.description}</div>
               </div>
             </div>
             <div className={cn(
@@ -237,7 +237,7 @@ export function CombatTrackersCard({ character: c }: Props) {
             <span className="text-accent"><Footprints className="h-3.5 w-3.5" /></span>
             <div>
               <div className="font-bold">Investida Aprimorada</div>
-              <div className="text-[10.5px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 +{investida.moveBonusMeters}m mov · +{investida.hitBonus} acerto · {investida.onHit}
               </div>
             </div>
@@ -262,7 +262,7 @@ export function CombatTrackersCard({ character: c }: Props) {
           <div className="flex items-center gap-1.5 text-xs">
             <Zap className="h-3.5 w-3.5 text-accent" />
             <span className="font-bold">Físico Aperfeiçoado</span>
-            <span className="text-[10.5px] text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               · escolha ativa muda passivos
             </span>
           </div>
@@ -278,7 +278,7 @@ export function CombatTrackersCard({ character: c }: Props) {
                   addLog('system', `⚙️ ${c.name}: Físico Aperfeiçoado alterado para "${v.label}".`);
                 }}
                 className={cn(
-                  'rounded-full border px-2 py-0.5 text-[10.5px] transition',
+                  'rounded-full border px-2 py-0.5 text-xs transition',
                   fisicoChoice === v.key
                     ? 'border-primary/60 bg-primary/15 text-primary font-bold'
                     : 'border-border bg-background text-muted-foreground hover:bg-muted/50',
@@ -299,7 +299,7 @@ export function CombatTrackersCard({ character: c }: Props) {
             <span className="text-accent"><Megaphone className="h-3.5 w-3.5" /></span>
             <div>
               <div className="font-bold">Discurso Motivador (Ação Completa)</div>
-              <div className="text-[10.5px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 {discursoCalc.eligible
                   ? `+${discursoCalc.tempHP} PV Temp por aliado · 1 buff por criatura por Descanso Longo`
                   : 'Requer Persuasão treinada.'}

@@ -1,25 +1,102 @@
-import { EmpunharArmaButton } from './EmpunharArmaButton';
+'use client';
+
+import { useState, useCallback, useMemo, useEffect, useRef, useLayoutEffect } from 'react';
+import {
+  Shield, Heart, Zap, Flame, Sword, Sparkles, Skull, Star, ScrollText,
+  AlertTriangle, Gem, Backpack, ChevronDown, Plus, X, Trash2, Copy,
+  Dice1, Target, Circle, HelpCircle, Wand2, BookOpen, Crown, Dumbbell,
+  Brain, Eye, ShieldAlert, Feather, Anchor, Hash, Layers,
+  Droplets, Battery, Scale, Swords, EyeOff, ChevronUp, RotateCcw, Crosshair, Moon, Wallet, Info, Edit,
+} from 'lucide-react';
+import { useCharacterStore } from '@/stores/useCharacterStore';
+import { useCombatStore } from '@/stores/useCombatStore';
+import { useChronosStore } from '@/stores/useChronosStore';
+import { useLogStore } from '@/stores/useLogStore';
+import { useRoleStore } from '@/stores/useRoleStore';
+import { useProfileStore } from '@/stores/useProfileStore';
+import { useItemStore } from '@/stores/useItemStore';
+import { useInventoryStore, type InventoryItem } from '@/stores/useInventoryStore';
+import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
+import { useReactionStore } from '@/stores/useReactionStore';
+import { useSpellProposalStore } from '@/stores/useSpellProposalStore';
+import { usePassiveProposalStore } from '@/stores/usePassiveProposalStore';
+import { playClickSound, playDiceSound, playFichaCreateSound, playToggleSound, playSuccessSound, playErrorSound, playFichaToggleSound } from '@/lib/sounds';
+import { cn } from '@/lib/utils';
+import { getTrainingBonus, getMasteryBonus, getLevelSkillBonus, getBaseAttackBonus } from '@/types';
+import { getTrainingBonusByLevel, getHitDiceMax, MAX_LEVEL, getKeyAttrForSpec } from '@/lib/levelEngine';
+import { isCamActive as isCamActiveFn } from '@/lib/camCores';
+import { useAttributeLockConfirm } from '@/components/fichas/AttributeLockConfirm';
+import type { EntidadeOmni } from '@/lib/omni/tipos';
+import {
+  Character,
+  Attribute,
+  CharacterCategory,
+  Specialization,
+  Motivation,
+  Origin,
+  ItemSlotType,
+  ALL_CONDITIONS,
+  ITEM_SLOT_LABELS,
+  DamageType,
+  Spell,
+  SpellBuff,
+  Passive,
+  ActiveBuff,
+  ActiveCondition,
+  AccessorySlots,
+  DAMAGE_TYPES,
+  DAMAGE_TYPE_LABELS,
+  DAMAGE_TYPE_ABBR,
+  CHARACTER_CLASSES,
+  CharacterClass,
+  SPECIALIZATIONS,
+  MOTIVATIONS,
+  ORIGINS,
+  SPELL_LEVELS,
+  SpellLevel,
+  SpellCondition,
+  SPELL_RANGES,
+  SPELL_TARGET_MODES,
+  SpellTargetMode,
+  SaveAttr,
+  SAVE_ATTRS,
+  APTITUDE_KEYS,
+  APTITUDE_LABELS,
+  APTITUDE_MAX,
+  createDefaultCursedAptitudes,
+  type AptitudeKey,
+  createEmptyRdByType,
+  createEmptyAccessorySlots,
+  getTrainingValue,
+} from '@/types';
+import { HungerBar } from '@/components/fichas/HungerBar';
+import { AuraAptitudesPanel } from '@/components/fichas/AuraAptitudesPanel';
+import { ClAptitudesPanel } from '@/components/fichas/ClAptitudesPanel';
+import { DomAptitudesPanel } from '@/components/fichas/DomAptitudesPanel';
+import { BarAptitudesPanel } from '@/components/fichas/BarAptitudesPanel';
+import { ErAptitudesPanel } from '@/components/fichas/ErAptitudesPanel';
+import { SpecialAptitudesPanel } from '@/components/fichas/SpecialAptitudesPanel';
+import { CursedExclusivePanel } from '@/components/fichas/CursedExclusivePanel';
+import { DotesPanel } from '@/components/fichas/DotesPanel';
+import { EmpolgacaoPanel, SpecAbilitiesPanel } from '@/components/fichas/SpecAbilitiesPanel';
+import { EmpunharArmaButton } from '@/components/fichas/EmpunharArmaButton';
 import { PortasDaMorteCard } from './PortasDaMorteCard';
-import { SoltarItemButton } from './SoltarItemButton';
+import { OmniVinculadosList } from './OmniVinculadosList';
+import { AcoesAtivasSection } from './AcoesAtivasSection';
+import { OmniItemDescription } from '@/components/omni/OmniItemDescription';
 import { OmniItemImagem } from '@/components/omni/OmniItemImagem';
 import { ContadoresEquipamento } from '@/components/omni/ContadoresEquipamento';
-import { consumeCritNegated } from '@/lib/suporteNegacao';
-import { implementoMarcialBonus } from '@/lib/golpeEspecial';
-import { InspiradoButton } from './SuporteNivel4Sections';
-import { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
-import { Character, Attribute, Passive, Spell, ActiveBuff, DAMAGE_TYPES, DAMAGE_TYPE_LABELS, DAMAGE_TYPE_ABBR, DamageType, SpellBuff, createEmptyRdByType, CHARACTER_CLASSES, CharacterClass, SPECIALIZATIONS, Specialization, MOTIVATIONS, Motivation, ORIGINS, Origin, createEmptyAccessorySlots, AccessorySlots, ItemSlotType, ITEM_SLOT_LABELS, ALL_CONDITIONS, SPELL_LEVELS, SpellLevel, SpellCondition, SPELL_RANGES, SPELL_TARGET_MODES, SpellTargetMode, getTrainingBonus, getMasteryBonus, getLevelSkillBonus, getBaseAttackBonus, getTrainingValue, SaveAttr, SAVE_ATTRS, APTITUDE_KEYS, APTITUDE_LABELS, APTITUDE_MAX, createDefaultCursedAptitudes, type AptitudeKey } from '@/types';
-import { SpellCreationAssistant } from './SpellCreationAssistant';
-import { OmniVinculadosList } from './OmniVinculadosList';
-import { podeUsarVersaoAprovada } from '@/lib/controlador/aprovacao';
-import { escaparAgarradoPorInvocacao, type PericiaFugaSapo } from '@/lib/controlador/mapa';
-import { BlindfoldSlot } from './BlindfoldSlot';
-import { useCharacterStore } from '@/stores/useCharacterStore';
-import { useRoleStore } from '@/stores/useRoleStore';
-import { useItemStore } from '@/stores/useItemStore';
-import { useLogStore } from '@/stores/useLogStore';
-import { useReactionStore } from '@/stores/useReactionStore';
-import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
-import { useInventoryStore, type InventoryItem } from '@/stores/useInventoryStore';
+import { LevelUpDialog } from '@/components/fichas/LevelUpDialog';
+import { AttributeSpendDialog } from '@/components/fichas/AttributeSpendDialog';
+import { PoolGrantDialog } from '@/components/fichas/PoolGrantDialog';
+import { CamDeathReactionDialog } from '@/components/fichas/CamDeathReactionDialog';
+import { SpellApplyDialog } from './SpellApplyDialog';
+import { ItemDetailsDialog, type ItemDetailsTarget } from './ItemDetailsDialog';
+import { SoltarItemButton } from '@/components/fichas/SoltarItemButton';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 import { avaliarFormula } from '@/lib/omni/parser';
 import { montarVariaveisDoPersonagem } from '@/lib/omni/resolvedor';
 import { SYSTEM_ACTIONS } from '@/lib/omni/constantesDoSistema';
@@ -36,35 +113,24 @@ import {
   validarDestinoAplicacao,
 } from '@/lib/omni/aplicarEfeito';
 import { executarCombatEffect, validarEfeitosAtivosDaFicha } from '@/lib/omni/executarSubEfeito';
-import { useSpellProposalStore } from '@/stores/useSpellProposalStore';
-import { usePassiveProposalStore } from '@/stores/usePassiveProposalStore';
+import { applyOriginEffects } from '@/lib/originEngine';
+import { getMaxSpells, getPassiveSpellLevel, isPassiveActive } from '@/lib/spellRules';
 import { rollD20Com, rollDiceCom } from '@/lib/dice';
 import { perguntarFortuna } from '@/lib/fortuna';
 import { posturaPericia } from '@/lib/posturas';
 import { ehFurtividade, penalidadeChamativa, presencaSuprimidaBonus } from '@/lib/presencaSuprimida';
 import { guardaEstudadaTrBonus } from '@/lib/guardaEstudada';
-
 import { hasSpecAbility } from '@/lib/suporteNivel2';
 import { PRE_ANALISE_ATENCAO, PRE_ANALISE_ID } from '@/lib/suportePreAnaliseRecompensa';
 import { consumeAdvantageFor, consumeFlatBonusFor, applyAdvantageToD20 } from '@/lib/omni/rollAdvantage';
 import { maybeApplyRecompensa } from '@/lib/suportePreAnaliseRecompensa';
-import { cn } from '@/lib/utils';
 import { getReactionsAvailable } from '@/lib/reactionBudget';
-import { Eye, EyeOff, Dice1, ChevronDown, ChevronUp, Zap, Plus, X, Heart, Sparkles, Shield, Backpack, Star, Crosshair, RotateCcw, Gem, ScrollText, ShieldAlert, AlertTriangle, HelpCircle, Wand2, Moon, Wallet, Sword, Trash2 } from 'lucide-react';
-import { playDiceSound, playClickSound, playToggleSound, playSuccessSound, playErrorSound, playFichaToggleSound } from '@/lib/sounds';
-import { NullSafeInput } from './NullSafeInput';
-import { StatusBar } from './StatusBar';
-import { StatValue, type StatModifierOrigin } from './StatValue';
-import { toast } from 'sonner';
 import { listarRecursosAlterados, montarMensagemEquipar, type ChaveBonusEquipado } from '@/lib/omni/omniBonusLabels';
-import { HungerBar } from './HungerBar';
 import { ExhaustionControl } from './ExhaustionControl';
 import { getExhaustionHpReduction } from '@/lib/exhaustionEffects';
 import { DeleteConfirm } from './DeleteConfirm';
-import { SpellApplyDialog } from './SpellApplyDialog';
 import { ActiveConcentrationPanel } from './ActiveConcentrationPanel';
 import { SpellLevelGuide } from './SpellLevelGuide';
-import { LevelUpDialog } from './LevelUpDialog';
 import { CamCoreTabs } from './CamCoreTabs';
 import { FahPanel } from './FahPanel';
 import { SpecReactionsPanel } from './SpecReactionsPanel';
@@ -72,65 +138,35 @@ import { SpecActionsPanel } from './SpecActionsPanel';
 import { SuportePanel } from './SuportePanel';
 import { CombateEstilosPanel } from './CombateEstilosPanel';
 import { AttackPanel } from './AttackPanel';
-import { AcoesAtivasSection } from './AcoesAtivasSection';
-import { CamDeathReactionDialog } from './CamDeathReactionDialog';
 import { PendingLevelChoicesPanel, hasPendingChoices } from './PendingLevelChoicesPanel';
 import { PendingSummaryButton } from './PendingSummaryButton';
 import { ConquistasButton } from '@/components/conquistas/ConquistasButton';
-import { AttributeSpendDialog } from './AttributeSpendDialog';
-import { PoolGrantDialog } from './PoolGrantDialog';
+import { AttributeSpendDialog as AttributeSpendDialogV2 } from './AttributeSpendDialog';
+import { PoolGrantDialog as PoolGrantDialogV2 } from './PoolGrantDialog';
 import { SorcererRankBadge } from './SorcererRankBadge';
-import { SpecAbilitiesPanel, EmpolgacaoPanel } from './SpecAbilitiesPanel';
-import { OmniItemDescription } from '@/components/omni/OmniItemDescription';
-import { ItemDetailsDialog, type ItemDetailsTarget } from './ItemDetailsDialog';
-import { AuraAptitudesPanel } from './AuraAptitudesPanel';
-import { ClAptitudesPanel } from './ClAptitudesPanel';
-import { DomAptitudesPanel } from './DomAptitudesPanel';
-import { BarAptitudesPanel } from './BarAptitudesPanel';
-import { ErAptitudesPanel } from './ErAptitudesPanel';
-import { SpecialAptitudesPanel } from './SpecialAptitudesPanel';
-import { CursedExclusivePanel } from './CursedExclusivePanel';
-import { DotesPanel } from './DotesPanel';
-import { isCamActive } from '@/lib/camCores';
-import { getPassiveSpellLevel, isPassiveActive, getMaxSpells } from '@/lib/spellRules';
-import { applyOriginEffects } from '@/lib/originEngine';
-import { getTrainingBonusByLevel, getHitDiceMax, MAX_LEVEL, getKeyAttrForSpec } from '@/lib/levelEngine';
-import { aggregateTalentBonuses } from '@/lib/talentEffects';
-import { aggregateAuraEffects, getPendingAbsorbedDice, hasKokusen, getKokusenCritThreshold } from '@/lib/auraEffects';
-import { aggregateConditionMods, getDefenseModFromConditions, getSkillModFromConditions, getAutoCritFromConditions, hasLancaReactionSuppression } from '@/lib/conditionEffects';
-import { useCombatStore } from '@/stores/useCombatStore';
-import { useProfileStore } from '@/stores/useProfileStore';
-import { notifyMissedRangedAttack } from '@/stores/useReactionStore';
-import { TalentBonusBadge } from './TalentBonusBadge';
 import { RestModal } from './RestModal';
 import { PreparedSpellsDialog } from './PreparedSpellsDialog';
-import { useAttributeLockConfirm } from './AttributeLockConfirm';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getMobilidadeBonus } from '@/lib/movementBudget';
 import { getOtimizacaoSlotsBonus } from '@/lib/suporteProtetor';
+import { aggregateTalentBonuses } from '@/lib/talentEffects';
+import { aggregateAuraEffects, getPendingAbsorbedDice, hasKokusen, getKokusenCritThreshold, hasEnergiaReversa as hasEnergiaReversaFn } from '@/lib/auraEffects';
+import { aggregateConditionMods, getDefenseModFromConditions, getSkillModFromConditions, getAutoCritFromConditions, hasLancaReactionSuppression } from '@/lib/conditionEffects';
+import { notifyMissedRangedAttack } from '@/stores/useReactionStore';
+import { TalentBonusBadge } from './TalentBonusBadge';
+import { implementoMarcialBonus } from '@/lib/golpeEspecial';
+import { InspiradoButton } from './SuporteNivel4Sections';
+import { SpellCreationAssistant } from './SpellCreationAssistant';
+import { podeUsarVersaoAprovada } from '@/lib/controlador/aprovacao';
+import { escaparAgarradoPorInvocacao, type PericiaFugaSapo } from '@/lib/controlador/mapa';
+import { BlindfoldSlot } from './BlindfoldSlot';
+import { consumeCritNegated } from '@/lib/suporteNegacao';
 
-interface Props {
-  character: Character;
-  /** Esconde o Painel de Ataque (usado no mapa: ele vive na hotbar do turno). */
-  hideAttackPanel?: boolean;
-  /** Reorganiza o cabeçalho para a coluna lateral estreita do mapa. */
-  compactHeader?: boolean;
-}
+// ============================================================================
+// INLINE COMPONENTS (missing from codebase)
+// ============================================================================
 
-interface RollResult {
-  label: string;
-  d20: number;
-  bonus: number;
-  total: number;
-  hitResults?: { name: string; hit: 'hit' | 'miss' | 'crit' | 'critFail' }[];
-}
-
-/** Calculate D&D-style attribute modifier: (value - 10) / 2, floored */
-export function getAttrModifier(value: number): number {
-  return Math.floor((value - 10) / 2);
-}
-
-/* ─── Smooth collapsible wrapper (height-based, animação garantida em todos os navegadores) ─── */
+// SmoothCollapse preserves nested state and animates both height and opacity.
 function SmoothCollapse({ open, children, className }: { open: boolean; children: React.ReactNode; className?: string }) {
   const innerRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState<number | 'auto'>(open ? 'auto' : 0);
@@ -140,7 +176,6 @@ function SmoothCollapse({ open, children, className }: { open: boolean; children
     const el = innerRef.current;
     if (!el) return;
 
-    // Primeiro render: aplica estado final sem animar
     if (firstRender.current) {
       firstRender.current = false;
       setHeight(open ? 'auto' : 0);
@@ -148,23 +183,20 @@ function SmoothCollapse({ open, children, className }: { open: boolean; children
     }
 
     if (open) {
-      // Abrindo: 0 → scrollHeight → auto
       const target = el.scrollHeight;
       setHeight(0);
-      // força reflow antes de transicionar
       requestAnimationFrame(() => {
         requestAnimationFrame(() => setHeight(target));
       });
       const timeout = setTimeout(() => setHeight('auto'), 620);
       return () => clearTimeout(timeout);
-    } else {
-      // Fechando: auto → scrollHeight → 0
-      const current = el.scrollHeight;
-      setHeight(current);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => setHeight(0));
-      });
     }
+
+    const current = el.scrollHeight;
+    setHeight(current);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setHeight(0));
+    });
   }, [open]);
 
   return (
@@ -187,18 +219,60 @@ function SmoothCollapse({ open, children, className }: { open: boolean; children
   );
 }
 
+// ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
+
+interface Props {
+  character: Character;
+  /** Esconde o Painel de Ataque (usado no mapa: ele vive na hotbar do turno). */
+  hideAttackPanel?: boolean;
+  /** Reorganiza o cabeçalho para a coluna lateral estreita do mapa. */
+  compactHeader?: boolean;
+}
+
+interface RollResult {
+  label: string;
+  d20: number;
+  bonus: number;
+  total: number;
+  hitResults?: { name: string; hit: 'hit' | 'miss' | 'crit' | 'critFail' }[];
+}
+
+/** Calculate D&D-style attribute modifier: (value - 10) / 2, floored */
+export function getAttrModifier(value: number): number {
+  return Math.floor((value - 10) / 2);
+}
+
 /* ─── Collapsible Section ─── */
-function Section({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
+function Section({
+  icon: Icon,
+  title,
+  children,
+  defaultOpen = false,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
-    <div className="rounded-xl border border-border overflow-hidden">
-      <button onClick={() => setOpen(!open)} className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-secondary/30 transition-colors">
-        <span className="text-primary">{icon}</span>
-        <span className="flex-1 text-sm font-bold uppercase tracking-wider text-foreground">{title}</span>
-        <ChevronDown className={cn('h-3.5 w-3.5 text-muted-foreground transition-transform duration-300', open && 'rotate-180')} />
+    <div className="border border-border/50 rounded-xl overflow-hidden bg-background/50">
+      <button
+        type="button"
+        onClick={() => { playClickSound(); setIsOpen(o => !o); }}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-secondary/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+        aria-expanded={isOpen}
+      >
+        <Icon className="h-5 w-5 text-muted-foreground flex-shrink-0" aria-hidden="true" />
+        <span className="font-display text-base font-semibold text-foreground flex-1">{title}</span>
+        <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform duration-300 flex-shrink-0', isOpen && 'rotate-180')} aria-hidden="true" />
       </button>
-      <SmoothCollapse open={open}>
-        <div className="px-3 pb-3 pt-1">{children}</div>
+      <SmoothCollapse open={isOpen}>
+        <div className="px-4 pb-4 pt-2 border-t border-border/30">
+          {children}
+        </div>
       </SmoothCollapse>
     </div>
   );
@@ -250,7 +324,6 @@ function DamageHealPanel({ sourceId, sourceName }: { sourceId: string; sourceNam
       `✨ ${sourceName}: Afinidade Ampliada${afinidadeElem ? ` (${afinidadeElem})` : ''} → +${afinidadeBonus} de dano somado ao valor.`,
     );
   };
-
 
   const toggleTarget = (id: string) => {
     setSelectedTargets((prev) =>
@@ -323,6 +396,7 @@ function DamageHealPanel({ sourceId, sourceName }: { sourceId: string; sourceNam
         <input
           type="text"
           inputMode="numeric"
+          aria-label="Valor para dano, cura, escudo ou redução de dano"
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder="Valor"
@@ -390,6 +464,1115 @@ function DamageHealPanel({ sourceId, sourceName }: { sourceId: string; sourceNam
   );
 }
 
+// StatusBar - inline version since the separate file has different props
+function StatusBar({
+  label,
+  current,
+  max,
+  color,
+  showInput = false,
+  onChange
+}: {
+  label: string;
+  current: number;
+  max: number;
+  color: string;
+  showInput?: boolean;
+  onChange?: (v: number) => void;
+}) {
+  const safeCurrent = Number.isFinite(current) ? Math.max(0, current) : 0;
+  const safeMax = Number.isFinite(max) ? Math.max(0, max) : 0;
+  const pct = safeMax > 0 ? Math.max(0, Math.min(100, (safeCurrent / safeMax) * 100)) : 0;
+  const [displayPct, setDisplayPct] = useState(pct);
+  const [displayCurrent, setDisplayCurrent] = useState(safeCurrent);
+  const prevRef = useRef({ pct, current: safeCurrent });
+
+  useEffect(() => {
+    const startPct = prevRef.current.pct;
+    const startCurrent = prevRef.current.current;
+    const diffPct = pct - startPct;
+    const diffCurrent = safeCurrent - startCurrent;
+    const duration = 500;
+    const startTime = performance.now();
+    let raf: number;
+
+    const animate = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplayPct(startPct + diffPct * eased);
+      setDisplayCurrent(Math.round(startCurrent + diffCurrent * eased));
+      if (progress < 1) {
+        raf = requestAnimationFrame(animate);
+      } else {
+        prevRef.current = { pct, current: safeCurrent };
+      }
+    };
+
+    raf = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(raf);
+  }, [safeCurrent, pct]);
+
+  const colorClasses: Record<string, string> = {
+    hp: 'bg-hp',
+    pe: 'bg-pe',
+    shield: 'bg-shield',
+  };
+
+  return (
+    <div className="rounded-lg border border-border/50 bg-card/50 p-3">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</span>
+        <span className="font-mono text-sm text-foreground">{displayCurrent} / {safeMax}</span>
+      </div>
+      <div className="h-2 w-full rounded-full bg-muted overflow-hidden relative">
+        <div
+          className={`h-full transition-all duration-300 ${colorClasses[color] || 'bg-primary'}`}
+          style={{ width: `${displayPct}%` }}
+        />
+      </div>
+      {showInput && onChange && (
+        <input
+          type="number"
+          min={0}
+          max={safeMax}
+          value={safeCurrent}
+          onChange={(e) => onChange(parseInt(e.target.value) || 0)}
+          className="mt-2 h-8 w-full rounded border border-input bg-background px-2 text-center text-sm font-mono"
+        />
+      )}
+    </div>
+  );
+}
+
+// CAM Panel (inline)
+function CAMPanel({ character, editMode, onUpdate }: { character: Character; editMode: boolean; onUpdate: (id: string, updates: Partial<Character>) => void }) {
+  if (!isCamActiveFn(character)) return null;
+
+  return (
+    <div className="rounded-lg border border-border/50 bg-card/50 p-3">
+      <h4 className="font-display text-sm font-semibold text-foreground uppercase tracking-wider mb-2 flex items-center gap-2">
+        <Brain className="h-4 w-4" /> CAM - Núcleos
+      </h4>
+      <div className="space-y-2">
+        <div className="text-sm text-muted-foreground">
+          Núcleo ativo: {character.activeCoreId ?? 'core1'} | Primário: {character.primaryCoreId ?? 'core1'}
+        </div>
+        {character.cores?.map((core) => (
+          <div key={core.id} className="rounded border border-border/50 bg-background/50 p-2 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="font-bold capitalize">{core.id}</span>
+              <Badge variant={core.id === character.activeCoreId ? 'default' : 'outline'} className="text-xs">
+                {core.id === character.activeCoreId ? 'Ativo' : 'Inativo'}
+              </Badge>
+              {core.destroyed && <Badge variant="destructive" className="text-xs">Destruído</Badge>}
+              {core.damaged && <Badge variant="outline" className="text-xs text-amber-400 border-amber-400">Danificado</Badge>}
+            </div>
+            <div className="flex gap-4 mt-1 text-sm text-muted-foreground">
+              <span>HP: {core.hpCurrent}/{core.hpMax}</span>
+              <span>PE: {core.peCurrent}/{core.peMax}</span>
+              <span>Esp: {core.specialization}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Spec Panel (inline)
+function SpecPanel({ character, editMode, onUpdate }: { character: Character; editMode: boolean; onUpdate: (id: string, updates: Partial<Character>) => void }) {
+  if (!character.specialization || character.specialization === 'Restringido') return null;
+
+  return (
+    <div className="rounded-lg border border-border/50 bg-card/50 p-3">
+      <h4 className="font-display text-sm font-semibold text-foreground uppercase tracking-wider mb-2 flex items-center gap-2">
+        <Crown className="h-4 w-4" /> Especialização: {character.specialization}
+      </h4>
+      <div className="space-y-1 text-sm">
+        <div>Atributo-chave: {character.keyAttribute ?? '—'}</div>
+        <div>Habilidades escolhidas: {character.chosenSpecAbilities?.length ?? 0}</div>
+        <div>Pool espec: {character.availableSpecAbilities ?? 0}</div>
+        <div>Pool talentos: {character.availableTalentOnly ?? 0}</div>
+        <div>Pool compartilhado: {character.availableSkillOnly ?? 0}</div>
+        {character.empolgacaoLevel !== undefined && (
+          <div>Empolgação (Lutador): {character.empolgacaoLevel} / 5</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// === Passive Card ===
+function PassiveCard({ passive: p, editMode, onRemove, charLevel }: { passive: Passive; editMode: boolean; onRemove: (id: string) => void; charLevel: number }) {
+  const [expanded, setExpanded] = useState(false);
+  const passiveSpellLv = getPassiveSpellLevel(p);
+  const isActive = isPassiveActive(p, charLevel);
+  const rdEntries = p.bonusRdByType ? DAMAGE_TYPES.filter(t => (p.bonusRdByType![t] || 0) !== 0) : [];
+  return (
+    <div
+      onClick={() => setExpanded(!expanded)}
+      className={cn(
+        "mb-1.5 rounded-xl border bg-secondary/30 px-3 py-2 text-sm cursor-pointer transition-all duration-200 hover:bg-secondary/50",
+        isActive ? "border-primary/30 hover:border-primary/50" : "border-border opacity-60"
+      )}
+    >
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-primary text-base">⭐</span>
+          <span className="font-bold text-foreground">{p.name}</span>
+          <span className={cn(
+            "text-xs rounded-full border px-1.5 py-0.5 font-extrabold tracking-wider",
+            isActive ? "bg-primary/15 text-primary border-primary/40" : "bg-secondary/50 text-muted-foreground border-border"
+          )} title={isActive ? `Ativa (Nível de feitiço ${passiveSpellLv})` : `Inativa — requer nível de feitiço ${passiveSpellLv}`}>
+            🔮 Nv.{passiveSpellLv}
+          </span>
+          {!isActive && <span className="text-xs text-hp font-bold">🔒 inativa</span>}
+        </div>
+        {editMode && (
+          <button onClick={(e) => { e.stopPropagation(); onRemove(p.id); }} className="text-destructive/60 hover:text-destructive flex-shrink-0"><X className="h-3.5 w-3.5" /></button>
+        )}
+      </div>
+      {p.description && (
+        <p className={cn("text-muted-foreground text-sm break-words transition-all duration-300 mt-1", !expanded && "line-clamp-2")}>{p.description}</p>
+      )}
+      <div className="flex gap-1.5 text-xs font-medium mt-1.5 flex-wrap">
+        {p.bonusHP !== 0 && <span className="rounded-full bg-hp/20 border border-hp/30 px-2 py-0.5 text-hp">HP{p.bonusHP >= 0 ? '+' : ''}{p.bonusHP}</span>}
+        {p.bonusPE !== 0 && <span className="rounded-full bg-pe/20 border border-pe/30 px-2 py-0.5 text-pe">PE{p.bonusPE >= 0 ? '+' : ''}{p.bonusPE}</span>}
+        {p.bonusESC !== 0 && <span className="rounded-full bg-shield/20 border border-shield/30 px-2 py-0.5 text-shield">ESC{p.bonusESC >= 0 ? '+' : ''}{p.bonusESC}</span>}
+        {p.bonusCA !== 0 && <span className="rounded-full bg-primary/20 border border-primary/30 px-2 py-0.5 text-primary">CA{p.bonusCA >= 0 ? '+' : ''}{p.bonusCA}</span>}
+        {p.bonusRD !== 0 && <span className="rounded-full bg-pe/15 border border-pe/30 px-2 py-0.5 text-pe" title="RD geral">🔰 RD{p.bonusRD >= 0 ? '+' : ''}{p.bonusRD}</span>}
+        {p.bonusSlots !== 0 && <span className="rounded-full bg-secondary border border-border px-2 py-0.5 text-muted-foreground">Slots{p.bonusSlots >= 0 ? '+' : ''}{p.bonusSlots}</span>}
+        {rdEntries.map(t => (
+          <span key={t} className="rounded-full bg-pe/10 border border-pe/30 px-2 py-0.5 text-pe" title={`RD ${DAMAGE_TYPE_LABELS[t]}`}>
+            🔰 {DAMAGE_TYPE_ABBR[t]}+{p.bonusRdByType![t]}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// === Passive Block ===
+function PassiveBlock({
+  charId, passives, editMode, onAdd, onRemove, charLevel, onSubmitProposal,
+}: {
+  charId: string;
+  passives: Passive[];
+  editMode: boolean;
+  onAdd: (p: Passive) => void;
+  onRemove: (id: string) => void;
+  charLevel: number;
+  /** Se definido, criar passiva ENVIA para análise do Mestre em vez de aplicar direto. */
+  onSubmitProposal?: (p: Passive) => void;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [form, setForm] = useState<{ name: string; description: string; spellLevel: SpellLevel; bonusHP: number; bonusPE: number; bonusESC: number; bonusSlots: number; bonusRD: number; bonusCA: number; bonusRdByType: Partial<Record<DamageType, number>> }>({ name: '', description: '', spellLevel: '1', bonusHP: 0, bonusPE: 0, bonusESC: 0, bonusSlots: 0, bonusRD: 0, bonusCA: 0, bonusRdByType: {} });
+  const [showRdPicker, setShowRdPicker] = useState(false);
+
+  const handleAdd = () => {
+    if (!form.name.trim()) return;
+    const cleanRd: Partial<Record<DamageType, number>> = {};
+    DAMAGE_TYPES.forEach(t => { if ((form.bonusRdByType[t] || 0) !== 0) cleanRd[t] = form.bonusRdByType[t]; });
+    const newPassive: Passive = { id: crypto.randomUUID(), name: form.name, description: form.description, spellLevel: form.spellLevel, bonusHP: form.bonusHP, bonusPE: form.bonusPE, bonusESC: form.bonusESC, bonusSlots: form.bonusSlots, bonusRD: form.bonusRD, bonusCA: form.bonusCA, bonusRdByType: Object.keys(cleanRd).length > 0 ? cleanRd : undefined };
+    if (onSubmitProposal) {
+      onSubmitProposal(newPassive);
+    } else {
+      onAdd(newPassive);
+    }
+    setForm({ name: '', description: '', spellLevel: '1', bonusHP: 0, bonusPE: 0, bonusESC: 0, bonusSlots: 0, bonusRD: 0, bonusCA: 0, bonusRdByType: {} });
+    setAdding(false);
+    setShowRdPicker(false);
+  };
+
+  if (passives.length === 0 && !editMode) {
+    return <p className="text-sm text-muted-foreground italic">Nenhuma passiva.</p>;
+  }
+
+  // RD geral + RD por tipo (somam-se na ficha).
+  const bonusFields = [
+    { key: 'bonusHP' as const, label: '❤️ HP', color: 'text-hp border-hp/30 focus:border-hp' },
+    { key: 'bonusPE' as const, label: '⚡ PE', color: 'text-pe border-pe/30 focus:border-pe' },
+    { key: 'bonusESC' as const, label: '🛡 ESC', color: 'text-shield border-shield/30 focus:border-shield' },
+    { key: 'bonusCA' as const, label: '🛡 CA', color: 'text-primary border-primary/30 focus:border-primary' },
+    { key: 'bonusSlots' as const, label: '📦 Slots', color: 'text-muted-foreground border-border' },
+  ];
+
+  return (
+    <div>
+      {passives.map((p) => (
+        <PassiveCard key={p.id} passive={p} editMode={editMode} onRemove={onRemove} charLevel={charLevel} />
+      ))}
+      {editMode && !adding && (
+        <button onClick={() => setAdding(true)} className="mt-1 flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 rounded-lg bg-primary/10 border border-primary/20 px-3 py-1.5 transition-all hover:bg-primary/20">
+          <Plus className="h-3.5 w-3.5" /> Nova Passiva
+        </button>
+      )}
+      {adding && (
+        <div className="mt-2 space-y-3 rounded-2xl border border-primary/30 bg-gradient-to-br from-[oklch(0.16_0.04_280)] to-[oklch(0.12_0.05_300)] p-4 shadow-lg shadow-primary/10">
+          <div className="flex items-center gap-2 mb-1">
+            <Star className="h-4 w-4 text-primary" />
+            <span className="text-sm font-bold text-primary uppercase tracking-wider">Nova Passiva</span>
+          </div>
+          <input
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            placeholder="Nome da passiva"
+            className="h-9 w-full rounded-xl border border-primary/30 bg-background/50 px-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none transition-colors"
+            autoFocus
+          />
+          <textarea
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            placeholder="Descrição detalhada do efeito..."
+            rows={3}
+            className="w-full rounded-xl border border-primary/30 bg-background/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none resize-y transition-colors"
+          />
+          {/* Nível de feitiço da passiva */}
+          <div className="flex items-center gap-3">
+            <label className="text-xs font-medium text-muted-foreground whitespace-nowrap">🔮 Nível de feitiço</label>
+            <select
+              value={form.spellLevel}
+              onChange={(e) => setForm({ ...form, spellLevel: e.target.value as SpellLevel })}
+              className="h-8 w-32 rounded-lg border border-primary/30 bg-background/50 px-2 text-center text-sm font-mono font-bold text-primary focus:border-primary focus:outline-none"
+            >
+              {SPELL_LEVELS.map(lv => (
+                <option key={lv} value={lv}>{lv}</option>
+              ))}
+            </select>
+            <span className="text-xs text-muted-foreground italic">
+              {isPassiveActive({ ...form, id: '', bonusRD: 0 } as Passive, charLevel) ? '✅ ativa agora' : `⚠️ requer mais nível de jogador`}
+            </span>
+          </div>
+          <div className="space-y-2 rounded-xl border border-pe/20 bg-pe/5 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-pe">🔰 RD</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={form.bonusRD || ''}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    setForm({ ...form, bonusRD: raw === '' || raw === '-' ? 0 : parseInt(raw) || 0 });
+                  }}
+                  placeholder="0"
+                  className="h-8 w-20 rounded-lg border border-pe/30 bg-background/60 px-2 text-center text-sm font-mono font-bold text-pe focus:border-pe focus:outline-none"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRdPicker(!showRdPicker)}
+                className="text-xs font-medium text-pe hover:text-pe/80 transition-colors"
+              >
+                RD por tipo {showRdPicker ? '▲' : '▼'}
+              </button>
+            </div>
+            {showRdPicker && (
+              <div className="grid grid-cols-3 gap-1.5">
+                {DAMAGE_TYPES.map((t) => (
+                  <div key={t} className="space-y-0.5">
+                    <label className="text-xs font-bold text-pe uppercase" title={DAMAGE_TYPE_LABELS[t]}>{DAMAGE_TYPE_ABBR[t]}</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={form.bonusRdByType[t] || ''}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        setForm({
+                          ...form,
+                          bonusRdByType: {
+                            ...form.bonusRdByType,
+                            [t]: raw === '' || raw === '-' ? 0 : parseInt(raw) || 0,
+                          },
+                        });
+                      }}
+                      placeholder="0"
+                      className="h-7 w-full rounded-lg border border-pe/30 bg-background/60 px-1 text-center text-xs font-mono font-bold text-pe focus:border-pe focus:outline-none"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {bonusFields.map(({ key, label, color }) => (
+              <div key={key} className="space-y-1">
+                <label className={cn("text-xs font-medium", color.split(' ')[0])}>{label}</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={form[key] || ''}
+                  onChange={(e) => { const raw = e.target.value; setForm({ ...form, [key]: raw === '' || raw === '-' ? 0 : parseInt(raw) || 0 }); }}
+                  className={cn("h-8 w-full rounded-lg border bg-background/50 px-2 text-center text-sm font-mono font-bold focus:outline-none transition-colors", color)}
+                />
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button onClick={handleAdd} className="h-9 flex-1 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-colors shadow-md shadow-primary/20">
+              {onSubmitProposal ? '📨 Enviar para análise do Mestre' : '✨ Criar Passiva'}
+            </button>
+            <button onClick={() => setAdding(false)} className="h-9 rounded-xl bg-secondary px-4 text-sm text-secondary-foreground hover:bg-secondary/80 transition-colors">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// === Spell Card ===
+function SpellCard({ spell: s, editMode, onRemove, onUse, onEdit, cooldown = 0 }: { spell: Spell; editMode: boolean; onRemove: (id: string) => void; onUse: (s: Spell) => void; onEdit?: (s: Spell) => void; cooldown?: number }) {
+  const [expanded, setExpanded] = useState(false);
+  const typeLabel = s.spellType === 'heal' ? '💚 Cura' : s.spellType === 'buff' ? '🔮 Buff' : s.spellType === 'condition' ? '⚠️ Condição' : '⚔️ Dano';
+  const actionLabels: Record<string, string> = { bonus: 'AB', action: 'AC', reaction: 'RÇ', full: 'Completa', rapida: 'AR', movimento: 'MV', free: 'LV' };
+  const actionLabel = actionLabels[s.actionType] || 'AC';
+  const dmgTypeLabel = s.damageType ? DAMAGE_TYPE_ABBR[s.damageType] : '';
+  const levelLabel = s.spellLevel || '1';
+  const rangeLabel = s.range || '';
+  return (
+    <div
+      onClick={() => setExpanded(!expanded)}
+      className="mb-1.5 rounded-xl border border-border bg-secondary/30 px-3 py-2 text-sm cursor-pointer transition-all duration-200 hover:bg-secondary/50"
+    >
+      <div className="flex items-center justify-between">
+        <div>
+          <span className="font-bold text-foreground">{s.name}</span>
+          <span className="ml-1 text-xs rounded bg-primary/20 text-primary px-1 py-0.5 font-mono">Nv.{levelLabel}</span>
+          {s.requiresConcentration && (
+            <span className="ml-1 rounded-full border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary" title="Este feitiço ocupa um slot de concentração enquanto ativo">
+              Concentração
+            </span>
+          )}
+          {s.targetMode === 'single_atk' && (
+            <span className="ml-1 text-xs rounded-full bg-primary/15 text-primary border border-primary/40 px-1.5 py-0.5 font-extrabold tracking-wider" title="Alvo Único (Ataque)">AUA</span>
+          )}
+          {s.targetMode === 'single_tr' && (
+            <span className="ml-1 text-xs rounded-full bg-neon-yellow/15 text-neon-yellow border border-neon-yellow/40 px-1.5 py-0.5 font-extrabold tracking-wider" title={`TR Alvo Único — ${s.saveAttr || 'DES'}`}>TRU{s.saveAttr ? `:${s.saveAttr}` : ''}</span>
+          )}
+          {s.targetMode === 'area_tr' && (
+            <span className="ml-1 text-xs rounded-full bg-hp/15 text-hp border border-hp/40 px-1.5 py-0.5 font-extrabold tracking-wider" title={`TR Área — ${s.saveAttr || 'DES'}`}>TRA{s.saveAttr ? `:${s.saveAttr}` : ''}</span>
+          )}
+          <span className="ml-2 text-muted-foreground text-sm">
+            PE:{s.costPE} | {s.damageDice ? `${s.damageDice}+${s.damageBonus}` : '—'} | {typeLabel} | {actionLabel}
+            {dmgTypeLabel && ` | ${dmgTypeLabel}`}
+            {rangeLabel && ` | ${rangeLabel}`}
+            {s.durationRounds > 0 && ` | ${s.durationRounds}rd`}
+            {s.bonusDC && s.bonusDC > 0 && ` | CD+${s.bonusDC}`}
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          {cooldown > 0 && (
+            <span className="rounded-md bg-hp/20 border border-hp/40 px-1.5 py-0.5 text-xs font-bold text-hp" title="Em recarga (Técnica Máxima)">
+              ⏳ Recarga: {cooldown}t
+            </span>
+          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); if (cooldown <= 0) onUse(s); }}
+            disabled={cooldown > 0}
+            title={cooldown > 0 ? `Em recarga: faltam ${cooldown} turno(s)` : 'Usar feitiço'}
+            className={cn(
+              "rounded-lg border px-2 py-0.5 transition-colors font-medium text-sm",
+              cooldown > 0
+                ? "bg-muted/40 border-muted text-muted-foreground cursor-not-allowed opacity-60"
+                : "bg-primary/20 border-primary/40 text-primary hover:bg-primary/30",
+            )}
+          >
+            Usar
+          </button>
+          <Zap className="h-3.5 w-3.5 text-primary" />
+          {editMode && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); onEdit?.(s); }}
+                className="text-primary/60 hover:text-primary ml-1 flex-shrink-0 flex items-center gap-0.5 text-xs font-bold"
+              >
+                ✏️ Editar
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); onRemove(s.id); }} className="text-destructive/60 hover:text-destructive ml-1 flex-shrink-0">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+      {/* Buff info */}
+      {s.buffs && s.buffs.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-1">
+          {s.buffs.map((b, i) => {
+            const desc = b.type === 'ca' ? `CA+${b.value}`
+              : b.type === 'hit' ? `Acerto+${b.value}`
+              : b.type === 'extraDice' ? `+${b.extraDiceCount}d${b.extraDiceSides}`
+              : `${b.targetName}+${b.value}`;
+            return (
+              <span key={i} className="rounded-full bg-pe/10 border border-pe/20 px-1.5 py-0.5 text-xs text-pe">
+                🔮 {desc} ({b.durationTurns}t)
+              </span>
+            );
+          })}
+        </div>
+      )}
+      {/* Condition info */}
+      {s.conditions && s.conditions.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-1">
+          {s.conditions.map((sc, i) => {
+            const cond = ALL_CONDITIONS.find(c => c.id === sc.conditionId);
+            if (!cond) return null;
+            const dur = sc.durationTurns > 0 ? `${sc.durationTurns}t` : `${sc.durationRounds}rd`;
+            return (
+              <span key={i} className="rounded-full bg-hp/10 border border-hp/20 px-1.5 py-0.5 text-xs text-hp">
+                {cond.icon} {cond.name} ({dur})
+              </span>
+            );
+          })}
+        </div>
+      )}
+      {s.description && (
+        <div className={cn(
+          "text-muted-foreground text-sm break-all transition-all duration-300 overflow-hidden",
+          expanded ? "mt-1 max-h-96 opacity-100" : "max-h-0 opacity-0"
+        )}>
+          {s.description}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SpellBlock({
+  spells, passivesCount = 0, editMode, onAdd, onRemove, onUse, charLevel = 1, isGolpeador = false, hasEnergiaReversa = false, maxSpells = 99, availableTags = [], cooldowns = {}, isMaster = false, hasTecnicaMaxima = false, hasTecnicaReversa = false, onSubmitProposal,
+}: {
+  spells: Spell[];
+  passivesCount?: number;
+  editMode: boolean;
+  onAdd: (s: Spell) => void;
+  onRemove: (id: string) => void;
+  onUse: (s: Spell) => void;
+  charLevel?: number;
+  isGolpeador?: boolean;
+  hasEnergiaReversa?: boolean;
+  maxSpells?: number;
+  availableTags?: { label: string; discountPE: number }[];
+  cooldowns?: Record<string, number>;
+  isMaster?: boolean;
+  hasTecnicaMaxima?: boolean;
+  hasTecnicaReversa?: boolean;
+  onSubmitProposal?: (spell: Spell) => void;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [editingSpell, setEditingSpell] = useState<Spell | null>(null);
+  const [showAssistant, setShowAssistant] = useState(false);
+  const [showGuide, setShowGuide] = useState<string | null>(null);
+
+  const [form, setForm] = useState<Partial<Spell>>({
+    name: '', description: '', costPE: 0, damageDice: '', damageBonus: 0,
+    spellType: 'damage', actionType: 'action', durationRounds: 0, range: '1,5m',
+    targetMode: 'single_atk', spellLevel: '1',
+    buffs: [], conditions: [], saveAttr: 'DES'
+  });
+
+  const [buffs, setBuffs] = useState<SpellBuff[]>([]);
+  const [spellConditions, setSpellConditions] = useState<SpellCondition[]>([]);
+  const [addingBuff, setAddingBuff] = useState(false);
+  const [buffForm, setBuffForm] = useState<SpellBuff>({ type: 'ca', value: 0, durationTurns: 1 });
+  const [addingCondition, setAddingCondition] = useState(false);
+  const [condForm, setCondForm] = useState<SpellCondition>({ conditionId: ALL_CONDITIONS[0].id, durationTurns: 0, durationRounds: 1 });
+
+  const handleAdd = () => {
+    if (!form.name) return;
+    const id = editingSpell?.id || crypto.randomUUID();
+    onAdd({ ...form, id, buffs, conditions: spellConditions } as Spell);
+    setAdding(false);
+    setEditingSpell(null);
+    setBuffs([]);
+    setSpellConditions([]);
+    setForm({
+      name: '', description: '', costPE: 0, damageDice: '', damageBonus: 0,
+      spellType: 'damage', actionType: 'action', durationRounds: 0, range: '1,5m',
+      targetMode: 'single_atk', spellLevel: '1',
+      buffs: [], conditions: [], saveAttr: 'DES'
+    });
+  };
+
+  const handleAddBuff = () => {
+    setBuffs([...buffs, { ...buffForm }]);
+    setBuffForm({ type: 'ca', value: 0, durationTurns: 1 });
+    setAddingBuff(false);
+  };
+
+  const totalSpells = spells.length;
+  const isLocked = totalSpells >= maxSpells;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+          Capacidade: {totalSpells} / {maxSpells}
+        </span>
+        {!isLocked ? (
+          <div className="flex gap-2">
+            <button onClick={() => setShowAssistant(true)} className="flex items-center gap-1 text-xs font-bold text-primary hover:text-primary/80 animate-pulse" title="Aprender novo feitiço (assistente guiado)">
+              <Plus className="h-3 w-3" /> Aprender (Assistente)
+            </button>
+            {editMode && (
+              <button onClick={() => { setAdding(true); setEditingSpell(null); }} className="flex items-center gap-1 text-xs font-bold text-primary hover:text-primary/80" title="Criar feitiço manualmente">
+                <Plus className="h-3 w-3" /> Manual
+              </button>
+            )}
+          </div>
+        ) : (
+          <span className="text-xs font-bold text-hp flex items-center gap-1">
+            🔒 Limite atingido
+          </span>
+        )}
+      </div>
+
+      <div className="space-y-1">
+        {spells.map((s) => (
+          <SpellCard
+            key={s.id}
+            spell={s}
+            editMode={editMode}
+            onRemove={onRemove}
+            onUse={onUse}
+            cooldown={cooldowns[s.id] ?? 0}
+            onEdit={(spell) => {
+              setEditingSpell(spell);
+              setShowAssistant(true);
+            }}
+          />
+        ))}
+        {spells.length === 0 && !adding && !showAssistant && (
+          <p className="text-sm text-muted-foreground italic">Nenhum feitiço aprendido.</p>
+        )}
+      </div>
+
+      {showAssistant && (
+        <SpellCreationAssistant
+          onAdd={(s) => {
+            onAdd(s);
+            setShowAssistant(false);
+            setEditingSpell(null);
+          }}
+          onCancel={() => {
+            setShowAssistant(false);
+            setEditingSpell(null);
+          }}
+          charLevel={charLevel}
+          currentSpellCount={totalSpells}
+          maxSpells={maxSpells}
+          initialSpell={editingSpell || undefined}
+          isGolpeador={isGolpeador}
+          hasEnergiaReversa={hasEnergiaReversa}
+          availableTags={availableTags}
+          isMaster={isMaster}
+          hasTecnicaMaxima={hasTecnicaMaxima}
+          hasTecnicaReversa={hasTecnicaReversa}
+          onSubmitProposal={onSubmitProposal}
+        />
+      )}
+      {adding && (
+        <div className="mt-1 space-y-1 rounded-xl border border-primary/30 p-2 text-sm">
+          <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nome" className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground" />
+          <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Descrição" className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground" />
+          <div className="flex gap-1 flex-wrap">
+            <div className="flex-1 min-w-[70px] space-y-0.5">
+              <label className="text-sm text-muted-foreground flex items-center gap-1">
+                Nível
+                <button
+                  type="button"
+                  onClick={() => setShowGuide(form.spellLevel ?? null)}
+                  className="text-primary hover:text-primary/80 transition-colors"
+                  title="Guia de criação para este nível"
+                >
+                  <HelpCircle className="h-3.5 w-3.5" />
+                </button>
+              </label>
+              <select value={form.spellLevel} onChange={(e) => setForm({ ...form, spellLevel: e.target.value as SpellLevel })} className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground">
+                {SPELL_LEVELS.map((lv) => (
+                  <option key={lv} value={lv}>{lv}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex-1 min-w-[80px] space-y-0.5">
+              <label className="text-sm text-muted-foreground">Tipo</label>
+              <select value={form.spellType} onChange={(e) => setForm({ ...form, spellType: e.target.value as any })} className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground">
+                <option value="damage">⚔️ Dano</option>
+                <option value="heal">💚 Cura</option>
+                <option value="buff">✨ Buff</option>
+                <option value="debuff">💀 Debuff</option>
+                <option value="condition">⚠️ Foco Condições</option>
+              </select>
+            </div>
+            <div className="flex-1 min-w-[80px] space-y-0.5">
+              <label className="text-sm text-muted-foreground">Ação</label>
+              <select value={form.actionType} onChange={(e) => setForm({ ...form, actionType: e.target.value as Spell['actionType'] })} className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground">
+                <option value="action">AC (Comum)</option>
+                <option value="bonus">AB (Bônus)</option>
+                <option value="rapida">AR (Rápida)</option>
+                <option value="reaction">RÇ (Reação)</option>
+                <option value="movimento">MV (Movimento)</option>
+                <option value="free">LV (Livre)</option>
+                <option value="full">Completa</option>
+              </select>
+            </div>
+            <div className="flex-1 min-w-[90px] space-y-0.5">
+              <label className="text-sm text-muted-foreground">Modo Alvo</label>
+              <select value={form.targetMode} onChange={(e) => setForm({ ...form, targetMode: e.target.value as SpellTargetMode })} className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground">
+                {SPELL_TARGET_MODES.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+              </select>
+            </div>
+            {(form.spellType === 'damage' || form.spellType === 'condition') && (
+              <div className="flex-1 min-w-[90px] space-y-0.5">
+                <label className="text-sm text-muted-foreground">Tipo Dano</label>
+                <select value={form.damageType} onChange={(e) => setForm({ ...form, damageType: e.target.value as DamageType })} className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground">
+                  <option value="">Nenhum</option>
+                  {DAMAGE_TYPES.map((t) => (
+                    <option key={t} value={t}>{DAMAGE_TYPE_ABBR[t]} — {DAMAGE_TYPE_LABELS[t]}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div className="flex-1 min-w-[60px] space-y-0.5">
+              <label className="text-sm text-muted-foreground">Custo PE</label>
+              <input type="text" inputMode="numeric" value={form.costPE || ''} onChange={(e) => { const raw = e.target.value; setForm({ ...form, costPE: raw === '' ? 0 : parseInt(raw) || 0 }); }} className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground" />
+            </div>
+            <div className="flex-1 min-w-[60px] space-y-0.5">
+              <label className="text-sm text-muted-foreground">Duração (rd)</label>
+              <input type="text" inputMode="numeric" value={form.durationRounds || ''} onChange={(e) => { const raw = e.target.value; setForm({ ...form, durationRounds: raw === '' ? 0 : parseInt(raw) || 0 }); }} className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground" />
+            </div>
+            <div className="flex-1 min-w-[80px] space-y-0.5">
+              <label className="text-sm text-muted-foreground">Alcance</label>
+              <select value={form.range} onChange={(e) => setForm({ ...form, range: e.target.value, customRange: '' } as any)} className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground">
+                {SPELL_RANGES.map((r) => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+            <div className="flex-1 min-w-[70px] space-y-0.5">
+              <label className="text-sm text-muted-foreground">Personalizado</label>
+              <input value={(form as any).customRange || ''} onChange={(e) => setForm({ ...form, customRange: e.target.value } as any)} placeholder="ex: 15m" className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground" />
+            </div>
+            {(form.targetMode === 'single_tr' || form.targetMode === 'area_tr') && (
+              <>
+                <div className="flex-1 min-w-[60px] space-y-0.5">
+                  <label className="text-sm text-muted-foreground">Bônus CD</label>
+                  <input type="text" inputMode="numeric" value={form.bonusDC || ''} onChange={(e) => { const raw = e.target.value; setForm({ ...form, bonusDC: raw === '' ? 0 : parseInt(raw) || 0 }); }} className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground" />
+                </div>
+                <div className="flex-1 min-w-[80px] space-y-0.5">
+                  <label className="text-sm text-muted-foreground">Atrib. TR</label>
+                  <select value={form.saveAttr} onChange={(e) => setForm({ ...form, saveAttr: e.target.value as SaveAttr })} className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground">
+                    {SAVE_ATTRS.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+              </>
+            )}
+            {form.spellType !== 'buff' && (form.spellType as string) !== 'debuff' && (
+              <>
+                <div className="flex-1 min-w-[60px] space-y-0.5">
+                  <label className="text-sm text-muted-foreground">Dados</label>
+                  <input value={form.damageDice} onChange={(e) => setForm({ ...form, damageDice: e.target.value })} placeholder="3d6" className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground" />
+                </div>
+                <div className="flex-1 min-w-[60px] space-y-0.5">
+                  <label className="text-sm text-muted-foreground">Bônus</label>
+                  <input type="text" inputMode="numeric" value={form.damageBonus || ''} onChange={(e) => { const raw = e.target.value; setForm({ ...form, damageBonus: raw === '' ? 0 : parseInt(raw) || 0 }); }} className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground" />
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Buff section - only for buff/debuff types */}
+          {(form.spellType === 'buff' || (form.spellType as string) === 'debuff') && (
+          <div className="space-y-1 border-t border-border pt-1">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">{(form.spellType as string) === 'debuff' ? '💀 Debuffs' : '✨ Buffs'} ({buffs.length})</span>
+              <button onClick={() => setAddingBuff(true)} className="text-xs text-primary hover:text-primary/80">+ {(form.spellType as string) === 'debuff' ? 'Debuff' : 'Buff'}</button>
+            </div>
+            {buffs.map((b, i) => {
+              const desc = b.type === 'ca' ? `CA+${b.value}`
+                : b.type === 'hit' ? `Acerto+${b.value}`
+                : b.type === 'extraDice' ? `+${b.extraDiceCount}d${b.extraDiceSides}`
+                : `${b.targetName}+${b.value}`;
+              return (
+                <div key={i} className="flex items-center gap-1 text-xs">
+                  <span className={(form.spellType as string) === 'debuff' ? 'text-hp' : 'text-pe'}>{(form.spellType as string) === 'debuff' ? '💀' : '✨'} {desc} ({b.durationTurns}rd)</span>
+                  <button onClick={() => setBuffs(buffs.filter((_, j) => j !== i))} className="text-destructive/60 hover:text-destructive"><X className="h-3 w-3" /></button>
+                </div>
+              );
+            })}
+            {addingBuff && (
+              <div className="flex gap-1 flex-wrap items-end">
+                <div className="space-y-0.5">
+                  <label className="text-xs text-muted-foreground">Tipo</label>
+                  <select value={buffForm.type} onChange={(e) => setBuffForm({ ...buffForm, type: e.target.value as SpellBuff['type'] })} className="h-7 rounded border border-input bg-background px-1 text-xs text-foreground">
+                    <option value="ca">CA</option>
+                    <option value="hit">Acerto</option>
+                    <option value="skill">Perícia</option>
+                    <option value="attribute">Atributo</option>
+                    <option value="extraDice">Dados extras</option>
+                  </select>
+                </div>
+                {(buffForm.type === 'skill' || buffForm.type === 'attribute') && (
+                  <div className="space-y-0.5">
+                    <label className="text-xs text-muted-foreground">Nome</label>
+                    <input value={buffForm.targetName || ''} onChange={(e) => setBuffForm({ ...buffForm, targetName: e.target.value })} placeholder="Nome" className="h-7 w-20 rounded border border-input bg-background px-1 text-xs text-foreground" />
+                  </div>
+                )}
+                {buffForm.type !== 'extraDice' ? (
+                  <div className="space-y-0.5">
+                    <label className="text-xs text-muted-foreground">Valor</label>
+                    <input type="text" inputMode="numeric" value={buffForm.value || ''} onChange={(e) => setBuffForm({ ...buffForm, value: parseInt(e.target.value) || 0 })} className="h-7 w-12 rounded border border-input bg-background px-1 text-xs text-foreground" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-0.5">
+                      <label className="text-xs text-muted-foreground">Qtd</label>
+                      <input type="text" inputMode="numeric" value={buffForm.extraDiceCount || ''} onChange={(e) => setBuffForm({ ...buffForm, extraDiceCount: parseInt(e.target.value) || 0 })} className="h-7 w-10 rounded border border-input bg-background px-1 text-xs text-foreground" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <label className="text-xs text-muted-foreground">Lados</label>
+                      <input type="text" inputMode="numeric" value={buffForm.extraDiceSides || ''} onChange={(e) => setBuffForm({ ...buffForm, extraDiceSides: parseInt(e.target.value) || 0 })} className="h-7 w-10 rounded border border-input bg-background px-1 text-xs text-foreground" />
+                    </div>
+                  </>
+                )}
+                <div className="space-y-0.5">
+                  <label className="text-xs text-muted-foreground">Rodadas</label>
+                  <input type="text" inputMode="numeric" value={buffForm.durationTurns || ''} onChange={(e) => setBuffForm({ ...buffForm, durationTurns: parseInt(e.target.value) || 1 })} className="h-7 w-10 rounded border border-input bg-background px-1 text-xs text-foreground" />
+                </div>
+                <button onClick={handleAddBuff} className="h-7 rounded bg-pe/20 px-2 text-xs text-pe">OK</button>
+                <button onClick={() => setAddingBuff(false)} className="h-7 rounded bg-secondary px-2 text-xs text-secondary-foreground">✕</button>
+              </div>
+            )}
+          </div>
+          )}
+
+          {/* Conditions section - for damage, debuff, condition types */}
+          {(form.spellType === 'damage' || (form.spellType as string) === 'debuff' || form.spellType === 'condition') && (
+          <div className="space-y-1 border-t border-border pt-1">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">Condições ({spellConditions.length})</span>
+              <button onClick={() => setAddingCondition(true)} className="text-xs text-hp hover:text-hp/80">+ Condição</button>
+            </div>
+            {spellConditions.map((sc, i) => {
+              const cond = ALL_CONDITIONS.find(c => c.id === sc.conditionId);
+              if (!cond) return null;
+              const dur = sc.durationTurns > 0 ? `${sc.durationTurns}t` : `${sc.durationRounds}rd`;
+              return (
+                <div key={i} className="flex items-center gap-1 text-xs">
+                  <span className="text-hp">{cond.icon} {cond.name} ({dur})</span>
+                  <button onClick={() => setSpellConditions(spellConditions.filter((_, j) => j !== i))} className="text-destructive/60 hover:text-destructive"><X className="h-3 w-3" /></button>
+                </div>
+              );
+            })}
+            {addingCondition && (
+              <div className="flex gap-1 flex-wrap items-end">
+                <div className="space-y-0.5 flex-1 min-w-[120px]">
+                  <label className="text-xs text-muted-foreground">Condição</label>
+                  <select value={condForm.conditionId} onChange={(e) => setCondForm({ ...condForm, conditionId: e.target.value })} className="h-7 w-full rounded border border-input bg-background px-1 text-xs text-foreground">
+                    {ALL_CONDITIONS.map((c) => (
+                      <option key={c.id} value={c.id}>{c.icon} {c.name} ({c.category})</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-0.5">
+                  <label className="text-xs text-muted-foreground">Rodadas</label>
+                  <input type="text" inputMode="numeric" value={condForm.durationRounds || ''} onChange={(e) => setCondForm({ ...condForm, durationRounds: parseInt(e.target.value) || 0 })} className="h-7 w-10 rounded border border-input bg-background px-1 text-xs text-foreground" />
+                </div>
+                <div className="space-y-0.5">
+                  <label className="text-xs text-muted-foreground">Rodadas</label>
+                  <input type="text" inputMode="numeric" value={condForm.durationRounds || ''} onChange={(e) => setCondForm({ ...condForm, durationRounds: parseInt(e.target.value) || 0 })} className="h-7 w-10 rounded border border-input bg-background px-1 text-xs text-foreground" />
+                </div>
+                <button onClick={() => { setSpellConditions([...spellConditions, { ...condForm }]); setCondForm({ conditionId: ALL_CONDITIONS[0].id, durationTurns: 0, durationRounds: 1 }); setAddingCondition(false); }} className="h-7 rounded bg-hp/20 px-2 text-xs text-hp">OK</button>
+                <button onClick={() => setAddingCondition(false)} className="h-7 rounded bg-secondary px-2 text-xs text-secondary-foreground">✕</button>
+              </div>
+            )}
+          </div>
+          )}
+
+          <div className="flex gap-1">
+            <button onClick={handleAdd} className="h-8 rounded-lg bg-primary px-3 text-sm text-primary-foreground">Salvar</button>
+            <button onClick={() => { setAdding(false); setBuffs([]); setSpellConditions([]); }} className="h-8 rounded-lg bg-secondary px-3 text-sm text-secondary-foreground">Cancelar</button>
+          </div>
+        </div>
+      )}
+
+      {showGuide && (
+        <SpellLevelGuide level={showGuide as any} onClose={() => setShowGuide(null)} />
+      )}
+    </div>
+  );
+}
+
+
+// === Accessory Slots Section ===
+function AccessorySlotsSection({
+  character, items, accessorySlots, onUpdateSlots,
+  omniInventory, onEquipOmni, onUnequipOmni,
+  onShowDetails, resolverEntidadeOmniAtual, onUseOmni,
+}: {
+  character: Character;
+  items: import('@/types').Item[];
+  accessorySlots: AccessorySlots;
+  onUpdateSlots: (slots: AccessorySlots) => void;
+  omniInventory: InventoryItem[];
+  onEquipOmni: (instanceId: string, slotName: string) => boolean;
+  onUnequipOmni: (instanceId: string) => void;
+  onShowDetails: (target: ItemDetailsTarget) => void;
+  resolverEntidadeOmniAtual: (inv: InventoryItem) => InventoryItem['entity'];
+  /** Dispara o Script Ativo do item equipado. Recebe a instância do inventário. */
+  onUseOmni: (inv: InventoryItem) => void;
+}) {
+  const assignedAccessoryItems = items.filter(
+    (i) => (i.assignedTo ?? []).includes(character.id) && i.slotType && i.slotType !== 'nenhum'
+  );
+
+  const getItemById = (id: string | null) => id ? items.find((i) => i.id === id) : null;
+
+  const availableForSlot = (slotType: ItemSlotType) =>
+    assignedAccessoryItems.filter((i) => i.slotType === slotType && !isItemInAnySlot(i.id));
+
+  const isItemInAnySlot = (itemId: string) => {
+    if (accessorySlots.colar === itemId) return true;
+    if (accessorySlots.aneis.includes(itemId)) return true;
+    if (accessorySlots.pulseiras.includes(itemId)) return true;
+    return false;
+  };
+
+  const setSlot = (type: 'colar' | 'anel' | 'pulseira', index: number, itemId: string | null) => {
+    const newSlots = { ...accessorySlots, aneis: [...accessorySlots.aneis] as AccessorySlots['aneis'], pulseiras: [...accessorySlots.pulseiras] as AccessorySlots['pulseiras'] };
+    if (type === 'colar') newSlots.colar = itemId;
+    else if (type === 'anel') newSlots.aneis[index] = itemId;
+    else if (type === 'pulseira') newSlots.pulseiras[index] = itemId;
+    onUpdateSlots(newSlots);
+  };
+
+  // ===== Omni-Engine integration =====
+  const slotKey = (type: 'colar' | 'anel' | 'pulseira', index: number) =>
+    type === 'colar' ? 'colar' : `${type}:${index}`;
+
+  // Inventário Omni filtrado por slotType compatível.
+  const omniAvailableForSlot = (st: ItemSlotType) =>
+    omniInventory.filter((inv) => (inv.entity.slotType ?? 'nenhum') === st && !inv.isEquipped);
+
+  const omniEquippedInSlot = (slotName: string) =>
+    omniInventory.find((inv) => inv.isEquipped && inv.equippedSlot === slotName);
+
+  const renderSlot = (label: string, type: 'colar' | 'anel' | 'pulseira', index: number, currentId: string | null) => {
+    const item = getItemById(currentId);
+    const slotName = slotKey(type, index);
+    const omniEquipped = omniEquippedInSlot(slotName);
+    const available = availableForSlot(type === 'colar' ? 'colar' : type === 'anel' ? 'anel' : 'pulseira');
+    const omniAvailable = omniAvailableForSlot(
+      type === 'colar' ? 'colar' : type === 'anel' ? 'anel' : 'pulseira',
+    );
+    const isActive = !!item || !!omniEquipped;
+
+    const handleSlotClick = () => {
+      if (omniEquipped) {
+        onShowDetails({
+          kind: 'omni',
+          entity: resolverEntidadeOmniAtual(omniEquipped),
+          isEquipped: true,
+          equippedSlot: omniEquipped.equippedSlot,
+        });
+      } else if (item) {
+        onShowDetails({ kind: 'legacy', item });
+      }
+    };
+
+    return (
+      <div
+        key={`${type}-${index}`}
+        role={isActive ? 'button' : undefined}
+        tabIndex={isActive ? 0 : undefined}
+        onClick={isActive ? handleSlotClick : undefined}
+        onKeyDown={isActive ? (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleSlotClick();
+          }
+        } : undefined}
+        title={isActive ? 'Ver detalhes' : undefined}
+        className={cn(
+          'rounded-lg border px-2 py-1.5 text-sm transition-all',
+          omniEquipped
+            ? 'border-violet-500/60 bg-violet-500/10 shadow-[0_0_12px_-2px_rgba(124,58,237,0.55)] ring-1 ring-violet-500/40'
+            : isActive ? 'border-primary/40 bg-primary/10' : 'border-border bg-secondary/30',
+          isActive && 'cursor-pointer hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-primary/40',
+        )}
+      >
+        <div className="flex items-center justify-between gap-1">
+          <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{label}</span>
+          {isActive && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (omniEquipped) onUnequipOmni(omniEquipped.instanceId);
+                else setSlot(type, index, null);
+              }}
+              className="text-destructive/60 hover:text-destructive"
+              title="Remover do slot"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+        {item ? (
+          <div className="mt-0.5">
+            <span className="text-foreground font-medium text-sm">{item!.name}</span>
+            <div className="flex flex-wrap gap-0.5 mt-0.5">
+              {item!.bonusCA !== 0 && <span className="text-xs text-primary">CA+{item!.bonusCA}</span>}
+              {item!.bonusHP !== 0 && <span className="text-xs text-hp">HP+{item!.bonusHP}</span>}
+              {item!.bonusPE !== 0 && <span className="text-xs text-pe">PE+{item!.bonusPE}</span>}
+              {item!.bonusRD !== 0 && <span className="text-xs">RD+{item!.bonusRD}</span>}
+            </div>
+          </div>
+        ) : omniEquipped ? (
+          <div className="mt-0.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-foreground font-medium text-sm">
+                ◇ {omniEquipped.entity.nome}
+              </span>
+              <SoltarItemButton charId={character.id} itemId={omniEquipped.instanceId} />
+                  <ContadoresEquipamento charId={character.id} entidade={resolverEntidadeOmniAtual(omniEquipped)} />
+              {omniEquipped.usosTotais !== undefined && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    useInventoryStore.getState().recargaInstancia(omniEquipped.instanceId);
+                  }}
+                  title={`Cargas restantes — clique para recarregar (${omniEquipped.usosTotais} máx)`}
+                  className={cn(
+                    'flex items-center gap-0.5 rounded-full border px-1.5 py-0 text-xs font-semibold transition-colors',
+                    (omniEquipped.usosRestantes ?? 0) === 0
+                      ? 'border-destructive/50 bg-destructive/15 text-destructive hover:bg-destructive/25'
+                      : (omniEquipped.usosRestantes ?? 0) <= Math.ceil((omniEquipped.usosTotais ?? 1) / 3)
+                        ? 'border-amber-500/50 bg-amber-500/15 text-amber-400 hover:bg-amber-500/25'
+                        : 'border-sky-500/50 bg-sky-500/15 text-sky-300 hover:bg-sky-500/25',
+                  )}
+                >
+                  ⚡ {omniEquipped.usosRestantes ?? 0}/{omniEquipped.usosTotais}
+                </button>
+              )}
+              {(() => {
+                const cdEq = normalizarCombatData(omniEquipped.entity.combatData);
+                const ativos = cdEq?.effectsActive ?? [];
+                if (ativos.length === 0) return null;
+                const first = ativos[0];
+                const rt = first.type === 'ADICIONAR' ? 'heal' : first.type === 'MODIFICADOR' ? 'modifier' : 'damage';
+                const cls = rt === 'heal'
+                  ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/30'
+                  : rt === 'modifier'
+                    ? 'bg-primary/20 border-primary/40 text-primary hover:bg-primary/30'
+                    : 'bg-destructive/20 border-destructive/40 text-destructive hover:bg-destructive/30';
+                const label = ativos.length > 1
+                  ? `Usar (${ativos.length})`
+                  : rt === 'heal' ? 'Curar' : rt === 'modifier' ? 'Aplicar' : 'Atacar';
+                return (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onUseOmni(omniEquipped); }}
+                    className={`flex items-center gap-1 rounded border px-1.5 py-0.5 text-xs font-semibold transition-colors ${cls}`}
+                    title={`${label} com ${omniEquipped.entity.nome}`}
+                  >
+                    <Sword className="h-2.5 w-2.5" /> {label.toUpperCase()}
+                  </button>
+                );
+              })()}
+            </div>
+            <div className="flex flex-wrap gap-0.5 mt-0.5">
+              {(['ca','hp','pe','rd','esc','slots'] as const).map((k) => {
+                const v = omniEquipped.entity.bonusEquipado?.[k] ?? 0;
+                const f = omniEquipped.entity.bonusEquipadoFormula?.[k];
+                if (!v && !f) return null;
+                return (
+                  <span key={k} className="text-xs text-primary">
+                    {k.toUpperCase()}{v >= 0 ? '+' : ''}{v}
+                    {f ? <span className="text-sky-400 ml-0.5" title={f}>·ƒ</span> : null}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        ) : omniAvailable.length > 0 ? (
+          <select
+            className="mt-0.5 h-7 w-full rounded border border-input bg-background px-1 text-xs text-foreground"
+            value=""
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => {
+              e.stopPropagation();
+              const v = e.target.value;
+              if (!v) return;
+              if (v.startsWith('omni:')) {
+                onEquipOmni(v.slice(5), slotName);
+              }
+            }}
+          >
+            <option value="">Vazio</option>
+            {omniAvailable.map((inv) => (
+              <option key={inv.instanceId} value={`omni:${inv.instanceId}`}>
+                ◇ {inv.entity.nome}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <span className="text-xs text-muted-foreground italic mt-0.5 block">Vazio</span>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-1 gap-1">
+        {renderSlot('Colar', 'colar', 0, accessorySlots.colar)}
+      </div>
+      <div className="grid grid-cols-2 gap-1">
+        {accessorySlots.aneis.map((id, i) => renderSlot(`Anel ${i + 1}`, 'anel', i, id))}
+      </div>
+      <div className="grid grid-cols-2 gap-1">
+        {accessorySlots.pulseiras.map((id, i) => renderSlot(`Pulseira ${i + 1}`, 'pulseira', i, id))}
+      </div>
+      {assignedAccessoryItems.length === 0 && omniInventory.length === 0 && (
+        <p className="text-sm text-muted-foreground italic">Nenhum item de acessório vinculado. Crie itens com tipo de slot (Colar, Anel, Pulseira) — pelo módulo de Itens ou pelo Omni-Engine — e vincule a este personagem.</p>
+      )}
+    </div>
+  );
+}
+
+/* ─── Perfil Amaldiçoado: Aptidões numéricas (AU/CL/BAR/DOM/ER) ─── */
+
+// === Action Cost Badge (Omni Combat) ========================================
+// Mostra um chip colorido representando o Custo de Ação de um ataque/item.
+// Cores: Azul=Livre, Verde=Movimento, Âmbar=Padrão, Roxo=Bônus,
+// Ciano=Reação, Vermelho=Completa, Rosa=Interrupção.
+function ActionCostBadge({ actionId }: { actionId?: string }) {
+  if (!actionId) return null;
+  const meta = Object.values(SYSTEM_ACTIONS).find((a) => a.id === actionId);
+  if (!meta) return null;
+  const palette: Record<string, string> = {
+    action_free:      'bg-blue-500/15 border-blue-500/40 text-blue-400',
+    action_move:      'bg-emerald-500/15 border-emerald-500/40 text-emerald-400',
+    action_standard:  'bg-amber-500/15 border-amber-500/40 text-amber-400',
+    action_bonus:     'bg-purple-500/15 border-purple-500/40 text-purple-400',
+    action_reaction:  'bg-cyan-500/15 border-cyan-500/40 text-cyan-400',
+    action_full:      'bg-red-500/15 border-red-500/40 text-red-400',
+    action_interrupt: 'bg-pink-500/15 border-pink-500/40 text-pink-400',
+  };
+  const cls = palette[actionId] ?? 'bg-muted/40 border-border text-muted-foreground';
+  return (
+    <span
+      className={`text-xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${cls}`}
+      title={`${meta.label} · custo ${meta.cost}`}
+    >
+      {meta.label}
+    </span>
+  );
+}
+
+
+// MAIN CHARACTER CARD
+// ============================================================================
+
 export function CharacterCard({ character: c, hideAttackPanel, compactHeader = false }: Props) {
   const role = useRoleStore((s) => s.role);
   const isPlayer = role === 'PLAYER';
@@ -448,7 +1631,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
   // CAM: dispara o prompt de Reação quando o HP do núcleo ativo cai a 0
   // (apenas se ainda não estiver Morrendo e tiver pelo menos 1 outro núcleo).
   useEffect(() => {
-    if (!isCamActive(c)) return;
+    if (!isCamActiveFn(c)) return;
     if (c.dying) return;
     if (c.hpCurrent > 0) return;
     const hasSwitchable = (c.cores ?? []).some(
@@ -457,6 +1640,11 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     if (hasSwitchable) setShowDeathPrompt(true);
   }, [c.hpCurrent, c.dying, c.cores, c.activeCoreId, c]);
 
+
+  const handleLevelUp = () => {
+    playClickSound();
+    setShowLevelUp(true);
+  };
 
   // Click outside to close edit mode
   useEffect(() => {
@@ -470,7 +1658,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     return () => document.removeEventListener('mousedown', handler);
   }, [editMode]);
 
-  const { updateCharacter, removeCharacter, addAttribute, removeAttribute, addSkill, removeSkill, addSavingThrow, removeSavingThrow, addPassive, removePassive, addSpell, updateSpell, removeSpell, resetActions, addCondition, removeCondition, triggerKokusen } = useCharacterStore();
+  const { updateCharacter, removeCharacter, addAttribute, removeAttribute, addSkill, removeSkill, addSavingThrow, removeSavingThrow, addPassive, removePassive, addSpell, updateSpell, removeSpell, resetActions, addCondition, removeCondition, triggerKokusen, desvincularOmniAtivo, vincularOmniAtivo } = useCharacterStore();
   const items = useItemStore((s) => s.items);
   const addLog = useLogStore((s) => s.addLog);
   const [showAddCondition, setShowAddCondition] = useState(false);
@@ -501,6 +1689,26 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
       setBusyFugaAgarrado(false);
     }
   };
+
+  const handleAddCondition = () => {
+    const condDef = ALL_CONDITIONS.find(def => def.id === manualCondId);
+    if (!condDef) return;
+    const newCondition = {
+      id: crypto.randomUUID(),
+      conditionId: manualCondId,
+      name: condDef.name,
+      icon: condDef.icon,
+      remainingTurns: manualCondTurns > 0 ? manualCondTurns : -1,
+      remainingRounds: manualCondRounds > 0 ? manualCondRounds : -1,
+      durationMode: 'ate_acabar' as const,
+    };
+    addCondition(c.id, newCondition);
+    addLog('combat', `${c.name} recebeu condição: ${condDef.name} ${condDef.icon}.`);
+    setShowAddCondition(false);
+    setManualCondTurns(1);
+    setManualCondRounds(0);
+  };
+
   const effects = c.origin ? applyOriginEffects(c.origin, c.level, {}) : null;
   // Especialista em Técnica usa fórmula própria de slots:
   //   Base = 3 no Nv 1 e +1 a CADA nível subsequente (não acumula em pares).
@@ -518,6 +1726,8 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     : c.characterClass === 'Feiticeiro'
       ? getMaxSpells(c.level) + (effects?.extraSpellsImmediate ?? 0) + (effects?.automation?.extraSpells ?? 0) + afinidadeBonus
       : getMaxSpells(c.level) + afinidadeBonus;
+
+  const hasEnergiaReversa = hasEnergiaReversaFn(c);
 
   const availableTags: { label: string; discountPE: number }[] = [];
   // Conta quantos feitiços já possuem cada tag especial. Limite = 1 por origem.
@@ -605,6 +1815,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
   passiveBonuses.rd    += omniPassivasBonus.totals.rd;
   passiveBonuses.esc   += omniPassivasBonus.totals.esc;
   passiveBonuses.slots += omniPassivasBonus.totals.slots;
+
   /**
    * Executa o "Script Ativo" (Ação/Uso) de um item.
    * Aceita o nome (lookup pelo catálogo) ou uma EntidadeOmni explícita
@@ -612,24 +1823,24 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
    * Quando `instance` é fornecida, faz gate de usos e injeta @ITEM.*.
    */
   const executarAcaoItem = async (
-    arg: string | { entidade: { nome: string; combatData?: unknown }; instance?: InventoryItem },
+    arg: string | { entidade: { nome: string; combatData?: unknown }; instance?: ReturnType<typeof useInventoryStore.getState>['items'][string] },
   ) => {
     let nome: string;
     let cd: ReturnType<typeof normalizarCombatData>;
-    let instance: InventoryItem | undefined;
+    let instance: ReturnType<typeof useInventoryStore.getState>['items'][string] | undefined;
     if (typeof arg === 'string') {
       const ent = omniByName.get(arg.trim().toLowerCase());
       cd = normalizarCombatData(ent?.combatData);
       nome = arg;
       // Tenta achar uma instância no inventário desse personagem com este nome.
-      instance = Object.values(inventoryItems).find(
+      instance = Object.values(useInventoryStore.getState().items).find(
         (i) => i.ownerId === c.id && i.entity.nome.trim().toLowerCase() === arg.trim().toLowerCase(),
       );
     } else {
       cd = normalizarCombatData(arg.entidade.combatData);
       nome = arg.entidade.nome;
       instance = arg.instance
-        ?? Object.values(inventoryItems).find(
+        ?? Object.values(useInventoryStore.getState().items).find(
           (i) => i.ownerId === c.id && i.entity.nome === arg.entidade.nome,
         );
     }
@@ -868,7 +2079,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
   const inventoryItems = useInventoryStore((s) => s.items);
   const equipOmni = useInventoryStore((s) => s.equipItem);
   const unequipOmni = useInventoryStore((s) => s.unequipItem);
-  const resolverEntidadeOmniAtual = (inv: InventoryItem) => omniEntidadesMap[inv.entity.id] ?? inv.entity;
+  const resolverEntidadeOmniAtual = (inv: ReturnType<typeof useInventoryStore.getState>['items'][string]) => omniEntidadesMap[inv.entity.id] ?? inv.entity;
   const ownedOmniInventoryInstances = Object.values(inventoryItems)
     .filter((inv) => inv.ownerId === c.id)
     .sort((a, b) => b.acquiredAt - a.acquiredAt)
@@ -947,13 +2158,13 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
   itemBonuses.slots += omniTotalsCombinados.slots - omniPassivasBonus.totals.slots;
 
   // Hook de Reatividade: mesma fonte alimenta os tooltips (Base / Modificador / Origem).
-  const omniOrigensPorChave: Record<ChaveBonusEquipado, StatModifierOrigin[]> = {
-    hp: omniOriginsCombinadas.hp.map((o) => ({ nome: o.source, delta: o.delta, aplicado: o.applied })),
-    pe: omniOriginsCombinadas.pe.map((o) => ({ nome: o.source, delta: o.delta, aplicado: o.applied })),
-    ca: omniOriginsCombinadas.ca.map((o) => ({ nome: o.source, delta: o.delta, aplicado: o.applied })),
-    rd: omniOriginsCombinadas.rd.map((o) => ({ nome: o.source, delta: o.delta, aplicado: o.applied })),
-    esc: omniOriginsCombinadas.esc.map((o) => ({ nome: o.source, delta: o.delta, aplicado: o.applied })),
-    slots: omniOriginsCombinadas.slots.map((o) => ({ nome: o.source, delta: o.delta, aplicado: o.applied })),
+  const omniOrigensPorChave: Record<ChaveBonusEquipado, { nome: string; delta: number; aplicado: number }[]> = {
+    hp: omniOriginsCombinadas.hp.map((o) => ({ nome: o.source, delta: o.delta, aplicado: o.applied ? 1 : 0 })),
+    pe: omniOriginsCombinadas.pe.map((o) => ({ nome: o.source, delta: o.delta, aplicado: o.applied ? 1 : 0 })),
+    ca: omniOriginsCombinadas.ca.map((o) => ({ nome: o.source, delta: o.delta, aplicado: o.applied ? 1 : 0 })),
+    rd: omniOriginsCombinadas.rd.map((o) => ({ nome: o.source, delta: o.delta, aplicado: o.applied ? 1 : 0 })),
+    esc: omniOriginsCombinadas.esc.map((o) => ({ nome: o.source, delta: o.delta, aplicado: o.applied ? 1 : 0 })),
+    slots: omniOriginsCombinadas.slots.map((o) => ({ nome: o.source, delta: o.delta, aplicado: o.applied ? 1 : 0 })),
   };
 
   const desAttrCC = (c.attributes || []).find(a => a.name?.toUpperCase() === 'DES');
@@ -1041,7 +2252,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
   const normalizarNomeRolagem = (nome: string) => nome
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]/g, '');
 
   const getItemRollBonus = (attrName: string) => {
@@ -1059,7 +2270,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     const omniSkillKey = (name || '')
       .toLowerCase()
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[̀-ͯ]/g, '')
       .replace(/[^a-z0-9]+/g, '_');
     return ((c.omniSkillBonuses ?? {})[omniSkillKey] ?? 0) + (omniPassivasContinuas.skillBonuses[omniSkillKey] ?? 0);
   };
@@ -1144,7 +2355,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     const omniSkillKey = (name || '')
       .toLowerCase()
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[̀-ͯ]/g, '')
       .replace(/[^a-z0-9]+/g, '_');
     const omniSkillBonus = getOmniSkillBonus(name);
     // Mente Plácida (Tier 2): TR Concentração (=Astúcia) +Mod_Chave.
@@ -1197,282 +2408,6 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
   };
 
   const [hitTargets, setHitTargets] = useState<string[]>([]);
-  const [showHitTargetSelect, setShowHitTargetSelect] = useState(false);
-  const allCharacters = useCharacterStore((s) => s.characters);
-
-  const toggleHitTarget = (id: string) => {
-    setHitTargets((prev) =>
-      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
-    );
-  };
-
-  const getAttackTotalBonus = (type: 'melee' | 'ranged' | 'cursed') => {
-    const base = getBaseAttackBonus(c.level);
-    const bonus = type === 'melee' ? (c.meleeAttackBonus || 0) : type === 'ranged' ? (c.rangedAttackBonus || 0) : (c.cursedAttackBonus || 0);
-    const linkedId = type === 'melee' ? c.meleeLinkedAttr : type === 'ranged' ? c.rangedLinkedAttr : c.cursedLinkedAttr;
-    const trained = type === 'melee' ? c.meleeTrained : type === 'ranged' ? c.rangedTrained : c.cursedTrained;
-    let attrMod = 0;
-    if (linkedId) {
-      const attr = c.attributes.find(a => a.id === linkedId);
-      if (attr) attrMod = getAttrModifier(attr.value);
-    }
-    // Jogadas de ataque usam apenas Treinamento (sem Maestria)
-    const trainBonus = getTrainingBonus(c.level, trained, false);
-    // Fase 10 — Faíscas Negras (buff de cena pós-Kokusen): +½CL no acerto CaC.
-    let faiscasHit = 0;
-    if (type === 'melee' && c.kokusenSceneBuffActive) {
-      const cl = c.cursedAptitudes?.CL ?? 0;
-      faiscasHit = Math.floor(cl / 2);
-    }
-    return base + bonus + attrMod + trainBonus + buffHit + faiscasHit + conditionMods.attack;
-  };
-
-  const rollDamageAssist = async (buffs: ActiveBuff[]): Promise<string[]> => {
-    const lines: string[] = [];
-    for (const buff of buffs) {
-      if (buff.type !== 'extraDiceAfter') continue;
-      const formula = buff.extraDamageFormula ?? (buff.extraDiceCount && buff.extraDiceSides
-        ? `${buff.extraDiceCount}d${buff.extraDiceSides}`
-        : undefined);
-      if (!formula) continue;
-      const { rolls, total } = await rollDice(formula);
-      lines.push(`➕ Dano Extra: ${total} [${formula}(${rolls.join(',')})]`);
-    }
-    return lines;
-  };
-
-  const consumeSupportAttackBuffs = (buffs: ActiveBuff[]) => {
-    const atuais = useCharacterStore.getState().characters.find(character => character.id === c.id)?.activeBuffs ?? [];
-    const ids = new Set(buffs.filter(buff => buff.consumeOnAttack).map(buff => buff.id));
-    for (const buff of atuais) if (ids.has(buff.id)) useCharacterStore.getState().removeBuff(c.id, buff.id);
-  };
-
-  // Alvos por tipo de ataque (Corpo a Corpo / Distância / Amaldiçoado)
-  const [attackTargets, setAttackTargets] = useState<Record<'melee' | 'ranged' | 'cursed', string[]>>({
-    melee: [], ranged: [], cursed: [],
-  });
-  const [openTargetPicker, setOpenTargetPicker] = useState<null | 'melee' | 'ranged' | 'cursed'>(null);
-
-  const toggleAttackTarget = (type: 'melee' | 'ranged' | 'cursed', id: string) => {
-    setAttackTargets(prev => ({
-      ...prev,
-      [type]: prev[type].includes(id) ? prev[type].filter(t => t !== id) : [...prev[type], id],
-    }));
-  };
-
-  const handleAttackTypeRoll = async (type: 'melee' | 'ranged' | 'cursed') => {
-    const label = type === 'melee' ? '⚔️ Acerto C.a.C' : type === 'ranged' ? '🏹 Acerto Distância' : '👁‍🗨 Acerto Amaldiçoado';
-    const omniAdv = consumeAdvantageFor(c.id, { kind: 'attack', subtype: type });
-    const flatAtk = consumeFlatBonusFor(c.id, { kind: 'attack', subtype: type });
-    const totalBonus = getAttackTotalBonus(type) + flatAtk.bonus;
-    const advAtk = await applyAdvantageToD20(omniAdv.net, () => rollD20Com(c.id));
-    const { modeLabel } = advAtk;
-    const d20 = await perguntarFortuna(c.id, advAtk.d20, 'ataque', () => rollD20Com(c.id));
-    const finalResult = d20 + totalBonus;
-    const targets = attackTargets[type];
-
-    if (targets.length === 0) {
-      showRollAnimation(label + modeLabel, d20, totalBonus, finalResult);
-      maybeApplyRecompensa(c.id, flatAtk, { find: (id) => useCharacterStore.getState().characters.find((x) => x.id === id), update: updateCharacter, log: (m) => addLog('combat', m) });
-      return;
-    }
-
-    // Crit threshold honra buffs critMargin (igual ao handleCustomHitRoll)
-    const critMarginBuff = activeBuffs.filter(b => b.type === 'critMargin').reduce((s, b) => s + b.value, 0);
-    const critThreshold = Math.max(2, 20 - critMarginBuff);
-    const isCritFail = d20 === 1 && !consumeCritNegated(c.id);
-    const isCritHit = d20 >= critThreshold && !isCritFail;
-
-    // Fase 10 — Motor Kokusen (Raio Negro) - escuta passiva em ataques CaC
-    let isKokusen = false;
-    if (type === 'melee' && hasKokusen(c) && !isCritFail) {
-      const kk = getKokusenCritThreshold(c);
-      if (kk && d20 >= kk.threshold) {
-        isKokusen = true;
-      }
-    }
-
-    const hitResultsList: { name: string; hit: 'hit' | 'miss' | 'crit' | 'critFail' }[] = [];
-    const hitLogResults: string[] = [];
-    let anyHit = false;
-    targets.forEach((targetId) => {
-      const target = allCharacters.find((ch) => ch.id === targetId);
-      if (!target) return;
-      const tPassiveCA = target.passives.reduce((sum, p) => sum + p.bonusCA, 0);
-      const tEquipped = items.filter((i) => (i.assignedTo ?? []).includes(target.id));
-      const tItemCA = tEquipped.reduce((sum, i) => sum + i.bonusCA, 0);
-      const tBuffCA = (target.activeBuffs || []).filter(b => b.type === 'ca').reduce((s, b) => s + b.value, 0);
-      const tCondCA = getDefenseModFromConditions(target, type === 'cursed' ? 'cursed' : type);
-      const targetCA = target.ca + tPassiveCA + tItemCA + tBuffCA + tCondCA;
-      // Paralisado / Inconsciente / Indefeso → auto-acerto e auto-crítico (×2 dados de dano).
-      const auto = getAutoCritFromConditions(target, type === 'cursed' ? 'cursed' : type);
-      if (auto) {
-        hitResultsList.push({ name: target.name, hit: 'crit' });
-        hitLogResults.push(`💥 ${target.name} — ACERTO CRÍTICO AUTOMÁTICO (${auto.reason}): dado de dano DOBRADO`);
-        anyHit = true;
-        return;
-      }
-      if (isCritFail) { hitResultsList.push({ name: target.name, hit: 'critFail' }); hitLogResults.push(`💀 ${target.name} — FALHA CRÍTICA`); }
-      else if (isKokusen) { hitResultsList.push({ name: target.name, hit: 'crit' }); hitLogResults.push(`⚡ ${target.name} — KOKUSEN! (×1.5 dano, ignora RD)`); anyHit = true; }
-      else if (isCritHit) { hitResultsList.push({ name: target.name, hit: 'crit' }); hitLogResults.push(`✨ ${target.name} — ACERTO CRÍTICO!`); anyHit = true; }
-      else if (finalResult >= targetCA) { hitResultsList.push({ name: target.name, hit: 'hit' }); hitLogResults.push(`✅ ${target.name} — ACERTOU`); anyHit = true; }
-      else { hitResultsList.push({ name: target.name, hit: 'miss' }); hitLogResults.push(`❌ ${target.name} — ERROU`); }
-    });
-
-    // Kokusen — incrementa stack após confirmar acerto e arma flag para o próximo aplicar dano
-    if (isKokusen && anyHit) {
-      const round = useCombatStore.getState().round ?? 1;
-      const r = triggerKokusen(c.id, round);
-      if (r.ok) {
-        updateCharacter(c.id, { kokusenArmedDamage: true });
-        addLog('system', `⚡ ${c.name}: KOKUSEN! Consciência Absoluta ${r.newStacks} (próx. crit em ${r.threshold}+). Próximo dano aplicado: ×1.5 e ignora RD.`);
-      }
-    }
-
-    // Fase 9 — Aura Redirecionadora: dispara prompt de reação se algum tiro à distância errou.
-    if (type === 'ranged' && hitResultsList.some(r => r.hit === 'miss' || r.hit === 'critFail')) {
-      notifyMissedRangedAttack(c.id);
-    }
-
-    // Empolgação (Lutador): qualquer ataque corpo-a-corpo que acertar dá +1 (cap 5).
-    if (type === 'melee' && anyHit && c.characterClass === 'Feiticeiro' && c.specialization === 'Lutador') {
-      const startLv = c.empolgacaoStartLevel ?? (c.level >= 20 ? 2 : 1);
-      const cur = c.empolgacaoLevel ?? startLv;
-      if (cur < 5) {
-        updateCharacter(c.id, { empolgacaoLevel: cur + 1 });
-        addLog('system', `🔥 ${c.name}: acerto C.a.C — Empolgação ${cur} → ${cur + 1}.`);
-      }
-    }
-
-    const buffsConsumedByThisAttack = activeBuffs.filter(buff => buff.consumeOnAttack);
-
-    setRollAnimating(true);
-    let count = 0;
-    const interval = setInterval(async () => {
-      setRollResult({ label, d20: Math.floor(Math.random() * 20) + 1, bonus: totalBonus, total: Math.floor(Math.random() * 30) });
-      count++;
-      if (count >= 15) {
-        clearInterval(interval);
-        setRollResult({ label, d20, bonus: totalBonus, total: finalResult, hitResults: hitResultsList });
-        setRollAnimating(false);
-        const extraAfter = anyHit ? await rollDamageAssist(buffsConsumedByThisAttack) : [];
-        consumeSupportAttackBuffs(buffsConsumedByThisAttack);
-        addLog('roll', `🎲 ${c.name} → ${label}: d20(${d20}) + ${totalBonus} = ${finalResult}${extraAfter.length ? ` | ${extraAfter.join(' | ')}` : ''}\n${hitLogResults.join('\n')}`);
-      }
-    }, 80);
-    setOpenTargetPicker(null);
-  };
-
-  const handleCustomHitRoll = async () => {
-    // Sem subtipo conhecido — usa 'melee' como default (UI permite só 1 botão custom);
-    // escopos genéricos como next_attack/attack_all funcionam normalmente.
-    const omniAdv = consumeAdvantageFor(c.id, { kind: 'attack', subtype: 'melee' });
-    const flatAtk = consumeFlatBonusFor(c.id, { kind: 'attack', subtype: 'melee' });
-    const d20 = await perguntarFortuna(c.id, (await applyAdvantageToD20(omniAdv.net, () => rollD20Com(c.id))).d20, 'ataque', () => rollD20Com(c.id));
-    const totalHitBonus = c.customHitBonus + buffHit + flatAtk.bonus;
-    const result = d20 + totalHitBonus;
-    maybeApplyRecompensa(c.id, flatAtk, { find: (id) => useCharacterStore.getState().characters.find((x) => x.id === id), update: updateCharacter, log: (m) => addLog('combat', m) });
-
-    // Check for extra dice from buffs
-    const extraDiceBuffs = activeBuffs.filter(b => b.type === 'extraDice');
-    const extraDiceAfterBuffs = activeBuffs.filter(b => b.type === 'extraDiceAfter');
-    const damageLevelsBuff = activeBuffs.filter(b => b.type === 'damageLevels').reduce((s, b) => s + b.value, 0);
-    
-    let extraDiceTotal = 0;
-    const extraDiceDetails: string[] = [];
-    
-    // Add extra dice from "During Attack" buffs
-    for (const b of extraDiceBuffs) {
-      if (b.extraDiceCount && b.extraDiceSides) {
-        const { rolls, total } = await rollDice(`${b.extraDiceCount}d${b.extraDiceSides}`);
-        extraDiceTotal += total;
-        extraDiceDetails.push(`${b.extraDiceCount}d${b.extraDiceSides}[${rolls.join(',')}]=${total}`);
-      }
-    }
-
-    // Add extra dice from "Damage Levels" (1d8 per level)
-    if (damageLevelsBuff > 0) {
-      const { rolls, total } = await rollDice(`${damageLevelsBuff}d8`);
-      extraDiceTotal += total;
-      extraDiceDetails.push(`${damageLevelsBuff}d8[${rolls.join(',')}]=${total} (Níveis)`);
-    }
-
-    const finalResult = result + extraDiceTotal;
-
-    if (hitTargets.length === 0) {
-      showRollAnimation('Acerto', d20, totalHitBonus + extraDiceTotal, finalResult);
-      return;
-    }
-
-    const critMarginBuff = activeBuffs.filter(b => b.type === 'critMargin').reduce((s, b) => s + b.value, 0);
-    const critThreshold = Math.max(2, 20 - critMarginBuff);
-    const isCritFail = d20 === 1 && !consumeCritNegated(c.id);
-    const isCritHit = d20 >= critThreshold && !isCritFail;
-
-    const hitResultsList: { name: string; hit: 'hit' | 'miss' | 'crit' | 'critFail' }[] = [];
-    const hitLogResults: string[] = [];
-    hitTargets.forEach((targetId) => {
-      const target = allCharacters.find((ch) => ch.id === targetId);
-      if (!target) return;
-      const tPassiveCA = target.passives.reduce((sum, p) => sum + p.bonusCA, 0);
-      const tEquipped = items.filter((i) => (i.assignedTo ?? []).includes(target.id));
-      const tItemCA = tEquipped.reduce((sum, i) => sum + i.bonusCA, 0);
-      const tBuffCA = (target.activeBuffs || []).filter(b => b.type === 'ca').reduce((s, b) => s + b.value, 0);
-      const tCondCA = getDefenseModFromConditions(target, 'melee');
-      const targetCA = target.ca + tPassiveCA + tItemCA + tBuffCA + tCondCA;
-
-      // Paralisado / Inconsciente / Indefeso → auto-acerto e auto-crítico (×2 dados de dano).
-      const auto = getAutoCritFromConditions(target, 'melee');
-      if (auto) {
-        hitResultsList.push({ name: target.name, hit: 'crit' });
-        hitLogResults.push(`💥 ${target.name} — ACERTO CRÍTICO AUTOMÁTICO (${auto.reason}): dado de dano DOBRADO`);
-        return;
-      }
-      if (isCritFail) {
-        hitResultsList.push({ name: target.name, hit: 'critFail' });
-        hitLogResults.push(`❌ ${target.name} — FALHA CRÍTICA`);
-      } else if (isCritHit) {
-        hitResultsList.push({ name: target.name, hit: 'crit' });
-        hitLogResults.push(`✅ ${target.name} — ACERTO CRÍTICO!`);
-      } else if (finalResult >= targetCA) {
-        hitResultsList.push({ name: target.name, hit: 'hit' });
-        hitLogResults.push(`✅ ${target.name} — ACERTOU`);
-      } else {
-        hitResultsList.push({ name: target.name, hit: 'miss' });
-        hitLogResults.push(`❌ ${target.name} — ERROU`);
-      }
-    });
-
-    playDiceSound();
-    setRollAnimating(true);
-    let count = 0;
-    const interval = setInterval(async () => {
-      setRollResult({ label: 'Acerto', d20: Math.floor(Math.random() * 20) + 1, bonus: totalHitBonus, total: Math.floor(Math.random() * 30) });
-      count++;
-      if (count >= 15) {
-        clearInterval(interval);
-        setRollResult({ label: 'Acerto', d20, bonus: totalHitBonus + extraDiceTotal, total: finalResult, hitResults: hitResultsList });
-        setRollAnimating(false);
-
-        // After-attack damage (separate instance)
-        let extraAfterStr = '';
-        if (extraDiceAfterBuffs.length > 0) {
-          for (const b of extraDiceAfterBuffs) {
-            const formula = b.extraDamageFormula ?? (b.extraDiceCount && b.extraDiceSides ? `${b.extraDiceCount}d${b.extraDiceSides}` : undefined);
-            if (!formula) continue;
-            const { rolls, total } = await rollDice(formula);
-            extraAfterStr += ` | ➕ Dano Extra: ${total} [${formula}(${rolls.join(',')})]`;
-          }
-        }
-
-        const extraStr = extraDiceDetails.length > 0 ? ` + ${extraDiceDetails.join(' + ')}` : '';
-        consumeSupportAttackBuffs(extraDiceAfterBuffs);
-        addLog('roll', `🎲 ${c.name} → Acerto: d20(${d20}) + ${totalHitBonus}${extraStr} = ${finalResult}${extraAfterStr}\n${hitLogResults.join('\n')}`);
-      }
-    }, 80);
-
-    setShowHitTargetSelect(false);
-  };
 
   const handleUseSpell = async (spell: Spell) => {
     // Feitiço em área: roda o fluxo de posicionamento no mapa (mesmo dos players)
@@ -1554,8 +2489,13 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
     NPC: 'bg-neon-yellow/20 text-neon-yellow border-neon-yellow/30',
   };
 
+  // Wrapper for SpellBlock which uses Spell type
+  const handleSpellUse = useCallback((spell: Spell) => {
+    handleUseSpell(spell);
+  }, []);
+
   return (
-    <div ref={cardRef} className={cn("rounded-2xl border border-border bg-card overflow-hidden animate-scale-in transition-all duration-300", removing && "opacity-0 scale-95")}>
+    <div ref={cardRef} data-compact-sheet={compactHeader || undefined} className={cn("@container/sheet min-w-0 w-full rounded-2xl border border-border bg-card overflow-hidden animate-scale-in transition-all duration-300", removing && "opacity-0 scale-95")}>
       {/* ─── Clickable header region ─── */}
       <div
         onClick={() => { playFichaToggleSound(); setExpanded(!expanded); }}
@@ -1567,7 +2507,7 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
         compactHeader && "content-start",
       )}>
         <div className="flex items-center gap-2 text-foreground font-bold text-sm rounded-lg p-1">
-          <span className="font-mono text-muted-foreground">A</span>
+          <span className="font-mono text-muted-foreground">{c.name.trim().charAt(0).toLocaleUpperCase() || '?'}</span>
           <span className="text-sm text-muted-foreground">
             {c.category === 'INIMIGO' ? `ND.${c.level}` : `Nv.${c.level}`}
           </span>
@@ -1656,1202 +2596,530 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
           >
             <span className="text-xs font-bold uppercase tracking-wider text-primary/80 leading-none">CA</span>
             <span className="font-mono text-2xl font-black leading-none text-primary">
-              <StatValue
-                valorBase={effectiveCA - omniTotalsCombinados.ca}
-                valorAtual={effectiveCA}
-                origens={omniOrigensPorChave.ca}
+              <span
+                data-valor-base={effectiveCA - omniTotalsCombinados.ca}
+                data-valor-atual={effectiveCA}
+                data-origens={JSON.stringify(omniOrigensPorChave.ca)}
               >
                 {effectiveCA}
-              </StatValue>
+              </span>
               {buffCA > 0 && <span className="ml-0.5 text-xs text-pe align-top">+{buffCA}</span>}
             </span>
             {hasDirectionalDef && (
-              <div className="mt-0.5 flex gap-1 text-xs font-mono leading-none text-primary/70">
-                <span title="Defesa contra ataques corpo-a-corpo">CaC {caVsMelee + buffCA}</span>
-                <span className="text-primary/30">·</span>
-                <span title="Defesa contra ataques à distância">Dist {caVsRanged + buffCA}</span>
+              <div className="mt-0.5 flex gap-1 text-sm font-mono leading-none text-primary/70">
+                <span className="rounded bg-sky-500/20 px-1">CaC {caVsMelee + buffCA}</span>
+                <span className="rounded bg-amber-500/20 px-1">Dist {caVsRanged + buffCA}</span>
               </div>
             )}
           </div>}
-          {/* CD — mesmo visual da CA, com atributo configurável travado uma vez */}
-          <div
-            className="flex flex-col items-center justify-center rounded-xl border-2 border-neon-yellow/50 bg-gradient-to-br from-neon-yellow/20 to-neon-yellow/5 px-3 py-1.5 shadow-[0_0_20px_-5px_hsl(var(--neon-yellow)/0.4)]"
-            title={`CD base ${baseDCCC}${dcAttrCC ? ` + ${dcAttrCC.name.slice(0,3).toUpperCase()} ${dcAttrModCC >= 0 ? '+' : ''}${dcAttrModCC}` : ' (sem atributo)'} + ½ Nv ${halfLevelCC} + Treinamento ${trainingBonusCC}${passiveDC ? ` + Passivas ${passiveDC}` : ''}${itemDC ? ` + Itens ${itemDC}` : ''}${buffDC ? ` + Buffs ${buffDC}` : ''}${cdIncreaseCC ? ` + Aumento ${cdIncreaseCC}` : ''}${classCdBonusCC ? ` + Classe ${classCdBonusCC}` : ''}`}
-          >
-            <span className="text-xs font-bold uppercase tracking-wider text-neon-yellow/80 leading-none">CD Amald.</span>
-            <span className="font-mono text-2xl font-black leading-none text-neon-yellow">
-              {effectiveDC}
-              {buffDC > 0 && <span className="ml-0.5 text-xs text-pe align-top">+{buffDC}</span>}
-            </span>
-          </div>
-          <div
-            className="flex flex-col items-center justify-center rounded-xl border-2 border-primary/50 bg-gradient-to-br from-primary/20 to-primary/5 px-3 py-1.5"
-            title={`CD de Especialização: base ${baseDCCC}${specKeyAttrCC ? ` + ${specKeyAttrCC.name.slice(0,3).toUpperCase()} ${specKeyModCC >= 0 ? '+' : ''}${specKeyModCC}` : ' (sem atributo-chave)'} + ½ Nv ${halfLevelCC} + Treinamento ${trainingBonusCC}${passiveDC ? ` + Passivas ${passiveDC}` : ''}${itemDC ? ` + Itens ${itemDC}` : ''}${buffDC ? ` + Buffs ${buffDC}` : ''}${cdIncreaseCC ? ` + Aumento ${cdIncreaseCC}` : ''}${implementoCC ? ` + Implemento Marcial ${implementoCC}` : ''}`}
-          >
-            <span className="text-xs font-bold uppercase tracking-wider text-primary/80 leading-none">CD Espec.</span>
-            <span className="font-mono text-2xl font-black leading-none text-primary">{specDC}</span>
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <div className="text-xs text-muted-foreground font-mono" title={`Movimento base ${c.movement ?? 9}m${talentBonuses.movementMeters > 0 ? ` + ${talentBonuses.movementMeters}m (talento)` : ''}${getMobilidadeBonus(c) > 0 ? ` + ${getMobilidadeBonus(c)}m (Mobilidade Avançada)` : ''}${omniModifiers.deslocamento !== 0 ? ` ${omniModifiers.deslocamento > 0 ? '+' : '-'} ${Math.abs(omniModifiers.deslocamento)}m (equipamento)` : ''}${(c.exhaustionLevel ?? 0) > 0 ? ` - ${(1.5 * (c.exhaustionLevel ?? 0)).toFixed(1)}m (Exaustão)` : ''}`}>
-              MOV:{Math.max(0, (c.movement ?? 9) + talentBonuses.movementMeters + getMobilidadeBonus(c) + omniModifiers.deslocamento - 1.5 * (c.exhaustionLevel ?? 0)).toFixed(1)}m{talentBonuses.movementMeters > 0 && <span className="ml-0.5 text-primary/80">⚙</span>}
-            </div>
-            <Select
-              value={c.dcLinkedAttr || ''}
-              onValueChange={(newId) => {
-                if (!newId) return;
-                const attr = (c.attributes || []).find(a => a.id === newId);
-                requestAttrLock({
-                  context: 'CD (Classe de Dificuldade)',
-                  attrName: attr?.name ?? '—',
-                  onConfirm: () => updateCharacter(c.id, { dcLinkedAttr: newId }),
-                });
-              }}
-              disabled={!!c.dcLinkedAttr}
-            >
-              <SelectTrigger
-                onClick={(e) => e.stopPropagation()}
-                title={c.dcLinkedAttr ? `Atributo da CD: ${dcAttrCC?.name} (travado)` : 'Definir atributo da CD (única vez)'}
-                className="h-5 w-auto min-w-[68px] gap-1 rounded border border-neon-yellow/30 bg-background/60 px-1.5 py-0 text-xs font-bold text-neon-yellow disabled:opacity-90 disabled:cursor-not-allowed [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-neon-yellow/70"
-              >
-                <SelectValue placeholder="CD: —" />
-              </SelectTrigger>
-              <SelectContent onClick={(e) => e.stopPropagation()} className="min-w-[120px]">
-                {(c.attributes || []).map(a => (
-                  <SelectItem key={a.id} value={a.id} className="text-xs font-bold text-neon-yellow focus:text-neon-yellow">
-                    CD:{a.name.slice(0,3).toUpperCase()}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <span className={cn('rounded-full border px-2 py-0.5 text-sm font-bold uppercase', categoryColors[c.category])}>
-          {c.category}
-        </span>
-        <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform duration-300', expanded && 'rotate-180')} />
-      </div>
-      </div>
-
-      {isMaster && omniFormulaDiagnostics.length > 0 && (
-        <div
-          role="alert"
-          onClick={(event) => event.stopPropagation()}
-          className="mx-4 mt-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm leading-relaxed text-amber-100"
-        >
-          <div className="mb-1 flex items-center gap-2 font-semibold">
-            <AlertTriangle className="h-4 w-4 shrink-0" />
-            Fórmulas ou keys de bônus OMNI inválidas
-          </div>
-          <ul className="list-disc space-y-1 pl-5">
-            {omniFormulaDiagnostics.map((diagnostic, index) => (
-              <li key={`${diagnostic.source}-${diagnostic.key}-${index}`}>
-                <strong>{diagnostic.source}</strong> · {diagnostic.key}: {diagnostic.message}
-                {diagnostic.formula && <code className="ml-1 break-all">({diagnostic.formula})</code>}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <PortasDaMorteCard c={c} />
-      {/* ─── Status bars ─── */}
-      <div className="px-4 pb-2 space-y-1.5">
-        <div className="flex items-center gap-1">
-          <div className="flex-1"><StatusBar
-            label="HP" icon="♥" current={c.hpCurrent} max={effectiveHpMax} color="bg-hp"
-            baseMax={effectiveHpMax - omniTotalsCombinados.hp}
-            maxOrigens={omniOrigensPorChave.hp}
-          /></div>
-          <TalentBonusBadge bonuses={talentBonuses} prefix="HP máx" />
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="flex-1"><StatusBar
-            label="PE" icon="♦" current={c.peCurrent} max={effectivePeMax} color="bg-primary"
-            baseMax={effectivePeMax - omniTotalsCombinados.pe}
-            maxOrigens={omniOrigensPorChave.pe}
-          /></div>
-          <TalentBonusBadge bonuses={talentBonuses} prefix="PE máx" />
-        </div>
-        <StatusBar
-          label="PVTs" icon="○" current={c.escCurrent} max={effectiveEscMax} color="bg-shield"
-          baseMax={effectiveEscMax - omniTotalsCombinados.esc}
-          maxOrigens={omniOrigensPorChave.esc}
-        />
-        {c.category === 'PLAYER' && <HungerBar character={c} />}
-        {(talentBonuses.initiative !== 0 || talentBonuses.attention !== 0 || talentBonuses.luckMax !== 0 || talentBonuses.fortitude !== 0 || talentBonuses.soulRd !== 0 || talentBonuses.movementMeters !== 0 || talentBonuses.immunities.length > 0 || talentBonuses.notes.length > 0 || talentBonuses.suporteLv2Unlocked || talentBonuses.shieldProficient) && (
-          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground pt-1">
-            {talentBonuses.initiative !== 0 && (
-              <span className="inline-flex items-center gap-1">
-                ⚡ Iniciativa: <strong className="text-foreground">{effectiveInitiative >= 0 ? '+' : ''}{effectiveInitiative}</strong>
-                <TalentBonusBadge bonuses={talentBonuses} prefix="Iniciativa" />
-              </span>
-            )}
-            {talentBonuses.attention !== 0 && (
-              <span className="inline-flex items-center gap-1">
-                👁 Atenção: <strong className="text-foreground">+{effectiveAttention}</strong>
-                <TalentBonusBadge bonuses={talentBonuses} prefix="Atenção" />
-              </span>
-            )}
-            {hasSpecAbility(c, PRE_ANALISE_ID) && (
-              <span className="inline-flex items-center gap-1 rounded bg-primary/15 px-1.5 text-primary" title="Pré-Análise (narrativo)">
-                👁 Pré-Análise: Atenção +{PRE_ANALISE_ATENCAO} · imune a Surpreso
-              </span>
-            )}
-            {talentBonuses.fortitude !== 0 && (
-              <span className="inline-flex items-center gap-1" title="Bônus em Testes de Resistência de Fortitude">
-                💪 Fortitude: <strong className="text-foreground">+{talentBonuses.fortitude}</strong>
-                <TalentBonusBadge bonuses={talentBonuses} prefix="Fortitude" />
-              </span>
-            )}
-            {talentBonuses.soulRd !== 0 && (
-              <span className="inline-flex items-center gap-1" title="Redução de Dano contra Dano de Alma">
-                ✨ RD Alma: <strong className="text-foreground">{talentBonuses.soulRd}</strong>
-                <TalentBonusBadge bonuses={talentBonuses} prefix="RD Alma" />
-              </span>
-            )}
-            {talentBonuses.movementMeters !== 0 && (
-              <span className="inline-flex items-center gap-1" title="Bônus de Deslocamento">
-                🏃 Movimento: <strong className="text-foreground">+{talentBonuses.movementMeters}m</strong>
-                <TalentBonusBadge bonuses={talentBonuses} prefix="Movimento" />
-              </span>
-            )}
-            {c.luckMax != null && c.luckMax > 0 && (
-              <span className="inline-flex items-center gap-1">
-                🍀 Sorte:{' '}
-                <strong className="text-foreground">{c.luckCurrent ?? 0}/{c.luckMax}</strong>
-                <button
-                  onClick={(e) => { e.stopPropagation(); useCharacterStore.getState().spendLuck(c.id); }}
-                  disabled={(c.luckCurrent ?? 0) <= 0}
-                  className="ml-1 rounded border border-primary/40 bg-primary/15 px-1.5 py-0.5 text-xs uppercase font-bold text-primary hover:bg-primary/25 disabled:opacity-40 disabled:cursor-not-allowed"
-                  title="Gastar 1 Sorte: re-rola a última rolagem e fica com o MAIOR (exceto falha crítica). Pode repetir até esgotar. Reseta no Descanso Longo."
-                >
-                  Gastar
-                </button>
-              </span>
-            )}
-            {talentBonuses.immunities.length > 0 && (
-              <span className="inline-flex items-center gap-1">
-                🛡 Imune: <strong className="text-foreground">{talentBonuses.immunities.join(', ')}</strong>
-              </span>
-            )}
-            {talentBonuses.suporteLv2Unlocked && (
-              <span
-                className="inline-flex items-center gap-1 rounded border border-emerald-400/40 bg-emerald-500/10 px-1.5 py-0.5 text-emerald-300"
-                title="Adepto de Medicina: 2º efeito de Suporte em Combate liberado. Cura usa o Nível do personagem; usos /2."
-              >
-                ⚕ Suporte Lv2
-              </span>
-            )}
-            {talentBonuses.shieldProficient && (
-              <span
-                className="inline-flex items-center gap-1 rounded border border-sky-400/40 bg-sky-500/10 px-1.5 py-0.5 text-sky-300"
-                title="Mestre Defensivo: já proficiente em escudos — RD do escudo equipado é amplificada (base + ⌊base/2⌋)."
-              >
-                🛡 Escudo+
-              </span>
-            )}
-            {talentBonuses.saveBonusVsDefenseDebuff > 0 && (
-              <span
-                className="inline-flex items-center gap-1 rounded border border-amber-400/40 bg-amber-500/10 px-1.5 py-0.5 text-amber-300"
-                title={`Guarda Infalível: +${talentBonuses.saveBonusVsDefenseDebuff} em TR contra efeitos que reduzam Defesa ou imponham penalidade em TRs.`}
-              >
-                🛡 TR+{talentBonuses.saveBonusVsDefenseDebuff} vs debuff
-              </span>
-            )}
-          </div>
-        )}
-        {c.restGrant && (
-          <div className="pt-1">
+          {!compactHeader && (
             <button
-              onClick={() => { setShowRestModal(true); playClickSound(); }}
-              className="w-full h-8 rounded-lg border border-primary/40 bg-primary/15 px-3 text-xs font-medium text-primary hover:bg-primary/25 transition-all flex items-center justify-center gap-1.5 glow-primary"
-              title={`Descanso ${c.restGrant === 'short' ? 'Curto' : 'Longo'} concedido pelo Mestre`}
+              onClick={() => { playClickSound(); setShowDamagePanel(!showDamagePanel); }}
+              className="h-8 w-8 flex items-center justify-center rounded-lg border border-border bg-background/60 hover:bg-secondary/30 transition-colors"
+              title="Painel Dano/Cura multi-alvo"
+              aria-label={showDamagePanel ? 'Fechar painel de dano e cura' : 'Abrir painel de dano e cura'}
+              aria-expanded={showDamagePanel}
             >
-              <Moon className="h-3.5 w-3.5" /> Descansar ({c.restGrant === 'short' ? 'Curto' : 'Longo'})
+              <Swords className="h-4 w-4" />
             </button>
-          </div>
-        )}
-        {c.hasBlindfoldSlot && (
-          <div className="pt-1" onClick={(e) => e.stopPropagation()}>
-            <BlindfoldSlot character={c} />
-          </div>
-        )}
-        {!isPlayer && (
-          <div className="pt-1" onClick={(e) => e.stopPropagation()}>
-            <label className="flex items-center gap-2 text-[10.5px] text-muted-foreground cursor-pointer select-none">
-              <input
-                type="checkbox"
-                className="h-3 w-3 cursor-pointer"
-                checked={!!c.hasBlindfoldSlot}
-                onChange={(e) =>
-                  useCharacterStore
-                    .getState()
-                    .setHasBlindfoldSlot(c.id, e.target.checked)
-                }
-              />
-              [Mestre] Habilitar slot de Venda
-            </label>
-          </div>
-        )}
-      </div>
-
-      {showRestModal && c.restGrant && (
-        <RestModal character={c} allowedMode={c.restGrant} onClose={() => setShowRestModal(false)} />
-      )}
-
-      {/* Memorização Imediata: abre automaticamente após Descanso Longo se houver slots pendentes. */}
-      {(c.pendingPreparedSpellSlots ?? 0) > 0 && (
-        <PreparedSpellsDialog
-          character={c}
-          onClose={() => useCharacterStore.getState().updateCharacter(c.id, { pendingPreparedSpellSlots: 0 })}
-        />
-      )}
-
-      {/* ─── CAM: tabs de núcleos + barra de Integridade da Alma ─── */}
-      {isCamActive(c) && (
-        <div className="px-4 pb-2">
-          <CamCoreTabs character={c} />
-        </div>
-      )}
-
-      {/* ─── FAH: Vigor Maldito + Anatomias + toggles ─── */}
-      {c.origin === 'Feto Amaldiçoada Híbrido (FAH)' && <FahPanel character={c} />}
-
-      {/* ─── Reações do Especialista em Técnica (Bloco A) ─── */}
-      {!c.isGrimorioCreature && <SpecReactionsPanel character={c} />}
-
-      {/* ─── Ações ativas do Especialista em Técnica (Bloco B) ─── */}
-      {!c.isGrimorioCreature && <SpecActionsPanel character={c} />}
-
-      {/* ─── Inspirar Aliados: botão do aliado inspirado ─── */}
-      <InspiradoButton c={c} />
-
-      {/* ─── Suporte: habilidades base ─── */}
-      <div onClick={(e) => e.stopPropagation()}>
-        <SuportePanel character={c} />
-        <CombateEstilosPanel character={c} />
-      </div>
-
-      {/* ─── Painel de Ataque (combatEngine) ─── */}
-      {/* Visível apenas durante combate ativo. */}
-      {/* stopPropagation: o painel está dentro da região clickable do header
-          (que toggla expanded). Sem isso, qualquer clique dentro do AttackPanel
-          borbulha e fecha/abre a ficha. */}
-      {useCombatStore((s) => s.inCombat) && !hideAttackPanel && (
-        <div onClick={(e) => e.stopPropagation()}>
-          <AttackPanel character={c} />
-        </div>
-      )}
-
-      {/* ─── DERIVADO: Recuperação de Emergência (1×/dia) ─── */}
-      {c.origin === 'Derivado' && (() => {
-        const tb = getTrainingBonusByLevel(c.level);
-        const recovered = tb * 2;
-        const used = !!c.derivadoEmergencyUsed;
-        return (
-          <div className="px-4 pb-2">
-            <div className="flex items-center justify-between rounded-md border border-primary/30 bg-primary/5 px-3 py-2">
-              <div className="text-xs">
-                <div className="font-bold text-primary">Recuperação de Emergência</div>
-                <div className="text-muted-foreground">
-                  Ação Bônus em combate · Recupera <b>+{recovered} PE</b> (2× Bônus de Treinamento) · 1×/dia
-                </div>
-              </div>
-              <button
-                type="button"
-                disabled={used}
-                onClick={() => {
-                  const r = useCharacterStore.getState().useDerivadoEmergencyRecovery(c.id, useCombatStore.getState().inCombat);
-                  if (!r.ok) { toast.error(r.reason ?? 'Falha.'); playErrorSound(); return; }
-                  playSuccessSound();
-                  toast.success(`+${r.recovered} PE (Recuperação de Emergência).`);
-                  useLogStore.getState().addLog('combat', `⚡ ${c.name} usou Recuperação de Emergência → +${r.recovered} PE.`);
-                }}
-                className={cn(
-                  'text-xs font-bold rounded px-3 py-1.5 transition',
-                  used
-                    ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                    : 'bg-primary text-primary-foreground hover:bg-primary/90',
-                )}
-              >
-                {used ? 'Usada hoje' : 'Usar'}
-              </button>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* ─── INUMAKI: Olhos de Cobra e Presas (usos diários = Maestria) ─── */}
-      {c.clanId === 'Inumaki' && (() => {
-        const max = c.inumakiMax ?? getTrainingBonusByLevel(c.level);
-        const cur = c.inumakiUses ?? max;
-        return (
-          <div className="px-4 pb-2">
-            <div className="flex items-center justify-between rounded-md border border-accent/30 bg-accent/5 px-3 py-2">
-              <div className="text-xs">
-                <div className="font-bold text-accent">Olhos de Cobra e Presas</div>
-                <div className="text-muted-foreground">
-                  Ação Bônus · Concede Ação Bônus a um aliado (gasta como Reação) · {cur}/{max} hoje
-                </div>
-              </div>
-              <button
-                type="button"
-                disabled={cur <= 0}
-                onClick={() => {
-                  const r = useCharacterStore.getState().useInumakiOlhosCobra(c.id);
-                  if (!r.ok) { toast.error(r.reason ?? 'Falha.'); playErrorSound(); return; }
-                  playSuccessSound();
-                  toast.success(`Olhos de Cobra e Presas usado (${r.usesLeft} restante).`);
-                  useLogStore.getState().addLog('combat', `🐍 ${c.name} ativou Olhos de Cobra e Presas.`);
-                }}
-                className={cn(
-                  'text-xs font-bold rounded px-3 py-1.5 transition',
-                  cur <= 0
-                    ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                    : 'bg-accent text-accent-foreground hover:bg-accent/90',
-                )}
-              >
-                {cur <= 0 ? 'Esgotado' : 'Usar'}
-              </button>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* ─── RESTRINGIDO: Resiliência Imediata (usos diários = Maestria) ─── */}
-      {c.origin === 'Restringido' && (() => {
-        const max = c.restringidoResilMax ?? getTrainingBonusByLevel(c.level);
-        const cur = c.restringidoResilUses ?? max;
-        const reduce = Math.max(1, Math.floor(c.level / 2)) * 5;
-        return (
-          <div className="px-4 pb-2">
-            <div className="flex items-center justify-between rounded-md border border-hp/30 bg-hp/5 px-3 py-2">
-              <div className="text-xs">
-                <div className="font-bold text-hp">Resiliência Imediata</div>
-                <div className="text-muted-foreground">
-                  Reação · Reduz dano em <b>{reduce}</b> OU evita Desmembramento · {cur}/{max} hoje
-                </div>
-              </div>
-              <button
-                type="button"
-                disabled={cur <= 0}
-                onClick={() => {
-                  const r = useCharacterStore.getState().useRestringidoResiliencia(c.id);
-                  if (!r.ok) { toast.error(r.reason ?? 'Falha.'); playErrorSound(); return; }
-                  playSuccessSound();
-                  toast.success(`Resili\u00eancia Imediata: -${r.reduced} dano (${r.usesLeft} restante).`);
-                  useLogStore.getState().addLog('combat', `🛡 ${c.name} usou Resili\u00eancia Imediata → -${r.reduced} dano.`);
-                }}
-                className={cn(
-                  'text-xs font-bold rounded px-3 py-1.5 transition',
-                  cur <= 0
-                    ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                    : 'bg-hp text-white hover:bg-hp/90',
-                )}
-              >
-                {cur <= 0 ? 'Esgotado' : 'Usar'}
-              </button>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* ─── RD & Vulnerabilities & Actions ─── */}
-      <div className="flex items-center justify-between px-4 pb-2 text-sm text-muted-foreground flex-wrap gap-1">
-        <div className="flex items-center gap-1 flex-wrap">
-          <span className="font-medium">RD:<StatValue
-            valorBase={totalRD - omniTotalsCombinados.rd}
-            valorAtual={totalRD}
-            origens={omniOrigensPorChave.rd}
-          >{totalRD}</StatValue></span>
-          {nonZeroRds.map((t) => (
-            <span key={t} className="text-xs rounded bg-secondary/50 px-1.5 py-0.5 whitespace-nowrap" title={`RD ${DAMAGE_TYPE_LABELS[t]}`}>
-              {DAMAGE_TYPE_LABELS[t]}:{rdByType[t]}
-            </span>
-          ))}
-          {(c.vulnerabilities || []).length > 0 && (
-            <span className="text-xs text-neon-red ml-1">
-              ⚠ Vuln: {(c.vulnerabilities || []).map(v => DAMAGE_TYPE_LABELS[v]).join(', ')}
-            </span>
           )}
-          {(c.immunities || []).length > 0 && (
-            <span className="text-xs text-pe ml-1">
-              🛡 Imune: {(c.immunities || []).map(v => DAMAGE_TYPE_LABELS[v]).join(', ')}
-            </span>
+          {canManageThisCharacter && !compactHeader && (
+            <button
+              onClick={() => { playClickSound(); setEditMode(e => !e); }}
+              className="h-8 w-8 flex items-center justify-center rounded-lg border border-border bg-background/60 hover:bg-secondary/30 transition-colors"
+              title={editMode ? 'Sair do modo edição' : 'Entrar no modo edição'}
+              aria-label={editMode ? 'Sair do modo edição' : 'Entrar no modo edição'}
+              aria-pressed={editMode}
+            >
+              <Edit className="h-4 w-4" />
+            </button>
           )}
-          {auraEffects.physicalResistanceActive && (
-            <span className="text-xs rounded bg-primary/20 border border-primary/40 text-primary px-1.5 py-0.5 ml-1" title="Aura Impenetrável: dano físico (DCO/DP/DI) reduzido à metade por 1 rodada">
-              🛡 Aura Impenetrável (½ físico)
-            </span>
-          )}
-          {auraEffects.casuloActive && (
-            <span className="text-xs rounded bg-primary/20 border border-primary/40 text-primary px-1.5 py-0.5 ml-1" title={`Casulo de Energia: imune a DCO/DP/DI mundanos; +${auraEffects.casuloTechniqueRD} RD vs técnicas`}>
-              🥚 Casulo (imune mundano)
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={(e) => { e.stopPropagation(); handleResetActions(); }}
-            className="rounded p-0.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-            title="Resetar ações"
-          >
-            <RotateCcw className="h-3 w-3" />
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); if (c.actionsCurrent > 0) updateCharacter(c.id, { actionsCurrent: c.actionsCurrent - 1 }); }}
-            className={cn('rounded px-1.5 py-0.5 text-xs font-bold border transition-colors', c.actionsCurrent > 0 ? 'bg-primary/20 text-primary border-primary/40' : 'bg-secondary/30 text-muted-foreground/50 border-border')}
-            title="Ação Comum"
-          >
-            AC {c.actionsCurrent}/{effectiveActionsMax}
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); if (c.bonusActionsCurrent > 0) updateCharacter(c.id, { bonusActionsCurrent: c.bonusActionsCurrent - 1 }); }}
-            className={cn('rounded px-1.5 py-0.5 text-xs font-bold border transition-colors', c.bonusActionsCurrent > 0 ? 'bg-pe/20 text-pe border-pe/40' : 'bg-secondary/30 text-muted-foreground/50 border-border')}
-            title="Ação Bônus"
-          >
-            AB {c.bonusActionsCurrent}/{c.bonusActionsMax + itemBonuses.bonusActions}
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); useReactionStore.getState().consumeReaction(c.id); }}
-            className={cn('rounded px-1.5 py-0.5 text-xs font-bold border transition-colors', getReactionsAvailable(c) > 0 ? 'bg-neon-yellow/20 text-neon-yellow border-neon-yellow/40' : 'bg-secondary/30 text-muted-foreground/50 border-border')}
-            title={hasLancaReactionSuppression(c) ? 'Reações suprimidas pela Sentença Rubra; o saldo continua preservado.' : 'Reação'}
-            aria-label={hasLancaReactionSuppression(c) ? 'Reações suprimidas; saldo não consumido' : 'Reação'}
-          >
-            {hasLancaReactionSuppression(c) ? 'RÇ SUPRIMIDA' : `RÇ ${getReactionsAvailable(c)}/${c.reactionsMax + itemBonuses.reactions}`}
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); if (c.opportunityCurrent > 0) updateCharacter(c.id, { opportunityCurrent: c.opportunityCurrent - 1 }); }}
-            className={cn('rounded px-1.5 py-0.5 text-xs font-bold border transition-colors', c.opportunityCurrent > 0 ? 'bg-hp/20 text-hp border-hp/40' : 'bg-secondary/30 text-muted-foreground/50 border-border')}
-            title={talentBonuses.opportunity > 0 ? `Ataque de Oportunidade (+${talentBonuses.opportunity} de talentos)${talentBonuses.notes.find(n=>n.includes('AdO')) ? ' · ' + talentBonuses.notes.find(n=>n.includes('AdO')) : ''}` : 'Ataque de Oportunidade'}
-          >
-            AO {c.opportunityCurrent}/{c.opportunityMax + itemBonuses.opportunity + talentBonuses.opportunity}
-            {talentBonuses.opportunity > 0 && <span className="ml-0.5 text-primary/80">⚙</span>}
-          </button>
-          <span title={espacosIntermediarios > 0 ? 'Inclui ' + espacosIntermediarios.toLocaleString('pt-BR') + ' espaço(s) de intermediário vinculado.' : undefined}>📦 {slotsAtualComIntermediarios.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}/<StatValue
-            valorBase={effectiveSlotsMax - omniTotalsCombinados.slots}
-            valorAtual={effectiveSlotsMax}
-            origens={omniOrigensPorChave.slots}
-          >{effectiveSlotsMax}</StatValue></span>
+          {/* Master-only: Pool Grant */}
           {!isPlayer && (
             <button
-              onClick={(e) => { e.stopPropagation(); setShowDamagePanel(!showDamagePanel); }}
-              className={cn(
-                'rounded-lg p-1.5 transition-all duration-200',
-                showDamagePanel ? 'bg-hp/20 text-hp shadow-sm shadow-hp/20' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
-              )}
-              title="Dano / Cura / Escudo"
+              onClick={() => { playClickSound(); setPoolGrantOpen(true); }}
+              className="h-8 w-8 flex items-center justify-center rounded-lg border border-border bg-background/60 hover:bg-secondary/30 transition-colors text-muted-foreground hover:text-primary"
+              title="Conceder pontos de pools (Mestre)"
             >
-              <Heart className="h-3.5 w-3.5" />
+              <Wallet className="h-4 w-4" />
             </button>
+          )}
+          {/* Master-only: Delete character in edit mode */}
+          {!isPlayer && editMode && (
+            <DeleteConfirm
+              onConfirm={() => { setRemoving(true); setTimeout(() => removeCharacter(c.id), 300); }}
+              label={c.name}
+            />
           )}
         </div>
       </div>
-      {canManageThisCharacter && (c.activeConcentrations || []).length > 0 && (
-        <ActiveConcentrationPanel character={c} />
-      )}
-      {/* Active Buffs */}
-      {activeBuffs.length > 0 && (
-        <div className="px-4 pb-2 flex flex-wrap gap-1">
-          {activeBuffs.map((b) => {
-            const desc = b.type === 'ca' ? `CA+${b.value}`
-              : b.type === 'hit' ? `Acerto+${b.value}`
-              : b.type === 'extraDice' ? `+${b.extraDiceCount}d${b.extraDiceSides}`
-              : b.type === 'extraDiceAfter' ? `Dano extra ${b.extraDamageFormula ?? `${b.extraDiceCount ?? 0}d${b.extraDiceSides ?? 0}`}`
-              : b.type === 'rd' ? `RD+${b.value}${b.rdDamageTypes?.length ? ` (${b.rdDamageTypes.join('/')})` : ''}`
-              : (b.targetName || '');
-            const isSus = b.isSustained || b.remainingTurns === -1;
-            const durLabel = b.expiraNaRodada !== undefined ? `R${b.expiraNaRodada}` : isSus ? '♾' : `${b.remainingTurns}t`;
-            return (
-              <span
-                key={b.id}
-                className={cn(
-                  "rounded-full border px-2 py-0.5 text-xs font-medium inline-flex items-center gap-1",
-                  isSus ? "bg-primary/20 border-primary/40 text-primary" : "bg-pe/20 border-pe/30 text-pe"
-                )}
-                title={`${b.spellName}${isSus ? ' (sustentado)' : ''}`}
-              >
-                {isSus ? '♾' : '🔮'} {b.spellName}: {desc} ({durLabel})
+      </div>
+
+      {/* ── MAIN CONTENT: 6 ACCORDION SECTIONS ── */}
+      <div className={cn("min-w-0 min-h-0 space-y-4", compactHeader ? "p-3" : "flex-1 overflow-y-auto p-4")}>
+
+        {/* ========== 1. COMBATE ========== */}
+        <Section icon={Swords} title="Combate" defaultOpen={true}>
+          <div className="space-y-4">
+            {/* Portas da Morte */}
+            <PortasDaMorteCard c={c} />
+
+            {/* Status Bars: HP / PE / ESC (Shield) */}
+            <div className="grid grid-cols-1 @[560px]/sheet:grid-cols-3 gap-3">
+              <StatusBar
+                label="HP"
+                current={c.hpCurrent ?? 0}
+                max={effectiveHpMax}
+                color="hp"
+              />
+              <StatusBar
+                label="PE"
+                current={c.peCurrent ?? 0}
+                max={effectivePeMax}
+                color="pe"
+              />
+              <StatusBar
+                label="ESC"
+                current={c.escCurrent ?? 0}
+                max={effectiveEscMax}
+                color="shield"
+              />
+            </div>
+
+            {!c.isGrimorioCreature && <PendingLevelChoicesPanel character={c} />}
+            <ExhaustionControl character={c} />
+
+            {/* Hunger Bar */}
+            <HungerBar character={c} />
+
+            {/* CAM / FAH / Spec / Damage-Heal */}
+            <div className="grid grid-cols-1 @[640px]/sheet:grid-cols-2 gap-4">
+              <CAMPanel character={c} editMode={editMode} onUpdate={updateCharacter} />
+              {isCamActiveFn(c) && <CamCoreTabs character={c} />}
+              {c.origin === 'Feto Amaldiçoada Híbrido (FAH)' && <FahPanel character={c} />}
+            </div>
+            <div className="grid grid-cols-1 @[640px]/sheet:grid-cols-2 gap-4">
+              <SpecPanel character={c} editMode={editMode} onUpdate={updateCharacter} />
+              <SmoothCollapse open={showDamagePanel}>
+                <DamageHealPanel sourceId={c.id} sourceName={c.name} />
+              </SmoothCollapse>
+            </div>
+
+            {/* ─── Descanso concedido pelo Mestre ─── */}
+            {c.restGrant && (
+              <div className="pt-1">
                 <button
-                  onClick={() => {
-                    useCharacterStore.getState().removeBuff(c.id, b.id);
-                    addLog('spell', `${isSus ? '♾' : '🔮'} ${c.name} cancelou buff "${b.spellName}" (${desc})`);
-                  }}
-                  className="text-destructive/60 hover:text-destructive"
-                  title="Cancelar buff"
+                  onClick={() => { setShowRestModal(true); playClickSound(); }}
+                  className="w-full h-8 rounded-lg border border-primary/40 bg-primary/15 px-3 text-xs font-medium text-primary hover:bg-primary/25 transition-all flex items-center justify-center gap-1.5"
+                  title={`Descanso ${c.restGrant === 'short' ? 'Curto' : 'Longo'} concedido pelo Mestre`}
                 >
-                  ✕
+                  <Moon className="h-3.5 w-3.5" /> Descansar ({c.restGrant === 'short' ? 'Curto' : 'Longo'})
                 </button>
-              </span>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Active Conditions */}
-      {(c.activeConditions || []).length > 0 && (
-        <div className="px-4 pb-2 flex flex-wrap gap-1">
-          {(c.activeConditions || []).map((cd) => {
-            const dur = cd.remainingTurns === -1 && cd.remainingRounds === -1 ? '∞'
-              : cd.remainingTurns > 0 ? `${cd.remainingTurns}t`
-              : `${cd.remainingRounds}rd`;
-            return (
-              <span key={cd.id} className="rounded-full bg-hp/20 border border-hp/30 px-2 py-0.5 text-xs text-hp font-medium group cursor-pointer" title={`${cd.name}${cd.sourceCharName ? ` (por ${cd.sourceCharName})` : ''}`}>
-                {cd.icon} {cd.name} ({dur})
-                {cd.conditionId === 'agarrado' && cd.sourceEntityId === 'dez-sombras:sapo' && cd.sourceInstanceId && (
-                  <span className="ml-2 inline-flex gap-1">
-                    <button type="button" disabled={busyFugaAgarrado || !canManageThisCharacter || (combatInProgress && activeTurnCharId !== c.id)} title="Tentar escapar no início do seu turno, sem gastar ação" onClick={() => void tentarFugaDoSapo(cd.id, 'Atletismo')} className="rounded border px-1 text-[10px] disabled:opacity-50">Escapar · Atletismo</button>
-                    <button type="button" disabled={busyFugaAgarrado || !canManageThisCharacter || (combatInProgress && activeTurnCharId !== c.id)} title="Tentar escapar no início do seu turno, sem gastar ação" onClick={() => void tentarFugaDoSapo(cd.id, 'Acrobacia')} className="rounded border px-1 text-[10px] disabled:opacity-50">Escapar · Acrobacia</button>
-                  </span>
-                )}
-                {cd.conditionId !== 'caido' && cd.sourceEntityId !== 'dez-sombras:sapo' && <button onClick={() => removeCondition(c.id, cd.id)} className="ml-1 text-destructive/60 hover:text-destructive hidden group-hover:inline">✕</button>}
-              </span>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ─── Damage/Heal Panel ─── */}
-      <SmoothCollapse open={showDamagePanel}>
-        <div className="px-4 pb-3 border-t border-border pt-2">
-          <DamageHealPanel sourceId={c.id} sourceName={c.name} />
-        </div>
-      </SmoothCollapse>
-
-      {/* ─── Roll result ─── */}
-      {rollResult && (
-        <div className={cn(
-          'mx-4 mb-2 rounded-xl border p-2 text-center text-sm font-mono transition-all relative',
-          rollAnimating
-            ? 'border-primary/50 bg-primary/10 animate-pulse'
-            : rollResult.d20 === 20
-              ? 'border-neon-green bg-neon-green/20 text-neon-green'
-              : rollResult.d20 === 1
-                ? 'border-neon-red bg-neon-red/20 text-neon-red'
-                : 'border-primary/30 bg-secondary/50'
-        )}>
-          {!rollAnimating && (
-            <button onClick={() => setRollResult(null)} className="absolute top-1 right-1 text-muted-foreground hover:text-foreground">
-              <X className="h-3 w-3" />
-            </button>
-          )}
-          <div className="text-xs text-muted-foreground mb-0.5">{rollResult.label}</div>
-          <div className="text-lg font-bold text-foreground">
-            d20({rollResult.d20}) {rollResult.bonus >= 0 ? '+' : '−'} {Math.abs(rollResult.bonus)} = <span className="text-primary">{rollResult.total}</span>
-          </div>
-          {!rollAnimating && rollResult.d20 === 20 && <div className="text-neon-green font-bold">CRÍTICO!</div>}
-          {!rollAnimating && rollResult.d20 === 1 && <div className="text-neon-red font-bold">FALHA CRÍTICA!</div>}
-          {!rollAnimating && rollResult.hitResults && rollResult.hitResults.length > 0 && (
-            <div className="mt-1 space-y-0.5 text-xs">
-              {rollResult.hitResults.map((hr, i) => (
-                <div key={i} className={cn('font-bold',
-                  hr.hit === 'crit' ? 'text-indigo-400' :
-                  hr.hit === 'hit' ? 'text-neon-green' :
-                  hr.hit === 'critFail' ? 'text-fuchsia-500' :
-                  'text-neon-red'
-                )}>
-                  {hr.hit === 'crit' ? '✨' : hr.hit === 'hit' ? '✅' : hr.hit === 'critFail' ? '💀' : '❌'} {hr.name}
-                  {' — '}
-                  {hr.hit === 'crit' ? 'ACERTO CRÍTICO!' : hr.hit === 'hit' ? 'ACERTOU' : hr.hit === 'critFail' ? 'FALHA CRÍTICA' : 'ERROU'}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ─── Expanded content ─── */}
-      <SmoothCollapse open={expanded}>
-        <div className="border-t border-border px-4 py-3 space-y-3 resize-y overflow-auto" style={{ minHeight: expanded ? '200px' : undefined }}>
-          <ExhaustionControl character={c} />
-          {!c.isGrimorioCreature && <PendingLevelChoicesPanel character={c} />}
-          <div className="space-y-2">
-            {/* Attack types with linked attr, training, mastery */}
-            <div className="space-y-1.5">
-              {(['melee', 'ranged', 'cursed'] as const).map((atkType) => {
-                const label = atkType === 'melee' ? 'Corpo a Corpo' : atkType === 'ranged' ? 'A Distância' : 'Amaldiçoado';
-                const bonusKey = atkType === 'melee' ? 'meleeAttackBonus' : atkType === 'ranged' ? 'rangedAttackBonus' : 'cursedAttackBonus';
-                const linkedKey = atkType === 'melee' ? 'meleeLinkedAttr' : atkType === 'ranged' ? 'rangedLinkedAttr' : 'cursedLinkedAttr';
-                const trainedKey = atkType === 'melee' ? 'meleeTrained' : atkType === 'ranged' ? 'rangedTrained' : 'cursedTrained';
-                const bonus = (c as any)[bonusKey] || 0;
-                const linkedId = (c as any)[linkedKey] || '';
-                const trained = (c as any)[trainedKey] || false;
-                const total = getAttackTotalBonus(atkType);
-                const emoji = atkType === 'melee' ? '⚔️' : atkType === 'ranged' ? '🏹' : '👁‍🗨';
-                return (
-                  <div key={atkType} className="flex items-center gap-1.5 flex-wrap rounded-lg bg-secondary/30 px-2 py-1">
-                    <span className="text-sm font-bold text-muted-foreground w-[90px]">{emoji} {label}</span>
-                    {/* Treinamento — IRREVERSÍVEL. Players NÃO podem alternar livremente
-                        (apenas Mestre concede via aptidão/regra). Mostramos apenas o estado. */}
-                    {!isPlayer ? (
-                      <button
-                        onClick={() => {
-                          // Mestre em modo de edição: pode tirar e colocar livremente.
-                          if (editMode) {
-                            updateCharacter(c.id, { [trainedKey]: !trained } as any);
-                            return;
-                          }
-                          if (!trained) updateCharacter(c.id, { [trainedKey]: true } as any);
-                        }}
-                        disabled={trained && !editMode}
-                        className={cn('w-4 h-4 rounded-sm border text-xs font-bold flex items-center justify-center disabled:cursor-not-allowed',
-                          trained ? 'bg-primary/30 border-primary text-primary' : 'border-border text-muted-foreground/40 hover:border-primary/50')}
-                        title={
-                          editMode
-                            ? (trained ? 'Treinamento ativo — clique para remover (modo edição)' : `Treinamento (+${getMasteryBonus(c.level)}) — clique para conceder`)
-                            : (trained ? 'Treinamento já definido (irreversível)' : `Treinamento (+${getMasteryBonus(c.level)})`)
-                        }
-                      >T</button>
-                    ) : trained ? (
-                      <span
-                        className="w-4 h-4 rounded-sm border bg-primary/30 border-primary text-primary text-xs font-bold flex items-center justify-center"
-                        title={`Treinamento ativo (+${getMasteryBonus(c.level)}) — apenas o Mestre pode conceder`}
-                      >T</span>
-                    ) : null}
-                    {/* Linked attribute — Melee/Ranged: só FOR ou DES. Cursed: qualquer atributo. */}
-                    <select
-                      value={linkedId}
-                      onChange={(e) => {
-                        const newId = e.target.value;
-                        if (!newId) return;
-                        const attr = c.attributes.find(a => a.id === newId);
-                        const ctxLabel = atkType === 'melee'
-                          ? 'Ataque Corpo a Corpo'
-                          : atkType === 'ranged'
-                            ? 'Ataque à Distância'
-                            : 'Ataque Amaldiçoado';
-                        requestAttrLock({
-                          context: ctxLabel,
-                          attrName: attr?.name ?? '—',
-                          onConfirm: () => updateCharacter(c.id, { [linkedKey]: newId } as any),
-                        });
-                      }}
-                      className="h-6 rounded border border-input bg-background px-0.5 text-xs text-foreground w-16 disabled:opacity-50 disabled:cursor-not-allowed"
-                      title={linkedId ? "Atributo não pode ser alterado após definido" : (atkType === 'cursed' ? 'Atributo vinculado' : 'Atributo vinculado (apenas FOR ou DES)')}
-                      disabled={!!linkedId}
-                    >
-                      <option value="">—</option>
-                      {c.attributes
-                        .filter(a => atkType === 'cursed' || a.name === 'Força' || a.name === 'Destreza')
-                        .map(a => <option key={a.id} value={a.id}>{a.name.slice(0, 3)}</option>)}
-                    </select>
-                    {/* Extra bonus — apenas Mestre pode editar */}
-                    {!isPlayer ? (
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        value={bonus || ''}
-                        onChange={(e) => {
-                          const raw = e.target.value;
-                          if (raw === '' || raw === '-') { updateCharacter(c.id, { [bonusKey]: 0 } as any); return; }
-                          const num = parseInt(raw);
-                          if (!isNaN(num)) updateCharacter(c.id, { [bonusKey]: num } as any);
-                        }}
-                        className="h-6 w-10 rounded border border-input bg-background px-0.5 text-center text-xs font-mono text-foreground"
-                        title="Bônus externo"
-                      />
-                    ) : bonus !== 0 ? (
-                      <span className="h-6 px-1 inline-flex items-center text-xs font-mono text-muted-foreground" title="Bônus externo (apenas Mestre edita)">
-                        {bonus >= 0 ? '+' : ''}{bonus}
-                      </span>
-                    ) : null}
-                    <span className={cn('font-mono font-bold text-sm', total >= 0 ? 'text-primary' : 'text-hp')}>
-                      {total >= 0 ? '+' : ''}{total}
-                    </span>
-                    <div className="ml-auto relative flex items-center gap-1">
-                      <button
-                        onClick={() => { playClickSound(); setOpenTargetPicker(openTargetPicker === atkType ? null : atkType); }}
-                        className={cn(
-                          'h-6 w-6 rounded-md border flex items-center justify-center transition-colors relative',
-                          attackTargets[atkType].length > 0
-                            ? 'bg-primary/30 border-primary text-primary'
-                            : 'bg-secondary/40 border-border text-muted-foreground hover:border-primary/40',
-                        )}
-                        title={attackTargets[atkType].length > 0 ? `${attackTargets[atkType].length} alvo(s) selecionado(s)` : 'Selecionar alvo(s)'}
-                      >
-                        <Crosshair className="h-3 w-3" />
-                        {attackTargets[atkType].length > 0 && (
-                          <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-primary text-xs font-bold text-primary-foreground flex items-center justify-center">
-                            {attackTargets[atkType].length}
-                          </span>
-                        )}
-                      </button>
-                      <button
-                        onClick={() => handleAttackTypeRoll(atkType)}
-                        className="h-6 w-6 rounded-md bg-primary/15 hover:bg-primary/30 border border-primary/40 text-primary flex items-center justify-center transition-colors"
-                        title={`Rolar ${label}: d20 ${total >= 0 ? '+' : ''}${total}`}
-                      >
-                        <Dice1 className="h-3.5 w-3.5" />
-                      </button>
-                      {openTargetPicker === atkType && (
-                        <div className="absolute right-0 top-7 z-50 w-56 rounded-lg border border-border bg-popover p-2 shadow-lg space-y-1">
-                          <div className="flex items-center justify-between text-xs uppercase tracking-wider text-muted-foreground">
-                            <span>Alvos · {label}</span>
-                            <button onClick={() => setOpenTargetPicker(null)} className="text-muted-foreground hover:text-foreground"><X className="h-3 w-3" /></button>
-                          </div>
-                          <div className="flex flex-wrap gap-1 max-h-40 overflow-auto">
-                            {allCharacters.filter(ch => ch.id !== c.id).map(ch => {
-                              const sel = attackTargets[atkType].includes(ch.id);
-                              return (
-                                <button
-                                  key={ch.id}
-                                  onClick={() => { playClickSound(); toggleAttackTarget(atkType, ch.id); }}
-                                  className={cn(
-                                    'rounded-full px-2 py-0.5 text-xs font-medium border transition-colors',
-                                    sel ? 'bg-primary/30 border-primary text-primary' : 'bg-secondary/40 border-border text-muted-foreground hover:border-primary/40',
-                                  )}
-                                >{ch.name}</button>
-                              );
-                            })}
-                            {allCharacters.filter(ch => ch.id !== c.id).length === 0 && (
-                              <span className="text-xs italic text-muted-foreground">Nenhum outro personagem.</span>
-                            )}
-                          </div>
-                          {attackTargets[atkType].length > 0 && (
-                            <button
-                              onClick={() => setAttackTargets(prev => ({ ...prev, [atkType]: [] }))}
-                              className="w-full rounded-md border border-border bg-background/40 px-2 py-1 text-xs text-muted-foreground hover:border-hp/40 hover:text-hp"
-                            >Limpar alvos</button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              {buffHit > 0 && <span className="text-xs text-pe font-bold">+{buffHit} buff</span>}
-              <span className="text-sm text-muted-foreground">Base: +{getBaseAttackBonus(c.level)} (nível)</span>
-              <div className="ml-auto flex items-center gap-1">
-                {!isPlayer && (
-                  <button onClick={() => setEditMode(!editMode)} className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary" title={editMode ? 'Modo visualização' : 'Modo edição'}>
-                    {editMode ? <Eye className="h-4 w-4 text-primary" /> : <EyeOff className="h-4 w-4" />}
-                  </button>
-                )}
-                {!isPlayer && (
-                  <button
-                    onClick={() => { playClickSound(); setPoolGrantOpen(true); }}
-                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-primary"
-                    title="Conceder pontos de pools (Mestre)"
-                  >
-                    <Wallet className="h-4 w-4" />
-                  </button>
-                )}
-                {!isPlayer && editMode && <DeleteConfirm onConfirm={() => { setRemoving(true); setTimeout(() => removeCharacter(c.id), 300); }} label={c.name} />}
               </div>
-            </div>
-          </div>
-
-          {/* Edit stats */}
-          {editMode && (
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div className="space-y-1">
-                <label className="text-muted-foreground">HP Atual / Max</label>
-                <div className="flex gap-1">
-                  <NullSafeInput value={c.hpCurrent} onChange={(v) => updateCharacter(c.id, { hpCurrent: v })} className="w-full" />
-                  <NullSafeInput value={c.hpMax} onChange={(v) => updateCharacter(c.id, { hpMax: v })} className="w-full" />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-muted-foreground">PE Atual / Max</label>
-                <div className="flex gap-1">
-                  <NullSafeInput value={c.peCurrent} onChange={(v) => updateCharacter(c.id, { peCurrent: v })} className="w-full" />
-                  <NullSafeInput value={c.peMax} onChange={(v) => updateCharacter(c.id, { peMax: v })} className="w-full" />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-muted-foreground">AC / AB / RÇ / AO (Max)</label>
-                <div className="flex gap-1">
-                  <NullSafeInput value={c.actionsMax} onChange={(v) => updateCharacter(c.id, { actionsMax: v, actionsCurrent: v })} className="w-full" />
-                  <NullSafeInput value={c.bonusActionsMax} onChange={(v) => updateCharacter(c.id, { bonusActionsMax: v, bonusActionsCurrent: v })} className="w-full" />
-                  <NullSafeInput value={c.reactionsMax} onChange={(v) => updateCharacter(c.id, { reactionsMax: v, reactionsCurrent: v })} className="w-full" />
-                  <NullSafeInput value={c.opportunityMax} onChange={(v) => updateCharacter(c.id, { opportunityMax: v, opportunityCurrent: v })} className="w-full" />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-muted-foreground">Bônus Iniciativa / Movimento (m)</label>
-                <div className="flex gap-1">
-                  <NullSafeInput value={c.initiativeBonus} onChange={(v) => updateCharacter(c.id, { initiativeBonus: v })} className="w-full" />
-                  <NullSafeInput value={c.movement ?? 9} onChange={(v) => updateCharacter(c.id, { movement: v })} className="w-full" />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-muted-foreground">ESC Atual / Max</label>
-                <div className="flex gap-1">
-                  <NullSafeInput value={c.escCurrent} onChange={(v) => updateCharacter(c.id, { escCurrent: v })} className="w-full" />
-                  <NullSafeInput value={c.escMax} onChange={(v) => updateCharacter(c.id, { escMax: v })} className="w-full" />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-muted-foreground">RD / CA / CD / {c.category === 'INIMIGO' ? 'ND' : 'Nível'}</label>
-                <div className="flex gap-1">
-                  <NullSafeInput value={c.rd} onChange={(v) => updateCharacter(c.id, { rd: v })} className="w-full" />
-                  <NullSafeInput value={c.ca} onChange={(v) => updateCharacter(c.id, { ca: v })} className="w-full" />
-                  <NullSafeInput value={c.baseDC || 10} onChange={(v) => updateCharacter(c.id, { baseDC: v })} className="w-full" />
-                  {c.category === 'INIMIGO' ? (
-                    <div className="h-7 w-full rounded border border-input bg-muted px-2 text-xs text-muted-foreground text-center font-mono flex items-center justify-center" title="ND fixo pela criação no Grimório">
-                      {c.level}
-                    </div>
-                  ) : (
-                    <NullSafeInput value={c.level} onChange={(v) => updateCharacter(c.id, { level: v })} className="w-full" />
-                  )}
-                </div>
-              </div>
-              {/* CD: atributo vinculado (travado uma vez definido) — mesma lógica das jogadas de ataque */}
-              <div className="space-y-1">
-                <label className="text-muted-foreground">Atributo da CD <span className="text-xs opacity-70">(travado após definir)</span></label>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={c.dcLinkedAttr || ''}
-                    onChange={(e) => {
-                      const newId = e.target.value;
-                      if (!newId) return;
-                      const attr = (c.attributes || []).find(a => a.id === newId);
-                      requestAttrLock({
-                        context: 'CD (Classe de Dificuldade)',
-                        attrName: attr?.name ?? '—',
-                        onConfirm: () => updateCharacter(c.id, { dcLinkedAttr: newId }),
-                      });
-                    }}
-                    disabled={!!c.dcLinkedAttr}
-                    title={c.dcLinkedAttr ? 'Atributo da CD não pode ser alterado após definido' : 'Atributo vinculado à CD'}
-                    className="h-8 flex-1 rounded border border-input bg-background px-1 text-xs text-foreground disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    <option value="">— Nenhum —</option>
-                    {(c.attributes || []).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                  </select>
-                  {(() => {
-                    const attr = (c.attributes || []).find(a => a.id === c.dcLinkedAttr);
-                    if (!attr) return null;
-                    const mod = Math.floor((attr.value - 10) / 2);
-                    return (
-                      <span className="text-xs font-mono font-bold text-primary whitespace-nowrap">
-                        {attr.name.slice(0, 3).toUpperCase()} {mod >= 0 ? '+' : ''}{mod}
-                      </span>
-                    );
-                  })()}
-                </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-muted-foreground">Slots Atual / Max</label>
-                <div className="flex gap-1">
-                  <NullSafeInput value={c.slotsCurrent} onChange={(v) => updateCharacter(c.id, { slotsCurrent: v })} className="w-full" />
-                  <NullSafeInput value={c.slotsMax} onChange={(v) => updateCharacter(c.id, { slotsMax: v })} className="w-full" />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-muted-foreground">Nv. Dado Dano / Margem Crítico</label>
-                <div className="flex gap-1">
-                  <NullSafeInput value={c.damageDiceLevel ?? 0} onChange={(v) => updateCharacter(c.id, { damageDiceLevel: v })} className="w-full" />
-                  <NullSafeInput value={c.critMargin ?? 20} onChange={(v) => updateCharacter(c.id, { critMargin: v })} className="w-full" />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-muted-foreground">Aumento CD / Prejuízo Rolagem</label>
-                <div className="flex gap-1">
-                  <NullSafeInput value={c.cdIncrease ?? 0} onChange={(v) => updateCharacter(c.id, { cdIncrease: v })} className="w-full" />
-                  <NullSafeInput value={c.rollPenalty ?? 0} onChange={(v) => updateCharacter(c.id, { rollPenalty: v })} className="w-full" />
-                </div>
-              </div>
-              {/* RD by damage type */}
-              <div className="col-span-2 space-y-1">
-                <label className="text-muted-foreground text-xs">RD por tipo de dano</label>
-                <div className="grid grid-cols-3 gap-1">
-                  {DAMAGE_TYPES.map((t) => (
-                    <div key={t} className="flex items-center gap-0.5">
-                      <label className="text-xs text-muted-foreground w-16 truncate" title={DAMAGE_TYPE_LABELS[t]}>{DAMAGE_TYPE_LABELS[t]}</label>
-                      <NullSafeInput
-                        value={rdByType[t]}
-                        onChange={(v) => {
-                          const newRd = { ...rdByType, [t]: v };
-                          updateCharacter(c.id, { rdByType: newRd });
-                        }}
-                        className="w-full"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-              {/* Vulnerabilities */}
-              <div className="col-span-2 space-y-1">
-                <label className="text-muted-foreground text-xs">Vulnerabilidades (1.5x dano)</label>
-                <div className="grid grid-cols-3 gap-1">
-                  {DAMAGE_TYPES.map((t) => {
-                    const vulns = c.vulnerabilities || [];
-                    const isVuln = vulns.includes(t);
-                    return (
-                      <button
-                        key={t}
-                        onClick={() => {
-                          const newVulns = isVuln ? vulns.filter(v => v !== t) : [...vulns, t];
-                          updateCharacter(c.id, { vulnerabilities: newVulns });
-                        }}
-                        className={cn(
-                          'text-xs rounded px-1.5 py-1 border transition-colors text-left',
-                          isVuln
-                            ? 'bg-neon-red/20 text-neon-red border-neon-red/40'
-                            : 'bg-secondary/30 text-muted-foreground border-border hover:border-neon-red/30'
-                        )}
-                      >
-                        {DAMAGE_TYPE_LABELS[t]}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              {/* Immunities */}
-              <div className="col-span-2 space-y-1">
-                <label className="text-muted-foreground text-xs">Imunidades (ignora dano)</label>
-                <div className="grid grid-cols-3 gap-1">
-                  {DAMAGE_TYPES.map((t) => {
-                    const immunes = c.immunities || [];
-                    const isImmune = immunes.includes(t);
-                    return (
-                      <button
-                        key={t}
-                        onClick={() => {
-                          const newImmunes = isImmune ? immunes.filter(v => v !== t) : [...immunes, t];
-                          updateCharacter(c.id, { immunities: newImmunes });
-                        }}
-                        className={cn(
-                          'text-xs rounded px-1.5 py-1 border transition-colors text-left',
-                          isImmune
-                            ? 'bg-pe/20 text-pe border-pe/40'
-                            : 'bg-secondary/30 text-muted-foreground border-border hover:border-pe/30'
-                        )}
-                      >
-                        {DAMAGE_TYPE_LABELS[t]}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              {/* Character Class */}
-              <div className="space-y-1">
-                <label className="text-muted-foreground text-xs">Classe</label>
-                <select
-                  value={c.characterClass || 'Não-Feiticeiro'}
-                  onChange={(e) => {
-                    const newClass = e.target.value as CharacterClass;
-                    const updates: Partial<Character> = { characterClass: newClass };
-                    if (newClass === 'Não-Feiticeiro') {
-                      updates.specialization = 'Lutador' as Specialization;
-                    }
-                    updateCharacter(c.id, updates);
-                  }}
-                  className="w-full h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground"
-                >
-                  {CHARACTER_CLASSES.map((cls) => (
-                    <option key={cls} value={cls}>{cls}</option>
-                  ))}
-                </select>
-                {c.characterClass === 'Não-Feiticeiro' && (
-                  <p className="text-xs text-muted-foreground italic">
-                    Não-Feiticeiros não possuem classe/especialização de feitiçaria.
-                  </p>
-                )}
-              </div>
-              {/* Especialização - show for Feiticeiro only */}
-              {c.characterClass === 'Feiticeiro' && (
-                <div className="space-y-1">
-                  <label className="text-muted-foreground text-xs">Especialização</label>
-                  <select
-                    value={c.specialization || 'Lutador'}
-                    onChange={(e) => updateCharacter(c.id, { specialization: e.target.value as Specialization })}
-                    className="w-full h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground"
-                  >
-                    {SPECIALIZATIONS.map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              {/* Motivação - show for Maldição only */}
-              {c.characterClass === 'Maldição' && (
-                <div className="space-y-1">
-                  <label className="text-muted-foreground text-xs">Motivação</label>
-                  <select
-                    value={c.motivation || 'Medo'}
-                    onChange={(e) => updateCharacter(c.id, { motivation: e.target.value as Motivation })}
-                    className="w-full h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground"
-                  >
-                    {MOTIVATIONS.map((m) => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              {/* Origem - show for Feiticeiro only */}
-              {c.characterClass === 'Feiticeiro' && (
-                <div className="space-y-1">
-                  <label className="text-muted-foreground text-xs">Origem</label>
-                  <select
-                    value={c.origin || 'Inato'}
-                    onChange={(e) => updateCharacter(c.id, { origin: e.target.value as Origin })}
-                    className="w-full h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground"
-                  >
-                    {ORIGINS.map((o) => (
-                      <option key={o} value={o}>{o}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ─── Collapsible Sections ─── */}
-          {c.characterClass === 'Feiticeiro' && c.specialization === 'Lutador' && (
-            <Section icon={<Zap className="h-4 w-4" />} title="Empolgação">
-              <EmpolgacaoPanel character={c} />
-            </Section>
-          )}
-
-          <Section icon={<Sparkles className="h-4 w-4" />} title="Atributos">
-            {(c.availableAttrPoints ?? 0) > 0 && (
-              <button
-                onClick={() => { playClickSound(); setShowAttrSpend(true); }}
-                className="mb-2 w-full rounded-md border border-primary/60 bg-gradient-to-r from-primary/20 to-accent/15 px-3 py-2 text-xs font-bold text-primary hover:from-primary/30 hover:to-accent/25 transition-colors flex items-center justify-center gap-2 animate-pulse"
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                Distribuir {c.availableAttrPoints} ponto{(c.availableAttrPoints ?? 0) > 1 ? 's' : ''} de atributo
-              </button>
             )}
-            <AttributeBlock
-              items={c.attributes}
-              editMode={editMode}
-              onAdd={(attr) => addAttribute(c.id, attr)}
-              onRemove={(id) => removeAttribute(c.id, id)}
-              onRoll={(name, val) => handleAttrRoll(name, val)}
-              getBonus={getItemRollBonus}
-              isAttribute={true}
-              onUpdateValue={(attrId, value) => {
-                const newAttrs = c.attributes.map(a => a.id === attrId ? { ...a, value } : a);
-                updateCharacter(c.id, { attributes: newAttrs });
-              }}
-            />
-          </Section>
 
-          {/* ─── Perfil Amaldiçoado — Aptidões (sistema numérico AU/CL/BAR/DOM/ER) ─── */}
-          {!(c.specialization === 'Restringido') && (
-            <Section icon={<Sparkles className="h-4 w-4" />} title="Perfil Amaldiçoado — Aptidões">
-              <div className="space-y-3">
-                <CursedAptitudesSection
-                  character={c}
-                   onAptitudeClick={(key) => {
-                     if (key === 'AU') {
-                       setAuraCatalogOpen((o) => !o);
-                       setClCatalogOpen(false);
-                       setDomCatalogOpen(false);
-                       setBarCatalogOpen(false);
-                       setErCatalogOpen(false);
-                       setSpecialCatalogOpen(false);
-                     } else if (key === 'CL') {
-                       setClCatalogOpen((o) => !o);
-                       setAuraCatalogOpen(false);
-                       setDomCatalogOpen(false);
-                       setBarCatalogOpen(false);
-                       setErCatalogOpen(false);
-                       setSpecialCatalogOpen(false);
-                     } else if (key === 'DOM') {
-                       setDomCatalogOpen((o) => !o);
-                       setAuraCatalogOpen(false);
-                       setClCatalogOpen(false);
-                       setBarCatalogOpen(false);
-                       setErCatalogOpen(false);
-                       setSpecialCatalogOpen(false);
-                     } else if (key === 'BAR') {
-                       setBarCatalogOpen((o) => !o);
-                       setAuraCatalogOpen(false);
-                       setClCatalogOpen(false);
-                       setDomCatalogOpen(false);
-                       setErCatalogOpen(false);
-                       setSpecialCatalogOpen(false);
-                     } else if (key === 'ER') {
-                       setErCatalogOpen((o) => !o);
-                       setAuraCatalogOpen(false);
-                       setClCatalogOpen(false);
-                       setDomCatalogOpen(false);
-                       setBarCatalogOpen(false);
-                       setSpecialCatalogOpen(false);
-                     }
-                   }}
-                />
-                {auraCatalogOpen && (
-                  <div className="rounded-lg border border-primary/30 bg-card/40 p-3">
-                    <div className="mb-2 flex items-center justify-between">
-                      <div className="text-xs font-bold uppercase tracking-wider text-primary">
-                        Catálogo — Aptidões de Aura (AU)
+            {/* Rest Modal */}
+            {showRestModal && c.restGrant && (
+              <RestModal character={c} allowedMode={c.restGrant} onClose={() => setShowRestModal(false)} />
+            )}
+
+            {/* Memorização Imediata: abre automaticamente após Descanso Longo se houver slots pendentes. */}
+            {(c.pendingPreparedSpellSlots ?? 0) > 0 && (
+              <PreparedSpellsDialog
+                character={c}
+                onClose={() => useCharacterStore.getState().updateCharacter(c.id, { pendingPreparedSpellSlots: 0 })}
+              />
+            )}
+
+            {/* ─── Reações do Especialista em Técnica (Bloco A) ─── */}
+            {!c.isGrimorioCreature && <SpecReactionsPanel character={c} />}
+
+            {/* ─── Ações ativas do Especialista em Técnica (Bloco B) ─── */}
+            {!c.isGrimorioCreature && <SpecActionsPanel character={c} />}
+
+            {/* ─── Inspirar Aliados: botão do aliado inspirado ─── */}
+            <InspiradoButton c={c} />
+
+            {/* ─── Suporte: habilidades base ─── */}
+            <div onClick={(e) => e.stopPropagation()}>
+              <SuportePanel character={c} />
+              <CombateEstilosPanel character={c} />
+            </div>
+
+            {/* ─── Active Concentration Panel ─── */}
+            {canManageThisCharacter && (c.activeConcentrations || []).length > 0 && (
+              <ActiveConcentrationPanel character={c} />
+            )}
+
+            {/* ─── DERIVADO: Recuperação de Emergência (1×/dia) ─── */}
+            {c.origin === 'Derivado' && (() => {
+              const tb = getTrainingBonusByLevel(c.level);
+              const recovered = tb * 2;
+              const used = !!c.derivadoEmergencyUsed;
+              return (
+                <div className="px-4 pb-2">
+                  <div className="flex items-center justify-between rounded-md border border-primary/30 bg-primary/5 px-3 py-2">
+                    <div className="text-xs">
+                      <div className="font-bold text-primary">Recuperação de Emergência</div>
+                      <div className="text-muted-foreground">
+                        Ação Bônus em combate · Recupera <b>+{recovered} PE</b> (2× Bônus de Treinamento) · 1×/dia
                       </div>
                     </div>
-                    <AuraAptitudesPanel
-                      character={c}
-                      editMode={editMode}
-                    />
+                    <button
+                      type="button"
+                      disabled={used}
+                      onClick={() => {
+                        const r = useCharacterStore.getState().useDerivadoEmergencyRecovery(c.id, useCombatStore.getState().inCombat);
+                        if (!r.ok) { toast.error(r.reason ?? 'Falha.'); playErrorSound(); return; }
+                        playSuccessSound();
+                        toast.success(`+${r.recovered} PE (Recuperação de Emergência).`);
+                        useLogStore.getState().addLog('combat', `⚡ ${c.name} usou Recuperação de Emergência → +${r.recovered} PE.`);
+                      }}
+                      className={cn(
+                        'text-xs font-bold rounded px-3 py-1.5 transition',
+                        used
+                          ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                          : 'bg-primary text-primary-foreground hover:bg-primary/90',
+                      )}
+                    >
+                      {used ? 'Usada hoje' : 'Usar'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ─── INUMAKI: Olhos de Cobra e Presas (usos diários = Maestria) ─── */}
+            {c.clanId === 'Inumaki' && (() => {
+              const max = c.inumakiMax ?? getTrainingBonusByLevel(c.level);
+              const cur = c.inumakiUses ?? max;
+              return (
+                <div className="px-4 pb-2">
+                  <div className="flex items-center justify-between rounded-md border border-accent/30 bg-accent/5 px-3 py-2">
+                    <div className="text-xs">
+                      <div className="font-bold text-accent">Olhos de Cobra e Presas</div>
+                      <div className="text-muted-foreground">
+                        Ação Bônus · Concede Ação Bônus a um aliado (gasta como Reação) · {cur}/{max} hoje
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={cur <= 0}
+                      onClick={() => {
+                        const r = useCharacterStore.getState().useInumakiOlhosCobra(c.id);
+                        if (!r.ok) { toast.error(r.reason ?? 'Falha.'); playErrorSound(); return; }
+                        playSuccessSound();
+                        toast.success(`Olhos de Cobra e Presas usado (${r.usesLeft} restante).`);
+                        useLogStore.getState().addLog('combat', `🐍 ${c.name} ativou Olhos de Cobra e Presas.`);
+                      }}
+                      className={cn(
+                        'text-xs font-bold rounded px-3 py-1.5 transition',
+                        cur <= 0
+                          ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                          : 'bg-accent text-accent-foreground hover:bg-accent/90',
+                      )}
+                    >
+                      {cur <= 0 ? 'Esgotado' : 'Usar'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ─── RESTRINGIDO: Resiliência Imediata (usos diários = Maestria) ─── */}
+            {c.origin === 'Restringido' && (() => {
+              const max = c.restringidoResilMax ?? getTrainingBonusByLevel(c.level);
+              const cur = c.restringidoResilUses ?? max;
+              const reduce = Math.max(1, Math.floor(c.level / 2)) * 5;
+              return (
+                <div className="px-4 pb-2">
+                  <div className="flex items-center justify-between rounded-md border border-hp/30 bg-hp/5 px-3 py-2">
+                    <div className="text-xs">
+                      <div className="font-bold text-hp">Resiliência Imediata</div>
+                      <div className="text-muted-foreground">
+                        Reação · Reduz dano em <b>{reduce}</b> OU evita Desmembramento · {cur}/{max} hoje
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={cur <= 0}
+                      onClick={() => {
+                        const r = useCharacterStore.getState().useRestringidoResiliencia(c.id);
+                        if (!r.ok) { toast.error(r.reason ?? 'Falha.'); playErrorSound(); return; }
+                        playSuccessSound();
+                        toast.success(`Resiliência Imediata: -${r.reduced} dano (${r.usesLeft} restante).`);
+                        useLogStore.getState().addLog('combat', `🛡 ${c.name} usou Resiliência Imediata → -${r.reduced} dano.`);
+                      }}
+                      className={cn(
+                        'text-xs font-bold rounded px-3 py-1.5 transition',
+                        cur <= 0
+                          ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                          : 'bg-hp text-white hover:bg-hp/90',
+                      )}
+                    >
+                      {cur <= 0 ? 'Esgotado' : 'Usar'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ─── RD & Vulnerabilities & Actions ─── */}
+            <div className="flex items-center justify-between px-4 pb-2 text-sm text-muted-foreground flex-wrap gap-1">
+              <div className="flex items-center gap-1 flex-wrap">
+                <span className="font-medium">RD:</span>
+                <span className="font-mono text-sm text-foreground">{totalRD}</span>
+                {nonZeroRds.map((t) => (
+                  <span key={t} className="text-xs rounded bg-secondary/50 px-1.5 py-0.5 whitespace-nowrap" title={`RD ${DAMAGE_TYPE_LABELS[t]}`}>
+                    {DAMAGE_TYPE_LABELS[t]}:{rdByType[t]}
+                  </span>
+                ))}
+                {(c.vulnerabilities || []).length > 0 && (
+                  <span className="text-xs text-neon-red ml-1">
+                    ⚠ Vuln: {(c.vulnerabilities || []).map(v => DAMAGE_TYPE_LABELS[v]).join(', ')}
+                  </span>
+                )}
+                {(c.immunities || []).length > 0 && (
+                  <span className="text-xs text-pe ml-1">
+                    🛡 Imune: {(c.immunities || []).map(v => DAMAGE_TYPE_LABELS[v]).join(', ')}
+                  </span>
+                )}
+                {auraEffects.physicalResistanceActive && (
+                  <span className="text-xs rounded bg-primary/20 border border-primary/40 text-primary px-1.5 py-0.5 ml-1" title="Aura Impenetrável: dano físico (DCO/DP/DI) reduzido à metade por 1 rodada">
+                    🛡 Aura Impenetrável (½ físico)
+                  </span>
+                )}
+                {auraEffects.casuloActive && (
+                  <span className="text-xs rounded bg-primary/20 border border-primary/40 text-primary px-1.5 py-0.5 ml-1" title={`Casulo de Energia: imune a DCO/DP/DI mundanos; +${auraEffects.casuloTechniqueRD} RD vs técnicas`}>
+                    🥚 Casulo (imune mundano)
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleResetActions(); }}
+                  className="rounded p-0.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                  title="Resetar ações"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                </button>
+              </div>
+            </div>
+
+            {/* Conditions & Buffs */}
+            <div className="grid grid-cols-1 @[640px]/sheet:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <h4 className="font-display text-sm font-semibold text-foreground uppercase tracking-wider">Condições Ativas</h4>
+                {(c.activeConditions || []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground italic">Nenhuma condição ativa.</p>
+                ) : (
+                  <div className="space-y-1">
+                    {(c.activeConditions || []).map((cd) => {
+                      const condDef = ALL_CONDITIONS.find(def => def.id === cd.conditionId);
+                      const dur = cd.remainingTurns === -1 && cd.remainingRounds === -1 ? '∞'
+                        : cd.remainingTurns > 0 ? `${cd.remainingTurns} turnos`
+                        : `${cd.remainingRounds} rodadas`;
+                      return (
+                        <div key={cd.id} className="rounded-lg bg-destructive/10 border border-destructive/20 px-2 py-1.5 text-sm">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-destructive">{cd.icon} {cd.name} <span className="text-xs text-muted-foreground">({dur})</span></span>
+                            {cd.conditionId === 'caido' ? (
+                              <button
+                                type="button"
+                                onClick={() => levantar(cd.conditionId)}
+                                disabled={!canStandFromProne}
+                                title={canStandFromProne ? 'Gasta a ação de movimento para se levantar; não exige TR.' : 'Não pode levantar agora (fora de turno, sem ação de movimento, ou imobilizado).'}
+                                className="rounded border border-primary/40 px-2 py-0.5 text-xs font-semibold text-primary hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                Levantar · Movimento
+                              </button>
+                            ) : (
+                              <button onClick={() => removeCondition(c.id, cd.id)} className="text-destructive/60 hover:text-destructive"><X className="h-3 w-3" /></button>
+                            )}
+                          </div>
+                          {condDef && <p className="text-xs text-muted-foreground mt-0.5">{condDef.description}</p>}
+                          {cd.sourceCharName && <p className="text-xs text-muted-foreground">Causado por: {cd.sourceCharName}</p>}
+                        </div>
+                      );
+                    })}
+                    <button onClick={() => setShowAddCondition(!showAddCondition)} className="flex items-center gap-1 text-sm text-destructive hover:text-destructive/80">
+                      <Plus className="h-3 w-3" /> Adicionar condição
+                    </button>
+                    {showAddCondition && (
+                      <div className="flex gap-1 flex-wrap items-end rounded-lg border border-destructive/20 p-2">
+                        <div className="space-y-0.5 flex-1 min-w-[120px]">
+                          <label className="text-xs text-muted-foreground">Condição</label>
+                          <select value={manualCondId} onChange={(e) => setManualCondId(e.target.value)} className="h-7 w-full rounded border border-input bg-background px-1 text-xs text-foreground">
+                            {ALL_CONDITIONS.map((cnd) => (
+                              <option key={cnd.id} value={cnd.id}>{cnd.icon} {cnd.name} ({cnd.category})</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-0.5">
+                          <label className="text-xs text-muted-foreground">Turnos</label>
+                          <input type="text" inputMode="numeric" value={manualCondTurns || ''} onChange={(e) => setManualCondTurns(parseInt(e.target.value) || 0)} className="h-7 w-10 rounded border border-input bg-background px-1 text-xs text-foreground" />
+                        </div>
+                        <div className="space-y-0.5">
+                          <label className="text-xs text-muted-foreground">Rodadas</label>
+                          <input type="text" inputMode="numeric" value={manualCondRounds || ''} onChange={(e) => setManualCondRounds(parseInt(e.target.value) || 0)} className="h-7 w-10 rounded border border-input bg-background px-1 text-xs text-foreground" />
+                        </div>
+                        <button onClick={handleAddCondition} className="h-7 rounded bg-destructive/20 px-2 text-xs text-destructive">Aplicar</button>
+                        <button onClick={() => setShowAddCondition(false)} className="h-7 rounded bg-secondary px-2 text-xs text-secondary-foreground">✕</button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="font-display text-sm font-semibold text-foreground uppercase tracking-wider">Buffs / Efeitos Ativos</h4>
+                {(c.activeBuffs || []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground italic">Nenhum buff ativo.</p>
+                ) : (
+                  <div className="space-y-1">
+                    {(c.activeBuffs || []).map((buff: ActiveBuff) => (
+                      <div key={buff.id} className="rounded-lg bg-primary/10 border border-primary/20 px-2 py-1.5 text-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-primary">{buff.spellName}</span>
+                          <button onClick={() => useCharacterStore.getState().removeBuff?.(c.id, buff.id)} className="text-destructive/60 hover:text-destructive"><X className="h-3 w-3" /></button>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">Tipo: {buff.type} | Valor: {buff.value} | Restam: {buff.remainingTurns}t</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Omni vinculados: Condições */}
+            <OmniVinculadosList charId={c.id} charName={c.name} filtroCategoria="condicao" hideEmpty />
+
+            {/* AttackPanel (condicional) */}
+            {combatInProgress && !hideAttackPanel && (
+              <div className="border-t border-border/50 pt-4">
+                <AttackPanel character={c} />
+              </div>
+            )}
+          </div>
+        </Section>
+
+        {c.characterClass === 'Feiticeiro' && c.specialization === 'Lutador' && (
+          <Section icon={Zap} title="Empolgação">
+            <EmpolgacaoPanel character={c} />
+          </Section>
+        )}
+
+        {/* ========== 2. ATRIBUTOS ========== */}
+        <Section icon={Dumbbell} title="Atributos">
+          <div className="space-y-6">
+            {/* Atributos base */}
+            <div>
+              {(c.availableAttrPoints ?? 0) > 0 && (
+                <button
+                  onClick={() => { playClickSound(); setShowAttrSpend(true); }}
+                  className="mb-2 w-full rounded-md border border-primary/60 bg-gradient-to-r from-primary/20 to-accent/15 px-3 py-2 text-xs font-bold text-primary hover:from-primary/30 hover:to-accent/25 transition-colors flex items-center justify-center gap-2 animate-pulse"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Distribuir {c.availableAttrPoints} ponto{(c.availableAttrPoints ?? 0) > 1 ? 's' : ''} de atributo
+                </button>
+              )}
+              <AttributeBlock
+                items={c.attributes}
+                editMode={editMode}
+                onAdd={(attr) => addAttribute(c.id, attr)}
+                onRemove={(attrId) => removeAttribute(c.id, attrId)}
+                onRoll={(name, value) => handleAttrRoll(name, value)}
+                getBonus={getItemRollBonus}
+                isAttribute={true}
+                onUpdateValue={(attrId, value) => {
+                  const newAttrs = c.attributes.map(a => a.id === attrId ? { ...a, value } : a);
+                  updateCharacter(c.id, { attributes: newAttrs });
+                }}
+              />
+            </div>
+
+            {/* Perfil Amaldiçoado — Aptidões */}
+            {!(c.specialization === 'Restringido') && (
+              <div className="space-y-3 border-t border-border/50 pt-4">
+                <h4 className="font-display text-sm font-semibold text-foreground uppercase tracking-wider">Perfil Amaldiçoado — Aptidões</h4>
+                <div className="grid grid-cols-1 @[360px]/sheet:grid-cols-2 @[640px]/sheet:grid-cols-5 gap-2 mb-3">
+                  {(['AU', 'CL', 'DOM', 'BAR', 'ER'] as const).map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => {
+                        setAuraCatalogOpen(false);
+                        setClCatalogOpen(false);
+                        setDomCatalogOpen(false);
+                        setBarCatalogOpen(false);
+                        setErCatalogOpen(false);
+                        if (key === 'AU') setAuraCatalogOpen(true);
+                        else if (key === 'CL') setClCatalogOpen(true);
+                        else if (key === 'DOM') setDomCatalogOpen(true);
+                        else if (key === 'BAR') setBarCatalogOpen(true);
+                        else if (key === 'ER') setErCatalogOpen(true);
+                      }}
+                      className="rounded-lg border border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-between"
+                    >
+                      <span>{key}</span>
+                      <span className="text-xs opacity-80">
+                        {(c.cursedAptitudes?.[key] ?? 0)} / 5
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                {auraCatalogOpen && (
+                  <div className="rounded-lg border border-primary/30 bg-card/40 p-3 mt-2">
+                    <div className="mb-2 flex items-center justify-between">
+                      <div className="text-xs font-bold uppercase tracking-wider text-primary">Catálogo — Aptidões de Aura (AU)</div>
+                    </div>
+                    <AuraAptitudesPanel character={c} editMode={editMode} />
                   </div>
                 )}
                 {clCatalogOpen && (
-                  <div className="rounded-lg border border-primary/30 bg-card/40 p-3">
+                  <div className="rounded-lg border border-primary/30 bg-card/40 p-3 mt-2">
                     <div className="mb-2 flex items-center justify-between">
-                      <div className="text-xs font-bold uppercase tracking-wider text-primary">
-                        Catálogo — Aptidões de Controle e Leitura (CL)
-                      </div>
+                      <div className="text-xs font-bold uppercase tracking-wider text-primary">Catálogo — Aptidões de Controle e Leitura (CL)</div>
                     </div>
-                    <ClAptitudesPanel
-                      character={c}
-                      editMode={editMode}
-                    />
+                    <ClAptitudesPanel character={c} editMode={editMode} />
                   </div>
                 )}
                 {domCatalogOpen && (
-                  <div className="rounded-lg border border-primary/30 bg-card/40 p-3">
+                  <div className="rounded-lg border border-primary/30 bg-card/40 p-3 mt-2">
                     <div className="mb-2 flex items-center justify-between">
-                      <div className="text-xs font-bold uppercase tracking-wider text-primary">
-                        Catálogo — Aptidões de Domínio (DOM)
-                      </div>
+                      <div className="text-xs font-bold uppercase tracking-wider text-primary">Catálogo — Aptidões de Domínio (DOM)</div>
                     </div>
-                    <DomAptitudesPanel
-                      character={c}
-                      editMode={editMode}
-                    />
+                    <DomAptitudesPanel character={c} editMode={editMode} />
                   </div>
                 )}
                 {barCatalogOpen && (
-                  <div className="rounded-lg border border-primary/30 bg-card/40 p-3">
+                  <div className="rounded-lg border border-primary/30 bg-card/40 p-3 mt-2">
                     <div className="mb-2 flex items-center justify-between">
-                      <div className="text-xs font-bold uppercase tracking-wider text-primary">
-                        Catálogo — Aptidões de Barreira (BAR)
-                      </div>
+                      <div className="text-xs font-bold uppercase tracking-wider text-primary">Catálogo — Aptidões de Barreira (BAR)</div>
                     </div>
-                    <BarAptitudesPanel
-                      character={c}
-                      editMode={editMode}
-                    />
+                    <BarAptitudesPanel character={c} editMode={editMode} />
                   </div>
                 )}
                 {erCatalogOpen && (
-                  <div className="rounded-lg border border-primary/30 bg-card/40 p-3">
+                  <div className="rounded-lg border border-primary/30 bg-card/40 p-3 mt-2">
                     <div className="mb-2 flex items-center justify-between">
-                      <div className="text-xs font-bold uppercase tracking-wider text-primary">
-                        Catálogo — Aptidões de Energia Reversa (ER)
-                      </div>
+                      <div className="text-xs font-bold uppercase tracking-wider text-primary">Catálogo — Aptidões de Energia Reversa (ER)</div>
                     </div>
-                    <ErAptitudesPanel
-                      character={c}
-                      editMode={editMode}
-                    />
+                    <ErAptitudesPanel character={c} editMode={editMode} />
                   </div>
                 )}
-                {/* Botão dedicado para Aptidões Especiais (sem nível numérico) */}
+                {/* Aptidões Especiais */}
                 <button
                   type="button"
                   onClick={() => {
-                    setSpecialCatalogOpen((o) => !o);
+                    setSpecialCatalogOpen(o => !o);
                     setAuraCatalogOpen(false);
                     setClCatalogOpen(false);
                     setDomCatalogOpen(false);
                     setBarCatalogOpen(false);
                     setErCatalogOpen(false);
+                    setCursedCatalogOpen(false);
+                    setDotesCatalogOpen(false);
                   }}
                   className="w-full rounded-lg border border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-between"
                 >
@@ -2859,57 +3127,50 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                   <span className="text-xs opacity-80">{specialCatalogOpen ? 'Fechar' : 'Abrir catálogo'}</span>
                 </button>
                 {specialCatalogOpen && (
-                  <div className="rounded-lg border border-primary/30 bg-card/40 p-3">
+                  <div className="rounded-lg border border-primary/30 bg-card/40 p-3 mt-2">
                     <div className="mb-2 flex items-center justify-between">
-                      <div className="text-xs font-bold uppercase tracking-wider text-primary">
-                        Catálogo — Aptidões Especiais
-                      </div>
+                      <div className="text-xs font-bold uppercase tracking-wider text-primary">Catálogo — Aptidões Especiais</div>
                     </div>
-                    <SpecialAptitudesPanel
-                      character={c}
-                      editMode={editMode}
-                    />
+                    <SpecialAptitudesPanel character={c} editMode={editMode} />
                   </div>
                 )}
-                {/* Botão dedicado para Aptidões Amaldiçoadas Exclusivas (CURSED — para classe Maldição). Oculto para players. */}
+                {/* Aptidões Amaldiçoadas Exclusivas (Maldição) — apenas Mestre */}
                 {!isPlayer && (
                   <>
                     <button
                       type="button"
                       onClick={() => {
-                        setCursedCatalogOpen((o) => !o);
+                        setCursedCatalogOpen(o => !o);
                         setAuraCatalogOpen(false);
                         setClCatalogOpen(false);
                         setDomCatalogOpen(false);
                         setBarCatalogOpen(false);
                         setErCatalogOpen(false);
                         setSpecialCatalogOpen(false);
+                        setDotesCatalogOpen(false);
                       }}
-                      className="w-full rounded-lg border border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-between"
+                      className="w-full rounded-lg border border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-between mt-2"
                     >
                       <span>💀 Aptidões Amaldiçoadas Exclusivas</span>
                       <span className="text-xs opacity-80">{cursedCatalogOpen ? 'Fechar' : 'Abrir catálogo'}</span>
                     </button>
                     {cursedCatalogOpen && (
-                      <div className="rounded-lg border border-primary/30 bg-card/40 p-3">
+                      <div className="rounded-lg border border-primary/30 bg-card/40 p-3 mt-2">
                         <div className="mb-2 flex items-center justify-between">
-                          <div className="text-xs font-bold uppercase tracking-wider text-primary">
-                            Catálogo — Aptidões Amaldiçoadas Exclusivas (Maldição)
-                          </div>
+                          <div className="text-xs font-bold uppercase tracking-wider text-primary">Catálogo — Aptidões Amaldiçoadas Exclusivas (Maldição)</div>
                         </div>
                         <CursedExclusivePanel character={c} editMode={editMode} />
                       </div>
                     )}
                   </>
                 )}
-
-                {/* Dotes Gerais — oculto para players (apenas Mestre vê). */}
+                {/* Dotes Gerais — apenas Mestre */}
                 {!isPlayer && (
                   <>
                     <button
                       type="button"
-                      onClick={() => setDotesCatalogOpen((o) => !o)}
-                      className="w-full rounded-lg border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-between"
+                      onClick={() => setDotesCatalogOpen(o => !o)}
+                      className="w-full rounded-lg border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 px-3 py-2 text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-between mt-2"
                     >
                       <span>⭐ Dotes Gerais</span>
                       <span className="text-xs opacity-80">{dotesCatalogOpen ? 'Fechar' : 'Abrir'}</span>
@@ -2923,356 +3184,410 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                   </>
                 )}
               </div>
-            </Section>
-          )}
-
-          <Section icon={<ScrollText className="h-4 w-4" />} title="Perícias">
-            <label className="mb-1 flex items-center gap-2 text-xs text-muted-foreground" data-testid="chamativa-label">
-              <input
-                type="checkbox"
-                data-testid="chamativa-check"
-                checked={acaoChamativa}
-                onChange={(e) => setAcaoChamativa(e.target.checked)}
-              />
-              Após ataque / ação chamativa (penalidade de {penalidadeChamativa(c)} em Furtividade)
-            </label>
-            <SkillBlock
-
-              items={c.skills}
-              attributes={c.attributes}
-              editMode={editMode}
-              charLevel={c.level}
-              charId={c.id}
-              characterClass={c.characterClass}
-              isPlayer={isPlayer}
-              enforceTrainingLimit
-              onAdd={(s) => addSkill(c.id, s)}
-              onRemove={(id) => removeSkill(c.id, id)}
-              onRoll={(name, val, linkedId, trained, mastery, ext) => handleSkillRoll(name, val, linkedId, trained, mastery, ext)}
-              getBonus={getItemRollBonus}
-              getOmniSkillBonus={getOmniSkillBonus}
-              onUpdate={(skillId: string, updates: Partial<Attribute>) => {
-                const newSkills = c.skills.map(s => s.id === skillId ? { ...s, ...updates } : s);
-                updateCharacter(c.id, { skills: newSkills });
-              }}
-            />
-          </Section>
-
-          <Section icon={<ShieldAlert className="h-4 w-4" />} title="Testes de Resistência">
-            {editMode && (
-              <div className="mb-2 flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-secondary/30 px-2 py-1.5 text-xs">
-                <span className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Pool TR</span>
-                <label className="flex items-center gap-1">
-                  <span className="text-primary font-bold">T</span>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={c.availableSavingTrainings ?? 0}
-                    onChange={(e) => {
-                      const v = Math.max(0, parseInt(e.target.value) || 0);
-                      updateCharacter(c.id, { availableSavingTrainings: v });
-                    }}
-                    className="h-6 w-12 rounded border border-input bg-background px-1 text-center font-mono"
-                    title="Treinos de TR disponíveis"
-                  />
-                </label>
-                <label className="flex items-center gap-1">
-                  <span className="text-pe font-bold">M</span>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={c.availableSavingMastery ?? 0}
-                    onChange={(e) => {
-                      const v = Math.max(0, parseInt(e.target.value) || 0);
-                      updateCharacter(c.id, { availableSavingMastery: v });
-                    }}
-                    className="h-6 w-12 rounded border border-input bg-background px-1 text-center font-mono"
-                    title="Maestrias de TR disponíveis"
-                  />
-                </label>
-                <span className="ml-auto text-xs text-muted-foreground italic">Pool separado das perícias</span>
-              </div>
             )}
-            <SkillBlock
-              items={c.savingThrows || []}
-              attributes={c.attributes}
-              editMode={editMode}
-              charLevel={c.level}
-              charId={c.id}
-              isPlayer={isPlayer}
-              pool={{
-                availableTrainings: c.availableSavingTrainings ?? 0,
-                availableMastery: c.availableSavingMastery ?? 0,
-              }}
-              onAdd={(st) => addSavingThrow(c.id, { ...st, trained: false, mastery: false })}
-              onRemove={(id) => removeSavingThrow(c.id, id)}
-              onRoll={(name, val, linkedId, trained, mastery, ext) => handleSkillRoll(name, val, linkedId, trained, mastery, ext)}
-              getBonus={getItemRollBonus}
-              getOmniSkillBonus={getOmniSkillBonus}
-              onUpdate={(stId, updates) => {
-                const prev = (c.savingThrows || []).find(s => s.id === stId);
-                if (!prev) return;
-                const next = { ...prev, ...updates };
-                // Pool SEPARADO de TR: contabiliza somente quando T/M de fato mudou.
-                const poolDelta = { trainings: 0, mastery: 0 };
-                const wasT = !!prev.trained, wasM = !!prev.mastery;
-                const isT = !!next.trained, isM = !!next.mastery;
-                if (wasT !== isT) poolDelta.trainings += wasT ? 1 : -1; // marcar consome (-1), desmarcar devolve (+1)
-                if (wasM !== isM) poolDelta.mastery   += wasM ? 1 : -1;
-                const curT = c.availableSavingTrainings ?? 0;
-                const curM = c.availableSavingMastery ?? 0;
-                if (poolDelta.trainings < 0 && curT <= 0) return;
-                if (poolDelta.mastery   < 0 && curM <= 0) return;
-                const newSTs = (c.savingThrows || []).map(s => s.id === stId ? next : s);
-                updateCharacter(c.id, {
-                  savingThrows: newSTs,
-                  availableSavingTrainings: Math.max(0, curT + poolDelta.trainings),
-                  availableSavingMastery:   Math.max(0, curM + poolDelta.mastery),
-                });
-              }}
-            />
-          </Section>
+          </div>
+        </Section>
 
-          <Section icon={<Star className="h-4 w-4" />} title="Passivas">
-            <PassiveBlock
-              charId={c.id}
-              passives={c.passives}
-              editMode={editMode}
-              onAdd={(p) => addPassive(c.id, p)}
-              onRemove={(id) => removePassive(c.id, id)}
-              charLevel={c.level}
-              onSubmitProposal={isPlayer ? (p) => {
-                submitPassiveProposal(c.id, c.name, p);
-                addLog('spell', `📜 ${c.name} enviou a passiva "${p.name}" para análise do Mestre.`);
-              } : undefined}
-            />
-            <OmniVinculadosList
-              charId={c.id}
-              charName={c.name}
-              filtroCategoria="passiva"
-              hideEmpty
-            />
-          </Section>
-
-          {(c.omniAtivos ?? []).some((a) => a.categoria === 'talento') && (
-            <Section icon={<Star className="h-4 w-4" />} title="Talentos">
-              <OmniVinculadosList
-                charId={c.id}
-                charName={c.name}
-                filtroCategoria="talento"
-                hideEmpty
-              />
-              <AcoesAtivasSection charId={c.id} incluirCategorias={['talento']} />
-            </Section>
-          )}
-
-          {(c.omniAtivos ?? []).some((a) => a.categoria === 'aura') && (
-            <Section icon={<Sparkles className="h-4 w-4" />} title="Auras">
-              <OmniVinculadosList
-                charId={c.id}
-                charName={c.name}
-                filtroCategoria="aura"
-                hideEmpty
-              />
-              <AcoesAtivasSection charId={c.id} incluirCategorias={['aura']} />
-            </Section>
-          )}
-
-          {c.characterClass === 'Feiticeiro' && !c.isGrimorioCreature && (
-            <Section icon={<Sparkles className="h-4 w-4" />} title="Habilidades de Especialização">
-              <SpecAbilitiesPanel character={c} editMode={editMode} />
-
-            </Section>
-          )}
-
-          {/* Feitiços - hide for Não-Feiticeiro */}
-          {(c.characterClass !== 'Não-Feiticeiro' || (c.omniAtivos ?? []).some(a => a.categoria === 'feitico')) && (
-            <Section icon={<Zap className="h-4 w-4" />} title="Feitiços">
-              <SpellBlock
-                spells={c.spells}
-                passivesCount={(c.passives || []).length}
+        {/* ========== 3. PERÍCIAS ========== */}
+        <Section icon={ScrollText} title="Perícias">
+          <div className="space-y-6">
+            {/* Perícias */}
+            <div>
+              <label className="mb-1 flex items-center gap-2 text-xs text-muted-foreground" data-testid="chamativa-label">
+                <input
+                  type="checkbox"
+                  data-testid="chamativa-check"
+                  checked={acaoChamativa}
+                  onChange={(e) => setAcaoChamativa(e.target.checked)}
+                />
+                Após ataque / ação chamativa (penalidade de {penalidadeChamativa(c)} em Furtividade)
+              </label>
+              <SkillBlock
+                items={c.skills}
+                attributes={c.attributes}
                 editMode={editMode}
-                onAdd={(s) => {
-                  // If spell has same id as existing one → edit; otherwise add new
-                  const exists = c.spells.some(sp => sp.id === s.id);
-                  if (exists) updateSpell(c.id, s);
-                  else addSpell(c.id, s);
-                }}
-                onRemove={(id) => removeSpell(c.id, id)}
-                onUse={handleUseSpell}
                 charLevel={c.level}
-                isGolpeador={c.specialization === 'Golpeador'}
-                hasEnergiaReversa={c.hasEnergiaReversa}
-                maxSpells={maxSpells}
-                availableTags={availableTags}
-                cooldowns={c.cooldowns}
-                isMaster={!isPlayer}
-                hasTecnicaMaxima={(c.chosenAuraAptitudes || []).includes('special-tecnica-maxima')}
-                hasTecnicaReversa={(c.chosenAuraAptitudes || []).includes('special-reversao-de-tecnica')}
-                onSubmitProposal={isPlayer ? (s) => {
-                  submitSpellProposal(c.id, c.name, s);
-                  addLog('spell', `📜 ${c.name} enviou o feitiço "${s.name}" para análise do Mestre.`);
-                } : undefined}
-              />
-              <OmniVinculadosList
                 charId={c.id}
-                charName={c.name}
-                filtroCategoria="feitico"
-                hideEmpty
-                onUsar={(entidade) => executarAcaoItem({ entidade })}
+                characterClass={c.characterClass}
+                isPlayer={isPlayer}
+                enforceTrainingLimit
+                onAdd={(s) => addSkill(c.id, s)}
+                onRemove={(id) => removeSkill(c.id, id)}
+                onRoll={(name, val, linkedId, trained, mastery, ext) => handleSkillRoll(name, val, linkedId, trained, mastery, ext)}
+                getBonus={getItemRollBonus}
+                getOmniSkillBonus={getOmniSkillBonus}
+                requestAttrLock={requestAttrLock}
+                onUpdate={(skillId: string, updates: Partial<Attribute>) => {
+                  const newSkills = c.skills.map(s => s.id === skillId ? { ...s, ...updates } : s);
+                  updateCharacter(c.id, { skills: newSkills });
+                }}
               />
-              <AcoesAtivasSection charId={c.id} incluirCategorias={['feitico']} />
-            </Section>
-          )}
+            </div>
 
-          {pendingSpell && (
-            <SpellApplyDialog
-              spell={pendingSpell}
-              sourceCharId={c.id}
-              areaMode={pendingSpellAreaMode}
-              initialTargetIds={pendingSpellAreaTargets ?? undefined}
-              onClose={() => {
-                // Limpa o template de área temporário, se houver (a menos que
-                // o feitiço tenha Área Persistente — nesse caso o dialog/feitiço
-                // anexa o bloco `persistent` antes de fechar).
-                if (pendingSpellAreaTemplateId && !pendingSpell?.persistentArea?.enabled) {
-                  import('@/stores/useMapStore').then(({ useMapStore }) => {
-                    useMapStore.getState().removeTemplate(pendingSpellAreaTemplateId);
-                  });
-                }
-                setPendingSpell(null);
-                setPendingSpellAreaTargets(null);
-                setPendingSpellAreaMode(false);
-                setPendingSpellAreaTemplateId(null);
-              }}
-            />
-          )}
-
-          <Section icon={<AlertTriangle className="h-4 w-4" />} title="Condições">
-            <div className="space-y-1">
-              {(c.activeConditions || []).length === 0 && !showAddCondition && (
-                <p className="text-sm text-muted-foreground italic">Nenhuma condição ativa.</p>
-              )}
-              {(c.activeConditions || []).map((cd) => {
-                const condDef = ALL_CONDITIONS.find(def => def.id === cd.conditionId);
-                const dur = cd.remainingTurns === -1 && cd.remainingRounds === -1 ? '∞'
-                  : cd.remainingTurns > 0 ? `${cd.remainingTurns} turnos`
-                  : `${cd.remainingRounds} rodadas`;
-                return (
-                  <div key={cd.id} className="rounded-lg bg-hp/10 border border-hp/20 px-2 py-1.5 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-hp">{cd.icon} {cd.name} <span className="text-xs text-muted-foreground">({dur})</span></span>
-                      {cd.conditionId === 'caido' ? (
-                        <button
-                          type="button"
-                          onClick={() => levantar(cd.id)}
-                          disabled={!canStandFromProne}
-                          title={canStandFromProne ? 'Gasta a ação de movimento para se levantar; não exige TR.' : 'Disponível no próprio turno, uma vez por turno.'}
-                          className="rounded border border-primary/40 px-2 py-0.5 text-xs font-semibold text-primary disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          Levantar · Movimento
-                        </button>
-                      ) : (
-                        <button onClick={() => removeCondition(c.id, cd.id)} className="text-destructive/60 hover:text-destructive"><X className="h-3 w-3" /></button>
-                      )}
-                    </div>
-                    {condDef && <p className="text-xs text-muted-foreground mt-0.5">{condDef.description}</p>}
-                    {cd.sourceCharName && <p className="text-xs text-muted-foreground">Causado por: {cd.sourceCharName}</p>}
-                  </div>
-                );
-              })}
-              <button onClick={() => setShowAddCondition(!showAddCondition)} className="flex items-center gap-1 text-sm text-hp hover:text-hp/80">
-                <Plus className="h-3 w-3" /> Adicionar condição
-              </button>
-              {showAddCondition && (
-                <div className="flex gap-1 flex-wrap items-end rounded-lg border border-hp/20 p-2">
-                  <div className="space-y-0.5 flex-1 min-w-[120px]">
-                    <label className="text-xs text-muted-foreground">Condição</label>
-                    <select value={manualCondId} onChange={(e) => setManualCondId(e.target.value)} className="h-7 w-full rounded border border-input bg-background px-1 text-xs text-foreground">
-                      {ALL_CONDITIONS.map((cnd) => (
-                        <option key={cnd.id} value={cnd.id}>{cnd.icon} {cnd.name} ({cnd.category})</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-0.5">
-                    <label className="text-xs text-muted-foreground">Turnos</label>
-                    <input type="text" inputMode="numeric" value={manualCondTurns || ''} onChange={(e) => setManualCondTurns(parseInt(e.target.value) || 0)} className="h-7 w-10 rounded border border-input bg-background px-1 text-xs text-foreground" />
-                  </div>
-                  <div className="space-y-0.5">
-                    <label className="text-xs text-muted-foreground">Rodadas</label>
-                    <input type="text" inputMode="numeric" value={manualCondRounds || ''} onChange={(e) => setManualCondRounds(parseInt(e.target.value) || 0)} className="h-7 w-10 rounded border border-input bg-background px-1 text-xs text-foreground" />
-                  </div>
-                  <button onClick={() => {
-                    const cnd = ALL_CONDITIONS.find(c2 => c2.id === manualCondId);
-                    if (!cnd) return;
-                    addCondition(c.id, {
-                      id: crypto.randomUUID(),
-                      conditionId: cnd.id,
-                      name: cnd.name,
-                      icon: cnd.icon,
-                      remainingTurns: manualCondTurns > 0 ? manualCondTurns : -1,
-                      remainingRounds: manualCondRounds > 0 ? manualCondRounds : -1,
-                    });
-                    addLog('system', `⚠️ ${c.name} recebeu condição: ${cnd.icon} ${cnd.name}`);
-                    setShowAddCondition(false);
-                  }} className="h-7 rounded bg-hp/20 px-2 text-xs text-hp">Aplicar</button>
-                  <button onClick={() => setShowAddCondition(false)} className="h-7 rounded bg-secondary px-2 text-xs text-secondary-foreground">✕</button>
+            {/* Testes de Resistência */}
+            <div className="border-t border-border/50 pt-4">
+              <h4 className="font-display text-sm font-semibold text-foreground uppercase tracking-wider mb-2">Testes de Resistência</h4>
+              {editMode && (
+                <div className="mb-2 flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-secondary/30 px-2 py-1.5 text-xs">
+                  <span className="text-muted-foreground font-bold uppercase tracking-wider text-xs">Pool TR</span>
+                  <label className="flex items-center gap-1">
+                    <span className="text-primary font-bold">T</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={c.availableSavingTrainings ?? 0}
+                      onChange={(e) => {
+                        const v = Math.max(0, parseInt(e.target.value) || 0);
+                        updateCharacter(c.id, { availableSavingTrainings: v });
+                      }}
+                      className="h-6 w-12 rounded border border-input bg-background px-1 text-center font-mono"
+                      title="Treinos de TR disponíveis"
+                    />
+                  </label>
+                  <label className="flex items-center gap-1">
+                    <span className="text-pe font-bold">M</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={c.availableSavingMastery ?? 0}
+                      onChange={(e) => {
+                        const v = Math.max(0, parseInt(e.target.value) || 0);
+                        updateCharacter(c.id, { availableSavingMastery: v });
+                      }}
+                      className="h-6 w-12 rounded border border-input bg-background px-1 text-center font-mono"
+                      title="Maestrias de TR disponíveis"
+                    />
+                  </label>
+                  <span className="ml-auto text-xs text-muted-foreground italic">Pool separado das perícias</span>
                 </div>
               )}
-              <OmniVinculadosList
+              <SkillBlock
+                items={c.savingThrows || []}
+                attributes={c.attributes}
+                editMode={editMode}
+                charLevel={c.level}
                 charId={c.id}
-                charName={c.name}
-                filtroCategoria="condicao"
-                hideEmpty
+                isPlayer={isPlayer}
+                pool={{
+                  availableTrainings: c.availableSavingTrainings ?? 0,
+                  availableMastery: c.availableSavingMastery ?? 0,
+                }}
+                onAdd={(st) => addSavingThrow(c.id, { ...st, trained: false, mastery: false })}
+                onRemove={(id) => removeSavingThrow(c.id, id)}
+                onRoll={(name, val, linkedId, trained, mastery, ext) => handleSkillRoll(name, val, linkedId, trained, mastery, ext)}
+                getBonus={getItemRollBonus}
+                requestAttrLock={requestAttrLock}
+                getOmniSkillBonus={getOmniSkillBonus}
+                onUpdate={(stId, updates) => {
+                  const prev = (c.savingThrows || []).find(s => s.id === stId);
+                  if (!prev) return;
+                  const next = { ...prev, ...updates };
+                  const poolDelta = { trainings: 0, mastery: 0 };
+                  const wasT = !!prev.trained, wasM = !!prev.mastery;
+                  const isT = !!next.trained, isM = !!next.mastery;
+                  if (wasT !== isT) poolDelta.trainings += wasT ? 1 : -1;
+                  if (wasM !== isM) poolDelta.mastery += wasM ? 1 : -1;
+                  const curT = c.availableSavingTrainings ?? 0;
+                  const curM = c.availableSavingMastery ?? 0;
+                  if (poolDelta.trainings < 0 && curT <= 0) return;
+                  if (poolDelta.mastery < 0 && curM <= 0) return;
+                  const newSTs = (c.savingThrows || []).map(s => s.id === stId ? next : s);
+                  updateCharacter(c.id, {
+                    savingThrows: newSTs,
+                    availableSavingTrainings: Math.max(0, curT + poolDelta.trainings),
+                    availableSavingMastery: Math.max(0, curM + poolDelta.mastery),
+                  });
+                }}
               />
             </div>
-          </Section>
+          </div>
+        </Section>
 
-          <Section icon={<ScrollText className="h-4 w-4" />} title="Votos">
-            <div className="space-y-2">
-              {editMode ? (
-                <textarea
-                  value={c.votos || ''}
-                  onChange={(e) => updateCharacter(c.id, { votos: e.target.value })}
-                  placeholder="Anotações livres sobre os votos do personagem..."
-                  className="w-full min-h-[80px] rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground resize-y"
-                />
-              ) : (
-                c.votos && (
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                    {c.votos}
-                  </p>
-                )
+        {/* ========== 4. RECURSOS ========== */}
+        <Section icon={Battery} title="Recursos">
+          <div className="space-y-6">
+            {/* PE / ESC pools management */}
+            <div className="grid grid-cols-1 @[640px]/sheet:grid-cols-2 gap-4">
+              <div className="rounded-lg border border-border/50 bg-card/50 p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-display text-sm font-semibold text-foreground uppercase tracking-wider">Pontos de Energia (PE)</h4>
+                  {editMode && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playClickSound();
+                        const newMax = Math.max(1, (c.peMax ?? 10) + 1);
+                        updateCharacter(c.id, { peMax: newMax, peCurrent: Math.min(c.peCurrent ?? 0, newMax) });
+                      }}
+                      className="text-xs text-primary hover:text-primary/80"
+                    >
+                      +1 Máx
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <div className="h-3 w-full rounded-full bg-pe/20 overflow-hidden">
+                      <div
+                        className="h-full bg-pe transition-all duration-300"
+                        style={{ width: `${c.peMax > 0 ? ((c.peCurrent ?? 0) / c.peMax) * 100 : 0}%` }}
+                      />
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1 font-mono">{c.peCurrent ?? 0} / {c.peMax ?? 10}</div>
+                  </div>
+                  {editMode && (
+                    <input
+                      type="number"
+                      min={0}
+                      max={c.peMax ?? 10}
+                      value={c.peCurrent ?? 0}
+                      onChange={(e) => updateCharacter(c.id, { peCurrent: parseInt(e.target.value) || 0 })}
+                      className="h-8 w-16 rounded border border-input bg-background px-2 text-center text-sm font-mono"
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-border/50 bg-card/50 p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-display text-sm font-semibold text-foreground uppercase tracking-wider">Escudo (ESC)</h4>
+                  {editMode && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playClickSound();
+                        const newMax = Math.max(0, (c.escMax ?? 0) + 1);
+                        updateCharacter(c.id, { escMax: newMax, escCurrent: Math.min(c.escCurrent ?? 0, newMax) });
+                      }}
+                      className="text-xs text-shield hover:text-shield/80"
+                    >
+                      +1 Máx
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <div className="h-3 w-full rounded-full bg-shield/20 overflow-hidden">
+                      <div
+                        className="h-full bg-shield transition-all duration-300"
+                        style={{ width: `${c.escMax > 0 ? ((c.escCurrent ?? 0) / c.escMax) * 100 : 0}%` }}
+                      />
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1 font-mono">{c.escCurrent ?? 0} / {c.escMax ?? 0}</div>
+                  </div>
+                  {editMode && (
+                    <input
+                      type="number"
+                      min={0}
+                      max={c.escMax ?? 0}
+                      value={c.escCurrent ?? 0}
+                      onChange={(e) => updateCharacter(c.id, { escCurrent: parseInt(e.target.value) || 0 })}
+                      className="h-8 w-16 rounded border border-input bg-background px-2 text-center text-sm font-mono"
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Fome */}
+            <div className="rounded-lg border border-border/50 bg-card/50 p-4">
+              <h4 className="font-display text-sm font-semibold text-foreground uppercase tracking-wider mb-2">Fome</h4>
+              <HungerBar character={c} />
+            </div>
+
+            {/* Nível e XP */}
+            <div className="grid grid-cols-1 @[640px]/sheet:grid-cols-2 gap-4">
+              <div className="rounded-lg border border-border/50 bg-card/50 p-4">
+                <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Nível</div>
+                <div className="font-display text-3xl font-bold text-foreground">{c.level ?? 1}</div>
+                {editMode && (
+                  <div className="mt-2 flex gap-1">
+                    <Button variant="outline" size="sm" onClick={() => { playClickSound(); updateCharacter(c.id, { level: Math.max(1, (c.level ?? 1) - 1) }); }}>-1</Button>
+                    <Button variant="outline" size="sm" onClick={() => { playClickSound(); updateCharacter(c.id, { level: (c.level ?? 1) + 1 }); }}>+1</Button>
+                    <Button variant="mystic" size="sm" onClick={handleLevelUp}><Sparkles className="h-3 w-3 mr-1" /> Subir de Nível</Button>
+                  </div>
+                )}
+              </div>
+              <div className="rounded-lg border border-border/50 bg-card/50 p-4">
+                <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">XP para próximo nível</div>
+                <div className="font-display text-3xl font-bold text-primary">{(c.level ?? 1) * 1000}</div>
+              </div>
+            </div>
+
+            {/* Pools de Aptidões (se Feiticeiro) */}
+            {c.characterClass === 'Feiticeiro' && (
+              <div className="border-t border-border/50 pt-4">
+                <h4 className="font-display text-sm font-semibold text-foreground uppercase tracking-wider mb-3">Pools de Aptidões (Feiticeiro)</h4>
+                <div className="grid grid-cols-1 @[560px]/sheet:grid-cols-2 @[896px]/sheet:grid-cols-4 gap-3">
+                  {(['AU', 'CL', 'DOM', 'BAR', 'ER'] as const).map((key) => (
+                    <div key={key} className="rounded-lg border border-border/50 bg-card/50 p-3">
+                      <div className="text-xs font-bold uppercase tracking-wider text-primary mb-1">{key}</div>
+                      <div className="font-display text-xl font-bold text-foreground">
+                        {(c.cursedAptitudes?.[key] ?? 0)} / 5
+                      </div>
+                      {editMode && (
+                        <div className="mt-2 flex gap-1">
+                          <input
+                            type="number"
+                            min={0}
+                            max={5}
+                            value={c.cursedAptitudes?.[key] ?? 0}
+                            onChange={(e) => {
+                              const val = Math.max(0, Math.min(5, parseInt(e.target.value) || 0));
+                              const currentAptitudes = c.cursedAptitudes ?? { AU: 0, CL: 0, DOM: 0, BAR: 0, ER: 0 };
+                              updateCharacter(c.id, { cursedAptitudes: { ...currentAptitudes, [key]: val } });
+                            }}
+                            className="h-7 flex-1 rounded border border-input bg-background px-2 text-center text-sm font-mono"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Perícia points pool (Feiticeiro) */}
+            {c.characterClass === 'Feiticeiro' && (() => {
+              const trainedCount = c.skills?.filter(s => s.trained).length ?? 0;
+              const masteryCount = c.skills?.filter(s => s.mastery).length ?? 0;
+              const maxPoints = (c.level ?? 1) + 1;
+              const spentPoints = trainedCount * 1 + masteryCount * 2;
+              const remainingPoints = Math.max(0, maxPoints - spentPoints);
+              return (
+                <div className="border-t border-border/50 pt-4">
+                  <h4 className="font-display text-sm font-semibold text-foreground uppercase tracking-wider mb-3">Pontos de Perícia (Feiticeiro)</h4>
+                  <div className="rounded-lg border border-primary/30 bg-primary/10 p-3">
+                    <div className="text-xs text-muted-foreground mb-1">
+                      Total: <span className="font-mono text-primary">{maxPoints}</span> |
+                      Gasto: <span className="font-mono text-destructive">{spentPoints}</span> |
+                      Restante: <span className="font-mono text-emerald-400">{remainingPoints}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">T = 1 ponto · M = 2 pontos · M sobre T = 1 ponto (substitui)</div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* TR Pools */}
+            {(c.availableSavingTrainings !== undefined || c.availableSavingMastery !== undefined) && (
+              <div className="border-t border-border/50 pt-4">
+                <h4 className="font-display text-sm font-semibold text-foreground uppercase tracking-wider mb-3">Pool de Testes de Resistência</h4>
+                <div className="grid grid-cols-1 @[640px]/sheet:grid-cols-2 gap-3">
+                  <div className="rounded-lg border border-border/50 bg-card/50 p-3">
+                    <div className="text-xs font-bold uppercase tracking-wider text-primary mb-1">Treinos (T)</div>
+                    <div className="font-display text-xl font-bold text-primary">{c.availableSavingTrainings ?? 0}</div>
+                    {editMode && (
+                      <input
+                        type="number"
+                        min={0}
+                        value={c.availableSavingTrainings ?? 0}
+                        onChange={(e) => updateCharacter(c.id, { availableSavingTrainings: parseInt(e.target.value) || 0 })}
+                        className="mt-2 h-7 w-full rounded border border-input bg-background px-2 text-center text-sm font-mono"
+                      />
+                    )}
+                  </div>
+                  <div className="rounded-lg border border-border/50 bg-card/50 p-3">
+                    <div className="text-xs font-bold uppercase tracking-wider text-pe mb-1">Maestrias (M)</div>
+                    <div className="font-display text-xl font-bold text-pe">{c.availableSavingMastery ?? 0}</div>
+                    {editMode && (
+                      <input
+                        type="number"
+                        min={0}
+                        value={c.availableSavingMastery ?? 0}
+                        onChange={(e) => updateCharacter(c.id, { availableSavingMastery: parseInt(e.target.value) || 0 })}
+                        className="mt-2 h-7 w-full rounded border border-input bg-background px-2 text-center text-sm font-mono"
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Tecnica Maxima / Reversao de Tecnica flags */}
+            {(c.chosenAuraAptitudes?.includes('special-tecnica-maxima') || c.chosenAuraAptitudes?.includes('special-reversao-de-tecnica')) && (
+              <div className="border-t border-border/50 pt-4">
+                <h4 className="font-display text-sm font-semibold text-foreground uppercase tracking-wider mb-3">Habilidades Especiais Ativas</h4>
+                <div className="flex flex-wrap gap-2">
+                  {c.chosenAuraAptitudes?.includes('special-tecnica-maxima') && (
+                    <Badge variant="default" className="bg-primary/20 text-primary border-primary/30">Técnica Máxima</Badge>
+                  )}
+                  {c.chosenAuraAptitudes?.includes('special-reversao-de-tecnica') && (
+                    <Badge variant="default" className="bg-destructive/20 text-destructive border-destructive/30">Reversão de Técnica</Badge>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </Section>
+
+        {/* ========== 5. EQUIPAMENTO ========== */}
+        {(!isPlayer || c.hasBlindfoldSlot) && (
+          <Section icon={Backpack} title="Equipamento">
+            <div className="rounded-xl border border-border/60 bg-background/30 p-3 space-y-3">
+              {!isPlayer && (
+                <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 py-1 text-base text-muted-foreground hover:bg-secondary/40">
+                  <input
+                    type="checkbox"
+                    className="h-5 w-5 accent-primary"
+                    checked={!!c.hasBlindfoldSlot}
+                    onChange={(event) => useCharacterStore.getState().setHasBlindfoldSlot(c.id, event.target.checked)}
+                  />
+                  <span>Habilitar slot de venda</span>
+                  <span className="ml-auto font-mono text-sm text-muted-foreground/70">Mestre</span>
+                </label>
               )}
-              <OmniVinculadosList
-                charId={c.id}
-                charName={c.name}
-                filtroCategoria="voto"
-              />
+              {c.hasBlindfoldSlot && <BlindfoldSlot character={c} />}
             </div>
           </Section>
+        )}
 
-          <Section icon={<Gem className="h-4 w-4" />} title="Acessórios">
-            <AccessorySlotsSection
-              character={c}
-              items={items}
-              accessorySlots={accessorySlots}
-              onUpdateSlots={(slots) => updateCharacter(c.id, { accessorySlots: slots })}
-              omniInventory={Object.values(inventoryItems).filter((i) => i.ownerId === c.id)}
-              onEquipOmni={equipOmni}
-              onUnequipOmni={unequipOmni}
-              onShowDetails={(t) => setItemDetails(t)}
-              resolverEntidadeOmniAtual={resolverEntidadeOmniAtual}
-              onUseOmni={(inv) => executarAcaoItem({ entidade: inv.entity, instance: inv })}
-            />
+        <Section icon={Gem} title="Acessórios">
+          <AccessorySlotsSection
+            character={c}
+            items={items}
+            accessorySlots={accessorySlots}
+            onUpdateSlots={(slots) => updateCharacter(c.id, { accessorySlots: slots })}
+            omniInventory={Object.values(inventoryItems).filter((item) => item.ownerId === c.id)}
+            onEquipOmni={equipOmni}
+            onUnequipOmni={unequipOmni}
+            onShowDetails={setItemDetails}
+            resolverEntidadeOmniAtual={resolverEntidadeOmniAtual}
+            onUseOmni={(item) => executarAcaoItem({ entidade: item.entity, instance: item })}
+          />
+        </Section>
+
+        {(c.mainHandWeaponName || c.offHandWeaponName) && (
+          <Section icon={Swords} title="Armas Empunhadas">
+            <div className="space-y-2">
+              {c.mainHandWeaponName && (
+                <div className="rounded-lg border border-border/50 bg-card/50 p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">Mão Principal: {c.mainHandWeaponName}</span>
+                    <EmpunharArmaButton charId={c.id} nome={c.mainHandWeaponName} instanceId={c.mainHandWeaponInstanceId ?? ''} />
+                  </div>
+                </div>
+              )}
+              {c.offHandWeaponName && (
+                <div className="rounded-lg border border-border/50 bg-card/50 p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">Mão Secundária: {c.offHandWeaponName}</span>
+                    <EmpunharArmaButton charId={c.id} nome={c.offHandWeaponName} instanceId={c.offHandWeaponInstanceId ?? ''} />
+                  </div>
+                </div>
+              )}
+            </div>
           </Section>
+        )}
 
-          <Section icon={<Backpack className="h-4 w-4" />} title="Inventário">
-            {legacyGeneralItems.length === 0 && ownedOmniInventoryInstances.length === 0 ? (
-              <p className="text-sm text-muted-foreground italic">Nenhum item no inventário.</p>
-            ) : (
-              <div className="space-y-1">
-                {legacyGeneralItems.map((item) => (
+            {/* Inventário — Legado + Omni */}
+        <Section icon={Backpack} title="Inventário">
+              {legacyGeneralItems.length === 0 && ownedOmniInventoryInstances.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">Nenhum item no inventário.</p>
+              ) : (
+                <div className="space-y-2">
+                  {/* Legacy items */}
+                  {legacyGeneralItems.map((item) => (
                   <div
                     key={item.id}
                     role="button"
@@ -3673,12 +3988,142 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
                     </div>
                   );
                 })}
+                </div>
+              )}
+        </Section>
+
+        {/* ========== 6. FEITIÇOS / PASSIVAS ========== */}
+        <Section icon={Wand2} title="Feitiços / Passivas">
+          <div className="space-y-6">
+            {/* Passivas */}
+            <div>
+              <h4 className="font-display text-sm font-semibold text-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                <Star className="h-4 w-4" /> Passivas
+              </h4>
+              <PassiveBlock
+                charId={c.id}
+                passives={c.passives}
+                editMode={editMode}
+                onAdd={(p) => addPassive(c.id, p)}
+                onRemove={(id) => removePassive(c.id, id)}
+                charLevel={c.level}
+                onSubmitProposal={isPlayer ? (p) => {
+                  submitPassiveProposal(c.id, c.name, p);
+                  addLog('spell', `📜 ${c.name} enviou a passiva "${p.name}" para análise do Mestre.`);
+                } : undefined}
+              />
+              <OmniVinculadosList charId={c.id} charName={c.name} filtroCategoria="passiva" hideEmpty />
+            </div>
+
+            {/* Talentos */}
+            {(c.omniAtivos ?? []).some((a) => a.categoria === 'talento') && (
+              <div className="border-t border-border/50 pt-4">
+                <h4 className="font-display text-sm font-semibold text-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <Crown className="h-4 w-4" /> Talentos
+                </h4>
+                <OmniVinculadosList charId={c.id} charName={c.name} filtroCategoria="talento" hideEmpty />
+                <AcoesAtivasSection charId={c.id} incluirCategorias={['talento']} />
               </div>
             )}
-          </Section>
-        </div>
-      </SmoothCollapse>
 
+            {/* Auras */}
+            {(c.omniAtivos ?? []).some((a) => a.categoria === 'aura') && (
+              <div className="border-t border-border/50 pt-4">
+                <h4 className="font-display text-sm font-semibold text-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" /> Auras
+                </h4>
+                <OmniVinculadosList charId={c.id} charName={c.name} filtroCategoria="aura" hideEmpty />
+                <AcoesAtivasSection charId={c.id} incluirCategorias={['aura']} />
+              </div>
+            )}
+
+            {/* Habilidades de Especialização (Feiticeiro) */}
+            {c.characterClass === 'Feiticeiro' && !c.isGrimorioCreature && (
+              <div className="border-t border-border/50 pt-4">
+                <h4 className="font-display text-sm font-semibold text-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <Crown className="h-4 w-4" /> Habilidades de Especialização
+                </h4>
+                <SpecAbilitiesPanel character={c} editMode={editMode} />
+              </div>
+            )}
+
+            {/* Feitiços */}
+            {(c.characterClass !== 'Não-Feiticeiro' || (c.omniAtivos ?? []).some(a => a.categoria === 'feitico')) && (
+              <div className="border-t border-border/50 pt-4">
+                <h4 className="font-display text-sm font-semibold text-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <Wand2 className="h-4 w-4" /> Feitiços
+                </h4>
+                <SpellBlock
+                  spells={c.spells}
+                  passivesCount={(c.passives || []).length}
+                  editMode={editMode}
+                  onAdd={(s) => {
+                    const exists = c.spells.some(sp => sp.id === s.id);
+                    if (exists) updateSpell(c.id, s);
+                    else addSpell(c.id, s);
+                  }}
+                  onRemove={(id) => removeSpell(c.id, id)}
+                  onUse={handleSpellUse}
+                  charLevel={c.level}
+                  isGolpeador={c.specialization === 'Golpeador'}
+                  hasEnergiaReversa={hasEnergiaReversa}
+                  maxSpells={maxSpells}
+                  availableTags={availableTags}
+                  cooldowns={c.cooldowns || {}}
+                  isMaster={!isPlayer}
+                  hasTecnicaMaxima={c.chosenAuraAptitudes?.includes('special-tecnica-maxima') ?? false}
+                  hasTecnicaReversa={c.chosenAuraAptitudes?.includes('special-reversao-de-tecnica') ?? false}
+                  onSubmitProposal={isPlayer ? (s) => {
+                    submitSpellProposal(c.id, c.name, s);
+                    addLog('spell', `📜 ${c.name} enviou o feitiço "${s.name}" para análise do Mestre.`);
+                  } : undefined}
+                />
+                <OmniVinculadosList
+                  charId={c.id}
+                  charName={c.name}
+                  filtroCategoria="feitico"
+                  hideEmpty
+                  onUsar={(entidade) => handleUseSpell(entidade as any)}
+                />
+                <AcoesAtivasSection charId={c.id} incluirCategorias={['feitico']} />
+              </div>
+            )}
+
+            {/* Votos */}
+            <div className="border-t border-border/50 pt-4">
+              <h4 className="font-display text-sm font-semibold text-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                <ScrollText className="h-4 w-4" /> Votos
+              </h4>
+              <div className="space-y-2">
+                {editMode ? (
+                  <textarea
+                    value={c.votos || ''}
+                    onChange={(e) => updateCharacter(c.id, { votos: e.target.value })}
+                    placeholder="Anotações livres sobre os votos do personagem..."
+                    className="w-full min-h-[80px] rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground resize-y"
+                  />
+                ) : (
+                  c.votos && (
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{c.votos}</p>
+                  )
+                )}
+                <OmniVinculadosList charId={c.id} charName={c.name} filtroCategoria="voto" />
+              </div>
+            </div>
+
+            {/* Condições (Omni vinculados) */}
+            <div className="border-t border-border/50 pt-4">
+              <h4 className="font-display text-sm font-semibold text-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" /> Condições (Vinculadas)
+              </h4>
+              <OmniVinculadosList charId={c.id} charName={c.name} filtroCategoria="condicao" hideEmpty />
+            </div>
+          </div>
+        </Section>
+
+      </div>
+
+      {/* ── DIALOGS ── */}
       {showLevelUp && (
         <LevelUpDialog character={c} onClose={() => setShowLevelUp(false)} />
       )}
@@ -3697,23 +4142,43 @@ export function CharacterCard({ character: c, hideAttackPanel, compactHeader = f
         />
       )}
 
-      {showDeathPrompt && isCamActive(c) && (
+      {showDeathPrompt && isCamActiveFn(c) && (
         <CamDeathReactionDialog
           character={c}
           onClose={() => setShowDeathPrompt(false)}
         />
       )}
 
-      {/* Confirmação irreversível ao vincular atributo a CaC/CD/TR */}
       {attrLockDialog}
 
-      {/* Detalhes de itens (inventário e acessórios) */}
       <ItemDetailsDialog target={itemDetails} onClose={() => setItemDetails(null)} />
+
+      {pendingSpell && (
+        <SpellApplyDialog
+          spell={pendingSpell}
+          sourceCharId={c.id}
+          areaMode={pendingSpellAreaMode}
+          initialTargetIds={pendingSpellAreaTargets ?? undefined}
+          onClose={() => {
+            if (pendingSpellAreaTemplateId && !pendingSpell?.persistentArea?.enabled) {
+              import('@/stores/useMapStore').then(({ useMapStore }) => {
+                useMapStore.getState().removeTemplate(pendingSpellAreaTemplateId);
+              });
+            }
+            setPendingSpell(null);
+            setPendingSpellAreaTargets(null);
+            setPendingSpellAreaMode(false);
+            setPendingSpellAreaTemplateId(null);
+          }}
+        />
+      )}
     </div>
   );
 }
 
-// === Attribute Block ===
+// ============================================================================
+// ATTRIBUTE BLOCK
+// ============================================================================
 function AttributeBlock({
   items, editMode, onAdd, onRemove, onRoll, getBonus, isAttribute, onUpdateValue,
 }: {
@@ -3766,7 +4231,7 @@ function AttributeBlock({
               ) : (
                 <span className="font-mono text-sm text-muted-foreground flex-shrink-0">{a.value}</span>
               )}
-              <span className={cn('font-mono font-bold flex-shrink-0 w-6 text-right text-sm', totalMod >= 0 ? 'text-foreground' : 'text-hp')}>
+              <span className={cn('font-mono font-bold flex-shrink-0 w-6 text-right text-sm', totalMod >= 0 ? 'text-foreground' : 'text-destructive')}>
                 {modStr}
               </span>
               {editMode && (
@@ -3789,9 +4254,11 @@ function AttributeBlock({
   );
 }
 
-// === Skill Block ===
+// ============================================================================
+// SKILL BLOCK
+// ============================================================================
 function SkillBlock({
-  items, attributes, editMode, charLevel, charId, characterClass, enforceTrainingLimit, hideTraining, hideMastery, pool, onAdd, onRemove, onRoll, getBonus, getOmniSkillBonus, onUpdate, isPlayer,
+  items, attributes, editMode, charLevel, charId, characterClass, enforceTrainingLimit, hideTraining, hideMastery, pool, onAdd, onRemove, onRoll, getBonus, getOmniSkillBonus, onUpdate, isPlayer, requestAttrLock,
 }: {
   items: Attribute[];
   attributes: Attribute[];
@@ -3799,17 +4266,9 @@ function SkillBlock({
   charLevel: number;
   charId: string;
   characterClass?: string;
-  /** Quando true, aplica limite de treinos (Feiticeiro) e torna T/M irreversíveis. */
   enforceTrainingLimit?: boolean;
-  /** Quando true, oculta os botões de Treino (T) e Maestria (M). */
   hideTraining?: boolean;
-  /** Quando true, oculta apenas o botão de Maestria (M). Usado em TR. */
   hideMastery?: boolean;
-  /**
-   * Pool conquistado para gastar em T/M. Quando informado, marcar T exige
-   * availableTrainings>0 e marcar M exige availableMastery>0. Desmarcar devolve
-   * o ponto (cabe ao onUpdate externo creditar de volta).
-   */
   pool?: { availableTrainings: number; availableMastery: number };
   onAdd: (a: Attribute) => void;
   onRemove: (id: string) => void;
@@ -3817,13 +4276,12 @@ function SkillBlock({
   getBonus: (name: string) => number;
   getOmniSkillBonus?: (name: string) => number;
   onUpdate: (skillId: string, updates: Partial<Attribute>) => void;
-  /** Quando true (player), oculta inputs de bônus externo. */
   isPlayer?: boolean;
+  requestAttrLock: (p: { context: string; attrName: string; onConfirm: () => void }) => void;
 }) {
   const [newName, setNewName] = useState('');
   const [newVal, setNewVal] = useState('');
   const [newLinkedAttr, setNewLinkedAttr] = useState('');
-  const { request: requestAttrLock, dialog: attrLockDialog } = useAttributeLockConfirm();
 
   const handleAdd = () => {
     if (!newName.trim()) return;
@@ -3834,9 +4292,6 @@ function SkillBlock({
       setNewVal('');
       setNewLinkedAttr('');
     };
-    // Quando o bloco está no contexto de TR (pool definido) e o usuário escolheu
-    // um atributo vinculado, exigimos confirmação irreversível — não há UI para
-    // trocar o atributo de um TR depois que ele é criado.
     if (pool && newLinkedAttr) {
       const attr = attributes.find(a => a.id === newLinkedAttr);
       requestAttrLock({
@@ -3853,18 +4308,14 @@ function SkillBlock({
     return <p className="text-sm text-muted-foreground italic">Nenhuma perícia.</p>;
   }
 
-  // Pool unificado de perícias (Feiticeiro): total de pontos = level + 1.
-  // Custos: Treino = 1 ponto · Maestria = 2 pontos · Maestria sobre perícia já Treinada = 1 ponto (substitui o T).
   const isWizard = characterClass === 'Feiticeiro';
   const trainedCount = items.filter(i => i.trained).length;
   const masteryCount = items.filter(i => i.mastery).length;
   const maxPoints = isWizard ? charLevel + 1 : Infinity;
-  // Custo gasto: cada T vale 1 e cada M vale 2 (M absorve o T anterior — não soma).
   const spentPoints = trainedCount * 1 + masteryCount * 2;
   const remainingPoints = isWizard ? Math.max(0, maxPoints - spentPoints) : Infinity;
   const trainingLimitReached = enforceTrainingLimit && remainingPoints < 1;
-  const masteryLimitReached  = enforceTrainingLimit && remainingPoints < 2;
-  // Pool conquistado externo (TR) mantém o gating original.
+  const masteryLimitReached = enforceTrainingLimit && remainingPoints < 2;
   const poolTrainEmpty = !!pool && pool.availableTrainings <= 0;
   const poolMasteryEmpty = !!pool && pool.availableMastery <= 0;
 
@@ -3892,1207 +4343,104 @@ function SkillBlock({
           const omniSkillBonus = getOmniSkillBonus?.(s.name) ?? 0;
           const trainBonus = getTrainingBonus(charLevel, s.trained, s.mastery);
           const extBonus = s.externalBonus || 0;
-          const totalBonus = s.value + attrMod + itemBonus + trainBonus + extBonus + omniSkillBonus;
-          const modStr = totalBonus >= 0 ? `+${totalBonus}` : `${totalBonus}`;
-          // Regras (apenas quando enforceTrainingLimit):
-          //  - Irreversível: T/M, uma vez marcado, não desmarca.
-          //  - Mutuamente exclusivos: não pode ter T e M ao mesmo tempo.
-          //  - Limite (Feiticeiro): respeitar maxTrainings/maxMasteries.
-          // Pool conquistado externo (TR) — gating original.
-          // MESTRE em modo de edição: bypass total dos limites (pode tirar/colocar T e M livremente).
-          const masterFreeEdit = !isPlayer && editMode;
-          const tBlockedByPool = !masterFreeEdit && !!pool && !s.trained && poolTrainEmpty;
-          const mBlockedByPool = !masterFreeEdit && !!pool && !s.mastery && poolMasteryEmpty;
-          // Feiticeiro (pool unificado): bloqueia marcar quando saldo insuficiente.
-          // T custa 1; M custa 2 (ou 1 se já houver T para substituir).
-          const tBlockedByWizard = !masterFreeEdit && !!enforceTrainingLimit && isWizard && !s.trained && !s.mastery && remainingPoints < 1;
-          const mWizardCost = s.trained ? 1 : 2;
-          const mBlockedByWizard = !masterFreeEdit && !!enforceTrainingLimit && isWizard && !s.mastery && remainingPoints < mWizardCost;
-          const tDisabled = tBlockedByPool || tBlockedByWizard;
-          const mDisabled = mBlockedByPool || mBlockedByWizard;
+          const total = s.value + attrMod + itemBonus + omniSkillBonus + trainBonus + extBonus;
+          const totalStr = total >= 0 ? `+${total}` : `${total}`;
+
           return (
-            <div key={s.id} className="flex items-center gap-1 rounded-lg bg-secondary/50 px-2 py-1 text-sm">
-              <button onClick={() => onRoll(s.name, s.value, s.linkedAttribute, s.trained, s.mastery, s.externalBonus)} className="text-primary hover:text-primary/80 flex-shrink-0" title="Rolar d20">
-                <Dice1 className="h-3 w-3" />
-              </button>
-              {/* Training/Mastery checkboxes */}
-              {!hideTraining && (
-                <div className="flex flex-col gap-0 flex-shrink-0">
-                  <button
-                    onClick={() => {
-                      // PLAYER: irreversível — só pode marcar quando há saldo, nunca desmarca.
-                      // MESTRE: livre.
-                      if (s.trained) {
-                        if (isPlayer) return; // trava: jogador não desmarca
-                        onUpdate(s.id, { trained: false, mastery: false });
-                        return;
-                      }
-                      if (s.mastery) return; // Para tirar M, use o botão M.
-                      if (tDisabled) return;
-                      onUpdate(s.id, { trained: true, mastery: false });
-                    }}
-                    disabled={(tDisabled && !s.trained) || (isPlayer && s.trained)}
-                    className={cn(
-                      'w-4 h-4 rounded-sm border text-xs font-bold leading-none flex items-center justify-center transition-all disabled:cursor-not-allowed',
-                      s.trained ? 'bg-primary/30 border-primary text-primary' : 'border-border text-muted-foreground/40 hover:border-primary/50',
-                      tDisabled && !s.trained && !s.mastery && 'opacity-30'
-                    )}
-                    title={
-                      s.trained ? 'Treinado — clique para devolver 1 ponto'
-                      : s.mastery ? 'Maestria ativa — use o botão M para alterar'
-                      : tBlockedByPool ? 'Sem treinos disponíveis no pool externo'
-                      : tBlockedByWizard ? 'Sem pontos suficientes (T = 1 ponto)'
-                      : `Treinamento (custa 1 ponto · +${getMasteryBonus(charLevel)})`
-                    }
-                  >
-                    T
-                  </button>
+            <div key={s.id} className="rounded-lg bg-secondary/50 p-2 text-sm">
+              <div className="flex items-start gap-1 mb-1">
+                <button onClick={() => onRoll(s.name, s.value, s.linkedAttribute, s.trained, s.mastery, extBonus)} className="text-primary hover:text-primary/80 mt-0.5 flex-shrink-0" title="Rolar d20">
+                  <Dice1 className="h-3 w-3" />
+                </button>
+                <span className="truncate flex-1 min-w-0 font-medium text-sm">{s.name}</span>
+                {editMode && (
+                  <button onClick={() => onRemove(s.id)} className="text-destructive/60 hover:text-destructive flex-shrink-0"><X className="h-3 w-3" /></button>
+                )}
+              </div>
+              <div className="flex items-center gap-1 text-xs">
+                <span className="text-muted-foreground">Base:</span>
+                <span className="font-mono font-bold text-sm">{s.value}</span>
+                {attrMod !== 0 && <span className="text-muted-foreground">+{attrMod} (atr)</span>}
+                {itemBonus !== 0 && <span className="text-primary">+{itemBonus} (item)</span>}
+                {omniSkillBonus !== 0 && <span className="text-accent">+{omniSkillBonus} (omni)</span>}
+                {trainBonus !== 0 && <span className="text-emerald-400">+{trainBonus} (treino)</span>}
+                {extBonus !== 0 && <span className="text-amber-400">+{extBonus} (ext)</span>}
+                <span className={cn('ml-auto font-mono font-bold text-sm', total >= 0 ? 'text-foreground' : 'text-destructive')}>{totalStr}</span>
+              </div>
+              {editMode && (
+                <div className="mt-1 flex flex-wrap gap-1">
+                  <label className="flex items-center gap-1 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={s.trained}
+                      onChange={(e) => {
+                        if (e.target.checked && (trainingLimitReached || poolTrainEmpty)) return;
+                        onUpdate(s.id, { trained: e.target.checked });
+                      }}
+                      disabled={trainingLimitReached || poolTrainEmpty || (hideTraining ?? false)}
+                      className="h-3 w-3"
+                    />
+                    <span className="text-primary font-bold">T</span>
+                  </label>
                   {!hideMastery && (
-                  <button
-                    onClick={() => {
-                      // PLAYER: irreversível. MESTRE: pode alternar.
-                      if (s.mastery) {
-                        if (isPlayer) return;
-                        onUpdate(s.id, { mastery: false, trained: false });
-                        return;
-                      }
-                      if (mDisabled) return;
-                      onUpdate(s.id, { mastery: true, trained: false });
-                    }}
-                    disabled={(mDisabled && !s.mastery) || (isPlayer && s.mastery)}
-                    className={cn(
-                      'w-4 h-4 rounded-sm border text-xs font-bold leading-none flex items-center justify-center transition-all disabled:cursor-not-allowed',
-                      s.mastery ? 'bg-pe/30 border-pe text-pe' : 'border-border text-muted-foreground/40 hover:border-pe/50',
-                      mDisabled && !s.trained && !s.mastery && 'opacity-30'
-                    )}
-                    title={
-                      s.mastery ? 'Maestria — clique para devolver 2 pontos'
-                      : mBlockedByPool ? 'Sem maestrias disponíveis no pool externo'
-                      : mBlockedByWizard ? `Sem pontos suficientes (M custa ${mWizardCost})`
-                      : s.trained
-                        ? `Maestria — substitui o Treino (custa apenas 1 ponto adicional · +${2 * getMasteryBonus(charLevel)})`
-                        : `Maestria (custa 2 pontos · +${2 * getMasteryBonus(charLevel)})`
-                    }
-                  >
-                    M
-                  </button>
+                    <label className="flex items-center gap-1 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={s.mastery}
+                        onChange={(e) => {
+                          if (e.target.checked && (masteryLimitReached || poolMasteryEmpty)) return;
+                          onUpdate(s.id, { mastery: e.target.checked });
+                        }}
+                        disabled={masteryLimitReached || poolMasteryEmpty}
+                        className="h-3 w-3"
+                      />
+                      <span className="text-pe font-bold">M</span>
+                    </label>
+                  )}
+                  {!isPlayer && (
+                    <div className="flex-1 min-w-[60px]">
+                      <input
+                        type="number"
+                        value={extBonus}
+                        onChange={(e) => onUpdate(s.id, { externalBonus: parseInt(e.target.value) || 0 })}
+                        className="h-5 w-full rounded border border-input bg-background px-1 text-center text-xs font-mono"
+                        placeholder="Bônus ext."
+                      />
+                    </div>
+                  )}
+                  {s.linkedAttribute && (
+                    <select
+                      value={s.linkedAttribute}
+                      onChange={(e) => onUpdate(s.id, { linkedAttribute: e.target.value })}
+                      className="flex-1 min-w-[80px] h-5 rounded border border-input bg-background px-1 text-xs text-foreground"
+                    >
+                      <option value="">— Atributo —</option>
+                      {attributes.map((a) => (
+                        <option key={a.id} value={a.id}>{a.name} ({a.value})</option>
+                      ))}
+                    </select>
                   )}
                 </div>
-              )}
-              <span className="truncate flex-1 min-w-0 text-sm">{s.name}</span>
-              {linkedAttr && (
-                <span className="text-sm text-muted-foreground flex-shrink-0" title={`Vinculado a ${linkedAttr.name}`}>
-                  ({linkedAttr.name.slice(0, 3)})
-                </span>
-              )}
-              {editMode && (
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={s.value}
-                  onChange={(e) => {
-                    const raw = e.target.value.trim();
-                    if (raw === '' || raw === '-') { onUpdate(s.id, { value: 0 }); return; }
-                    const n = parseInt(raw, 10);
-                    if (!Number.isNaN(n)) onUpdate(s.id, { value: n });
-                  }}
-                  className="h-5 w-8 rounded border border-input bg-background px-0.5 text-center text-xs font-mono text-primary flex-shrink-0"
-                  title="Bônus base (aceita negativos)"
-                />
-              )}
-              {/* External bonus — apenas Mestre pode editar */}
-              {!isPlayer ? (
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={extBonus || ''}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    onUpdate(s.id, { externalBonus: raw === '' || raw === '-' ? 0 : parseInt(raw) || 0 });
-                  }}
-                  className="h-5 w-8 rounded border border-input bg-background px-0.5 text-center text-xs font-mono text-muted-foreground flex-shrink-0"
-                  title="Bônus externo"
-                  placeholder="ext"
-                />
-              ) : extBonus !== 0 ? (
-                <span className="h-5 inline-flex items-center px-1 text-xs font-mono text-muted-foreground flex-shrink-0" title="Bônus externo (apenas Mestre edita)">
-                  {extBonus >= 0 ? '+' : ''}{extBonus}
-                </span>
-              ) : null}
-              {trainBonus > 0 && (
-                <span className="text-xs text-pe flex-shrink-0" title={s.mastery ? 'Maestria' : 'Treinamento'}>+{trainBonus}</span>
-              )}
-              <span className={cn('font-mono font-bold flex-shrink-0 w-6 text-right text-sm', totalBonus >= 0 ? 'text-foreground' : 'text-hp')}>
-                {modStr}
-              </span>
-              {editMode && (
-                <button onClick={() => onRemove(s.id)} className="text-destructive/60 hover:text-destructive flex-shrink-0">
-                  <X className="h-3 w-3" />
-                </button>
               )}
             </div>
           );
         })}
       </div>
       {editMode && (
-        <div className="mt-1 space-y-1">
-          <div className="flex gap-1">
-            <input value={newName} onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAdd()} placeholder="Nome" className="h-7 flex-1 min-w-0 rounded-lg border border-input bg-background px-2 text-sm text-foreground" />
-            <input value={newVal} onChange={(e) => setNewVal(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAdd()} placeholder="Bônus" type="text" inputMode="numeric" className="h-7 w-14 flex-shrink-0 rounded-lg border border-input bg-background px-2 text-sm text-foreground" />
-            <select
-              value={newLinkedAttr}
-              onChange={(e) => setNewLinkedAttr(e.target.value)}
-              className="h-7 rounded-lg border border-input bg-background px-1 text-sm text-foreground"
-            >
-              <option value="">Atributo...</option>
-              {attributes.map((a) => (
-                <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </select>
-            <button onClick={handleAdd} className="h-7 w-7 flex-shrink-0 rounded-lg bg-primary text-primary-foreground flex items-center justify-center"><Plus className="h-3 w-3" /></button>
-          </div>
-        </div>
-      )}
-      {attrLockDialog}
-    </div>
-  );
-}
-
-// === Passive Card ===
-function PassiveCard({ passive: p, editMode, onRemove, charLevel }: { passive: Passive; editMode: boolean; onRemove: (id: string) => void; charLevel: number }) {
-  const [expanded, setExpanded] = useState(false);
-  const passiveSpellLv = getPassiveSpellLevel(p);
-  const isActive = isPassiveActive(p, charLevel);
-  const rdEntries = p.bonusRdByType ? DAMAGE_TYPES.filter(t => (p.bonusRdByType![t] || 0) !== 0) : [];
-  return (
-    <div
-      onClick={() => setExpanded(!expanded)}
-      className={cn(
-        "mb-1.5 rounded-xl border bg-secondary/30 px-3 py-2 text-sm cursor-pointer transition-all duration-200 hover:bg-secondary/50",
-        isActive ? "border-primary/30 hover:border-primary/50" : "border-border opacity-60"
-      )}
-    >
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-primary text-base">⭐</span>
-          <span className="font-bold text-foreground">{p.name}</span>
-          <span className={cn(
-            "text-xs rounded-full border px-1.5 py-0.5 font-extrabold tracking-wider",
-            isActive ? "bg-primary/15 text-primary border-primary/40" : "bg-secondary/50 text-muted-foreground border-border"
-          )} title={isActive ? `Ativa (Nível de feitiço ${passiveSpellLv})` : `Inativa — requer nível de feitiço ${passiveSpellLv}`}>
-            🔮 Nv.{passiveSpellLv}
-          </span>
-          {!isActive && <span className="text-xs text-hp font-bold">🔒 inativa</span>}
-        </div>
-        {editMode && (
-          <button onClick={(e) => { e.stopPropagation(); onRemove(p.id); }} className="text-destructive/60 hover:text-destructive flex-shrink-0"><X className="h-3.5 w-3.5" /></button>
-        )}
-      </div>
-      {p.description && (
-        <p className={cn("text-muted-foreground text-sm break-words transition-all duration-300 mt-1", !expanded && "line-clamp-2")}>{p.description}</p>
-      )}
-      <div className="flex gap-1.5 text-xs font-medium mt-1.5 flex-wrap">
-        {p.bonusHP !== 0 && <span className="rounded-full bg-hp/20 border border-hp/30 px-2 py-0.5 text-hp">HP{p.bonusHP >= 0 ? '+' : ''}{p.bonusHP}</span>}
-        {p.bonusPE !== 0 && <span className="rounded-full bg-pe/20 border border-pe/30 px-2 py-0.5 text-pe">PE{p.bonusPE >= 0 ? '+' : ''}{p.bonusPE}</span>}
-        {p.bonusESC !== 0 && <span className="rounded-full bg-shield/20 border border-shield/30 px-2 py-0.5 text-shield">ESC{p.bonusESC >= 0 ? '+' : ''}{p.bonusESC}</span>}
-        {p.bonusCA !== 0 && <span className="rounded-full bg-primary/20 border border-primary/30 px-2 py-0.5 text-primary">CA{p.bonusCA >= 0 ? '+' : ''}{p.bonusCA}</span>}
-        {p.bonusRD !== 0 && <span className="rounded-full bg-pe/15 border border-pe/30 px-2 py-0.5 text-pe" title="RD geral">🔰 RD{p.bonusRD >= 0 ? '+' : ''}{p.bonusRD}</span>}
-        {p.bonusSlots !== 0 && <span className="rounded-full bg-secondary border border-border px-2 py-0.5 text-muted-foreground">Slots{p.bonusSlots >= 0 ? '+' : ''}{p.bonusSlots}</span>}
-        {rdEntries.map(t => (
-          <span key={t} className="rounded-full bg-pe/10 border border-pe/30 px-2 py-0.5 text-pe" title={`RD ${DAMAGE_TYPE_LABELS[t]}`}>
-            🔰 {DAMAGE_TYPE_ABBR[t]}+{p.bonusRdByType![t]}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// === Passive Block ===
-function PassiveBlock({
-  charId, passives, editMode, onAdd, onRemove, charLevel, onSubmitProposal,
-}: {
-  charId: string;
-  passives: Passive[];
-  editMode: boolean;
-  onAdd: (p: Passive) => void;
-  onRemove: (id: string) => void;
-  charLevel: number;
-  /** Se definido, criar passiva ENVIA para análise do Mestre em vez de aplicar direto. */
-  onSubmitProposal?: (p: Passive) => void;
-}) {
-  const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState<{ name: string; description: string; spellLevel: SpellLevel; bonusHP: number; bonusPE: number; bonusESC: number; bonusSlots: number; bonusRD: number; bonusCA: number; bonusRdByType: Partial<Record<DamageType, number>> }>({ name: '', description: '', spellLevel: '1', bonusHP: 0, bonusPE: 0, bonusESC: 0, bonusSlots: 0, bonusRD: 0, bonusCA: 0, bonusRdByType: {} });
-  const [showRdPicker, setShowRdPicker] = useState(false);
-
-  const handleAdd = () => {
-    if (!form.name.trim()) return;
-    const cleanRd: Partial<Record<DamageType, number>> = {};
-    DAMAGE_TYPES.forEach(t => { if ((form.bonusRdByType[t] || 0) !== 0) cleanRd[t] = form.bonusRdByType[t]; });
-    const newPassive: Passive = { id: crypto.randomUUID(), name: form.name, description: form.description, spellLevel: form.spellLevel, bonusHP: form.bonusHP, bonusPE: form.bonusPE, bonusESC: form.bonusESC, bonusSlots: form.bonusSlots, bonusRD: form.bonusRD, bonusCA: form.bonusCA, bonusRdByType: Object.keys(cleanRd).length > 0 ? cleanRd : undefined };
-    if (onSubmitProposal) {
-      onSubmitProposal(newPassive);
-    } else {
-      onAdd(newPassive);
-    }
-    setForm({ name: '', description: '', spellLevel: '1', bonusHP: 0, bonusPE: 0, bonusESC: 0, bonusSlots: 0, bonusRD: 0, bonusCA: 0, bonusRdByType: {} });
-    setAdding(false);
-    setShowRdPicker(false);
-  };
-
-  if (passives.length === 0 && !editMode) {
-    return <p className="text-sm text-muted-foreground italic">Nenhuma passiva.</p>;
-  }
-
-  // RD geral + RD por tipo (somam-se na ficha).
-  const bonusFields = [
-    { key: 'bonusHP' as const, label: '❤️ HP', color: 'text-hp border-hp/30 focus:border-hp' },
-    { key: 'bonusPE' as const, label: '⚡ PE', color: 'text-pe border-pe/30 focus:border-pe' },
-    { key: 'bonusESC' as const, label: '🛡 ESC', color: 'text-shield border-shield/30 focus:border-shield' },
-    { key: 'bonusCA' as const, label: '🛡 CA', color: 'text-primary border-primary/30 focus:border-primary' },
-    { key: 'bonusSlots' as const, label: '📦 Slots', color: 'text-muted-foreground border-border' },
-  ];
-
-  return (
-    <div>
-      {passives.map((p) => (
-        <PassiveCard key={p.id} passive={p} editMode={editMode} onRemove={onRemove} charLevel={charLevel} />
-      ))}
-      {editMode && !adding && (
-        <button onClick={() => setAdding(true)} className="mt-1 flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 rounded-lg bg-primary/10 border border-primary/20 px-3 py-1.5 transition-all hover:bg-primary/20">
-          <Plus className="h-3.5 w-3.5" /> Nova Passiva
-        </button>
-      )}
-      {adding && (
-        <div className="mt-2 space-y-3 rounded-2xl border border-primary/30 bg-gradient-to-br from-[oklch(0.16_0.04_280)] to-[oklch(0.12_0.05_300)] p-4 shadow-lg shadow-primary/10">
-          <div className="flex items-center gap-2 mb-1">
-            <Star className="h-4 w-4 text-primary" />
-            <span className="text-sm font-bold text-primary uppercase tracking-wider">Nova Passiva</span>
-          </div>
-          <input
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="Nome da passiva"
-            className="h-9 w-full rounded-xl border border-primary/30 bg-background/50 px-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none transition-colors"
-            autoFocus
-          />
-          <textarea
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            placeholder="Descrição detalhada do efeito..."
-            rows={3}
-            className="w-full rounded-xl border border-primary/30 bg-background/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none resize-y transition-colors"
-          />
-          {/* Nível de feitiço da passiva */}
-          <div className="flex items-center gap-3">
-            <label className="text-xs font-medium text-muted-foreground whitespace-nowrap">🔮 Nível de feitiço</label>
-            <select
-              value={form.spellLevel}
-              onChange={(e) => setForm({ ...form, spellLevel: e.target.value as SpellLevel })}
-              className="h-8 w-32 rounded-lg border border-primary/30 bg-background/50 px-2 text-center text-sm font-mono font-bold text-primary focus:border-primary focus:outline-none"
-            >
-              {SPELL_LEVELS.map(lv => (
-                <option key={lv} value={lv}>{lv}</option>
-              ))}
-            </select>
-            <span className="text-xs text-muted-foreground italic">
-              {isPassiveActive({ ...form, id: '', bonusRD: 0 } as Passive, charLevel) ? '✅ ativa agora' : `⚠️ requer mais nível de jogador`}
-            </span>
-          </div>
-          <div className="space-y-2 rounded-xl border border-pe/20 bg-pe/5 p-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-pe">🔰 RD</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={form.bonusRD || ''}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    setForm({ ...form, bonusRD: raw === '' || raw === '-' ? 0 : parseInt(raw) || 0 });
-                  }}
-                  placeholder="0"
-                  className="h-8 w-20 rounded-lg border border-pe/30 bg-background/60 px-2 text-center text-sm font-mono font-bold text-pe focus:border-pe focus:outline-none"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowRdPicker(!showRdPicker)}
-                className="text-xs font-medium text-pe hover:text-pe/80 transition-colors"
-              >
-                RD por tipo {showRdPicker ? '▲' : '▼'}
-              </button>
-            </div>
-            {showRdPicker && (
-              <div className="grid grid-cols-3 gap-1.5">
-                {DAMAGE_TYPES.map((t) => (
-                  <div key={t} className="space-y-0.5">
-                    <label className="text-xs font-bold text-pe uppercase" title={DAMAGE_TYPE_LABELS[t]}>{DAMAGE_TYPE_ABBR[t]}</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={form.bonusRdByType[t] || ''}
-                      onChange={(e) => {
-                        const raw = e.target.value;
-                        setForm({
-                          ...form,
-                          bonusRdByType: {
-                            ...form.bonusRdByType,
-                            [t]: raw === '' || raw === '-' ? 0 : parseInt(raw) || 0,
-                          },
-                        });
-                      }}
-                      placeholder="0"
-                      className="h-7 w-full rounded-lg border border-pe/30 bg-background/60 px-1 text-center text-xs font-mono font-bold text-pe focus:border-pe focus:outline-none"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {bonusFields.map(({ key, label, color }) => (
-              <div key={key} className="space-y-1">
-                <label className={cn("text-xs font-medium", color.split(' ')[0])}>{label}</label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={form[key] || ''}
-                  onChange={(e) => { const raw = e.target.value; setForm({ ...form, [key]: raw === '' || raw === '-' ? 0 : parseInt(raw) || 0 }); }}
-                  className={cn("h-8 w-full rounded-lg border bg-background/50 px-2 text-center text-sm font-mono font-bold focus:outline-none transition-colors", color)}
-                />
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-2 pt-1">
-            <button onClick={handleAdd} className="h-9 flex-1 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-colors shadow-md shadow-primary/20">
-              {onSubmitProposal ? '📨 Enviar para análise do Mestre' : '✨ Criar Passiva'}
-            </button>
-            <button onClick={() => setAdding(false)} className="h-9 rounded-xl bg-secondary px-4 text-sm text-secondary-foreground hover:bg-secondary/80 transition-colors">
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// === Spell Card ===
-function SpellCard({ spell: s, editMode, onRemove, onUse, onEdit, cooldown = 0 }: { spell: Spell; editMode: boolean; onRemove: (id: string) => void; onUse: (s: Spell) => void; onEdit?: (s: Spell) => void; cooldown?: number }) {
-  const [expanded, setExpanded] = useState(false);
-  const typeLabel = s.spellType === 'heal' ? '💚 Cura' : s.spellType === 'buff' ? '🔮 Buff' : s.spellType === 'condition' ? '⚠️ Condição' : '⚔️ Dano';
-  const actionLabels: Record<string, string> = { bonus: 'AB', action: 'AC', reaction: 'RÇ', full: 'Completa', rapida: 'AR', movimento: 'MV', free: 'LV' };
-  const actionLabel = actionLabels[s.actionType] || 'AC';
-  const dmgTypeLabel = s.damageType ? DAMAGE_TYPE_ABBR[s.damageType] : '';
-  const levelLabel = s.spellLevel || '1';
-  const rangeLabel = s.range || '';
-  return (
-    <div
-      onClick={() => setExpanded(!expanded)}
-      className="mb-1.5 rounded-xl border border-border bg-secondary/30 px-3 py-2 text-sm cursor-pointer transition-all duration-200 hover:bg-secondary/50"
-    >
-      <div className="flex items-center justify-between">
-        <div>
-          <span className="font-bold text-foreground">{s.name}</span>
-          <span className="ml-1 text-xs rounded bg-primary/20 text-primary px-1 py-0.5 font-mono">Nv.{levelLabel}</span>
-          {s.requiresConcentration && (
-            <span className="ml-1 rounded-full border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary" title="Este feitiço ocupa um slot de concentração enquanto ativo">
-              Concentração
-            </span>
-          )}
-          {s.targetMode === 'single_atk' && (
-            <span className="ml-1 text-xs rounded-full bg-primary/15 text-primary border border-primary/40 px-1.5 py-0.5 font-extrabold tracking-wider" title="Alvo Único (Ataque)">AUA</span>
-          )}
-          {s.targetMode === 'single_tr' && (
-            <span className="ml-1 text-xs rounded-full bg-neon-yellow/15 text-neon-yellow border border-neon-yellow/40 px-1.5 py-0.5 font-extrabold tracking-wider" title={`TR Alvo Único — ${s.saveAttr || 'DES'}`}>TRU{s.saveAttr ? `:${s.saveAttr}` : ''}</span>
-          )}
-          {s.targetMode === 'area_tr' && (
-            <span className="ml-1 text-xs rounded-full bg-hp/15 text-hp border border-hp/40 px-1.5 py-0.5 font-extrabold tracking-wider" title={`TR Área — ${s.saveAttr || 'DES'}`}>TRA{s.saveAttr ? `:${s.saveAttr}` : ''}</span>
-          )}
-          <span className="ml-2 text-muted-foreground text-sm">
-            PE:{s.costPE} | {s.damageDice ? `${s.damageDice}+${s.damageBonus}` : '—'} | {typeLabel} | {actionLabel}
-            {dmgTypeLabel && ` | ${dmgTypeLabel}`}
-            {rangeLabel && ` | ${rangeLabel}`}
-            {s.durationRounds > 0 && ` | ${s.durationRounds}rd`}
-            {s.bonusDC && s.bonusDC > 0 && ` | CD+${s.bonusDC}`}
-          </span>
-        </div>
-        <div className="flex items-center gap-1">
-          {cooldown > 0 && (
-            <span className="rounded-md bg-hp/20 border border-hp/40 px-1.5 py-0.5 text-xs font-bold text-hp" title="Em recarga (Técnica Máxima)">
-              ⏳ Recarga: {cooldown}t
-            </span>
-          )}
-          <button
-            onClick={(e) => { e.stopPropagation(); if (cooldown <= 0) onUse(s); }}
-            disabled={cooldown > 0}
-            title={cooldown > 0 ? `Em recarga: faltam ${cooldown} turno(s)` : 'Usar feitiço'}
-            className={cn(
-              "rounded-lg border px-2 py-0.5 transition-colors font-medium text-sm",
-              cooldown > 0
-                ? "bg-muted/40 border-muted text-muted-foreground cursor-not-allowed opacity-60"
-                : "bg-primary/20 border-primary/40 text-primary hover:bg-primary/30",
-            )}
-          >
-            Usar
-          </button>
-          <Zap className="h-3.5 w-3.5 text-primary" />
-          {editMode && (
-            <>
-              <button 
-                onClick={(e) => { e.stopPropagation(); onEdit?.(s); }} 
-                className="text-primary/60 hover:text-primary ml-1 flex-shrink-0 flex items-center gap-0.5 text-xs font-bold"
-              >
-                ✏️ Editar
-              </button>
-              <button onClick={(e) => { e.stopPropagation(); onRemove(s.id); }} className="text-destructive/60 hover:text-destructive ml-1 flex-shrink-0">
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-      {/* Buff info */}
-      {s.buffs && s.buffs.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-1">
-          {s.buffs.map((b, i) => {
-            const desc = b.type === 'ca' ? `CA+${b.value}`
-              : b.type === 'hit' ? `Acerto+${b.value}`
-              : b.type === 'extraDice' ? `+${b.extraDiceCount}d${b.extraDiceSides}`
-              : `${b.targetName}+${b.value}`;
-            return (
-              <span key={i} className="rounded-full bg-pe/10 border border-pe/20 px-1.5 py-0.5 text-xs text-pe">
-                🔮 {desc} ({b.durationTurns}t)
-              </span>
-            );
-          })}
-        </div>
-      )}
-      {/* Condition info */}
-      {s.conditions && s.conditions.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-1">
-          {s.conditions.map((sc, i) => {
-            const cond = ALL_CONDITIONS.find(c => c.id === sc.conditionId);
-            if (!cond) return null;
-            const dur = sc.durationTurns > 0 ? `${sc.durationTurns}t` : `${sc.durationRounds}rd`;
-            return (
-              <span key={i} className="rounded-full bg-hp/10 border border-hp/20 px-1.5 py-0.5 text-xs text-hp">
-                {cond.icon} {cond.name} ({dur})
-              </span>
-            );
-          })}
-        </div>
-      )}
-      {s.description && (
-        <div className={cn(
-          "text-muted-foreground text-sm break-all transition-all duration-300 overflow-hidden",
-          expanded ? "mt-1 max-h-96 opacity-100" : "max-h-0 opacity-0"
-        )}>
-          {s.description}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SpellBlock({
-  spells, passivesCount = 0, editMode, onAdd, onRemove, onUse, charLevel = 1, isGolpeador = false, hasEnergiaReversa = false, maxSpells = 99, availableTags = [], cooldowns = {}, isMaster = false, hasTecnicaMaxima = false, hasTecnicaReversa = false, onSubmitProposal,
-}: {
-  spells: Spell[];
-  passivesCount?: number;
-  editMode: boolean;
-  onAdd: (s: Spell) => void;
-  onRemove: (id: string) => void;
-  onUse: (s: Spell) => void;
-  charLevel?: number;
-  isGolpeador?: boolean;
-  hasEnergiaReversa?: boolean;
-  maxSpells?: number;
-  availableTags?: { label: string; discountPE: number }[];
-  cooldowns?: Record<string, number>;
-  isMaster?: boolean;
-  hasTecnicaMaxima?: boolean;
-  hasTecnicaReversa?: boolean;
-  onSubmitProposal?: (spell: Spell) => void;
-}) {
-  const [adding, setAdding] = useState(false);
-  const [editingSpell, setEditingSpell] = useState<Spell | null>(null);
-  const [showAssistant, setShowAssistant] = useState(false);
-  const [showGuide, setShowGuide] = useState<string | null>(null);
-
-  const [form, setForm] = useState<Partial<Spell>>({
-    name: '', description: '', costPE: 0, damageDice: '', damageBonus: 0,
-    spellType: 'damage', actionType: 'action', durationRounds: 0, range: '1,5m',
-    targetMode: 'single_atk', spellLevel: '1',
-    buffs: [], conditions: [], saveAttr: 'DES'
-  });
-
-  const [buffs, setBuffs] = useState<SpellBuff[]>([]);
-  const [spellConditions, setSpellConditions] = useState<SpellCondition[]>([]);
-  const [addingBuff, setAddingBuff] = useState(false);
-  const [buffForm, setBuffForm] = useState<SpellBuff>({ type: 'ca', value: 0, durationTurns: 1 });
-  const [addingCondition, setAddingCondition] = useState(false);
-  const [condForm, setCondForm] = useState<SpellCondition>({ conditionId: ALL_CONDITIONS[0].id, durationTurns: 0, durationRounds: 1 });
-
-  const handleAdd = () => {
-    if (!form.name) return;
-    const id = editingSpell?.id || crypto.randomUUID();
-    onAdd({ ...form, id, buffs, conditions: spellConditions } as Spell);
-    setAdding(false);
-    setEditingSpell(null);
-    setBuffs([]);
-    setSpellConditions([]);
-    setForm({
-      name: '', description: '', costPE: 0, damageDice: '', damageBonus: 0,
-      spellType: 'damage', actionType: 'action', durationRounds: 0, range: '1,5m',
-      targetMode: 'single_atk', spellLevel: '1',
-      buffs: [], conditions: [], saveAttr: 'DES'
-    });
-  };
-
-  const handleAddBuff = () => {
-    setBuffs([...buffs, { ...buffForm }]);
-    setBuffForm({ type: 'ca', value: 0, durationTurns: 1 });
-    setAddingBuff(false);
-  };
-
-  const totalSpells = spells.length;
-  const isLocked = totalSpells >= maxSpells;
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-          Capacidade: {totalSpells} / {maxSpells}
-        </span>
-        {!isLocked ? (
-          <div className="flex gap-2">
-            <button onClick={() => setShowAssistant(true)} className="flex items-center gap-1 text-xs font-bold text-primary hover:text-primary/80 animate-pulse" title="Aprender novo feitiço (assistente guiado)">
-              <Plus className="h-3 w-3" /> Aprender (Assistente)
-            </button>
-            {editMode && (
-              <button onClick={() => { setAdding(true); setEditingSpell(null); }} className="flex items-center gap-1 text-xs font-bold text-primary hover:text-primary/80" title="Criar feitiço manualmente">
-                <Plus className="h-3 w-3" /> Manual
-              </button>
-            )}
-          </div>
-        ) : (
-          <span className="text-xs font-bold text-hp flex items-center gap-1">
-            🔒 Limite atingido
-          </span>
-        )}
-      </div>
-
-      <div className="space-y-1">
-        {spells.map((s) => (
-          <SpellCard 
-            key={s.id} 
-            spell={s} 
-            editMode={editMode} 
-            onRemove={onRemove} 
-            onUse={onUse}
-            cooldown={cooldowns[s.id] ?? 0}
-            onEdit={(spell) => {
-              setEditingSpell(spell);
-              setShowAssistant(true);
-            }}
-          />
-        ))}
-        {spells.length === 0 && !adding && !showAssistant && (
-          <p className="text-sm text-muted-foreground italic">Nenhum feitiço aprendido.</p>
-        )}
-      </div>
-
-      {showAssistant && (
-        <SpellCreationAssistant
-          onAdd={(s) => {
-            onAdd(s);
-            setShowAssistant(false);
-            setEditingSpell(null);
-          }}
-          onCancel={() => {
-            setShowAssistant(false);
-            setEditingSpell(null);
-          }}
-          charLevel={charLevel}
-          currentSpellCount={totalSpells}
-          maxSpells={maxSpells}
-          initialSpell={editingSpell || undefined}
-          isGolpeador={isGolpeador}
-          hasEnergiaReversa={hasEnergiaReversa}
-          availableTags={availableTags}
-          isMaster={isMaster}
-          hasTecnicaMaxima={hasTecnicaMaxima}
-          hasTecnicaReversa={hasTecnicaReversa}
-          onSubmitProposal={onSubmitProposal}
-        />
-      )}
-      {adding && (
-        <div className="mt-1 space-y-1 rounded-xl border border-primary/30 p-2 text-sm">
-          <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nome" className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground" />
-          <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Descrição" className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground" />
-          <div className="flex gap-1 flex-wrap">
-            <div className="flex-1 min-w-[70px] space-y-0.5">
-              <label className="text-sm text-muted-foreground flex items-center gap-1">
-                Nível
-                <button
-                  type="button"
-                  onClick={() => setShowGuide(form.spellLevel ?? null)}
-                  className="text-primary hover:text-primary/80 transition-colors"
-                  title="Guia de criação para este nível"
-                >
-                  <HelpCircle className="h-3.5 w-3.5" />
-                </button>
-              </label>
-              <select value={form.spellLevel} onChange={(e) => setForm({ ...form, spellLevel: e.target.value as SpellLevel })} className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground">
-                {SPELL_LEVELS.map((lv) => (
-                  <option key={lv} value={lv}>{lv}</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex-1 min-w-[80px] space-y-0.5">
-              <label className="text-sm text-muted-foreground">Tipo</label>
-              <select value={form.spellType} onChange={(e) => setForm({ ...form, spellType: e.target.value as any })} className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground">
-                <option value="damage">⚔️ Dano</option>
-                <option value="heal">💚 Cura</option>
-                <option value="buff">✨ Buff</option>
-                <option value="debuff">💀 Debuff</option>
-                <option value="condition">⚠️ Foco Condições</option>
-              </select>
-            </div>
-            <div className="flex-1 min-w-[80px] space-y-0.5">
-              <label className="text-sm text-muted-foreground">Ação</label>
-              <select value={form.actionType} onChange={(e) => setForm({ ...form, actionType: e.target.value as Spell['actionType'] })} className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground">
-                <option value="action">AC (Comum)</option>
-                <option value="bonus">AB (Bônus)</option>
-                <option value="rapida">AR (Rápida)</option>
-                <option value="reaction">RÇ (Reação)</option>
-                <option value="movimento">MV (Movimento)</option>
-                <option value="free">LV (Livre)</option>
-                <option value="full">Completa</option>
-              </select>
-            </div>
-            <div className="flex-1 min-w-[90px] space-y-0.5">
-              <label className="text-sm text-muted-foreground">Modo Alvo</label>
-              <select value={form.targetMode} onChange={(e) => setForm({ ...form, targetMode: e.target.value as SpellTargetMode })} className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground">
-                {SPELL_TARGET_MODES.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
-              </select>
-            </div>
-            {(form.spellType === 'damage' || form.spellType === 'condition') && (
-              <div className="flex-1 min-w-[90px] space-y-0.5">
-                <label className="text-sm text-muted-foreground">Tipo Dano</label>
-                <select value={form.damageType} onChange={(e) => setForm({ ...form, damageType: e.target.value as DamageType })} className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground">
-                  <option value="">Nenhum</option>
-                  {DAMAGE_TYPES.map((t) => (
-                    <option key={t} value={t}>{DAMAGE_TYPE_ABBR[t]} — {DAMAGE_TYPE_LABELS[t]}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-            <div className="flex-1 min-w-[60px] space-y-0.5">
-              <label className="text-sm text-muted-foreground">Custo PE</label>
-              <input type="text" inputMode="numeric" value={form.costPE || ''} onChange={(e) => { const raw = e.target.value; setForm({ ...form, costPE: raw === '' ? 0 : parseInt(raw) || 0 }); }} className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground" />
-            </div>
-            <div className="flex-1 min-w-[60px] space-y-0.5">
-              <label className="text-sm text-muted-foreground">Duração (rd)</label>
-              <input type="text" inputMode="numeric" value={form.durationRounds || ''} onChange={(e) => { const raw = e.target.value; setForm({ ...form, durationRounds: raw === '' ? 0 : parseInt(raw) || 0 }); }} className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground" />
-            </div>
-            <div className="flex-1 min-w-[80px] space-y-0.5">
-              <label className="text-sm text-muted-foreground">Alcance</label>
-              <select value={form.range} onChange={(e) => setForm({ ...form, range: e.target.value, customRange: '' } as any)} className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground">
-                {SPELL_RANGES.map((r) => <option key={r} value={r}>{r}</option>)}
-              </select>
-            </div>
-            <div className="flex-1 min-w-[70px] space-y-0.5">
-              <label className="text-sm text-muted-foreground">Personalizado</label>
-              <input value={(form as any).customRange || ''} onChange={(e) => setForm({ ...form, customRange: e.target.value } as any)} placeholder="ex: 15m" className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground" />
-            </div>
-            {(form.targetMode === 'single_tr' || form.targetMode === 'area_tr') && (
-              <>
-                <div className="flex-1 min-w-[60px] space-y-0.5">
-                  <label className="text-sm text-muted-foreground">Bônus CD</label>
-                  <input type="text" inputMode="numeric" value={form.bonusDC || ''} onChange={(e) => { const raw = e.target.value; setForm({ ...form, bonusDC: raw === '' ? 0 : parseInt(raw) || 0 }); }} className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground" />
-                </div>
-                <div className="flex-1 min-w-[80px] space-y-0.5">
-                  <label className="text-sm text-muted-foreground">Atrib. TR</label>
-                  <select value={form.saveAttr} onChange={(e) => setForm({ ...form, saveAttr: e.target.value as SaveAttr })} className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground">
-                    {SAVE_ATTRS.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-              </>
-            )}
-            {form.spellType !== 'buff' && (form.spellType as string) !== 'debuff' && (
-              <>
-                <div className="flex-1 min-w-[60px] space-y-0.5">
-                  <label className="text-sm text-muted-foreground">Dados</label>
-                  <input value={form.damageDice} onChange={(e) => setForm({ ...form, damageDice: e.target.value })} placeholder="3d6" className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground" />
-                </div>
-                <div className="flex-1 min-w-[60px] space-y-0.5">
-                  <label className="text-sm text-muted-foreground">Bônus</label>
-                  <input type="text" inputMode="numeric" value={form.damageBonus || ''} onChange={(e) => { const raw = e.target.value; setForm({ ...form, damageBonus: raw === '' ? 0 : parseInt(raw) || 0 }); }} className="h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground" />
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Buff section - only for buff/debuff types */}
-          {(form.spellType === 'buff' || (form.spellType as string) === 'debuff') && (
-          <div className="space-y-1 border-t border-border pt-1">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">{(form.spellType as string) === 'debuff' ? '💀 Debuffs' : '✨ Buffs'} ({buffs.length})</span>
-              <button onClick={() => setAddingBuff(true)} className="text-xs text-primary hover:text-primary/80">+ {(form.spellType as string) === 'debuff' ? 'Debuff' : 'Buff'}</button>
-            </div>
-            {buffs.map((b, i) => {
-              const desc = b.type === 'ca' ? `CA+${b.value}`
-                : b.type === 'hit' ? `Acerto+${b.value}`
-                : b.type === 'extraDice' ? `+${b.extraDiceCount}d${b.extraDiceSides}`
-                : `${b.targetName}+${b.value}`;
-              return (
-                <div key={i} className="flex items-center gap-1 text-xs">
-                  <span className={(form.spellType as string) === 'debuff' ? 'text-hp' : 'text-pe'}>{(form.spellType as string) === 'debuff' ? '💀' : '✨'} {desc} ({b.durationTurns}rd)</span>
-                  <button onClick={() => setBuffs(buffs.filter((_, j) => j !== i))} className="text-destructive/60 hover:text-destructive"><X className="h-3 w-3" /></button>
-                </div>
-              );
-            })}
-            {addingBuff && (
-              <div className="flex gap-1 flex-wrap items-end">
-                <div className="space-y-0.5">
-                  <label className="text-xs text-muted-foreground">Tipo</label>
-                  <select value={buffForm.type} onChange={(e) => setBuffForm({ ...buffForm, type: e.target.value as SpellBuff['type'] })} className="h-7 rounded border border-input bg-background px-1 text-xs text-foreground">
-                    <option value="ca">CA</option>
-                    <option value="hit">Acerto</option>
-                    <option value="skill">Perícia</option>
-                    <option value="attribute">Atributo</option>
-                    <option value="extraDice">Dados extras</option>
-                  </select>
-                </div>
-                {(buffForm.type === 'skill' || buffForm.type === 'attribute') && (
-                  <div className="space-y-0.5">
-                    <label className="text-xs text-muted-foreground">Nome</label>
-                    <input value={buffForm.targetName || ''} onChange={(e) => setBuffForm({ ...buffForm, targetName: e.target.value })} placeholder="Nome" className="h-7 w-20 rounded border border-input bg-background px-1 text-xs text-foreground" />
-                  </div>
-                )}
-                {buffForm.type !== 'extraDice' ? (
-                  <div className="space-y-0.5">
-                    <label className="text-xs text-muted-foreground">Valor</label>
-                    <input type="text" inputMode="numeric" value={buffForm.value || ''} onChange={(e) => setBuffForm({ ...buffForm, value: parseInt(e.target.value) || 0 })} className="h-7 w-12 rounded border border-input bg-background px-1 text-xs text-foreground" />
-                  </div>
-                ) : (
-                  <>
-                    <div className="space-y-0.5">
-                      <label className="text-xs text-muted-foreground">Qtd</label>
-                      <input type="text" inputMode="numeric" value={buffForm.extraDiceCount || ''} onChange={(e) => setBuffForm({ ...buffForm, extraDiceCount: parseInt(e.target.value) || 0 })} className="h-7 w-10 rounded border border-input bg-background px-1 text-xs text-foreground" />
-                    </div>
-                    <div className="space-y-0.5">
-                      <label className="text-xs text-muted-foreground">Lados</label>
-                      <input type="text" inputMode="numeric" value={buffForm.extraDiceSides || ''} onChange={(e) => setBuffForm({ ...buffForm, extraDiceSides: parseInt(e.target.value) || 0 })} className="h-7 w-10 rounded border border-input bg-background px-1 text-xs text-foreground" />
-                    </div>
-                  </>
-                )}
-                <div className="space-y-0.5">
-                  <label className="text-xs text-muted-foreground">Rodadas</label>
-                  <input type="text" inputMode="numeric" value={buffForm.durationTurns || ''} onChange={(e) => setBuffForm({ ...buffForm, durationTurns: parseInt(e.target.value) || 1 })} className="h-7 w-10 rounded border border-input bg-background px-1 text-xs text-foreground" />
-                </div>
-                <button onClick={handleAddBuff} className="h-7 rounded bg-pe/20 px-2 text-xs text-pe">OK</button>
-                <button onClick={() => setAddingBuff(false)} className="h-7 rounded bg-secondary px-2 text-xs text-secondary-foreground">✕</button>
-              </div>
-            )}
-          </div>
-          )}
-
-          {/* Conditions section - for damage, debuff, condition types */}
-          {(form.spellType === 'damage' || (form.spellType as string) === 'debuff' || form.spellType === 'condition') && (
-          <div className="space-y-1 border-t border-border pt-1">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">Condições ({spellConditions.length})</span>
-              <button onClick={() => setAddingCondition(true)} className="text-xs text-hp hover:text-hp/80">+ Condição</button>
-            </div>
-            {spellConditions.map((sc, i) => {
-              const cond = ALL_CONDITIONS.find(c => c.id === sc.conditionId);
-              if (!cond) return null;
-              const dur = sc.durationTurns > 0 ? `${sc.durationTurns}t` : `${sc.durationRounds}rd`;
-              return (
-                <div key={i} className="flex items-center gap-1 text-xs">
-                  <span className="text-hp">{cond.icon} {cond.name} ({dur})</span>
-                  <button onClick={() => setSpellConditions(spellConditions.filter((_, j) => j !== i))} className="text-destructive/60 hover:text-destructive"><X className="h-3 w-3" /></button>
-                </div>
-              );
-            })}
-            {addingCondition && (
-              <div className="flex gap-1 flex-wrap items-end">
-                <div className="space-y-0.5 flex-1 min-w-[120px]">
-                  <label className="text-xs text-muted-foreground">Condição</label>
-                  <select value={condForm.conditionId} onChange={(e) => setCondForm({ ...condForm, conditionId: e.target.value })} className="h-7 w-full rounded border border-input bg-background px-1 text-xs text-foreground">
-                    {ALL_CONDITIONS.map((c) => (
-                      <option key={c.id} value={c.id}>{c.icon} {c.name} ({c.category})</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-0.5">
-                  <label className="text-xs text-muted-foreground">Rodadas</label>
-                  <input type="text" inputMode="numeric" value={condForm.durationRounds || ''} onChange={(e) => setCondForm({ ...condForm, durationRounds: parseInt(e.target.value) || 0 })} className="h-7 w-10 rounded border border-input bg-background px-1 text-xs text-foreground" />
-                </div>
-                <div className="space-y-0.5">
-                  <label className="text-xs text-muted-foreground">Rodadas</label>
-                  <input type="text" inputMode="numeric" value={condForm.durationRounds || ''} onChange={(e) => setCondForm({ ...condForm, durationRounds: parseInt(e.target.value) || 0 })} className="h-7 w-10 rounded border border-input bg-background px-1 text-xs text-foreground" />
-                </div>
-                <button onClick={() => { setSpellConditions([...spellConditions, { ...condForm }]); setCondForm({ conditionId: ALL_CONDITIONS[0].id, durationTurns: 0, durationRounds: 1 }); setAddingCondition(false); }} className="h-7 rounded bg-hp/20 px-2 text-xs text-hp">OK</button>
-                <button onClick={() => setAddingCondition(false)} className="h-7 rounded bg-secondary px-2 text-xs text-secondary-foreground">✕</button>
-              </div>
-            )}
-          </div>
-          )}
-
-          <div className="flex gap-1">
-            <button onClick={handleAdd} className="h-8 rounded-lg bg-primary px-3 text-sm text-primary-foreground">Salvar</button>
-            <button onClick={() => { setAdding(false); setBuffs([]); setSpellConditions([]); }} className="h-8 rounded-lg bg-secondary px-3 text-sm text-secondary-foreground">Cancelar</button>
-          </div>
-        </div>
-      )}
-
-      {showGuide && (
-        <SpellLevelGuide level={showGuide as any} onClose={() => setShowGuide(null)} />
-      )}
-    </div>
-  );
-}
-
-// === Accessory Slots Section ===
-function AccessorySlotsSection({
-  character, items, accessorySlots, onUpdateSlots,
-  omniInventory, onEquipOmni, onUnequipOmni,
-  onShowDetails, resolverEntidadeOmniAtual, onUseOmni,
-}: {
-  character: Character;
-  items: import('@/types').Item[];
-  accessorySlots: AccessorySlots;
-  onUpdateSlots: (slots: AccessorySlots) => void;
-  omniInventory: InventoryItem[];
-  onEquipOmni: (instanceId: string, slotName: string) => boolean;
-  onUnequipOmni: (instanceId: string) => void;
-  onShowDetails: (target: ItemDetailsTarget) => void;
-  resolverEntidadeOmniAtual: (inv: InventoryItem) => InventoryItem['entity'];
-  /** Dispara o Script Ativo do item equipado. Recebe a instância do inventário. */
-  onUseOmni: (inv: InventoryItem) => void;
-}) {
-  const assignedAccessoryItems = items.filter(
-    (i) => (i.assignedTo ?? []).includes(character.id) && i.slotType && i.slotType !== 'nenhum'
-  );
-
-  const getItemById = (id: string | null) => id ? items.find((i) => i.id === id) : null;
-
-  const availableForSlot = (slotType: ItemSlotType) =>
-    assignedAccessoryItems.filter((i) => i.slotType === slotType && !isItemInAnySlot(i.id));
-
-  const isItemInAnySlot = (itemId: string) => {
-    if (accessorySlots.colar === itemId) return true;
-    if (accessorySlots.aneis.includes(itemId)) return true;
-    if (accessorySlots.pulseiras.includes(itemId)) return true;
-    return false;
-  };
-
-  const setSlot = (type: 'colar' | 'anel' | 'pulseira', index: number, itemId: string | null) => {
-    const newSlots = { ...accessorySlots, aneis: [...accessorySlots.aneis] as AccessorySlots['aneis'], pulseiras: [...accessorySlots.pulseiras] as AccessorySlots['pulseiras'] };
-    if (type === 'colar') newSlots.colar = itemId;
-    else if (type === 'anel') newSlots.aneis[index] = itemId;
-    else if (type === 'pulseira') newSlots.pulseiras[index] = itemId;
-    onUpdateSlots(newSlots);
-  };
-
-  // ===== Omni-Engine integration =====
-  const slotKey = (type: 'colar' | 'anel' | 'pulseira', index: number) =>
-    type === 'colar' ? 'colar' : `${type}:${index}`;
-
-  // Inventário Omni filtrado por slotType compatível.
-  const omniAvailableForSlot = (st: ItemSlotType) =>
-    omniInventory.filter((inv) => (inv.entity.slotType ?? 'nenhum') === st && !inv.isEquipped);
-
-  const omniEquippedInSlot = (slotName: string) =>
-    omniInventory.find((inv) => inv.isEquipped && inv.equippedSlot === slotName);
-
-  const renderSlot = (label: string, type: 'colar' | 'anel' | 'pulseira', index: number, currentId: string | null) => {
-    const item = getItemById(currentId);
-    const slotName = slotKey(type, index);
-    const omniEquipped = omniEquippedInSlot(slotName);
-    const available = availableForSlot(type === 'colar' ? 'colar' : type === 'anel' ? 'anel' : 'pulseira');
-    const omniAvailable = omniAvailableForSlot(
-      type === 'colar' ? 'colar' : type === 'anel' ? 'anel' : 'pulseira',
-    );
-    const isActive = !!item || !!omniEquipped;
-
-    const handleSlotClick = () => {
-      if (omniEquipped) {
-        onShowDetails({
-          kind: 'omni',
-          entity: resolverEntidadeOmniAtual(omniEquipped),
-          isEquipped: true,
-          equippedSlot: omniEquipped.equippedSlot,
-        });
-      } else if (item) {
-        onShowDetails({ kind: 'legacy', item });
-      }
-    };
-
-    return (
-      <div
-        key={`${type}-${index}`}
-        role={isActive ? 'button' : undefined}
-        tabIndex={isActive ? 0 : undefined}
-        onClick={isActive ? handleSlotClick : undefined}
-        onKeyDown={isActive ? (e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            handleSlotClick();
-          }
-        } : undefined}
-        title={isActive ? 'Ver detalhes' : undefined}
-        className={cn(
-          'rounded-lg border px-2 py-1.5 text-sm transition-all',
-          omniEquipped
-            ? 'border-violet-500/60 bg-violet-500/10 shadow-[0_0_12px_-2px_rgba(124,58,237,0.55)] ring-1 ring-violet-500/40'
-            : isActive ? 'border-primary/40 bg-primary/10' : 'border-border bg-secondary/30',
-          isActive && 'cursor-pointer hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-primary/40',
-        )}
-      >
-        <div className="flex items-center justify-between gap-1">
-          <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{label}</span>
-          {isActive && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (omniEquipped) onUnequipOmni(omniEquipped.instanceId);
-                else setSlot(type, index, null);
-              }}
-              className="text-destructive/60 hover:text-destructive"
-              title="Remover do slot"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          )}
-        </div>
-        {item ? (
-          <div className="mt-0.5">
-            <span className="text-foreground font-medium text-sm">{item!.name}</span>
-            <div className="flex flex-wrap gap-0.5 mt-0.5">
-              {item!.bonusCA !== 0 && <span className="text-xs text-primary">CA+{item!.bonusCA}</span>}
-              {item!.bonusHP !== 0 && <span className="text-xs text-hp">HP+{item!.bonusHP}</span>}
-              {item!.bonusPE !== 0 && <span className="text-xs text-pe">PE+{item!.bonusPE}</span>}
-              {item!.bonusRD !== 0 && <span className="text-xs">RD+{item!.bonusRD}</span>}
-            </div>
-          </div>
-        ) : omniEquipped ? (
-          <div className="mt-0.5">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-foreground font-medium text-sm">
-                ◇ {omniEquipped.entity.nome}
-              </span>
-              <SoltarItemButton charId={character.id} itemId={omniEquipped.instanceId} />
-                  <ContadoresEquipamento charId={character.id} entidade={resolverEntidadeOmniAtual(omniEquipped)} />
-              {omniEquipped.usosTotais !== undefined && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    useInventoryStore.getState().recargaInstancia(omniEquipped.instanceId);
-                  }}
-                  title={`Cargas restantes — clique para recarregar (${omniEquipped.usosTotais} máx)`}
-                  className={cn(
-                    'flex items-center gap-0.5 rounded-full border px-1.5 py-0 text-xs font-semibold transition-colors',
-                    (omniEquipped.usosRestantes ?? 0) === 0
-                      ? 'border-destructive/50 bg-destructive/15 text-destructive hover:bg-destructive/25'
-                      : (omniEquipped.usosRestantes ?? 0) <= Math.ceil((omniEquipped.usosTotais ?? 1) / 3)
-                        ? 'border-amber-500/50 bg-amber-500/15 text-amber-400 hover:bg-amber-500/25'
-                        : 'border-sky-500/50 bg-sky-500/15 text-sky-300 hover:bg-sky-500/25',
-                  )}
-                >
-                  ⚡ {omniEquipped.usosRestantes ?? 0}/{omniEquipped.usosTotais}
-                </button>
-              )}
-              {(() => {
-                const cdEq = normalizarCombatData(omniEquipped.entity.combatData);
-                const ativos = cdEq?.effectsActive ?? [];
-                if (ativos.length === 0) return null;
-                const first = ativos[0];
-                const rt = first.type === 'ADICIONAR' ? 'heal' : first.type === 'MODIFICADOR' ? 'modifier' : 'damage';
-                const cls = rt === 'heal'
-                  ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/30'
-                  : rt === 'modifier'
-                    ? 'bg-primary/20 border-primary/40 text-primary hover:bg-primary/30'
-                    : 'bg-destructive/20 border-destructive/40 text-destructive hover:bg-destructive/30';
-                const label = ativos.length > 1
-                  ? `Usar (${ativos.length})`
-                  : rt === 'heal' ? 'Curar' : rt === 'modifier' ? 'Aplicar' : 'Atacar';
-                return (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onUseOmni(omniEquipped); }}
-                    className={`flex items-center gap-1 rounded border px-1.5 py-0.5 text-xs font-semibold transition-colors ${cls}`}
-                    title={`${label} com ${omniEquipped.entity.nome}`}
-                  >
-                    <Sword className="h-2.5 w-2.5" /> {label.toUpperCase()}
-                  </button>
-                );
-              })()}
-            </div>
-            <div className="flex flex-wrap gap-0.5 mt-0.5">
-              {(['ca','hp','pe','rd','esc','slots'] as const).map((k) => {
-                const v = omniEquipped.entity.bonusEquipado?.[k] ?? 0;
-                const f = omniEquipped.entity.bonusEquipadoFormula?.[k];
-                if (!v && !f) return null;
-                return (
-                  <span key={k} className="text-xs text-primary">
-                    {k.toUpperCase()}{v >= 0 ? '+' : ''}{v}
-                    {f ? <span className="text-sky-400 ml-0.5" title={f}>·ƒ</span> : null}
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-        ) : omniAvailable.length > 0 ? (
-          <select
-            className="mt-0.5 h-7 w-full rounded border border-input bg-background px-1 text-xs text-foreground"
-            value=""
-            onClick={(e) => e.stopPropagation()}
-            onChange={(e) => {
-              e.stopPropagation();
-              const v = e.target.value;
-              if (!v) return;
-              if (v.startsWith('omni:')) {
-                onEquipOmni(v.slice(5), slotName);
-              }
-            }}
-          >
-            <option value="">Vazio</option>
-            {omniAvailable.map((inv) => (
-              <option key={inv.instanceId} value={`omni:${inv.instanceId}`}>
-                ◇ {inv.entity.nome}
-              </option>
+        <div className="mt-2 flex gap-1 flex-wrap">
+          <input value={newName} onChange={(e) => setNewName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAdd()} placeholder="Nome" className="h-7 flex-1 min-w-[120px] rounded-lg border border-input bg-background px-2 text-sm text-foreground" />
+          <input value={newVal} onChange={(e) => setNewVal(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAdd()} placeholder="Base" type="text" inputMode="numeric" className="h-7 w-16 flex-shrink-0 rounded-lg border border-input bg-background px-2 text-sm text-foreground" />
+          <select value={newLinkedAttr} onChange={(e) => setNewLinkedAttr(e.target.value)} className="h-7 w-32 flex-shrink-0 rounded-lg border border-input bg-background px-2 text-sm text-foreground">
+            <option value="">— Atributo —</option>
+            {attributes.map((a) => (
+              <option key={a.id} value={a.id}>{a.name} ({a.value})</option>
             ))}
           </select>
-        ) : (
-          <span className="text-xs text-muted-foreground italic mt-0.5 block">Vazio</span>
-        )}
-      </div>
-    );
-  };
-
-  return (
-    <div className="space-y-2">
-      <div className="grid grid-cols-1 gap-1">
-        {renderSlot('Colar', 'colar', 0, accessorySlots.colar)}
-      </div>
-      <div className="grid grid-cols-2 gap-1">
-        {accessorySlots.aneis.map((id, i) => renderSlot(`Anel ${i + 1}`, 'anel', i, id))}
-      </div>
-      <div className="grid grid-cols-2 gap-1">
-        {accessorySlots.pulseiras.map((id, i) => renderSlot(`Pulseira ${i + 1}`, 'pulseira', i, id))}
-      </div>
-      {assignedAccessoryItems.length === 0 && omniInventory.length === 0 && (
-        <p className="text-sm text-muted-foreground italic">Nenhum item de acessório vinculado. Crie itens com tipo de slot (Colar, Anel, Pulseira) — pelo módulo de Itens ou pelo Omni-Engine — e vincule a este personagem.</p>
-      )}
-    </div>
-  );
-}
-
-/* ─── Perfil Amaldiçoado: Aptidões numéricas (AU/CL/BAR/DOM/ER) ─── */
-function CursedAptitudesSection({
-  character: c,
-  onAptitudeClick,
-}: {
-  character: Character;
-  onAptitudeClick?: (key: AptitudeKey) => void;
-}) {
-  const apts = { ...createDefaultCursedAptitudes(), ...(c.cursedAptitudes ?? {}) };
-  const pendingPts = c.pendingAptitudePoints ?? 0;
-  return (
-    <div className="space-y-2">
-      {pendingPts > 0 && (
-        <div className="flex items-center gap-2 rounded-md border border-primary/50 bg-primary/15 px-2 py-1.5 text-xs animate-pulse">
-          <Sparkles className="h-3.5 w-3.5 text-primary" />
-          <span className="font-bold text-primary">
-            {pendingPts} ponto(s) de aptidão pendente(s) — distribua no painel de Pendências do Wizard de Nível.
-          </span>
+          <button onClick={handleAdd} className="h-7 w-7 flex-shrink-0 rounded-lg bg-primary text-primary-foreground flex items-center justify-center"><Plus className="h-3 w-3" /></button>
         </div>
       )}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-        {APTITUDE_KEYS.map((k: AptitudeKey) => {
-          const label = APTITUDE_LABELS[k];
-          const v = apts[k] ?? 0;
-          const clickable = (k === 'AU' || k === 'CL' || k === 'DOM' || k === 'BAR' || k === 'ER') && !!onAptitudeClick;
-          const catalogLabel = k === 'AU'
-            ? 'catálogo de Aptidões de Aura'
-            : k === 'CL'
-              ? 'catálogo de Aptidões de Controle e Leitura'
-              : k === 'DOM'
-                ? 'catálogo de Aptidões de Domínio'
-                : k === 'BAR'
-                  ? 'catálogo de Aptidões de Barreira'
-                  : k === 'ER'
-                    ? 'catálogo de Aptidões de Energia Reversa'
-              : null;
-          return (
-            <button
-              key={k}
-              type="button"
-              onClick={clickable ? () => onAptitudeClick!(k) : undefined}
-              disabled={!clickable}
-              className={cn(
-                'rounded-lg border border-border bg-secondary/30 p-2 flex flex-col items-center gap-1 transition-colors text-left',
-                clickable
-                  ? 'hover:bg-secondary/60 hover:border-primary/60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50'
-                  : 'cursor-default',
-              )}
-              title={
-                clickable && catalogLabel
-                  ? `${label.full} — ${label.desc}\n\nClique para abrir o ${catalogLabel}.`
-                  : `${label.full} — ${label.desc}`
-              }
-            >
-              <div className="text-xs font-bold uppercase tracking-wider text-primary">{label.short}</div>
-              <div className="font-mono text-base font-bold text-foreground">{v}/{APTITUDE_MAX}</div>
-              <div className="text-xs text-muted-foreground text-center leading-tight">{label.full}</div>
-              <div className="flex gap-0.5 mt-0.5">
-                {Array.from({ length: APTITUDE_MAX }).map((_, i) => (
-                  <span
-                    key={i}
-                    className={cn(
-                      'h-1.5 w-2.5 rounded-sm',
-                      i < v ? 'bg-primary' : 'bg-muted',
-                    )}
-                  />
-                ))}
-              </div>
-            </button>
-          );
-        })}
-      </div>
     </div>
   );
 }
 
-// === Action Cost Badge (Omni Combat) ========================================
-// Mostra um chip colorido representando o Custo de Ação de um ataque/item.
-// Cores: Azul=Livre, Verde=Movimento, Âmbar=Padrão, Roxo=Bônus,
-// Ciano=Reação, Vermelho=Completa, Rosa=Interrupção.
-function ActionCostBadge({ actionId }: { actionId?: string }) {
-  if (!actionId) return null;
-  const meta = Object.values(SYSTEM_ACTIONS).find((a) => a.id === actionId);
-  if (!meta) return null;
-  const palette: Record<string, string> = {
-    action_free:      'bg-blue-500/15 border-blue-500/40 text-blue-400',
-    action_move:      'bg-emerald-500/15 border-emerald-500/40 text-emerald-400',
-    action_standard:  'bg-amber-500/15 border-amber-500/40 text-amber-400',
-    action_bonus:     'bg-purple-500/15 border-purple-500/40 text-purple-400',
-    action_reaction:  'bg-cyan-500/15 border-cyan-500/40 text-cyan-400',
-    action_full:      'bg-red-500/15 border-red-500/40 text-red-400',
-    action_interrupt: 'bg-pink-500/15 border-pink-500/40 text-pink-400',
-  };
-  const cls = palette[actionId] ?? 'bg-muted/40 border-border text-muted-foreground';
-  return (
-    <span
-      className={`text-xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${cls}`}
-      title={`${meta.label} · custo ${meta.cost}`}
-    >
-      {meta.label}
-    </span>
-  );
-}
+export default CharacterCard;

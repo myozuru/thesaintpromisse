@@ -19,7 +19,7 @@ export function RIcon({ className }: { className?: string }) {
         className="text-primary-foreground font-black leading-none"
         style={{
           fontFamily: "'Cinzel Decorative', serif",
-          fontSize: '0.7em',
+          fontSize: '14px',
         }}
       >
         R

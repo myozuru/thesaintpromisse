@@ -1,4 +1,5 @@
 import type { InvocacaoControlador } from './tipos';
+import { ALCANCE_BASE_INVOCACAO_M } from './alcanceInvocacao';
 import { ataque, cura } from './dezSombras';
 
 /** Formas descritas à parte no material da Enciclopédia; não são novos membros-base. */
@@ -56,7 +57,7 @@ export function criarFormasDerivadasDezSombras(donoCharacterId: string): Invocac
     economiaAcoesConfigurada: { acaoComum: 1, acaoBonus: 1, acaoMovimento: 1, reacao: 1 },
     intermediario: { tipo: 'tecnica', tecnicaId: 'Dez Sombras' },
     origemAquisicao: 'Feiticeiros e Maldições — Enciclopédia Amaldiçoada v0.9, Cap. 2',
-    alcanceInvocacaoM: undefined,
+    alcanceInvocacaoM: ALCANCE_BASE_INVOCACAO_M,
   };
 
   return [

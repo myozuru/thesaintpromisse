@@ -74,7 +74,7 @@ export function BackgroundButton() {
           if (background) setOpen((v) => !v);
           else fileRef.current?.click();
         }}
-        className="h-11 min-w-11 rounded-md px-2 flex items-center justify-center gap-1.5 text-[11px] font-medium whitespace-nowrap text-muted-foreground hover:text-foreground hover:bg-secondary"
+        className="h-11 min-w-11 rounded-md px-2 flex items-center justify-center gap-1.5 text-xs font-medium whitespace-nowrap text-muted-foreground hover:text-foreground hover:bg-secondary"
         style={background ? { color: 'var(--map-background-tint)' } : undefined}
       >
         <ImageIcon className="h-4 w-4" />

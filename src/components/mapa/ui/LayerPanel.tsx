@@ -89,6 +89,9 @@ export function LayerPanel({ onClose }: Props) {
 
   return (
     <div
+      id="map-layer-panel"
+      role="region"
+      aria-label="Camadas e entidades do mapa"
       className="absolute top-2 right-3 w-72 max-h-[80%] pointer-events-auto rounded-lg shadow-xl flex flex-col text-xs"
       style={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', color: 'hsl(var(--foreground))', zIndex: 20 }}
     >
@@ -97,7 +100,7 @@ export function LayerPanel({ onClose }: Props) {
           <Layers className="h-3.5 w-3.5" />
           <span className="text-sm font-medium">Camadas</span>
         </div>
-        <button onClick={onClose} className="text-muted-foreground hover:text-foreground" title="Fechar">×</button>
+        <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" title="Fechar" aria-label="Fechar painel de camadas">×</button>
       </div>
 
       <div className="flex-1 overflow-auto p-1">
@@ -112,6 +115,10 @@ export function LayerPanel({ onClose }: Props) {
                 onDrop={(e) => { e.preventDefault(); handleDropOn(null, layer); }}
               >
                 <button
+                  type="button"
+                  aria-label={`${isOpen ? 'Recolher' : 'Expandir'} camada ${LAYER_LABEL[layer]}`}
+                  aria-expanded={isOpen}
+                  aria-controls={`map-layer-entities-${layer}`}
                   onClick={() => setCollapsed((c) => ({ ...c, [layer]: !c[layer] }))}
                   className="text-muted-foreground hover:text-foreground"
                 >
@@ -121,7 +128,10 @@ export function LayerPanel({ onClose }: Props) {
                   {LAYER_LABEL[layer]} <span className="text-muted-foreground/40">· {items.length}</span>
                 </span>
                 <button
+                  type="button"
                   title={layerVisible[layer] ? 'Ocultar camada' : 'Mostrar camada'}
+                  aria-label={`${layerVisible[layer] ? 'Ocultar' : 'Mostrar'} camada ${LAYER_LABEL[layer]}`}
+                  aria-pressed={!layerVisible[layer]}
                   onClick={() => setLayerVisible(layer, !layerVisible[layer])}
                   className="text-muted-foreground hover:text-foreground"
                 >
@@ -129,8 +139,7 @@ export function LayerPanel({ onClose }: Props) {
                 </button>
               </div>
 
-              {isOpen && (
-                <div className="ml-1 mt-0.5">
+              <div id={`map-layer-entities-${layer}`} hidden={!isOpen} className="ml-1 mt-0.5">
                   {items.length === 0 && (
                     <div
                       className="px-2 py-1.5 text-xs text-muted-foreground/40 italic border border-dashed border-border rounded mx-1"
@@ -189,6 +198,19 @@ export function LayerPanel({ onClose }: Props) {
                           />
                         ) : (
                           <button
+                            type="button"
+                            aria-label={`Selecionar entidade ${e.label || 'sem nome'}`}
+                            aria-pressed={selected}
+                            onClick={(ev) => {
+                              ev.stopPropagation();
+                              if (ev.shiftKey) {
+                                setSelected(selected
+                                  ? selectedIds.filter((id) => id !== e.id)
+                                  : [...selectedIds, e.id]);
+                              } else {
+                                setSelected([e.id]);
+                              }
+                            }}
                             className="flex-1 text-left truncate text-foreground"
                             onDoubleClick={(ev) => { ev.stopPropagation(); setEditingId(e.id); }}
                             title="Duplo-clique para renomear"
@@ -197,14 +219,19 @@ export function LayerPanel({ onClose }: Props) {
                           </button>
                         )}
                         <button
+                          type="button"
                           title="Mostrar nameplate"
+                          aria-label={`${e.nameplate ? 'Ocultar' : 'Mostrar'} placa de nome de ${e.label || 'entidade sem nome'}`}
+                          aria-pressed={!!e.nameplate}
                           onClick={(ev) => { ev.stopPropagation(); updateEntity(e.id, { nameplate: !e.nameplate }); }}
                           className={`text-muted-foreground hover:text-foreground ${e.nameplate ? 'text-sky-300' : ''}`}
                         >
                           <Tag className="h-3.5 w-3.5" />
                         </button>
                         <button
+                          type="button"
                           title={typeof e.hp === 'number' ? 'Editar HP' : 'Definir HP'}
+                          aria-label={`${typeof e.hp === 'number' ? 'Editar' : 'Definir'} HP de ${e.label || 'entidade sem nome'}`}
                           onClick={(ev) => {
                             ev.stopPropagation();
                             const cur = typeof e.hp === 'number' ? `${e.hp}/${e.hpMax ?? e.hp}` : '';
@@ -226,21 +253,29 @@ export function LayerPanel({ onClose }: Props) {
                           <Heart className="h-3.5 w-3.5" />
                         </button>
                         <button
+                          type="button"
                           title={e.hidden ? 'Mostrar' : 'Ocultar'}
+                          aria-label={`${e.hidden ? 'Mostrar' : 'Ocultar'} ${e.label || 'entidade sem nome'}`}
+                          aria-pressed={!!e.hidden}
                           onClick={(ev) => { ev.stopPropagation(); updateEntity(e.id, { hidden: !e.hidden }); }}
                           className="text-muted-foreground hover:text-foreground"
                         >
                           {e.hidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                         </button>
                         <button
+                          type="button"
                           title={e.locked ? 'Destravar' : 'Travar'}
+                          aria-label={`${e.locked ? 'Destravar' : 'Travar'} ${e.label || 'entidade sem nome'}`}
+                          aria-pressed={!!e.locked}
                           onClick={(ev) => { ev.stopPropagation(); updateEntity(e.id, { locked: !e.locked }); }}
                           className="text-muted-foreground hover:text-foreground"
                         >
                           {e.locked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
                         </button>
                         <button
+                          type="button"
                           title="Excluir"
+                          aria-label={`Excluir ${e.label || 'entidade sem nome'}`}
                           onClick={(ev) => {
                             ev.stopPropagation();
                             const aid = e.assetId;
@@ -254,8 +289,7 @@ export function LayerPanel({ onClose }: Props) {
                       </div>
                     );
                   })}
-                </div>
-              )}
+              </div>
             </div>
           );
         })}

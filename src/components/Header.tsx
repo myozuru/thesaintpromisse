@@ -65,7 +65,7 @@ const TAB_ICONS: Record<TabId, React.ComponentType<{ className?: string; "aria-h
 
 const PLAYER_TABS: TabId[] = ['relogio', 'fichas', 'invocacoes', 'feiticos-players', 'money', 'cardapios', 'calendario', 'omni', 'mapa', 'guia'];
 const ALL_TABS: TabId[] = ['relogio', 'fichas', 'invocacoes', 'feiticos-players', 'itens', 'baus', 'money', 'cardapios', 'calendario', 'omni', 'catalogo', 'mapa', 'grimorio', 'sistema', 'guia'];
-const VISIBLE_TABS_COUNT = 6;
+const VISIBLE_TABS_COUNT = { MASTER: 4, PLAYER: 5 } as const;
 
 export function getTabsForRole(role: UserRole): TabId[] {
   if (role === 'PLAYER') return PLAYER_TABS;
@@ -75,6 +75,7 @@ export function getTabsForRole(role: UserRole): TabId[] {
 interface HeaderProps {
   activeTab: TabId;
   onTabChange: (tab: TabId) => void;
+  immersive?: boolean;
   testsOpen?: boolean;
   onToggleTests?: () => void;
   onOpenDiary?: () => void;
@@ -83,7 +84,7 @@ interface HeaderProps {
 /**
  * Topbar global com navegação horizontal de módulos (drag-and-drop preservado).
  */
-export function Header({ activeTab, onTabChange, testsOpen = false, onToggleTests, onOpenDiary }: HeaderProps) {
+export function Header({ activeTab, onTabChange, immersive = false, testsOpen = false, onToggleTests, onOpenDiary }: HeaderProps) {
   const role = useRoleStore((s) => s.role);
   const logout = useRoleStore((s) => s.logout);
   const [accountsOpen, setAccountsOpen] = useState(false);
@@ -91,6 +92,13 @@ export function Header({ activeTab, onTabChange, testsOpen = false, onToggleTest
   const [overModulesButton, setOverModulesButton] = useState(false);
   const activeMenuItemRef = useRef<HTMLDivElement | null>(null);
   const [reorderAnnouncement, setReorderAnnouncement] = useState('');
+
+  useEffect(() => {
+    if (!immersive) return;
+    setAccountsOpen(false);
+    setModulesMenuOpen(false);
+    setOverModulesButton(false);
+  }, [immersive]);
   const setOrder = useTabOrderStore((s) => s.setOrder);
   const savedOrders = useTabOrderStore((s) => s.orders);
   const pending = usePendingDebates();
@@ -107,8 +115,9 @@ export function Header({ activeTab, onTabChange, testsOpen = false, onToggleTest
         ...defaults.filter((id) => !savedForRole.includes(id)),
       ]
     : defaults;
-  const primaryTabs = tabs.slice(0, VISIBLE_TABS_COUNT);
-  const overflowTabs = tabs.slice(VISIBLE_TABS_COUNT);
+  const visibleTabsCount = role === 'PLAYER' ? VISIBLE_TABS_COUNT.PLAYER : VISIBLE_TABS_COUNT.MASTER;
+  const primaryTabs = tabs.slice(0, visibleTabsCount);
+  const overflowTabs = tabs.slice(visibleTabsCount);
   const isActiveInModulesMenu = overflowTabs.includes(activeTab);
 
   const [dragId, setDragId] = useState<TabId | null>(null);
@@ -173,7 +182,7 @@ export function Header({ activeTab, onTabChange, testsOpen = false, onToggleTest
     const from = next.indexOf(dragId);
     if (from === -1) return;
     next.splice(from, 1);
-    next.splice(Math.min(VISIBLE_TABS_COUNT, next.length), 0, dragId);
+    next.splice(Math.min(visibleTabsCount, next.length), 0, dragId);
     setOrder(roleKey, next);
     setDragId(null);
     setOverId(null);
@@ -203,10 +212,18 @@ export function Header({ activeTab, onTabChange, testsOpen = false, onToggleTest
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/60 bg-card/90 backdrop-blur-xl shadow-[0_4px_24px_-12px_hsl(265_80%_4%/0.8)]">
+    <header
+      aria-hidden={immersive || undefined}
+      inert={immersive}
+      className={cn(
+        'atlas-immersive-shell atlas-header fixed top-0 left-0 right-0 z-50 border-b border-border/60 bg-card/90 backdrop-blur-xl transition-[opacity,transform] duration-300 ease-in-out',
+        immersive ? 'pointer-events-none -translate-y-full opacity-0 invisible' : 'translate-y-0 opacity-100 visible',
+      )}
+      style={{ transition: `opacity 300ms ease-in-out, transform 300ms ease-in-out, visibility 0s linear ${immersive ? '300ms' : '0ms'}` }}
+    >
       {/* Linha ornamental dourada superior */}
       <div className="absolute inset-x-0 bottom-0 ornament-divider" aria-hidden />
-      <div className="flex h-14 items-center gap-3 px-3 sm:px-4">
+      <div className="flex h-16 items-center gap-3 px-3 sm:px-5">
         <div className="flex items-center gap-2 shrink-0">
           {role === 'MASTER' ? (
             <button
@@ -227,7 +244,7 @@ export function Header({ activeTab, onTabChange, testsOpen = false, onToggleTest
               >
                 R
               </span>
-              <span className="text-[11px] font-semibold tracking-wide text-primary-foreground">Testes</span>
+              <span className="text-xs font-semibold tracking-wide text-primary-foreground">Testes</span>
               <div className="pointer-events-none absolute inset-0 rounded-md ring-1 ring-accent/30" aria-hidden />
             </button>
           ) : (
@@ -280,11 +297,13 @@ export function Header({ activeTab, onTabChange, testsOpen = false, onToggleTest
                     onDragLeave={() => handleDragLeave(id)}
                     onDrop={(event) => { event.preventDefault(); handleDrop(id); }}
                     onDragEnd={handleDragEnd}
+                    onKeyDown={handleKeyboardReorder(id)}
+                    aria-keyshortcuts={roleKey ? 'Shift+ArrowUp Shift+ArrowDown' : undefined}
                     aria-current={isActive ? 'page' : undefined}
                     onClick={() => onTabChange(id)}
                     title={TAB_LABELS[id]}
                     className={cn(
-                      'group relative flex h-9 items-center gap-1.5 rounded-md px-3 text-xs whitespace-nowrap cursor-grab active:cursor-grabbing select-none border transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-200 ease-out active:scale-[0.97]',
+                      'group relative flex h-10 items-center gap-1.5 rounded-lg px-3 text-sm whitespace-nowrap cursor-grab active:cursor-grabbing select-none border transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-200 ease-out active:scale-[0.97]',
                       isActive
                         ? 'bg-primary/15 text-primary font-semibold border-primary/50 shadow-[0_0_16px_-5px_hsl(var(--primary)/0.8)] -translate-y-px'
                         : 'text-muted-foreground border-transparent hover:bg-secondary/70 hover:text-foreground hover:border-border/70 hover:-translate-y-px',
@@ -340,7 +359,7 @@ export function Header({ activeTab, onTabChange, testsOpen = false, onToggleTest
                   aria-label={isActiveInModulesMenu ? `Módulos. Página atual: ${TAB_LABELS[activeTab]}` : 'Módulos'}
                   title={isActiveInModulesMenu ? `Módulos · página atual: ${TAB_LABELS[activeTab]}` : 'Módulos'}
                   className={cn(
-                    'shrink-0 flex h-9 items-center gap-1.5 rounded-md border px-2.5 text-xs whitespace-nowrap transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                    'shrink-0 flex h-10 items-center gap-1.5 rounded-lg border px-2.5 text-sm whitespace-nowrap transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                     overflowTabs.length === 0 && 'sm:hidden',
                     isActiveInModulesMenu
                       ? 'border-primary/50 bg-primary/15 text-primary shadow-[0_0_16px_-5px_hsl(var(--primary)/0.8)]'
@@ -351,7 +370,7 @@ export function Header({ activeTab, onTabChange, testsOpen = false, onToggleTest
                   <Menu className="h-3.5 w-3.5 shrink-0" aria-hidden />
                   <span>Módulos</span>
                   {isActiveInModulesMenu && (
-                    <span className="max-w-14 sm:max-w-24 truncate text-[10px] text-primary/80" aria-hidden="true">
+                    <span className="max-w-14 sm:max-w-24 truncate text-xs text-primary/80" aria-hidden="true">
                       · {TAB_LABELS[activeTab]}
                     </span>
                   )}
@@ -371,7 +390,7 @@ export function Header({ activeTab, onTabChange, testsOpen = false, onToggleTest
                 <DropdownMenuLabel className="flex flex-col items-start gap-0.5 px-3 py-2">
                   <span className="sm:hidden">{'Navega\u00e7\u00e3o'}</span>
                   <span className="hidden sm:inline">Mais módulos</span>
-                  <span className="text-[10px] font-normal text-muted-foreground">{'Arraste ou use Shift + \u2191/\u2193 para reordenar'}</span>
+                  <span className="text-sm font-normal text-muted-foreground">{'Arraste ou use Shift + \u2191/\u2193 para reordenar'}</span>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup className="max-h-[min(65vh,24rem)] overflow-y-auto">
@@ -399,7 +418,7 @@ export function Header({ activeTab, onTabChange, testsOpen = false, onToggleTest
                         aria-current={isActive ? 'page' : undefined}
                         className={cn(
                           'gap-2 py-2 cursor-grab active:cursor-grabbing select-none border border-transparent',
-                          tabs.indexOf(id) < VISIBLE_TABS_COUNT ? 'sm:hidden' : '',
+                          tabs.indexOf(id) < visibleTabsCount ? 'sm:hidden' : '',
                           isActive && 'bg-primary/15 text-primary font-semibold border-primary/40',
                           dragId === id && 'opacity-50',
                           overId === id && dragId && dragId !== id && 'translate-x-1 ring-2 ring-accent/60',
@@ -447,7 +466,7 @@ export function Header({ activeTab, onTabChange, testsOpen = false, onToggleTest
           <button
             onClick={() => { void signOutAll(); logout(); }}
             title={`Sair (${role === 'MASTER' ? 'Mestre' : 'Player'})`}
-            className="shrink-0 flex h-9 items-center gap-1.5 rounded-md border border-transparent px-2 sm:px-3 text-xs font-medium text-muted-foreground hover:bg-destructive/15 hover:text-destructive hover:border-destructive/40 hover:-translate-y-px active:scale-95 transition-all duration-200"
+            className="shrink-0 flex h-10 items-center gap-1.5 rounded-lg border border-transparent px-2 sm:px-3 text-sm font-medium text-muted-foreground hover:bg-destructive/15 hover:text-destructive hover:border-destructive/40 hover:-translate-y-px active:scale-95 transition-all duration-200"
           >
             <LogOut className="h-3.5 w-3.5" />
             <span className="hidden sm:inline" style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.05em' }}>

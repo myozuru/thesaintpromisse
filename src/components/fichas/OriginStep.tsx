@@ -142,7 +142,12 @@ export function OriginStep({ origin, setOrigin, choices, setChoices, anatomyAllo
             {CLANS.map(c => (
               <button
                 key={c}
-                onClick={() => update({ clan: c, primaryAttr: undefined, secondaryAttr: undefined })}
+                onClick={() => update({
+                  clan: c,
+                  primaryAttr: undefined,
+                  secondaryAttr: undefined,
+                  tecnicaAmaldicoada: c === 'Zenin' ? choices.tecnicaAmaldicoada : undefined,
+                })}
                 className={cn(
                   'rounded-lg border px-3 py-2 text-xs font-bold transition-all text-left',
                   choices.clan === c
@@ -157,6 +162,36 @@ export function OriginStep({ origin, setOrigin, choices, setChoices, anatomyAllo
               </button>
             ))}
           </div>
+
+          {choices.clan === 'Zenin' && (
+            <div className="space-y-2 rounded-lg border border-accent/30 bg-accent/5 p-3">
+              <label htmlFor="zenin-cursed-technique" className="block text-base font-semibold text-foreground">
+                Técnica amaldiçoada — escolha separada
+              </label>
+              <p id="zenin-technique-help" className="text-base leading-relaxed text-muted-foreground">
+                A técnica é independente do clã. Selecione Dez Sombras para liberar o pacote correspondente na Biblioteca de Invocações.
+              </p>
+              <select
+                id="zenin-cursed-technique"
+                aria-describedby={choices.tecnicaAmaldicoada === 'Dez Sombras'
+                  ? 'zenin-technique-help'
+                  : 'zenin-technique-help zenin-technique-required'}
+                aria-required="true"
+                required
+                value={choices.tecnicaAmaldicoada ?? ''}
+                onChange={(event) => update({ tecnicaAmaldicoada: event.target.value || undefined })}
+                className="h-11 w-full rounded-lg border border-input bg-background px-3 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+              >
+                <option value="">Selecione uma técnica</option>
+                <option value="Dez Sombras">Dez Sombras</option>
+              </select>
+              {choices.tecnicaAmaldicoada !== 'Dez Sombras' && (
+                <p id="zenin-technique-required" className="text-base text-accent">
+                  Escolha uma técnica para avançar.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Painel detalhado do clã (rolável) */}
           {choices.clan && (

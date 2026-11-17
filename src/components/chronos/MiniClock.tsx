@@ -3,7 +3,6 @@ import { useChronosStore } from '@/stores/useChronosStore';
 import { useLogStore } from '@/stores/useLogStore';
 import { useRoleStore } from '@/stores/useRoleStore';
 import { Play, Pause, FastForward, ChevronDown, ChevronUp, CalendarPlus } from 'lucide-react';
-import { AnalogClock } from './AnalogClock';
 import { SmoothTimeDisplay } from './SmoothTimeDisplay';
 import { cn } from '@/lib/utils';
 import { playClockClickSound } from '@/lib/sounds';
@@ -11,6 +10,9 @@ import { playClockClickSound } from '@/lib/sounds';
 export function MiniClock() {
   const store = useChronosStore();
   const isPlayer = useRoleStore((s) => s.role) === 'PLAYER';
+  const hourAngle = ((store.hours % 12) + store.minutes / 60) * 30;
+  const minuteAngle = (store.minutes + store.seconds / 60) * 6;
+  const secondAngle = store.seconds * 6;
   const addLog = useLogStore((s) => s.addLog);
   const [expanded, setExpanded] = useState(false);
   const [advMin, setAdvMin] = useState('');
@@ -48,11 +50,16 @@ export function MiniClock() {
   return (
     <div className="relative shrink-0">
       {/* Compact bar */}
-      <div className="flex items-center gap-1.5 bg-card/60 border border-border rounded-lg px-2.5 py-1 glow-border">
-        <div className="w-6 h-6">
-          <AnalogClock size={24} />
-        </div>
-        <SmoothTimeDisplay className="text-xs text-foreground tracking-[0.1em] glow-text text-center tabular-nums whitespace-nowrap" style={{ fontFamily: "'Cinzel Decorative', serif", fontSize: '11px', width: '7.2em', display: 'inline-block' }} />
+      <div className="flex items-center gap-1.5 bg-card/60 border border-border rounded-lg px-2.5 py-1">
+        <svg className="h-6 w-6 shrink-0 text-primary" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.65" strokeWidth="1.25" />
+          <path d="M12 4.5v1.25M19.5 12h-1.25M12 19.5v-1.25M4.5 12h1.25" stroke="currentColor" strokeOpacity="0.45" strokeWidth="1" />
+          <line x1="12" y1="12" x2="12" y2="7.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" transform={`rotate(${hourAngle} 12 12)`} />
+          <line x1="12" y1="12" x2="12" y2="5.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" transform={`rotate(${minuteAngle} 12 12)`} />
+          <line x1="12" y1="13.5" x2="12" y2="4.5" stroke="hsl(var(--accent))" strokeWidth="0.7" strokeLinecap="round" transform={`rotate(${secondAngle} 12 12)`} />
+          <circle cx="12" cy="12" r="1.2" fill="hsl(var(--accent))" />
+        </svg>
+        <SmoothTimeDisplay className="text-base text-foreground tracking-[0.1em] glow-text text-center tabular-nums whitespace-nowrap" style={{ fontFamily: "'Cinzel Decorative', serif", width: '7.2em', display: 'inline-block' }} />
         {!isPlayer && (
           <button
             aria-label={store.isRunning ? 'Pausar relógio da campanha' : 'Retomar relógio da campanha'}

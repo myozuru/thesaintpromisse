@@ -51,6 +51,10 @@ export function FichasModule() {
   // Fichas temporárias são privadas por perfil: cada player só vê as próprias.
   // Mestre vê tudo (inclusive fichas criadas por players).
   const characters = charactersVisibleToRole(allCharacters, role, activeProfileId);
+  const marketCandidates = isPlayer ? characters : role === 'MASTER' ? allCharacters : [];
+  const marketCharacter = marketCandidates.find(
+    (character) => character.category === 'PLAYER' && !character.temporary,
+  ) ?? marketCandidates.find((character) => character.category === 'PLAYER');
   const combat = useCombatStore();
   const chronosDay = useChronosStore((s) => s.day);
   const chronosMonth = useChronosStore((s) => s.month);
@@ -194,7 +198,7 @@ export function FichasModule() {
   if (!role) return null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6 animate-fade-in">
       <FortunaPrompt />
       <IndomavelPrompt />
       <ZonaRiscoPrompt />
@@ -206,21 +210,15 @@ export function FichasModule() {
         title="Fichas"
         subtitle={`${characters.length} ${characters.length === 1 ? 'personagem' : 'personagens'}`}
         description={isPlayer ? 'Sua ficha de jogador.' : 'Painel do Mestre — todas as fichas e combate.'}
-        actions={
-          isPlayer && characters[0] ? (
-            <MercadoLauncher characterId={characters[0].id} />
-          ) : !isPlayer && allCharacters[0] ? (
-            <MercadoLauncher characterId={allCharacters[0].id} />
-          ) : undefined
-        }
+        actions={marketCharacter ? <MercadoLauncher characterId={marketCharacter.id} /> : undefined}
       />
       {/* Combat bar (Mestre apenas) — extraído para componente compartilhado com o Mapa */}
       {!isPlayer && <CombatBar />}
 
       {/* Quick create bar */}
-      <div className="flex flex-col gap-2">
+      <div className={cn("flex flex-col gap-2 rounded-2xl p-3", "card-enigmatic")}>
         {isPlayer && playerLimitReached && (
-          <div className="rounded-lg border border-border bg-card px-4 py-2 text-xs text-muted-foreground text-center">
+          <div className="rounded-lg border border-border bg-card px-4 py-2 text-sm text-muted-foreground text-center">
             Você já possui sua ficha principal. Ainda pode criar fichas temporárias à vontade.
           </div>
         )}
@@ -293,16 +291,18 @@ export function FichasModule() {
       {/* Player: ficha principal + temporárias */}
       {isPlayer ? (
         characters.length > 0 ? (
-          <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2 2xl:grid-cols-3">
             {characters.map((c) => (
-              c.temporary
-                ? <TemporaryCharacterCard key={c.id} character={c} />
-                : <CharacterCard key={c.id} character={c} />
+              <div key={c.id} className={cn('min-w-0', !c.temporary && 'xl:col-span-2')}>
+                {c.temporary
+                  ? <TemporaryCharacterCard character={c} />
+                  : <CharacterCard character={c} />}
+              </div>
             ))}
           </div>
         ) : (
-          <div className="card-enigmatic flex items-center justify-center rounded-xl border border-border p-12">
-            <p className="text-muted-foreground text-sm">Crie sua ficha para começar.</p>
+          <div className={cn("flex items-center justify-center rounded-xl p-12", "card-enigmatic")}>
+            <p className="text-muted-foreground text-sm" style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}>Crie sua ficha para começar.</p>
           </div>
         )
       ) : (
@@ -320,14 +320,14 @@ export function FichasModule() {
             const chars = visibleCharacters.filter((c) => c.category === cat.id);
             const isOpen = openTabs[cat.id] ?? false;
             return (
-              <section key={cat.id} className="card-enigmatic rounded-xl border border-border overflow-hidden">
+              <section key={cat.id} className={cn("rounded-xl border border-border overflow-hidden", "card-enigmatic")}>
                 <button
                   onClick={() => toggleTab(cat.id)}
                   className="flex w-full items-center gap-2 px-4 py-3 text-left hover:bg-secondary/30 transition-all duration-300"
                 >
                   <span
                     className={cn('text-sm font-bold uppercase tracking-[0.12em]', cat.color)}
-                    style={{ fontFamily: "'Cinzel', serif" }}
+                    style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.06em' }}
                   >
                     {cat.label}
                   </span>
@@ -340,7 +340,7 @@ export function FichasModule() {
                 >
                   <div className="overflow-hidden">
                     {chars.length === 0 ? (
-                      <p className="px-4 py-6 text-center text-sm text-muted-foreground italic">Nenhum personagem nesta categoria.</p>
+                      <p className="px-4 py-6 text-center text-sm text-muted-foreground" style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}>Nenhum personagem nesta categoria.</p>
                     ) : (
                       <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-4 items-start p-4 border-t border-border/50">
                         {chars.map((c) => (
@@ -357,8 +357,8 @@ export function FichasModule() {
           })}
 
           {characters.length === 0 && (
-            <div className="card-enigmatic flex items-center justify-center rounded-xl border border-border p-12">
-              <p className="text-muted-foreground text-sm">Crie um personagem para começar.</p>
+            <div className={cn("flex items-center justify-center rounded-xl p-12", "card-enigmatic")}>
+              <p className="text-muted-foreground text-sm" style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}>Crie um personagem para começar.</p>
             </div>
           )}
         </>

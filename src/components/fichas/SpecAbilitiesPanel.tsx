@@ -297,11 +297,6 @@ export function SpecAbilitiesPanel({ character: c, editMode = false }: Props) {
         </div>
       )}
 
-      {/* === Painel de Empolgação (Lutador) === */}
-      {c.specialization === 'Lutador' && (
-        <EmpolgacaoPanel character={c} />
-      )}
-
       {/* ═══════════ SEÇÃO: HABILIDADES ESCOLHIDAS ═══════════ */}
       <div className="mt-3 space-y-1.5">
         <div className="flex items-center gap-1.5 px-1">

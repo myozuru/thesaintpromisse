@@ -178,7 +178,7 @@ export const GRAU_CONDICAO: Record<string, GrauCondicao> = {
   cego: 'forte', desorientado: 'fraca', desprevenido: 'fraca', invisivel: 'especial', surdo: 'media', surpreso: 'especial',
   exposto: 'forte', fragilizado: 'forte',
   // Condições internas do sistema, fora da lista do livro: não removíveis.
-  marcado: 'especial', morto: 'especial', desmaiado: 'especial',
+  marcado: 'especial', morto: 'especial', desmaiado: 'especial', suspenso: 'especial',
 };
 
 const ORDEM: Record<'fraca' | 'media' | 'forte' | 'extrema', number> = { fraca: 0, media: 1, forte: 2, extrema: 3 };

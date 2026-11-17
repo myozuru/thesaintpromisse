@@ -11,6 +11,7 @@
  * "células" usa gridConfig.dpi para exibir labels.
  */
 import type { GridConfig, Vector2 } from '@/stores/useMapStore';
+import { UI_READING_FLOOR_PX } from '@/lib/uiTypography';
 
 export type TemplateKind = 'circle' | 'cone' | 'cone_attached' | 'line' | 'square';
 
@@ -205,9 +206,9 @@ export const TemplateEngine = {
     scale: number,
   ) {
     const text = this.label(t, cfg);
-    const fontPx = 12;
+    const fontPx = UI_READING_FLOOR_PX;
     ctx.save();
-    ctx.font = `600 ${fontPx / scale}px ui-sans-serif, system-ui, sans-serif`;
+    ctx.font = `600 ${fontPx / scale}px 'JetBrains Mono', monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const m = ctx.measureText(text);

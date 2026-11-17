@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { SpellLevelGuide } from '@/components/fichas/SpellLevelGuide';
 import type { SpellLevel } from '@/types';
 import { SPELL_LEVELS } from '@/types';
-import { BookOpen } from 'lucide-react';
+import { Activity, BookOpen, ChevronLeft, ChevronRight, Flame, Heart, Shield, SlidersHorizontal, Swords, Target, Users, Wand2 } from 'lucide-react';
 import { ModuleHeader } from '@/components/ui/module-header';
 
 type GuiaTopic =
@@ -17,16 +17,16 @@ type GuiaTopic =
   | 'dano'
   | 'alvos';
 
-const TOPICS: { id: GuiaTopic; label: string; icon: string }[] = [
-  { id: 'feiticos', label: 'Sobre Feitiços', icon: '🔮' },
-  { id: 'combate', label: 'Combate', icon: '⚔️' },
-  { id: 'atributos', label: 'Atributos & Perícias', icon: '📊' },
-  { id: 'trs', label: 'Testes de Resistência', icon: '🛡' },
-  { id: 'condicoes', label: 'Condições', icon: '⚠️' },
-  { id: 'recursos', label: 'PV / PE / ESC', icon: '❤️' },
-  { id: 'pvp', label: 'PvP', icon: '⚡' },
-  { id: 'dano', label: 'Tipos de Dano', icon: '🔥' },
-  { id: 'alvos', label: 'Sistema de Alvos', icon: '🎯' },
+const TOPICS: { id: GuiaTopic; label: string; icon: typeof BookOpen }[] = [
+  { id: 'feiticos', label: 'Sobre Feitiços', icon: Wand2 },
+  { id: 'combate', label: 'Combate', icon: Swords },
+  { id: 'atributos', label: 'Atributos & Perícias', icon: SlidersHorizontal },
+  { id: 'trs', label: 'Testes de Resistência', icon: Shield },
+  { id: 'condicoes', label: 'Condições', icon: Activity },
+  { id: 'recursos', label: 'PV / PE / ESC', icon: Heart },
+  { id: 'pvp', label: 'PvP', icon: Users },
+  { id: 'dano', label: 'Tipos de Dano', icon: Flame },
+  { id: 'alvos', label: 'Sistema de Alvos', icon: Target },
 ];
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -80,7 +80,7 @@ function TopicFeiticos() {
           <li>+4,5m de Comprimento (linha)</li>
           <li>+1 CD</li>
         </ul>
-        <p className="mt-2 text-xs text-amber-400">⚠ O saldo mínimo após qualquer troca é 1 (não pode zerar tudo). Feitiços de dano têm budget de condições = base-1.</p>
+        <p className="mt-2 text-sm text-amber-400">⚠ O saldo mínimo após qualquer troca é 1 (não pode zerar tudo). Feitiços de dano têm budget de condições = base-1.</p>
       </Section>
 
       <Section title="Durações">
@@ -98,7 +98,7 @@ function TopicFeiticos() {
 
       <Section title="Condições em Feitiços">
         <p>Feitiços de condição (Foco) têm um orçamento de dados igual ao nível do feitiço. Cada condição consome dados conforme raridade.</p>
-        <p className="mt-1 text-xs">Feitiços de dano também podem adicionar condições usando o budget = dados base - 1.</p>
+        <p className="mt-1 text-sm">Feitiços de dano também podem adicionar condições usando o budget = dados base - 1.</p>
       </Section>
 
       <Section title="Guia por Nível">
@@ -158,14 +158,14 @@ function TopicAtributos() {
         <Row label="INT (Inteligência)" value="Feitiçaria, Investigação, Tecnologia." />
         <Row label="SAB (Sabedoria)" value="Percepção, Medicina, Sobrevivência." />
         <Row label="CAR (Presença)" value="Persuasão, Intimidação, Enganação." />
-        <p className="text-xs mt-2">Modificador = (Valor - 10) ÷ 2 (arredondado para baixo).</p>
+        <p className="text-sm mt-2">Modificador = (Valor - 10) ÷ 2 (arredondado para baixo).</p>
       </Section>
 
       <Section title="Treinamento e Maestria">
         <Row label="Treinado (T)" value={<>Adiciona <Pill>+⌊nível/3⌋</Pill> à perícia.</>} />
         <Row label="Maestria (M)" value={<>Adiciona <Pill>+⌊nível/2⌋</Pill> à perícia.</>} />
         <Row label="Maestria em Feitiços" value={<><Pill>+2 + ⌊nível/5⌋</Pill> ao acerto e CD.</>} />
-        <p className="text-xs mt-1 text-amber-400">⚠ Treinamento e Maestria não se acumulam — escolha um por perícia.</p>
+        <p className="text-sm mt-1 text-amber-400">⚠ Treinamento e Maestria não se acumulam — escolha um por perícia.</p>
       </Section>
     </div>
   );
@@ -242,7 +242,7 @@ function TopicPvP() {
       <Section title="Combate entre Jogadores (PvP)">
         <p>Quando um PLAYER causa dano a outro PLAYER:</p>
         <Row label="Redução" value={<><Pill color="red">-66%</Pill> do dano total.</>} />
-        <p className="text-xs mt-1">Isso é aplicado automaticamente pelo sistema tanto no ataque direto quanto ao aplicar feitiços de dano.</p>
+        <p className="text-sm mt-1">Isso é aplicado automaticamente pelo sistema tanto no ataque direto quanto ao aplicar feitiços de dano.</p>
       </Section>
     </div>
   );
@@ -268,13 +268,16 @@ function TopicDano() {
   return (
     <div className="space-y-4">
       <Section title="Tipos de Dano">
-        <div className="grid grid-cols-2 gap-1 mt-1">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3 mt-1">
           {tipos.map(t => (
-            <div key={t.abbr} className="flex items-start gap-2 rounded-lg bg-secondary/30 px-2 py-1">
-              <span className="font-mono text-xs font-bold text-primary w-8 flex-shrink-0">{t.abbr}</span>
-              <div>
-                <div className="text-xs font-medium text-foreground">{t.nome}</div>
-                <div className="text-xs text-muted-foreground">{t.desc}</div>
+            <div
+              key={t.abbr}
+              className="flex items-start gap-3 rounded-lg border border-border/60 bg-secondary/30 px-3 py-2.5 transition-all duration-300 hover:border-primary/30 hover:bg-secondary/50 hover:shadow-sm hover:shadow-primary/5"
+            >
+              <span className="mt-0.5 flex-shrink-0 font-mono text-xs font-bold text-primary w-10 text-center" style={{ letterSpacing: '0.04em' }}>{t.abbr}</span>
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-foreground">{t.nome}</div>
+                <div className="text-sm text-muted-foreground" style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic' }}>{t.desc}</div>
               </div>
             </div>
           ))}
@@ -301,7 +304,7 @@ function TopicAlvos() {
       </Section>
       <Section title="Seleção de Alvos">
         <p>Ao usar um feitiço na ficha, o diálogo de aplicação permite selecionar múltiplos alvos e registrar os resultados de TR individualmente por alvo.</p>
-        <p className="text-xs mt-1 text-amber-400">⚠ Buff direto não exige TR — é aplicado imediatamente ao alvo selecionado.</p>
+        <p className="text-sm mt-1 text-amber-400">⚠ Buff direto não exige TR — é aplicado imediatamente ao alvo selecionado.</p>
       </Section>
     </div>
   );
@@ -310,6 +313,7 @@ function TopicAlvos() {
 // ─── Main Component ────────────────────────────────────────────
 export function GuiaModule() {
   const [activeTopic, setActiveTopic] = useState<GuiaTopic>('feiticos');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const renderContent = () => {
     switch (activeTopic) {
@@ -326,38 +330,89 @@ export function GuiaModule() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6 animate-fade-in">
       <ModuleHeader
         icon={BookOpen}
         title="Guia"
         subtitle={TOPICS.find(t => t.id === activeTopic)?.label}
         description="Referência rápida das regras: feitiços, combate, condições e recursos."
       />
-      <div className="flex flex-col gap-4 lg:flex-row">
-      {/* Sidebar */}
-      <div className="flex w-full shrink-0 gap-1 overflow-x-auto pb-1 lg:w-44 lg:flex-col lg:overflow-visible lg:pb-0">
-        <h2 className="shrink-0 px-2 text-xs font-bold uppercase tracking-widest text-muted-foreground lg:pb-1">Tópicos</h2>
-        {TOPICS.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setActiveTopic(t.id)}
-            className={cn(
-              'w-auto min-h-[44px] shrink-0 whitespace-nowrap flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-left transition-all duration-200 lg:w-full',
-              activeTopic === t.id
-                ? 'bg-primary/20 text-primary border border-primary/40 shadow-sm shadow-primary/10'
-                : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground border border-transparent'
-            )}
-          >
-            <span>{t.icon}</span>
-            <span>{t.label}</span>
-          </button>
-        ))}
-      </div>
 
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        {renderContent()}
-      </div>
+      {/* One content tree; navigation adapts to the available width. */}
+      <div className={cn('lg:grid lg:items-start lg:gap-6', sidebarCollapsed ? 'lg:grid-cols-[60px_minmax(0,1fr)]' : 'lg:grid-cols-[220px_minmax(0,1fr)]')}>
+        <aside className="hidden min-w-0 lg:sticky lg:top-24 lg:block">
+          <div className="rounded-xl border border-border bg-card p-2 card-enigmatic">
+            <div className={cn('flex items-center pb-2', sidebarCollapsed ? 'justify-center' : 'justify-between px-1')}>
+              {!sidebarCollapsed && (
+                <h2 className="px-2 text-sm font-bold uppercase tracking-wider text-muted-foreground" style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.06em' }}>
+                  Tópicos
+                </h2>
+              )}
+              <button
+                type="button"
+                aria-label={sidebarCollapsed ? 'Expandir tópicos do Guia' : 'Recolher tópicos do Guia'}
+                aria-controls="guide-topic-navigation"
+                aria-expanded={!sidebarCollapsed}
+                onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+                className="flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition-colors hover:border-primary/35 hover:bg-primary/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+              >
+                {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+              </button>
+            </div>
+            <nav id="guide-topic-navigation" className="space-y-1" aria-label="Tópicos do Guia">
+              {TOPICS.map(t => {
+                const Icon = t.icon;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    aria-pressed={activeTopic === t.id}
+                    aria-label={t.label}
+                    title={sidebarCollapsed ? t.label : undefined}
+                    onClick={() => setActiveTopic(t.id)}
+                    className={cn(
+                      'flex min-h-11 w-full items-center rounded-lg border py-2 text-left text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70',
+                      sidebarCollapsed ? 'justify-center px-1.5' : 'gap-3 px-3',
+                      activeTopic === t.id
+                        ? 'border-primary/30 bg-primary/15 text-primary shadow-sm shadow-primary/10'
+                        : 'border-transparent text-muted-foreground hover:border-border/40 hover:bg-secondary/50 hover:text-foreground'
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    <span className={cn('truncate', sidebarCollapsed && 'sr-only')}>{t.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+        </aside>
+
+        <nav className="mb-4 flex gap-1 overflow-x-auto pb-1 lg:hidden" role="group" aria-label="Tópicos do Guia">
+          {TOPICS.map(t => {
+            const Icon = t.icon;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                aria-pressed={activeTopic === t.id}
+                onClick={() => setActiveTopic(t.id)}
+                className={cn(
+                  'flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70',
+                  activeTopic === t.id
+                    ? 'border-primary/35 bg-primary/15 text-primary'
+                    : 'border-border/50 text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                )}
+              >
+                <Icon className="h-4 w-4" aria-hidden="true" />
+                <span>{t.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="min-w-0 space-y-4 animate-fade-in lg:col-start-2 lg:row-start-1">
+          {renderContent()}
+        </div>
       </div>
     </div>
   );

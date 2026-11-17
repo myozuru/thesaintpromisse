@@ -2,11 +2,11 @@
  * Página principal do Omni-Engine: grid de entidades no-code com
  * criação, edição, duplicação, export/import JSON.
  */
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ModuleHeader } from '@/components/ui/module-header';
-import { Plus, Download, Upload, Copy, Trash2, Pencil, Sparkles, Play, Lock, Package, Wand2, Store, BookOpen } from 'lucide-react';
+import { Plus, Download, Upload, Copy, Trash2, Pencil, Sparkles, Play, Lock, Package, Wand2, Store, BookOpen, Eye, X } from 'lucide-react';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
 import { useOmniRuntimeStore } from '@/stores/useOmniRuntimeStore';
 import { useRoleStore } from '@/stores/useRoleStore';
@@ -31,6 +31,7 @@ import { useToast } from '@/hooks/use-toast';
 import { OmniItemDescription } from './OmniItemDescription';
 import { ROTULOS_GATILHOS } from '@/lib/omni/constantesDoSistema';
 import { nomeAmigavelRecurso } from '@/lib/omni/omniScript';
+import { cn } from '@/lib/utils';
 
 /** Renderiza um ValorDinamico de forma humana (fixo ou fórmula). */
 function valorDinamicoTexto(v?: { tipo: 'fixo'; valor: number } | { tipo: 'formula'; expressao: string }): string {
@@ -70,6 +71,7 @@ export function OmniModule() {
   const [filtro, setFiltro] = useState<CategoriaEntidade | 'todos'>('todos');
   const [busca, setBusca] = useState('');
   const [editando, setEditando] = useState<EntidadeOmni | null>(null);
+  const [entidadeSelecionadaId, setEntidadeSelecionadaId] = useState<string | null>(null);
   const [sourceId, setSourceId] = useState<string>('');
   const [targetId, setTargetId] = useState<string>('');
   const [presetsAberto, setPresetsAberto] = useState(false);
@@ -79,17 +81,39 @@ export function OmniModule() {
   const [propondoCharId, setPropondoCharId] = useState<string>('');
   const [rascunho, setRascunho] = useState<EntidadeOmni | null>(null);
   const [propostaAberta, setPropostaAberta] = useState<string | null>(null);
+  const buscaInputRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const todas = useMemo(
     () => Object.values(entidades).sort((a, b) => b.atualizadoEm - a.atualizadoEm),
     [entidades],
   );
-  const filtradas = todas.filter((e) => {
-    if (filtro !== 'todos' && e.categoria !== filtro) return false;
-    if (busca && !e.nome.toLowerCase().includes(busca.toLowerCase())) return false;
-    return true;
-  });
+  const filtradas = useMemo(
+    () => todas.filter((e) => {
+      if (filtro !== 'todos' && e.categoria !== filtro) return false;
+      if (busca && !e.nome.toLowerCase().includes(busca.toLowerCase())) return false;
+      return true;
+    }),
+    [todas, filtro, busca],
+  );
+
+  // Category counts for filter pills
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    CATEGORIAS.forEach((c) => {
+      counts[c.id] = todas.filter((e) => e.categoria === c.id).length;
+    });
+    counts['todos'] = todas.length;
+    return counts;
+  }, [todas]);
+
+  // Keep the detail view while the selected entity is hidden by search/filters;
+  // clear it only when the entity itself was removed from the catalog.
+  useEffect(() => {
+    if (entidadeSelecionadaId && !todas.some((e) => e.id === entidadeSelecionadaId)) {
+      setEntidadeSelecionadaId(null);
+    }
+  }, [todas, entidadeSelecionadaId]);
 
   const criar = (cat: CategoriaEntidade) => {
     if (isMaster) {
@@ -162,13 +186,13 @@ export function OmniModule() {
           <div className="rounded-lg border border-dashed border-border/60 bg-muted/10 p-10 text-center text-muted-foreground">
             <Lock className="h-10 w-10 mx-auto text-primary/40 mb-3" />
             <p className="font-semibold text-foreground">Crie uma ficha primeiro</p>
-            <p className="text-xs mt-1">
+            <p className="text-base mt-1">
               Você precisa de pelo menos um personagem (não-NPC) para propor entidades ao Mestre.
             </p>
           </div>
         ) : (
           <>
-            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/20 bg-card/60 p-2 text-xs">
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/20 bg-card/60 p-2 text-base">
               <span className="text-muted-foreground">Propondo como:</span>
               <span className="font-semibold text-foreground">{playerCharacters[0]?.name}</span>
               <span className="ml-auto text-muted-foreground italic">
@@ -196,15 +220,15 @@ export function OmniModule() {
               </Button>
             </div>
             <div className="rounded-lg border border-border/60 bg-card/60 p-3">
-              <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+              <h3 className="text-base uppercase tracking-wider text-muted-foreground mb-2">
                 Minhas Propostas ({minhasPropostas.length})
               </h3>
               {minhasPropostas.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic">
+                <p className="text-base text-muted-foreground italic">
                   Você ainda não propôs nenhuma entidade. Use os botões acima para começar.
                 </p>
               ) : (
-                <ul className="space-y-1 text-xs">
+                <ul className="space-y-1 text-sm">
                   {minhasPropostas.slice(0, 8).map((p) => {
                     const last = p.revisions[p.revisions.length - 1];
                     const statusLabel = {
@@ -232,14 +256,14 @@ export function OmniModule() {
                           <span className="text-xs text-muted-foreground uppercase">{statusLabel}</span>
                         </button>
                         {aberta && (
-                          <div className="border-t border-border/40 p-2 text-xs space-y-1.5">
+                          <div className="border-t border-border/40 p-2 text-sm space-y-1.5">
                             {last.entidade.descricao && (
                               <p className="text-muted-foreground italic">{last.entidade.descricao}</p>
                             )}
                             {last.entidade.tags.length > 0 && (
                               <div className="flex flex-wrap gap-1">
                                 {last.entidade.tags.map((t) => (
-                                  <span key={t} className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-xs">
+                                  <span key={t} className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-sm">
                                     {t}
                                   </span>
                                 ))}
@@ -254,7 +278,7 @@ export function OmniModule() {
                             {/* Custos detalhados */}
                             {last.entidade.custos.length > 0 && (
                               <div className="rounded border border-amber-500/30 bg-amber-500/5 p-2 space-y-0.5">
-                                <div className="text-xs uppercase tracking-wider text-amber-300/80">Custos</div>
+                              <div className="text-sm uppercase tracking-wider text-amber-300/80">Custos</div>
                                 {last.entidade.custos.map((c, i) => (
                                   <div key={i} className="text-foreground/90">
                                     💰 {valorDinamicoTexto(c.valor)} de {nomeAmigavelRecurso(c.caminhoRecurso)}
@@ -265,7 +289,7 @@ export function OmniModule() {
                             {/* Gatilhos detalhados */}
                             {last.entidade.gatilhos.length > 0 && (
                               <div className="rounded border border-sky-500/30 bg-sky-500/5 p-2 space-y-0.5">
-                                <div className="text-xs uppercase tracking-wider text-sky-300/80">Gatilhos</div>
+                              <div className="text-sm uppercase tracking-wider text-sky-300/80">Gatilhos</div>
                                 {last.entidade.gatilhos.map((g, i) => (
                                   <div key={g.id ?? i} className="text-foreground/90">
                                     ⚡ {ROTULOS_GATILHOS[g.evento] ?? g.evento}
@@ -299,7 +323,7 @@ export function OmniModule() {
                                 💬 "{last.note}"
                               </p>
                             )}
-                            <p className="text-xs text-muted-foreground italic mt-1">
+                            <p className="text-base text-muted-foreground italic mt-1">
                               Use a aba "Feitiços de Players" para responder contrapropostas em detalhe.
                             </p>
                           </div>
@@ -309,7 +333,7 @@ export function OmniModule() {
                   })}
                 </ul>
               )}
-              <p className="text-xs text-muted-foreground mt-2 italic">
+              <p className="text-base text-muted-foreground mt-2 italic">
                 Acompanhe e responda contrapropostas na aba "Feitiços de Players".
               </p>
             </div>
@@ -318,7 +342,7 @@ export function OmniModule() {
         {rascunho && (
           <ConstrutorEntidade
             aberto={!!rascunho}
-            onClose={() => setRascunho(null)}
+            onCancelar={() => setRascunho(null)}
             entidadeInicial={rascunho}
             onSalvar={(e) => enviarProposta(e)}
             onProporConceito={(e) => enviarProposta(e)}
@@ -362,36 +386,65 @@ export function OmniModule() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6 animate-fade-in">
       <ModuleHeader title="Omni-Engine" subtitle="Construtor visual no-code de entidades do sistema" icon={Sparkles} />
 
-      <Tabs defaultValue="construtor" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="construtor" className="gap-1.5">
+      <Tabs defaultValue="construtor" className="space-y-5">
+        <TabsList className="h-auto flex-wrap gap-1 rounded-xl border border-border/70 bg-card/70 p-1.5">
+          <TabsTrigger value="construtor" className="min-h-11 gap-2 px-4 text-base data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
             <Sparkles className="h-3.5 w-3.5" /> Construtor
           </TabsTrigger>
-          <TabsTrigger value="catalogo" className="gap-1.5">
+          <TabsTrigger value="catalogo" className="min-h-11 gap-2 px-4 text-base data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
             <Package className="h-3.5 w-3.5" /> Catálogo
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="construtor" className="space-y-4 mt-0">
-        <div className="flex flex-wrap items-center gap-2">
-        <Input placeholder="Buscar..." value={busca} onChange={(e) => setBusca(e.target.value)} className="w-48" />
-        <div className="flex gap-1 flex-wrap">
+        <TabsContent value="construtor" className="mt-0 space-y-5">
+        <div className="space-y-4 rounded-2xl border border-border/70 bg-card/70 p-4 card-enigmatic">
+        <div className="flex flex-wrap items-center gap-3">
+        <div className="relative min-w-[14rem] flex-1">
+          <Input
+            ref={buscaInputRef}
+            aria-label="Buscar entidades"
+            placeholder="Buscar entidade…"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="h-11 w-full bg-background/70 pr-14 text-base"
+          />
+          {busca && (
+            <button
+              type="button"
+              aria-label="Limpar busca"
+              title="Limpar busca"
+              onClick={() => { setBusca(''); buscaInputRef.current?.focus(); }}
+              className="absolute right-1 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
           {CATEGORIAS.map((c) => (
             <button
               key={c.id}
+              type="button"
+              aria-pressed={filtro === c.id}
               onClick={() => setFiltro(c.id)}
-              className={`text-xs px-3 py-1.5 rounded-md border ${filtro === c.id
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'border-border text-muted-foreground hover:text-foreground'}`}
+              className={`min-h-11 shrink-0 rounded-full border px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 ${filtro === c.id
+                ? 'border-primary/50 bg-primary/15 text-primary shadow-sm shadow-primary/10'
+                : 'border-border/70 bg-background/40 text-muted-foreground hover:border-primary/30 hover:bg-secondary/60 hover:text-foreground'}`}
             >
               {c.label}
+              {categoryCounts[c.id] > 0 && (
+                <span className="ml-1.5 px-1.5 py-0.5 text-xs font-semibold rounded-full bg-primary/20 text-primary/80">
+                  {categoryCounts[c.id]}
+                </span>
+              )}
             </button>
           ))}
         </div>
-        <div className="ml-auto flex gap-2 flex-wrap">
+        <div className="flex flex-wrap gap-2 border-t border-border/50 pt-4">
           <Button size="sm" variant="outline" onClick={() => setGuiaAberto(true)}>
             <BookOpen className="h-4 w-4 mr-1" /> Guia de Fórmulas
           </Button>
@@ -424,21 +477,22 @@ export function OmniModule() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 rounded-xl border border-border/60 bg-background/25 p-3">
         {CATEGORIAS.filter((c) => c.id !== 'todos').map((c) => (
-          <Button key={c.id} size="sm" onClick={() => criar(c.id as CategoriaEntidade)} className="bg-primary/10 text-primary hover:bg-primary/20 border border-primary/30">
+          <Button key={c.id} size="sm" onClick={() => criar(c.id as CategoriaEntidade)} className="min-h-11 border border-primary/30 bg-primary/10 px-4 text-base text-primary hover:bg-primary/20 focus-visible:ring-2 focus-visible:ring-primary/70">
             <Plus className="h-3.5 w-3.5 mr-1" /> {c.label.replace(/s$/, '')}
           </Button>
         ))}
       </div>
 
       {/* Seletor source/target — usado pelo botão Aplicar e pelo simulador */}
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-card/60 p-2 text-xs">
-        <span className="text-muted-foreground">Aplicar como:</span>
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border/70 bg-card/60 p-3 text-base card-enigmatic">
+        <span className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">Aplicar como</span>
         <select
           value={sourceId}
           onChange={(e) => setSourceId(e.target.value)}
-          className="bg-background border border-border rounded px-2 py-1"
+          aria-label="Personagem de origem"
+          className="min-h-11 min-w-[12rem] flex-1 rounded-lg border border-border bg-background px-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
         >
           <option value="">— Origem —</option>
           {characters.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -447,7 +501,8 @@ export function OmniModule() {
         <select
           value={targetId}
           onChange={(e) => setTargetId(e.target.value)}
-          className="bg-background border border-border rounded px-2 py-1"
+          aria-label="Personagem alvo"
+          className="min-h-11 min-w-[12rem] flex-1 rounded-lg border border-border bg-background px-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
         >
           <option value="">— Alvo —</option>
           {characters.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -458,118 +513,262 @@ export function OmniModule() {
       <PainelEspacial />
 
       {filtradas.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border/60 bg-muted/10 p-10 text-center text-muted-foreground">
+        <div className="rounded-2xl border border-dashed border-border/70 bg-card/45 p-10 text-center text-muted-foreground card-enigmatic">
           <Sparkles className="h-10 w-10 mx-auto text-primary/40 mb-3" />
-          <p>Nenhuma entidade criada ainda.</p>
-          <p className="text-xs mt-1">Comece criando um Item, Feitiço, Talento ou Aura acima.</p>
+          <p>{todas.length === 0 ? 'Nenhuma entidade criada ainda.' : 'Nenhuma entidade corresponde aos filtros.'}</p>
+          <p className="text-sm mt-1">{todas.length === 0 ? 'Comece criando um Item, Feitiço, Talento ou Aura acima.' : 'Ajuste a busca ou escolha outra categoria.'}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filtradas.map((e) => (
-            <div key={e.id} className="rounded-lg border border-border/60 bg-card/80 p-3 hover:border-primary/50 transition-colors">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="font-semibold text-foreground truncate">{e.nome}</div>
-                  <div className="text-xs uppercase tracking-wider text-primary/70">{e.categoria}</div>
-                </div>
-                <div className="flex gap-1 shrink-0">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 w-7 p-0"
-                    aria-label={'Aplicar efeito ' + e.nome}
-                    title={`Aplicar efeito${sourceId ? ` (origem: ${characters.find(c => c.id === sourceId)?.name})` : ''}${targetId ? ` → ${characters.find(c => c.id === targetId)?.name}` : ''}`}
-                    onClick={() => {
-                      useOmniRuntimeStore.getState().aplicarEfeito(e, {
-                        sourceCharId: sourceId || undefined,
-                        targetCharId: targetId || undefined,
-                      });
-                      toast({ title: 'Efeito aplicado', description: e.nome });
-                    }}
-                  >
-                    <Play className="h-3.5 w-3.5 text-primary" />
-                  </Button>
-                  <Button size="sm" variant="ghost" aria-label={'Editar ' + e.nome} title={'Editar ' + e.nome} className="h-7 w-7 p-0" onClick={() => setEditando(e)}>
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button size="sm" variant="ghost" aria-label={'Duplicar ' + e.nome} title={'Duplicar ' + e.nome} className="h-7 w-7 p-0" onClick={() => duplicar(e)}>
-                    <Copy className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button size="sm" variant="ghost" aria-label={'Excluir ' + e.nome} title={'Excluir ' + e.nome} className="h-7 w-7 p-0" onClick={() => removerEntidade(e.id)}>
-                    <Trash2 className="h-3.5 w-3.5 text-destructive/70" />
-                  </Button>
-                </div>
+        <div className="flex flex-col gap-4 min-h-[500px] lg:h-[min(70vh,800px)] lg:flex-row">
+          {/* Sidebar - Lista filtrável (~280px) */}
+          <aside
+            className="lg:w-[280px] flex-shrink-0 flex flex-col"
+            aria-label="Lista de entidades"
+          >
+            <div className="rounded-2xl border border-border/70 bg-card/85 p-3 card-enigmatic overflow-hidden flex flex-col h-full">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-foreground text-sm uppercase tracking-wider">
+                  Entidades ({filtradas.length})
+                </h3>
               </div>
-              {e.descricao && <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{e.descricao}</p>}
-              <div className="flex gap-2 mt-2 text-xs text-muted-foreground">
-                <span>Duração: {e.duracao.tipo}</span>
-                <span>•</span>
-                <span>{e.gatilhos.length} gatilho(s)</span>
-                <span>•</span>
-                <span>{e.custos.length} custo(s)</span>
+              <div className="flex-1 overflow-y-auto overflow-x-hidden pr-1">
+                <ul className="space-y-1" aria-label="Entidades disponíveis">
+                  {filtradas.map((e) => {
+                    const selecionada = entidadeSelecionadaId === e.id;
+                    return (
+                      <li key={e.id}>
+                        <button
+                          type="button"
+                          onClick={() => setEntidadeSelecionadaId(selecionada ? null : e.id)}
+                          aria-pressed={selecionada}
+                          className={cn(
+                            "w-full text-left px-3 py-2.5 rounded-xl transition-all duration-200",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70",
+                            selecionada
+                              ? "bg-primary/15 border border-primary/40 shadow-sm shadow-primary/10"
+                              : "border border-transparent hover:bg-secondary/60 hover:border-primary/20",
+                          )}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium text-foreground truncate text-sm">{e.nome}</div>
+                              <div className="text-xs uppercase tracking-wider text-primary/70">{e.categoria}</div>
+                            </div>
+                            {selecionada && <Eye className="h-4 w-4 text-primary flex-shrink-0" />}
+                          </div>
+                          {e.descricao && (
+                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{e.descricao}</p>
+                          )}
+                          <div className="mt-2 flex flex-wrap gap-x-2 gap-y-0.5 text-sm font-mono text-muted-foreground">
+                            <span>Duração: <span className="text-foreground">{e.duracao.tipo}</span></span>
+                            <span className="text-border">•</span>
+                            <span>{e.gatilhos.length} gatilho(s)</span>
+                            <span className="text-border">•</span>
+                            <span>{e.custos.length} custo(s)</span>
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
-              {characters.length > 0 && (
-                <div className="mt-2 flex items-center gap-1.5 border-t border-border/40 pt-2">
-                  <span className="text-xs uppercase text-muted-foreground">
-                    {e.categoria === 'item' || e.categoria === 'arma' ? 'Dar a:' : 'Atribuir a:'}
-                  </span>
-                  <select
-                    defaultValue=""
-                    onChange={(ev) => {
-                      const charId = ev.target.value;
-                      if (!charId) return;
-                      const char = characters.find((c) => c.id === charId);
-                      if (e.categoria === 'item' || e.categoria === 'arma') {
-                        inventoryAdd(charId, e);
-                        addLog('system', `🎁 Mestre entregou "${e.nome}" para ${char?.name ?? 'jogador'}.`);
-                        toast({ title: 'Item entregue', description: `${e.nome} → ${char?.name}` });
-                       } else {
-                        const jaVinculada = char?.omniAtivos?.some((a) => a.entidadeId === e.id);
-                        if (jaVinculada) {
-                          toast({ title: 'Já atribuída', description: `${e.nome} já está na ficha de ${char?.name}.` });
-                        } else {
-                          // NÃO entra no inventário — vai direto pra seção da categoria (passiva/talento/aura/feitiço/condição)
-                          const instanceId = `omni-inst-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-                          const ok = vincularOmniAtivo(charId, {
-                            categoria: e.categoria,
-                            entidadeId: e.id,
-                            instanceId,
-                          });
-                          if (ok) {
-                            const rotulo =
-                              e.categoria === 'passiva' ? 'passiva' :
-                              e.categoria === 'talento' ? 'talento' :
-                              e.categoria === 'aura' ? 'aura' :
-                              e.categoria === 'feitico' ? 'feitiço' :
-                              e.categoria === 'condicao' ? 'condição' :
-                              e.categoria === 'voto' ? 'voto' : 'habilidade';
-                            addLog('system', `🔗 Mestre atribuiu a ${rotulo} "${e.nome}" à ficha de ${char?.name ?? 'jogador'}.`);
-                            toast({ title: `${rotulo[0].toUpperCase()}${rotulo.slice(1)} atribuída`, description: `${e.nome} → ${char?.name}` });
-                          }
-                        }
-                      }
-                      ev.target.value = '';
-                    }}
-                    className="flex-1 text-xs bg-background border border-border rounded px-1.5 py-1"
-                  >
-                    <option value="">— Selecionar personagem —</option>
-                    {characters.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
             </div>
-          ))}
+          </aside>
+
+          {/* Painel de detalhe/edição à direita */}
+          <div className="flex-1 min-w-0">
+            {entidadeSelecionadaId ? (
+              (() => {
+                const ent = todas.find((e) => e.id === entidadeSelecionadaId);
+                if (!ent) return null;
+                return (
+                  <div className="rounded-2xl border border-border/70 bg-card/85 p-4 card-enigmatic h-full flex flex-col overflow-hidden">
+                    <div className="flex items-start justify-between gap-3 mb-4">
+                      <div className="min-w-0">
+                        <div className="font-semibold text-foreground text-lg truncate">{ent.nome}</div>
+                        <div className="text-xs uppercase tracking-wider text-primary/70">{ent.categoria}</div>
+                        {!filtradas.some((e) => e.id === ent.id) && (
+                          <p role="status" className="mt-1 text-base text-muted-foreground">
+                            Esta entidade está fora da busca e dos filtros atuais; o detalhe permanece aberto.
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex shrink-0 gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-10 w-10 p-0 focus-visible:ring-2 focus-visible:ring-primary/70"
+                          aria-label={'Aplicar efeito ' + ent.nome}
+                          title={`Aplicar efeito${sourceId ? ` (origem: ${characters.find(c => c.id === sourceId)?.name})` : ''}${targetId ? ` → ${characters.find(c => c.id === targetId)?.name}` : ''}`}
+                          onClick={() => {
+                            useOmniRuntimeStore.getState().aplicarEfeito(ent, {
+                              sourceCharId: sourceId || undefined,
+                              targetCharId: targetId || undefined,
+                            });
+                            toast({ title: 'Efeito aplicado', description: ent.nome });
+                          }}
+                        >
+                          <Play className="h-4 w-4 text-primary" />
+                        </Button>
+                        <Button size="sm" variant="ghost" aria-label={'Editar ' + ent.nome} title={'Editar ' + ent.nome} className="h-10 w-10 p-0 focus-visible:ring-2 focus-visible:ring-primary/70" onClick={() => setEditando(ent)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" aria-label={'Duplicar ' + ent.nome} title={'Duplicar ' + ent.nome} className="h-10 w-10 p-0 focus-visible:ring-2 focus-visible:ring-primary/70" onClick={() => duplicar(ent)}>
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" aria-label={'Excluir ' + ent.nome} title={'Excluir ' + ent.nome} className="h-10 w-10 p-0 text-destructive/80 focus-visible:ring-2 focus-visible:ring-primary/70" onClick={() => { removerEntidade(ent.id); setEntidadeSelecionadaId(null); }}>
+                          <Trash2 className="h-4 w-4 text-destructive/70" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto space-y-4">
+                      {ent.descricao && (
+                        <div className="prose prose-invert max-w-none text-muted-foreground" style={{ fontSize: 'var(--ui-reading-floor)', lineHeight: '1.75' }}>
+                          <p className="leading-relaxed">{ent.descricao}</p>
+                        </div>
+                      )}
+
+                      <div className="rounded-xl border border-border/50 bg-background/40 p-3 space-y-2">
+                        <div className="text-sm uppercase tracking-wider text-muted-foreground">Resumo</div>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                          <span>Duração:</span>
+                          <span className="text-foreground font-mono">{ent.duracao.tipo}</span>
+                          <span>Gatilhos:</span>
+                          <span className="text-foreground font-mono">{ent.gatilhos.length}</span>
+                          <span>Custos:</span>
+                          <span className="text-foreground font-mono">{ent.custos.length}</span>
+                          <span>Efeitos:</span>
+                          <span className="text-foreground font-mono">{ent.combatData?.effects?.length ?? 0}</span>
+                        </div>
+                        {ent.alcance && (
+                          <div className="text-sm text-muted-foreground">
+                            Alcance: <span className="text-foreground font-mono">{valorDinamicoTexto(ent.alcance)}m</span>
+                          </div>
+                        )}
+                        {ent.areaRaio && (
+                          <div className="text-sm text-muted-foreground">
+                            Área: <span className="text-foreground font-mono">{valorDinamicoTexto(ent.areaRaio)}m</span>
+                          </div>
+                        )}
+                        {ent.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {ent.tags.map((t) => (
+                              <span key={t} className="px-2 py-0.5 rounded bg-primary/10 text-primary text-sm border border-primary/20">
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {ent.custos.length > 0 && (
+                        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
+                          <div className="text-sm uppercase tracking-wider text-amber-300/80">Custos</div>
+                          {ent.custos.map((c, i) => (
+                            <div key={i} className="text-foreground/90 text-sm">
+                              💰 {valorDinamicoTexto(c.valor)} de {nomeAmigavelRecurso(c.caminhoRecurso)}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {ent.gatilhos.length > 0 && (
+                        <div className="rounded-xl border border-sky-500/30 bg-sky-500/5 p-3 space-y-2">
+                          <div className="text-sm uppercase tracking-wider text-sky-300/80">Gatilhos</div>
+                          {ent.gatilhos.map((g, i) => (
+                            <div key={g.id ?? i} className="text-foreground/90 text-sm">
+                              ⚡ {ROTULOS_GATILHOS[g.evento] ?? g.evento}
+                              {g.blocos?.length > 0 && (
+                                <span className="text-muted-foreground"> · {g.blocos.length} bloco(s) lógico(s)</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {(ent.combatData?.effects?.length ?? 0) > 0 && (
+                        <OmniItemDescription
+                          effects={ent.combatData!.effects}
+                          variante="bloco"
+                        />
+                      )}
+                    </div>
+
+                    {characters.length > 0 && (
+                      <div className="mt-4 border-t border-border/40 pt-4">
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <span className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                            {ent.categoria === 'item' || ent.categoria === 'arma' ? 'Dar a:' : 'Atribuir a:'}
+                          </span>
+                        </div>
+                        <select
+                          defaultValue=""
+                          onChange={(ev) => {
+                            const charId = ev.target.value;
+                            if (!charId) return;
+                            const char = characters.find((c) => c.id === charId);
+                            if (ent.categoria === 'item' || ent.categoria === 'arma') {
+                              inventoryAdd(charId, ent);
+                              addLog('system', `🎁 Mestre entregou "${ent.nome}" para ${char?.name ?? 'jogador'}.`);
+                              toast({ title: 'Item entregue', description: `${ent.nome} → ${char?.name}` });
+                             } else {
+                              const jaVinculada = char?.omniAtivos?.some((a) => a.entidadeId === ent.id);
+                              if (jaVinculada) {
+                                toast({ title: 'Já atribuída', description: `${ent.nome} já está na ficha de ${char?.name}.` });
+                              } else {
+                                const instanceId = `omni-inst-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+                                const ok = vincularOmniAtivo(charId, {
+                                  categoria: ent.categoria,
+                                  entidadeId: ent.id,
+                                  instanceId,
+                                });
+                                if (ok) {
+                                  const rotulo =
+                                    ent.categoria === 'passiva' ? 'passiva' :
+                                    ent.categoria === 'talento' ? 'talento' :
+                                    ent.categoria === 'aura' ? 'aura' :
+                                    ent.categoria === 'feitico' ? 'feitiço' :
+                                    ent.categoria === 'condicao' ? 'condição' :
+                                    ent.categoria === 'voto' ? 'voto' : 'habilidade';
+                                  addLog('system', `🔗 Mestre atribuiu a ${rotulo} "${ent.nome}" à ficha de ${char?.name ?? 'jogador'}.`);
+                                  toast({ title: `${rotulo[0].toUpperCase()}${rotulo.slice(1)} atribuída`, description: `${ent.nome} → ${char?.name}` });
+                                }
+                              }
+                            }
+                            ev.target.value = '';
+                          }}
+                          aria-label={`Atribuir ${ent.nome} a personagem`}
+                          className="min-h-11 min-w-0 flex-1 rounded-lg border border-border bg-background px-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+                        >
+                          <option value="">— Selecionar personagem —</option>
+                          {characters.map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()
+            ) : (
+              <div className="rounded-2xl border border-dashed border-border/70 bg-card/45 p-10 text-center text-muted-foreground card-enigmatic h-full flex flex-col items-center justify-center">
+                <Sparkles className="h-12 w-12 mx-auto text-primary/40 mb-4" />
+                <p className="text-foreground">Selecione uma entidade</p>
+                <p className="text-base mt-1">Clique em um item na lista à esquerda para ver os detalhes aqui.</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
       {editando && (
         <ConstrutorEntidade
           aberto={!!editando}
-          onClose={() => setEditando(null)}
+          onCancelar={() => setEditando(null)}
+          onSalvarEFechar={(e) => { setEditando(null); }}
           entidadeInicial={editando}
-          onSalvar={(e) => substituirEntidade(e.id, e)}
+          onSalvar={(e) => { substituirEntidade(e.id, e); setEntidadeSelecionadaId(e.id); }}
         />
       )}
         </TabsContent>

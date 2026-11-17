@@ -28,28 +28,28 @@ export function ModuleHeader({
   return (
     <header
       className={cn(
-        'card-enigmatic flex flex-wrap items-center gap-3 rounded-xl border border-border px-4 py-3',
+        'atlas-module-header card-enigmatic flex flex-wrap items-center gap-3 rounded-2xl border border-border px-4 py-4 sm:px-5',
         className,
       )}
     >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-primary/30 bg-primary/10 text-primary shadow-[0_0_15px_-3px_hsl(var(--primary)/0.4)]">
+      <div className="atlas-module-mark flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 text-primary">
         <Icon className="h-5 w-5" />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-2">
           <h2
-            className="text-base sm:text-lg font-bold tracking-[0.08em] text-foreground glow-text"
+            className="text-lg sm:text-xl font-bold tracking-[0.055em] text-foreground"
             style={{ fontFamily: "'Cinzel', serif" }}
           >
             {title}
           </h2>
           {subtitle && (
-            <span className="text-sm text-muted-foreground font-mono">{subtitle}</span>
+            <span className="text-sm text-muted-foreground font-mono tabular-nums">{subtitle}</span>
           )}
         </div>
         {description && (
           <p
-            className="mt-0.5 text-sm text-muted-foreground italic"
+            className="mt-1 text-base text-muted-foreground italic leading-snug"
             style={{ fontFamily: "'Cormorant Garamond', serif" }}
           >
             {description}

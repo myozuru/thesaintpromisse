@@ -46,8 +46,8 @@ export class AppErrorBoundary extends Component<{ children: ReactNode }, State> 
           background: "#0a0a0f",
           color: "#f5f5f7",
           padding: "32px",
-          fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-          fontSize: 13,
+          fontFamily: "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace",
+          fontSize: 16,
           lineHeight: 1.5,
         }}
       >

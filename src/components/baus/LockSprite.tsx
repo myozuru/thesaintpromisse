@@ -95,7 +95,7 @@ export function LockSpritePicker({
   onChange: (id: string) => void;
 }) {
   return (
-    <div className="grid grid-cols-6 gap-1.5 max-h-44 overflow-y-auto rounded-md border border-border/60 bg-background/40 p-2">
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(2.75rem,1fr))] gap-1.5 max-h-44 overflow-y-auto rounded-md border border-border/60 bg-background/40 p-2">
       {LOCK_SPRITES.map((s) => {
         const active = (value ?? DEFAULT_LOCK_SPRITE) === s.id;
         return (
@@ -103,10 +103,12 @@ export function LockSpritePicker({
             key={s.id}
             type="button"
             onClick={() => onChange(s.id)}
+            aria-label={`Cadeado: ${s.label}`}
+            aria-pressed={active}
             title={s.label}
-            className={`flex flex-col items-center justify-end gap-1 rounded-md p-1.5 transition-colors ${
+            className={`flex min-w-11 flex-col items-center justify-end gap-1 rounded-md p-1.5 transition-colors ${
               active ? 'bg-amber-500/20 ring-1 ring-amber-400/70' : 'hover:bg-secondary/60'
-            }`}
+            } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70`}
             style={{ minHeight: 64 }}
           >
             <LockSprite id={s.id} scale={1.2} />
@@ -125,7 +127,7 @@ export function KeySpritePicker({
   onChange: (id: string) => void;
 }) {
   return (
-    <div className="grid grid-cols-8 gap-1.5 max-h-40 overflow-y-auto rounded-md border border-border/60 bg-background/40 p-2">
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(2.75rem,1fr))] gap-1.5 max-h-40 overflow-y-auto rounded-md border border-border/60 bg-background/40 p-2">
       {KEY_SPRITES.map((s) => {
         const active = (value ?? DEFAULT_KEY_SPRITE) === s.id;
         return (
@@ -133,10 +135,12 @@ export function KeySpritePicker({
             key={s.id}
             type="button"
             onClick={() => onChange(s.id)}
+            aria-label={`Chave: ${s.label}`}
+            aria-pressed={active}
             title={s.label}
-            className={`flex items-center justify-center rounded-md p-1.5 transition-colors ${
+            className={`flex min-w-11 items-center justify-center rounded-md p-1.5 transition-colors ${
               active ? 'bg-amber-500/20 ring-1 ring-amber-400/70' : 'hover:bg-secondary/60'
-            }`}
+            } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70`}
             style={{ minHeight: 60 }}
           >
             <KeySprite id={s.id} scale={1.1} />

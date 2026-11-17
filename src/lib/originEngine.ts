@@ -27,6 +27,8 @@ export interface OriginChoices {
   secondaryAttr?: AttrName;
   /** Clã selecionado (Herdado). */
   clan?: ClanId;
+  /** Técnica amaldiçoada escolhida à parte do clã Zenin. */
+  tecnicaAmaldicoada?: string;
   /** Aptidão de Aura selecionada (Derivado). */
   auraAptitudeId?: string;
   /** IDs de Anatomias selecionadas (FAH; pode ter múltiplas conforme nível). */

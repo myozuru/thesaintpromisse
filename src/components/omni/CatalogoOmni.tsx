@@ -279,7 +279,7 @@ export function CatalogoOmni() {
       {editandoConceito && (
         <ConstrutorEntidade
           aberto={!!editandoConceito}
-          onClose={() => setEditandoConceito(null)}
+          onCancelar={() => setEditandoConceito(null)}
           entidadeInicial={editandoConceito}
           abaInicial="combate"
           onSalvar={(ent) => {

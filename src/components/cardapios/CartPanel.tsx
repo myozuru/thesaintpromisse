@@ -38,12 +38,15 @@ export function CartPanel({ estId, estName }: Props) {
     <>
       <div className="rounded-md border border-primary/30 bg-primary/5">
         <button
+          type="button"
           onClick={(e) => {
             e.stopPropagation();
             setOpen(!open);
             playClickSound();
           }}
           className="flex w-full items-center gap-2 px-2 py-1.5 text-xs hover:bg-primary/10 transition-colors"
+          aria-expanded={open}
+          aria-label={`Carrinho de ${estName}: ${totalCount} ${totalCount === 1 ? 'item' : 'itens'}`}
         >
           <ShoppingCart className="h-3.5 w-3.5 text-primary" />
           <span className="font-bold text-primary">
@@ -78,9 +81,11 @@ export function CartPanel({ estId, estName }: Props) {
                   </div>
                   <div className="flex items-center gap-0.5">
                     <button
+                      type="button"
                       onClick={() => { setQty(estId, l.itemId, l.qty - 1); playClickSound(); }}
                       className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
                       title="Diminuir"
+                      aria-label={`Diminuir quantidade de ${l.name}`}
                     >
                       <Minus className="h-3 w-3" />
                     </button>
@@ -88,9 +93,11 @@ export function CartPanel({ estId, estName }: Props) {
                       {l.qty}
                     </span>
                     <button
+                      type="button"
                       onClick={() => { setQty(estId, l.itemId, l.qty + 1); playClickSound(); }}
                       className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
                       title="Aumentar"
+                      aria-label={`Aumentar quantidade de ${l.name}`}
                     >
                       <Plus className="h-3 w-3" />
                     </button>
@@ -99,9 +106,11 @@ export function CartPanel({ estId, estName }: Props) {
                     {sym}{l.unitPrice * l.qty}
                   </div>
                   <button
+                    type="button"
                     onClick={() => { removeItem(estId, l.itemId); playClickSound(); }}
                     className="rounded p-1 text-muted-foreground hover:bg-hp/20 hover:text-hp"
                     title="Remover"
+                    aria-label={`Remover ${l.name} do carrinho`}
                   >
                     <Trash2 className="h-3 w-3" />
                   </button>
@@ -111,12 +120,14 @@ export function CartPanel({ estId, estName }: Props) {
 
             <div className="flex items-center justify-between gap-2 pt-1">
               <button
+                type="button"
                 onClick={() => { clearCart(estId); playClickSound(); }}
                 className="text-xs text-muted-foreground hover:text-hp underline"
               >
                 Esvaziar
               </button>
               <button
+                type="button"
                 onClick={() => { setConfirmOpen(true); playClickSound(); }}
                 className="flex items-center gap-1 rounded-md bg-gradient-to-r from-primary to-accent px-3 py-1 text-xs font-bold text-primary-foreground hover:shadow-[0_0_18px_-4px_hsl(var(--primary)/0.6)] transition-all"
               >

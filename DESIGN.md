@@ -54,6 +54,10 @@ typography:
     fontWeight: 500
   label:
     fontFamily: "JetBrains Mono, monospace"
+  splashInstruction:
+    fontFamily: "Inter, system-ui, sans-serif"
+    fontWeight: 500
+    minFontSize: "16px"
 rounded:
   sm: "6px"
   md: "8px"
@@ -104,16 +108,18 @@ components:
 
 ## Overview
 
-**Creative North Star: "grimório digital para a mesa de campanha"**
+**Creative North Star: "atlas astral da campanha"**
 
-The current visual language is sombria e mística: a dark campaign workspace framed by ceremonial type, restrained ornament, and the violet-and-gold colors already present in the source. It serves the Master and players in the same campaign, so the shared interface keeps modules, character tools, and session activity close at hand.
+The visual language turns the campaign workspace into an astral atlas: deep violet surfaces, a restrained gold secondary accent, ceremonial type, and subtle orbital geometry. It preserves the existing dark, mystical identity while making navigation and player resources easier to scan.
 
-The experience is organized around play rather than a marketing page. A fixed module bar and event log surround the selected RPG workspace; module-specific content uses a shared family of controls and surfaces. The interface is information-dense, with clear type roles for headings, reading text, and numeric or system data.
+The experience is organized around play rather than a marketing page. A 64px module bar and session log frame the selected RPG workspace; module-specific content uses a shared family of controls and surfaces. Low-contrast coordinate lines, orbit arcs, and radial gradients stay behind interactive content. The interface remains information-dense, with clear type roles for headings, reading text, and numeric or system data.
 
 **Key Characteristics:**
-- Dark HSL surfaces with violet primary and gold accent tokens.
+- Dark HSL surfaces with violet primary and a restrained gold accent.
+- Subtle atlas grid and orbit arcs behind panels, never over text or controls.
 - Cinzel-family headings, Cormorant Garamond reading text, and JetBrains Mono data labels.
-- Persistent module navigation, a collapsible session log, and specialized RPG workspaces.
+- A 64px module bar, role-aware primary tabs, a collapsible 256px session log, and specialized RPG workspaces.
+- An absolute 14px text floor; reading copy and actionable controls are at least 16px.
 - Layered panels and shadows, with glow reserved for actions and active emphasis.
 
 ## Colors
@@ -162,6 +168,7 @@ The component-specific CSS properties below preserve existing highlights while k
 **Display Font:** Cinzel Decorative, with Cinzel and serif fallbacks
 **Body Font:** Cormorant Garamond, with Georgia and serif fallbacks
 **Label/Mono Font:** JetBrains Mono, with a monospace fallback
+**Splash instruction exception:** Inter/system-ui sans is limited to the welcome keyboard and click guidance.
 
 **Character:** Cinzel Decorative gives the main headings a ceremonial voice; Cinzel carries module and navigation labels. Cormorant Garamond handles reading copy, while JetBrains Mono makes logs and numeric details distinct.
 
@@ -169,13 +176,17 @@ The component-specific CSS properties below preserve existing highlights while k
 - **Display:** Cinzel Decorative; used by the global heading styles and the RPG splash title.
 - **Headline:** Cinzel; used by module headings, navigation, and shared card titles.
 - **Body:** Cormorant Garamond at weight 500; used by the global body and descriptive copy.
-- **Label:** JetBrains Mono; used for logs, timestamps, and data-oriented details. The global text-xs size is 0.8125rem (13px).
+- **Label:** JetBrains Mono; used for logs, timestamps, and data-oriented details. Global `text-xs` is 14px and `text-sm` is 16px.
 
 **The Type-by-Role Rule.** Keep display, reading, and data typography in their established roles; the global font links load these families from Google Fonts.
 
+### Absolute Type Floor
+
+All visible interface text is at least 14 CSS px. Reading copy and actionable controls are at least 16 CSS px. Canvas labels account for zoom so their effective on-screen size respects the same floor.
+
 ## Layout
 
-The shell uses a fixed 56px top bar with horizontally scrollable module navigation. A session log occupies the left rail: it is 256px wide on wider screens, 40px when collapsed, and becomes a collapsible overlay on narrow screens. The main workspace spans the remaining width, with its top and left offsets accounting for the persistent chrome.
+The shell uses a fixed 64px top bar. On desktop, the session log occupies a 256px left rail or a 40px collapsed rail; the main workspace spans the remaining width, with its top and left offsets accounting for the persistent chrome. Primary module tabs vary by role to keep the header readable, with remaining routes in the “Módulos” menu.
 
 Modules supply their own internal layouts. The shell adds a compact zoom control and a floating dice action near the lower-right edge. The map can enter an immersive mode that hides the normal shell. At narrow widths, the log collapses automatically and the module bar remains horizontally scrollable.
 
@@ -222,7 +233,7 @@ Shared controls provide the base; each RPG module adds the information and actio
 - **Error / Disabled:** Destructive state is available; disabled fields reduce opacity and use a not-allowed cursor.
 
 ### Navigation
-- **Style:** Fixed top bar with compact Cinzel labels and icons. The module list scrolls horizontally and can be reordered.
+- **Style:** Fixed 64px top bar with Cinzel labels and icons. Four primary tabs are shown to the Master and five to Players; remaining routes are available from the “Módulos” menu. The order remains configurable.
 - **Active:** Translucent primary surface, violet border and glow, plus a fine gold underline.
 - **Inactive / Hover:** Muted text becomes foreground text over a secondary surface.
 - **Responsive:** Keep the tab strip scrollable; the log panel collapses on narrow screens.
@@ -238,6 +249,7 @@ The left panel uses colored event icons, compact monospaced messages, and monosp
 ### Do:
 - **Do** use the existing semantic tokens for global surfaces, actions, and RPG resource states.
 - **Do** preserve the display, reading, and monospace typography roles.
+- **Do** keep all interface text at or above 14px, and reading text and actionable controls at or above 16px.
 - **Do** build module-specific interfaces from the shared buttons, fields, cards, badges, and module header.
 - **Do** keep keyboard focus visible and preserve active, hover, and disabled states.
 

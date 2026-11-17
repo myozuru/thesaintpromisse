@@ -27,6 +27,8 @@ import { prepareCollisionCache, resolveCollisionMove, tokenFootprintSegments, ty
 import { ReplicaSustentacaoPrompt } from '@/components/fichas/ReplicasSection';
 import { shownPeMax, shownHpMax } from '@/lib/peDisplay';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { canvasFontSizeAtScale, UI_READING_FLOOR_PX } from '@/lib/uiTypography';
+import { cn } from '@/lib/utils';
 import {
   useMapStore,
   type GridType,
@@ -94,6 +96,10 @@ import { useFogStore } from '@/stores/fogStore';
 import { buildSegments as buildFogSegments } from '@/lib/fog/visibility';
 import { useProfileStore } from '@/stores/useProfileStore';
 import { useCharacterStore } from '@/stores/useCharacterStore';
+import { resolverTokenControladorDaFicha } from '@/lib/mapa/tokenDaFicha';
+import { carregarAssetFicha } from '@/lib/controlador/assetFicha';
+import { drawInvocationPlacementPreview } from './InvocationPlacementPreview';
+import { MAP_TOOL_RAIL_WIDTH } from './ui/toolSettings';
 import { useCombatStore } from '@/stores/useCombatStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useOmniEntidadesStore } from '@/stores/useOmniEntidadesStore';
@@ -123,6 +129,11 @@ import { podeMoverInvocacao } from '@/lib/controlador/mapa';
 const MIN_SCALE = 0.1;
 const MAX_SCALE = 10;
 const ZOOM_STEP = 1.1;
+const ZOOM_PRESETS = [0.55, 0.65, 0.75, 0.85, 1, 1.15] as const;
+const getNearestZoomPresetIndex = (scale: number) => ZOOM_PRESETS.reduce(
+  (nearest, level, index) => Math.abs(level - scale) < Math.abs(ZOOM_PRESETS[nearest] - scale) ? index : nearest,
+  0,
+);
 const isRotatableAoEKind = (kind: MapTemplate['kind']) => kind === 'square' || kind === 'cone' || kind === 'cone_attached' || kind === 'line';
 
 function bonusDeslocamentoOmni(character: Character | undefined): number {
@@ -369,6 +380,14 @@ export function MapaModule() {
   const setImmersive = useMapStore((s) => s.setImmersive);
   const partyCollapsed = useMapStore((s) => s.partyCollapsed);
   const setPartyCollapsed = useMapStore((s) => s.setPartyCollapsed);
+  const [toolRailCollapsed, setToolRailCollapsed] = useState(() => {
+    try { return typeof window !== 'undefined' && localStorage.getItem('mapa.toolrail.collapsed') === '1'; }
+    catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('mapa.toolrail.collapsed', toolRailCollapsed ? '1' : '0'); }
+    catch { /* A preferência local não impede o uso das ferramentas. */ }
+  }, [toolRailCollapsed]);
   const activeTool = useMapStore((s) => s.activeTool);
   const setActiveTool = useMapStore((s) => s.setActiveTool);
   const shapeShape = useMapStore((s) => s.toolSettings.shape.shape);
@@ -377,6 +396,26 @@ export function MapaModule() {
   const setToolSettings = useMapStore((s) => s.setToolSettings);
 
   const [gridOpen, setGridOpen] = useState(false);
+  const gridPanelRef = useRef<HTMLDivElement>(null);
+  const gridWasOpenRef = useRef(false);
+
+  useEffect(() => {
+    if (gridOpen && !gridWasOpenRef.current) {
+      const frame = window.requestAnimationFrame(() => {
+        const firstControl = gridPanelRef.current?.querySelector<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])',
+        );
+        firstControl?.focus();
+      });
+      gridWasOpenRef.current = true;
+      return () => window.cancelAnimationFrame(frame);
+    }
+
+    if (!gridOpen && gridWasOpenRef.current) {
+      document.getElementById('map-grid-trigger')?.focus();
+      gridWasOpenRef.current = false;
+    }
+  }, [gridOpen]);
   const [layerPanelOpen, setLayerPanelOpen] = useState(false);
   const selectedIdsKey = useMapStore((s) => s.selectedIds.join(','));
   useEffect(() => { setSelectionToolbarVisible(false); selectionToolbarVisibleRef.current = false; }, [selectedIdsKey]);
@@ -620,8 +659,8 @@ export function MapaModule() {
           ? `${fmt(Math.min(meters, budgetM))} / ${fmt(budgetM)} m`
           : `${fmt(meters)} m`;
 
-        const fontPx = 13;
-        tkCtx.font = `600 ${fontPx / camera.scale}px ui-sans-serif, system-ui, sans-serif`;
+        const fontPx = UI_READING_FLOOR_PX;
+        tkCtx.font = `600 ${fontPx / camera.scale}px 'JetBrains Mono', monospace`;
         tkCtx.textAlign = 'center';
         tkCtx.textBaseline = 'middle';
         const padX = 6 / camera.scale;
@@ -726,8 +765,8 @@ export function MapaModule() {
           tkCtx.save();
           const b = { x: e.x - e.w / 2, y: e.y - e.h / 2 };
           const text = 'ACERTO';
-          const fontPx = 11 / camera.scale;
-          tkCtx.font = `800 ${fontPx}px ui-sans-serif, system-ui, sans-serif`;
+          const fontPx = canvasFontSizeAtScale(11 / camera.scale, camera.scale, UI_READING_FLOOR_PX);
+          tkCtx.font = `800 ${fontPx}px 'Cinzel', serif`;
           tkCtx.textAlign = 'center';
           tkCtx.textBaseline = 'middle';
           const padX = 5 / camera.scale;
@@ -751,12 +790,12 @@ export function MapaModule() {
         const t = state.templates.find((tpl) => tpl.id === aoePreview.templateId);
         if (t) {
           const text = aoeTargetIds.size > 0 ? `${aoeTargetIds.size} acerto(s)` : 'Nenhum acerto';
-          const fontPx = 13 / camera.scale;
+          const fontPx = canvasFontSizeAtScale(13 / camera.scale, camera.scale, UI_READING_FLOOR_PX);
           const padX = 7 / camera.scale;
           const padY = 3 / camera.scale;
           const y = t.y + (t.kind === 'circle' || t.kind === 'square' ? t.length + 18 / camera.scale : 18 / camera.scale);
           tkCtx.save();
-          tkCtx.font = `800 ${fontPx}px ui-sans-serif, system-ui, sans-serif`;
+          tkCtx.font = `800 ${fontPx}px 'JetBrains Mono', monospace`;
           tkCtx.textAlign = 'center';
           tkCtx.textBaseline = 'middle';
           const tw = tkCtx.measureText(text).width;
@@ -831,7 +870,7 @@ export function MapaModule() {
           tkCtx.stroke();
           tkCtx.shadowBlur = 0;
           const badgePx = 16 / camera.scale;
-          tkCtx.font = `${badgePx}px ui-sans-serif, system-ui, sans-serif`;
+          tkCtx.font = `${badgePx}px 'JetBrains Mono', monospace`;
           tkCtx.textAlign = 'center';
           tkCtx.textBaseline = 'middle';
           tkCtx.fillText('🔖', e.x, e.y - radius - badgePx);
@@ -969,8 +1008,8 @@ export function MapaModule() {
                 : `${distM.toFixed(1)} m`;
               const mx = (origin.x + mw.x) / 2;
               const my = (origin.y + mw.y) / 2;
-              const fontPx = Math.max(11, 12 / camera.scale);
-              tkCtx.font = `bold ${fontPx}px ui-monospace, monospace`;
+              const fontPx = canvasFontSizeAtScale(12 / camera.scale, camera.scale, UI_READING_FLOOR_PX);
+              tkCtx.font = `bold ${fontPx}px 'JetBrains Mono', monospace`;
               tkCtx.textAlign = 'center';
               tkCtx.textBaseline = 'middle';
               const padX = 6 / camera.scale;
@@ -1004,56 +1043,6 @@ export function MapaModule() {
             };
             TemplateEngine.draw(tkCtx, ghost, camera.scale);
             TemplateEngine.drawLabel(tkCtx, ghost, state.gridConfig, camera.scale);
-          }
-        }
-      }
-
-      // Ghost do posicionamento de invocações: célula, alcance, colisões e progresso.
-      {
-        const pending = state.pendingInvocationPlacement;
-        const mw = mouseWorldRef.current;
-        const item = pending?.items[pending.placements.length];
-        if (pending && item && mw && drag.kind === 'none') {
-          const dpi = state.gridConfig.dpi;
-          const mpc = state.gridConfig.metersPerCell;
-          const owner = Object.values(state.entities).find(entity => entity.characterId === pending.ownerCharacterId && !entity.invocationId);
-          if (dpi > 0 && mpc > 0 && owner) {
-            const target = { x: Math.round(mw.x / dpi) * dpi, y: Math.round(mw.y / dpi) * dpi };
-            const distM = Math.hypot(target.x - owner.x, target.y - owner.y) / dpi * mpc;
-            const occupied = Object.values(state.entities).some(entity =>
-              entity.layer !== 'map' && !entity.hidden &&
-              Math.abs(entity.x - target.x) < (entity.w + dpi) / 2 &&
-              Math.abs(entity.y - target.y) < (entity.h + dpi) / 2,
-            ) || pending.placements.some(placement =>
-              Math.abs(placement.x - target.x) < dpi &&
-              Math.abs(placement.y - target.y) < dpi,
-            );
-            const segments = WallsEngine.blockingSegments(state.walls, 'sight');
-            const blockedByWall = WallsEngine.minDistanceToSegments(target, segments) < dpi * Math.SQRT1_2;
-            const outOfRange = distM > item.alcanceM;
-            const valid = !outOfRange && !occupied && !blockedByWall;
-            const color = valid ? item.color : '#ef4444';
-            tkCtx.save();
-            tkCtx.strokeStyle = item.color + '77';
-            tkCtx.lineWidth = 1.5 / camera.scale;
-            tkCtx.setLineDash([7 / camera.scale, 5 / camera.scale]);
-            tkCtx.beginPath();
-            tkCtx.arc(owner.x, owner.y, (item.alcanceM / mpc) * dpi, 0, Math.PI * 2);
-            tkCtx.stroke();
-            tkCtx.setLineDash([]);
-            tkCtx.strokeStyle = color;
-            tkCtx.fillStyle = valid ? item.color + '55' : 'rgba(239,68,68,0.30)';
-            tkCtx.lineWidth = 2 / camera.scale;
-            tkCtx.fillRect(target.x - dpi / 2, target.y - dpi / 2, dpi, dpi);
-            tkCtx.strokeRect(target.x - dpi / 2, target.y - dpi / 2, dpi, dpi);
-            const labelText = item.label + ': ' + distM.toFixed(1) + ' / ' + item.alcanceM + ' m · ' + (pending.placements.length + 1) + '/' + pending.items.length;
-            const fontPx = Math.max(11, 12 / camera.scale);
-            tkCtx.font = 'bold ' + fontPx + 'px ui-monospace, monospace';
-            tkCtx.textAlign = 'center';
-            tkCtx.textBaseline = 'bottom';
-            tkCtx.fillStyle = valid ? '#ffffff' : '#fecaca';
-            tkCtx.fillText(labelText, target.x, target.y - dpi / 2 - 4 / camera.scale);
-            tkCtx.restore();
           }
         }
       }
@@ -1108,8 +1097,8 @@ export function MapaModule() {
             : `${distM.toFixed(1)} m`;
           const mx = (origin.x + mw.x) / 2;
           const my = (origin.y + mw.y) / 2;
-          const fontPx = Math.max(11, 12 / camera.scale);
-          tkCtx.font = `bold ${fontPx}px ui-monospace, monospace`;
+          const fontPx = canvasFontSizeAtScale(12 / camera.scale, camera.scale, UI_READING_FLOOR_PX);
+          tkCtx.font = `bold ${fontPx}px 'JetBrains Mono', monospace`;
           tkCtx.textAlign = 'center';
           tkCtx.textBaseline = 'middle';
           const padX = 6 / camera.scale;
@@ -1181,8 +1170,8 @@ export function MapaModule() {
               const label = rangeM === undefined ? `${distanceM.toFixed(1)} m` : `${distanceM.toFixed(1)} / ${rangeM} m`;
               const mx = (sourceCenter.x + point.x) / 2;
               const my = (sourceCenter.y + point.y) / 2;
-              const font = Math.max(11, 12 / camera.scale);
-              tkCtx.font = `bold ${font}px ui-monospace, monospace`;
+              const font = canvasFontSizeAtScale(12 / camera.scale, camera.scale, UI_READING_FLOOR_PX);
+              tkCtx.font = `bold ${font}px 'JetBrains Mono', monospace`;
               tkCtx.textAlign = 'center';
               tkCtx.textBaseline = 'middle';
               const width = tkCtx.measureText(label).width + 12 / camera.scale;
@@ -1377,6 +1366,16 @@ export function MapaModule() {
         }
       }
 
+      // O alcance é uma sobreposição de interação: permanece legível também no modo escuro.
+      ltCtx.save();
+      ltCtx.setTransform(1, 0, 0, 1, 0, 0);
+      ltCtx.scale(dpr, dpr);
+      ltCtx.scale(camera.scale, camera.scale);
+      ltCtx.translate(camera.x, camera.y);
+      drawInvocationPlacementPreview(ltCtx, state, useCharacterStore.getState().characters,
+        drag.kind === 'none' ? mouseWorldRef.current : null, camera.scale);
+      ltCtx.restore();
+
       rafId = requestAnimationFrame(render);
     };
     rafId = requestAnimationFrame(render);
@@ -1432,6 +1431,15 @@ export function MapaModule() {
 
   // Quando troca de cena, garante hidratação dos assets da nova cena.
   const activeSceneId = useMapStore((s) => s.activeSceneId);
+  const invocationAssetIdsKey = useMapStore(s => [...new Set(Object.values(s.entities)
+    .filter(entity => entity.invocationId)
+    .flatMap(entity => [entity.assetId, entity.invocationFallbackAssetId])
+    .filter((id): id is string => Boolean(id)))].sort().join(','));
+  useEffect(() => {
+    if (!invocationAssetIdsKey) return;
+    void Promise.all(invocationAssetIdsKey.split(',').map(id => carregarAssetFicha(id)))
+      .catch(error => console.warn('[mapa] Não foi possível carregar a arte de uma invocação.', error));
+  }, [invocationAssetIdsKey]);
   useEffect(() => {
     if (!activeSceneId) return;
     const st = useMapStore.getState();
@@ -1455,20 +1463,18 @@ export function MapaModule() {
       if (e.key === 'Escape' && useAlvoMapaStore.getState().pending) { terminarAlvoMapa(null); e.preventDefault(); return; }
       if (e.key === 'Escape' && useShikigamiHudStore.getState().interaction) { useShikigamiHudStore.getState().cancelInteraction(); e.preventDefault(); return; }
       if (e.code === 'Space') {
-        // Evita que Space "re-clique" o último botão focado e impede o scroll
-        // padrão da página. Mantém o Space funcionando dentro de inputs/textareas.
+        // Space mantém a ativação nativa de botões e controles. Só inicia o pan
+        // quando o mapa, e não um controle da interface, possui o contexto.
         const t = e.target as HTMLElement | null;
         const tag = t?.tagName ?? '';
         const editable = t?.isContentEditable;
-        if (!editable && !['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) {
-          if (t && typeof (t as HTMLElement).blur === 'function' && tag === 'BUTTON') {
-            (t as HTMLElement).blur();
-          }
-          const ae = document.activeElement as HTMLElement | null;
-          if (ae && ae.tagName === 'BUTTON') ae.blur();
+        const interactive = !!t?.closest(
+          'button, a, input, textarea, select, [role="button"], [role="checkbox"], [role="radio"], [role="switch"], [role="tab"], [contenteditable="true"]',
+        );
+        if (!editable && !interactive && !['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) && (el.contains(t) || el.matches(':hover'))) {
           e.preventDefault();
+          spaceDownRef.current = true;
         }
-        spaceDownRef.current = true;
       }
       if (e.key === 'Shift') shiftDownRef.current = true;
       if (e.key === 'Control' || e.key === 'Meta') snapBypassRef.current = true;
@@ -1514,8 +1520,29 @@ export function MapaModule() {
 
       // Ignora atalhos de teclado se digitando em campo de texto
       const tgt = e.target as HTMLElement | null;
-      const typing = !!tgt && ['INPUT', 'TEXTAREA', 'SELECT'].includes(tgt.tagName);
+      const typing = !!tgt && (['INPUT', 'TEXTAREA', 'SELECT'].includes(tgt.tagName) || tgt.isContentEditable);
       const mod = e.ctrlKey || e.metaKey;
+
+      const zoomInKey = e.key === '+' || (e.key === '=' && e.shiftKey);
+      const zoomOutKey = e.key === '-';
+      if (!mod && !typing && (zoomInKey || zoomOutKey)) {
+        const current = store.getState().camera;
+        const currentIndex = getNearestZoomPresetIndex(current.scale);
+        const nextIndex = Math.max(0, Math.min(ZOOM_PRESETS.length - 1, currentIndex + (zoomInKey ? 1 : -1)));
+        const scale = ZOOM_PRESETS[nextIndex];
+        if (nextIndex !== currentIndex) {
+          const rect = el.getBoundingClientRect();
+          const centerX = rect.width / 2;
+          const centerY = rect.height / 2;
+          store.getState().setCamera({
+            scale,
+            x: centerX / scale - (centerX / current.scale - current.x),
+            y: centerY / scale - (centerY / current.scale - current.y),
+          });
+        }
+        e.preventDefault();
+        return;
+      }
 
       // Ctrl/Cmd+Z — undo; Ctrl/Cmd+Shift+Z ou Ctrl+Y — redo
       if (mod && !typing && (e.key === 'z' || e.key === 'Z')) {
@@ -1798,9 +1825,8 @@ export function MapaModule() {
         const dpi = state.gridConfig.dpi;
         const mpc = state.gridConfig.metersPerCell;
         const item = invocationPlacement.items[invocationPlacement.placements.length];
-        const owner = Object.values(state.entities).find(entity =>
-          entity.characterId === invocationPlacement.ownerCharacterId && !entity.invocationId,
-        );
+        const ownerCharacter = useCharacterStore.getState().characters.find(character => character.id === invocationPlacement.ownerCharacterId);
+        const owner = resolverTokenControladorDaFicha(ownerCharacter, state.entities, state.layerVisible);
         if (!(dpi > 0) || !(mpc > 0) || !item || !owner) return;
         const x = Math.round(wx / dpi) * dpi;
         const y = Math.round(wy / dpi) * dpi;
@@ -3233,25 +3259,31 @@ export function MapaModule() {
 
   return (
     <div
-      className="w-full flex select-none overflow-hidden"
+      className={cn("atlas-immersive-shell w-full flex select-none overflow-hidden transition-[height,border-radius,background-color,box-shadow,border-color] duration-300 ease-in-out", {
+        'rounded-xl card-enigmatic': !immersive,
+      })}
       style={{
         height: shellHeight,
         minHeight: 480,
-        background: 'hsl(var(--secondary))',
         color: 'hsl(var(--foreground))',
-        borderRadius: immersive ? 0 : 6,
-        border: immersive ? 'none' : '1px solid hsl(var(--border))',
+        backgroundColor: immersive ? undefined : 'hsl(var(--card))',
+        borderRadius: immersive ? 0 : undefined,
+        border: immersive ? 'none' : undefined,
       }}
     >
       {/* ============ COLUNA ESQUERDA: rail + painel contextual ============ */}
-      <div className="relative h-full flex shrink-0">
+      <div className="relative h-full flex shrink-0 motion-safe:transition-[width] motion-safe:duration-200" style={{ width: toolRailCollapsed ? 40 : MAP_TOOL_RAIL_WIDTH }}>
         <ToolRail
+          collapsed={toolRailCollapsed}
+          onToggleCollapsed={() => setToolRailCollapsed(current => !current)}
           activeTool={activeTool}
           shape={shapeShape}
           onSelectTool={(id) => setActiveTool(id)}
           onPickShape={(s) => setToolSettings('shape', { shape: s })}
+          layerPanelOpen={layerPanelOpen}
+          setLayerPanelOpen={setLayerPanelOpen}
         />
-        <ToolSettingsPanel placement="rail" />
+        <ToolSettingsPanel />
       </div>
 
 
@@ -3260,12 +3292,10 @@ export function MapaModule() {
       <div className="flex-1 flex flex-col min-w-0 relative">
         <MapTopBar
           immersive={immersive}
-          settingsOpen={gridOpen}
-          layerPanelOpen={layerPanelOpen}
-          onToggleSettings={() => setGridOpen((v) => !v)}
           onToggleImmersive={() => setImmersive(!immersive)}
-          onToggleLayerPanel={() => setLayerPanelOpen((v) => !v)}
           onOpenHelp={() => setShortcutsOpen(true)}
+          gridOpen={gridOpen}
+          onToggleGrid={() => setGridOpen((current) => !current)}
         />
 
         
@@ -3275,13 +3305,19 @@ export function MapaModule() {
           ref={containerRef}
           className="flex-1 relative overflow-hidden"
           tabIndex={0}
+          role="application"
+          aria-label="Mapa interativo da campanha"
+          aria-describedby="map-canvas-keyboard-help"
           style={{ touchAction: 'none', background: 'hsl(var(--secondary))' }}
         >
-          <ToolSettingsPanel placement="top" />
-          <canvas ref={bgCanvasRef} className="absolute inset-0" style={{ zIndex: 1 }} />
-          <canvas ref={tokenCanvasRef} className="absolute inset-0" style={{ zIndex: 2 }} />
+          <p id="map-canvas-keyboard-help" className="sr-only">
+            Mapa interativo. Selecione entidades no painel Camadas para manipulá-las pelo teclado. Use as setas para mover a seleção, Shift mais setas para passos finos e Alt mais setas para passos maiores. Use Delete para remover e F2 para renomear uma entidade selecionada. Pressione interrogação para abrir os atalhos.
+          </p>
+          <canvas ref={bgCanvasRef} aria-hidden="true" className="absolute inset-0" style={{ zIndex: 1 }} />
+          <canvas ref={tokenCanvasRef} aria-hidden="true" className="absolute inset-0" style={{ zIndex: 2 }} />
           <canvas
             ref={lightCanvasRef}
+            aria-hidden="true"
             className="absolute inset-0 pointer-events-none"
             style={{ zIndex: 3 }}
           />
@@ -3296,7 +3332,7 @@ export function MapaModule() {
           {activeTool === 'fog' && (
             <>
               <div
-                className="absolute z-40 rounded-lg border border-border bg-popover px-3 py-2 text-popover-foreground shadow-2xl pointer-events-auto"
+                className="absolute z-40 rounded-lg border border-border bg-card/95 backdrop-blur px-3 py-2 text-card-foreground shadow-2xl pointer-events-auto card-enigmatic"
                 style={{
                   top: 8,
                   left: '50%',
@@ -3337,7 +3373,14 @@ export function MapaModule() {
             <PlayerActionBar />
           </div>
 
-          {layerPanelOpen && <LayerPanel onClose={() => setLayerPanelOpen(false)} />}
+          {layerPanelOpen && (
+            <LayerPanel
+              onClose={() => {
+                setLayerPanelOpen(false);
+                document.getElementById('map-layers-trigger')?.focus();
+              }}
+            />
+          )}
           <InitiativeMount />
           <DicePanel />
           {shortcutsOpen && <ShortcutsHelp onClose={() => setShortcutsOpen(false)} />}
@@ -3415,18 +3458,9 @@ export function MapaModule() {
 
           {/* HUD overlays dentro do canvas */}
           <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 10 }}>
-            {/* Zoom indicator */}
-            <div
-              className="absolute bottom-3 right-3 pointer-events-auto rounded-md px-2.5 py-1 text-xs text-foreground/80 tabular-nums"
-              style={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
-            >
-              {Math.round(cameraScale * 100)}%
-            </div>
-
             {/* Drop hint */}
             <div
-              className="absolute bottom-3 left-1/2 -translate-x-1/2 pointer-events-auto flex items-center gap-2 rounded-full px-3 py-1.5 text-xs text-muted-foreground"
-              style={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
+              className="absolute top-2 left-3 pointer-events-none flex items-center gap-2 rounded-full px-3 py-1.5 text-base text-muted-foreground card-enigmatic font-body"
             >
               <ImageIcon className="h-3.5 w-3.5" />
               Arraste imagens para o mapa
@@ -3435,22 +3469,31 @@ export function MapaModule() {
             {/* Settings popover (top-right anchored to topbar area) */}
             {gridOpen && (
               <div
-                className="absolute top-2 right-3 w-72 pointer-events-auto rounded-lg p-3 text-xs space-y-3 shadow-xl"
-                style={{
-                  background: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
-                  color: 'hsl(var(--foreground))',
+                ref={gridPanelRef}
+                id="map-grid-settings"
+                role="dialog"
+                aria-modal="false"
+                aria-labelledby="map-grid-settings-title"
+                tabIndex={-1}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setGridOpen(false);
+                  }
                 }}
+                className="absolute top-2 right-3 w-72 overflow-y-auto overscroll-contain pointer-events-auto rounded-xl p-3 space-y-3 shadow-2xl card-enigmatic"
+                style={{ maxHeight: 'calc(100% - 1rem)' }}
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Configurações</span>
-                  <button onClick={() => setGridOpen(false)} className="text-muted-foreground hover:text-foreground">×</button>
+                <div className="flex items-center justify-between mb-2">
+                  <span id="map-grid-settings-title" className="text-sm font-semibold uppercase tracking-wider text-primary" style={{ fontFamily: "'Cinzel', serif", letterSpacing: '0.06em' }}>Configurações da grade</span>
+                  <button type="button" aria-label="Fechar configurações da grade" onClick={() => setGridOpen(false)} className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70">×</button>
                 </div>
                 <Row label="Tipo de grade">
                   <select
                     value={gridConfig.type}
                     onChange={(e) => setGridConfig({ type: e.target.value as GridType })}
-                    className="bg-secondary border border-border rounded px-2 py-1 w-full text-foreground"
+                    className="bg-secondary/50 border border-border/60 rounded px-2 py-1 w-full text-foreground text-sm focus:border-primary/40 focus:outline-none focus:ring-1 focus:ring-primary/30 font-mono"
                   >
                     <option value="SQUARE">Quadrada</option>
                     <option value="HEX_VERTICAL">Hex (flat-top)</option>
@@ -3460,8 +3503,9 @@ export function MapaModule() {
                 </Row>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <div className="text-muted-foreground mb-1">Tamanho da grade (m)</div>
+                    <div className="text-muted-foreground mb-1 text-sm font-body">Tamanho da grade (m)</div>
                     <input
+                      aria-label="Tamanho da grade em metros"
                       type="number"
                       min={0.1}
                       step={0.1}
@@ -3470,12 +3514,13 @@ export function MapaModule() {
                         const v = Number(e.target.value);
                         if (Number.isFinite(v) && v > 0) setGridConfig({ metersPerCell: v });
                       }}
-                      className="w-full bg-secondary border border-border rounded px-2 py-1 text-foreground"
+                      className="w-full bg-secondary/50 border border-border/60 rounded px-2 py-1 text-foreground text-sm focus:border-primary/40 focus:outline-none focus:ring-1 focus:ring-primary/30 font-mono"
                     />
                   </div>
                   <div>
-                    <div className="text-muted-foreground mb-1">Célula (px)</div>
+                    <div className="text-muted-foreground mb-1 text-sm font-body">Célula (px)</div>
                     <input
+                      aria-label="Tamanho da célula em pixels"
                       type="number"
                       min={10}
                       step={1}
@@ -3484,7 +3529,7 @@ export function MapaModule() {
                         const v = Number(e.target.value);
                         if (Number.isFinite(v) && v > 0) setGridConfig({ dpi: v });
                       }}
-                      className="w-full bg-secondary border border-border rounded px-2 py-1 text-foreground"
+                      className="w-full bg-secondary/50 border border-border/60 rounded px-2 py-1 text-foreground text-sm focus:border-primary/40 focus:outline-none focus:ring-1 focus:ring-primary/30 font-mono"
                     />
                   </div>
                 </div>
@@ -3498,7 +3543,7 @@ export function MapaModule() {
                       const v = Number(e.target.value);
                       if (Number.isFinite(v) && v > 0) setGridConfig({ defaultImageHeightM: v });
                     }}
-                    className="w-full bg-secondary border border-border rounded px-2 py-1 text-foreground"
+                    className="w-full bg-secondary/50 border border-border/60 rounded px-2 py-1 text-foreground text-sm focus:border-primary/40 focus:outline-none focus:ring-1 focus:ring-primary/30 font-mono"
                   />
                 </Row>
 
@@ -3506,36 +3551,36 @@ export function MapaModule() {
                   <input type="range" min={0.5} max={4} step={0.25}
                     value={gridConfig.lineWidth}
                     onChange={(e) => setGridConfig({ lineWidth: Number(e.target.value) })}
-                    className="w-full" />
+                    className="w-full accent-primary" />
                 </Row>
-                <label className="flex items-center justify-between text-foreground/80">
+                <label className="flex items-center justify-between text-foreground/80 text-sm font-body">
                   <span>Snapping (encaixar na grade)</span>
                   <input
                     type="checkbox"
                     checked={gridConfig.snapping !== false}
                     onChange={(e) => setGridConfig({ snapping: e.target.checked })}
-                  />
+                    className="accent-primary" />
                 </label>
                 <Row label={`Sensibilidade do snap: ${(gridConfig.snappingSensitivity * 100).toFixed(0)}%`}>
                   <input type="range" min={0} max={1} step={0.05}
                     value={gridConfig.snappingSensitivity}
                     onChange={(e) => setGridConfig({ snappingSensitivity: Number(e.target.value) })}
-                    className="w-full" />
+                    className="w-full accent-primary" />
                 </Row>
-                <div className="flex items-center gap-3 text-foreground/80">
+                <div className="flex items-center gap-3 text-foreground/80 text-sm font-body">
                   <label className="flex items-center gap-1">
                     <input type="checkbox" checked={gridConfig.useCorners}
-                      onChange={(e) => setGridConfig({ useCorners: e.target.checked })} />
+                      onChange={(e) => setGridConfig({ useCorners: e.target.checked })} className="accent-primary" />
                     Cantos
                   </label>
                   <label className="flex items-center gap-1">
                     <input type="checkbox" checked={gridConfig.useCenter}
-                      onChange={(e) => setGridConfig({ useCenter: e.target.checked })} />
+                      onChange={(e) => setGridConfig({ useCenter: e.target.checked })} className="accent-primary" />
                     Centro
                   </label>
                   <label className="flex items-center gap-1 ml-auto">
                     <input type="checkbox" checked={gridConfig.visible}
-                      onChange={(e) => setGridConfig({ visible: e.target.checked })} />
+                      onChange={(e) => setGridConfig({ visible: e.target.checked })} className="accent-primary" />
                     Visível
                   </label>
                 </div>
@@ -3543,7 +3588,7 @@ export function MapaModule() {
                   <select
                     value={gridConfig.lineType}
                     onChange={(e) => setGridConfig({ lineType: e.target.value as LineType })}
-                    className="bg-secondary border border-border rounded px-2 py-1 w-full text-foreground"
+                    className="bg-secondary/50 border border-border/60 rounded px-2 py-1 w-full text-foreground text-sm focus:border-primary/40 focus:outline-none focus:ring-1 focus:ring-primary/30 font-mono"
                   >
                     <option value="solid">Sólida</option>
                     <option value="dashed">Tracejada</option>
@@ -3552,17 +3597,17 @@ export function MapaModule() {
                 </Row>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <div className="text-muted-foreground mb-1">Cor da grade</div>
-                    <input type="color" value={gridConfig.color}
+                    <div className="text-muted-foreground mb-1 text-sm font-body">Cor da grade</div>
+                    <input aria-label="Cor da grade" type="color" value={gridConfig.color}
                       onChange={(e) => setGridConfig({ color: e.target.value })}
-                      className="h-7 w-full bg-secondary border border-border rounded" />
+                      className="h-7 w-full bg-secondary/50 border border-border/60 rounded cursor-pointer" />
                   </div>
                   <div>
-                    <div className="text-muted-foreground mb-1">Opacidade: {Math.round((gridConfig.opacity ?? 0.35) * 100)}%</div>
-                    <input type="range" min={0.05} max={1} step={0.05}
+                    <div className="text-muted-foreground mb-1 text-sm font-body">Opacidade: {Math.round((gridConfig.opacity ?? 0.35) * 100)}%</div>
+                    <input aria-label="Opacidade da grade" type="range" min={0.05} max={1} step={0.05}
                       value={gridConfig.opacity ?? 0.35}
                       onChange={(e) => setGridConfig({ opacity: Number(e.target.value) })}
-                      className="w-full" />
+                      className="w-full accent-primary" />
                   </div>
                 </div>
 
@@ -3570,7 +3615,7 @@ export function MapaModule() {
                   <select
                     value={gridConfig.measurementStyle}
                     onChange={(e) => setGridConfig({ measurementStyle: e.target.value as typeof gridConfig.measurementStyle })}
-                    className="bg-secondary border border-border rounded px-2 py-1 w-full text-foreground"
+                    className="bg-secondary/50 border border-border/60 rounded px-2 py-1 w-full text-foreground text-sm focus:border-primary/40 focus:outline-none focus:ring-1 focus:ring-primary/30 font-mono"
                   >
                     <option value="CHEBYSHEV">Chebyshev (5e)</option>
                     <option value="ALTERNATING">Alternada (3.5)</option>
@@ -3684,10 +3729,10 @@ function InitiativeMount() {
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div>
-      <div className="text-muted-foreground mb-1">{label}</div>
+    <label className="block">
+      <span className="block text-muted-foreground mb-1">{label}</span>
       {children}
-    </div>
+    </label>
   );
 }
 
@@ -3699,8 +3744,8 @@ function ViewportControls() {
     <div className="border-t border-border pt-2 space-y-2">
       <div className="text-muted-foreground uppercase tracking-wider text-xs">Viewport</div>
       <div className="grid grid-cols-3 gap-2">
-        <div>
-          <div className="text-muted-foreground mb-1">Pos X</div>
+        <label className="block">
+          <span className="block text-muted-foreground mb-1">Pos X</span>
           <input
             type="number"
             value={Math.round(camera.x)}
@@ -3710,9 +3755,9 @@ function ViewportControls() {
             }}
             className="w-full bg-secondary border border-border rounded px-2 py-1 text-foreground"
           />
-        </div>
-        <div>
-          <div className="text-muted-foreground mb-1">Pos Y</div>
+        </label>
+        <label className="block">
+          <span className="block text-muted-foreground mb-1">Pos Y</span>
           <input
             type="number"
             value={Math.round(camera.y)}
@@ -3722,9 +3767,9 @@ function ViewportControls() {
             }}
             className="w-full bg-secondary border border-border rounded px-2 py-1 text-foreground"
           />
-        </div>
-        <div>
-          <div className="text-muted-foreground mb-1">Zoom %</div>
+        </label>
+        <label className="block">
+          <span className="block text-muted-foreground mb-1">Zoom %</span>
           <input
             type="number"
             min={5}
@@ -3736,12 +3781,12 @@ function ViewportControls() {
             }}
             className="w-full bg-secondary border border-border rounded px-2 py-1 text-foreground"
           />
-        </div>
+        </label>
       </div>
       <button
         type="button"
         onClick={() => resetCamera()}
-        className="w-full h-7 rounded border border-border hover:bg-secondary text-foreground"
+        className="w-full min-h-11 rounded border border-border px-2 hover:bg-secondary text-base text-foreground"
       >
         Resetar viewport
       </button>
