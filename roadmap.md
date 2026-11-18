@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Restaurar a gravação segura e versionada do mapa no banco usado pelo site publicado; testes descartáveis de Mestre e jogador passaram sem alterar a campanha.
+- [ ] Confirmar visualmente a propagação Mestre → jogadores no site publicado (bloqueado até uma conta da mesa entrar no preview para a automação).
 - [x] Sistema de Conquistas: raridades, catálogo editável, recompensas automáticas, banner e aba no Diário.
 - [x] Tornar Diário e Conquistas visíveis na barra superior e nas fichas; acessos verificados no navegador como Mestre e jogador, sem gravações na nuvem.
 - [ ] OMNI: chaves de mitigação por tipo de dano, scripts/passivas e verificação em combate no navegador.

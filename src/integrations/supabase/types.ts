@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      character_slice_write_receipts: {
+        Row: {
+          created_at: string
+          request: Json
+          request_id: string
+          result: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          request: Json
+          request_id: string
+          result: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          request?: Json
+          request_id?: string
+          result?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
       combat_action_requests: {
         Row: {
           actor_character_id: string
@@ -131,6 +155,30 @@ export type Database = {
         }
         Relationships: []
       }
+      map_scene_write_receipts: {
+        Row: {
+          created_at: string
+          request: Json
+          request_id: string
+          result: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          request: Json
+          request_id: string
+          result: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          request?: Json
+          request_id?: string
+          result?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar: string | null
@@ -176,16 +224,19 @@ export type Database = {
       realtime_world: {
         Row: {
           data: Json
+          revision: number
           slice: string
           updated_at: string
         }
         Insert: {
           data?: Json
+          revision?: number
           slice: string
           updated_at?: string
         }
         Update: {
           data?: Json
+          revision?: number
           slice?: string
           updated_at?: string
         }
@@ -214,6 +265,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      character_invocation_catalog_is_authorized: {
+        Args: {
+          p_character_id: string
+          p_current_character: Json
+          p_proposed_character: Json
+        }
+        Returns: boolean
+      }
       claim_first_master: { Args: never; Returns: boolean }
       has_role: {
         Args: {
@@ -227,6 +286,22 @@ export type Database = {
       set_master: {
         Args: { _make: boolean; _target: string }
         Returns: undefined
+      }
+      write_owned_characters_slice: {
+        Args: {
+          p_characters: Json
+          p_expected_revision: number
+          p_request_id: string
+        }
+        Returns: Json
+      }
+      write_owned_map_scene: {
+        Args: {
+          p_expected_revision: number
+          p_map_scene: Json
+          p_request_id: string
+        }
+        Returns: Json
       }
     }
     Enums: {

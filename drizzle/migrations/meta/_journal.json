@@ -22,6 +22,27 @@
       "when": 1794951267807,
       "tag": "0002_combat_action_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794981866742,
+      "tag": "0003_install_secure_character_slice_writes",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794981893931,
+      "tag": "0004_install_secure_map_scene_writes",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794981964364,
+      "tag": "0005_fix_map_scene_count_compatibility",
+      "breakpoints": true
     }
   ]
 }
